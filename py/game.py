@@ -120,8 +120,8 @@ class GameState:
         self._occupancy_matrix = np.zeros((NUM_COLORS + 1, BOARD_SIZE, BOARD_SIZE), dtype=bool)
         self._occupancy_matrix[NUM_COLORS] = 1
         self._available_pieces = np.ones((NUM_COLORS, NUM_PIECES), dtype=bool)
-        self._permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=int)
-        self._required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=int)
+        self._permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
+        self._required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
 
         # starting corners
         b = BOARD_SIZE - 1
