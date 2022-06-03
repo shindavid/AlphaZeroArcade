@@ -154,6 +154,9 @@ class GameState:
                 assert np.sum(self._required_matrix[c]) == 1
 
     def to_ascii_drawing(self) -> str:
+        """
+        TODO: add pretty_print kwarg that prints out colored squares rather than R/G/B/Y
+        """
         char_matrix = [list('%-2d ' % y) + ['.' for _ in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
         for (c, color) in enumerate(COLORS):
             for x, y in zip(*np.where(self._occupancy_matrix[c])):
@@ -207,10 +210,16 @@ class GameState:
             self._validate()
 
     def announce_results(self):
+        scores = []
         for c, color in enumerate(COLORS):
             available_piece_mask = self._available_pieces[c]
             score = sum([ALL_PIECES[i].size for i in np.where(available_piece_mask)[0]])
-            print(f'{color}: {score}')
+            scores.append(score)
+
+        winning_score = min(scores)
+        for color, score in zip(COLORS, scores):
+            winner_str = ' (WINNER)' if score == winning_score else ''
+            print(f'{color}: {score}{winner_str}')
 
 
 def simulate_random_game(seed=123):
@@ -227,6 +236,7 @@ def simulate_random_game(seed=123):
             mask = state.get_legal_move_mask(c)
             legal_moves = np.where(mask)[0]
             if len(legal_moves) == 0:
+                print(f'{color}: PASS')
                 continue
             move_made = True
             move_index = np.random.choice(legal_moves)
@@ -234,6 +244,7 @@ def simulate_random_game(seed=123):
             print(f'{color}: {move}')
             state.apply(c, move)
 
+    print('')
     state.announce_results()
 
 
