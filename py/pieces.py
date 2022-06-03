@@ -1,10 +1,11 @@
+import itertools
 from typing import List
 
 import numpy as np
 
 
 """
-A PieceOrientationMask corresponds to a particular orientation of a Piece.
+A PieceOrientationCoordinates corresponds to a particular orientation of a Piece.
 
 It is represented by an (N, 2)-shaped int ndarray, where N is the number of squares in the piece.
 Each row of the array corresponds to (x, y) coordinates of grid squares occupied by the piece.
@@ -14,47 +15,47 @@ The representation is normalized by:
 - shifting to border the x/y-axes within the 1st quadrant
 - ordering the array rows lexicographically
 
-An RawPieceOrientationMask is an un-normalized PieceOrientationMask.
+An RawPieceOrientationCoordinates is an un-normalized PieceOrientationCoordinates.
 """
-PieceOrientationMask = np.ndarray
-RawPieceOrientationMask = np.ndarray
+PieceOrientationCoordinates = np.ndarray
+RawPieceOrientationCoordinates = np.ndarray
 
 
-def normalize(mask: RawPieceOrientationMask) -> PieceOrientationMask:
+def normalize(c: RawPieceOrientationCoordinates) -> PieceOrientationCoordinates:
     """
     Shifts to border the x/y-axes within the 1st quadrant.
     Orders the array rows lexicographically.
     """
-    mask = mask[np.lexsort(mask.T[::-1])]  # https://stackoverflow.com/a/38277186/543913
-    mask[:, 0] -= min(mask[:, 0])
-    mask[:, 1] -= min(mask[:, 1])
-    return mask
+    c = c[np.lexsort(c.T[::-1])]  # https://stackoverflow.com/a/38277186/543913
+    c[:, 0] -= min(c[:, 0])
+    c[:, 1] -= min(c[:, 1])
+    return c
 
 
-def rotate_clockwise(mask: PieceOrientationMask, n: int = 1) -> PieceOrientationMask:
+def rotate_clockwise(c: PieceOrientationCoordinates, n: int = 1) -> PieceOrientationCoordinates:
     """
-    Rotates the given PieceOrientationMask 90*n degrees clockwise, and returns it.
+    Rotates the given PieceOrientationCoordinates 90*n degrees clockwise, and returns it.
     """
     n = n % 4
     xs = (+1, +1, -1, -1)[n]
     ys = (+1, -1, -1, +1)[n]
     xi = n % 2
     yi = 1 - xi
-    x = xs*mask[:, xi].reshape((-1, 1))
-    y = ys*mask[:, yi].reshape((-1, 1))
+    x = xs * c[:, xi].reshape((-1, 1))
+    y = ys * c[:, yi].reshape((-1, 1))
     return normalize(np.hstack((x, y)))
 
 
-def reflect_over_x_axis(mask: PieceOrientationMask) -> PieceOrientationMask:
+def reflect_over_x_axis(c: PieceOrientationCoordinates) -> PieceOrientationCoordinates:
     """
-    Reflects the given PieceOrientationMask over the x-axis, and returns it.
+    Reflects the given PieceOrientationCoordinates over the x-axis, and returns it.
     """
-    x = mask[:, 0].reshape((-1, 1))
-    y = mask[:, 1].reshape((-1, 1))
+    x = c[:, 0].reshape((-1, 1))
+    y = c[:, 1].reshape((-1, 1))
     return normalize(np.hstack((x, -y)))
 
 
-def compute_piece_orientation_mask(ascii_drawing: str) -> PieceOrientationMask:
+def compute_piece_orientation_coordinates(ascii_drawing: str) -> PieceOrientationCoordinates:
     """
     ascii_drawing consists of one or more lines of text, each consisting of ' ' or 'x' characters,
     with the 'x' characters corresponding to occupied spaces.
@@ -93,15 +94,20 @@ def block_str_join(strs: List[str], delim: str) -> str:
 
 
 class PieceOrientation:
-    def __init__(self, name: str, mask: PieceOrientationMask):
+    _next_id = 0
+
+    def __init__(self, name: str, piece_id: int, coordinates: PieceOrientationCoordinates):
+        self._id = PieceOrientation._next_id
+        PieceOrientation._next_id += 1
+        self.piece_id = piece_id
         self.name = name
-        self.mask = mask
+        self.coordinates = coordinates
 
     def __eq__(self, other):
-        return type(other) == PieceOrientation and self.name == other.name
+        return type(other) == PieceOrientation and self._id == other.get_id()
 
     def __hash__(self):
-        return hash(self.name)
+        return self._id
 
     def __str__(self):
         return self.name
@@ -109,56 +115,65 @@ class PieceOrientation:
     def __repr__(self):
         return f'PieceOrientation({self.name})'
 
-    def get_ascii_drawing(self) -> str:
-        mask = self.mask
+    def get_id(self):
+        return self._id
 
-        max_x = max(mask[:, 0])
-        max_y = max(mask[:, 1])
+    def get_ascii_drawing(self) -> str:
+        coordinates = self.coordinates
+
+        max_x = max(coordinates[:, 0])
+        max_y = max(coordinates[:, 1])
 
         char_matrix = [[' '] * (max_x + 1) for _ in range(max_y + 1)]
-        for x, y in mask:
+        for x, y in coordinates:
             char_matrix[y][x] = 'x'
 
         return '\n'.join([''.join(c) for c in reversed(char_matrix)] + [self.name])
 
 
-def get_rank_key(mask: PieceOrientationMask):
+def get_rank_key(coordinates: PieceOrientationCoordinates):
     """
-    Returns a sorted-tuple of all (x, y) pairs in mask.
+    Returns a sorted-tuple of all (x, y) pairs in coordinates.
 
-    This is used to define the notion of the canonical orientation of a PieceOrientationMask.
+    This is used to define the notion of the canonical orientation of a PieceOrientationCoordinates.
     """
-    return tuple(sorted(map(tuple, mask)))
+    return tuple(map(tuple, coordinates))
 
 
 class Piece:
+    _next_id = 0
+
     def __init__(self, name: str, ascii_drawing: str):
         """
         ascii_drawing can be in any orientation. The constructor normalized appropriately.
         """
+        self._id = Piece._next_id
+        Piece._next_id += 1
         self.name = name
+        assert len(name) == 2 and name[1] in '12345', name
+        self.size = int(name[1])
         self.orientations: List[PieceOrientation] = []
 
-        mask = compute_piece_orientation_mask(ascii_drawing)
+        coordinates = compute_piece_orientation_coordinates(ascii_drawing)
 
         # first compute canonical
-        mask_dict = {}
-        for r, m in [('r', mask), ('R', reflect_over_x_axis(mask))]:
+        coordinates_dict = {}
+        for r, m in [('r', coordinates), ('R', reflect_over_x_axis(coordinates))]:
             for n in range(4):
                 m2 = rotate_clockwise(m, n)
-                mask_dict[m2.tobytes()] = m2
+                coordinates_dict[m2.tobytes()] = m2
 
-        canonical_mask = list(sorted(mask_dict.values(), key=get_rank_key))[0]
+        canonical_coordinates = list(sorted(coordinates_dict.values(), key=get_rank_key))[0]
 
         # now compute orientations relative to canonical
         oset = set()
-        for r, m in [('r', canonical_mask), ('R', reflect_over_x_axis(canonical_mask))]:
+        for r, m in [('r', canonical_coordinates), ('R', reflect_over_x_axis(canonical_coordinates))]:
             for n in range(4):
                 m2 = rotate_clockwise(m, n)
                 key = m2.tobytes()
                 if key not in oset:
                     descr = f'{name}{r}{n}'
-                    self.orientations.append(PieceOrientation(descr, m2))
+                    self.orientations.append(PieceOrientation(descr, self._id, m2))
                     oset.add(key)
 
         self._validate()
@@ -171,11 +186,14 @@ class Piece:
     def canonical_orientation(self) -> PieceOrientation:
         return self.orientations[0]
 
+    def get_id(self):
+        return self._id
+
     def __eq__(self, other):
-        return type(other) == Piece and self.name == other.name
+        return type(other) == Piece and self._id == other.get_id()
 
     def __hash__(self):
-        return hash(self.name)
+        return self._id
 
     def __str__(self):
         return self.name
@@ -184,10 +202,8 @@ class Piece:
         return f'Piece({self.name})'
 
     def _validate(self):
-        assert len(self.name) == 2 and self.name[1] in '12345', self.name
-        size = int(self.name[1])
         for orientation in self.orientations:
-            assert len(orientation.mask) == size, (self.name, orientation, size)
+            assert len(orientation.coordinates) == self.size, (self.name, orientation, self.size)
         assert len(self.orientations) in (1, 2, 4, 8), (self.name, len(self.orientations))
 
 
@@ -275,7 +291,11 @@ ALL_PIECES = [
     F5, I5, L5, N5, P5, T5, U5, V5, W5, X5, Y5, Z5
 ]
 
-assert len(ALL_PIECES) == len(set(ALL_PIECES))
-for piece in ALL_PIECES:
-    print('----------------------------------------------------------')
-    print(piece.verbose_repr())
+ALL_PIECE_ORIENTATIONS = list(itertools.chain(*[piece.orientations for piece in ALL_PIECES]))
+
+
+if __name__ == '__main__':
+    assert len(ALL_PIECES) == len(set(ALL_PIECES))
+    for piece in ALL_PIECES:
+        print('----------------------------------------------------------')
+        print(piece.verbose_repr())
