@@ -6,6 +6,7 @@ import numpy as np
 
 from pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS, PieceOrientation
 
+DEBUG_MODE = False
 BOARD_SIZE = 20
 NUM_PIECES = len(ALL_PIECES)
 NUM_PIECE_ORIENTATIONS = sum([len(p.orientations) for p in ALL_PIECES])
@@ -129,7 +130,8 @@ class GameState:
         self._required_matrix[2][b][b] = 1
         self._required_matrix[3][b][0] = 1
 
-        self._validate()
+        if DEBUG_MODE:
+            self._validate()
 
     def _validate(self):
         assert np.sum(self._occupancy_matrix) == BOARD_SIZE * BOARD_SIZE
@@ -201,7 +203,8 @@ class GameState:
         self._required_matrix[c] |= self._permissible_matrix[c] & get_diagonal_neighbors(move_mask)
         self._required_matrix[:] &= ~move_mask
 
-        self._validate()
+        if DEBUG_MODE:
+            self._validate()
 
     def announce_results(self):
         for c, color in enumerate(COLORS):
