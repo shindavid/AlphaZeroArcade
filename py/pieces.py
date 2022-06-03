@@ -36,21 +36,25 @@ def rotate_clockwise(mask: PieceOrientationMask, n: int = 1) -> PieceOrientation
     Rotates the given PieceOrientationMask 90*n degrees clockwise, and returns it.
     """
     n = n % 4
-    s0 = (+1, +1, -1, -1)[n]
-    s1 = (+1, -1, -1, +1)[n]
-    i0 = n % 2
-    i1 = 1 - i0
-    return normalize(np.hstack((s0*mask[:, i0].reshape((-1, 1)), s1*mask[:, i1].reshape((-1, 1)))))
+    xs = (+1, +1, -1, -1)[n]
+    ys = (+1, -1, -1, +1)[n]
+    xi = n % 2
+    yi = 1 - xi
+    x = xs*mask[:, xi].reshape((-1, 1))
+    y = ys*mask[:, yi].reshape((-1, 1))
+    return normalize(np.hstack((x, y)))
 
 
 def reflect_over_x_axis(mask: PieceOrientationMask) -> PieceOrientationMask:
     """
     Reflects the given PieceOrientationMask over the x-axis, and returns it.
     """
-    return normalize(np.hstack((mask[:, 0].reshape((-1, 1)), -mask[:, 1].reshape((-1, 1)))))
+    x = mask[:, 0].reshape((-1, 1))
+    y = mask[:, 1].reshape((-1, 1))
+    return normalize(np.hstack((x, -y)))
 
 
-def compute_piece_mask(ascii_drawing: str) -> PieceOrientationMask:
+def compute_piece_orientation_mask(ascii_drawing: str) -> PieceOrientationMask:
     """
     ascii_drawing consists of one or more lines of text, each consisting of ' ' or 'x' characters,
     with the 'x' characters corresponding to occupied spaces.
@@ -133,7 +137,11 @@ class Piece:
         ascii_drawing can be in any orientation. The constructor normalized appropriately.
         """
         self.name = name
-        mask = compute_piece_mask(ascii_drawing)
+        self.orientations: List[PieceOrientation] = []
+
+        mask = compute_piece_orientation_mask(ascii_drawing)
+
+        # first compute canonical
         mask_dict = {}
         for r, m in [('r', mask), ('R', reflect_over_x_axis(mask))]:
             for n in range(4):
@@ -142,7 +150,7 @@ class Piece:
 
         canonical_mask = list(sorted(mask_dict.values(), key=get_rank_key))[0]
 
-        self.orientations: List[PieceOrientation] = []
+        # now compute orientations relative to canonical
         oset = set()
         for r, m in [('r', canonical_mask), ('R', reflect_over_x_axis(canonical_mask))]:
             for n in range(4):
