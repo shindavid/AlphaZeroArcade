@@ -94,29 +94,26 @@ def block_str_join(strs: List[str], delim: str) -> str:
 
 
 class PieceOrientation:
-    _next_id = 0
+    _next_index = 0
 
-    def __init__(self, name: str, piece_id: int, coordinates: PieceOrientationCoordinates):
-        self._id = PieceOrientation._next_id
-        PieceOrientation._next_id += 1
-        self.piece_id = piece_id
+    def __init__(self, name: str, piece_index: int, coordinates: PieceOrientationCoordinates):
+        self.index = PieceOrientation._next_index
+        PieceOrientation._next_index += 1
+        self.piece_index = piece_index
         self.name = name
         self.coordinates = coordinates
 
     def __eq__(self, other):
-        return type(other) == PieceOrientation and self._id == other.get_id()
+        return type(other) == PieceOrientation and self.index == other.index
 
     def __hash__(self):
-        return self._id
+        return self.index
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
         return f'PieceOrientation({self.name})'
-
-    def get_id(self):
-        return self._id
 
     def get_ascii_drawing(self) -> str:
         coordinates = self.coordinates
@@ -141,14 +138,14 @@ def get_rank_key(coordinates: PieceOrientationCoordinates):
 
 
 class Piece:
-    _next_id = 0
+    _next_index = 0
 
     def __init__(self, name: str, ascii_drawing: str):
         """
         ascii_drawing can be in any orientation. The constructor normalized appropriately.
         """
-        self._id = Piece._next_id
-        Piece._next_id += 1
+        self.index = Piece._next_index
+        Piece._next_index += 1
         self.name = name
         assert len(name) == 2 and name[1] in '12345', name
         self.size = int(name[1])
@@ -173,7 +170,7 @@ class Piece:
                 key = m2.tobytes()
                 if key not in oset:
                     descr = f'{name}{r}{n}'
-                    self.orientations.append(PieceOrientation(descr, self._id, m2))
+                    self.orientations.append(PieceOrientation(descr, self.index, m2))
                     oset.add(key)
 
         self._validate()
@@ -186,14 +183,11 @@ class Piece:
     def canonical_orientation(self) -> PieceOrientation:
         return self.orientations[0]
 
-    def get_id(self):
-        return self._id
-
     def __eq__(self, other):
-        return type(other) == Piece and self._id == other.get_id()
+        return type(other) == Piece and self.index == other.index
 
     def __hash__(self):
-        return self._id
+        return self.index
 
     def __str__(self):
         return self.name

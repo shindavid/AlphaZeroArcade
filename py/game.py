@@ -76,14 +76,14 @@ class Move:
     def __init__(self, piece_orientation: PieceOrientation, lower_left_corner: BoardLocation):
         self.piece_orientation = piece_orientation
         self.lower_left_corner = lower_left_corner
-        self._id = to_move_index(piece_orientation.get_id(), lower_left_corner)
+        self.index = to_move_index(piece_orientation.index, lower_left_corner)
         self.name = f'{piece_orientation.name}@{board_location_code(lower_left_corner)}'
 
     def __eq__(self, other):
-        return type(other) == Move and self._id == other.get_id()
+        return type(other) == Move and self.index == other.index
 
     def __hash__(self):
-        return self._id
+        return self.index
 
     def __str__(self):
         return self.name
@@ -91,11 +91,8 @@ class Move:
     def __repr__(self):
         return f'Move({self.name})'
 
-    def get_id(self) -> MoveIndex:
-        return self._id
-
     @staticmethod
-    def from_id(index: MoveIndex) -> 'Move':
+    def from_index(index: MoveIndex) -> 'Move':
         piece_orientation_index = index // (BOARD_SIZE * BOARD_SIZE)
         piece_orientation = ALL_PIECE_ORIENTATIONS[piece_orientation_index]
         loc_value = index % (BOARD_SIZE * BOARD_SIZE)
@@ -172,8 +169,8 @@ class GameState:
 
         mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
 
-        for piece_id in np.where(self._available_pieces[c])[0]:
-            piece = ALL_PIECES[piece_id]
+        for piece_index in np.where(self._available_pieces[c])[0]:
+            piece = ALL_PIECES[piece_index]
             for orientation in piece.orientations:
                 for oi in range(piece.size):
                     ox, oy = orientation.coordinates[oi]
@@ -187,7 +184,7 @@ class GameState:
                             continue
                         move_mask = coordinates_to_mask(move_coordinates)
                         if is_subset_of(move_mask, permissible_mask):
-                            mask[to_move_index(orientation.get_id(), tuple(shift_xy.reshape((-1,))))] = 1
+                            mask[to_move_index(orientation.index, tuple(shift_xy.reshape((-1,))))] = 1
 
         return mask
 
@@ -199,7 +196,7 @@ class GameState:
         impermissible_mask = move_mask | get_orthogonal_neighbors(move_mask)
         self._occupancy_matrix[c] |= move_mask
         self._occupancy_matrix[NUM_COLORS] ^= move_mask
-        self._available_pieces[c][piece_orientation.piece_id] = 0
+        self._available_pieces[c][piece_orientation.piece_index] = 0
         self._permissible_matrix[:] &= ~move_mask
         self._permissible_matrix[c] &= ~impermissible_mask
         self._required_matrix[c] &= ~impermissible_mask
@@ -236,11 +233,11 @@ def simulate_random_game(seed=123):
             mask = state.get_legal_move_mask(c)
             legal_moves = np.where(mask)[0]
             if len(legal_moves) == 0:
-                print(f'{color}: PASS')
+                print(f'{color}: pass')
                 continue
             move_made = True
             move_index = np.random.choice(legal_moves)
-            move = Move.from_id(move_index)
+            move = Move.from_index(move_index)
             print(f'{color}: {move}')
             state.apply(c, move)
 
