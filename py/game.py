@@ -1,6 +1,6 @@
 import functools
 import operator
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 
@@ -10,7 +10,7 @@ DEBUG_MODE = False
 BOARD_SIZE = 20
 NUM_PIECES = len(ALL_PIECES)
 NUM_PIECE_ORIENTATIONS = sum([len(p.orientations) for p in ALL_PIECES])
-NUM_MOVES_BOUND = NUM_PIECE_ORIENTATIONS * BOARD_SIZE * BOARD_SIZE
+NUM_MOVES_BOUND = NUM_PIECE_ORIENTATIONS * BOARD_SIZE * BOARD_SIZE + 1  # +1 for pass move
 
 COLORS = ['R', 'G', 'B', 'Y']  # own the SW, NW, NE, and SE corners respectively
 NUM_COLORS = len(COLORS)
@@ -73,11 +73,18 @@ def to_move_index(piece_orientation_index: PieceOrientationIndex, lower_left_cor
 
 
 class Move:
-    def __init__(self, piece_orientation: PieceOrientation, lower_left_corner: BoardLocation):
+    def __init__(self, piece_orientation: Optional[PieceOrientation], lower_left_corner: BoardLocation):
         self.piece_orientation = piece_orientation
         self.lower_left_corner = lower_left_corner
-        self.index = to_move_index(piece_orientation.index, lower_left_corner)
-        self.name = f'{piece_orientation.name}@{board_location_code(lower_left_corner)}'
+        if piece_orientation is None:
+            self.index = NUM_MOVES_BOUND - 1
+            self.name = 'pass'
+        else:
+            self.index = to_move_index(piece_orientation.index, lower_left_corner)
+            self.name = f'{piece_orientation.name}@{board_location_code(lower_left_corner)}'
+
+    def is_pass(self):
+        return self.index == NUM_MOVES_BOUND - 1
 
     def __eq__(self, other):
         return type(other) == Move and self.index == other.index
@@ -93,6 +100,8 @@ class Move:
 
     @staticmethod
     def from_index(index: MoveIndex) -> 'Move':
+        if index == NUM_MOVES_BOUND - 1:
+            return Move(None, (0, 0))
         piece_orientation_index = index // (BOARD_SIZE * BOARD_SIZE)
         piece_orientation = ALL_PIECE_ORIENTATIONS[piece_orientation_index]
         loc_value = index % (BOARD_SIZE * BOARD_SIZE)
@@ -119,6 +128,7 @@ class GameState:
         self._available_pieces = np.ones((NUM_COLORS, NUM_PIECES), dtype=bool)
         self._permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
         self._required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
+        self._current_color_index = 0
 
         # starting corners
         b = BOARD_SIZE - 1
@@ -168,6 +178,7 @@ class GameState:
         required_coordinates = mask_to_coordinates(self._required_matrix[c])
 
         mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
+        mask[NUM_MOVES_BOUND-1] = 1  # pass move
 
         for piece_index in np.where(self._available_pieces[c])[0]:
             piece = ALL_PIECES[piece_index]
@@ -188,7 +199,12 @@ class GameState:
 
         return mask
 
-    def apply(self, c: ColorIndex, move: Move):
+    def apply_move(self, c: ColorIndex, move: Move):
+        assert self._current_color_index == c
+        self._current_color_index = (c+1) % NUM_COLORS
+        if move.is_pass():
+            return
+
         piece_orientation = move.piece_orientation
         lower_left_corner = move.lower_left_corner
         move_coordinates = piece_orientation.coordinates + lower_left_corner
@@ -223,23 +239,20 @@ def simulate_random_game(seed=123):
     np.random.seed(seed)
     state = GameState()
 
-    move_made = True
-    while move_made:
+    all_passed = False
+    while not all_passed:
         print('')
         print(state.to_ascii_drawing())
         print('')
-        move_made = False
+        all_passed = True
         for c, color in enumerate(COLORS):
             mask = state.get_legal_move_mask(c)
             legal_moves = np.where(mask)[0]
-            if len(legal_moves) == 0:
-                print(f'{color}: pass')
-                continue
-            move_made = True
             move_index = np.random.choice(legal_moves)
             move = Move.from_index(move_index)
+            all_passed &= move.is_pass()
             print(f'{color}: {move}')
-            state.apply(c, move)
+            state.apply_move(c, move)
 
     print('')
     state.announce_results()
