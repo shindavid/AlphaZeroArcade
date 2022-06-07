@@ -103,9 +103,13 @@ class Move:
         return f'Move({self.name})'
 
     @staticmethod
+    def get_pass() -> 'Move':
+        return Move(None, (0, 0))
+
+    @staticmethod
     def from_index(index: MoveIndex) -> 'Move':
         if index == NUM_MOVES_BOUND - 1:
-            return Move(None, (0, 0))
+            return Move.get_pass()
         piece_orientation_index = index // (BOARD_SIZE * BOARD_SIZE)
         piece_orientation = ALL_PIECE_ORIENTATIONS[piece_orientation_index]
         loc_value = index % (BOARD_SIZE * BOARD_SIZE)
@@ -147,7 +151,10 @@ class GameState:
         self.required_matrix[3][b][0] = 1
 
         if DEBUG_MODE:
-            self.validate()
+            self._validate()
+
+    def get_current_color_index(self) -> ColorIndex:
+        return np.where(self.current_color_array)[0][0]
 
     def _validate(self):
         assert np.sum(self.occupancy_matrix) == BOARD_SIZE * BOARD_SIZE
@@ -181,32 +188,6 @@ class GameState:
         out_lines.append('')
         out_lines.append(''.join([' ', ' ', ' '] + [chr(ord('A')+x) + p for x in range(BOARD_SIZE)]))
         return '\n'.join(out_lines)
-
-    def get_legal_move_mask(self, c: ColorIndex) -> MoveMask:
-        permissible_mask = self.permissible_matrix[c]
-        required_coordinates = mask_to_coordinates(self.required_matrix[c])
-
-        mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
-        mask[NUM_MOVES_BOUND-1] = 1  # pass move
-
-        for piece_index in np.where(self.available_pieces[c])[0]:
-            piece = ALL_PIECES[piece_index]
-            for orientation in piece.orientations:
-                for oi in range(piece.size):
-                    ox, oy = orientation.coordinates[oi]
-                    o_xy = np.array([ox, oy], dtype=int).reshape((1, 2))
-                    for zx, zy in required_coordinates:
-                        # test an orientation of the piece with (ox, oy) == (zx, zy)
-                        z_xy = np.array([zx, zy], dtype=int).reshape((1, 2))
-                        shift_xy = z_xy - o_xy
-                        move_coordinates = orientation.coordinates + shift_xy
-                        if np.min(move_coordinates) < 0 or np.max(move_coordinates) >= BOARD_SIZE:
-                            continue
-                        move_mask = coordinates_to_mask(move_coordinates)
-                        if is_subset_of(move_mask, permissible_mask):
-                            mask[to_move_index(orientation.index, tuple(shift_xy.reshape((-1,))))] = 1
-
-        return mask
 
     def apply_move(self, c: ColorIndex, move: Move):
         assert self.current_color_array[c] and sum(self.current_color_array) == 1
@@ -248,29 +229,38 @@ class GameState:
 
 class TuiGameManager:
     def __init__(self, players: List, pretty_print: bool = True):
-        self.players = players
+        self.players = list(players)
+        np.random.shuffle(self.players)  # randomize starting order
+        for c, player in enumerate(self.players):
+            player.receive_color_assignment(c)
+
         self.pretty_print = pretty_print
         assert len(players) == NUM_COLORS
 
-    def run(self):
+    def run(self, silent: bool = False):
         state = GameState()
         all_passed = False
         while not all_passed:
-            print('')
-            print(state.to_ascii_drawing(self.pretty_print))
-            print('')
+            if not silent:
+                print('')
+                print(state.to_ascii_drawing(self.pretty_print))
+                print('')
             all_passed = True
             for c, player in enumerate(self.players):
                 color = COLORS[c]
                 move = player.get_move(state)
                 all_passed &= move.is_pass()
-                print(f'{color}: {move}')
+                if not silent:
+                    print(f'{color}: {move}')
                 state.apply_move(c, move)
 
-        print('')
         scores = state.get_scores()
-
         winning_score = min(scores)
-        for color, score in zip(COLORS, scores):
-            winner_str = ' (WINNER)' if score == winning_score else ''
-            print(f'{color}: {score}{winner_str}')
+
+        if not silent:
+            print('')
+            for color, player, score in zip(COLORS, self.players, scores):
+                winner_str = ' (WINNER)' if score == winning_score else ''
+                print(f'{color} {player}: {score}{winner_str}')
+
+        return [p for p, s in zip(self.players, scores) if s == winning_score]

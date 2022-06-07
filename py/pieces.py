@@ -142,7 +142,7 @@ class Piece:
 
     def __init__(self, name: str, ascii_drawing: str):
         """
-        ascii_drawing can be in any orientation. The constructor normalized appropriately.
+        ascii_drawing can be in any orientation. The constructor normalizes appropriately.
         """
         self.index = Piece._next_index
         Piece._next_index += 1
