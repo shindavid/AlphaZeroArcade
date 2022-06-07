@@ -1,6 +1,6 @@
 import functools
 import operator
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 import numpy as np
 from termcolor import colored
@@ -18,6 +18,7 @@ NUM_COLORS = len(COLORS)
 SQUARE_CHAR = chr(9607) * 2
 PRETTY_COLORS = [colored(SQUARE_CHAR, c) for c in ('red', 'green', 'blue', 'yellow')]
 
+Score = int
 ColorIndex = int
 MoveIndex = int
 PieceIndex = int
@@ -235,41 +236,41 @@ class GameState:
         if DEBUG_MODE:
             self._validate()
 
-    def announce_results(self):
+    def get_scores(self) -> List[Score]:
         scores = []
         for c, color in enumerate(COLORS):
             available_piece_mask = self.available_pieces[c]
             score = sum([ALL_PIECES[i].size for i in np.where(available_piece_mask)[0]])
             scores.append(score)
 
+        return scores
+
+
+class TuiGameManager:
+    def __init__(self, players: List, pretty_print: bool = True):
+        self.players = players
+        self.pretty_print = pretty_print
+        assert len(players) == NUM_COLORS
+
+    def run(self):
+        state = GameState()
+        all_passed = False
+        while not all_passed:
+            print('')
+            print(state.to_ascii_drawing(self.pretty_print))
+            print('')
+            all_passed = True
+            for c, player in enumerate(self.players):
+                color = COLORS[c]
+                move = player.get_move(state)
+                all_passed &= move.is_pass()
+                print(f'{color}: {move}')
+                state.apply_move(c, move)
+
+        print('')
+        scores = state.get_scores()
+
         winning_score = min(scores)
         for color, score in zip(COLORS, scores):
             winner_str = ' (WINNER)' if score == winning_score else ''
             print(f'{color}: {score}{winner_str}')
-
-
-def simulate_random_game(seed=123):
-    np.random.seed(seed)
-    state = GameState()
-
-    all_passed = False
-    while not all_passed:
-        print('')
-        print(state.to_ascii_drawing())
-        print('')
-        all_passed = True
-        for c, color in enumerate(COLORS):
-            mask = state.get_legal_move_mask(c)
-            legal_moves = np.where(mask)[0]
-            move_index = np.random.choice(legal_moves)
-            move = Move.from_index(move_index)
-            all_passed &= move.is_pass()
-            print(f'{color}: {move}')
-            state.apply_move(c, move)
-
-    print('')
-    state.announce_results()
-
-
-if __name__ == '__main__':
-    simulate_random_game()
