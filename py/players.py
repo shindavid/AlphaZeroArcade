@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 
 from game import ColorIndex, GameState, Move, NUM_COLORS, TuiGameManager
@@ -15,8 +17,11 @@ class RandomPlayer:
         return move
 
 
-def main(seed=123):
-    np.random.seed(seed)
+def main():
+    if len(sys.argv) > 1:
+        seed = int(sys.argv[1])
+        print(f'Using random seed {seed}')
+        np.random.seed(seed)
     players = [RandomPlayer(c) for c in range(NUM_COLORS)]
     manager = TuiGameManager(players)
     manager.run()
