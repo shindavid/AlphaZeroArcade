@@ -124,13 +124,18 @@ class GameState:
         * _required_matrix: for each color, the set of permissible squares that the next move must intersect
         """
         self._occupancy_matrix = np.zeros((NUM_COLORS + 1, BOARD_SIZE, BOARD_SIZE), dtype=bool)
-        self._occupancy_matrix[NUM_COLORS] = 1
         self._available_pieces = np.ones((NUM_COLORS, NUM_PIECES), dtype=bool)
         self._permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
         self._required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
-        self._current_color_index = 0
+        self._current_color_array = np.zeros(NUM_COLORS, dtype=bool)
 
-        # starting corners
+        # 0 is the starting player
+        self._current_color_array[0] = 1
+
+        # all squares are initially unoccupied
+        self._occupancy_matrix[NUM_COLORS] = 1
+
+        # starting moves must occupy the corners
         b = BOARD_SIZE - 1
         self._required_matrix[0][0][0] = 1
         self._required_matrix[1][0][b] = 1
@@ -200,8 +205,9 @@ class GameState:
         return mask
 
     def apply_move(self, c: ColorIndex, move: Move):
-        assert self._current_color_index == c
-        self._current_color_index = (c+1) % NUM_COLORS
+        assert self._current_color_array[c] and sum(self._current_color_array) == 1
+        self._current_color_array[c] = 0
+        self._current_color_array[(c+1) % NUM_COLORS] = 1
         if move.is_pass():
             return
 
