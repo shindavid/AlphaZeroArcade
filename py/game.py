@@ -219,6 +219,10 @@ class GameState:
         move_coordinates = piece_orientation.coordinates + lower_left_corner
         move_mask = coordinates_to_mask(move_coordinates)
         impermissible_mask = move_mask | get_orthogonal_neighbors(move_mask)
+
+        assert np.all(self._permissible_matrix[c] & move_mask == move_mask)
+        assert np.any(self._required_matrix[c] & move_mask)
+
         self._occupancy_matrix[c] |= move_mask
         self._occupancy_matrix[NUM_COLORS] ^= move_mask
         self._available_pieces[c][piece_orientation.piece_index] = 0
