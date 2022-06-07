@@ -3,6 +3,7 @@ import operator
 from typing import Tuple, Optional
 
 import numpy as np
+from termcolor import colored
 
 from pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS, PieceOrientation
 
@@ -14,6 +15,8 @@ NUM_MOVES_BOUND = NUM_PIECE_ORIENTATIONS * BOARD_SIZE * BOARD_SIZE + 1  # +1 for
 
 COLORS = ['R', 'G', 'B', 'Y']  # own the SW, NW, NE, and SE corners respectively
 NUM_COLORS = len(COLORS)
+SQUARE_CHAR = chr(9607) * 2
+PRETTY_COLORS = [colored(SQUARE_CHAR, c) for c in ('red', 'green', 'blue', 'yellow')]
 
 ColorIndex = int
 MoveIndex = int
@@ -165,17 +168,17 @@ class GameState:
             else:
                 assert np.sum(self._required_matrix[c]) == 1
 
-    def to_ascii_drawing(self) -> str:
-        """
-        TODO: add pretty_print kwarg that prints out colored squares rather than R/G/B/Y
-        """
-        char_matrix = [list('%-2d ' % y) + ['.' for _ in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
-        for (c, color) in enumerate(COLORS):
+    def to_ascii_drawing(self, pretty_print=True) -> str:
+        colors = PRETTY_COLORS if pretty_print else COLORS
+        p = ' ' if pretty_print else ''
+        empty_color = '  ' if pretty_print else '.'
+        char_matrix = [list('%-2d ' % y) + [empty_color for _ in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
+        for (c, color) in enumerate(colors):
             for x, y in zip(*np.where(self._occupancy_matrix[c])):
                 char_matrix[y][x+3] = color
         out_lines = list(reversed([''.join(char_list) for char_list in char_matrix]))
         out_lines.append('')
-        out_lines.append(''.join([' ', ' ', ' '] + [chr(ord('A')+x) for x in range(BOARD_SIZE)]))
+        out_lines.append(''.join([' ', ' ', ' '] + [chr(ord('A')+x) + p for x in range(BOARD_SIZE)]))
         return '\n'.join(out_lines)
 
     def get_legal_move_mask(self, c: ColorIndex) -> MoveMask:
