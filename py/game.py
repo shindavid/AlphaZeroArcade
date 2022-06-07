@@ -126,47 +126,47 @@ class GameState:
         * _permissible_matrix: for each color, which unoccupied squares are not adjacent to that color
         * _required_matrix: for each color, the set of permissible squares that the next move must intersect
         """
-        self._occupancy_matrix = np.zeros((NUM_COLORS + 1, BOARD_SIZE, BOARD_SIZE), dtype=bool)
-        self._available_pieces = np.ones((NUM_COLORS, NUM_PIECES), dtype=bool)
-        self._permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
-        self._required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
-        self._current_color_array = np.zeros(NUM_COLORS, dtype=bool)
+        self.occupancy_matrix = np.zeros((NUM_COLORS + 1, BOARD_SIZE, BOARD_SIZE), dtype=bool)
+        self.available_pieces = np.ones((NUM_COLORS, NUM_PIECES), dtype=bool)
+        self.permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
+        self.required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
+        self.current_color_array = np.zeros(NUM_COLORS, dtype=bool)
 
         # 0 is the starting player
-        self._current_color_array[0] = 1
+        self.current_color_array[0] = 1
 
         # all squares are initially unoccupied
-        self._occupancy_matrix[NUM_COLORS] = 1
+        self.occupancy_matrix[NUM_COLORS] = 1
 
         # starting moves must occupy the corners
         b = BOARD_SIZE - 1
-        self._required_matrix[0][0][0] = 1
-        self._required_matrix[1][0][b] = 1
-        self._required_matrix[2][b][b] = 1
-        self._required_matrix[3][b][0] = 1
+        self.required_matrix[0][0][0] = 1
+        self.required_matrix[1][0][b] = 1
+        self.required_matrix[2][b][b] = 1
+        self.required_matrix[3][b][0] = 1
 
         if DEBUG_MODE:
-            self._validate()
+            self.validate()
 
     def _validate(self):
-        assert np.sum(self._occupancy_matrix) == BOARD_SIZE * BOARD_SIZE
-        assert np.all(functools.reduce(operator.or_, self._occupancy_matrix))
+        assert np.sum(self.occupancy_matrix) == BOARD_SIZE * BOARD_SIZE
+        assert np.all(functools.reduce(operator.or_, self.occupancy_matrix))
         for c, color in enumerate(COLORS):
-            m = self._occupancy_matrix[c]
+            m = self.occupancy_matrix[c]
 
-            available_piece_mask = self._available_pieces[c]
+            available_piece_mask = self.available_pieces[c]
             used_piece_mask = ~available_piece_mask
             num_used_squares = sum([ALL_PIECES[i].size for i in np.where(used_piece_mask)[0]])
             assert num_used_squares == np.sum(m), (c, num_used_squares, np.sum(m))
 
-            permissible_mask = self._occupancy_matrix[NUM_COLORS] & ~get_orthogonal_neighbors(m)
-            assert np.all(permissible_mask == self._permissible_matrix[c])
+            permissible_mask = self.occupancy_matrix[NUM_COLORS] & ~get_orthogonal_neighbors(m)
+            assert np.all(permissible_mask == self.permissible_matrix[c])
 
             if num_used_squares:
                 required_mask = permissible_mask & get_diagonal_neighbors(m)
-                assert np.all(required_mask == self._required_matrix[c]), (color, mask_to_coordinates(required_mask), mask_to_coordinates(self._required_matrix[c]))
+                assert np.all(required_mask == self.required_matrix[c]), (color, mask_to_coordinates(required_mask), mask_to_coordinates(self.required_matrix[c]))
             else:
-                assert np.sum(self._required_matrix[c]) == 1
+                assert np.sum(self.required_matrix[c]) == 1
 
     def to_ascii_drawing(self, pretty_print=True) -> str:
         colors = PRETTY_COLORS if pretty_print else COLORS
@@ -174,7 +174,7 @@ class GameState:
         empty_color = '  ' if pretty_print else '.'
         char_matrix = [list('%-2d ' % y) + [empty_color for _ in range(BOARD_SIZE)] for y in range(BOARD_SIZE)]
         for (c, color) in enumerate(colors):
-            for x, y in zip(*np.where(self._occupancy_matrix[c])):
+            for x, y in zip(*np.where(self.occupancy_matrix[c])):
                 char_matrix[y][x+3] = color
         out_lines = list(reversed([''.join(char_list) for char_list in char_matrix]))
         out_lines.append('')
@@ -182,13 +182,13 @@ class GameState:
         return '\n'.join(out_lines)
 
     def get_legal_move_mask(self, c: ColorIndex) -> MoveMask:
-        permissible_mask = self._permissible_matrix[c]
-        required_coordinates = mask_to_coordinates(self._required_matrix[c])
+        permissible_mask = self.permissible_matrix[c]
+        required_coordinates = mask_to_coordinates(self.required_matrix[c])
 
         mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
         mask[NUM_MOVES_BOUND-1] = 1  # pass move
 
-        for piece_index in np.where(self._available_pieces[c])[0]:
+        for piece_index in np.where(self.available_pieces[c])[0]:
             piece = ALL_PIECES[piece_index]
             for orientation in piece.orientations:
                 for oi in range(piece.size):
@@ -208,9 +208,9 @@ class GameState:
         return mask
 
     def apply_move(self, c: ColorIndex, move: Move):
-        assert self._current_color_array[c] and sum(self._current_color_array) == 1
-        self._current_color_array[c] = 0
-        self._current_color_array[(c+1) % NUM_COLORS] = 1
+        assert self.current_color_array[c] and sum(self.current_color_array) == 1
+        self.current_color_array[c] = 0
+        self.current_color_array[(c+1) % NUM_COLORS] = 1
         if move.is_pass():
             return
 
@@ -220,17 +220,17 @@ class GameState:
         move_mask = coordinates_to_mask(move_coordinates)
         impermissible_mask = move_mask | get_orthogonal_neighbors(move_mask)
 
-        assert np.all(self._permissible_matrix[c] & move_mask == move_mask)
-        assert np.any(self._required_matrix[c] & move_mask)
+        assert np.all(self.permissible_matrix[c] & move_mask == move_mask)
+        assert np.any(self.required_matrix[c] & move_mask)
 
-        self._occupancy_matrix[c] |= move_mask
-        self._occupancy_matrix[NUM_COLORS] ^= move_mask
-        self._available_pieces[c][piece_orientation.piece_index] = 0
-        self._permissible_matrix[:] &= ~move_mask
-        self._permissible_matrix[c] &= ~impermissible_mask
-        self._required_matrix[c] &= ~impermissible_mask
-        self._required_matrix[c] |= self._permissible_matrix[c] & get_diagonal_neighbors(move_mask)
-        self._required_matrix[:] &= ~move_mask
+        self.occupancy_matrix[c] |= move_mask
+        self.occupancy_matrix[NUM_COLORS] ^= move_mask
+        self.available_pieces[c][piece_orientation.piece_index] = 0
+        self.permissible_matrix[:] &= ~move_mask
+        self.permissible_matrix[c] &= ~impermissible_mask
+        self.required_matrix[c] &= ~impermissible_mask
+        self.required_matrix[c] |= self.permissible_matrix[c] & get_diagonal_neighbors(move_mask)
+        self.required_matrix[:] &= ~move_mask
 
         if DEBUG_MODE:
             self._validate()
@@ -238,7 +238,7 @@ class GameState:
     def announce_results(self):
         scores = []
         for c, color in enumerate(COLORS):
-            available_piece_mask = self._available_pieces[c]
+            available_piece_mask = self.available_pieces[c]
             score = sum([ALL_PIECES[i].size for i in np.where(available_piece_mask)[0]])
             scores.append(score)
 
