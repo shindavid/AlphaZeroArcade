@@ -54,7 +54,7 @@ def get_legal_moves(state: GameState, c: ColorIndex, piece: Piece) -> MoveMask:
     return mask
 
 
-class RandomPlayer(Player):
+class BasicPlayer0(Player):
     """
     Chooses uniformly at random among all legal moves.
     """
@@ -76,7 +76,7 @@ class RandomPlayer(Player):
 
 class BasicPlayer1(Player):
     """
-    Like RandomPlayer, but only considers moves that use the largest pieces.
+    Like BasicPlayer0, but only considers moves that use the largest pieces.
     """
     def get_move(self, state: GameState) -> Move:
         c = self.color_index
