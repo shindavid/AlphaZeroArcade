@@ -132,11 +132,12 @@ def within_reach(state: GameState, c: ColorIndex, loc: BoardLocation) -> bool:
 
 class BasicPlayer2(Player):
     """
-    For each unoccupied square, s, on the board, let f(s) be the number of opponents that can occupy that square with
-    their next move.
+    For each unoccupied square, s, and for each color, c, let A[s,c] equal 1 if c can occupy s with its next move, and
+    0 else.
 
-    The score of a given board state is defined as the sum of (1+f(s)) over all required squares s. Chooses randomly
-    among all maximal-size moves that result in maximal score.
+    Scores a given board state for color c by summing 4*A[s,c] - sum_{c' != c} A[s,c'] over all unoccupied squares s.
+
+    Among all maximal-size moves, chooses one that results in maximal score.
     """
     def get_move(self, state: GameState) -> Move:
         c = self.color_index
@@ -174,8 +175,9 @@ class BasicPlayer2(Player):
 
         opponent_c = [c2 for c2 in range(NUM_COLORS) if c != c2]
         score = 0
-        for loc in zip(*np.where(state.required_matrix[c])):
-            score += 1 + sum([within_reach(state, c2, loc) for c2 in opponent_c])
+        for loc in zip(*np.where(state.permissible_matrix[c])):
+            score += 4 * within_reach(state, c, loc)
+            score -= sum([within_reach(state, c2, loc) for c2 in opponent_c])
         return score
 
 
