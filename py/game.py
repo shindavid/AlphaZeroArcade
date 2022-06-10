@@ -153,6 +153,13 @@ class GameState:
         if DEBUG_MODE:
             self._validate()
 
+    def copy_from(self, state: 'GameState'):
+        self.occupancy_matrix = np.copy(state.occupancy_matrix)
+        self.available_pieces = np.copy(state.available_pieces)
+        self.permissible_matrix = np.copy(state.permissible_matrix)
+        self.required_matrix = np.copy(state.required_matrix)
+        self.current_color_array = np.copy(state.current_color_array)
+
     def get_current_color_index(self) -> ColorIndex:
         return np.where(self.current_color_array)[0][0]
 
