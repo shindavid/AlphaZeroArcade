@@ -240,18 +240,32 @@ class GameState:
 
 class TuiGameManager:
     def __init__(self, players: List, pretty_print: bool = True):
+        n = len(players)
+        assert n in (2, 4)
+        self.num_players = n
         self.players = list(players)
         np.random.shuffle(self.players)  # randomize starting order
-        for c, player in enumerate(self.players):
-            player.receive_color_assignment(c)
+        self.color_to_player = self.players
+        if n == 4:
+            for c, player in enumerate(self.players):
+                player.receive_color_assignment(c)
+        elif n == 2:
+            self.color_to_player = self.players + self.players
+            for c, player in enumerate(self.players):
+                player.receive_color_assignment(c, c+2)
 
         self.pretty_print = pretty_print
-        assert len(players) == NUM_COLORS
 
     def run(self, silent: bool = False):
         if not silent:
-            for color, player in zip(COLORS, self.players):
-                print(f'{color} {player}')
+            if self.num_players == 4:
+                for color, player in zip(COLORS, self.players):
+                    print(f'{color} {player}')
+            else:
+                for c, player in enumerate(self.players):
+                    color1 = COLORS[c]
+                    color2 = COLORS[c+2]
+                    print(f'{color1}{color2} {player}')
 
         state = GameState()
         all_passed = False
@@ -261,7 +275,7 @@ class TuiGameManager:
                 print(state.to_ascii_drawing(self.pretty_print))
                 print('')
             all_passed = True
-            for c, player in enumerate(self.players):
+            for c, player in enumerate(self.color_to_player):
                 color = COLORS[c]
                 move = player.get_move(state)
                 all_passed &= move.is_pass()
@@ -269,13 +283,17 @@ class TuiGameManager:
                     print(f'{color}: {move}')
                 state.apply_move(c, move)
 
-        scores = state.get_scores()
-        winning_score = min(scores)
+        color_scores = state.get_scores()
+        player_scores = [sum([color_scores[c] for c in player.color_indices]) for player in self.players]
+        winning_score = min(player_scores)
+        winning_players = [p for p, s in zip(self.players, player_scores) if s == winning_score]
+        winning_colors = [COLORS[c] for p in winning_players for c in p.color_indices]
 
         if not silent:
             print('')
-            for color, player, score in zip(COLORS, self.players, scores):
-                winner_str = ' (WINNER)' if score == winning_score else ''
+            for color, player, score in zip(COLORS, self.color_to_player, color_scores):
+                won = color in winning_colors
+                winner_str = ' (WINNER)' if won else ''
                 print(f'{color} {player}: {score}{winner_str}')
 
-        return [p for p, s in zip(self.players, scores) if s == winning_score]
+        return winning_players

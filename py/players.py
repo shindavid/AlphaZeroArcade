@@ -13,10 +13,10 @@ from pieces import ALL_PIECES, Piece
 
 class Player:
     def __init__(self):
-        self.color_index = None
+        self.color_indices = []
 
-    def receive_color_assignment(self, c: ColorIndex):
-        self.color_index = c
+    def receive_color_assignment(self, *c: ColorIndex):
+        self.color_indices = list(c)
 
     def __str__(self):
         return f'{type(self).__name__}'
@@ -52,7 +52,7 @@ class BasicPlayer0(Player):
     Chooses uniformly at random among all legal moves.
     """
     def get_move(self, state: GameState) -> Move:
-        c = self.color_index
+        c = state.get_current_color_index()
         mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
 
         for piece_index in np.where(state.available_pieces[c])[0]:
@@ -72,7 +72,7 @@ class BasicPlayer1(Player):
     Like BasicPlayer0, but only considers moves that use the largest pieces.
     """
     def get_move(self, state: GameState) -> Move:
-        c = self.color_index
+        c = state.get_current_color_index()
 
         piece_map = collections.defaultdict(list)
         for piece_index in np.where(state.available_pieces[c])[0]:
@@ -133,7 +133,7 @@ class BasicPlayer2(Player):
     Among all maximal-size moves, chooses one that results in maximal score.
     """
     def get_move(self, state: GameState) -> Move:
-        c = self.color_index
+        c = state.get_current_color_index()
 
         state2 = GameState()
 
@@ -164,7 +164,7 @@ class BasicPlayer2(Player):
         return Move.get_pass()
 
     def compute_score(self, state: GameState) -> int:
-        c = self.color_index
+        c = state.get_current_color_index()
 
         opponent_c = [c2 for c2 in range(NUM_COLORS) if c != c2]
         score = 0
@@ -180,11 +180,12 @@ def main():
         print(f'Using random seed {seed}')
         np.random.seed(seed)
 
-    players = [BasicPlayer2(), BasicPlayer1(), BasicPlayer1(), BasicPlayer1()]
+    # players = [BasicPlayer0(), BasicPlayer0(), BasicPlayer0(), BasicPlayer1()]
+    players = [BasicPlayer0(), BasicPlayer1()]
     manager = TuiGameManager(players)
     manager.run()
 
-    num_games = 8
+    num_games = 32
     score_counts = collections.defaultdict(float)
     game_counts = collections.defaultdict(int)
 
