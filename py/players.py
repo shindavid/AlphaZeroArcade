@@ -12,21 +12,14 @@ from pieces import ALL_PIECES, Piece
 
 
 class Player:
-    def __init__(self, identifier):
-        self.identifier = identifier
+    def __init__(self):
         self.color_index = None
 
     def receive_color_assignment(self, c: ColorIndex):
         self.color_index = c
 
-    def __eq__(self, other):
-        return type(self)==type(other) and self.identifier == other.identifier
-
-    def __hash__(self):
-        return hash(self.identifier)
-
     def __str__(self):
-        return f'{type(self).__name__}({self.identifier})'
+        return f'{type(self).__name__}'
 
     @abstractmethod
     def get_move(self, state: GameState) -> Move:
@@ -187,13 +180,13 @@ def main():
         print(f'Using random seed {seed}')
         np.random.seed(seed)
 
-    player_classes = [BasicPlayer2, BasicPlayer1, BasicPlayer1, BasicPlayer1]
-    players = [cls(i) for cls, i in zip(player_classes, range(NUM_COLORS))]
+    players = [BasicPlayer2(), BasicPlayer1(), BasicPlayer1(), BasicPlayer1()]
     manager = TuiGameManager(players)
     manager.run()
 
-    num_games = 32
+    num_games = 8
     score_counts = collections.defaultdict(float)
+    game_counts = collections.defaultdict(int)
 
     print('')
     print(f'Simulating {num_games} games...')
@@ -201,13 +194,17 @@ def main():
         manager = TuiGameManager(players)
         winners = manager.run(silent=True)
 
+        for p in players:
+            game_counts[str(p)] += 1
+
         for w in winners:
-            score_counts[w] += 1.0 / len(winners)
+            score_counts[str(w)] += 1.0 / len(winners)
 
     print(f'Win counts after {num_games} games:')
-    for player in players:
-        count = score_counts[player]
-        print(f'{player}: {count}')
+    for p in sorted(game_counts):
+        n = game_counts[p]
+        s = score_counts[p]
+        print(f'{p}: {s} of {n}')
 
 
 if __name__ == '__main__':

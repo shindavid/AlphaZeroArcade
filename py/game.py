@@ -249,6 +249,10 @@ class TuiGameManager:
         assert len(players) == NUM_COLORS
 
     def run(self, silent: bool = False):
+        if not silent:
+            for color, player in zip(COLORS, self.players):
+                print(f'{color} {player}')
+
         state = GameState()
         all_passed = False
         while not all_passed:
