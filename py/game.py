@@ -287,13 +287,14 @@ class TuiGameManager:
         player_scores = [sum([color_scores[c] for c in player.color_indices]) for player in self.players]
         winning_score = min(player_scores)
         winning_players = [p for p, s in zip(self.players, player_scores) if s == winning_score]
-        winning_colors = [COLORS[c] for p in winning_players for c in p.color_indices]
 
         if not silent:
             print('')
-            for color, player, score in zip(COLORS, self.color_to_player, color_scores):
-                won = color in winning_colors
+            for player, score in zip(self.players, player_scores):
+                won = score == winning_score
                 winner_str = ' (WINNER)' if won else ''
-                print(f'{color} {player}: {score}{winner_str}')
+                color_str = '+'.join([COLORS[c] for c in player.color_indices])
+                score_str = '+'.join([str(color_scores[c]) for c in player.color_indices])
+                print(f'{color_str} {player}: {score_str}{winner_str}')
 
         return winning_players
