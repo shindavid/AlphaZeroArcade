@@ -153,6 +153,10 @@ class GameState:
         if DEBUG_MODE:
             self._validate()
 
+    @property
+    def unoccupied_matrix(self) -> BoardMask:
+        return self.occupancy_matrix[NUM_COLORS]
+
     def copy_from(self, state: 'GameState'):
         self.occupancy_matrix = np.copy(state.occupancy_matrix)
         self.available_pieces = np.copy(state.available_pieces)

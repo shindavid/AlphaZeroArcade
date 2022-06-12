@@ -175,7 +175,7 @@ class BasicPlayer2(Player):
 
         opponent_c = [c2 for c2 in range(NUM_COLORS) if c != c2]
         score = 0
-        for loc in zip(*np.where(state.permissible_matrix[c])):
+        for loc in zip(*np.where(state.unoccupied_matrix)):
             score += 4 * within_reach(state, c, loc)
             score -= sum([within_reach(state, c2, loc) for c2 in opponent_c])
         return score
