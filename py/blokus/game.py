@@ -5,7 +5,7 @@ from typing import Tuple, Optional, List
 import numpy as np
 from termcolor import colored
 
-from pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS, PieceOrientation
+from pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS, Piece, PieceOrientation
 
 DEBUG_MODE = False
 BOARD_SIZE = 20
@@ -136,6 +136,7 @@ class GameState:
         self.permissible_matrix = np.ones((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
         self.required_matrix = np.zeros((NUM_COLORS, BOARD_SIZE, BOARD_SIZE), dtype=bool)
         self.current_color_array = np.zeros(NUM_COLORS, dtype=bool)
+        self.pass_history = np.zeros(NUM_COLORS, dtype=bool)  # 1 = passed on last move
 
         # 0 is the starting player
         self.current_color_array[0] = 1
@@ -166,6 +167,35 @@ class GameState:
 
     def get_current_color_index(self) -> ColorIndex:
         return np.where(self.current_color_array)[0][0]
+
+    def get_legal_moves(self, c: ColorIndex, piece: Piece) -> MoveMask:
+        mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
+        permissible_mask = self.permissible_matrix[c]
+        required_coordinates = mask_to_coordinates(self.required_matrix[c])
+        for orientation in piece.orientations:
+            for oi in range(piece.size):
+                o_xy = orientation.coordinates[oi].reshape((1, 2))
+                for zx, zy in required_coordinates:
+                    # test an orientation of the piece with (ox, oy) == (zx, zy)
+                    z_xy = np.array([zx, zy], dtype=int).reshape((1, 2))
+                    shift_xy = z_xy - o_xy
+                    move_coordinates = orientation.coordinates + shift_xy
+                    if np.min(move_coordinates) < 0 or np.max(move_coordinates) >= BOARD_SIZE:
+                        continue
+                    move_mask = coordinates_to_mask(move_coordinates)
+                    if is_subset_of(move_mask, permissible_mask):
+                        mask[to_move_index(orientation.index, tuple(shift_xy.reshape((-1,))))] = 1
+
+        return mask
+
+    def getValidMoves(self) -> MoveMask:
+        c = self.get_current_color_index()
+        mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
+
+        for piece_index in np.where(self.available_pieces[c])[0]:
+            piece = ALL_PIECES[piece_index]
+            mask |= self.get_legal_moves(c, piece)
+        return mask
 
     def _validate(self):
         assert np.sum(self.occupancy_matrix) == BOARD_SIZE * BOARD_SIZE
@@ -204,7 +234,9 @@ class GameState:
         assert self.current_color_array[c] and sum(self.current_color_array) == 1
         self.current_color_array[c] = 0
         self.current_color_array[(c+1) % NUM_COLORS] = 1
-        if move.is_pass():
+        is_pass = move.is_pass()
+        self.pass_history[c] = is_pass
+        if is_pass:
             return
 
         piece_orientation = move.piece_orientation
@@ -236,6 +268,9 @@ class GameState:
             scores.append(score)
 
         return scores
+
+    def getGameEnded(self) -> bool:
+        return np.all(self.pass_history)
 
 
 class TuiGameManager:

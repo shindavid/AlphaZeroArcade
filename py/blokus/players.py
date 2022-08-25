@@ -26,27 +26,6 @@ class Player:
         pass
 
 
-def get_legal_moves(state: GameState, c: ColorIndex, piece: Piece) -> MoveMask:
-    mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
-    permissible_mask = state.permissible_matrix[c]
-    required_coordinates = mask_to_coordinates(state.required_matrix[c])
-    for orientation in piece.orientations:
-        for oi in range(piece.size):
-            o_xy = orientation.coordinates[oi].reshape((1, 2))
-            for zx, zy in required_coordinates:
-                # test an orientation of the piece with (ox, oy) == (zx, zy)
-                z_xy = np.array([zx, zy], dtype=int).reshape((1, 2))
-                shift_xy = z_xy - o_xy
-                move_coordinates = orientation.coordinates + shift_xy
-                if np.min(move_coordinates) < 0 or np.max(move_coordinates) >= BOARD_SIZE:
-                    continue
-                move_mask = coordinates_to_mask(move_coordinates)
-                if is_subset_of(move_mask, permissible_mask):
-                    mask[to_move_index(orientation.index, tuple(shift_xy.reshape((-1,))))] = 1
-
-    return mask
-
-
 class BasicPlayer0(Player):
     """
     Chooses uniformly at random among all legal moves.
@@ -57,7 +36,7 @@ class BasicPlayer0(Player):
 
         for piece_index in np.where(state.available_pieces[c])[0]:
             piece = ALL_PIECES[piece_index]
-            mask |= get_legal_moves(state, c, piece)
+            mask |= state.get_legal_moves(c, piece)
 
         legal_moves = np.where(mask)[0]
         if not len(legal_moves):
@@ -82,7 +61,7 @@ class BasicPlayer1(Player):
         for size in reversed(sorted(piece_map)):
             mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
             for piece in piece_map[size]:
-                mask |= get_legal_moves(state, c, piece)
+                mask |= state.get_legal_moves(c, piece)
 
             legal_moves = np.where(mask)[0]
             if len(legal_moves):
@@ -146,7 +125,7 @@ class BasicPlayer2(Player):
             max_score = -1
             candidate_moves = []
             for piece in piece_map[size]:
-                mask = get_legal_moves(state, c, piece)
+                mask = state.get_legal_moves(c, piece)
 
                 for m in np.where(mask)[0]:
                     state2.copy_from(state)
