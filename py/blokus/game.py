@@ -273,6 +273,26 @@ class GameState:
         return np.all(self.pass_history)
 
 
+    def _get_fields(self):
+        return (self.occupancy_matrix,
+                self.available_pieces,
+                self.permissible_matrix,
+                self.required_matrix,
+                self.current_color_array,
+                self.pass_history)
+        
+    def __hash__(self) -> int:
+        return hash(tuple(a.data.tobytes() for a in self._get_fields()))
+
+    def __eq__(self, other) -> bool:
+        if type(self) != type(other):
+            return False
+        for a, b in zip(self._get_fields(), other._get_fields()):
+            if not np.all(a == b):
+                return False
+        return True
+
+
 class TuiGameManager:
     def __init__(self, players: List, pretty_print: bool = True):
         n = len(players)
