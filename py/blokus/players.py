@@ -1,14 +1,13 @@
 import collections
 import sys
-
 from abc import abstractmethod
 
 import numpy as np
 from tqdm import tqdm
 
-from game import ColorIndex, GameState, Move, MoveMask, NUM_COLORS, NUM_MOVES_BOUND, TuiGameManager, \
-    coordinates_to_mask, mask_to_coordinates, is_subset_of, BOARD_SIZE, to_move_index, BoardLocation
-from pieces import ALL_PIECES, Piece
+from game import ColorIndex, GameState, Move, NUM_COLORS, NUM_MOVES_BOUND, TuiGameManager, \
+    coordinates_to_mask, mask_to_coordinates, is_subset_of, BOARD_SIZE, BoardLocation
+from pieces import ALL_PIECES
 
 
 class Player:
@@ -36,7 +35,7 @@ class BasicPlayer0(Player):
 
         for piece_index in np.where(state.available_pieces[c])[0]:
             piece = ALL_PIECES[piece_index]
-            mask |= state.get_legal_moves(c, piece)
+            mask |= state.get_legal_moves(piece)
 
         legal_moves = np.where(mask)[0]
         if not len(legal_moves):
@@ -61,7 +60,7 @@ class BasicPlayer1(Player):
         for size in reversed(sorted(piece_map)):
             mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
             for piece in piece_map[size]:
-                mask |= state.get_legal_moves(c, piece)
+                mask |= state.get_legal_moves(piece)
 
             legal_moves = np.where(mask)[0]
             if len(legal_moves):
@@ -125,7 +124,7 @@ class BasicPlayer2(Player):
             max_score = -1
             candidate_moves = []
             for piece in piece_map[size]:
-                mask = state.get_legal_moves(c, piece)
+                mask = state.get_legal_moves(piece)
 
                 for m in np.where(mask)[0]:
                     state2.copy_from(state)

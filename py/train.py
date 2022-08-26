@@ -1,13 +1,11 @@
-import abc
-
-from tqdm import tqdm
-
 from blokus.game import GameState, Move
+
+import abc
+import collections
 import copy
 import numpy as np
-from typing import List, Optional, Any
-
-from py.blokus.players import get_legal_moves
+from tqdm import tqdm
+from typing import Any, Dict, List, Optional
 
 ActionIndex = int
 ActionMask = np.ndarray
@@ -55,7 +53,7 @@ class BlokusGameState(AbstractGameState):
         return BlokusGameState(self._num_players, state)
 
     def getValidActions(self, player_index: PlayerIndex) -> List[BlokusAction]:
-        action_mask = get_legal_moves(self._state, self._state.get_current_color_index())
+        action_mask = self._state.get_legal_moves(self._state.get_current_color_index())
         # return np.where(action_mask)[0]
 
     def getGameEnded(self, player_index: PlayerIndex) -> bool:

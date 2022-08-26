@@ -168,8 +168,16 @@ class GameState:
     def get_current_color_index(self) -> ColorIndex:
         return np.where(self.current_color_array)[0][0]
 
-    def get_legal_moves(self, c: ColorIndex, piece: Piece) -> MoveMask:
+    def get_legal_moves(self, piece: Optional[Piece]=None) -> MoveMask:
+        c = self.get_current_color_index()
         mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
+
+        if piece is None:
+            for piece_index in np.where(self.available_pieces[c])[0]:
+                piece = ALL_PIECES[piece_index]
+                mask |= self.get_legal_moves(piece)
+                return mask
+
         permissible_mask = self.permissible_matrix[c]
         required_coordinates = mask_to_coordinates(self.required_matrix[c])
         for orientation in piece.orientations:
@@ -189,13 +197,7 @@ class GameState:
         return mask
 
     def getValidMoves(self) -> MoveMask:
-        c = self.get_current_color_index()
-        mask = np.zeros(NUM_MOVES_BOUND, dtype=bool)
-
-        for piece_index in np.where(self.available_pieces[c])[0]:
-            piece = ALL_PIECES[piece_index]
-            mask |= self.get_legal_moves(c, piece)
-        return mask
+        return self.get_legal_moves()
 
     def _validate(self):
         assert np.sum(self.occupancy_matrix) == BOARD_SIZE * BOARD_SIZE
