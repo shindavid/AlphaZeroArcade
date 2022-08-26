@@ -129,7 +129,7 @@ class BasicPlayer2(Player):
                 for m in np.where(mask)[0]:
                     state2.copy_from(state)
                     move = Move.from_index(m)
-                    state2.apply_move(c, move)
+                    state2.apply_move(move)
                     score = self.compute_score(state2)
                     if score > max_score:
                         max_score = score

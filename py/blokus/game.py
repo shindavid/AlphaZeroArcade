@@ -232,7 +232,8 @@ class GameState:
         out_lines.append(''.join([' ', ' ', ' '] + [chr(ord('A')+x) + p for x in range(BOARD_SIZE)]))
         return '\n'.join(out_lines)
 
-    def apply_move(self, c: ColorIndex, move: Move):
+    def apply_move(self, move: Move):
+        c = self.get_current_color_index()
         assert self.current_color_array[c] and sum(self.current_color_array) == 1
         self.current_color_array[c] = 0
         self.current_color_array[(c+1) % NUM_COLORS] = 1
@@ -338,7 +339,7 @@ class TuiGameManager:
                 all_passed &= move.is_pass()
                 if not silent:
                     print(f'{color}: {move}')
-                state.apply_move(c, move)
+                state.apply_move(move)
 
         color_scores = state.get_scores()
         player_scores = [sum([color_scores[c] for c in player.color_indices]) for player in self.players]

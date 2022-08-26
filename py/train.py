@@ -1,4 +1,5 @@
 from blokus.game import GameState, Move
+from blokus.pieces import ALL_PIECES
 
 import abc
 import collections
@@ -24,15 +25,15 @@ class AbstractNeuralNetwork(metaclass=abc.ABCMeta):
 
 class AbstractGameState(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def getNextState(self, player_index: PlayerIndex, action: AbstractAction) -> 'AbstractGameState':
+    def getNextState(self, action_index: ActionIndex) -> 'AbstractGameState':
         pass
 
     @abc.abstractmethod
-    def getValidActions(self, player_index: PlayerIndex) -> List[AbstractAction]:
+    def getValidActions(self) -> ActionMask:
         pass
 
     @abc.abstractmethod
-    def getGameEnded(self, player_index: PlayerIndex) -> bool:
+    def getGameEnded(self) -> bool:
         pass
 
 
@@ -47,16 +48,15 @@ class BlokusGameState(AbstractGameState):
         self._num_players = num_players
         self._state = GameState() if state is None else state
 
-    def getNextState(self, player_index: PlayerIndex, action: BlokusAction) -> 'BlokusGameState':
+    def getNextState(self, action_index: ActionIndex) -> 'BlokusGameState':
         state = copy.deepcopy(self._state)
-        state.apply_move(state.get_current_color_index(), action.toMove())
+        state.apply_move(Move.from_index(action_index))
         return BlokusGameState(self._num_players, state)
 
-    def getValidActions(self, player_index: PlayerIndex) -> List[BlokusAction]:
-        action_mask = self._state.get_legal_moves(self._state.get_current_color_index())
-        # return np.where(action_mask)[0]
+    def getValidActions(self) -> ActionMask:
+        return self._state.get_legal_moves()
 
-    def getGameEnded(self, player_index: PlayerIndex) -> bool:
+    def getGameEnded(self) -> bool:
         return self._state.getGameEnded()
 
     def __hash__(self) -> int:
@@ -72,19 +72,18 @@ class BlokusNeuralNetwork(AbstractNeuralNetwork):
     pass
 
 
-class MCTSNode:
+class MCTSNodeStats:
     def __init__(self):
         self.count = 0
         self.value_sum = 0
         self.policy_prior = 0.0
 
-        
 
 class MCTS:
     def __init__(self, state: AbstractGameState,
                  network: AbstractNeuralNetwork,
                  args: Dict[str, Any]):
-        self.game_state_stats = collections.defaultdict(MCTSNode)
+        self.game_state_stats = collections.defaultdict(MCTSNodeStats)
         self.forward_adj_list = collections.defaultdict(list)
         self.parents = {}
 
@@ -92,10 +91,9 @@ class MCTS:
 
         valid_action_mask = state.getValidActions()
         for valid_action_index in np.where(valid_action_mask)[0]:
-            valid_action = state.
+            # TODO
             pass
-        
-        
+
 
 class Coach:
     def __init__(self, state: AbstractGameState, nnet: AbstractNeuralNetwork):
