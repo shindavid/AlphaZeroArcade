@@ -1,5 +1,4 @@
 import random
-import time
 from typing import Optional, List
 
 import numpy as np
@@ -15,50 +14,6 @@ COLORS = ['R', 'Y']
 NUM_COLORS = len(COLORS)
 CIRCLE_CHAR = chr(9679)
 PRETTY_COLORS = [colored(CIRCLE_CHAR, c) for c in ('red', 'yellow')]
-
-
-T1 = 0
-T2 = 0
-N = 0
-
-
-def compute_segment_masks():
-    """
-    Returns a list SEGMENT_MASKS with the property that...
-
-    SEGMENT_MASKS[col][row] returns a list of (c_tups, r_tups),
-    with the property that for every 4-segment {(c0, r0), (c1, r1), (c2, r2), (c3, r3)}
-    on the board, SEGMENT_MASKS[ci][ri] contains the 2-tuple
-    ((c0, c1, c2, c3), (r0, r1, r2, r3)).
-
-    This structure is useful for computing winner information.
-    """
-    output = []
-    for _ in range(NUM_COLUMNS):
-        output.append([[] for _ in range(NUM_ROWS)])
-
-    for c in range(NUM_COLUMNS):
-        for r in range(NUM_ROWS):
-            for (dc, dr) in ((0, 1), (1, 0), (1, 1), (1, -1)):
-                c2 = c + 3*dc
-                r2 = r + 3*dr
-                if not (0 <= c2 < NUM_COLUMNS):
-                    continue
-                if not (0 <= r2 < NUM_ROWS):
-                    continue
-
-                c_tup = tuple(c+k*dc for k in range(4))
-                r_tup = tuple(r+k*dr for k in range(4))
-
-                for k in range(4):
-                    cc = c + k * dc
-                    rr = r + k * dr
-                    output[cc][rr].append((c_tup, r_tup))
-
-    return output
-
-
-SEGMENT_MASKS = compute_segment_masks()
 
 
 class Game:
@@ -92,26 +47,15 @@ class Game:
         move_color = self.current_player
         self.current_player = 1 - self.current_player
 
-        global T1, T2, N
+        winner = self.compute_winner(column, cur_height, move_color)
 
-        t1 = time.time()
-        w1 = self.compute_winner1(column, cur_height, move_color)
-        t2 = time.time()
-        w2 = self.compute_winner2(column, cur_height, move_color)
-        t3 = time.time()
-
-        T1 += t2 - t1
-        T2 += t3 - t2
-        N += 1
-
-        assert w1 == w2, (w1, w2, self.to_ascii_drawing())
-        if announce and w2 is not None:
+        if announce and winner is not None:
             cur_color = 'R' if self.current_player == Game.RED else 'Y'
             print(f'** {cur_color} playing in column {column}')
             print(f'Winner! {cur_color}')
-        return w2
+        return winner
 
-    def compute_winner1(self, column, cur_height, move_color):
+    def compute_winner(self, column, cur_height, move_color):
         mask = self.piece_mask[move_color]
         dir_tuple_set = (
             ((-1, 0), (+1, 0)),  # horizontal
@@ -135,13 +79,6 @@ class Game:
                     break
                 if count == 4:
                     return move_color
-        return None
-
-    def compute_winner2(self, column, cur_height, move_color):
-        mask = self.piece_mask[move_color]
-        seg = SEGMENT_MASKS[column-1][cur_height]
-        if any(np.sum(mask[s]) == 4 for s in seg):
-            return move_color
         return None
 
     def to_ascii_drawing(self, pretty_print=True, newline=True) -> str:
@@ -177,5 +114,3 @@ if __name__ == '__main__':
                 break
 
     print('Played all games!')
-    print('t1: %.fns' % (T1*1e9/N))
-    print('t2: %.fns' % (T2*1e9/N))
