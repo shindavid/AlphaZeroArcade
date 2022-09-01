@@ -29,6 +29,11 @@ class Game:
         assert cur_heights.shape == (NUM_COLUMNS, )
         return [c+1 for c, h in enumerate(cur_heights) if h + 1 < NUM_ROWS]
 
+    def vectorize(self) -> np.ndarray:
+        full_mask = self.piece_mask[0] + 2 * self.piece_mask[1]
+        flattened_mask = full_mask.reshape((-1, ))
+        return flattened_mask
+
     def apply_move(self, column: int, announce: bool=False) -> Optional[Color]:
         """
         column is 1-indexed
