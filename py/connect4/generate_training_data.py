@@ -20,9 +20,10 @@ def get_args():
 def main():
     args = get_args()
 
-    c4_solver_bin = os.path.join(args.c4_solver_dir, 'c4solver')
-    c4_solver_book = os.path.join(args.c4_solver_dir, '7x6.book')
-    assert os.path.isdir(args.c4_solver_dir)
+    c4_solver_dir = os.path.expanduser(args.c4_solver_dir)
+    c4_solver_bin = os.path.join(c4_solver_dir, 'c4solver')
+    c4_solver_book = os.path.join(c4_solver_dir, '7x6.book')
+    assert os.path.isdir(c4_solver_dir)
     assert os.path.isfile(c4_solver_bin)
     assert os.path.isfile(c4_solver_book)
     c4_cmd = f"{c4_solver_bin} -b {c4_solver_book} -a"
