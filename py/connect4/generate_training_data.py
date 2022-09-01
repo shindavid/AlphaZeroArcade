@@ -31,6 +31,10 @@ def main():
     proc = subprocess.Popen(c4_cmd, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                             stderr=subprocess.PIPE, encoding='utf-8')
 
+    recorded_hashes = set()
+    record_count = 0
+    skip_count = 0
+
     with open(args.output_file, 'w') as output_file:
         for _ in tqdm(range(args.num_training_games), desc="Writing training games"):
             g = game.Game()
@@ -43,7 +47,15 @@ def main():
                 result = g.apply_move(move, announce=False)
                 if result is not None:
                     break
+
                 move_history += str(move)
+                gvec = g.vectorize()
+                gvec_hash = hash(move_history)
+                if gvec_hash in recorded_hashes:
+                    skip_count += 1
+                    continue
+                record_count += 1
+                recorded_hashes.add(gvec_hash)
 
                 proc.stdin.write(move_history + '\n')
                 proc.stdin.flush()
@@ -63,9 +75,12 @@ def main():
                 value_vec[g.current_player] = cur_player_value
                 value_vec[1 - g.current_player] = other_player_value
 
-                output_vec = np.concatenate((g.vectorize(), best_move_arr, value_vec))
-                output_file.write(' '.join(map(str, output_vec)))
+                output_vec = np.concatenate((gvec, best_move_arr, value_vec))
+                output_file.write(' '.join(map(lambda s: '%g' % s, output_vec)))
                 output_file.write('\n')
+
+    print('skip: ', skip_count)
+    print('record: ', record_count)
 
 
 if __name__ == '__main__':
