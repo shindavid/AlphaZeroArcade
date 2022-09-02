@@ -55,7 +55,8 @@ def main():
                 cur_player_value = np.sign(best_score) * .5 + .5
                 other_player_value = 1 - cur_player_value
 
-                gvec = g.vectorize()
+                gvec = g.vectorize().astype(np.float32)
+                best_move_arr = best_move_arr.astype(np.float32)
                 data = (gvec, cur_player_value, best_move_arr)
                 game_output.append(data)
 
