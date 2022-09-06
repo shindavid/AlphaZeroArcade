@@ -1,5 +1,5 @@
 import random
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
 import numpy as np
 from termcolor import colored
@@ -35,7 +35,7 @@ class Game:
     def get_mask(self, color: Color) -> np.ndarray:
         return self.piece_mask[color]
 
-    def apply_move(self, column: int, announce: bool=False) -> Optional[Color]:
+    def apply_move(self, column: int, announce: bool = False) -> Optional[Color]:
         """
         column is 1-indexed
 
@@ -112,10 +112,10 @@ if __name__ == '__main__':
         while True:
             moves = g.get_valid_moves()
             if not moves:
-                #print('Game is drawn!')
+                # print('Game is drawn!')
                 break
             result = g.apply_move(random.choice(moves), announce=False)
-            #print(g.to_ascii_drawing())
+            # print(g.to_ascii_drawing())
             if result is not None:
                 break
 
