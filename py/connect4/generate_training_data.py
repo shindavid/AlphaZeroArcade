@@ -23,7 +23,7 @@ def get_args():
     parser.add_argument("-c", '--c4-solver-dir', required=True,
                         help="base directory containing c4solver bin and 7x6.book")
     parser.add_argument("-n", "--num-training-games", type=int, help="number of training games")
-    parser.add_argument("-o", "--output-dir", default="c4_games")
+    parser.add_argument("-g", "--games-dir", default="c4_games")
     parser.add_argument("-s", "--num-previous-states", type=int, default=3,
                         help='how many previous board states to use')
 
@@ -34,9 +34,9 @@ def main():
     args = get_args()
 
     if not RANK:
-        if os.path.exists(args.output_dir):
-            os.system(f'rm -rf {args.output_dir}')
-        os.makedirs(args.output_dir, exist_ok=True)
+        if os.path.exists(args.games_dir):
+            os.system(f'rm -rf {args.games_dir}')
+        os.makedirs(args.games_dir, exist_ok=True)
 
     MPI.COMM_WORLD.barrier()
     launch(args)
@@ -64,7 +64,7 @@ def launch(args):
     proc = subprocess.Popen(c4_cmd, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                             stderr=subprocess.PIPE, encoding='utf-8')
 
-    output_filename = os.path.join(args.output_dir, f'{RANK}.h5')
+    output_filename = os.path.join(args.games_dir, f'{RANK}.h5')
     n = args.num_training_games
     start = RANK * n // SIZE
     end = (RANK+1) * n // SIZE
@@ -105,12 +105,14 @@ def launch(args):
 
                 shape1 = (1, NUM_COLUMNS, NUM_ROWS)
 
-                red_mask = g.get_mask(Game.RED)
-                yellow_mask = g.get_mask(Game.YELLOW)
-                cur_player_mask = np.zeros(shape1, dtype=bool) + g.get_current_player()
-
-                full_red_mask = np.concatenate((red_mask.reshape(shape1), full_red_mask[1:]))
-                full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), full_yellow_mask[1:]))
+                cur_player = g.get_current_player()
+                cur_player_mask = np.zeros(shape1, dtype=bool) + cur_player
+                if cur_player == Game.RED:
+                    yellow_mask = g.get_mask(Game.YELLOW)
+                    full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), full_yellow_mask[:-1]))
+                else:
+                    red_mask = g.get_mask(Game.RED)
+                    full_red_mask = np.concatenate((red_mask.reshape(shape1), full_red_mask[:-1]))
 
                 input_matrix = np.concatenate((full_red_mask, full_yellow_mask, cur_player_mask))
 
@@ -134,7 +136,7 @@ def launch(args):
         policy_output_dataset.resize(write_index, axis=0)
 
     if verbose:
-        generic_output_filename = os.path.join(args.output_dir, '*.h5')
+        generic_output_filename = os.path.join(args.games_dir, '*.h5')
         print('')
         print(f'Wrote to: {generic_output_filename}')
 
