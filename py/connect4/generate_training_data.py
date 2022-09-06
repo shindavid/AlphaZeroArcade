@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
 import argparse
+from typing import Tuple
+
+import h5py
+from mpi4py import MPI
 import numpy as np
 import os
-import pickle
 import random
 import subprocess
 from tqdm import tqdm
 
 import game
+from game import Game, NUM_ROWS, NUM_COLUMNS
+
+
+RANK = MPI.COMM_WORLD.Get_rank()
+SIZE = MPI.COMM_WORLD.Get_size()
+
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", '--c4-solver-dir', required=True,
                         help="base directory containing c4solver bin and 7x6.book")
     parser.add_argument("-n", "--num-training-games", type=int, help="number of training games")
-    parser.add_argument("-o", "--output-file", default="output.pkl")
+    parser.add_argument("-o", "--output-dir", default="c4_games")
+    parser.add_argument("-s", "--num-previous-states", type=int, default=3,
+                        help='how many previous board states to use')
 
     return parser.parse_args()
 
@@ -22,6 +33,27 @@ def get_args():
 def main():
     args = get_args()
 
+    if not RANK:
+        if os.path.exists(args.output_dir):
+            os.system(f'rm -rf {args.output_dir}')
+        os.makedirs(args.output_dir, exist_ok=True)
+
+    MPI.COMM_WORLD.barrier()
+    launch(args)
+
+
+Shape = Tuple[int, ...]
+
+
+def chunkify(shape: Shape, size=1024) -> Shape:
+    values = list(shape)
+    values[0] = min(values[0], size)
+    return tuple(values)
+
+
+def launch(args):
+    verbose = not RANK
+    num_previous_states = args.num_previous_states
     c4_solver_dir = os.path.expanduser(args.c4_solver_dir)
     c4_solver_bin = os.path.join(c4_solver_dir, 'c4solver')
     c4_solver_book = os.path.join(c4_solver_dir, '7x6.book')
@@ -32,42 +64,60 @@ def main():
     proc = subprocess.Popen(c4_cmd, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                             stderr=subprocess.PIPE, encoding='utf-8')
 
-    record_count = 0
+    output_filename = os.path.join(args.output_dir, f'{RANK}.h5')
+    n = args.num_training_games
+    start = RANK * n // SIZE
+    end = (RANK+1) * n // SIZE
+    num_my_games = end - start
+    max_rows = num_my_games * NUM_ROWS * NUM_COLUMNS
 
-    with open(args.output_file, 'wb') as output_file:
-        full_output = []
+    with h5py.File(output_filename, 'w') as output_file:
+        input_shape = (max_rows, num_previous_states*2+3, NUM_COLUMNS, NUM_ROWS)
+        value_output_shape = (max_rows, 1)
+        policy_output_shape = (max_rows, NUM_COLUMNS)
 
-        for _ in tqdm(range(args.num_training_games), desc="Writing training games"):
+        write_index = 0
+        input_dataset = output_file.create_dataset('input', shape=input_shape, dtype=np.float32,
+                                                   chunks=chunkify(input_shape))
+        value_output_dataset = output_file.create_dataset('value_output', shape=value_output_shape, dtype=np.float32,
+                                                          chunks=chunkify(value_output_shape))
+        policy_output_dataset = output_file.create_dataset('policy_output', shape=policy_output_shape,
+                                                           dtype=np.float32, chunks=chunkify(policy_output_shape))
+
+        tqdm_range = tqdm(range(num_my_games), desc="Writing training games") if verbose else range(num_my_games)
+        for _ in tqdm_range:
             g = game.Game()
-            game_output = []
+
+            full_red_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
+            full_yellow_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
+
             move_history = ''
             while True:
-                record_count += 1
-
                 proc.stdin.write(move_history + '\n')
                 proc.stdin.flush()
                 stdout = proc.stdout.readline()
 
-                move_scores = list(map(int, stdout.split()[-7:]))
+                move_scores = list(map(int, stdout.split()[-NUM_COLUMNS:]))
 
                 best_score = max(move_scores)
-                best_move_arr = (np.array(move_scores) == best_score).astype(int)
-                cur_player_value = np.sign(best_score) * .5 + .5
-                other_player_value = 1 - cur_player_value
+                best_move_arr = (np.array(move_scores) == best_score)
+                cur_player_value = np.sign(best_score)
 
-                gvec = g.vectorize().astype(np.float32)
-                best_move_arr = best_move_arr.astype(np.float32)
-                data = (gvec, cur_player_value, best_move_arr)
-                game_output.append(data)
+                shape1 = (1, NUM_COLUMNS, NUM_ROWS)
 
-                #
-                # value_vec = np.array([0.0, 0.0])
-                # value_vec[g.current_player] = cur_player_value
-                # value_vec[1 - g.current_player] = other_player_value
-                #
-                # output_vec = np.concatenate((gvec, best_move_arr, value_vec))
-                # output_file.write(' '.join(map(lambda s: '%g' % s, output_vec)))
-                # output_file.write('\n')
+                red_mask = g.get_mask(Game.RED)
+                yellow_mask = g.get_mask(Game.YELLOW)
+                cur_player_mask = np.zeros(shape1, dtype=bool) + g.get_current_player()
+
+                full_red_mask = np.concatenate((red_mask.reshape(shape1), full_red_mask[1:]))
+                full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), full_yellow_mask[1:]))
+
+                input_matrix = np.concatenate((full_red_mask, full_yellow_mask, cur_player_mask))
+
+                input_dataset[write_index] = input_matrix
+                value_output_dataset[write_index] = cur_player_value
+                policy_output_dataset[write_index] = best_move_arr
+                write_index += 1
 
                 moves = g.get_valid_moves()
                 if not moves:
@@ -79,10 +129,14 @@ def main():
 
                 move_history += str(move)
 
-            full_output.append(game_output)
-        pickle.dump(full_output, output_file)
+        input_dataset.resize(write_index, axis=0)
+        value_output_dataset.resize(write_index, axis=0)
+        policy_output_dataset.resize(write_index, axis=0)
 
-    print('record: ', record_count)
+    if verbose:
+        generic_output_filename = os.path.join(args.output_dir, '*.h5')
+        print('')
+        print(f'Wrote to: {generic_output_filename}')
 
 
 if __name__ == '__main__':

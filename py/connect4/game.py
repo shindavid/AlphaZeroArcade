@@ -29,13 +29,11 @@ class Game:
         assert cur_heights.shape == (NUM_COLUMNS, )
         return [c+1 for c, h in enumerate(cur_heights) if h + 1 < NUM_ROWS]
 
-    def vectorize(self) -> Tuple[np.ndarray, np.ndarray]:
-        c = self.current_player
-        fmask = self.piece_mask.astype(np.float)
-        return np.stack((fmask[c], fmask[1-c]))
-        # full_mask = self.piece_mask[0] + 2 * self.piece_mask[1]
-        # flattened_mask = full_mask.reshape((-1, ))
-        # return flattened_mask
+    def get_current_player(self) -> Color:
+        return self.current_player
+
+    def get_mask(self, color: Color) -> np.ndarray:
+        return self.piece_mask[color]
 
     def apply_move(self, column: int, announce: bool=False) -> Optional[Color]:
         """
