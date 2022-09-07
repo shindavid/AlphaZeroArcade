@@ -126,7 +126,7 @@ class ValueHead(nn.Module):
 
 
 class Net(nn.Module):
-    def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=9):
+    def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
         super(Net, self).__init__()
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
@@ -192,7 +192,7 @@ def main():
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader = DataLoader(test_data, batch_size=len(test_data), pin_memory=True)
 
-    num_epochs = 8
+    num_epochs = 16
     for epoch in range(num_epochs):
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
