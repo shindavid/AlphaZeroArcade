@@ -1,54 +1,142 @@
 #!/usr/bin/env python3
 import argparse
+import os
+import random
 from typing import Tuple
 
 import h5py
-import itertools
-
 import numpy as np
-from natsort import natsorted
-import os
-import pickle
-import random
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
+from natsort import natsorted
+from torch.utils.data import DataLoader
+
+from game import NUM_COLUMNS, NUM_ROWS
 
 
 Shape = Tuple[int, ...]
 
 
-class Net(nn.Module):
-    def __init__(self, input_shape: Shape, n_conv_filters=64):
-        super(Net, self).__init__()
-        self.conv = nn.Conv2d(input_shape[0], n_conv_filters, 2)  # 64 x 6 x 5
+class ConvBlock(nn.Module):
+    """
+    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+
+    The convolutional block applies the following modules:
+
+    1. A convolution of 256 filters of kernel size 3 × 3 with stride 1
+    2. Batch normalisation
+    3. A rectifier non-linearity
+
+    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+    """
+    def __init__(self, n_input_channels: int, n_conv_filters: int):
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Conv2d(n_input_channels, n_conv_filters, kernel_size=3, stride=1, padding=1)
         self.batch = nn.BatchNorm2d(n_conv_filters)
 
-        # TODO
+    def forward(self, x):
+        return F.relu(self.batch(self.conv(x)))
 
-        self.conv1 = nn.Conv2d(2, 4, 2)
-        self.conv2 = nn.Conv2d(4, 16, 2)
-        # an affine operation: y = Wx + b
-        self.fc1 = nn.Linear(16 * 3 * 2, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3a = nn.Linear(84, 7)
-        # self.fc3b = nn.Linear(84, 1)
+
+class ResBlock(nn.Module):
+    """
+    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+
+    Each residual block applies the following modules sequentially to its input:
+
+    1. A convolution of 256 filters of kernel size 3 × 3 with stride 1
+    2. Batch normalisation
+    3. A rectifier non-linearity
+    4. A convolution of 256 filters of kernel size 3 × 3 with stride 1
+    5. Batch normalisation
+    6. A skip connection that adds the input to the block
+    7. A rectifier non-linearity
+
+    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+    """
+    def __init__(self, n_conv_filters: int):
+        super(ResBlock, self).__init__()
+        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1)
+        self.batch1 = nn.BatchNorm2d(n_conv_filters)
+        self.conv2 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1)
+        self.batch2 = nn.BatchNorm2d(n_conv_filters)
 
     def forward(self, x):
-        # Max pooling over a (2, 2) window
-        x = F.max_pool2d(F.relu(self.conv1(x)), 2, 1)  # (4, 5, 4)
-        # If the size is a square, you can specify with a single number
-        x = F.max_pool2d(F.relu(self.conv2(x)), 2, 1)  # (16, 3, 2)
-        x = torch.flatten(x, 1) # flatten all dimensions except the batch dimension
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        ya = self.fc3a(x)
-        return ya
-        # yb = self.fc3b(x)
-        # return ya, yb
+        identity = x
+        x = F.relu(self.batch1(self.conv1(x)))
+        x = self.batch2(self.conv2(x))
+        x += identity  # skip connection
+        return F.relu(x)
+
+
+class PolicyHead(nn.Module):
+    """
+    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+
+    The policy head applies the following modules:
+
+    1. A convolution of 2 filters of kernel size 1 × 1 with stride 1
+    2. Batch normalisation
+    3. A rectifier non-linearity
+    4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
+    logit probabilities for all intersections and the pass move
+
+    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+    """
+    def __init__(self, n_input_channels: int):
+        super(PolicyHead, self).__init__()
+        self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1)
+        self.batch = nn.BatchNorm2d(2)
+        self.linear = nn.Linear(2 * NUM_COLUMNS * NUM_ROWS, NUM_COLUMNS)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.batch(x)
+        x = F.relu(x)
+        x = x.view(-1, 2 * NUM_COLUMNS * NUM_ROWS)
+        x = self.linear(x)
+        return x
+        # return self.linear(F.relu(self.batch(self.conv(x))).view(2 * NUM_COLUMNS * NUM_ROWS))
+
+
+class ValueHead(nn.Module):
+    """
+    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+
+    The value head applies the following modules:
+
+    1. A convolution of 1 filter of kernel size 1 × 1 with stride 1
+    2. Batch normalisation
+    3. A rectifier non-linearity
+    4. A fully connected linear layer to a hidden layer of size 256
+    5. A rectifier non-linearity
+    6. A fully connected linear layer to a scalar
+    7. A tanh non-linearity outputting a scalar in the range [−1, 1]
+
+    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+    """
+    def __init__(self):
+        super(ValueHead, self).__init__()
+        raise Exception('TODO')
+
+    def forward(self, x):
+        pass
+
+
+class Net(nn.Module):
+    def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=9):
+        super(Net, self).__init__()
+        self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
+        self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
+        self.policy_head = PolicyHead(n_conv_filters)
+
+    def forward(self, x):
+        x = self.conv_block(x)
+        for block in self.res_blocks:
+            x = block(x)
+        return self.policy_head(x)
 
 
 def get_args():
@@ -84,57 +172,34 @@ def main():
     full_policy_output_data = np.concatenate(full_policy_output_data)
     full_value_output_data = np.concatenate(full_value_output_data)
 
-    print('input', full_input_data.shape)
-    print('policy', full_policy_output_data.shape)
-    print('value', full_value_output_data.shape)
-    if True:
-        return
+    full_data = list(zip(full_input_data, full_value_output_data, full_policy_output_data))
 
+    net = Net(full_input_data[0].shape)
+    net.cuda()
 
-    net = Net()
-
-    #criterion = nn.CrossEntropyLoss()
-    criterion = nn.MSELoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
-    print('Loading data...')
-    with open('output.pkl', 'rb') as f:
-        full_data = pickle.load(f)
-    print('Data loaded!')
-
+    # criterion = nn.CrossEntropyLoss()
+    criterion = nn.MultiLabelSoftMarginLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9)
 
     train_pct = 0.9
 
-
     random.shuffle(full_data)
-    num_games = len(full_data)
-    num_train_games = int(num_games * train_pct)
-    train_data = list(itertools.chain(*full_data[:num_train_games]))
-    test_data = list(itertools.chain(*full_data[num_train_games:]))
+    train_n = int(len(full_data) * train_pct)
+    train_data = full_data[:train_n]
+    test_data = full_data[train_n:]
 
+    batch_size = 256
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader = DataLoader(test_data, batch_size=len(test_data), pin_memory=True)
 
-    class CustomDataset(Dataset):
-        def __init__(self, data):
-            self.data = data
-
-        def __len__(self):
-            return len(self.data)
-
-        def __getitem__(self, item):
-            return self.data[item]
-
-
-    batch_size = 64
-    train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(CustomDataset(test_data), batch_size=len(test_data))
-
-
-    num_epochs = 4
+    num_epochs = 8
     for epoch in range(num_epochs):
-        running_loss = 0.0
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
             inputs, value_label, policy_label = data
+            inputs = inputs.to('cuda', non_blocking=True)
+            value_label = value_label.to('cuda', non_blocking=True)
+            policy_label = policy_label.to('cuda', non_blocking=True)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -145,16 +210,11 @@ def main():
             loss.backward()
             optimizer.step()
 
-            # print statistics
-            running_loss += loss.item()
-
-            # N = 100
-            # if i % N == (N-1):
-            #     print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / N:.3f}')
-            #     running_loss = 0.0
-
         for data in test_loader:
             inputs, value_label, policy_label = data
+            inputs = inputs.to('cuda', non_blocking=True)
+            value_label = value_label.to('cuda', non_blocking=True)
+            policy_label = policy_label.to('cuda', non_blocking=True)
             outputs = net(inputs)
             loss = criterion(outputs, policy_label)
             avg_test_loss = loss.item()
@@ -167,47 +227,6 @@ def main():
             print(f'Epoch {epoch} ended! Avg test loss: {avg_test_loss:.3f} Accuracy: {100*accuracy:.3f}% move_range:[{min_move}, {max_move}]')
 
     print('Finished Training')
-
-
-
-    #
-    # torch.manual_seed(123)
-    #
-    # net = Net()
-    # print(net)
-    #
-    # params = list(net.parameters())
-    # print(len(params))
-    # print(params[0].size())  # conv1's .weight
-    #
-    # input = torch.randn(1, 1, 32, 32)
-    # out = net(input)
-    # print(out)
-    #
-    # net.zero_grad()
-    # out.backward(torch.randn(1, 10))
-    #
-    # output = net(input)
-    # target = torch.randn(10)  # a dummy target, for example
-    # target = target.view(1, -1)  # make it the same shape as output
-    # criterion = nn.MSELoss()
-    #
-    # loss = criterion(output, target)
-    # print(loss)
-    #
-    # net.zero_grad()     # zeroes the gradient buffers of all parameters
-    #
-    # print('conv1.bias.grad before backward')
-    # print(net.conv1.bias.grad)
-    #
-    # loss.backward()
-    #
-    # print('conv1.bias.grad after backward')
-    # print(net.conv1.bias.grad)
-    #
-    # learning_rate = 0.01
-    # for f in net.parameters():
-    #     f.data.sub_(f.grad.data * learning_rate)
 
 
 if __name__ == '__main__':
