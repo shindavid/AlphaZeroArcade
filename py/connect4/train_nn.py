@@ -96,7 +96,7 @@ def main():
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
     best_net = None
-    best_test_loss = np.inf
+    best_test_accuracy = 0
 
     for epoch in range(num_epochs):
         train_accuracy_num = 0.0
@@ -144,13 +144,13 @@ def main():
                 selected_moves = torch.argmax(outputs, axis=1)
                 correct = policy_label.gather(1, selected_moves.view(-1, 1))
                 test_accuracy = float(sum(correct)) / len(correct)
-                best = avg_test_loss < best_test_loss
+                best = test_accuracy > best_test_accuracy
                 print(f'Epoch {epoch} ended! Train loss/accuracy: {avg_train_loss:.3f}/{100*train_accuracy:.3f}% ' +
                       f'Test loss/accuracy: {avg_test_loss:.3f}/{100*test_accuracy:.3f}% {"*" if best else ""}')
 
                 if best:
                     best_net = copy.deepcopy(net)
-                    best_test_loss = avg_test_loss
+                    best_test_accuracy = test_accuracy
 
     print('Finished Training')
     output_dir = os.path.split(args.model_file)[0]
