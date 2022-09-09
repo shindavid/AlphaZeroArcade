@@ -87,7 +87,7 @@ class Game:
                     return move_color
         return None
 
-    def to_ascii_drawing(self, pretty_print=True, newline=True) -> str:
+    def to_ascii_drawing(self, pretty_print=True, newline=True, add_legend=False, player_names=('1', '2')) -> str:
         colors = PRETTY_COLORS if pretty_print else COLORS
         empty_color = ' ' if pretty_print else '.'
         char_matrix = [[empty_color for _ in range(NUM_COLUMNS)] for _ in range(NUM_ROWS)]
@@ -95,6 +95,10 @@ class Game:
             for x, y in zip(*np.where(self.piece_mask[c])):
                 char_matrix[y][x] = color
         out_lines = list(reversed([''.join(char_list) for char_list in char_matrix]))
+        if add_legend:
+            out_lines.append('1234567')
+            out_lines.append(f'{colors[0]}: {player_names[0]}')
+            out_lines.append(f'{colors[1]}: {player_names[1]}')
         if newline:
             out_lines.append('')
         return '\n'.join(out_lines)

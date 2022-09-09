@@ -12,15 +12,16 @@ import torch.optim as optim
 from torch import Tensor
 from torch.optim.lr_scheduler import LambdaLR
 from natsort import natsorted
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
-from neural_net import CustomDataset, Net
+from neural_net import Net
 
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--games-dir", default="c4_games", help='c4 games dir (default: %(default)s)')
-    parser.add_argument("-o", "--output", default="c4_model.pt", help='model output location (default: %(default)s)')
+    parser.add_argument("-m", "--model-file", default="c4_model.pt",
+                        help='model output location (default: %(default)s)')
     parser.add_argument("-w", "--weak-mode", action='store_true', help='Weak mode (default: strong)')
     parser.add_argument("-e", "--num-epochs", type=int, default=16, help='Num epochs (default: %(default)s)')
     parser.add_argument("-b", "--batch-size", type=int, default=64, help='Batch size (default: %(default)s)')
@@ -28,6 +29,17 @@ def get_args():
                         help='Num residual blocks (default: %(default)s)')
 
     return parser.parse_args()
+
+
+class CustomDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        return self.data[item]
 
 
 def main():
@@ -141,14 +153,14 @@ def main():
                     best_test_loss = avg_test_loss
 
     print('Finished Training')
-    output_dir = os.path.split(args.output)[0]
+    output_dir = os.path.split(args.model_file)[0]
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     torch.save({
         'model.constructor_args': best_net.constructor_args,
         'model.state_dict': best_net.state_dict(),
-    }, args.output)
-    print(f'Model saved to {args.output}')
+    }, args.model_file)
+    print(f'Model saved to {args.model_file}')
 
 
 if __name__ == '__main__':

@@ -3,22 +3,9 @@ from typing import Tuple
 from torch import nn as nn
 from torch.nn import functional as F
 
-from torch.utils.data import Dataset
-
 from game import NUM_COLUMNS, NUM_ROWS
 
 Shape = Tuple[int, ...]
-
-
-class CustomDataset(Dataset):
-    def __init__(self, data):
-        self.data = data
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, item):
-        return self.data[item]
 
 
 class ConvBlock(nn.Module):
@@ -130,6 +117,7 @@ class Net(nn.Module):
     def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
         super(Net, self).__init__()
         self.constructor_args = (input_shape, n_conv_filters, n_res_blocks)  # to aid in loading of saved model object
+        self.input_shape = input_shape
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(n_conv_filters)
