@@ -3,6 +3,7 @@ import argparse
 import copy
 import os
 import random
+import time
 
 import h5py
 import numpy as np
@@ -98,6 +99,7 @@ def main():
     best_net = None
     best_test_accuracy = 0
 
+    t1 = time.time()
     for epoch in range(num_epochs):
         train_accuracy_num = 0.0
         train_loss_num = 0.0
@@ -151,8 +153,11 @@ def main():
                 if best:
                     best_net = copy.deepcopy(net)
                     best_test_accuracy = test_accuracy
+    t2 = time.time()
+    sec_per_epoch = (t2 - t1) / num_epochs
+    ms_per_train_row = 1000 * sec_per_epoch / train_n
 
-    print('Finished Training')
+    print('Finished Training (%.3fms/train-row)' % ms_per_train_row)
     output_dir = os.path.split(args.model_file)[0]
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
