@@ -10,13 +10,26 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch import Tensor
+from torch.optim.lr_scheduler import LambdaLR, ExponentialLR
 from natsort import natsorted
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 from game import NUM_COLUMNS, NUM_ROWS
 
 
 Shape = Tuple[int, ...]
+
+
+class CustomDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        return self.data[item]
 
 
 class ConvBlock(nn.Module):
@@ -98,7 +111,6 @@ class PolicyHead(nn.Module):
         x = x.view(-1, 2 * NUM_COLUMNS * NUM_ROWS)
         x = self.linear(x)
         return x
-        # return self.linear(F.relu(self.batch(self.conv(x))).view(2 * NUM_COLUMNS * NUM_ROWS))
 
 
 class ValueHead(nn.Module):
@@ -166,20 +178,19 @@ def main():
             full_input_data.append(input_data)
             full_policy_output_data.append(policy_output_data)
             full_value_output_data.append(value_output_data)
-    print('Data loaded!')
 
     full_input_data = np.concatenate(full_input_data)
     full_policy_output_data = np.concatenate(full_policy_output_data)
     full_value_output_data = np.concatenate(full_value_output_data)
 
     full_data = list(zip(full_input_data, full_value_output_data, full_policy_output_data))
+    print(f'Data loaded! Num positions: {len(full_data)}')
 
     net = Net(full_input_data[0].shape)
     net.cuda()
 
     # criterion = nn.CrossEntropyLoss()
     criterion = nn.MultiLabelSoftMarginLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9)
 
     train_pct = 0.9
 
@@ -188,43 +199,50 @@ def main():
     train_data = full_data[:train_n]
     test_data = full_data[train_n:]
 
-    batch_size = 256
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_loader = DataLoader(test_data, batch_size=len(test_data), pin_memory=True)
+    batch_size = 64
+    train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)  #, pin_memory=True)
+    test_loader = DataLoader(CustomDataset(test_data), batch_size=len(test_data))  # , pin_memory=True)
 
+    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
     num_epochs = 16
+    scheduler = LambdaLR(optimizer, lambda epoch: 0.1 if epoch*2<num_epochs else .01)
+    # scheduler = ExponentialLR(optimizer, gamma=0.9)
+
     for epoch in range(num_epochs):
         for i, data in enumerate(train_loader):
-            # get the inputs; data is a list of [inputs, labels]
             inputs, value_label, policy_label = data
-            inputs = inputs.to('cuda', non_blocking=True)
-            value_label = value_label.to('cuda', non_blocking=True)
-            policy_label = policy_label.to('cuda', non_blocking=True)
+            assert isinstance(inputs, Tensor)
+            inputs = inputs.to('cuda')  # , non_blocking=True)
 
-            # zero the parameter gradients
+            net.train()
             optimizer.zero_grad()
-
-            # forward + backward + optimize
             outputs = net(inputs)
+
+            # value_label = value_label.to('cuda', non_blocking=True)
+            policy_label = policy_label.to('cuda')  # , non_blocking=True)
             loss = criterion(outputs, policy_label)
             loss.backward()
             optimizer.step()
 
-        for data in test_loader:
-            inputs, value_label, policy_label = data
-            inputs = inputs.to('cuda', non_blocking=True)
-            value_label = value_label.to('cuda', non_blocking=True)
-            policy_label = policy_label.to('cuda', non_blocking=True)
-            outputs = net(inputs)
-            loss = criterion(outputs, policy_label)
-            avg_test_loss = loss.item()
-            predicted_best_moves = torch.argmax(outputs, axis=1)
+        scheduler.step()
 
-            correct = policy_label.gather(1, predicted_best_moves.view(-1, 1))
-            accuracy = float(sum(correct)) / len(correct)
-            min_move = min(predicted_best_moves)
-            max_move = max(predicted_best_moves)
-            print(f'Epoch {epoch} ended! Avg test loss: {avg_test_loss:.3f} Accuracy: {100*accuracy:.3f}% move_range:[{min_move}, {max_move}]')
+        with torch.set_grad_enabled(False):
+            for data in test_loader:
+                inputs, value_label, policy_label = data
+                inputs = inputs.to('cuda', non_blocking=True)
+
+                net.eval()
+                outputs = net(inputs)
+
+                # value_label = value_label.to('cuda', non_blocking=True)
+                policy_label = policy_label.to('cuda', non_blocking=True)
+                loss = criterion(outputs, policy_label)
+                avg_test_loss = loss.item()
+                predicted_best_moves = torch.argmax(outputs, axis=1)
+
+                correct = policy_label.gather(1, predicted_best_moves.view(-1, 1))
+                accuracy = float(sum(correct)) / len(correct)
+                print(f'Epoch {epoch} ended! Avg test loss: {avg_test_loss:.3f} Accuracy: {100*accuracy:.3f}%')
 
     print('Finished Training')
 
