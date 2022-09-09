@@ -79,10 +79,12 @@ def launch(args):
         write_index = 0
         input_dataset = output_file.create_dataset('input', shape=input_shape, dtype=np.float32,
                                                    chunks=chunkify(input_shape))
-        value_output_dataset = output_file.create_dataset('value_output', shape=value_output_shape, dtype=np.float32,
-                                                          chunks=chunkify(value_output_shape))
-        policy_output_dataset = output_file.create_dataset('policy_output', shape=policy_output_shape,
+        value_dataset = output_file.create_dataset('value', shape=value_output_shape, dtype=np.float32,
+                                                   chunks=chunkify(value_output_shape))
+        strong_policy_dataset = output_file.create_dataset('strong_policy', shape=policy_output_shape,
                                                            dtype=np.float32, chunks=chunkify(policy_output_shape))
+        weak_policy_dataset = output_file.create_dataset('weak_policy', shape=policy_output_shape,
+                                                         dtype=np.float32, chunks=chunkify(policy_output_shape))
 
         tqdm_range = tqdm(range(num_my_games), desc="Writing training games") if verbose else range(num_my_games)
         for _ in tqdm_range:
@@ -101,6 +103,7 @@ def launch(args):
 
                 best_score = max(move_scores)
                 best_move_arr = (np.array(move_scores) == best_score)
+                winning_move_arr = np.array(move_scores) > 0
                 cur_player_value = np.sign(best_score)
 
                 shape1 = (1, NUM_COLUMNS, NUM_ROWS)
@@ -117,8 +120,9 @@ def launch(args):
                 input_matrix = np.concatenate((full_red_mask, full_yellow_mask, cur_player_mask))
 
                 input_dataset[write_index] = input_matrix
-                value_output_dataset[write_index] = cur_player_value
-                policy_output_dataset[write_index] = best_move_arr
+                value_dataset[write_index] = cur_player_value
+                strong_policy_dataset[write_index] = best_move_arr
+                weak_policy_dataset[write_index] = winning_move_arr
                 write_index += 1
 
                 moves = g.get_valid_moves()
@@ -132,8 +136,9 @@ def launch(args):
                 move_history += str(move)
 
         input_dataset.resize(write_index, axis=0)
-        value_output_dataset.resize(write_index, axis=0)
-        policy_output_dataset.resize(write_index, axis=0)
+        value_dataset.resize(write_index, axis=0)
+        strong_policy_dataset.resize(write_index, axis=0)
+        weak_policy_dataset.resize(write_index, axis=0)
 
     if verbose:
         generic_output_filename = os.path.join(args.games_dir, '*.h5')

@@ -154,12 +154,15 @@ class Net(nn.Module):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--games-dir", default="c4_games")
+    parser.add_argument("-w", "--weak-mode", action='store_true', help='Weak mode (default: strong)')
 
     return parser.parse_args()
 
 
 def main():
     args = get_args()
+    if args.weak_mode:
+        raise Exception('TODO: figure out how to handle weak mode better. Exclude all data in losing positions?')
 
     games_dir = args.games_dir
     assert os.path.isdir(games_dir)
@@ -168,13 +171,14 @@ def main():
     full_policy_output_data = []
     full_value_output_data = []
 
+    policy_key = 'weak_policy' if args.weak_mode else 'strong_policy'
     print('Loading data...')
     for filename in natsorted(os.listdir(games_dir)):
         full_filename = os.path.join(games_dir, filename)
         with h5py.File(full_filename, 'r') as f:
             input_data = f['input'][()]
-            policy_output_data = f['policy_output'][()]
-            value_output_data = f['value_output'][()]
+            policy_output_data = f[policy_key][()]
+            value_output_data = f['value'][()]
             full_input_data.append(input_data)
             full_policy_output_data.append(policy_output_data)
             full_value_output_data.append(value_output_data)
@@ -200,7 +204,7 @@ def main():
     test_data = full_data[train_n:]
 
     batch_size = 64
-    train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)  #, pin_memory=True)
+    train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)  # , pin_memory=True)
     test_loader = DataLoader(CustomDataset(test_data), batch_size=len(test_data))  # , pin_memory=True)
 
     optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
@@ -209,8 +213,9 @@ def main():
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
     for epoch in range(num_epochs):
+        train_accuracy_num = 0.0
         train_loss_num = 0.0
-        train_loss_den = 0
+        train_den = 0
         for i, data in enumerate(train_loader):
             inputs, value_label, policy_label = data
             assert isinstance(inputs, Tensor)
@@ -223,13 +228,20 @@ def main():
             # value_label = value_label.to('cuda', non_blocking=True)
             policy_label = policy_label.to('cuda')  # , non_blocking=True)
             loss = criterion(outputs, policy_label)
-            train_loss_num += float(loss.item()) * len(inputs)
-            train_loss_den += len(inputs)
+            n = len(inputs)
+            train_loss_num += float(loss.item()) * n
+            train_den += n
+
+            selected_moves = torch.argmax(outputs, axis=1)
+            correct = policy_label.gather(1, selected_moves.view(-1, 1))
+            train_accuracy_num += float(sum(correct))
+
             loss.backward()
             optimizer.step()
 
         scheduler.step()
-        avg_train_loss = train_loss_num / train_loss_den
+        train_accuracy = train_accuracy_num / train_den
+        avg_train_loss = train_loss_num / train_den
 
         with torch.set_grad_enabled(False):
             for data in test_loader:
@@ -243,11 +255,11 @@ def main():
                 policy_label = policy_label.to('cuda', non_blocking=True)
                 loss = criterion(outputs, policy_label)
                 avg_test_loss = loss.item()
-                predicted_best_moves = torch.argmax(outputs, axis=1)
-
-                correct = policy_label.gather(1, predicted_best_moves.view(-1, 1))
-                accuracy = float(sum(correct)) / len(correct)
-                print(f'Epoch {epoch} ended! Avg train loss: {avg_train_loss:.3f} Avg test loss: {avg_test_loss:.3f} Accuracy: {100*accuracy:.3f}%')
+                selected_moves = torch.argmax(outputs, axis=1)
+                correct = policy_label.gather(1, selected_moves.view(-1, 1))
+                test_accuracy = float(sum(correct)) / len(correct)
+                print(f'Epoch {epoch} ended! Train loss/accuracy: {avg_train_loss:.3f}/{100*train_accuracy:.3f}% ' +
+                      f'Test loss/accuracy: {avg_test_loss:.3f}/{100*test_accuracy:.3f}%')
 
     print('Finished Training')
 
