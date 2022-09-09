@@ -27,7 +27,7 @@ class Game:
     def get_valid_moves(self) -> List[int]:
         cur_heights = np.sum(np.sum(self.piece_mask, axis=0), axis=1)
         assert cur_heights.shape == (NUM_COLUMNS, )
-        return [c+1 for c, h in enumerate(cur_heights) if h + 1 < NUM_ROWS]
+        return [c+1 for c, h in enumerate(cur_heights) if h < NUM_ROWS]
 
     def get_current_player(self) -> Color:
         return self.current_player
