@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import copy
 import os
 import random
 from typing import Tuple
@@ -140,6 +141,7 @@ class ValueHead(nn.Module):
 class Net(nn.Module):
     def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
         super(Net, self).__init__()
+        self.constructor_args = (input_shape, n_conv_filters, n_res_blocks)  # to aid in loading of saved model object
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(n_conv_filters)
@@ -153,8 +155,13 @@ class Net(nn.Module):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--games-dir", default="c4_games")
+    parser.add_argument("-g", "--games-dir", default="c4_games", help='c4 games dir (default: %(default)s)')
+    parser.add_argument("-o", "--output", default="c4_model.pt", help='model output location (default: %(default)s)')
     parser.add_argument("-w", "--weak-mode", action='store_true', help='Weak mode (default: strong)')
+    parser.add_argument("-e", "--num-epochs", type=int, default=16, help='Num epochs (default: %(default)s)')
+    parser.add_argument("-b", "--batch-size", type=int, default=64, help='Batch size (default: %(default)s)')
+    parser.add_argument("-r", "--num-residual-blocks", type=int, default=19,
+                        help='Num residual blocks (default: %(default)s)')
 
     return parser.parse_args()
 
@@ -190,7 +197,7 @@ def main():
     full_data = list(zip(full_input_data, full_value_output_data, full_policy_output_data))
     print(f'Data loaded! Num positions: {len(full_data)}')
 
-    net = Net(full_input_data[0].shape)
+    net = Net(full_input_data[0].shape, n_res_blocks=args.num_residual_blocks)
     net.cuda()
 
     # criterion = nn.CrossEntropyLoss()
@@ -203,14 +210,17 @@ def main():
     train_data = full_data[:train_n]
     test_data = full_data[train_n:]
 
-    batch_size = 64
+    batch_size = args.batch_size
     train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)  # , pin_memory=True)
     test_loader = DataLoader(CustomDataset(test_data), batch_size=len(test_data))  # , pin_memory=True)
 
     optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
-    num_epochs = 16
+    num_epochs = args.num_epochs
     scheduler = LambdaLR(optimizer, lambda epoch: 0.1 if epoch*2<num_epochs else .01)
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
+
+    best_net = None
+    best_test_loss = np.inf
 
     for epoch in range(num_epochs):
         train_accuracy_num = 0.0
@@ -258,10 +268,22 @@ def main():
                 selected_moves = torch.argmax(outputs, axis=1)
                 correct = policy_label.gather(1, selected_moves.view(-1, 1))
                 test_accuracy = float(sum(correct)) / len(correct)
+                best = avg_test_loss < best_test_loss
                 print(f'Epoch {epoch} ended! Train loss/accuracy: {avg_train_loss:.3f}/{100*train_accuracy:.3f}% ' +
-                      f'Test loss/accuracy: {avg_test_loss:.3f}/{100*test_accuracy:.3f}%')
+                      f'Test loss/accuracy: {avg_test_loss:.3f}/{100*test_accuracy:.3f}% {"*" if best else ""}')
+
+                if best:
+                    best_net = copy.deepcopy(net)
 
     print('Finished Training')
+    output_dir = os.path.split(args.output)[0]
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    torch.save({
+        'model.constructor_args': best_net.constructor_args,
+        'model.state_dict': best_net.state_dict(),
+    }, args.output)
+    print(f'Model saved to {args.output}')
 
 
 if __name__ == '__main__':
