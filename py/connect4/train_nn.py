@@ -65,10 +65,10 @@ class ResBlock(nn.Module):
 
     def forward(self, x):
         identity = x
-        x = F.relu(self.batch1(self.conv1(x)))
-        x = self.batch2(self.conv2(x))
-        x += identity  # skip connection
-        return F.relu(x)
+        out = F.relu(self.batch1(self.conv1(x)))
+        out = self.batch2(self.conv2(out))
+        out += identity  # skip connection
+        return F.relu(out)
 
 
 class PolicyHead(nn.Module):
