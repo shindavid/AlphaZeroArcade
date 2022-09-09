@@ -1,9 +1,10 @@
 from typing import Tuple
 
+import numpy as np
 from torch import nn as nn
 from torch.nn import functional as F
 
-from game import NUM_COLUMNS, NUM_ROWS
+from game import Game, NUM_COLUMNS, NUM_ROWS
 
 Shape = Tuple[int, ...]
 
@@ -127,3 +128,39 @@ class Net(nn.Module):
         for block in self.res_blocks:
             x = block(x)
         return self.policy_head(x)
+
+
+class InputBuilder:
+    def __init__(self, num_previous_states: int):
+        self.num_previous_states = num_previous_states
+
+        self.full_red_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
+        self.full_yellow_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
+
+    def get_shape(self):
+        return (self.num_previous_states*2+3, NUM_COLUMNS, NUM_ROWS)
+
+    def start_game(self):
+        """
+        Should be called once at start of game.
+        """
+        self.full_red_mask &= False
+        self.full_yellow_mask &= False
+
+    def get_input(self, g: Game) -> np.ndarray:
+        """
+        Should be called after each move made in the game.
+
+        Returns a 3-D numpy array.
+        """
+        shape1 = (1, NUM_COLUMNS, NUM_ROWS)
+        cur_player = g.get_current_player()
+        cur_player_mask = np.zeros(shape1, dtype=bool) + cur_player
+        if cur_player == Game.RED:
+            yellow_mask = g.get_mask(Game.YELLOW)
+            self.full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), self.full_yellow_mask[:-1]))
+        else:
+            red_mask = g.get_mask(Game.RED)
+            self.full_red_mask = np.concatenate((red_mask.reshape(shape1), self.full_red_mask[:-1]))
+
+        return np.concatenate((self.full_red_mask, self.full_yellow_mask, cur_player_mask))

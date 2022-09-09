@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 import game
 from game import Game, NUM_ROWS, NUM_COLUMNS
+from neural_net import InputBuilder
 
 
 RANK = MPI.COMM_WORLD.Get_rank()
@@ -72,7 +73,8 @@ def launch(args):
     max_rows = num_my_games * NUM_ROWS * NUM_COLUMNS
 
     with h5py.File(output_filename, 'w') as output_file:
-        input_shape = (max_rows, num_previous_states*2+3, NUM_COLUMNS, NUM_ROWS)
+        builder = InputBuilder(num_previous_states)
+        input_shape = tuple([max_rows] + list(builder.get_shape()))
         value_output_shape = (max_rows, 1)
         policy_output_shape = (max_rows, NUM_COLUMNS)
 
@@ -89,10 +91,7 @@ def launch(args):
         tqdm_range = tqdm(range(num_my_games), desc="Writing training games") if verbose else range(num_my_games)
         for _ in tqdm_range:
             g = game.Game()
-
-            full_red_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
-            full_yellow_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
-
+            builder.start_game()
             move_history = ''
             while True:
                 proc.stdin.write(move_history + '\n')
@@ -106,18 +105,7 @@ def launch(args):
                 winning_move_arr = np.array(move_scores) > 0
                 cur_player_value = np.sign(best_score)
 
-                shape1 = (1, NUM_COLUMNS, NUM_ROWS)
-
-                cur_player = g.get_current_player()
-                cur_player_mask = np.zeros(shape1, dtype=bool) + cur_player
-                if cur_player == Game.RED:
-                    yellow_mask = g.get_mask(Game.YELLOW)
-                    full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), full_yellow_mask[:-1]))
-                else:
-                    red_mask = g.get_mask(Game.RED)
-                    full_red_mask = np.concatenate((red_mask.reshape(shape1), full_red_mask[:-1]))
-
-                input_matrix = np.concatenate((full_red_mask, full_yellow_mask, cur_player_mask))
+                input_matrix = builder.get_input(g)
 
                 input_dataset[write_index] = input_matrix
                 value_dataset[write_index] = cur_player_value

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from game import Color, Game, NUM_COLUMNS, NUM_ROWS
-from neural_net import Net
+from neural_net import InputBuilder, Net
 
 
 def get_args():
@@ -48,11 +48,9 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
     player_names[my_color] = 'Human'
 
     num_previous_states = (net.input_shape[0] - 3) // 2
-    shape1 = (1, NUM_COLUMNS, NUM_ROWS)
     tensor_shape = tuple([1] + list(net.input_shape))
+    builder = InputBuilder(num_previous_states)
     g = Game()
-    full_red_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
-    full_yellow_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
 
     last_move = None
     while True:
@@ -84,14 +82,7 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
                 print('Congratulations! You win!')
                 break
         else:
-            cur_player_mask = np.zeros(shape1, dtype=bool) + cur_player
-            if cur_player == Game.RED:
-                yellow_mask = g.get_mask(Game.YELLOW)
-                full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), full_yellow_mask[:-1]))
-            else:
-                red_mask = g.get_mask(Game.RED)
-                full_red_mask = np.concatenate((red_mask.reshape(shape1), full_red_mask[:-1]))
-            input_matrix = np.concatenate((full_red_mask, full_yellow_mask, cur_player_mask))
+            input_matrix = builder.get_input(g)
             in_tensor = torch.reshape(torch.from_numpy(input_matrix), tensor_shape).float()
 
             out_tensor = net(in_tensor)
