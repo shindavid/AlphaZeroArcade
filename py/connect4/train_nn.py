@@ -209,6 +209,8 @@ def main():
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
     for epoch in range(num_epochs):
+        train_loss_num = 0.0
+        train_loss_den = 0
         for i, data in enumerate(train_loader):
             inputs, value_label, policy_label = data
             assert isinstance(inputs, Tensor)
@@ -221,10 +223,13 @@ def main():
             # value_label = value_label.to('cuda', non_blocking=True)
             policy_label = policy_label.to('cuda')  # , non_blocking=True)
             loss = criterion(outputs, policy_label)
+            train_loss_num += float(loss.item()) * len(inputs)
+            train_loss_den += len(inputs)
             loss.backward()
             optimizer.step()
 
         scheduler.step()
+        avg_train_loss = train_loss_num / train_loss_den
 
         with torch.set_grad_enabled(False):
             for data in test_loader:
@@ -242,7 +247,7 @@ def main():
 
                 correct = policy_label.gather(1, predicted_best_moves.view(-1, 1))
                 accuracy = float(sum(correct)) / len(correct)
-                print(f'Epoch {epoch} ended! Avg test loss: {avg_test_loss:.3f} Accuracy: {100*accuracy:.3f}%')
+                print(f'Epoch {epoch} ended! Avg train loss: {avg_train_loss:.3f} Avg test loss: {avg_test_loss:.3f} Accuracy: {100*accuracy:.3f}%')
 
     print('Finished Training')
 
