@@ -23,7 +23,7 @@ class ConvBlock(nn.Module):
     """
     def __init__(self, n_input_channels: int, n_conv_filters: int):
         super(ConvBlock, self).__init__()
-        self.conv = nn.Conv2d(n_input_channels, n_conv_filters, kernel_size=3, stride=1, padding=1)
+        self.conv = nn.Conv2d(n_input_channels, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
         self.batch = nn.BatchNorm2d(n_conv_filters)
 
     def forward(self, x):
@@ -48,9 +48,9 @@ class ResBlock(nn.Module):
     """
     def __init__(self, n_conv_filters: int):
         super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
         self.batch1 = nn.BatchNorm2d(n_conv_filters)
-        self.conv2 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
         self.batch2 = nn.BatchNorm2d(n_conv_filters)
 
     def forward(self, x):
@@ -77,7 +77,7 @@ class PolicyHead(nn.Module):
     """
     def __init__(self, n_input_channels: int):
         super(PolicyHead, self).__init__()
-        self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1)
+        self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
         self.batch = nn.BatchNorm2d(2)
         self.linear = nn.Linear(2 * NUM_COLUMNS * NUM_ROWS, NUM_COLUMNS)
 
