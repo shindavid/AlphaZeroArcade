@@ -138,6 +138,7 @@ def main():
 
                 if best:
                     best_net = copy.deepcopy(net)
+                    best_test_loss = avg_test_loss
 
     print('Finished Training')
     output_dir = os.path.split(args.output)[0]
