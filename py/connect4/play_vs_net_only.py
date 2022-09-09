@@ -14,6 +14,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model-file", default="c4_model.pt",
                         help='model output location (default: %(default)s)')
+    parser.add_argument("-v", "--verbose", action='store_true', help='verbose mode')
     parser.add_argument("-t", "--softmax-temperature", default=1.0, type=float,
                         help='softmax temperature. Must be positive. Higher=more random play (default: %(default)2f)')
 
@@ -26,6 +27,7 @@ def main():
     args = get_args()
     softmax_temperature = args.softmax_temperature
     model_file = args.model_file
+    verbose = args.verbose
 
     print(f'Loading model from {model_file}')
     model_data = torch.load(model_file)
@@ -35,10 +37,10 @@ def main():
     net.eval()
     print('Model successfully loaded!')
 
-    run_game(net, softmax_temperature)
+    run_game(net, softmax_temperature, verbose=verbose)
 
 
-def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = None):
+def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = None, verbose=False):
     if my_color is None:
         my_color = np.random.randint(0, 1)
     cpu_color = 1 - my_color
@@ -52,6 +54,7 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
     full_red_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
     full_yellow_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
 
+    last_move = None
     while True:
         cur_player = g.get_current_player()
         valid_moves = g.get_valid_moves()
@@ -63,7 +66,7 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
             while True:
                 if my_move is not None:
                     os.system('clear')
-                    print(g.to_ascii_drawing(add_legend=True, player_names=player_names))
+                    print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=last_move))
                     print(f'Invalid input!')
                 my_move = input('Enter move [1-7]: ')
                 try:
@@ -73,9 +76,10 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
                 except:
                     continue
 
+            last_move = my_move
             winner = g.apply_move(my_move)
             os.system('clear')
-            print(g.to_ascii_drawing(add_legend=True, player_names=player_names))
+            print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=last_move))
             if winner is not None:
                 print('Congratulations! You win!')
                 break
@@ -92,10 +96,8 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
 
             out_tensor = net(in_tensor)
             out_arr = out_tensor.numpy()[0]
-            assert out_arr.shape == (NUM_COLUMNS, ), out_arr.shape
-
-            out_arr /= softmax_temperature
-            move_probs = np.exp(out_arr) / sum(np.exp(out_arr))
+            heated_arr = out_arr / softmax_temperature
+            move_probs = np.exp(heated_arr) / sum(np.exp(heated_arr))
 
             mask = np.zeros_like(out_arr)
             mask[np.array(valid_moves, dtype=int) - 1] = 1
@@ -105,16 +107,23 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
             cpu_move = np.random.choice(NUM_COLUMNS, p=move_probs) + 1
             assert cpu_move in valid_moves
 
+            last_move = cpu_move
             winner = g.apply_move(cpu_move)
             os.system('clear')
-            print(g.to_ascii_drawing(add_legend=True, player_names=player_names))
+            print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=last_move))
+            if verbose:
+                print('%3s %8s %8s' % ('Col', 'Net', 'Prob'))
+                for i, x in enumerate(out_arr):
+                    print(f'{i+1:3d} {x:+8.3f} {move_probs[i]:8.3f}')
+                print('')
+
             if winner is not None:
                 print('Sorry! You lose!')
                 break
 
     continue_decision = input('Play again? [Y/n]: ')
     if continue_decision in ('', 'y', 'Y'):
-        return run_game(net, softmax_temperature, cpu_color)
+        return run_game(net, softmax_temperature, cpu_color, verbose=verbose)
     else:
         print('Thank you for playing! Good-bye!')
 
