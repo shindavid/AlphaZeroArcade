@@ -3,7 +3,7 @@ from typing import Tuple, Dict, Any, List, Optional
 
 import numpy as np
 
-from py.train import AbstractGameState, AbstractNeuralNetwork, ValueDistribution
+from train import AbstractGameState, AbstractNeuralNetwork, ValueDistribution
 
 
 class MCTSNodeStats:
