@@ -85,12 +85,13 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
             input_matrix = builder.get_input(g)
             in_tensor = torch.reshape(torch.from_numpy(input_matrix), tensor_shape).float()
 
-            out_tensor = net(in_tensor)
-            out_arr = out_tensor.numpy()[0]
-            heated_arr = out_arr / softmax_temperature
+            pol_tensor, val_tensor = net(in_tensor)
+            pol_arr = pol_tensor.numpy()[0]
+            heated_arr = pol_arr / softmax_temperature
             move_probs = np.exp(heated_arr) / sum(np.exp(heated_arr))
+            cpu_pos_eval = float(val_tensor)
 
-            mask = np.zeros_like(out_arr)
+            mask = np.zeros_like(pol_arr)
             mask[np.array(valid_moves, dtype=int) - 1] = 1
             move_probs *= mask
 
@@ -103,8 +104,11 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
             os.system('clear')
             print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=last_move))
             if verbose:
+                print('CPU pos eval: %.3f' % cpu_pos_eval)
+                print('')
+
                 print('%3s %8s %8s' % ('Col', 'Net', 'Prob'))
-                for i, x in enumerate(out_arr):
+                for i, x in enumerate(pol_arr):
                     print(f'{i+1:3d} {x:+8.3f} {move_probs[i]:8.3f}')
                 print('')
 

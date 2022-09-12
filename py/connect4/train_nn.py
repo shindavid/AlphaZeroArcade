@@ -43,11 +43,29 @@ class CustomDataset(Dataset):
         return self.data[item]
 
 
-def main():
-    args = get_args()
-    if args.weak_mode:
-        raise Exception('TODO: figure out how to handle weak mode better. Exclude all data in losing positions?')
+def get_num_correct_policy_predictions(policy_outputs, policy_labels):
+    selected_moves = torch.argmax(policy_outputs, axis=1)
+    correct_policy_preds = policy_labels.gather(1, selected_moves.view(-1, 1))
+    return int(sum(correct_policy_preds))
 
+
+def get_num_correct_value_predictions(value_outputs, value_labels):
+    predicted_draws = torch.abs(value_outputs) <= 0.5
+    predicted_wins = value_outputs < -0.5
+    predicted_losses = value_outputs > 0.5
+
+    labeled_draws = value_labels == 0
+    labeled_wins = value_labels == -1
+    labeled_losses = value_labels == +1
+
+    correct_value_preds = 0
+    correct_value_preds += int(sum(predicted_draws & labeled_draws))
+    correct_value_preds += int(sum(predicted_wins & labeled_wins))
+    correct_value_preds += int(sum(predicted_losses & labeled_losses))
+    return correct_value_preds
+
+
+def load_data(args):
     games_dir = args.games_dir
     assert os.path.isdir(games_dir)
 
@@ -73,23 +91,91 @@ def main():
 
     full_data = list(zip(full_input_data, full_value_output_data, full_policy_output_data))
     print(f'Data loaded! Num positions: {len(full_data)}')
+    return full_data, full_input_data[0].shape
 
-    net = Net(full_input_data[0].shape, n_res_blocks=args.num_residual_blocks)
+
+class C4DataLoader:
+    def __init__(self, args):
+        games_dir = args.games_dir
+        assert os.path.isdir(games_dir)
+
+        full_input_data = []
+        full_policy_output_data = []
+        full_value_output_data = []
+
+        policy_key = 'weak_policy' if args.weak_mode else 'strong_policy'
+        print('Loading data...')
+        for filename in natsorted(os.listdir(games_dir)):
+            full_filename = os.path.join(games_dir, filename)
+            with h5py.File(full_filename, 'r') as f:
+                input_data = f['input'][()]
+                policy_output_data = f[policy_key][()]
+                value_output_data = f['value'][()]
+                full_input_data.append(input_data)
+                full_policy_output_data.append(policy_output_data)
+                full_value_output_data.append(value_output_data)
+
+        full_input_data = np.concatenate(full_input_data)
+        full_policy_output_data = np.concatenate(full_policy_output_data)
+        full_value_output_data = np.concatenate(full_value_output_data)
+
+        full_data = list(zip(full_input_data, full_value_output_data, full_policy_output_data))
+        print(f'Data loaded! Num positions: {len(full_data)}')
+
+        train_pct = 0.9
+
+        random.shuffle(full_data)
+        train_n = int(len(full_data) * train_pct)
+        train_data = full_data[:train_n]
+        test_data = full_data[train_n:]
+
+        batch_size = args.batch_size
+        train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)  # , pin_memory=True)
+        test_loader = DataLoader(CustomDataset(test_data), batch_size=len(test_data))  # , pin_memory=True)
+
+        self.train_n = train_n
+        self.input_shape = full_input_data[0].shape
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+
+
+def center_text(text: str, n: int) -> str:
+    m = n - len(text)
+    assert m>=0
+    a = m // 2
+    b = m - a
+    return (' ' * a) + text + (' ' * b)
+
+
+def main():
+    args = get_args()
+    if args.weak_mode:
+        raise Exception('TODO: figure out how to handle weak mode better. Exclude all data in losing positions?')
+
+    c4_data_loader = C4DataLoader(args)
+
+    net = Net(c4_data_loader.input_shape, n_res_blocks=args.num_residual_blocks)
     net.cuda()
 
-    # criterion = nn.CrossEntropyLoss()
-    criterion = nn.MultiLabelSoftMarginLoss()
+    """
+    Normally for AlphaZero, cross-entropy-loss should be used for policy loss. For our current Connect4
+    experiment, there are multiple correct moves for a given situation, so we are using
+    MultiLabelSoftMarginLoss.
+    """
+    policy_criterion = nn.MultiLabelSoftMarginLoss()
+    value_criterion = nn.MSELoss()
 
-    train_pct = 0.9
+    """
+    This constant is used to mute the magnitude of the value loss, based on this excerpt from
+    "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
 
-    random.shuffle(full_data)
-    train_n = int(len(full_data) * train_pct)
-    train_data = full_data[:train_n]
-    test_data = full_data[train_n:]
+    By using a combined policy and value network architecture, and by using a low weight on the
+    value component, it was possible to avoid overfitting to the values (a problem described in
+    prior work).
 
-    batch_size = args.batch_size
-    train_loader = DataLoader(CustomDataset(train_data), batch_size=batch_size, shuffle=True)  # , pin_memory=True)
-    test_loader = DataLoader(CustomDataset(test_data), batch_size=len(test_data))  # , pin_memory=True)
+    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+    """
+    value_loss_lambda = 0.1
 
     optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
     num_epochs = args.num_epochs
@@ -97,65 +183,93 @@ def main():
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
     best_net = None
-    best_test_accuracy = 0
+    best_test_policy_accuracy = 0
+
+    print('%5s %s %s' % ('', center_text('Train', 23), center_text('Test', 23)))
+    print('%5s %s %s %s %s' % (
+        '', center_text('Value', 11), center_text('Policy', 11),
+        center_text('Value', 11), center_text('Policy', 11),
+    ))
+    print('%5s %5s %5s %5s %5s %5s %5s %5s %5s' % (
+        'Epoch', 'Loss', 'Acc', 'Loss', 'Acc', 'Loss', 'Acc', 'Loss', 'Acc',
+    ))
 
     t1 = time.time()
     for epoch in range(num_epochs):
-        train_accuracy_num = 0.0
-        train_loss_num = 0.0
+        train_policy_accuracy_num = 0.0
+        train_policy_loss_num = 0.0
+        train_value_accuracy_num = 0.0
+        train_value_loss_num = 0.0
         train_den = 0
-        for i, data in enumerate(train_loader):
-            inputs, value_label, policy_label = data
+
+        for i, data in enumerate(c4_data_loader.train_loader):
+            inputs, value_labels, policy_labels = data
             assert isinstance(inputs, Tensor)
-            inputs = inputs.to('cuda')  # , non_blocking=True)
+            inputs = inputs.to('cuda')
+            value_labels = value_labels.to('cuda')
+            policy_labels = policy_labels.to('cuda')
 
             net.train()
             optimizer.zero_grad()
-            outputs = net(inputs)
+            policy_outputs, value_outputs = net(inputs)
 
-            # value_label = value_label.to('cuda', non_blocking=True)
-            policy_label = policy_label.to('cuda')  # , non_blocking=True)
-            loss = criterion(outputs, policy_label)
+            policy_loss = policy_criterion(policy_outputs, policy_labels)
+            value_loss = value_criterion(value_outputs, value_labels)
+            loss = policy_loss + value_loss * value_loss_lambda
+
             n = len(inputs)
-            train_loss_num += float(loss.item()) * n
+            train_policy_loss_num += float(policy_loss.item()) * n
+            train_value_loss_num += float(value_loss.item()) * n
             train_den += n
-
-            selected_moves = torch.argmax(outputs, axis=1)
-            correct = policy_label.gather(1, selected_moves.view(-1, 1))
-            train_accuracy_num += float(sum(correct))
+            train_policy_accuracy_num += get_num_correct_policy_predictions(policy_outputs, policy_labels)
+            train_value_accuracy_num += get_num_correct_value_predictions(value_outputs, value_labels)
 
             loss.backward()
             optimizer.step()
 
         scheduler.step()
-        train_accuracy = train_accuracy_num / train_den
-        avg_train_loss = train_loss_num / train_den
+        train_policy_accuracy = train_policy_accuracy_num / train_den
+        avg_train_policy_loss = train_policy_loss_num / train_den
+        train_value_accuracy = train_value_accuracy_num / train_den
+        avg_train_value_loss = train_value_loss_num / train_den
 
         with torch.set_grad_enabled(False):
-            for data in test_loader:
-                inputs, value_label, policy_label = data
-                inputs = inputs.to('cuda', non_blocking=True)
+            for data in c4_data_loader.test_loader:
+                inputs, value_labels, policy_labels = data
+                inputs = inputs.to('cuda')
+                value_labels = value_labels.to('cuda')
+                policy_labels = policy_labels.to('cuda')
 
                 net.eval()
-                outputs = net(inputs)
+                policy_outputs, value_outputs = net(inputs)
 
-                # value_label = value_label.to('cuda', non_blocking=True)
-                policy_label = policy_label.to('cuda', non_blocking=True)
-                loss = criterion(outputs, policy_label)
-                avg_test_loss = loss.item()
-                selected_moves = torch.argmax(outputs, axis=1)
-                correct = policy_label.gather(1, selected_moves.view(-1, 1))
-                test_accuracy = float(sum(correct)) / len(correct)
-                best = test_accuracy > best_test_accuracy
-                print(f'Epoch {epoch} ended! Train loss/accuracy: {avg_train_loss:.3f}/{100*train_accuracy:.3f}% ' +
-                      f'Test loss/accuracy: {avg_test_loss:.3f}/{100*test_accuracy:.3f}% {"*" if best else ""}')
+                policy_loss = policy_criterion(policy_outputs, policy_labels)
+                value_loss = value_criterion(value_outputs, value_labels)
+
+                avg_test_policy_loss = policy_loss.item()
+                avg_test_value_loss = value_loss.item()
+
+                n = len(inputs)
+                test_policy_accuracy = get_num_correct_policy_predictions(policy_outputs, policy_labels) / n
+                test_value_accuracy = get_num_correct_value_predictions(value_outputs, value_labels) / n
+
+                best = test_policy_accuracy > best_test_policy_accuracy
+                print('%5d %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %5.3f %s' %
+                      (epoch,
+                       avg_train_value_loss, train_value_accuracy,
+                       avg_train_policy_loss, train_policy_accuracy,
+                       avg_test_value_loss, test_value_accuracy,
+                       avg_test_policy_loss, test_policy_accuracy,
+                       '*' if best else ''
+                       ))
 
                 if best:
                     best_net = copy.deepcopy(net)
-                    best_test_accuracy = test_accuracy
+                    best_test_policy_accuracy = test_policy_accuracy
+
     t2 = time.time()
     sec_per_epoch = (t2 - t1) / num_epochs
-    ms_per_train_row = 1000 * sec_per_epoch / train_n
+    ms_per_train_row = 1000 * sec_per_epoch / c4_data_loader.train_n
 
     print('Finished Training (%.3fms/train-row)' % ms_per_train_row)
     output_dir = os.path.split(args.model_file)[0]

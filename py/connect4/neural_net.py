@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import numpy as np
+import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
@@ -106,12 +107,19 @@ class ValueHead(nn.Module):
 
     https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
     """
-    def __init__(self):
+    def __init__(self, n_input_channels: int):
         super(ValueHead, self).__init__()
-        raise Exception('TODO')
+        self.conv = nn.Conv2d(n_input_channels, 1, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(1)
+        self.linear1 = nn.Linear(NUM_COLUMNS * NUM_ROWS, 256)
+        self.linear2 = nn.Linear(256, 1)
 
     def forward(self, x):
-        pass
+        x = F.relu(self.batch(self.conv(x)))
+        x = x.view(-1, NUM_COLUMNS * NUM_ROWS)
+        x = F.relu(self.linear1(x))
+        x = torch.tanh(self.linear2(x))
+        return x
 
 
 class Net(nn.Module):
@@ -122,12 +130,13 @@ class Net(nn.Module):
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(n_conv_filters)
+        self.value_head = ValueHead(n_conv_filters)
 
     def forward(self, x):
         x = self.conv_block(x)
         for block in self.res_blocks:
             x = block(x)
-        return self.policy_head(x)
+        return self.policy_head(x), self.value_head(x)
 
 
 class InputBuilder:
