@@ -44,25 +44,15 @@ class CustomDataset(Dataset):
 
 
 def get_num_correct_policy_predictions(policy_outputs, policy_labels):
-    selected_moves = torch.argmax(policy_outputs, axis=1)
+    selected_moves = torch.argmax(policy_outputs, dim=1)
     correct_policy_preds = policy_labels.gather(1, selected_moves.view(-1, 1))
     return int(sum(correct_policy_preds))
 
 
 def get_num_correct_value_predictions(value_outputs, value_labels):
-    predicted_draws = torch.abs(value_outputs) <= 0.5
-    predicted_wins = value_outputs < -0.5
-    predicted_losses = value_outputs > 0.5
-
-    labeled_draws = value_labels == 0
-    labeled_wins = value_labels == -1
-    labeled_losses = value_labels == +1
-
-    correct_value_preds = 0
-    correct_value_preds += int(sum(predicted_draws & labeled_draws))
-    correct_value_preds += int(sum(predicted_wins & labeled_wins))
-    correct_value_preds += int(sum(predicted_losses & labeled_losses))
-    return correct_value_preds
+    value_output_probs = value_outputs.softmax(dim=1)
+    deltas = abs(value_output_probs - value_labels)
+    return int(sum((deltas < 0.25).all(dim=1)))
 
 
 def load_data(args):
@@ -163,11 +153,24 @@ def main():
     MultiLabelSoftMarginLoss.
     """
     policy_criterion = nn.MultiLabelSoftMarginLoss()
-    value_criterion = nn.MSELoss()
+    value_criterion = nn.CrossEntropyLoss()
 
     """
-    This constant is used to mute the magnitude of the value loss, based on this excerpt from
-    "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+    Some constants:
+
+    * value_loss_lambda: used to specify how much weight to place on the value loss, as opposed to the policy loss.
+                         KataGo uses 1.5.
+
+    * weight_decay: for L2 regularization. KataGo uses 3e-5 for the L2 regularization constant, which should translate
+                    to 2*3e-5 = 6e-5 in weight_decay terms.
+
+    * learning_rate{1,2}: learning rate for the {first, second} half of training. KataGo used a more complex learning
+                          rate schedule that we won't try to replicate initially.
+
+    * momentum: KataGo used 0.9
+
+    Regarding value_loss_lambda, note that the AlphaGo Zero paper has the following, which suggests the constant
+    should be "small":
 
     By using a combined policy and value network architecture, and by using a low weight on the
     value component, it was possible to avoid overfitting to the values (a problem described in
@@ -176,10 +179,14 @@ def main():
     https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
     """
     value_loss_lambda = 0.1
+    weight_decay = 6e-5
+    learning_rate1 = 0.1
+    learning_rate2 = 0.01
+    momentum = 0.9
 
-    optimizer = optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-5)
+    optimizer = optim.SGD(net.parameters(), lr=learning_rate1, momentum=momentum, weight_decay=weight_decay)
     num_epochs = args.num_epochs
-    scheduler = LambdaLR(optimizer, lambda epoch: 0.1 if epoch*2<num_epochs else .01)
+    scheduler = LambdaLR(optimizer, lambda epoch: learning_rate1 if epoch*2<num_epochs else learning_rate2)
     # scheduler = ExponentialLR(optimizer, gamma=0.9)
 
     best_net = None

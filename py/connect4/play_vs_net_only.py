@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 import torch
 
-from game import Color, Game, NUM_COLUMNS, NUM_ROWS
+from game import Color, Game, NUM_COLUMNS, NUM_ROWS, PRETTY_COLORS
 from neural_net import InputBuilder, Net
 
 
@@ -89,7 +89,6 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
             pol_arr = pol_tensor.numpy()[0]
             heated_arr = pol_arr / softmax_temperature
             move_probs = np.exp(heated_arr) / sum(np.exp(heated_arr))
-            cpu_pos_eval = float(val_tensor)
 
             mask = np.zeros_like(pol_arr)
             mask[np.array(valid_moves, dtype=int) - 1] = 1
@@ -104,7 +103,10 @@ def run_game(net: Net, softmax_temperature: float, my_color: Optional[Color] = N
             os.system('clear')
             print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=last_move))
             if verbose:
-                print('CPU pos eval: %.3f' % cpu_pos_eval)
+                win_probs = val_tensor.softmax(dim=1).flatten()
+                print('CPU pos eval:')
+                for c in (Game.RED, Game.YELLOW):
+                    print('%s: %6.3f%%' % (PRETTY_COLORS[c], 100.0 * float(win_probs[c])))
                 print('')
 
                 print('%3s %8s %8s' % ('Col', 'Net', 'Prob'))

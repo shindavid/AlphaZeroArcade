@@ -72,10 +72,12 @@ def launch(args):
     num_my_games = end - start
     max_rows = num_my_games * NUM_ROWS * NUM_COLUMNS
 
+    NUM_PLAYERS = 2
+
     with h5py.File(output_filename, 'w') as output_file:
         builder = InputBuilder(num_previous_states)
         input_shape = tuple([max_rows] + list(builder.get_shape()))
-        value_output_shape = (max_rows, 1)
+        value_output_shape = (max_rows, NUM_PLAYERS)
         policy_output_shape = (max_rows, NUM_COLUMNS)
 
         write_index = 0
@@ -100,15 +102,20 @@ def launch(args):
 
                 move_scores = list(map(int, stdout.split()[-NUM_COLUMNS:]))
 
+                cp = g.get_current_player()
                 best_score = max(move_scores)
                 best_move_arr = (np.array(move_scores) == best_score)
                 winning_move_arr = np.array(move_scores) > 0
-                cur_player_value = np.sign(best_score)
+                cur_player_value = 0.5 * (np.sign(best_score) + 1)
+
+                value_arr = np.zeros(2)
+                value_arr[cp] = cur_player_value
+                value_arr[1-cp] = 1 - cur_player_value
 
                 input_matrix = builder.get_input(g)
 
                 input_dataset[write_index] = input_matrix
-                value_dataset[write_index] = cur_player_value
+                value_dataset[write_index] = value_arr
                 strong_policy_dataset[write_index] = best_move_arr
                 weak_policy_dataset[write_index] = winning_move_arr
                 write_index += 1
