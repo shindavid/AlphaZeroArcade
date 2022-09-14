@@ -22,12 +22,6 @@ ValueProbDistr = Tensor  # size=# players, prob terms
 ValueLogitDistr = Tensor  # size=# players, logit terms
 
 
-class AbstractAction(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def getIndex(self) -> ActionIndex:
-        pass
-
-
 class AbstractNeuralNetwork(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
@@ -57,11 +51,6 @@ class AbstractGameState(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def vectorize(self) -> NeuralNetworkInput:
-        pass
-
-
-class BlokusAction(AbstractAction):
-    def toMove(self) -> Move:
         pass
 
 
