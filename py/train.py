@@ -1,3 +1,5 @@
+from torch import Tensor
+
 from blokus.game import GameState, Move
 
 import abc
@@ -11,9 +13,13 @@ from py.mcts import MCTS
 ActionIndex = int
 ActionMask = np.ndarray  # bool
 PlayerIndex = int
-NeuralNetworkInput = np.ndarray
-PolicyDistribution = np.ndarray  # float, sum=1, size=# actions
-ValueDistribution = np.ndarray  # float, size=# players
+NeuralNetworkInput = Tensor
+GlobalPolicyProbDistr = Tensor  # size=# global actions, prob terms
+GlobalPolicyLogitDistr = Tensor  # size=# global actions, logit terms
+LocalPolicyProbDistr = Tensor  # size=# locally legal actions, prob terms
+LocalPolicyLogitDistr = Tensor  # size=# locally legal actions, logit terms
+ValueProbDistr = Tensor  # size=# players, prob terms
+ValueLogitDistr = Tensor  # size=# players, logit terms
 
 
 class AbstractAction(metaclass=abc.ABCMeta):
@@ -24,11 +30,15 @@ class AbstractAction(metaclass=abc.ABCMeta):
 
 class AbstractNeuralNetwork(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def evaluate(self, vec: NeuralNetworkInput) -> Tuple[PolicyDistribution, ValueDistribution]:
+    def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
         pass
 
 
 class AbstractGameState(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def getCurrentPlayer(self) -> PlayerIndex:
+        pass
+
     @abc.abstractmethod
     def getNextState(self, action_index: ActionIndex) -> 'AbstractGameState':
         pass
@@ -38,7 +48,7 @@ class AbstractGameState(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def getGameResult(self) -> Optional[ValueDistribution]:
+    def getGameResult(self) -> Optional[ValueProbDistr]:
         """
         Returns None if game is not over. Else, returns a vector of win/loss values (whose sum
         should typically be 1).
@@ -69,7 +79,7 @@ class BlokusGameState(AbstractGameState):
     def getValidActions(self) -> ActionMask:
         return self._state.get_legal_moves()
 
-    def getGameResult(self) -> Optional[ValueDistribution]:
+    def getGameResult(self) -> Optional[ValueProbDistr]:
         raise Exception('TODO')
 
     def __hash__(self) -> int:
