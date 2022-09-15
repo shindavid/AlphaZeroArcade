@@ -47,3 +47,7 @@ class AbstractGameState(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def vectorize(self) -> NeuralNetworkInput:
         pass
+
+    @abc.abstractmethod
+    def getNumGlobalActions(self) -> int:
+        pass

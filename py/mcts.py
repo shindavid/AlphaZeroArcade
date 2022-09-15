@@ -16,9 +16,13 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import torch
+from torch import Tensor
 
 from train import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
     GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr
+
+
+GlobalPolicyCountDistr = Tensor
 
 
 @dataclass
@@ -159,10 +163,15 @@ class MCTS:
         self.root: Optional[Tree] = None
         self.cache: Dict[AbstractGameState, StateEvaluation] = {}
 
-    def sim(self, state: AbstractGameState, params: MCTSParams):
+    def sim(self, state: AbstractGameState, params: MCTSParams) -> GlobalPolicyCountDistr:
         self.root = Tree(self.n_players)
         for _ in range(params.treeSizeLimit):
             self.visit(self.root, state, params)
+
+        counts = torch.zeros(state.getNumGlobalActions(), dtype=int)
+        for child in self.root.children:
+            counts[child.action_index] = child.count
+        return counts
 
     def evaluate(self, state: AbstractGameState) -> StateEvaluation:
         evaluation = self.cache.get(state, None)
