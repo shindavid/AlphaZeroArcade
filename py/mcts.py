@@ -108,14 +108,9 @@ class Tree:
 
         is_root = self.is_root()
         inv_temp = (1.0 / params.root_softmax_temperature) if is_root else 1.0
-        policy_distr = np.exp(policy_output * inv_temp)
-        policy_distr *= valid_action_mask
-        policy_sum = sum(policy_distr)
-        assert policy_sum > 0.0, f'uh oh {policy_sum} {sum(valid_action_mask)}'
-        policy_distr *= 1.0 / sum(policy_distr)
 
-        valid_action_indices = np.where(valid_action_mask)[0]
-        P = policy_distr[valid_action_indices]
+        valid_action_indices = torch.where(valid_action_mask)[0]
+        P = torch.softmax(policy_output[valid_action_indices] * inv_temp, dim=0)
         if self.is_root() and params.dirichlet_mult:
             noise = np.random.dirichlet([params.dirichlet_alpha] * len(P))
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
