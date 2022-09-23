@@ -12,8 +12,7 @@ from tqdm import tqdm
 
 import game
 from game import Game, NUM_ROWS, NUM_COLUMNS
-from neural_net import InputBuilder
-
+from neural_net import HistoryBuffer
 
 RANK = MPI.COMM_WORLD.Get_rank()
 SIZE = MPI.COMM_WORLD.Get_size()
@@ -75,8 +74,7 @@ def launch(args):
     NUM_PLAYERS = 2
 
     with h5py.File(output_filename, 'w') as output_file:
-        builder = InputBuilder(num_previous_states)
-        input_shape = tuple([max_rows] + list(builder.get_shape()))
+        input_shape = tuple([max_rows] + list(HistoryBuffer.get_shape(num_previous_states)))
         value_output_shape = (max_rows, NUM_PLAYERS)
         policy_output_shape = (max_rows, NUM_COLUMNS)
 
@@ -93,7 +91,7 @@ def launch(args):
         tqdm_range = tqdm(range(num_my_games), desc="Writing training games") if verbose else range(num_my_games)
         for _ in tqdm_range:
             g = game.Game()
-            builder.start_game()
+            history_buffer = HistoryBuffer(num_previous_states)
             move_history = ''
             while True:
                 proc.stdin.write(move_history + '\n')
@@ -112,7 +110,7 @@ def launch(args):
                 value_arr[cp] = cur_player_value
                 value_arr[1-cp] = 1 - cur_player_value
 
-                input_matrix = builder.get_input(g)
+                input_matrix = history_buffer.get_input()
 
                 input_dataset[write_index] = input_matrix
                 value_dataset[write_index] = value_arr
@@ -128,6 +126,7 @@ def launch(args):
                 if result is not None:
                     break
 
+                history_buffer.update(g)
                 move_history += str(move)
 
         input_dataset.resize(write_index, axis=0)

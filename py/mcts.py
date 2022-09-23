@@ -201,5 +201,6 @@ class MCTS:
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
         else:
-            state = state.getNextState(best_child.action_index)
+            state.applyMove(best_child.action_index)
             self.visit(best_child, state, params)
+            state.undoLastMove()

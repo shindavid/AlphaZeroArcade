@@ -1,10 +1,17 @@
-from typing import Tuple
+import os
+import sys
+from typing import Tuple, Optional
 
 import numpy as np
 from torch import nn as nn
 from torch.nn import functional as F
 
 from game import Game, NUM_COLUMNS, NUM_ROWS
+from game import NUM_COLORS, Color, MAX_MOVES_PER_GAME
+
+sys.path.append(os.path.join(sys.path[0], '..'))
+from train import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
+    AbstractGameState, PlayerIndex, ActionIndex, ActionMask, ValueProbDistr
 
 Shape = Tuple[int, ...]
 
@@ -141,37 +148,79 @@ class Net(nn.Module):
         return self.policy_head(x), self.value_head(x)
 
 
-class InputBuilder:
+class HistoryBuffer:
     def __init__(self, num_previous_states: int):
+        history_buffer_len = 1 + num_previous_states + MAX_MOVES_PER_GAME // NUM_COLORS
+        shape = (NUM_COLORS, history_buffer_len, NUM_COLUMNS, NUM_ROWS)
+
         self.num_previous_states = num_previous_states
+        self.full_mask = np.zeros(shape, dtype=bool)
+        self.next_color = Game.RED
+        self.ref_indices = [self.num_previous_states, self.num_previous_states]
+        self.cur_player_mask = np.zeros((2, NUM_COLUMNS, NUM_ROWS), dtype=bool)
+        self.cur_player_mask[Game.YELLOW] = 1
 
-        self.full_red_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
-        self.full_yellow_mask = np.zeros((num_previous_states + 1, NUM_COLUMNS, NUM_ROWS), dtype=bool)
+    def update(self, g: Game):
+        self.ref_indices[self.next_color] += 1
+        self.full_mask[self.next_color][self.ref_indices[self.next_color]] = g.get_mask(self.next_color)
+        self.next_color = self.prev_color
+        assert self.next_color == g.get_current_player()
 
-    def get_shape(self):
-        return (self.num_previous_states*2+3, NUM_COLUMNS, NUM_ROWS)
+    @property
+    def prev_color(self) -> Color:
+        return 1 - self.next_color
 
-    def start_game(self):
+    def get_input(self):
+        r = self.ref_indices[Game.RED]
+        y = self.ref_indices[Game.YELLOW]
+        red_mask = self.full_mask[Game.RED][r-self.num_previous_states:r+1]
+        yellow_mask = self.full_mask[Game.YELLOW][y-self.num_previous_states:y+1]
+        cur_player_mask = self.cur_player_mask[self.cur_player_mask].reshape(1, NUM_COLUMNS, NUM_ROWS)
+        return np.concatenate((red_mask, yellow_mask, cur_player_mask))
+
+    @staticmethod
+    def get_shape(num_previous_states: int) -> Shape:
+        return num_previous_states*2+3, NUM_COLUMNS, NUM_ROWS
+
+
+class NetWrapper(AbstractNeuralNetwork):
+    def __init__(self, net: Net):
+        self.net = net
+
+    def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
+        return self.net(vec)
+
+
+class GameState(AbstractGameState):
+    def __init__(self, game: Game, history_buffer: HistoryBuffer):
+        self.game = game
+        self.history_buffer = history_buffer
+        self.move_stack = []
+
+    def getCurrentPlayer(self) -> PlayerIndex:
+        return self.game.get_current_player()
+
+    def applyMove(self, action_index: ActionIndex):
+        game = self.game.clone()
+        game.apply_move(action_index+1)
+        self.move_stack.append(action_index)
+
+    def undoLastMove(self):
+        action_index = self.move_stack.pop()
+        self.game.undo_move(action_index+1)
+
+    def getValidActions(self) -> ActionMask:
+        pass
+
+    def getGameResult(self) -> Optional[ValueProbDistr]:
         """
-        Should be called once at start of game.
+        Returns None if game is not over. Else, returns a vector of win/loss values (whose sum
+        should typically be 1).
         """
-        self.full_red_mask &= False
-        self.full_yellow_mask &= False
+        pass
 
-    def get_input(self, g: Game) -> np.ndarray:
-        """
-        Should be called after each move made in the game.
+    def vectorize(self) -> NeuralNetworkInput:
+        pass
 
-        Returns a 3-D numpy array.
-        """
-        shape1 = (1, NUM_COLUMNS, NUM_ROWS)
-        cur_player = g.get_current_player()
-        cur_player_mask = np.zeros(shape1, dtype=bool) + cur_player
-        if cur_player == Game.RED:
-            yellow_mask = g.get_mask(Game.YELLOW)
-            self.full_yellow_mask = np.concatenate((yellow_mask.reshape(shape1), self.full_yellow_mask[:-1]))
-        else:
-            red_mask = g.get_mask(Game.RED)
-            self.full_red_mask = np.concatenate((red_mask.reshape(shape1), self.full_red_mask[:-1]))
-
-        return np.concatenate((self.full_red_mask, self.full_yellow_mask, cur_player_mask))
+    def getNumGlobalActions(self) -> int:
+        pass

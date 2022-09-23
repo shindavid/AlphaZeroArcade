@@ -7,6 +7,7 @@ from termcolor import colored
 
 NUM_COLUMNS = 7
 NUM_ROWS = 6
+MAX_MOVES_PER_GAME = NUM_ROWS * NUM_COLUMNS
 Color = int
 
 
@@ -20,9 +21,15 @@ class Game:
     RED = 0  # first player
     YELLOW = 1
 
-    def __init__(self):
-        self.piece_mask = np.zeros((2, NUM_COLUMNS, NUM_ROWS), dtype=bool)
-        self.current_player = Game.RED
+    def __init__(self, piece_mask=None, current_player=None):
+        self.piece_mask = np.zeros((2, NUM_COLUMNS, NUM_ROWS), dtype=bool) if piece_mask is None else piece_mask
+        self.current_player = Game.RED if current_player is None else current_player
+
+    def clone(self) -> 'Game':
+        return Game(np.copy(self.piece_mask), self.current_player)
+
+    def get_num_moves_played(self) -> int:
+        return sum(self.piece_mask)
 
     def get_valid_moves(self) -> List[int]:
         cur_heights = np.sum(np.sum(self.piece_mask, axis=0), axis=1)
@@ -34,6 +41,17 @@ class Game:
 
     def get_mask(self, color: Color) -> np.ndarray:
         return self.piece_mask[color]
+
+    def undo_move(self, column: int):
+        """
+        Assumes that self.apply_move(column) was just invoked, and undoes that call.
+        """
+        assert 1 <= column <= NUM_COLUMNS
+
+        cur_height = np.sum(self.piece_mask[:, column-1])
+        assert cur_height > 0
+        self.piece_mask[:][column-1][cur_height-1] = 0
+        self.current_player = 1 - self.current_player
 
     def apply_move(self, column: int, announce: bool = False) -> Optional[Color]:
         """

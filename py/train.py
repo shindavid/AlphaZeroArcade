@@ -29,7 +29,11 @@ class AbstractGameState(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def getNextState(self, action_index: ActionIndex) -> 'AbstractGameState':
+    def applyMove(self, action_index: ActionIndex):
+        pass
+
+    @abc.abstractmethod
+    def undoLastMove(self):
         pass
 
     @abc.abstractmethod
