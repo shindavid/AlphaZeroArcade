@@ -175,7 +175,7 @@ class HistoryBuffer:
         y = self.ref_indices[Game.YELLOW]
         red_mask = self.full_mask[Game.RED][r-self.num_previous_states:r+1]
         yellow_mask = self.full_mask[Game.YELLOW][y-self.num_previous_states:y+1]
-        cur_player_mask = self.cur_player_mask[self.cur_player_mask].reshape(1, NUM_COLUMNS, NUM_ROWS)
+        cur_player_mask = self.cur_player_mask[self.next_color].reshape(1, NUM_COLUMNS, NUM_ROWS)
         return np.concatenate((red_mask, yellow_mask, cur_player_mask))
 
     @staticmethod
