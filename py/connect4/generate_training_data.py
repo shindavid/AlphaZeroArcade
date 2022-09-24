@@ -119,11 +119,10 @@ def launch(args):
                 write_index += 1
 
                 moves = g.get_valid_moves()
-                if not moves:
-                    break
+                assert moves
                 move = random.choice(moves)
-                result = g.apply_move(move, announce=False)
-                if result is not None:
+                results = g.apply_move(move, announce=False)
+                if results:
                     break
 
                 history_buffer.update(g)

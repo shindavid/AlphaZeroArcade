@@ -9,18 +9,18 @@ Action items:
 
 3. Subtree reuse (how does this interact with Dirichlet noise?).
 
-4. Root parallelism. In turn demands multi-process setup, virtual loss, etc.
+4. Root parallelism. In turn demands multiprocess setup, virtual loss, etc.
 """
+import io
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import numpy as np
 import torch
 from torch import Tensor
 
 from train import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
-    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr
-
+    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr
 
 GlobalPolicyCountDistr = Tensor
 
@@ -39,6 +39,14 @@ class MCTSNodeStats:
         self.count = 0
         self.value_sum = 0
         self.policy_prior = 0.0
+
+
+@dataclass
+class MCTSResults:
+    counts: GlobalPolicyCountDistr
+    win_rates: ValueProbDistr
+    raw_policy_prior: GlobalPolicyProbDistr
+    raw_value_prior: ValueProbDistr
 
 
 @dataclass
@@ -63,12 +71,21 @@ class StateEvaluation:
 
 class Tree:
     def __init__(self, n_players: int, action_index: Optional[ActionIndex] = None, parent: Optional['Tree'] = None):
+        self.state: Optional[AbstractGameState] = None  # use only when relying on state-clones
+        self.evaluation: Optional[StateEvaluation] = None
+        self.valid_action_indices: Optional[List[ActionIndex]] = None
         self.children: Optional[List[Tree]] = None
         self.action_index: Optional[ActionIndex] = action_index
         self.parent = parent
         self.count = 0
         self.value_sum = torch.zeros(n_players)
+        self.raw_value_prior: Optional[ValueProbDistr] = None
+        self.raw_policy_prior: Optional[LocalPolicyProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
+
+    def store_state(self, state: AbstractGameState):
+        if self.state is not None:
+            self.state = state.clone()
 
     @property
     def n_players(self) -> int:
@@ -76,6 +93,9 @@ class Tree:
 
     def is_root(self) -> bool:
         return self.parent is None
+
+    def win_rates(self) -> ValueProbDistr:
+        return self.value_sum / (self.count if self.count else 1.0)
 
     def avg_value(self, player_index: PlayerIndex):
         if self.count == 0:
@@ -90,8 +110,8 @@ class Tree:
             return
 
         valid_action_mask = evaluation.valid_action_mask
-        valid_action_indices = np.where(valid_action_mask)[0]
-        self.children = [Tree(self.n_players, action_index, self) for action_index in valid_action_indices]
+        self.valid_action_indices = np.where(valid_action_mask)[0]
+        self.children = [Tree(self.n_players, action_index, self) for action_index in self.valid_action_indices]
 
     def backprop(self, result: ValueProbDistr):
         self.count += 1
@@ -111,6 +131,8 @@ class Tree:
 
         valid_action_indices = torch.where(valid_action_mask)[0]
         P = torch.softmax(policy_output[valid_action_indices] * inv_temp, dim=0)
+        self.raw_value_prior = evaluation.value_prob_distr
+        self.raw_policy_prior = P
         if self.is_root() and params.dirichlet_mult:
             noise = np.random.dirichlet([params.dirichlet_alpha] * len(P))
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
@@ -152,33 +174,48 @@ class MCTS:
     - disable Dirichlet noise + explorative settings (maximizing strength)
     - do NOT export for nnet training
     """
-    def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2):
+    def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2, debug_file: Optional[io.StringIO] = None):
+        self.debug_file = debug_file
         self.network = network
         self.n_players = n_players
         self.root: Optional[Tree] = None
-        self.cache: Dict[AbstractGameState, StateEvaluation] = {}
+        self.cache: Dict[Any, StateEvaluation] = {}
 
-    def sim(self, state: AbstractGameState, params: MCTSParams) -> GlobalPolicyCountDistr:
+    def sim(self, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
         self.root = Tree(self.n_players)
-        for _ in range(params.treeSizeLimit):
+        for i in range(params.treeSizeLimit):
+            if self.debug_file:
+                self.debug_file.write('****************************\n')
+                self.debug_file.write(f'SIM LOOP i={i}\n')
+                self.debug_file.write('****************************\n')
+                self.debug_file.flush()
             self.visit(self.root, state, params)
 
-        counts = torch.zeros(state.getNumGlobalActions(), dtype=int)
+        n = state.getNumGlobalActions()
+        counts = torch.zeros(n, dtype=int)
         for child in self.root.children:
             counts[child.action_index] = child.count
-        return counts
+        win_rates = self.root.win_rates()
+        raw_policy_prior = torch.zeros(n)
+        raw_policy_prior[self.root.valid_action_indices] = self.root.raw_policy_prior
+        raw_value_prior = self.root.raw_value_prior
+        return MCTSResults(counts, win_rates, raw_policy_prior, raw_value_prior)
 
-    def evaluate(self, state: AbstractGameState) -> StateEvaluation:
-        evaluation = self.cache.get(state, None)
-        if evaluation is not None:
-            return evaluation
+    def evaluate(self, tree: Tree, state: AbstractGameState) -> StateEvaluation:
+        if tree.evaluation is not None:
+            return tree.evaluation
 
-        evaluation = StateEvaluation(self.network, state)
-        self.cache[state] = evaluation
+        signature = state.getSignature()
+        evaluation = self.cache.get(signature, None)
+        if evaluation is None:
+            evaluation = StateEvaluation(self.network, state)
+            self.cache[signature] = evaluation
+
+        tree.evaluation = evaluation
         return evaluation
 
     def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams):
-        evaluation = self.evaluate(state)
+        evaluation = self.evaluate(tree, state)
         game_result = evaluation.game_result
 
         if game_result is not None:
@@ -191,16 +228,35 @@ class MCTS:
 
         c_PUCT = params.c_PUCT
         P = tree.compute_policy_prior(evaluation, params)
-        V = np.array([c.avg_value(current_player) for c in tree.children])
-        N = np.array([c.count for c in tree.children])
+        V = torch.Tensor([c.avg_value(current_player) for c in tree.children])
+        N = torch.Tensor([c.count for c in tree.children])
         eps = 1e-6  # needed when N == 0
         PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
 
         best_child = tree.children[np.argmax(PUCT)]
 
+        if self.debug_file:
+            state.debugDump(self.debug_file)
+            self.debug_file.write(f'*** visit action:{tree.action_index}\n')
+            self.debug_file.write(f'P: {P}\n')
+            self.debug_file.write(f'V: {V}\n')
+            self.debug_file.write(f'N: {N}\n')
+            self.debug_file.write(f'PUCT: {PUCT}\n')
+            self.debug_file.write(f'sum: {tree.value_sum}\n')
+            self.debug_file.flush()
+
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
+            if self.debug_file:
+                self.debug_file.write(f'BACKPROP: {evaluation.value_prob_distr}\n')
+                self.debug_file.write(f'root sum: {self.root.value_sum}')
+                self.debug_file.flush()
         else:
-            state.applyMove(best_child.action_index)
-            self.visit(best_child, state, params)
-            state.undoLastMove()
+            if state.supportsUndo():
+                state.applyMove(best_child.action_index)
+                self.visit(best_child, state, params)
+                state.undoLastMove()
+            else:
+                best_child.store_state(state)
+                state.applyMove(best_child.action_index)
+                self.visit(best_child, best_child.state, params)

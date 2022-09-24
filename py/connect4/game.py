@@ -1,5 +1,5 @@
 import random
-from typing import Optional, List
+from typing import List
 
 import numpy as np
 from termcolor import colored
@@ -14,6 +14,8 @@ Color = int
 COLORS = ['R', 'Y']
 NUM_COLORS = len(COLORS)
 CIRCLE_CHAR = chr(9679)
+LEFT_TACK = chr(8867)
+RIGHT_TACK = chr(8866)
 PRETTY_COLORS = [colored(CIRCLE_CHAR, c) for c in ('red', 'yellow')]
 
 
@@ -29,7 +31,7 @@ class Game:
         return Game(np.copy(self.piece_mask), self.current_player)
 
     def get_num_moves_played(self) -> int:
-        return sum(self.piece_mask)
+        return int(np.sum(self.piece_mask))
 
     def get_valid_moves(self) -> List[int]:
         cur_heights = np.sum(np.sum(self.piece_mask, axis=0), axis=1)
@@ -50,14 +52,14 @@ class Game:
 
         cur_height = np.sum(self.piece_mask[:, column-1])
         assert cur_height > 0
-        self.piece_mask[:][column-1][cur_height-1] = 0
+        self.piece_mask[:, column-1, cur_height-1] = 0
         self.current_player = 1 - self.current_player
 
-    def apply_move(self, column: int, announce: bool = False) -> Optional[Color]:
+    def apply_move(self, column: int, announce: bool = False) -> List[Color]:
         """
         column is 1-indexed
 
-        Returns the winning color if the game has ended. Else returns None.
+        Returns the winning colors if the game has ended.
         """
         assert 1 <= column <= NUM_COLUMNS
 
@@ -71,15 +73,18 @@ class Game:
         move_color = self.current_player
         self.current_player = 1 - self.current_player
 
-        winner = self.compute_winner(column, cur_height, move_color)
+        winners = self.compute_winners(column, cur_height, move_color)
 
-        if announce and winner is not None:
+        if announce and winners:
             cur_color = 'R' if self.current_player == Game.RED else 'Y'
             print(f'** {cur_color} playing in column {column}')
-            print(f'Winner! {cur_color}')
-        return winner
+            if len(winners) == 2:
+                print('Tied!')
+            else:
+                print(f'Winner! {cur_color}')
+        return winners
 
-    def compute_winner(self, column, cur_height, move_color):
+    def compute_winners(self, column, cur_height, move_color):
         mask = self.piece_mask[move_color]
         dir_tuple_set = (
             ((-1, 0), (+1, 0)),  # horizontal
@@ -102,14 +107,15 @@ class Game:
                                 continue
                     break
                 if count == 4:
-                    return move_color
-        return None
+                    return [move_color]
+        if self.get_num_moves_played() == MAX_MOVES_PER_GAME:
+            return [Game.RED, Game.YELLOW]
+        return []
 
     def to_ascii_drawing(self, pretty_print=True, newline=True, add_legend=False, player_names=('1', '2'),
                          highlight_column=None) -> str:
         colors = PRETTY_COLORS if pretty_print else COLORS
-        empty_color = ' ' if pretty_print else '.'
-        char_matrix = [[empty_color for _ in range(NUM_COLUMNS)] for _ in range(NUM_ROWS)]
+        char_matrix = [[' ' for _ in range(NUM_COLUMNS)] for _ in range(NUM_ROWS)]
         blink_x = -1
         blink_y = -1
         for (c, color) in enumerate(colors):
@@ -122,9 +128,13 @@ class Game:
         if blink_x > 0:
             char_matrix[blink_y][blink_x] = colored(char_matrix[blink_y][blink_x], attrs=['blink'])
 
-        out_lines = list(reversed([''.join(char_list) for char_list in char_matrix]))
+        out_lines = []
+        for char_list in reversed(char_matrix):
+            body = '|'.join(char_list)
+            out_lines.append('|' + body + '|')
+
         if add_legend:
-            out_lines.append('1234567')
+            out_lines.append('|1|2|3|4|5|6|7|')
             out_lines.append(f'{colors[0]}: {player_names[0]}')
             out_lines.append(f'{colors[1]}: {player_names[1]}')
         if newline:
@@ -143,12 +153,9 @@ if __name__ == '__main__':
         g = Game()
         while True:
             moves = g.get_valid_moves()
-            if not moves:
-                # print('Game is drawn!')
-                break
-            result = g.apply_move(random.choice(moves), announce=False)
-            # print(g.to_ascii_drawing())
-            if result is not None:
+            assert moves
+            results = g.apply_move(random.choice(moves), announce=False)
+            if results:
                 break
 
     print('Played all games!')

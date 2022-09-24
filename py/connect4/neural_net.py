@@ -1,8 +1,9 @@
 import os
 import sys
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Hashable
 
 import numpy as np
+import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
@@ -12,6 +13,7 @@ from game import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 sys.path.append(os.path.join(sys.path[0], '..'))
 from train import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
     AbstractGameState, PlayerIndex, ActionIndex, ActionMask, ValueProbDistr
+
 
 Shape = Tuple[int, ...]
 
@@ -166,6 +168,14 @@ class HistoryBuffer:
         self.next_color = self.prev_color
         assert self.next_color == g.get_current_player()
 
+    def undo(self):
+        """
+        Undo last update() call.
+        """
+        self.next_color = self.prev_color
+        self.full_mask[self.next_color][self.ref_indices[self.next_color]] = 0
+        self.ref_indices[self.next_color] -= 1
+
     @property
     def prev_color(self) -> Color:
         return 1 - self.next_color
@@ -188,39 +198,61 @@ class NetWrapper(AbstractNeuralNetwork):
         self.net = net
 
     def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
-        return self.net(vec)
+        #print('vec.shape', type(vec), vec.dtype, vec.shape)
+        p, v = self.net(vec)
+        return p.flatten(), v.flatten()
 
 
 class GameState(AbstractGameState):
     def __init__(self, game: Game, history_buffer: HistoryBuffer):
+        self.winners = []
         self.game = game
         self.history_buffer = history_buffer
         self.move_stack = []
+
+    @staticmethod
+    def supportsUndo() -> bool:
+        return True
+
+    @staticmethod
+    def getNumGlobalActions() -> int:
+        return NUM_COLUMNS
+
+    def debugDump(self, file_handle):
+        file_handle.write(self.game.to_ascii_drawing(pretty_print=False))
+
+    def getSignature(self) -> Hashable:
+        return self.game.piece_mask.data.tobytes(), self.game.current_player
 
     def getCurrentPlayer(self) -> PlayerIndex:
         return self.game.get_current_player()
 
     def applyMove(self, action_index: ActionIndex):
-        game = self.game.clone()
-        game.apply_move(action_index+1)
+        self.winners = self.game.apply_move(action_index+1)
+        self.history_buffer.update(self.game)
         self.move_stack.append(action_index)
 
     def undoLastMove(self):
         action_index = self.move_stack.pop()
+        self.history_buffer.undo()
+        self.winners = []
         self.game.undo_move(action_index+1)
 
     def getValidActions(self) -> ActionMask:
-        pass
+        actions = np.array(self.game.get_valid_moves())
+        mask = torch.zeros(self.getNumGlobalActions(), dtype=bool)
+        mask[actions-1] = 1
+        return mask
 
     def getGameResult(self) -> Optional[ValueProbDistr]:
-        """
-        Returns None if game is not over. Else, returns a vector of win/loss values (whose sum
-        should typically be 1).
-        """
-        pass
+        if self.winners:
+            arr = np.zeros(2)
+            arr[self.winners] = 1.0 / len(self.winners)
+            return arr
+        return None
 
     def vectorize(self) -> NeuralNetworkInput:
-        pass
-
-    def getNumGlobalActions(self) -> int:
-        pass
+        i = self.history_buffer.get_input()
+        shape = i.shape
+        tensor_shape = tuple([1] + list(shape))
+        return torch.reshape(torch.from_numpy(i), tensor_shape).float()
