@@ -25,6 +25,13 @@ from train import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionM
 GlobalPolicyCountDistr = Tensor
 
 
+def simple_float_tensor_repr(t: Tensor) -> str:
+    """
+    I'm sure there's a better way to do this.
+    """
+    return ' '.join(['%.3f' % x for x in t.tolist()])
+
+
 @dataclass
 class MCTSParams:
     treeSizeLimit: int
@@ -237,18 +244,18 @@ class MCTS:
         if self.debug_file:
             state.debugDump(self.debug_file)
             self.debug_file.write(f'*** visit action:{tree.action_index}\n')
-            self.debug_file.write(f'P: {P}\n')
-            self.debug_file.write(f'V: {V}\n')
-            self.debug_file.write(f'N: {N}\n')
-            self.debug_file.write(f'PUCT: {PUCT}\n')
-            self.debug_file.write(f'sum: {tree.value_sum}\n')
+            self.debug_file.write(f'P:    {simple_float_tensor_repr(P)}\n')
+            self.debug_file.write(f'V:    {simple_float_tensor_repr(V)}\n')
+            self.debug_file.write(f'N:    {simple_float_tensor_repr(N)}\n')
+            self.debug_file.write(f'PUCT: {simple_float_tensor_repr(PUCT)}\n')
+            self.debug_file.write(f'sum:  {simple_float_tensor_repr(tree.value_sum)}\n')
             self.debug_file.flush()
 
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
             if self.debug_file:
-                self.debug_file.write(f'BACKPROP: {evaluation.value_prob_distr}\n')
-                self.debug_file.write(f'root sum: {self.root.value_sum}')
+                self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
+                self.debug_file.write(f'root sum: {simple_float_tensor_repr(self.root.value_sum)}')
                 self.debug_file.flush()
         else:
             if state.supportsUndo():

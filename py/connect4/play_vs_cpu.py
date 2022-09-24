@@ -16,6 +16,7 @@ from mcts import MCTSParams, MCTS
 
 class Args:
     model_file: str = 'c4_model.pt'
+    debug_file: str = None
     verbose: bool = False
     neural_network_only: bool = False
     num_mcts_iters: int = 100
@@ -25,6 +26,7 @@ class Args:
     def load(args):
         assert args.softmax_temperature > 0
         Args.model_file = args.model_file
+        Args.debug_file = args.debug_file
         Args.verbose = args.verbose
         Args.neural_network_only = args.neural_network_only
         Args.num_mcts_iters = args.num_mcts_iters
@@ -35,6 +37,7 @@ def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model-file", default=Args.model_file,
                         help='model output location (default: %(default)s)')
+    parser.add_argument("-d", "--debug-file", help='debug output file')
     parser.add_argument("-v", "--verbose", action='store_true', help='verbose mode')
     parser.add_argument("-o", "--neural-network-only", action='store_true', help='neural network only')
     parser.add_argument("-n", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
@@ -73,7 +76,8 @@ class GameRunner:
         self.mcts = None
         self.mcts_params = None
         if not Args.neural_network_only:
-            self.mcts = MCTS(self.net)
+            debug_file = open(Args.debug_file, 'w') if Args.debug_file else None
+            self.mcts = MCTS(self.net, debug_file=debug_file)
             self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters)
 
         self.player_names = ['???', '???']
