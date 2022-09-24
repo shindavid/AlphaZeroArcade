@@ -151,11 +151,11 @@ class GameRunner:
         heated_counts = mcts_counts / self.softmax_temperature
         mcts_policy = heated_counts.softmax(dim=0)
 
-        raw_policy_prior = results.raw_policy_prior
-        raw_value_prior = results.raw_value_prior
+        policy_prior = results.policy_prior
+        value_prior = results.value_prior
 
         mcts_value = results.win_rates
-        return self.handle_cpu_move_helper(valid_moves, raw_policy_prior, raw_value_prior,
+        return self.handle_cpu_move_helper(valid_moves, policy_prior, value_prior,
                                            mcts_counts, mcts_policy, mcts_value)
 
     def handle_cpu_move_net_only(self, valid_moves):
