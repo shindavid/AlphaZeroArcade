@@ -86,7 +86,9 @@ class Tree:
         self.parent = parent
         self.count = 0
         self.value_sum = torch.zeros(n_players)
+        self.value_avg = torch.zeros(n_players)
         self.value_prior: Optional[ValueProbDistr] = None
+        self.raw_policy_prior: Optional[LocalPolicyProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
 
     def store_state(self, state: AbstractGameState):
@@ -103,11 +105,6 @@ class Tree:
     def win_rates(self) -> ValueProbDistr:
         return self.value_sum / (self.count if self.count else 1.0)
 
-    def avg_value(self, player_index: PlayerIndex):
-        if self.count == 0:
-            return 0.0
-        return self.value_sum[player_index] / self.count
-
     def has_children(self) -> bool:
         return bool(self.children)
 
@@ -122,6 +119,7 @@ class Tree:
     def backprop(self, result: ValueProbDistr):
         self.count += 1
         self.value_sum += result
+        self.value_avg = self.value_sum / self.count
         if self.parent:
             self.parent.backprop(result)
 
@@ -138,6 +136,7 @@ class Tree:
         valid_action_indices = torch.where(valid_action_mask)[0]
         P = torch.softmax(policy_output[valid_action_indices] * inv_temp, dim=0)
         self.value_prior = evaluation.value_prob_distr
+        self.raw_policy_prior = policy_output
         self.policy_prior = P
         return P
 
@@ -216,12 +215,19 @@ class MCTS:
         tree.evaluation = evaluation
         return evaluation
 
+    def backprop(self, tree: Tree, evaluation: StateEvaluation, game_result: ValueProbDistr):
+        tree.backprop(game_result)
+        if self.debug_file:
+            self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
+            self.debug_file.write(f'root sum: {simple_float_tensor_repr(self.root.value_sum)}\n')
+            self.debug_file.flush()
+
     def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams):
         evaluation = self.evaluate(tree, state)
         game_result = evaluation.game_result
 
         if game_result is not None:
-            tree.backprop(game_result)
+            self.backprop(tree, evaluation, game_result)
             return
 
         current_player = evaluation.current_player
@@ -234,7 +240,7 @@ class MCTS:
             noise = np.random.dirichlet([params.dirichlet_alpha] * len(P))
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
 
-        V = torch.Tensor([c.avg_value(current_player) for c in tree.children])
+        V = torch.Tensor([c.value_avg[current_player] for c in tree.children])
         N = torch.Tensor([c.count for c in tree.children])
         eps = 1e-6  # needed when N == 0
         PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
@@ -244,6 +250,8 @@ class MCTS:
         if self.debug_file:
             state.debugDump(self.debug_file)
             self.debug_file.write(f'*** visit action:{tree.action_index}\n')
+            self.debug_file.write(f'cp:   {current_player}\n')
+            self.debug_file.write(f'rP:   {simple_float_tensor_repr(tree.raw_policy_prior)}\n')
             self.debug_file.write(f'P:    {simple_float_tensor_repr(P)}\n')
             self.debug_file.write(f'V:    {simple_float_tensor_repr(V)}\n')
             self.debug_file.write(f'N:    {simple_float_tensor_repr(N)}\n')
@@ -252,11 +260,7 @@ class MCTS:
             self.debug_file.flush()
 
         if leaf:
-            tree.backprop(evaluation.value_prob_distr)
-            if self.debug_file:
-                self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
-                self.debug_file.write(f'root sum: {simple_float_tensor_repr(self.root.value_sum)}')
-                self.debug_file.flush()
+            self.backprop(tree, evaluation, game_result)
         else:
             if state.supportsUndo():
                 state.applyMove(best_child.action_index)
