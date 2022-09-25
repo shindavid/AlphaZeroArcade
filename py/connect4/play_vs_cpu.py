@@ -6,6 +6,7 @@ from typing import Optional
 
 import numpy as np
 import torch
+from torch import Tensor
 
 from game import Color, Game, NUM_COLUMNS, PRETTY_COLORS
 from neural_net import Net, HistoryBuffer, NetWrapper, GameState
@@ -20,17 +21,18 @@ class Args:
     verbose: bool = False
     neural_network_only: bool = False
     num_mcts_iters: int = 100
-    softmax_temperature: float = 1.0
+    temperature: float = 0.0
 
     @staticmethod
     def load(args):
-        assert args.softmax_temperature > 0
+        if args.temperature <= 0:
+            args.temperature = 1e-6
         Args.model_file = args.model_file
         Args.debug_file = args.debug_file
         Args.verbose = args.verbose
         Args.neural_network_only = args.neural_network_only
         Args.num_mcts_iters = args.num_mcts_iters
-        Args.softmax_temperature = args.softmax_temperature
+        Args.temperature = args.temperature
 
 
 def load_args():
@@ -42,8 +44,8 @@ def load_args():
     parser.add_argument("-o", "--neural-network-only", action='store_true', help='neural network only')
     parser.add_argument("-n", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
                         help='num mcts iterations to do per move (default: %(default)s)')
-    parser.add_argument("-t", "--softmax-temperature", default=Args.softmax_temperature, type=float,
-                        help='softmax temperature. Must be positive. Higher=more random play (default: %(default)2f)')
+    parser.add_argument("-t", "--temperature", default=Args.temperature, type=float,
+                        help='temperature. Must be >=0. Higher=more random play (default: %(default)2f)')
 
     args = parser.parse_args()
     Args.load(args)
@@ -67,7 +69,7 @@ def main():
 class GameRunner:
     def __init__(self, net: Net):
         self.net = NetWrapper(net)
-        self.softmax_temperature = Args.softmax_temperature
+        self.temperature = Args.temperature
         self.neural_network_only = Args.neural_network_only
         self.verbose = Args.verbose
         self.num_previous_states = (net.input_shape[0] - 3) // 2
@@ -152,7 +154,7 @@ class GameRunner:
     def handle_cpu_move_mcts(self, valid_moves):
         results = self.mcts.sim(self.game_state, self.mcts_params)
         mcts_counts = results.counts
-        heated_counts = mcts_counts.pow(1.0 / self.softmax_temperature)
+        heated_counts = mcts_counts.pow(1.0 / self.temperature)
         mcts_policy = heated_counts / sum(heated_counts)
 
         policy_prior = results.policy_prior
@@ -169,17 +171,18 @@ class GameRunner:
         input_matrix = history_buffer.get_input()
         in_tensor = torch.reshape(torch.from_numpy(input_matrix), tensor_shape).float()
 
-        pol_tensor, val_tensor = self.net.evaluate(in_tensor)
-        pol_arr = pol_tensor.numpy()
-        heated_arr = pol_arr / self.softmax_temperature
-        move_probs = np.exp(heated_arr) / sum(np.exp(heated_arr))
+        logit_policy, logit_value = self.net.evaluate(in_tensor)
 
-        mask = np.zeros_like(pol_arr)
+        heated_policy = logit_policy / self.temperature
+        policy = heated_policy.softmax(dim=0)
+
+        mask = torch.zeros_like(policy)
         mask[np.array(valid_moves, dtype=int) - 1] = 1
-        move_probs *= mask
-        move_probs /= sum(move_probs)
-        value = val_tensor.softmax(dim=0)
-        return self.handle_cpu_move_helper(valid_moves, move_probs, value)
+        policy *= mask
+        policy /= sum(policy)
+        assert not torch.any(policy.isnan()), (logit_policy, policy)
+        value = logit_value.softmax(dim=0)
+        return self.handle_cpu_move_helper(valid_moves, policy, value)
 
     def handle_cpu_move_helper(self, valid_moves, net_policy, net_value,
                                mcts_counts=None, mcts_policy=None, mcts_value=None):
