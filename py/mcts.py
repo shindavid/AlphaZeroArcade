@@ -19,7 +19,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from train import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
+from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
     GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr
 
 GlobalPolicyCountDistr = Tensor

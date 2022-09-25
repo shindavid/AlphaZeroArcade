@@ -11,7 +11,7 @@ from game import Game, NUM_COLUMNS, NUM_ROWS
 from game import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 sys.path.append(os.path.join(sys.path[0], '..'))
-from train import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
+from interface import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
     AbstractGameState, PlayerIndex, ActionIndex, ActionMask, ValueProbDistr
 
 
