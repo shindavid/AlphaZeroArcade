@@ -25,8 +25,6 @@ class Args:
 
     @staticmethod
     def load(args):
-        if args.temperature <= 0:
-            args.temperature = 1e-6
         Args.model_file = args.model_file
         Args.debug_file = args.debug_file
         Args.verbose = args.verbose
@@ -154,8 +152,12 @@ class GameRunner:
     def handle_cpu_move_mcts(self, valid_moves):
         results = self.mcts.sim(self.game_state, self.mcts_params)
         mcts_counts = results.counts
-        heated_counts = mcts_counts.pow(1.0 / self.temperature)
-        mcts_policy = heated_counts / sum(heated_counts)
+        if self.temperature:
+            heated_counts = mcts_counts.pow(1.0 / self.temperature)
+            mcts_policy = heated_counts / sum(heated_counts)
+        else:
+            mcts_policy = (mcts_counts == mcts_counts.max()).float()
+            mcts_policy /= mcts_policy.sum()
 
         policy_prior = results.policy_prior
         value_prior = results.value_prior
@@ -173,8 +175,11 @@ class GameRunner:
 
         logit_policy, logit_value = self.net.evaluate(in_tensor)
 
-        heated_policy = logit_policy / self.temperature
-        policy = heated_policy.softmax(dim=0)
+        if self.temperature:
+            heated_policy = logit_policy / self.temperature
+            policy = heated_policy.softmax(dim=0)
+        else:
+            policy = (logit_policy == logit_policy.max()).float()
 
         mask = torch.zeros_like(policy)
         mask[np.array(valid_moves, dtype=int) - 1] = 1
