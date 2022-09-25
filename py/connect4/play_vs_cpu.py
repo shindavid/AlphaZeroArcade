@@ -152,8 +152,8 @@ class GameRunner:
     def handle_cpu_move_mcts(self, valid_moves):
         results = self.mcts.sim(self.game_state, self.mcts_params)
         mcts_counts = results.counts
-        heated_counts = mcts_counts / self.softmax_temperature
-        mcts_policy = heated_counts.softmax(dim=0)
+        heated_counts = mcts_counts.pow(1.0 / self.softmax_temperature)
+        mcts_policy = heated_counts / sum(heated_counts)
 
         policy_prior = results.policy_prior
         value_prior = results.value_prior
