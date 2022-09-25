@@ -1,7 +1,7 @@
 from torch import Tensor
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, List, Hashable
+from typing import Optional, Tuple, Hashable
 
 
 """

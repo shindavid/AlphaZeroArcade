@@ -11,7 +11,7 @@ import subprocess
 from tqdm import tqdm
 
 import game
-from game import Game, NUM_ROWS, NUM_COLUMNS
+from game import NUM_ROWS, NUM_COLUMNS
 from neural_net import HistoryBuffer
 
 RANK = MPI.COMM_WORLD.Get_rank()

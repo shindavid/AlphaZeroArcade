@@ -6,7 +6,6 @@ from typing import Optional
 
 import numpy as np
 import torch
-from torch import Tensor
 
 from game import Color, Game, NUM_COLUMNS, PRETTY_COLORS
 from neural_net import Net, HistoryBuffer, NetWrapper, GameState
