@@ -218,7 +218,7 @@ class GameRunner:
                     ))
                 print('')
                 print('%3s %8s %8s %8s' % ('Col', 'Net', 'Count', 'MCTS'))
-                for i, x in enumerate(policy):
+                for i, x in enumerate(net_policy):
                     print(f'{i+1:3d} {x:8.3f} {mcts_counts[i]:8d} {mcts_policy[i]:8.3f}')
 
             print('')
