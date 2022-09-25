@@ -260,7 +260,7 @@ class MCTS:
             self.debug_file.flush()
 
         if leaf:
-            self.backprop(tree, evaluation, game_result)
+            self.backprop(tree, evaluation, evaluation.value_prob_distr)
         else:
             if state.supportsUndo():
                 state.applyMove(best_child.action_index)
