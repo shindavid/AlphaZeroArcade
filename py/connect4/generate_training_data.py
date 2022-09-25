@@ -24,7 +24,7 @@ def get_args():
                         help="base directory containing c4solver bin and 7x6.book")
     parser.add_argument("-n", "--num-training-games", type=int, help="number of training games")
     parser.add_argument("-g", "--games-dir", default="c4_games")
-    parser.add_argument("-s", "--num-previous-states", type=int, default=3,
+    parser.add_argument("-s", "--num-previous-states", type=int, default=0,
                         help='how many previous board states to use')
 
     return parser.parse_args()

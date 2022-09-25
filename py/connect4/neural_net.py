@@ -159,8 +159,6 @@ class HistoryBuffer:
         self.full_mask = np.zeros(shape, dtype=bool)
         self.next_color = Game.RED
         self.ref_indices = [self.num_previous_states, self.num_previous_states]
-        self.cur_player_mask = np.zeros((2, NUM_COLUMNS, NUM_ROWS), dtype=bool)
-        self.cur_player_mask[Game.YELLOW] = 1
 
     def update(self, g: Game):
         self.ref_indices[self.next_color] += 1
@@ -181,16 +179,21 @@ class HistoryBuffer:
         return 1 - self.next_color
 
     def get_input(self):
-        r = self.ref_indices[Game.RED]
-        y = self.ref_indices[Game.YELLOW]
-        red_mask = self.full_mask[Game.RED][r-self.num_previous_states:r+1]
-        yellow_mask = self.full_mask[Game.YELLOW][y-self.num_previous_states:y+1]
-        cur_player_mask = self.cur_player_mask[self.next_color].reshape(1, NUM_COLUMNS, NUM_ROWS)
-        return np.concatenate((red_mask, yellow_mask, cur_player_mask))
+        n = self.next_color
+        p = self.prev_color
+        ni = self.ref_indices[n]
+        pi = self.ref_indices[p]
+        n_mask = self.full_mask[n][ni-self.num_previous_states:ni+1]
+        p_mask = self.full_mask[p][pi-self.num_previous_states:pi+1]
+        return np.concatenate((n_mask, p_mask))
 
     @staticmethod
     def get_shape(num_previous_states: int) -> Shape:
-        return num_previous_states*2+3, NUM_COLUMNS, NUM_ROWS
+        return num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
+
+    @staticmethod
+    def get_num_previous_states(shape: Shape) -> int:
+        return (shape[0] - 2) // 2
 
 
 class NetWrapper(AbstractNeuralNetwork):

@@ -69,7 +69,7 @@ class GameRunner:
         self.temperature = Args.temperature
         self.neural_network_only = Args.neural_network_only
         self.verbose = Args.verbose
-        self.num_previous_states = (net.input_shape[0] - 3) // 2
+        self.num_previous_states = HistoryBuffer.get_num_previous_states(net.input_shape)
         self.tensor_shape = tuple([1] + list(net.input_shape))
 
         self.mcts = None
