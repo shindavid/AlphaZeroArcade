@@ -125,7 +125,7 @@ class Game:
                     blink_x = x
                     blink_y = max(y, blink_y)
 
-        if blink_x > 0:
+        if blink_x >= 0:
             char_matrix[blink_y][blink_x] = colored(char_matrix[blink_y][blink_x], attrs=['blink'])
 
         out_lines = []
