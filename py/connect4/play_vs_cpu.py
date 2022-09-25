@@ -178,7 +178,8 @@ class GameRunner:
         mask[np.array(valid_moves, dtype=int) - 1] = 1
         move_probs *= mask
         move_probs /= sum(move_probs)
-        return self.handle_cpu_move_helper(valid_moves, move_probs, val_tensor)
+        value = val_tensor.softmax(dim=0)
+        return self.handle_cpu_move_helper(valid_moves, move_probs, value)
 
     def handle_cpu_move_helper(self, valid_moves, net_policy, net_value,
                                mcts_counts=None, mcts_policy=None, mcts_value=None):
@@ -200,7 +201,7 @@ class GameRunner:
         os.system('clear')
         print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
-            win_probs = value.softmax(dim=0)
+            win_probs = value
             print('CPU pos eval:')
             if mcts_value is None:
                 for c in (Game.RED, Game.YELLOW):
@@ -210,7 +211,7 @@ class GameRunner:
                 for i, x in enumerate(policy):
                     print(f'{i+1:3d} {x:8.3f}')
             else:
-                net_win_probs = net_value.softmax(dim=0)
+                net_win_probs = net_value
                 for c in (Game.RED, Game.YELLOW):
                     print('%s: %6.3f%% -> %6.3f%%' % (
                         PRETTY_COLORS[c], 100.0 * float(net_win_probs[c]), 100.0 * float(win_probs[c])
