@@ -87,7 +87,7 @@ class GameRunner:
 
     def run(self, my_color: Optional[Color] = None):
         if my_color is None:
-            my_color = np.random.randint(0, 1)
+            my_color = np.random.randint(0, 2)
         cpu_color = 1 - my_color
         self.player_names = ['CPU', 'CPU']
         self.player_names[my_color] = 'Human'
