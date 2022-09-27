@@ -218,7 +218,7 @@ class MCTS:
     def backprop(self, tree: Tree, evaluation: StateEvaluation, game_result: ValueProbDistr):
         tree.backprop(game_result)
         if self.debug_file:
-            self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
+            #self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
             self.debug_file.write(f'root sum: {simple_float_tensor_repr(self.root.value_sum)}\n')
             self.debug_file.flush()
 

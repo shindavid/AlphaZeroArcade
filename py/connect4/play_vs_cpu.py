@@ -18,6 +18,7 @@ class Args:
     model_file: str = 'c4_model.pt'
     debug_file: str = None
     verbose: bool = False
+    my_starting_color: str = None
     neural_network_only: bool = False
     num_mcts_iters: int = 100
     temperature: float = 0.0
@@ -27,6 +28,7 @@ class Args:
         Args.model_file = args.model_file
         Args.debug_file = args.debug_file
         Args.verbose = args.verbose
+        Args.my_starting_color = args.my_starting_color
         Args.neural_network_only = args.neural_network_only
         Args.num_mcts_iters = args.num_mcts_iters
         Args.temperature = args.temperature
@@ -38,6 +40,7 @@ def load_args():
                         help='model output location (default: %(default)s)')
     parser.add_argument("-d", "--debug-file", help='debug output file')
     parser.add_argument("-v", "--verbose", action='store_true', help='verbose mode')
+    parser.add_argument("-c", "--my-starting-color", help='my starting color (R or Y). Default: random')
     parser.add_argument("-o", "--neural-network-only", action='store_true', help='neural network only')
     parser.add_argument("-n", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
                         help='num mcts iterations to do per move (default: %(default)s)')
