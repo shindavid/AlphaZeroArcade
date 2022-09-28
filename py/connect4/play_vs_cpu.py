@@ -18,17 +18,27 @@ class Args:
     model_file: str = 'c4_model.pt'
     debug_file: str = None
     verbose: bool = False
-    my_starting_color: str = None
+    my_starting_color: Optional[Color] = None
     neural_network_only: bool = False
     num_mcts_iters: int = 100
     temperature: float = 0.0
+
+    @staticmethod
+    def str_to_color(s: Optional[str]) -> Optional[Color]:
+        if s is None:
+            return None
+        if s == 'R':
+            return Game.RED
+        if s == 'Y':
+            return Game.YELLOW
+        raise Exception(f'Invalid color -c {s}')
 
     @staticmethod
     def load(args):
         Args.model_file = args.model_file
         Args.debug_file = args.debug_file
         Args.verbose = args.verbose
-        Args.my_starting_color = args.my_starting_color
+        Args.my_starting_color = Args.str_to_color(args.my_starting_color)
         Args.neural_network_only = args.neural_network_only
         Args.num_mcts_iters = args.num_mcts_iters
         Args.temperature = args.temperature
@@ -63,7 +73,7 @@ def main():
     print('Model successfully loaded!')
 
     runner = GameRunner(net)
-    runner.run()
+    runner.run(Args.my_starting_color)
 
 
 class GameRunner:
