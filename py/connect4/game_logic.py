@@ -150,11 +150,11 @@ class Game:
 
 if __name__ == '__main__':
     for _ in range(1000):
-        g = Game()
+        game = Game()
         while True:
-            moves = g.get_valid_moves()
+            moves = game.get_valid_moves()
             assert moves
-            results = g.apply_move(random.choice(moves), announce=False)
+            results = game.apply_move(random.choice(moves), announce=False)
             if results:
                 break
 

@@ -7,8 +7,8 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from game import Game, NUM_COLUMNS, NUM_ROWS
-from game import NUM_COLORS, Color, MAX_MOVES_PER_GAME
+from game_logic import Game, NUM_COLUMNS, NUM_ROWS
+from game_logic import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
@@ -160,11 +160,11 @@ class HistoryBuffer:
         self.next_color = Game.RED
         self.ref_indices = [self.num_previous_states, self.num_previous_states]
 
-    def update(self, g: Game):
+    def update(self, game: Game):
         self.ref_indices[self.next_color] += 1
-        self.full_mask[self.next_color][self.ref_indices[self.next_color]] = g.get_mask(self.next_color)
+        self.full_mask[self.next_color][self.ref_indices[self.next_color]] = game.get_mask(self.next_color)
         self.next_color = self.prev_color
-        assert self.next_color == g.get_current_player()
+        assert self.next_color == game.get_current_player()
 
     def undo(self):
         """

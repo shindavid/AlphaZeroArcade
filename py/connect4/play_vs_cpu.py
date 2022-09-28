@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import torch
 
-from game import Color, Game, NUM_COLUMNS, PRETTY_COLORS
+from game_logic import Color, Game, NUM_COLUMNS, PRETTY_COLORS
 from neural_net import Net, HistoryBuffer, NetWrapper, GameState
 
 sys.path.append(os.path.join(sys.path[0], '..'))
@@ -95,7 +95,7 @@ class GameRunner:
         self.player_names = ['???', '???']
         self.last_move = None
         self.history_buffer = None
-        self.g = Game()
+        self.game = Game()
         self.game_state = None
 
     def run(self, my_color: Optional[Color] = None):
@@ -106,12 +106,12 @@ class GameRunner:
         self.player_names[my_color] = 'Human'
         self.last_move = None
         self.history_buffer = HistoryBuffer(self.num_previous_states)
-        self.g = Game()
-        self.game_state = GameState(self.g, self.history_buffer)
+        self.game = Game()
+        self.game_state = GameState(self.game, self.history_buffer)
 
         while True:
-            cur_player = self.g.get_current_player()
-            valid_moves = self.g.get_valid_moves()
+            cur_player = self.game.get_current_player()
+            valid_moves = self.game.get_valid_moves()
             assert valid_moves
             if cur_player == my_color:
                 result = self.handle_my_move(valid_moves)
@@ -138,14 +138,14 @@ class GameRunner:
             print('Thank you for playing! Good-bye!')
 
     def handle_my_move(self, valid_moves):
-        g = self.g
+        game = self.game
         player_names = self.player_names
 
         my_move = None
         while True:
             if my_move is not None:
                 os.system('clear')
-                print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
+                print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
                 print(f'Invalid input!')
             my_move = input('Enter move [1-7]: ')
             try:
@@ -158,7 +158,7 @@ class GameRunner:
         self.last_move = my_move
         self.game_state.applyMove(my_move-1)
         os.system('clear')
-        print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
+        print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         return self.game_state.getGameResult()
 
     def handle_cpu_move_mcts(self, valid_moves):
@@ -203,7 +203,7 @@ class GameRunner:
 
     def handle_cpu_move_helper(self, valid_moves, net_policy, net_value,
                                mcts_counts=None, mcts_policy=None, mcts_value=None):
-        g = self.g
+        game = self.game
         player_names = self.player_names
 
         policy = net_policy if mcts_policy is None else mcts_policy
@@ -219,7 +219,7 @@ class GameRunner:
         self.last_move = cpu_move
         self.game_state.applyMove(cpu_move-1)
         os.system('clear')
-        print(g.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
+        print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
             win_probs = value
             print('CPU pos eval:')

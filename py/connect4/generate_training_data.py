@@ -10,8 +10,8 @@ import random
 import subprocess
 from tqdm import tqdm
 
-import game
-from game import NUM_ROWS, NUM_COLUMNS
+import game_logic
+from game_logic import NUM_ROWS, NUM_COLUMNS
 from neural_net import HistoryBuffer
 
 RANK = MPI.COMM_WORLD.Get_rank()
@@ -90,7 +90,7 @@ def launch(args):
 
         tqdm_range = tqdm(range(num_my_games), desc="Writing training games") if verbose else range(num_my_games)
         for _ in tqdm_range:
-            g = game.Game()
+            game = game_logic.Game()
             history_buffer = HistoryBuffer(num_previous_states)
             move_history = ''
             while True:
@@ -100,7 +100,7 @@ def launch(args):
 
                 move_scores = list(map(int, stdout.split()[-NUM_COLUMNS:]))
 
-                cp = g.get_current_player()
+                cp = game.get_current_player()
                 best_score = max(move_scores)
                 best_move_arr = (np.array(move_scores) == best_score)
                 winning_move_arr = np.array(move_scores) > 0
@@ -118,14 +118,14 @@ def launch(args):
                 weak_policy_dataset[write_index] = winning_move_arr
                 write_index += 1
 
-                moves = g.get_valid_moves()
+                moves = game.get_valid_moves()
                 assert moves
                 move = random.choice(moves)
-                results = g.apply_move(move, announce=False)
+                results = game.apply_move(move, announce=False)
                 if results:
                     break
 
-                history_buffer.update(g)
+                history_buffer.update(game)
                 move_history += str(move)
 
         input_dataset.resize(write_index, axis=0)
