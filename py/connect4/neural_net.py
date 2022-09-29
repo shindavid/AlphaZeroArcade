@@ -214,40 +214,40 @@ class GameState(AbstractGameState):
         self.move_stack = []
 
     @staticmethod
-    def supportsUndo() -> bool:
+    def supports_undo() -> bool:
         return True
 
     @staticmethod
-    def getNumGlobalActions() -> int:
+    def get_num_global_actions() -> int:
         return NUM_COLUMNS
 
-    def debugDump(self, file_handle):
+    def debug_dump(self, file_handle):
         file_handle.write(self.game.to_ascii_drawing(pretty_print=False))
 
-    def getSignature(self) -> Hashable:
+    def get_signature(self) -> Hashable:
         return self.game.piece_mask.data.tobytes(), self.game.current_player
 
-    def getCurrentPlayer(self) -> PlayerIndex:
+    def get_current_player(self) -> PlayerIndex:
         return self.game.get_current_player()
 
-    def applyMove(self, action_index: ActionIndex):
+    def apply_move(self, action_index: ActionIndex):
         self.winners = self.game.apply_move(action_index+1)
         self.history_buffer.update(self.game)
         self.move_stack.append(action_index)
 
-    def undoLastMove(self):
+    def undo_last_move(self):
         action_index = self.move_stack.pop()
         self.history_buffer.undo()
         self.winners = []
         self.game.undo_move(action_index+1)
 
-    def getValidActions(self) -> ActionMask:
+    def get_valid_actions(self) -> ActionMask:
         actions = np.array(self.game.get_valid_moves())
-        mask = torch.zeros(self.getNumGlobalActions(), dtype=bool)
+        mask = torch.zeros(self.get_num_global_actions(), dtype=bool)
         mask[actions-1] = 1
         return mask
 
-    def getGameResult(self) -> Optional[ValueProbDistr]:
+    def get_game_result(self) -> Optional[ValueProbDistr]:
         if self.winners:
             arr = np.zeros(2)
             arr[self.winners] = 1.0 / len(self.winners)

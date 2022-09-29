@@ -25,10 +25,12 @@ from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, Act
 GlobalPolicyCountDistr = Tensor
 
 
-def simple_float_tensor_repr(t: Tensor) -> str:
+def simple_float_tensor_repr(t: Optional[Tensor]) -> str:
     """
     I'm sure there's a better way to do this.
     """
+    if t is None:
+        return '-'
     return ' '.join(['%.3f' % x for x in t.tolist()])
 
 
@@ -59,8 +61,8 @@ class MCTSResults:
 @dataclass
 class StateEvaluation:
     def __init__(self, network: AbstractNeuralNetwork, state: AbstractGameState):
-        self.current_player: PlayerIndex = state.getCurrentPlayer()
-        self.game_result: Optional[ValueProbDistr] = state.getGameResult()
+        self.current_player: PlayerIndex = state.get_current_player()
+        self.game_result: Optional[ValueProbDistr] = state.get_game_result()
 
         self.valid_action_mask: Optional[ActionMask] = None
         self.policy_logit_distr: Optional[GlobalPolicyLogitDistr] = None
@@ -70,7 +72,7 @@ class StateEvaluation:
             # game is over, don't bother computing other fields
             return
 
-        self.valid_action_mask = state.getValidActions()
+        self.valid_action_mask = state.get_valid_actions()
         policy_output, value_output = network.evaluate(state.vectorize())
         self.policy_logit_distr = policy_output
         self.value_prob_distr = value_output.softmax(dim=0)
@@ -192,7 +194,7 @@ class MCTS:
                 self.debug_file.flush()
             self.visit(self.root, state, params)
 
-        n = state.getNumGlobalActions()
+        n = state.get_num_global_actions()
         counts = torch.zeros(n, dtype=int)
         for child in self.root.children:
             counts[child.action_index] = child.count
@@ -206,7 +208,7 @@ class MCTS:
         if tree.evaluation is not None:
             return tree.evaluation
 
-        signature = state.getSignature()
+        signature = state.get_signature()
         evaluation = self.cache.get(signature, None)
         if evaluation is None:
             evaluation = StateEvaluation(self.network, state)
@@ -218,7 +220,7 @@ class MCTS:
     def backprop(self, tree: Tree, evaluation: StateEvaluation, game_result: ValueProbDistr):
         tree.backprop(game_result)
         if self.debug_file:
-            #self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
+            self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
             self.debug_file.write(f'root sum: {simple_float_tensor_repr(self.root.value_sum)}\n')
             self.debug_file.flush()
 
@@ -248,7 +250,7 @@ class MCTS:
         best_child = tree.children[np.argmax(PUCT)]
 
         if self.debug_file:
-            state.debugDump(self.debug_file)
+            state.debug_dump(self.debug_file)
             self.debug_file.write(f'*** visit action:{tree.action_index}\n')
             self.debug_file.write(f'cp:   {current_player}\n')
             self.debug_file.write(f'rP:   {simple_float_tensor_repr(tree.raw_policy_prior)}\n')
@@ -262,11 +264,11 @@ class MCTS:
         if leaf:
             self.backprop(tree, evaluation, evaluation.value_prob_distr)
         else:
-            if state.supportsUndo():
-                state.applyMove(best_child.action_index)
+            if state.supports_undo():
+                state.apply_move(best_child.action_index)
                 self.visit(best_child, state, params)
-                state.undoLastMove()
+                state.undo_last_move()
             else:
                 best_child.store_state(state)
-                state.applyMove(best_child.action_index)
+                state.apply_move(best_child.action_index)
                 self.visit(best_child, best_child.state, params)

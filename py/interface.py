@@ -36,29 +36,29 @@ class AbstractNeuralNetwork(ABC):
 class AbstractGameState(ABC):
     @staticmethod
     @abstractmethod
-    def supportsUndo() -> bool:
+    def supports_undo() -> bool:
         """
-        Returns whether the class implements an undoLastMove() method. If it does, the MCTS implementation will use it.
+        Returns whether the class implements an undo_last_move() method. If it does, the MCTS implementation will use it.
         Otherwise, the class must support a clone() method.
         """
         pass
 
     @staticmethod
     @abstractmethod
-    def getNumGlobalActions() -> int:
+    def get_num_global_actions() -> int:
         """
         Returns the number of global actions.
         """
         pass
 
-    def debugDump(self, file_handle):
+    def debug_dump(self, file_handle):
         """
         For debugging.
         """
         pass
 
     @abstractmethod
-    def getSignature(self) -> Hashable:
+    def get_signature(self) -> Hashable:
         """
         Returns an object that will serve as the dict-key for a neural network evaluation cache.
 
@@ -74,41 +74,41 @@ class AbstractGameState(ABC):
         pass
 
     @abstractmethod
-    def getCurrentPlayer(self) -> PlayerIndex:
+    def get_current_player(self) -> PlayerIndex:
         """
-        Returns the player that would correspond to the next applyMove() call.
+        Returns the player that would correspond to the next apply_move() call.
         """
         pass
 
     @abstractmethod
-    def applyMove(self, action_index: ActionIndex):
+    def apply_move(self, action_index: ActionIndex):
         """
         Apply a move, modifying the game state.
         """
         pass
 
-    def undoLastMove(self):
+    def undo_last_move(self):
         """
-        If supportsUndo() returns True, then this method must be implemented. Calling the method should effectively
-        undo the last applyMove() call.
+        If supports_undo() returns True, then this method must be implemented. Calling the method should effectively
+        undo the last apply_move() call.
         """
         raise NotImplementedError()
 
     def clone(self):
         """
-        If supportsUndo() returns False, then this method must be implemented. Returns a deep copy of self.
+        If supports_undo() returns False, then this method must be implemented. Returns a deep copy of self.
         """
         raise NotImplementedError()
 
     @abstractmethod
-    def getValidActions(self) -> ActionMask:
+    def get_valid_actions(self) -> ActionMask:
         """
         Returns a mask indicating which moves are legal at the current state.
         """
         pass
 
     @abstractmethod
-    def getGameResult(self) -> Optional[ValueProbDistr]:
+    def get_game_result(self) -> Optional[ValueProbDistr]:
         """
         Returns None if game is not over. Else, returns a vector of non-negative win/loss values summing to 1.
         These values can be fractional in the event of a tie.

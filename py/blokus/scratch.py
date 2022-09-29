@@ -20,10 +20,10 @@ class BlokusGameState(AbstractGameState):
         state.apply_move(Move.from_index(action_index))
         return BlokusGameState(self._num_players, state)
 
-    def getValidActions(self) -> ActionMask:
+    def get_valid_actions(self) -> ActionMask:
         return self._state.get_legal_moves()
 
-    def getGameResult(self) -> Optional[ValueProbDistr]:
+    def get_game_result(self) -> Optional[ValueProbDistr]:
         raise Exception('TODO')
 
     def __hash__(self) -> int:

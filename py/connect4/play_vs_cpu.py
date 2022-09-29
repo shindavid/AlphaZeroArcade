@@ -156,10 +156,10 @@ class GameRunner:
                 continue
 
         self.last_move = my_move
-        self.game_state.applyMove(my_move-1)
+        self.game_state.apply_move(my_move-1)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
-        return self.game_state.getGameResult()
+        return self.game_state.get_game_result()
 
     def handle_cpu_move_mcts(self, valid_moves):
         results = self.mcts.sim(self.game_state, self.mcts_params)
@@ -217,7 +217,7 @@ class GameRunner:
         assert cpu_move in valid_moves
 
         self.last_move = cpu_move
-        self.game_state.applyMove(cpu_move-1)
+        self.game_state.apply_move(cpu_move-1)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
@@ -243,7 +243,7 @@ class GameRunner:
 
             print('')
 
-        return self.game_state.getGameResult()
+        return self.game_state.get_game_result()
 
 
 if __name__ == '__main__':
