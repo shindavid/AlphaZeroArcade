@@ -1,3 +1,4 @@
 .idea
 cmake-build-debug
+js/c4-debug/node_modules
 **/__pycache__
