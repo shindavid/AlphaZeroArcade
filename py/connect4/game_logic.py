@@ -112,6 +112,13 @@ class Game:
             return [Game.RED, Game.YELLOW]
         return []
 
+    def get_board_str(self) -> str:
+        tokens = ['.' for _ in range(NUM_ROWS * NUM_COLUMNS)]
+        for c, color in enumerate(COLORS):
+            for k in np.where(self.piece_mask[c].reshape((-1,)))[0]:
+                tokens[k] = color
+        return ''.join(tokens)
+
     def to_ascii_drawing(self, pretty_print=True, newline=True, add_legend=False, player_names=('1', '2'),
                          highlight_column=None) -> str:
         colors = PRETTY_COLORS if pretty_print else COLORS

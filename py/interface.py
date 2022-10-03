@@ -2,6 +2,7 @@ from torch import Tensor
 
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Hashable
+import xml.etree.ElementTree as ET
 
 
 """
@@ -54,6 +55,15 @@ class AbstractGameState(ABC):
     def debug_dump(self, file_handle):
         """
         For debugging.
+        """
+        pass
+
+    def to_xml_tree(self, elem: ET.Element, tag: str) -> ET.Element:
+        """
+        For debugging.
+
+        Create an xml sub-element of <elem> with tag <tag>, and return it. This sub-element should contain all the
+        necessary info to construct a visual representation of the state.
         """
         pass
 

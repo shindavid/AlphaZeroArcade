@@ -11,9 +11,9 @@ Action items:
 
 4. Root parallelism. In turn demands multiprocess setup, virtual loss, etc.
 """
-import io
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
+import xml.etree.ElementTree as ET
 
 import numpy as np
 import torch
@@ -177,22 +177,28 @@ class MCTS:
     - disable Dirichlet noise + explorative settings (maximizing strength)
     - do NOT export for nnet training
     """
-    def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2, debug_file: Optional[io.StringIO] = None):
-        self.debug_file = debug_file
+    def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2, debug_filename: Optional[str] = None):
+        self.debug_filename = debug_filename
         self.network = network
         self.n_players = n_players
         self.root: Optional[Tree] = None
         self.cache: Dict[Any, StateEvaluation] = {}
+        self.debug_tree = None if debug_filename is None else ET.ElementTree(ET.Element('Game'))
+
+    def close_debug_file(self):
+        if self.debug_filename is None:
+            return
+        ET.indent(self.debug_tree)
+        self.debug_tree.write(self.debug_filename, encoding='utf-8', xml_declaration=True)
+        self.debug_filename = None
+        self.debug_tree = None
 
     def sim(self, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
+        move_tree = None if self.debug_tree is None else state.to_xml_tree(self.debug_tree.getroot(), 'Move')
         self.root = Tree(self.n_players)
         for i in range(params.treeSizeLimit):
-            if self.debug_file:
-                self.debug_file.write('****************************\n')
-                self.debug_file.write(f'SIM LOOP i={i}\n')
-                self.debug_file.write('****************************\n')
-                self.debug_file.flush()
-            self.visit(self.root, state, params)
+            visit_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
+            self.visit(self.root, state, params, debug_subtree=visit_tree)
 
         n = state.get_num_global_actions()
         counts = torch.zeros(n, dtype=int)
@@ -217,22 +223,24 @@ class MCTS:
         tree.evaluation = evaluation
         return evaluation
 
-    def backprop(self, tree: Tree, evaluation: StateEvaluation, game_result: ValueProbDistr):
-        tree.backprop(game_result)
-        if self.debug_file:
-            self.debug_file.write(f'BACKPROP: {simple_float_tensor_repr(evaluation.value_prob_distr)}\n')
-            self.debug_file.write(f'root sum: {simple_float_tensor_repr(self.root.value_sum)}\n')
-            self.debug_file.flush()
-
-    def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams):
+    def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams, debug_subtree: Optional[ET.Element]):
         evaluation = self.evaluate(tree, state)
         game_result = evaluation.game_result
+        current_player = evaluation.current_player
 
         if game_result is not None:
-            self.backprop(tree, evaluation, game_result)
+            tree.backprop(game_result)
+            if self.debug_filename:
+                tree_dict = {
+                    'action': -1 if tree.action_index is None else tree.action_index,
+                    'terminal': True,
+                    'cp': current_player,
+                    'eval': game_result,
+                }
+                for key, value in tree_dict.items():
+                    debug_subtree.set(key, stringify(value))
             return
 
-        current_player = evaluation.current_player
         leaf = not tree.has_children()
         tree.expand_children(evaluation)
 
@@ -249,26 +257,53 @@ class MCTS:
 
         best_child = tree.children[np.argmax(PUCT)]
 
-        if self.debug_file:
-            state.debug_dump(self.debug_file)
-            self.debug_file.write(f'*** visit action:{tree.action_index}\n')
-            self.debug_file.write(f'cp:   {current_player}\n')
-            self.debug_file.write(f'rP:   {simple_float_tensor_repr(tree.raw_policy_prior)}\n')
-            self.debug_file.write(f'P:    {simple_float_tensor_repr(P)}\n')
-            self.debug_file.write(f'V:    {simple_float_tensor_repr(V)}\n')
-            self.debug_file.write(f'N:    {simple_float_tensor_repr(N)}\n')
-            self.debug_file.write(f'PUCT: {simple_float_tensor_repr(PUCT)}\n')
-            self.debug_file.write(f'sum:  {simple_float_tensor_repr(tree.value_sum)}\n')
-            self.debug_file.flush()
+        debug_subtree2 = None
+        if self.debug_filename:
+            debug_subtree2 = ET.SubElement(debug_subtree, 'Visit')
 
         if leaf:
-            self.backprop(tree, evaluation, evaluation.value_prob_distr)
+            tree.backprop(evaluation.value_prob_distr)
         else:
             if state.supports_undo():
                 state.apply_move(best_child.action_index)
-                self.visit(best_child, state, params)
+                self.visit(best_child, state, params, debug_subtree2)
                 state.undo_last_move()
             else:
                 best_child.store_state(state)
                 state.apply_move(best_child.action_index)
-                self.visit(best_child, best_child.state, params)
+                self.visit(best_child, best_child.state, params, debug_subtree2)
+
+        if self.debug_filename:
+            tree_dict = {
+                'action': -1 if tree.action_index is None else tree.action_index,
+                'terminal': False,
+                'cp': current_player,
+                'valid_actions': tree.valid_action_indices,
+                'leaf': leaf,
+                'rP': tree.raw_policy_prior,
+                'P': P,
+                'eval': evaluation.value_prob_distr,
+                'V': V,
+                'N': N,
+                'PUCT': PUCT,
+                'value_sum': tree.value_sum,
+            }
+
+            for key, value in tree_dict.items():
+                debug_subtree.set(key, stringify(value))
+
+
+def stringify(value):
+    if isinstance(value, torch.Tensor):
+        assert len(value.shape) == 1, value.shape
+        return stringify(value.tolist())
+    if isinstance(value, np.ndarray):
+        assert len(value.shape) == 1, value.shape
+        return stringify(value.tolist())
+    if isinstance(value, (list, tuple)):
+        return ','.join(map(stringify, value))
+    if isinstance(value, bool):
+        return str(int(value))
+    if isinstance(value, float):
+        return '%.5g' % value
+    return str(value)

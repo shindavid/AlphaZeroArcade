@@ -16,7 +16,7 @@ from mcts import MCTSParams, MCTS
 
 class Args:
     model_file: str = 'c4_model.pt'
-    debug_file: str = None
+    debug_filename: str = None
     verbose: bool = False
     my_starting_color: Optional[Color] = None
     neural_network_only: bool = False
@@ -36,7 +36,7 @@ class Args:
     @staticmethod
     def load(args):
         Args.model_file = args.model_file
-        Args.debug_file = args.debug_file
+        Args.debug_filename = args.debug_filename
         Args.verbose = args.verbose
         Args.my_starting_color = Args.str_to_color(args.my_starting_color)
         Args.neural_network_only = args.neural_network_only
@@ -48,7 +48,7 @@ def load_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model-file", default=Args.model_file,
                         help='model output location (default: %(default)s)')
-    parser.add_argument("-d", "--debug-file", help='debug output file')
+    parser.add_argument("-d", "--debug-filename", help='debug output file')
     parser.add_argument("-v", "--verbose", action='store_true', help='verbose mode')
     parser.add_argument("-c", "--my-starting-color", help='my starting color (R or Y). Default: random')
     parser.add_argument("-o", "--neural-network-only", action='store_true', help='neural network only')
@@ -88,8 +88,7 @@ class GameRunner:
         self.mcts = None
         self.mcts_params = None
         if not Args.neural_network_only:
-            debug_file = open(Args.debug_file, 'w') if Args.debug_file else None
-            self.mcts = MCTS(self.net, debug_file=debug_file)
+            self.mcts = MCTS(self.net, debug_filename=Args.debug_filename)
             self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters)
 
         self.player_names = ['???', '???']
@@ -131,6 +130,7 @@ class GameRunner:
                 print('The game has ended in a draw!')
             break
 
+        self.mcts.close_debug_file()
         continue_decision = input('Play again? [Y/n]: ')
         if continue_decision in ('', 'y', 'Y'):
             self.run(cpu_color)

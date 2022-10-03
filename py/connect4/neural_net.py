@@ -1,6 +1,7 @@
 import os
 import sys
 from typing import Tuple, Optional, Hashable
+import xml.etree.ElementTree as ET
 
 import numpy as np
 import torch
@@ -201,7 +202,6 @@ class NetWrapper(AbstractNeuralNetwork):
         self.net = net
 
     def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
-        #print('vec.shape', type(vec), vec.dtype, vec.shape)
         p, v = self.net(vec)
         return p.flatten(), v.flatten()
 
@@ -223,6 +223,13 @@ class GameState(AbstractGameState):
 
     def debug_dump(self, file_handle):
         file_handle.write(self.game.to_ascii_drawing(pretty_print=False))
+
+    def to_xml_tree(self, elem: ET.Element, tag: str) -> ET.Element:
+        tag_dict = {
+            'cp': str(self.game.get_current_player()),
+            'board': self.game.get_board_str(),
+        }
+        return ET.SubElement(elem, tag, tag_dict)
 
     def get_signature(self) -> Hashable:
         return self.game.piece_mask.data.tobytes(), self.game.current_player
