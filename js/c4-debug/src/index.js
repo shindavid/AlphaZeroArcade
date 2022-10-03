@@ -1,6 +1,22 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import App from './App';
+//import App from './components/upload_example';
+import reportWebVitals from './reportWebVitals';
+
+// Rows and columns are 1-indexed
+class GameState {
+  constructor() {
+    this.red = 0n;
+    this.yellow = 0n;
+  }
+
+  getHeight(col) {
+    let combined = this.red | this.yellow;
+    combined = (combined >> ((col-1) * 8)) % 256;
+  }
+}
 
 function Square(props) {
   return (
@@ -142,5 +158,10 @@ function calculateWinner(squares) {
 // ========================================
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<Game />);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
 
+reportWebVitals(console.log);
