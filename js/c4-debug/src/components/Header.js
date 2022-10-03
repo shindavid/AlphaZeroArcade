@@ -16,23 +16,26 @@ class FileUpload extends Component {
 
   render() {
     const file = this.state.file;
+    let fileInfo;
+    if (file) {
+      fileInfo = <p>Replaying game: {file.name}</p>
+    } else {
+      fileInfo = "";
+    }
     return (
       <div id="upload-box">
-        <input type="file" name='debugfile' onChange={this.handleUpload} />
-        <p>Filename: {file.name}</p>
-        <p>File type: {file.type}</p>
-        <p>File size: {file.size} bytes</p>
-        {file && <ImageThumb image={file} />}
+        <input type="file" accept=".xml" name='debugfile' onChange={this.handleUpload} />
+        {fileInfo}
       </div>
     );
   }
 
   handleUpload(event) {
-    this.setState({file: event.target.files[0]});
+    const file = event.target.files[0];
+    this.setState({file: file});
 
     const data = new FormData();
-    console.log('target.files: ' + typeof(event.target.files[0]));
-    data.append('debug_file', event.target.files[0]);
+    data.append('debug_file', file);
     data.append('header', {
       'Access-Control-Allow-Origin': '*',
     });

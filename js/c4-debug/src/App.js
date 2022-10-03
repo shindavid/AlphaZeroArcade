@@ -15,9 +15,7 @@ class App extends Component {
     return (
       <Fragment>
         <Header state={this.state} />
-        <div className="body">
-          <Body state={this.state} />
-        </div>
+        <Body state={this.state} />
       </Fragment>
     );
   }
