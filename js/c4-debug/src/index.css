@@ -40,6 +40,12 @@ ol, ul {
   width: 32px;
 }
 
+.arrow {
+  display: inline-block;
+  height: 32px;
+  width: 32px;
+}
+
 .square {
   background-image: url(c4board.svg);
   background-size: 100% 100%;
@@ -48,6 +54,32 @@ ol, ul {
   height: 32px;
   width: 32px;
   z-index: 2;
+}
+
+.red {
+  background-image: url(c4board.svg), url(red.svg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 32px;
+  width: 32px;
+  z-index: 0;
+}
+
+.yellow {
+  background-image: url(c4board.svg), url(yellow.svg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 32px;
+  width: 32px;
+  z-index: 0;
+}
+
+.minicircle {
+  display: inline-block;
+  height: 16px;
+  width: 16px;
 }
 
 .square:focus {
