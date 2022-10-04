@@ -193,6 +193,10 @@ class MCTS:
         self.debug_filename = None
         self.debug_tree = None
 
+    def record_final_position(self, state: AbstractGameState):
+        if self.debug_tree:
+            state.to_xml_tree(self.debug_tree.getroot(), 'Move')
+
     def sim(self, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
         move_tree = None if self.debug_tree is None else state.to_xml_tree(self.debug_tree.getroot(), 'Move')
         self.root = Tree(self.n_players)

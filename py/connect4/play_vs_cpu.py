@@ -122,6 +122,8 @@ class GameRunner:
             if result is None:
                 continue
 
+            if self.mcts is not None:
+                self.mcts.record_final_position(self.game_state)
             if result[my_color] == 1:
                 print('Congratulations! You win!')
             elif result[cpu_color] == 1:
