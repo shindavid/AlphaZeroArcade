@@ -90,7 +90,6 @@ class Tree:
         self.value_sum = torch.zeros(n_players)
         self.value_avg = torch.zeros(n_players)
         self.value_prior: Optional[ValueProbDistr] = None
-        self.raw_policy_prior: Optional[LocalPolicyProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
 
     def store_state(self, state: AbstractGameState):
@@ -138,7 +137,6 @@ class Tree:
         valid_action_indices = torch.where(valid_action_mask)[0]
         P = torch.softmax(policy_output[valid_action_indices] * inv_temp, dim=0)
         self.value_prior = evaluation.value_prob_distr
-        self.raw_policy_prior = policy_output
         self.policy_prior = P
         return P
 
@@ -196,18 +194,20 @@ class MCTS:
 
     def record_final_position(self, state: AbstractGameState):
         if self.debug_tree:
-            state.to_xml_tree(self.debug_tree.getroot(), 'Move')
+            ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
 
     def sim(self, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
         if self.player_index is None:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
                 self.debug_tree.getroot().set('player', str(self.player_index))
-        move_tree = None if self.debug_tree is None else state.to_xml_tree(self.debug_tree.getroot(), 'Move')
+        move_tree = None
+        if self.debug_tree is not None:
+            move_tree = ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
         self.root = Tree(self.n_players)
         for i in range(params.treeSizeLimit):
-            visit_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
-            self.visit(self.root, state, params, debug_subtree=visit_tree)
+            iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
+            self.visit(self.root, state, params, 1, debug_subtree=iter_tree)
 
         n = state.get_num_global_actions()
         counts = torch.zeros(n, dtype=int)
@@ -232,7 +232,8 @@ class MCTS:
         tree.evaluation = evaluation
         return evaluation
 
-    def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams, debug_subtree: Optional[ET.Element]):
+    def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams, depth: int,
+              debug_subtree: Optional[ET.Element]):
         evaluation = self.evaluate(tree, state)
         game_result = evaluation.game_result
         current_player = evaluation.current_player
@@ -241,12 +242,16 @@ class MCTS:
             tree.backprop(game_result)
             if self.debug_filename:
                 tree_dict = {
-                    'action': -1 if tree.action_index is None else tree.action_index,
+                    'depth': depth,
+                    'board': state.compact_repr(),
                     'terminal': True,
                     'eval': game_result,
-                }
-                for key, value in tree_dict.items():
-                    debug_subtree.set(key, stringify(value))
+                    }
+                if tree.action_index is not None:
+                    tree_dict['action'] = tree.action_index
+                tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
+                elem = debug_subtree.makeelement('Visit', tree_dict)
+                debug_subtree.insert(0, elem)
             return
 
         leaf = not tree.has_children()
@@ -254,6 +259,7 @@ class MCTS:
 
         c_PUCT = params.c_PUCT
         P = tree.compute_policy_prior(evaluation, params)
+        noise = np.zeros(len(P))
         if tree.is_root() and params.dirichlet_mult:
             noise = np.random.dirichlet([params.dirichlet_alpha] * len(P))
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
@@ -262,47 +268,51 @@ class MCTS:
         N = torch.Tensor([c.count for c in tree.children])
         eps = 1e-6  # needed when N == 0
         PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
+        value_sum = torch.Tensor(tree.value_sum)
 
         best_child = tree.children[np.argmax(PUCT)]
-
-        debug_subtree2 = None
-        if self.debug_filename:
-            debug_subtree2 = ET.SubElement(debug_subtree, 'Visit')
 
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
         else:
             if state.supports_undo():
                 state.apply_move(best_child.action_index)
-                self.visit(best_child, state, params, debug_subtree2)
+                self.visit(best_child, state, params, depth + 1, debug_subtree)
                 state.undo_last_move()
             else:
                 best_child.store_state(state)
                 state.apply_move(best_child.action_index)
-                self.visit(best_child, best_child.state, params, debug_subtree2)
+                self.visit(best_child, best_child.state, params, depth + 1, debug_subtree)
 
         if self.debug_filename:
             tree_dict = {
-                'action': -1 if tree.action_index is None else tree.action_index,
-                'terminal': False,
-                'valid_actions': tree.valid_action_indices,
-                'leaf': leaf,
-                'rP': tree.raw_policy_prior,
-                'P': P,
+                'depth': depth,
+                'board': state.compact_repr(),
                 'eval': evaluation.value_prob_distr,
-                'V': V,
-                'N': N,
-                'PUCT': PUCT,
-                'value_sum': tree.value_sum,
+                'leaf': leaf,
+                'value_sum': value_sum,
             }
-
-            for key, value in tree_dict.items():
-                debug_subtree.set(key, stringify(value))
+            if tree.action_index is not None:
+                tree_dict['action'] = tree.action_index
+            tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
+            elem = debug_subtree.makeelement('Visit', tree_dict)
+            debug_subtree.insert(0, elem)
+            for ac, rp, p, no, v, n, puct in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT):
+                attribs = {
+                    'action': ac,
+                    'rP': rp,
+                    'P': p,
+                    'dir': no,
+                    'V': v,
+                    'N': n,
+                    'PUCT': puct,
+                }
+                attribs = {k: stringify(v) for k, v in attribs.items()}
+                ET.SubElement(elem, 'Child', attribs)
 
 
 def stringify(value):
     if isinstance(value, torch.Tensor):
-        assert len(value.shape) == 1, value.shape
         return stringify(value.tolist())
     if isinstance(value, np.ndarray):
         assert len(value.shape) == 1, value.shape

@@ -224,9 +224,11 @@ class GameState(AbstractGameState):
     def debug_dump(self, file_handle):
         file_handle.write(self.game.to_ascii_drawing(pretty_print=False))
 
+    def compact_repr(self) -> str:
+        return self.game.get_board_str()
+
     def to_xml_tree(self, elem: ET.Element, tag: str) -> ET.Element:
         tag_dict = {
-            'cp': str(self.game.get_current_player()),
             'board': self.game.get_board_str(),
         }
         return ET.SubElement(elem, tag, tag_dict)
