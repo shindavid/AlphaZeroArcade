@@ -17,6 +17,7 @@ class App extends Component {
     super(props);
     this.state = {
       debug_file: null,
+      player_index: null,
       history: [],
       move_index: 0,
     };
@@ -31,9 +32,12 @@ class App extends Component {
       const text = reader.result;
       let parser = new DOMParser();
       const tree = parser.parseFromString(text, "text/xml");
-      const moves = Array.from(tree.getElementsByTagName('Move'));
+      const game = tree.getElementsByTagName('Game')[0];
+      const moves = Array.from(game.getElementsByTagName('Move'));
       const history = moves.map(m => new Move(m));
+      const player_index = parseInt(game.getAttribute('player'));
       this.setState({
+        player_index: player_index,
         history: history
       })
     }
@@ -68,8 +72,15 @@ class App extends Component {
   render() {
     return (
       <Fragment>
-        <Header debug_file={this.state.debug_file} handleUpload={(event) => this.handleUpload(event)} />
-        <Body move_index={this.state.move_index} history={this.state.history} />
+        <Header
+          debug_file={this.state.debug_file}
+          handleUpload={(event) => this.handleUpload(event)}
+        />
+        <Body
+          player_index={this.state.player_index}
+          move_index={this.state.move_index}
+          history={this.state.history}
+        />
       </Fragment>
     );
   }

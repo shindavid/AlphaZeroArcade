@@ -1,8 +1,8 @@
 import React, { Component } from "react";
 import leftarrow from '../images/left.svg';
 import rightarrow from '../images/right.svg';
-// import redcircle from '../red.svg';
-// import yellowcircle from '../yellow.svg';
+import redcircle from '../images/red.svg';
+import yellowcircle from '../images/yellow.svg';
 
 class Square extends Component {
   render() {
@@ -93,9 +93,18 @@ class Body extends Component {
       }
       return rows;
     }
+    console.log(this.props.player_index);
+    const my_color = this.props.player_index === 0 ? redcircle : yellowcircle;
     // const next = move.cp === '0' ? redcircle : yellowcircle;
     return (
       <div className="center">
+        <div className="centertext">
+        My Color:&nbsp;
+          <span className="minicircle center">
+            <img src={my_color} />
+          </span>
+          <br/><br/>
+        </div>
         <table className="center"><tbody>
           <tr>
             <td>

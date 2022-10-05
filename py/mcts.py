@@ -184,6 +184,7 @@ class MCTS:
         self.root: Optional[Tree] = None
         self.cache: Dict[Any, StateEvaluation] = {}
         self.debug_tree = None if debug_filename is None else ET.ElementTree(ET.Element('Game'))
+        self.player_index: Optional[PlayerIndex] = None
 
     def close_debug_file(self):
         if self.debug_filename is None:
@@ -198,6 +199,10 @@ class MCTS:
             state.to_xml_tree(self.debug_tree.getroot(), 'Move')
 
     def sim(self, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
+        if self.player_index is None:
+            self.player_index = state.get_current_player()
+            if self.debug_tree is not None:
+                self.debug_tree.getroot().set('player', str(self.player_index))
         move_tree = None if self.debug_tree is None else state.to_xml_tree(self.debug_tree.getroot(), 'Move')
         self.root = Tree(self.n_players)
         for i in range(params.treeSizeLimit):
@@ -238,7 +243,6 @@ class MCTS:
                 tree_dict = {
                     'action': -1 if tree.action_index is None else tree.action_index,
                     'terminal': True,
-                    'cp': current_player,
                     'eval': game_result,
                 }
                 for key, value in tree_dict.items():
@@ -281,7 +285,6 @@ class MCTS:
             tree_dict = {
                 'action': -1 if tree.action_index is None else tree.action_index,
                 'terminal': False,
-                'cp': current_player,
                 'valid_actions': tree.valid_action_indices,
                 'leaf': leaf,
                 'rP': tree.raw_policy_prior,

@@ -22,6 +22,10 @@ ol, ul {
   margin-right: auto;
 }
 
+.centertext {
+  text-align: center;
+}
+
 .leftarrow {
   background-image: url(images/left.svg);
   background-size: 100% 100%;
