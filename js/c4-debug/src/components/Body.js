@@ -1,6 +1,6 @@
 import React, { Component } from "react";
-import leftarrow from '../left.svg';
-import rightarrow from '../right.svg';
+import leftarrow from '../images/left.svg';
+import rightarrow from '../images/right.svg';
 // import redcircle from '../red.svg';
 // import yellowcircle from '../yellow.svg';
 

@@ -23,7 +23,7 @@ ol, ul {
 }
 
 .leftarrow {
-  background-image: url(left.svg);
+  background-image: url(images/left.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
@@ -32,7 +32,7 @@ ol, ul {
 }
 
 .rightarrow {
-  background-image: url(right.svg);
+  background-image: url(images/right.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
@@ -47,7 +47,7 @@ ol, ul {
 }
 
 .square {
-  background-image: url(c4board.svg);
+  background-image: url(images/c4board.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
@@ -57,7 +57,7 @@ ol, ul {
 }
 
 .red {
-  background-image: url(c4board.svg), url(red.svg);
+  background-image: url(images/c4board.svg), url(images/red.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
@@ -67,7 +67,7 @@ ol, ul {
 }
 
 .yellow {
-  background-image: url(c4board.svg), url(yellow.svg);
+  background-image: url(images/c4board.svg), url(images/yellow.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
