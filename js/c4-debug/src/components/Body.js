@@ -61,14 +61,63 @@ class Arrow extends Component {
   }
 
   handleClick() {
+    const body = this.props.body;
     const move_index = this.props.move_index;
     const delta = this.props.delta;
     const new_move_index = move_index + delta;
 
-    this.props.parent.setState({
+    body.setState({
       move_index: new_move_index,
     });
   }
+}
+
+function GameHistory(props) {
+  const history = props.history;
+  const move_index = props.move_index;
+  const move = history[move_index];
+  const body = props.body;
+
+  const renderRows = () => {
+    let rows = [];
+    for (let i = 5; i >= 0; i--) {
+      rows.push(<BoardRow board={move.board} row={i} key={i}/>);
+    }
+    return rows;
+  }
+
+  return (
+    <table className="center"><tbody>
+    <tr>
+      <td>
+        <Arrow history={history} move_index={move_index} body={body} delta={-1} alt="left" src={leftarrow}/>
+      </td>
+      <td>
+        <span>
+          { renderRows() }
+        </span>
+      </td>
+      <td>
+        <Arrow history={history} move_index={move_index} body={body} delta={+1} alt="right" src={rightarrow}/>
+      </td>
+    </tr>
+    </tbody></table>
+  );
+}
+
+function MyColor(props) {
+  const player_index = props.player_index;
+  const my_color = player_index === 0 ? redcircle : yellowcircle;
+  return (
+    <div className="centertext">
+      My Color:&nbsp;
+      <span className="minicircle center">
+          <img src={my_color} alt="color" />
+        </span>
+      <br/><br/>
+    </div>
+  );
+
 }
 
 class Body extends Component {
@@ -85,40 +134,11 @@ class Body extends Component {
       return "";
     }
     const move_index = this.state.move_index;
-    const move = history[move_index];
-    const renderRows = () => {
-      let rows = [];
-      for (let i = 5; i >= 0; i--) {
-        rows.push(<BoardRow board={move.board} row={i} key={i}/>);
-      }
-      return rows;
-    }
-    const my_color = this.props.player_index === 0 ? redcircle : yellowcircle;
-    // const next = move.cp === '0' ? redcircle : yellowcircle;
+    const player_index = this.props.player_index;
     return (
       <div className="center">
-        <div className="centertext">
-        My Color:&nbsp;
-          <span className="minicircle center">
-            <img src={my_color} />
-          </span>
-          <br/><br/>
-        </div>
-        <table className="center"><tbody>
-          <tr>
-            <td>
-              <Arrow history={history} move_index={move_index} parent={this} delta={-1} alt="left" src={leftarrow}/>
-            </td>
-            <td>
-              <span>
-                { renderRows() }
-              </span>
-            </td>
-            <td>
-              <Arrow history={history} move_index={move_index} parent={this} delta={+1} alt="right" src={rightarrow}/>
-            </td>
-          </tr>
-        </tbody></table>
+        <MyColor player_index={player_index} />
+        <GameHistory history={history} move_index={move_index} body={this} />
       </div>
     );
   }
