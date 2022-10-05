@@ -21,13 +21,13 @@ class Square extends Component {
 
 class BoardRow extends Component {
   render() {
-    const move = this.props.move;
+    const board = this.props.board;
     const row = this.props.row;
     const renderSquares = () => {
       let squares = [];
       for (let i = 0; i < 7; i++) {
         const index = i * 6 + row;
-        const color = move.board.charAt(index);
+        const color = board.charAt(index);
         squares.push(<Square color={color} key={index} index={index} />);
       }
       return squares;
@@ -89,11 +89,10 @@ class Body extends Component {
     const renderRows = () => {
       let rows = [];
       for (let i = 5; i >= 0; i--) {
-        rows.push(<BoardRow move={move} key={i} row={i} />);
+        rows.push(<BoardRow board={move.board} row={i} key={i}/>);
       }
       return rows;
     }
-    console.log(this.props.player_index);
     const my_color = this.props.player_index === 0 ? redcircle : yellowcircle;
     // const next = move.cp === '0' ? redcircle : yellowcircle;
     return (
@@ -113,7 +112,6 @@ class Body extends Component {
             <td>
               <span>
                 { renderRows() }
-                {/*Current Player: <img className="minicircle" src={next} />*/}
               </span>
             </td>
             <td>
