@@ -9,10 +9,6 @@ class Move {
     const board = elem.getAttribute('board');
     this.cp = cp;
     this.board = board;
-    for (var i = 0; i < board.length; i++) {
-      const c = board.charAt(i);
-    }
-    console.log(board);
   }
 }
 
@@ -28,7 +24,6 @@ class App extends Component {
 
   handleUpload(event) {
     const file = event.target.files[0];
-    console.log('FILE: ' + file);
     let reader = new FileReader();
     reader.readAsText(file);
 
@@ -42,6 +37,8 @@ class App extends Component {
         history: history
       })
     }
+    // The below code sends the file to a backend server. This would make more sense for a web interface to play
+    // against the CPU.
     //
     // this.setState({debug_file: file});
     //
