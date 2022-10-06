@@ -56,7 +56,7 @@ ol, ul {
   width: 16px;
 }
 
-.square {
+.square32 {
   background-image: url(images/c4board.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
@@ -66,24 +66,32 @@ ol, ul {
   z-index: 2;
 }
 
-.red {
-  background-image: url(images/c4board.svg), url(images/red.svg);
+.square16 {
+  background-image: url(images/c4board.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
-  height: 32px;
-  width: 32px;
-  z-index: 0;
+  height: 16px;
+  width: 16px;
+  z-index: 2;
+}
+
+.red {
+  background-image: url(images/c4board.svg), url(images/red.svg);
 }
 
 .yellow {
   background-image: url(images/c4board.svg), url(images/yellow.svg);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  display: inline-block;
-  height: 32px;
-  width: 32px;
-  z-index: 0;
+}
+
+.lightred {
+  background-image: url(images/c4board.svg), url(images/red.svg);
+  opacity: 0.5;
+}
+
+.lightyellow {
+  background-image: url(images/c4board.svg), url(images/yellow.svg);
+  opacity: 0.5;
 }
 
 .minicircle {
@@ -96,8 +104,13 @@ ol, ul {
   outline: none;
 }
 
-.row {
+.row32 {
   height: 32px;
+  display: block;
+}
+
+.row16 {
+  height: 16px;
   display: block;
 }
 

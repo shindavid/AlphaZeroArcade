@@ -7,11 +7,15 @@ import yellowcircle from '../images/yellow.svg';
 class Square extends Component {
   render() {
     const color = this.props.color;
-    let className = 'square';
+    let className = this.props.className;
     if (color === 'R') {
-      className = 'red';
+      className += ' red';
     } else if (color === 'Y') {
-      className = 'yellow';
+      className += ' yellow';
+    } else if (color === 'r') {
+      className += ' lightred';
+    } else if (color === 'y') {
+      className += ' lightyellow';
     }
     return (
       <span className={className} ></span>
@@ -23,17 +27,19 @@ class BoardRow extends Component {
   render() {
     const board = this.props.board;
     const row = this.props.row;
+    const className = this.props.className;
+    const rowName = this.props.rowName;
     const renderSquares = () => {
       let squares = [];
       for (let i = 0; i < 7; i++) {
         const index = i * 6 + row;
         const color = board.charAt(index);
-        squares.push(<Square color={color} key={index} index={index} />);
+        squares.push(<Square className={className} color={color} key={index} index={index} />);
       }
       return squares;
     }
     return (
-      <span className="row">
+      <span className={rowName}>
         { renderSquares() }
       </span>
     );
@@ -89,9 +95,10 @@ function GameHistory(props) {
   const move = history[move_index];
 
   const renderRows = () => {
+    const className = "square32";
     let rows = [];
     for (let i = 5; i >= 0; i--) {
-      rows.push(<BoardRow board={move.board} row={i} key={i}/>);
+      rows.push(<BoardRow className={className} rowName="row32" board={move.board} row={i} key={i}/>);
     }
     return rows;
   }
@@ -261,12 +268,32 @@ function MCTSDisplay(props) {
   const move = history[move_index];
   const iter = move.iters[iter_index];
   const visit = iter.visits[visit_index];
-  const board = visit.board;
+
+  const orig_board = move.board;
+  let board = visit.board;
+  let new_board_arr = [];
+  for (let i=0; i<board.length; i++) {
+    const c = board.charAt(i);
+    const d = orig_board.charAt(i);
+    if (d === '.') {
+      if (c === 'R') {
+        new_board_arr.push('r');
+      } else if (c === 'Y') {
+        new_board_arr.push('y');
+      } else {
+        new_board_arr.push(c);
+      }
+    } else {
+      new_board_arr.push(c);
+    }
+  }
+  const new_board = new_board_arr.join('');
 
   const renderRows = () => {
+    const className = "square16";
     let rows = [];
     for (let i = 5; i >= 0; i--) {
-      rows.push(<BoardRow board={board} row={i} key={i}/>);
+      rows.push(<BoardRow className={className} rowName="row16" board={new_board} row={i} key={i}/>);
     }
     return rows;
   }
