@@ -27,12 +27,12 @@ class Visit {
     //this.value_sum = elem.getAttribute('value_sum').split(',').map(parseFloat);
 
     this.children = Array.from(elem.children).map(c => new Child(c));
-    this.rP_sum = this.children.reduce((a, b) => a.rP + b.rP, 0);
-    this.P_sum = this.children.reduce((a, b) => a.P + b.P, 0);
-    this.dir_sum = this.children.reduce((a, b) => a.dir + b.dir, 0);
-    this.V_sum = this.children.reduce((a, b) => a.V + b.V, 0);
-    this.N_sum = this.children.reduce((a, b) => a.N + b.N, 0);
-    this.PUCT_sum = this.children.reduce((a, b) => a.PUCT + b.PUCT, 0);
+    this.rP_sum = this.children.map((x) => x.rP).reduce((a, b) => a+b, 0);
+    this.P_sum = this.children.map((x) => x.P).reduce((a, b) => a+b, 0);
+    this.dir_sum = this.children.map((x) => x.dir).reduce((a, b) => a+b, 0);
+    this.V_sum = this.children.map((x) => x.V).reduce((a, b) => a+b, 0);
+    this.N_sum = this.children.map((x) => x.N).reduce((a, b) => a+b, 0);
+    this.PUCT_sum = this.children.map((x) => x.PUCT).reduce((a, b) => a+b, 0);
   }
 }
 

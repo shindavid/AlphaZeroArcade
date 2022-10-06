@@ -217,6 +217,17 @@ function MCTSNav(props) {
   );
 }
 
+function displayBar(x, y) {
+  if (y === 0) return displayBar(x, 1);
+  const q = x / (y===0 ? 1 : y);
+  const p = 100.0 * q;
+  return (
+    <div className="range">
+      <span className="progress" style={{width: p + '%'}} />
+    </div>
+  );
+}
+
 function MCTSValues(props) {
   const move_index = props.move_index;
   const iter_index = props.iter_index;
@@ -231,13 +242,17 @@ function MCTSValues(props) {
     for (const child of visit.children) {
       text.push((
         <tr key={child.action}>
-          <td>{child.action}</td>
-          <td>{child.rP}</td>
-          <td>{child.dir}</td>
-          <td>{child.P}</td>
-          <td>{child.V}</td>
-          <td>{child.N}</td>
-          <td>{child.PUCT}</td>
+          <td className="vert">
+            <div className="range">
+              {child.action}
+            </div>
+          </td>
+          <td className="vert">{displayBar(child.rP, visit.rP_sum)}</td>
+          <td className="vert">{displayBar(child.dir, visit.dir_sum)}</td>
+          <td className="vert">{displayBar(child.P, visit.P_sum)}</td>
+          <td className="vert">{displayBar(child.V, visit.V_sum)}</td>
+          <td className="vert">{displayBar(child.N, visit.N_sum)}</td>
+          <td className="vert">{displayBar(child.PUCT, visit.PUCT_sum)}</td>
         </tr>
       ));
     }
@@ -245,15 +260,15 @@ function MCTSValues(props) {
   }
 
   return (
-    <table><tbody>
+    <table className="collapsed"><tbody>
     <tr>
-      <td>Move</td>
-      <td>Eval</td>
-      <td>Dir</td>
-      <td>P</td>
-      <td>V</td>
-      <td>N</td>
-      <td>PUCT</td>
+      <td className="vert">Move</td>
+      <td className="vert">Eval</td>
+      <td className="vert">Dir</td>
+      <td className="vert">P</td>
+      <td className="vert">V</td>
+      <td className="vert">N</td>
+      <td className="vert">PUCT</td>
     </tr>
     { render_children() }
     </tbody></table>
