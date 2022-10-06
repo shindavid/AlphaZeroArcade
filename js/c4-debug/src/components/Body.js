@@ -223,7 +223,7 @@ function MCTSValues(props) {
     let text = []
     for (const child of visit.children) {
       text.push((
-        <tr>
+        <tr key={child.action}>
           <td>{child.action}</td>
           <td>{child.rP}</td>
           <td>{child.dir}</td>
@@ -254,9 +254,26 @@ function MCTSValues(props) {
 }
 
 function MCTSDisplay(props) {
+  const move_index = props.move_index;
+  const iter_index = props.iter_index;
+  const visit_index = props.visit_index;
+  const history = props.history;
+  const move = history[move_index];
+  const iter = move.iters[iter_index];
+  const visit = iter.visits[visit_index];
+  const board = visit.board;
+
+  const renderRows = () => {
+    let rows = [];
+    for (let i = 5; i >= 0; i--) {
+      rows.push(<BoardRow board={board} row={i} key={i}/>);
+    }
+    return rows;
+  }
+
   return (
     <span>
-      TODO
+      {renderRows()}
     </span>
   );
 }
@@ -295,7 +312,12 @@ class MCTSHistory extends Component {
             />
           </td>
           <td>
-            <MCTSDisplay/>
+            <MCTSDisplay
+              history={history}
+              move_index={move_index}
+              iter_index={iter_index}
+              visit_index={visit_index}
+            />
           </td>
         </tr>
         </tbody>
