@@ -246,6 +246,7 @@ class MCTS:
                     'board': state.compact_repr(),
                     'terminal': True,
                     'eval': game_result,
+                    'value_sum': tree.value_sum,
                     }
                 if tree.action_index is not None:
                     tree_dict['action'] = tree.action_index
