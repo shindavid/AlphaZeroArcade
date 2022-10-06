@@ -50,6 +50,12 @@ ol, ul {
   width: 32px;
 }
 
+.miniarrow {
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+}
+
 .square {
   background-image: url(images/c4board.svg);
   background-size: 100% 100%;

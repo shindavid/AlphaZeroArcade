@@ -61,48 +61,41 @@ class Arrow extends Component {
   }
 
   handleClick() {
-    const body = this.props.body;
     const move_index = this.props.move_index;
     const delta = this.props.delta;
     const new_move_index = move_index + delta;
 
-    body.setState({
-      move_index: new_move_index,
-    });
+    this.props.updateMoveIndex(new_move_index);
   }
 }
 
-function GameHistory(props) {
-  const history = props.history;
-  const move_index = props.move_index;
-  const move = history[move_index];
-  const body = props.body;
+class NAVArrow extends Component {
+  render() {
+    const index = this.props.index;
+    const max_index = this.props.max_index;
+    const delta = this.props.delta;
+    const className = this.props.className;
+    const alt = this.props.alt;
+    const src = this.props.src;
 
-  const renderRows = () => {
-    let rows = [];
-    for (let i = 5; i >= 0; i--) {
-      rows.push(<BoardRow board={move.board} row={i} key={i}/>);
+    const new_index = index + delta;
+    const hidden = (new_index === -1) || (new_index === max_index);
+
+    if (hidden) {
+      return (
+        <span className={className} />
+      );
     }
-    return rows;
+    return (
+      <span className={className}>
+        <img alt={alt} src={src} onClick={() => this.handleClick()} />
+      </span>
+    );
   }
 
-  return (
-    <table className="center"><tbody>
-    <tr>
-      <td>
-        <Arrow history={history} move_index={move_index} body={body} delta={-1} alt="left" src={leftarrow}/>
-      </td>
-      <td>
-        <span>
-          { renderRows() }
-        </span>
-      </td>
-      <td>
-        <Arrow history={history} move_index={move_index} body={body} delta={+1} alt="right" src={rightarrow}/>
-      </td>
-    </tr>
-    </tbody></table>
-  );
+  handleClick() {
+    this.props.update(this.props.index + this.props.delta);
+  }
 }
 
 function MyColor(props) {
@@ -117,7 +110,189 @@ function MyColor(props) {
       <br/><br/>
     </div>
   );
+}
 
+function GameHistory(props) {
+  const history = props.history;
+  const move_index = props.move_index;
+  const move = history[move_index];
+
+  const renderRows = () => {
+    let rows = [];
+    for (let i = 5; i >= 0; i--) {
+      rows.push(<BoardRow board={move.board} row={i} key={i}/>);
+    }
+    return rows;
+  }
+
+  return (
+    <table className="center"><tbody>
+    <tr>
+      <td>
+        <Arrow
+          history={history}
+          move_index={move_index}
+          updateMoveIndex={props.updateMoveIndex}
+          delta={-1}
+          alt="left"
+          src={leftarrow}
+        />
+      </td>
+      <td>
+        <span>
+          { renderRows() }
+        </span>
+      </td>
+      <td>
+        <Arrow
+          history={history}
+          move_index={move_index}
+          updateMoveIndex={props.updateMoveIndex}
+          delta={+1}
+          alt="right"
+          src={rightarrow}
+        />
+      </td>
+    </tr>
+    </tbody></table>
+  );
+}
+
+function MCTSNav(props) {
+  const history = props.history;
+  const move_index = props.move_index;
+  const move = history[move_index];
+  const iter_index = props.iter_index;
+  const visit_index = props.visit_index;
+
+  const iter = move.iters[iter_index];
+  const visit = iter.visits[visit_index];
+  const depth = visit.depth;
+
+  const num_iters = move.iters.length;
+  const num_visits = iter.visits.length;
+  const max_depth = iter.visits[num_visits-1].depth;
+
+  return (
+    <table>
+      <tbody>
+      <tr>
+        <td>
+          Visit:
+        </td>
+        <td>
+          {iter_index+1} / {num_iters}
+        </td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={num_iters}
+            index={iter_index}
+            update={(i) => props.updateIterIndex(i)}
+            delta={-1}
+            alt="left"
+            src={leftarrow}
+          />
+        </td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={num_iters}
+            index={iter_index}
+            update={(i) => props.updateIterIndex(i)}
+            delta={+1}
+            alt="right"
+            src={rightarrow}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          Depth:
+        </td>
+        <td>
+          {depth} / {max_depth}
+        </td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={num_visits}
+            index={visit_index}
+            update={(i) => props.updateVisitIndex(i)}
+            delta={-1}
+            alt="left"
+            src={leftarrow}
+          />
+        </td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={num_visits}
+            index={visit_index}
+            update={(i) => props.updateVisitIndex(i)}
+            delta={+1}
+            alt="right"
+            src={rightarrow}
+          />
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  );
+}
+
+function MCTSValues(props) {
+  return (
+    <span>
+      TODO
+    </span>
+  );
+}
+
+function MCTSDisplay(props) {
+  return (
+    <span>
+      TODO
+    </span>
+  );
+}
+
+
+class MCTSHistory extends Component {
+  render() {
+    const props = this.props;
+    const move_index = props.move_index;
+    const iter_index = props.iter_index;
+    const visit_index = props.visit_index;
+    const history = props.history;
+    const move = history[move_index];
+
+    return (
+      <table className="center">
+        <tbody>
+        <tr>
+          <td>
+            <MCTSNav
+              updateIterIndex={(i) => this.props.updateIterIndex(i)}
+              updateVisitIndex={(i) => this.props.updateVisitIndex(i)}
+              history={history}
+              move_index={move_index}
+              move={move}
+              iter_index={iter_index}
+              visit_index={visit_index}
+            />
+          </td>
+          <td>
+            <MCTSValues/>
+          </td>
+          <td>
+            <MCTSDisplay/>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    );
+  }
 }
 
 class Body extends Component {
@@ -125,7 +300,30 @@ class Body extends Component {
     super(props);
     this.state = {
       move_index: props.move_index,
+      iter_index: props.iter_index,
+      visit_index: props.visit_index,
     };
+  }
+
+  updateMoveIndex(move_index) {
+    this.setState({
+      move_index: move_index,
+      iter_index: 0,
+      visit_index: 0,
+    });
+  }
+
+  updateIterIndex(iter_index) {
+    this.setState({
+      iter_index: iter_index,
+      visit_index: 0,
+    });
+  }
+
+  updateVisitIndex(visit_index) {
+    this.setState({
+      visit_index: visit_index,
+    });
   }
 
   render() {
@@ -133,12 +331,29 @@ class Body extends Component {
     if (history.length === 0) {
       return "";
     }
-    const move_index = this.state.move_index;
     const player_index = this.props.player_index;
+    const move_index = this.state.move_index;
+    const iter_index = this.state.iter_index;
+    const visit_index = this.state.visit_index;
     return (
       <div className="center">
-        <MyColor player_index={player_index} />
-        <GameHistory history={history} move_index={move_index} body={this} />
+        <MyColor
+          player_index={player_index}
+        />
+        <GameHistory
+          updateMoveIndex={(m) => this.updateMoveIndex(m)}
+          history={history}
+          move_index={move_index}
+          body={this}
+        />
+        <MCTSHistory
+          updateIterIndex={(m) => this.updateIterIndex(m)}
+          updateVisitIndex={(m) => this.updateVisitIndex(m)}
+          history={history}
+          move_index={move_index}
+          iter_index={iter_index}
+          visit_index={visit_index}
+        />
       </div>
     );
   }
