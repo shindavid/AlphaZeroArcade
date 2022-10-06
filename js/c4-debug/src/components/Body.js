@@ -211,10 +211,45 @@ function MCTSNav(props) {
 }
 
 function MCTSValues(props) {
+  const move_index = props.move_index;
+  const iter_index = props.iter_index;
+  const visit_index = props.visit_index;
+  const history = props.history;
+  const move = history[move_index];
+  const iter = move.iters[iter_index];
+  const visit = iter.visits[visit_index];
+
+  const render_children = () => {
+    let text = []
+    for (const child of visit.children) {
+      text.push((
+        <tr>
+          <td>{child.action}</td>
+          <td>{child.rP}</td>
+          <td>{child.dir}</td>
+          <td>{child.P}</td>
+          <td>{child.V}</td>
+          <td>{child.N}</td>
+          <td>{child.PUCT}</td>
+        </tr>
+      ));
+    }
+    return text;
+  }
+
   return (
-    <span>
-      TODO
-    </span>
+    <table><tbody>
+    <tr>
+      <td>Move</td>
+      <td>Eval</td>
+      <td>Dir</td>
+      <td>P</td>
+      <td>V</td>
+      <td>N</td>
+      <td>PUCT</td>
+    </tr>
+    { render_children() }
+    </tbody></table>
   );
 }
 
@@ -252,7 +287,12 @@ class MCTSHistory extends Component {
             />
           </td>
           <td>
-            <MCTSValues/>
+            <MCTSValues
+              move_index={move_index}
+              iter_index={iter_index}
+              visit_index={visit_index}
+              history={history}
+            />
           </td>
           <td>
             <MCTSDisplay/>
