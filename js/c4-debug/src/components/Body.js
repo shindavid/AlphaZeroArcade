@@ -40,35 +40,6 @@ class BoardRow extends Component {
   }
 }
 
-class Arrow extends Component {
-  render() {
-    const move_index = this.props.move_index;
-    const history = this.props.history;
-    const delta = this.props.delta;
-    const new_move_index = move_index + delta;
-    const hidden = (new_move_index === -1) || (new_move_index === history.length);
-
-    if (hidden) {
-      return (
-        <span className="arrow" />
-      );
-    }
-    return (
-      <span className="arrow">
-        <img alt={this.props.alt} src={this.props.src} onClick={() => this.handleClick()} />
-      </span>
-    );
-  }
-
-  handleClick() {
-    const move_index = this.props.move_index;
-    const delta = this.props.delta;
-    const new_move_index = move_index + delta;
-
-    this.props.updateMoveIndex(new_move_index);
-  }
-}
-
 class NAVArrow extends Component {
   render() {
     const index = this.props.index;
@@ -129,10 +100,11 @@ function GameHistory(props) {
     <table className="center"><tbody>
     <tr>
       <td>
-        <Arrow
-          history={history}
-          move_index={move_index}
-          updateMoveIndex={props.updateMoveIndex}
+        <NAVArrow
+          className="arrow"
+          max_index={history.length}
+          index={move_index}
+          update={(i) => props.updateMoveIndex(i)}
           delta={-1}
           alt="left"
           src={leftarrow}
@@ -144,10 +116,11 @@ function GameHistory(props) {
         </span>
       </td>
       <td>
-        <Arrow
-          history={history}
-          move_index={move_index}
-          updateMoveIndex={props.updateMoveIndex}
+        <NAVArrow
+          className="arrow"
+          max_index={history.length}
+          index={move_index}
+          update={(i) => props.updateMoveIndex(i)}
           delta={+1}
           alt="right"
           src={rightarrow}
@@ -177,12 +150,10 @@ function MCTSNav(props) {
     <table>
       <tbody>
       <tr>
-        <td>
-          Visit:
-        </td>
-        <td>
-          {iter_index+1} / {num_iters}
-        </td>
+        <td>Visit:</td>
+        <td align="right">{iter_index+1}</td>
+        <td>/</td>
+        <td>{num_iters}</td>
         <td>
           <NAVArrow
             className="miniarrow"
@@ -207,12 +178,10 @@ function MCTSNav(props) {
         </td>
       </tr>
       <tr>
-        <td>
-          Depth:
-        </td>
-        <td>
-          {depth} / {max_depth}
-        </td>
+        <td>Depth:</td>
+        <td align="right">{depth}</td>
+        <td>/</td>
+        <td>{max_depth}</td>
         <td>
           <NAVArrow
             className="miniarrow"
