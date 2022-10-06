@@ -221,9 +221,11 @@ function displayBar(x, y) {
   if (y === 0) return displayBar(x, 1);
   const q = x / (y===0 ? 1 : y);
   const p = 100.0 * q;
+
+  const title = x.toFixed(2);
   return (
     <div className="range">
-      <span className="progress" style={{width: p + '%'}} />
+      <span className="progress" title={title} style={{width: p + '%'}} />
     </div>
   );
 }
