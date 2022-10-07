@@ -17,7 +17,9 @@ class Child {
 
 
 class Visit {
-  constructor(elem) {
+  constructor(elem, parent) {
+    this.board_visit_num = null;
+    this.parent = parent;
     this.depth = parseInt(elem.getAttribute('depth'));
     this.board = elem.getAttribute('board');
     this.leaf = parseInt(elem.getAttribute('leaf'));
@@ -38,9 +40,10 @@ class Visit {
 
 
 class Iter {
-  constructor(elem) {
+  constructor(elem, parent) {
+    this.parent = parent;
     this.index = parseInt(elem.getAttribute('i'));
-    this.visits = Array.from(elem.children).map(v => new Visit(v));
+    this.visits = Array.from(elem.children).map(v => new Visit(v, this));
   }
 }
 
@@ -51,7 +54,23 @@ class Move {
     const board = elem.getAttribute('board');
     this.cp = cp;
     this.board = board;
-    this.iters = Array.from(elem.children).map(i => new Iter(i));
+    this.iters = Array.from(elem.children).map(i => new Iter(i, this));
+
+    this.board_to_visits = {};
+    for (const iter of this.iters) {
+      for (const visit of iter.visits) {
+        let board = visit.board;
+        let visits = null;
+        if (board in this.board_to_visits) {
+          visits = this.board_to_visits[board];
+        } else {
+          visits = Array.from([]);
+          this.board_to_visits[board] = visits;
+        }
+        visit.board_visit_num = visits.length;
+        visits.push(visit);
+      }
+    }
   }
 }
 

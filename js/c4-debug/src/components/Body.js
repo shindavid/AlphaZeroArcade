@@ -306,6 +306,8 @@ function MCTSDisplay(props) {
   }
   const new_board = new_board_arr.join('');
 
+  const visit_history = move.board_to_visits[board];
+
   const renderRows = () => {
     const className = "square16";
     let rows = [];
@@ -317,7 +319,12 @@ function MCTSDisplay(props) {
 
   return (
     <span>
-      {renderRows()}
+      <span>
+        {renderRows()}
+      </span>
+      <span>
+        {visit.board_visit_num+1} of {visit_history.length}
+      </span>
     </span>
   );
 }
