@@ -27,7 +27,16 @@ ol, ul {
 }
 
 .leftarrow {
-  background-image: url(images/left.svg);
+  background-image: url(images/back-svgrepo-com.svg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 32px;
+  width: 32px;
+}
+
+.doubleleftarrow {
+  background-image: url(images/fast-backward-arrows-button-svgrepo-com.svg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
@@ -36,7 +45,18 @@ ol, ul {
 }
 
 .rightarrow {
-  background-image: url(images/right.svg);
+  background-image: url(images/back-svgrepo-com.svg);
+  transform: rotate(180deg);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  display: inline-block;
+  height: 32px;
+  width: 32px;
+}
+
+.doublerightarrow {
+  background-image: url(images/fast-backward-arrows-button-svgrepo-com.svg);
+  transform: rotate(180deg);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   display: inline-block;
