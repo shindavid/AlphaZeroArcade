@@ -1,0 +1,15 @@
+Installing Node/React dependencies for the log replay tool:
+
+conda install nodejs
+npm i -g yarn
+npm i toolcool-range-slider
+npm i react
+
+Generating a play log:
+
+python3 play_vs_cpu.py -d first_run.xml
+
+Launching the node server:
+
+npm start
+
