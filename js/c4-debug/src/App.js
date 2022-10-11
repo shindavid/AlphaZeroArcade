@@ -26,7 +26,7 @@ class Visit {
     this.eval = elem.getAttribute('eval').split(',').map(parseFloat);
     this.terminal = parseInt(elem.getAttribute('terminal'));
     this.action = elem.getAttribute('action');
-    //this.value_sum = elem.getAttribute('value_sum').split(',').map(parseFloat);
+    this.value_sum = elem.getAttribute('value_sum').split(',').map(parseFloat);
 
     this.children = Array.from(elem.children).map(c => new Child(c));
     this.rP_sum = this.children.map((x) => x.rP).reduce((a, b) => a+b, 0);
@@ -83,7 +83,8 @@ class App extends Component {
       history: [],
       move_index: 0,
       iter_index: 0,
-      visit_index: 0,
+      top_index: 0,
+      bot_index: 0,
     };
   }
 
@@ -105,7 +106,8 @@ class App extends Component {
         history: history,
         move_index: 0,
         iter_index: 0,
-        visit_index: 0,
+        top_index: 0,
+        bot_index: 0,
       })
     }
     // The below code sends the file to a backend server. This would make more sense for a web interface to play
@@ -147,7 +149,8 @@ class App extends Component {
           player_index={this.state.player_index}
           move_index={this.state.move_index}
           iter_index={this.state.iter_index}
-          visit_index={this.state.visit_index}
+          top_index={this.state.top_index}
+          bot_index={this.state.bot_index}
           history={this.state.history}
         />
       </Fragment>

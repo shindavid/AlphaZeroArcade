@@ -46,6 +46,18 @@ class BoardRow extends Component {
   }
 }
 
+function Board(props) {
+  const className = props.className;
+  const rowName = props.rowName;
+  const board = props.board;
+
+  let rows = [];
+  for (let i = 5; i >= 0; i--) {
+    rows.push(<BoardRow className={className} rowName={rowName} board={board} row={i} key={i}/>);
+  }
+  return rows;
+}
+
 class NAVArrow extends Component {
   render() {
     const index = this.props.index;
@@ -81,9 +93,7 @@ function MyColor(props) {
   return (
     <div className="centertext">
       My Color:&nbsp;
-      <span className="minicircle center">
-          <img src={my_color} alt="color" />
-        </span>
+      <span className="minicircle center"><img src={my_color} alt="color" /></span>
       <br/><br/>
     </div>
   );
@@ -93,15 +103,6 @@ function GameHistory(props) {
   const history = props.history;
   const move_index = props.move_index;
   const move = history[move_index];
-
-  const renderRows = () => {
-    const className = "square32";
-    let rows = [];
-    for (let i = 5; i >= 0; i--) {
-      rows.push(<BoardRow className={className} rowName="row32" board={move.board} row={i} key={i}/>);
-    }
-    return rows;
-  }
 
   return (
     <table className="center"><tbody>
@@ -119,7 +120,7 @@ function GameHistory(props) {
       </td>
       <td>
         <span>
-          { renderRows() }
+          <Board className="square32" rowName="row32" board={move.board }/>
         </span>
       </td>
       <td>
@@ -143,21 +144,27 @@ function MCTSNav(props) {
   const move_index = props.move_index;
   const move = history[move_index];
   const iter_index = props.iter_index;
-  const visit_index = props.visit_index;
+  const top_index = props.top_index;
+  const bot_index = props.bot_index;
 
   const iter = move.iters[iter_index];
-  const visit = iter.visits[visit_index];
-  const depth = visit.depth;
+  const top = iter.visits[top_index];
+  const bot = iter.visits[bot_index];
+  const top_depth = top.depth;
+  const bot_depth = bot.depth;
 
   const num_iters = move.iters.length;
   const num_visits = iter.visits.length;
   const max_depth = iter.visits[num_visits-1].depth;
 
+  const top_board = top.board;
+  const board_history = move.board_to_visits[top_board];
+
   return (
-    <table>
+    <table className="center">
       <tbody>
       <tr>
-        <td>Visit:</td>
+        <td>MCTS Iter:</td>
         <td align="right">{iter_index+1}</td>
         <td>/</td>
         <td>{num_iters}</td>
@@ -185,16 +192,16 @@ function MCTSNav(props) {
         </td>
       </tr>
       <tr>
-        <td>Depth:</td>
-        <td align="right">{depth}</td>
+        <td>Top Depth:</td>
+        <td align="right">{top_depth}</td>
         <td>/</td>
         <td>{max_depth}</td>
         <td>
           <NAVArrow
             className="miniarrow"
             max_index={num_visits}
-            index={visit_index}
-            update={(i) => props.updateVisitIndex(i)}
+            index={top_index}
+            update={(i) => props.updateTopIndex(i)}
             delta={-1}
             alt="left"
             src={leftarrow}
@@ -204,8 +211,64 @@ function MCTSNav(props) {
           <NAVArrow
             className="miniarrow"
             max_index={num_visits}
-            index={visit_index}
-            update={(i) => props.updateVisitIndex(i)}
+            index={top_index}
+            update={(i) => props.updateTopIndex(i)}
+            delta={+1}
+            alt="right"
+            src={rightarrow}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td>Bot Depth:</td>
+        <td align="right">{bot_depth}</td>
+        <td>/</td>
+        <td>{max_depth}</td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={num_visits}
+            index={bot_index}
+            update={(i) => props.updateBotIndex(i)}
+            delta={-1}
+            alt="left"
+            src={leftarrow}
+          />
+        </td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={num_visits}
+            index={bot_index}
+            update={(i) => props.updateBotIndex(i)}
+            delta={+1}
+            alt="right"
+            src={rightarrow}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td>Top Scan:</td>
+        <td align="right">{top.board_visit_num + 1}</td>
+        <td>/</td>
+        <td>{board_history.length}</td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={board_history.length}
+            index={top.board_visit_num}
+            update={(i) => props.updateTopScanIndex(board_history, i)}
+            delta={-1}
+            alt="left"
+            src={leftarrow}
+          />
+        </td>
+        <td>
+          <NAVArrow
+            className="miniarrow"
+            max_index={board_history.length}
+            index={top.board_visit_num}
+            update={(i) => props.updateTopScanIndex(board_history, i)}
             delta={+1}
             alt="right"
             src={rightarrow}
@@ -230,14 +293,8 @@ function displayBar(x, y) {
   );
 }
 
-function MCTSValues(props) {
-  const move_index = props.move_index;
-  const iter_index = props.iter_index;
-  const visit_index = props.visit_index;
-  const history = props.history;
-  const move = history[move_index];
-  const iter = move.iters[iter_index];
-  const visit = iter.visits[visit_index];
+function PolicyTable(props) {
+  const visit = props.visit;
 
   const render_children = () => {
     let text = []
@@ -262,11 +319,12 @@ function MCTSValues(props) {
   }
 
   return (
+    <div style={{height:200}}>
     <table className="collapsed"><tbody>
     <tr>
       <td className="vert">Move</td>
-      <td className="vert">Eval</td>
-      <td className="vert">Dir</td>
+      <td className="vert">NN.P</td>
+      <td className="vert">Diric</td>
       <td className="vert">P</td>
       <td className="vert">V</td>
       <td className="vert">N</td>
@@ -274,17 +332,44 @@ function MCTSValues(props) {
     </tr>
     { render_children() }
     </tbody></table>
+    </div>
   );
 }
 
-function MCTSDisplay(props) {
-  const move_index = props.move_index;
-  const iter_index = props.iter_index;
-  const visit_index = props.visit_index;
-  const history = props.history;
-  const move = history[move_index];
-  const iter = move.iters[iter_index];
-  const visit = iter.visits[visit_index];
+function ValueTable(props) {
+  const visit = props.visit;
+
+  const eval_total = visit.eval.reduce((a, b) => a+b, 0);
+  const value_sum_total = visit.value_sum.reduce((a, b) => a+b, 0);
+
+  return (
+    <table className="collapsed"><tbody>
+    <tr>
+      <td className="vert">Color</td>
+      <td className="vert">NN.V</td>
+      <td className="vert">V</td>
+    </tr>
+    <tr>
+      <td className="vert">
+        <span className="minicircle center"><img src={redcircle} alt="color" /></span>
+      </td>
+      <td className="vert">{displayBar(visit.eval[0], eval_total)}</td>
+      <td className="vert">{displayBar(visit.value_sum[0], value_sum_total)}</td>
+    </tr>
+    <tr>
+      <td className="vert">
+        <span className="minicircle center"><img src={yellowcircle} alt="color" /></span>
+      </td>
+      <td className="vert">{displayBar(visit.eval[1], eval_total)}</td>
+      <td className="vert">{displayBar(visit.value_sum[1], value_sum_total)}</td>
+    </tr>
+    </tbody></table>
+  );
+}
+
+function MiniBoard(props) {
+  const move = props.move;
+  const visit = props.visit;
 
   const orig_board = move.board;
   let board = visit.board;
@@ -306,75 +391,38 @@ function MCTSDisplay(props) {
   }
   const new_board = new_board_arr.join('');
 
-  const visit_history = move.board_to_visits[board];
-
-  const renderRows = () => {
-    const className = "square16";
-    let rows = [];
-    for (let i = 5; i >= 0; i--) {
-      rows.push(<BoardRow className={className} rowName="row16" board={new_board} row={i} key={i}/>);
-    }
-    return rows;
-  }
-
   return (
     <span>
       <span>
-        {renderRows()}
-      </span>
-      <span>
-        {visit.board_visit_num+1} of {visit_history.length}
+        <Board className="square16" rowName="row16" board={new_board} />
       </span>
     </span>
   );
 }
 
+function MCTSDisplay(props) {
+  const move = props.move;
+  const top = props.top;
+  const bot = props.bot;
 
-class MCTSHistory extends Component {
-  render() {
-    const props = this.props;
-    const move_index = props.move_index;
-    const iter_index = props.iter_index;
-    const visit_index = props.visit_index;
-    const history = props.history;
-    const move = history[move_index];
-
-    return (
-      <table className="center">
-        <tbody>
-        <tr>
-          <td>
-            <MCTSNav
-              updateIterIndex={(i) => this.props.updateIterIndex(i)}
-              updateVisitIndex={(i) => this.props.updateVisitIndex(i)}
-              history={history}
-              move_index={move_index}
-              move={move}
-              iter_index={iter_index}
-              visit_index={visit_index}
-            />
-          </td>
-          <td>
-            <MCTSValues
-              move_index={move_index}
-              iter_index={iter_index}
-              visit_index={visit_index}
-              history={history}
-            />
-          </td>
-          <td>
-            <MCTSDisplay
-              history={history}
-              move_index={move_index}
-              iter_index={iter_index}
-              visit_index={visit_index}
-            />
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    );
-  }
+  return (
+    <table className="center">
+      <tbody>
+      <tr>
+        <td>Top</td>
+        <td><PolicyTable visit={top} /></td>
+        <td><ValueTable visit={top} /></td>
+        <td><MiniBoard move={move} visit={top} /></td>
+      </tr>
+      <tr>
+        <td>Bottom</td>
+        <td><PolicyTable visit={bot} /></td>
+        <td><ValueTable visit={bot} /></td>
+        <td><MiniBoard move={move} visit={bot} /></td>
+      </tr>
+      </tbody>
+    </table>
+  );
 }
 
 class Body extends Component {
@@ -383,28 +431,62 @@ class Body extends Component {
     this.state = {
       move_index: props.move_index,
       iter_index: props.iter_index,
-      visit_index: props.visit_index,
+      top_index: props.top_index,
+      bot_index: props.bot_index,
     };
   }
 
   updateMoveIndex(move_index) {
+    const iter_index = 0;
+    const move = this.props.history[this.state.move_index];
+    const iter = move.iters[iter_index];
+    const bot_index = iter.visits.length - 1;
+
     this.setState({
       move_index: move_index,
       iter_index: 0,
-      visit_index: 0,
+      top_index: 0,
+      bot_index: bot_index,
     });
   }
 
   updateIterIndex(iter_index) {
+    const move = this.props.history[this.state.move_index];
+    const iter = move.iters[iter_index];
+    const bot_index = iter.visits.length - 1;
+
     this.setState({
       iter_index: iter_index,
-      visit_index: 0,
+      top_index: 0,
+      bot_index: bot_index,
     });
   }
 
-  updateVisitIndex(visit_index) {
+  updateTopIndex(top_index) {
+    let bot_index = this.state.bot_index;
+    if (top_index > bot_index) {
+      bot_index = top_index;
+    }
     this.setState({
-      visit_index: visit_index,
+      top_index: top_index,
+      bot_index: bot_index,
+    });
+  }
+
+  updateBotIndex(bot_index) {
+    this.setState({
+      bot_index: bot_index,
+    });
+  }
+
+  updateTopScanIndex(board_history, scan_index) {
+    const visit = board_history[scan_index];
+    const iter = visit.parent;
+
+    this.setState({
+      iter_index: iter.index,
+      top_index: visit.depth - 1,
+      bot_index: iter.visits.length - 1,
     });
   }
 
@@ -416,7 +498,14 @@ class Body extends Component {
     const player_index = this.props.player_index;
     const move_index = this.state.move_index;
     const iter_index = this.state.iter_index;
-    const visit_index = this.state.visit_index;
+    const top_index = this.state.top_index;
+    const bot_index = this.state.bot_index;
+
+    const move = history[move_index];
+    const iter = move.iters[iter_index];
+    const top = iter.visits[top_index];
+    const bot = iter.visits[bot_index];
+
     return (
       <div className="center">
         <MyColor
@@ -428,13 +517,17 @@ class Body extends Component {
           move_index={move_index}
           body={this}
         />
-        <MCTSHistory
+        <MCTSDisplay move={move} top={top} bot={bot} />
+        <MCTSNav
           updateIterIndex={(m) => this.updateIterIndex(m)}
-          updateVisitIndex={(m) => this.updateVisitIndex(m)}
+          updateTopIndex={(m) => this.updateTopIndex(m)}
+          updateBotIndex={(m) => this.updateBotIndex(m)}
+          updateTopScanIndex={(h, i) => this.updateTopScanIndex(h, i)}
           history={history}
           move_index={move_index}
           iter_index={iter_index}
-          visit_index={visit_index}
+          top_index={top_index}
+          bot_index={bot_index}
         />
       </div>
     );
