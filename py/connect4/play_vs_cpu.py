@@ -89,7 +89,7 @@ class GameRunner:
         self.mcts_params = None
         if not Args.neural_network_only:
             self.mcts = MCTS(self.net, debug_filename=Args.debug_filename)
-            self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters)
+            self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters, dirichlet_mult=0)
 
         self.player_names = ['???', '???']
         self.last_move = None
