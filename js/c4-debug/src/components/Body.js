@@ -4,46 +4,42 @@ import rightarrow from '../images/right.svg';
 import redcircle from '../images/red.svg';
 import yellowcircle from '../images/yellow.svg';
 
-class Square extends Component {
-  render() {
-    const color = this.props.color;
-    let className = this.props.className;
-    if (color === 'R') {
-      className += ' red';
-    } else if (color === 'Y') {
-      className += ' yellow';
-    } else if (color === 'r') {
-      className += ' lightred';
-    } else if (color === 'y') {
-      className += ' lightyellow';
-    }
-    return (
-      <span className={className} ></span>
-    )
+function Square(props) {
+  const color = props.color;
+  let className = props.className;
+  if (color === 'R') {
+    className += ' red';
+  } else if (color === 'Y') {
+    className += ' yellow';
+  } else if (color === 'r') {
+    className += ' lightred';
+  } else if (color === 'y') {
+    className += ' lightyellow';
   }
+  return (
+    <span className={className} ></span>
+  )
 }
 
-class BoardRow extends Component {
-  render() {
-    const board = this.props.board;
-    const row = this.props.row;
-    const className = this.props.className;
-    const rowName = this.props.rowName;
-    const renderSquares = () => {
-      let squares = [];
-      for (let i = 0; i < 7; i++) {
-        const index = i * 6 + row;
-        const color = board.charAt(index);
-        squares.push(<Square className={className} color={color} key={index} index={index} />);
-      }
-      return squares;
+function BoardRow(props) {
+  const board = props.board;
+  const row = props.row;
+  const className = props.className;
+  const rowName = props.rowName;
+  const renderSquares = () => {
+    let squares = [];
+    for (let i = 0; i < 7; i++) {
+      const index = i * 6 + row;
+      const color = board.charAt(index);
+      squares.push(<Square className={className} color={color} key={index} index={index} />);
     }
-    return (
-      <span className={rowName}>
-        { renderSquares() }
-      </span>
-    );
+    return squares;
   }
+  return (
+    <span className={rowName}>
+      { renderSquares() }
+    </span>
+  );
 }
 
 function Board(props) {
@@ -58,33 +54,52 @@ function Board(props) {
   return rows;
 }
 
-class NAVArrow extends Component {
-  render() {
-    const index = this.props.index;
-    const max_index = this.props.max_index;
-    const delta = this.props.delta;
-    const className = this.props.className;
-    const alt = this.props.alt;
-    const src = this.props.src;
+function NAVArrow(props) {
+  const index = props.index;
+  const max_index = props.max_index;
+  const delta = props.delta;
+  const className = props.className;
 
-    const new_index = index + delta;
-    const hidden = (new_index === -1) || (new_index === max_index);
+  const alt = delta < 0 ? "left" : "right";
+  const src = delta < 0 ? leftarrow : rightarrow;
 
-    if (hidden) {
-      return (
-        <span className={className} />
-      );
-    }
+  const new_index = index + delta;
+  const hidden = (new_index === -1) || (new_index === max_index);
+
+  if (hidden) {
     return (
-      <span className={className}>
-        <img alt={alt} src={src} onClick={() => this.handleClick()} />
-      </span>
+      <span className={className} />
     );
   }
+  return (
+    <span className={className}>
+      <img alt={alt} src={src} onClick={() => props.update(props.index + props.delta)} />
+    </span>
+  );
+}
 
-  handleClick() {
-    this.props.update(this.props.index + this.props.delta);
-  }
+function LeftNAVArrow(props) {
+  return (
+    <NAVArrow index={props.index} max_index={props.max_index} delta={-1} className="arrow" update={props.update} />
+  );
+}
+
+function RightNAVArrow(props) {
+  return (
+    <NAVArrow index={props.index} max_index={props.max_index} delta={+1} className="arrow" update={props.update} />
+  );
+}
+
+function MiniLeftNAVArrow(props) {
+  return (
+    <NAVArrow index={props.index} max_index={props.max_index} delta={-1} className="miniarrow" update={props.update} />
+  );
+}
+
+function MiniRightNAVArrow(props) {
+  return (
+    <NAVArrow index={props.index} max_index={props.max_index} delta={+1} className="miniarrow" update={props.update} />
+  );
 }
 
 function MyColor(props) {
@@ -108,15 +123,7 @@ function GameHistory(props) {
     <table className="center"><tbody>
     <tr>
       <td>
-        <NAVArrow
-          className="arrow"
-          max_index={history.length}
-          index={move_index}
-          update={(i) => props.updateMoveIndex(i)}
-          delta={-1}
-          alt="left"
-          src={leftarrow}
-        />
+        <LeftNAVArrow max_index={history.length} index={move_index} update={(i) => props.updateMoveIndex(i)} />
       </td>
       <td>
         <span>
@@ -124,15 +131,7 @@ function GameHistory(props) {
         </span>
       </td>
       <td>
-        <NAVArrow
-          className="arrow"
-          max_index={history.length}
-          index={move_index}
-          update={(i) => props.updateMoveIndex(i)}
-          delta={+1}
-          alt="right"
-          src={rightarrow}
-        />
+        <RightNAVArrow max_index={history.length} index={move_index} update={(i) => props.updateMoveIndex(i)} />
       </td>
     </tr>
     </tbody></table>
@@ -169,26 +168,10 @@ function MCTSNav(props) {
         <td>/</td>
         <td>{num_iters}</td>
         <td>
-          <NAVArrow
-            className="miniarrow"
-            max_index={num_iters}
-            index={iter_index}
-            update={(i) => props.updateIterIndex(i)}
-            delta={-1}
-            alt="left"
-            src={leftarrow}
-          />
+          <MiniLeftNAVArrow max_index={num_iters} index={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
         <td>
-          <NAVArrow
-            className="miniarrow"
-            max_index={num_iters}
-            index={iter_index}
-            update={(i) => props.updateIterIndex(i)}
-            delta={+1}
-            alt="right"
-            src={rightarrow}
-          />
+          <MiniRightNAVArrow max_index={num_iters} index={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
       </tr>
       <tr>
@@ -197,26 +180,10 @@ function MCTSNav(props) {
         <td>/</td>
         <td>{max_depth}</td>
         <td>
-          <NAVArrow
-            className="miniarrow"
-            max_index={num_visits}
-            index={top_index}
-            update={(i) => props.updateTopIndex(i)}
-            delta={-1}
-            alt="left"
-            src={leftarrow}
-          />
+          <MiniLeftNAVArrow max_index={num_visits} index={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
         <td>
-          <NAVArrow
-            className="miniarrow"
-            max_index={num_visits}
-            index={top_index}
-            update={(i) => props.updateTopIndex(i)}
-            delta={+1}
-            alt="right"
-            src={rightarrow}
-          />
+          <MiniRightNAVArrow max_index={num_visits} index={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
       </tr>
       <tr>
@@ -225,26 +192,10 @@ function MCTSNav(props) {
         <td>/</td>
         <td>{max_depth}</td>
         <td>
-          <NAVArrow
-            className="miniarrow"
-            max_index={num_visits}
-            index={bot_index}
-            update={(i) => props.updateBotIndex(i)}
-            delta={-1}
-            alt="left"
-            src={leftarrow}
-          />
+          <MiniLeftNAVArrow max_index={num_visits} index={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
         <td>
-          <NAVArrow
-            className="miniarrow"
-            max_index={num_visits}
-            index={bot_index}
-            update={(i) => props.updateBotIndex(i)}
-            delta={+1}
-            alt="right"
-            src={rightarrow}
-          />
+          <MiniRightNAVArrow max_index={num_visits} index={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
       </tr>
       <tr>
@@ -253,25 +204,17 @@ function MCTSNav(props) {
         <td>/</td>
         <td>{board_history.length}</td>
         <td>
-          <NAVArrow
-            className="miniarrow"
+          <MiniLeftNAVArrow
             max_index={board_history.length}
             index={top.board_visit_num}
             update={(i) => props.updateTopScanIndex(board_history, i)}
-            delta={-1}
-            alt="left"
-            src={leftarrow}
           />
         </td>
         <td>
-          <NAVArrow
-            className="miniarrow"
+          <MiniRightNAVArrow
             max_index={board_history.length}
             index={top.board_visit_num}
             update={(i) => props.updateTopScanIndex(board_history, i)}
-            delta={+1}
-            alt="right"
-            src={rightarrow}
           />
         </td>
       </tr>
