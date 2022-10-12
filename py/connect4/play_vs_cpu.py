@@ -7,8 +7,8 @@ from typing import Optional
 import numpy as np
 import torch
 
-from game_logic import Color, Game, NUM_COLUMNS, PRETTY_COLORS
-from neural_net import Net, HistoryBuffer, NetWrapper, GameState
+from game_logic import Color, C4GameState, NUM_COLUMNS, PRETTY_COLORS
+from neural_net import Net, NetWrapper, C4Tensorizor
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from mcts import MCTSParams, MCTS
@@ -28,9 +28,9 @@ class Args:
         if s is None:
             return None
         if s == 'R':
-            return Game.RED
+            return C4GameState.RED
         if s == 'Y':
-            return Game.YELLOW
+            return C4GameState.YELLOW
         raise Exception(f'Invalid color -c {s}')
 
     @staticmethod
@@ -76,26 +76,29 @@ def main():
     runner.run(Args.my_starting_color)
 
 
+#class GamePlayer:
+#    def play_move(self, ):
+
 class GameRunner:
     def __init__(self, net: Net):
         self.net = NetWrapper(net)
         self.temperature = Args.temperature
         self.neural_network_only = Args.neural_network_only
         self.verbose = Args.verbose
-        self.num_previous_states = HistoryBuffer.get_num_previous_states(net.input_shape)
+        self.num_previous_states = C4Tensorizor.get_num_previous_states(net.input_shape)
         self.tensor_shape = tuple([1] + list(net.input_shape))
+
+        self.player_names = ['???', '???']
+        self.last_move = None
+        self.history_buffer = None
+        self.state = C4GameState()
+        self.tensorizor = C4Tensorizor(self.num_previous_states)
 
         self.mcts = None
         self.mcts_params = None
         if not Args.neural_network_only:
             self.mcts = MCTS(self.net, debug_filename=Args.debug_filename)
             self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters, dirichlet_mult=0)
-
-        self.player_names = ['???', '???']
-        self.last_move = None
-        self.history_buffer = None
-        self.game = Game()
-        self.game_state = None
 
     def run(self, my_color: Optional[Color] = None):
         if my_color is None:
@@ -104,13 +107,12 @@ class GameRunner:
         self.player_names = ['CPU', 'CPU']
         self.player_names[my_color] = 'Human'
         self.last_move = None
-        self.history_buffer = HistoryBuffer(self.num_previous_states)
-        self.game = Game()
-        self.game_state = GameState(self.game, self.history_buffer)
+        self.state = C4GameState()
+        self.tensorizor = C4Tensorizor(self.num_previous_states)
 
         while True:
-            cur_player = self.game.get_current_player()
-            valid_moves = self.game.get_valid_moves()
+            cur_player = self.state.get_current_player()
+            valid_moves = self.state.get_valid_moves()
             assert valid_moves
             if cur_player == my_color:
                 result = self.handle_my_move(valid_moves)
@@ -123,7 +125,7 @@ class GameRunner:
                 continue
 
             if self.mcts is not None:
-                self.mcts.record_final_position(self.game_state)
+                self.mcts.record_final_position(self.state)
             if result[my_color] == 1:
                 print('Congratulations! You win!')
             elif result[cpu_color] == 1:
@@ -140,7 +142,7 @@ class GameRunner:
             print('Thank you for playing! Good-bye!')
 
     def handle_my_move(self, valid_moves):
-        game = self.game
+        game = self.state
         player_names = self.player_names
 
         my_move = None
@@ -158,13 +160,15 @@ class GameRunner:
                 continue
 
         self.last_move = my_move
-        self.game_state.apply_move(my_move-1)
+        action_index = my_move - 1
+        result = self.state.apply_move(action_index)
+        self.tensorizor.receive_state_change(self.state, action_index)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
-        return self.game_state.get_game_result()
+        return result
 
     def handle_cpu_move_mcts(self, valid_moves):
-        results = self.mcts.sim(self.game_state, self.mcts_params)
+        results = self.mcts.sim(self.tensorizor, self.state, self.mcts_params)
         mcts_counts = results.counts
         if self.temperature:
             heated_counts = mcts_counts.pow(1.0 / self.temperature)
@@ -205,7 +209,7 @@ class GameRunner:
 
     def handle_cpu_move_helper(self, valid_moves, net_policy, net_value,
                                mcts_counts=None, mcts_policy=None, mcts_value=None):
-        game = self.game
+        game = self.state
         player_names = self.player_names
 
         policy = net_policy if mcts_policy is None else mcts_policy
@@ -219,14 +223,16 @@ class GameRunner:
         assert cpu_move in valid_moves
 
         self.last_move = cpu_move
-        self.game_state.apply_move(cpu_move-1)
+        action_index = cpu_move - 1
+        result = self.state.apply_move(action_index)
+        self.tensorizor.receive_state_change(self.state, action_index)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
             win_probs = value
             print('CPU pos eval:')
             if mcts_value is None:
-                for c in (Game.RED, Game.YELLOW):
+                for c in (C4GameState.RED, C4GameState.YELLOW):
                     print('%s: %6.3f%%' % (PRETTY_COLORS[c], 100.0 * float(win_probs[c])))
                 print('')
                 print('%3s %8s' % ('Col', 'Net'))
@@ -234,7 +240,7 @@ class GameRunner:
                     print(f'{i+1:3d} {x:8.3f}')
             else:
                 net_win_probs = net_value
-                for c in (Game.RED, Game.YELLOW):
+                for c in (C4GameState.RED, C4GameState.YELLOW):
                     print('%s: %6.3f%% -> %6.3f%%' % (
                         PRETTY_COLORS[c], 100.0 * float(net_win_probs[c]), 100.0 * float(win_probs[c])
                     ))
@@ -245,7 +251,7 @@ class GameRunner:
 
             print('')
 
-        return self.game_state.get_game_result()
+        return result
 
 
 if __name__ == '__main__':

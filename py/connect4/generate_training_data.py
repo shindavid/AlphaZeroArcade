@@ -11,6 +11,8 @@ import subprocess
 from tqdm import tqdm
 
 import game_logic
+from connect4.game_logic import C4GameState
+from connect4.neural_net import C4Tensorizor
 from game_logic import NUM_ROWS, NUM_COLUMNS
 from neural_net import HistoryBuffer
 
@@ -74,7 +76,7 @@ def launch(args):
     NUM_PLAYERS = 2
 
     with h5py.File(output_filename, 'w') as output_file:
-        input_shape = tuple([max_rows] + list(HistoryBuffer.get_shape(num_previous_states)))
+        input_shape = tuple([max_rows] + list(C4Tensorizor.get_input_shape(num_previous_states)))
         value_output_shape = (max_rows, NUM_PLAYERS)
         policy_output_shape = (max_rows, NUM_COLUMNS)
 
@@ -90,8 +92,8 @@ def launch(args):
 
         tqdm_range = tqdm(range(num_my_games), desc="Writing training games") if verbose else range(num_my_games)
         for _ in tqdm_range:
-            game = game_logic.Game()
-            history_buffer = HistoryBuffer(num_previous_states)
+            state = game_logic.C4GameState()
+            tensorizor = C4Tensorizor(num_previous_states)
             move_history = ''
             while True:
                 proc.stdin.write(move_history + '\n')
@@ -100,7 +102,7 @@ def launch(args):
 
                 move_scores = list(map(int, stdout.split()[-NUM_COLUMNS:]))
 
-                cp = game.get_current_player()
+                cp = state.get_current_player()
                 best_score = max(move_scores)
                 best_move_arr = (np.array(move_scores) == best_score)
                 winning_move_arr = np.array(move_scores) > 0
@@ -110,7 +112,7 @@ def launch(args):
                 value_arr[cp] = cur_player_value
                 value_arr[1-cp] = 1 - cur_player_value
 
-                input_matrix = history_buffer.get_input()
+                input_matrix = tensorizor.vectorize(state)
 
                 input_dataset[write_index] = input_matrix
                 value_dataset[write_index] = value_arr
@@ -118,14 +120,15 @@ def launch(args):
                 weak_policy_dataset[write_index] = winning_move_arr
                 write_index += 1
 
-                moves = game.get_valid_moves()
+                moves = state.get_valid_moves()
                 assert moves
                 move = random.choice(moves)
-                results = game.apply_move(move, announce=False)
-                if results:
+                action_index = move - 1
+                results = state.apply_move(action_index)
+                tensorizor.receive_state_change(state, action_index)
+                if results is not None:
                     break
 
-                history_buffer.update(game)
                 move_history += str(move)
 
         input_dataset.resize(write_index, axis=0)

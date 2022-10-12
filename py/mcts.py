@@ -20,7 +20,8 @@ import torch
 from torch import Tensor
 
 from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
-    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr
+    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor, \
+    GameResult
 
 GlobalPolicyCountDistr = Tensor
 
@@ -60,9 +61,10 @@ class MCTSResults:
 
 @dataclass
 class StateEvaluation:
-    def __init__(self, network: AbstractNeuralNetwork, state: AbstractGameState):
+    def __init__(self, network: AbstractNeuralNetwork, tensorizor: AbstractGameTensorizor, state: AbstractGameState,
+                 result: GameResult):
         self.current_player: PlayerIndex = state.get_current_player()
-        self.game_result: Optional[ValueProbDistr] = state.get_game_result()
+        self.game_result = result
 
         self.valid_action_mask: Optional[ActionMask] = None
         self.policy_logit_distr: Optional[GlobalPolicyLogitDistr] = None
@@ -73,13 +75,14 @@ class StateEvaluation:
             return
 
         self.valid_action_mask = state.get_valid_actions()
-        policy_output, value_output = network.evaluate(state.vectorize())
+        policy_output, value_output = network.evaluate(tensorizor.vectorize(state))
         self.policy_logit_distr = policy_output
         self.value_prob_distr = value_output.softmax(dim=0)
 
 
 class Tree:
     def __init__(self, n_players: int, action_index: Optional[ActionIndex] = None, parent: Optional['Tree'] = None):
+        self.tensorizor: Optional[AbstractGameTensorizor] = None  # use only when relying on state-clones
         self.state: Optional[AbstractGameState] = None  # use only when relying on state-clones
         self.evaluation: Optional[StateEvaluation] = None
         self.valid_action_indices: Optional[List[ActionIndex]] = None
@@ -92,9 +95,10 @@ class Tree:
         self.value_prior: Optional[ValueProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
 
-    def store_state(self, state: AbstractGameState):
+    def store_cloned_data(self, tensorizor: AbstractGameTensorizor, state: AbstractGameState):
         if self.state is not None:
-            self.state = state.clone()
+            self.tensorizor, self.state = tensorizor.clone(state)
+        return self.tensorizor, self.state
 
     @property
     def n_players(self) -> int:
@@ -176,8 +180,8 @@ class MCTS:
     - do NOT export for nnet training
     """
     def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2, debug_filename: Optional[str] = None):
-        self.debug_filename = debug_filename
         self.network = network
+        self.debug_filename = debug_filename
         self.n_players = n_players
         self.root: Optional[Tree] = None
         self.cache: Dict[Any, StateEvaluation] = {}
@@ -196,7 +200,7 @@ class MCTS:
         if self.debug_tree:
             ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
 
-    def sim(self, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
+    def sim(self, tensorizor: AbstractGameTensorizor, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
         if self.player_index is None:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
@@ -207,7 +211,7 @@ class MCTS:
         self.root = Tree(self.n_players)
         for i in range(params.treeSizeLimit):
             iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
-            self.visit(self.root, state, params, 1, debug_subtree=iter_tree)
+            self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=iter_tree)
 
         n = state.get_num_global_actions()
         counts = torch.zeros(n, dtype=int)
@@ -219,22 +223,23 @@ class MCTS:
         value_prior = self.root.value_prior
         return MCTSResults(counts, win_rates, policy_prior, value_prior)
 
-    def evaluate(self, tree: Tree, state: AbstractGameState) -> StateEvaluation:
+    def evaluate(self, tree: Tree, tensorizor: AbstractGameTensorizor, state: AbstractGameState,
+                 result: GameResult) -> StateEvaluation:
         if tree.evaluation is not None:
             return tree.evaluation
 
         signature = state.get_signature()
         evaluation = self.cache.get(signature, None)
         if evaluation is None:
-            evaluation = StateEvaluation(self.network, state)
+            evaluation = StateEvaluation(self.network, tensorizor, state,  result)
             self.cache[signature] = evaluation
 
         tree.evaluation = evaluation
         return evaluation
 
-    def visit(self, tree: Tree, state: AbstractGameState, params: MCTSParams, depth: int,
-              debug_subtree: Optional[ET.Element]):
-        evaluation = self.evaluate(tree, state)
+    def visit(self, tree: Tree, tensorizor: AbstractGameTensorizor, state: AbstractGameState, params: MCTSParams,
+              depth: int, result: GameResult, debug_subtree: Optional[ET.Element]):
+        evaluation = self.evaluate(tree, tensorizor, state, result)
         game_result = evaluation.game_result
         current_player = evaluation.current_player
 
@@ -271,19 +276,20 @@ class MCTS:
         PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
         value_sum = torch.Tensor(tree.value_sum)
 
-        best_child = tree.children[np.argmax(PUCT)]
+        best_child: Tree = tree.children[np.argmax(PUCT)]
 
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
         else:
-            if state.supports_undo():
-                state.apply_move(best_child.action_index)
-                self.visit(best_child, state, params, depth + 1, debug_subtree)
-                state.undo_last_move()
-            else:
-                best_child.store_state(state)
-                state.apply_move(best_child.action_index)
-                self.visit(best_child, best_child.state, params, depth + 1, debug_subtree)
+            if not tensorizor.supports_undo():
+                tensorizor, state = best_child.store_cloned_data(tensorizor, state)
+
+            result = state.apply_move(best_child.action_index)
+            tensorizor.receive_state_change(state, best_child.action_index)
+            self.visit(best_child, tensorizor, state, params, depth + 1, result, debug_subtree)
+
+            if tensorizor.supports_undo():
+                tensorizor.undo(state)
 
         if self.debug_filename:
             tree_dict = {

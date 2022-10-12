@@ -1,22 +1,18 @@
 import os
 import sys
-from typing import Tuple, Optional, Hashable
-import xml.etree.ElementTree as ET
+from typing import Tuple, List
 
 import numpy as np
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from game_logic import Game, NUM_COLUMNS, NUM_ROWS
+from game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS
 from game_logic import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
-    AbstractGameState, PlayerIndex, ActionIndex, ActionMask, ValueProbDistr
-
-
-Shape = Tuple[int, ...]
+    ActionIndex, AbstractGameTensorizor, Shape
 
 
 class ConvBlock(nn.Module):
@@ -158,10 +154,10 @@ class HistoryBuffer:
 
         self.num_previous_states = num_previous_states
         self.full_mask = np.zeros(shape, dtype=bool)
-        self.next_color = Game.RED
+        self.next_color = C4GameState.RED
         self.ref_indices = [self.num_previous_states, self.num_previous_states]
 
-    def update(self, game: Game):
+    def update(self, game: C4GameState):
         self.ref_indices[self.next_color] += 1
         self.full_mask[self.next_color][self.ref_indices[self.next_color]] = game.get_mask(self.next_color)
         self.next_color = self.prev_color
@@ -188,13 +184,8 @@ class HistoryBuffer:
         p_mask = self.full_mask[p][pi-self.num_previous_states:pi+1]
         return np.concatenate((n_mask, p_mask))
 
-    @staticmethod
-    def get_shape(num_previous_states: int) -> Shape:
-        return num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
-
-    @staticmethod
-    def get_num_previous_states(shape: Shape) -> int:
-        return (shape[0] - 2) // 2
+    def get_shape(self) -> Shape:
+        return self.num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
 
 
 class NetWrapper(AbstractNeuralNetwork):
@@ -206,64 +197,34 @@ class NetWrapper(AbstractNeuralNetwork):
         return p.flatten(), v.flatten()
 
 
-class GameState(AbstractGameState):
-    def __init__(self, game: Game, history_buffer: HistoryBuffer):
-        self.winners = []
-        self.game = game
-        self.history_buffer = history_buffer
-        self.move_stack = []
+class C4Tensorizor(AbstractGameTensorizor):
+    def __init__(self, num_previous_states: int):
+        self.num_previous_states = num_previous_states
+        self.history_buffer = HistoryBuffer(num_previous_states)
+        self.move_stack: List[ActionIndex] = []
+
+    @staticmethod
+    def get_num_previous_states(shape: Shape) -> int:
+        return (shape[0] - 2) // 2
+
+    @staticmethod
+    def get_input_shape(num_previous_states) -> Shape:
+        return num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
+
+    def receive_state_change(self, state: C4GameState, action_index: ActionIndex):
+        self.history_buffer.update(state)
+        self.move_stack.append(action_index)
 
     @staticmethod
     def supports_undo() -> bool:
         return True
 
-    @staticmethod
-    def get_num_global_actions() -> int:
-        return NUM_COLUMNS
-
-    def debug_dump(self, file_handle):
-        file_handle.write(self.game.to_ascii_drawing(pretty_print=False))
-
-    def compact_repr(self) -> str:
-        return self.game.get_board_str()
-
-    def to_xml_tree(self, elem: ET.Element, tag: str) -> ET.Element:
-        tag_dict = {
-            'board': self.game.get_board_str(),
-        }
-        return ET.SubElement(elem, tag, tag_dict)
-
-    def get_signature(self) -> Hashable:
-        return self.game.piece_mask.data.tobytes(), self.game.current_player
-
-    def get_current_player(self) -> PlayerIndex:
-        return self.game.get_current_player()
-
-    def apply_move(self, action_index: ActionIndex):
-        self.winners = self.game.apply_move(action_index+1)
-        self.history_buffer.update(self.game)
-        self.move_stack.append(action_index)
-
-    def undo_last_move(self):
-        action_index = self.move_stack.pop()
+    def undo(self, state: C4GameState):
+        move = self.move_stack.pop()
+        state.undo_move(move+1)
         self.history_buffer.undo()
-        self.winners = []
-        self.game.undo_move(action_index+1)
 
-    def get_valid_actions(self) -> ActionMask:
-        actions = np.array(self.game.get_valid_moves())
-        mask = torch.zeros(self.get_num_global_actions(), dtype=bool)
-        mask[actions-1] = 1
-        return mask
-
-    def get_game_result(self) -> Optional[ValueProbDistr]:
-        if self.winners:
-            arr = np.zeros(2)
-            arr[self.winners] = 1.0 / len(self.winners)
-            return arr
-        return None
-
-    def vectorize(self) -> NeuralNetworkInput:
+    def vectorize(self, state: C4GameState) -> NeuralNetworkInput:
         i = self.history_buffer.get_input()
         shape = i.shape
         tensor_shape = tuple([1] + list(shape))
