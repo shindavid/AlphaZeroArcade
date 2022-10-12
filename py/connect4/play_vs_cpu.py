@@ -7,8 +7,8 @@ from typing import Optional
 import numpy as np
 import torch
 
-from game_logic import Color, Game, NUM_COLUMNS, PRETTY_COLORS
-from neural_net import Net, HistoryBuffer, NetWrapper, GameState
+from game_logic import Color, C4GameState, NUM_COLUMNS, PRETTY_COLORS
+from neural_net import Net, HistoryBuffer, NetWrapper, C4Tensorizor
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from mcts import MCTSParams, MCTS
@@ -28,9 +28,9 @@ class Args:
         if s is None:
             return None
         if s == 'R':
-            return Game.RED
+            return C4GameState.RED
         if s == 'Y':
-            return Game.YELLOW
+            return C4GameState.YELLOW
         raise Exception(f'Invalid color -c {s}')
 
     @staticmethod
@@ -76,6 +76,9 @@ def main():
     runner.run(Args.my_starting_color)
 
 
+class GamePlayer:
+    def play_move(self, ):
+
 class GameRunner:
     def __init__(self, net: Net):
         self.net = NetWrapper(net)
@@ -94,7 +97,7 @@ class GameRunner:
         self.player_names = ['???', '???']
         self.last_move = None
         self.history_buffer = None
-        self.game = Game()
+        self.game = C4GameState()
         self.game_state = None
 
     def run(self, my_color: Optional[Color] = None):
@@ -105,8 +108,8 @@ class GameRunner:
         self.player_names[my_color] = 'Human'
         self.last_move = None
         self.history_buffer = HistoryBuffer(self.num_previous_states)
-        self.game = Game()
-        self.game_state = GameState(self.game, self.history_buffer)
+        self.game = C4GameState()
+        self.game_state = C4Tensorizor(self.game, self.history_buffer)
 
         while True:
             cur_player = self.game.get_current_player()
@@ -158,7 +161,7 @@ class GameRunner:
                 continue
 
         self.last_move = my_move
-        self.game_state.apply_move(my_move-1)
+        self.game_state.apply_move(my_move - 1)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         return self.game_state.get_game_result()
@@ -219,14 +222,14 @@ class GameRunner:
         assert cpu_move in valid_moves
 
         self.last_move = cpu_move
-        self.game_state.apply_move(cpu_move-1)
+        self.game_state.apply_move(cpu_move)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
             win_probs = value
             print('CPU pos eval:')
             if mcts_value is None:
-                for c in (Game.RED, Game.YELLOW):
+                for c in (C4GameState.RED, C4GameState.YELLOW):
                     print('%s: %6.3f%%' % (PRETTY_COLORS[c], 100.0 * float(win_probs[c])))
                 print('')
                 print('%3s %8s' % ('Col', 'Net'))
@@ -234,7 +237,7 @@ class GameRunner:
                     print(f'{i+1:3d} {x:8.3f}')
             else:
                 net_win_probs = net_value
-                for c in (Game.RED, Game.YELLOW):
+                for c in (C4GameState.RED, C4GameState.YELLOW):
                     print('%s: %6.3f%% -> %6.3f%%' % (
                         PRETTY_COLORS[c], 100.0 * float(net_win_probs[c]), 100.0 * float(win_probs[c])
                     ))

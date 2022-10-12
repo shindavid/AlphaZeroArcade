@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Tuple, Optional, Hashable
+from typing import Tuple, Optional, Hashable, List
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -8,15 +8,12 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from game_logic import Game, NUM_COLUMNS, NUM_ROWS
+from game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS
 from game_logic import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
-    AbstractGameState, PlayerIndex, ActionIndex, ActionMask, ValueProbDistr
-
-
-Shape = Tuple[int, ...]
+    AbstractGameState, PlayerIndex, ActionIndex, ActionMask, ValueProbDistr, AbstractGameTensorizor, Shape
 
 
 class ConvBlock(nn.Module):
@@ -158,10 +155,10 @@ class HistoryBuffer:
 
         self.num_previous_states = num_previous_states
         self.full_mask = np.zeros(shape, dtype=bool)
-        self.next_color = Game.RED
+        self.next_color = C4GameState.RED
         self.ref_indices = [self.num_previous_states, self.num_previous_states]
 
-    def update(self, game: Game):
+    def update(self, game: C4GameState):
         self.ref_indices[self.next_color] += 1
         self.full_mask[self.next_color][self.ref_indices[self.next_color]] = game.get_mask(self.next_color)
         self.next_color = self.prev_color
@@ -188,9 +185,8 @@ class HistoryBuffer:
         p_mask = self.full_mask[p][pi-self.num_previous_states:pi+1]
         return np.concatenate((n_mask, p_mask))
 
-    @staticmethod
-    def get_shape(num_previous_states: int) -> Shape:
-        return num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
+    def get_shape(self) -> Shape:
+        return self.num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
 
     @staticmethod
     def get_num_previous_states(shape: Shape) -> int:
@@ -206,45 +202,29 @@ class NetWrapper(AbstractNeuralNetwork):
         return p.flatten(), v.flatten()
 
 
-class GameState(AbstractGameState):
-    def __init__(self, game: Game, history_buffer: HistoryBuffer):
-        self.winners = []
-        self.game = game
-        self.history_buffer = history_buffer
-        self.move_stack = []
+class C4Tensorizor(AbstractGameTensorizor):
+    def __init__(self, num_previous_states: int):
+        self.num_previous_states = num_previous_states
+        self.history_buffer = HistoryBuffer(num_previous_states)
+
+    @staticmethod
+    def get_input_shape(num_previous_states) -> Shape:
+        return num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
 
     @staticmethod
     def supports_undo() -> bool:
         return True
 
-    @staticmethod
-    def get_num_global_actions() -> int:
-        return NUM_COLUMNS
-
-    def debug_dump(self, file_handle):
-        file_handle.write(self.game.to_ascii_drawing(pretty_print=False))
-
-    def compact_repr(self) -> str:
-        return self.game.get_board_str()
-
-    def to_xml_tree(self, elem: ET.Element, tag: str) -> ET.Element:
+    def to_xml_tree(self, game: C4GameState, elem: ET.Element, tag: str) -> ET.Element:
         tag_dict = {
-            'board': self.game.get_board_str(),
+            'board': game.get_board_str(),
         }
         return ET.SubElement(elem, tag, tag_dict)
 
-    def get_signature(self) -> Hashable:
-        return self.game.piece_mask.data.tobytes(), self.game.current_player
+    def receive_state_change(self, state: C4GameState):
+        self.history_buffer.update(state)
 
-    def get_current_player(self) -> PlayerIndex:
-        return self.game.get_current_player()
-
-    def apply_move(self, action_index: ActionIndex):
-        self.winners = self.game.apply_move(action_index+1)
-        self.history_buffer.update(self.game)
-        self.move_stack.append(action_index)
-
-    def undo_last_move(self):
+    def undo_last_update(self):
         action_index = self.move_stack.pop()
         self.history_buffer.undo()
         self.winners = []

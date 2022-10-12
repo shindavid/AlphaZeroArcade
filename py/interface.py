@@ -1,7 +1,7 @@
 from torch import Tensor
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Hashable
+from typing import Optional, Tuple, Hashable, List
 import xml.etree.ElementTree as ET
 
 
@@ -27,6 +27,8 @@ LocalPolicyLogitDistr = Tensor  # size=# locally legal actions, logit terms
 ValueProbDistr = Tensor  # size=# players, prob terms
 ValueLogitDistr = Tensor  # size=# players, logit terms
 
+Shape = Tuple[int, ...]
+
 
 class AbstractNeuralNetwork(ABC):
     @abstractmethod
@@ -35,14 +37,6 @@ class AbstractNeuralNetwork(ABC):
 
 
 class AbstractGameState(ABC):
-    @staticmethod
-    @abstractmethod
-    def supports_undo() -> bool:
-        """
-        Returns whether the class implements an undo_last_move() method. If it does, the MCTS implementation will use it.
-        Otherwise, the class must support a clone() method.
-        """
-        pass
 
     @staticmethod
     @abstractmethod
@@ -67,22 +61,6 @@ class AbstractGameState(ABC):
         pass
 
     @abstractmethod
-    def get_signature(self) -> Hashable:
-        """
-        Returns an object that will serve as the dict-key for a neural network evaluation cache.
-
-        This can be simply <self>, provided the class has appropriate __eq__/__hash__ implementations that effectively
-        use the data structures from which the output of vectorize() are computed.
-
-        However, that behavior can be suboptimal because sometimes you want two states with unequal vectorize() outputs
-        to share a common signature. This is because the neural network input typically includes recent state history,
-        and because different move orders can transpose to the same position. Technically, the neural network will not
-        yield identical outputs for such transpositions, but game theoretically the evaluations should be identical.
-        So a theoretically perfect neural network should yield identical outputs, justifying a shared cache entry.
-        """
-        pass
-
-    @abstractmethod
     def get_current_player(self) -> PlayerIndex:
         """
         Returns the player that would correspond to the next apply_move() call.
@@ -90,24 +68,14 @@ class AbstractGameState(ABC):
         pass
 
     @abstractmethod
-    def apply_move(self, action_index: ActionIndex):
+    def apply_move(self, action_index: ActionIndex) -> Optional[ValueProbDistr]:
         """
         Apply a move, modifying the game state.
+
+        Returns None if game is not over. Else, returns a vector of non-negative win/loss values summing to 1.
+        These values can be fractional in the event of a tie.
         """
         pass
-
-    def undo_last_move(self):
-        """
-        If supports_undo() returns True, then this method must be implemented. Calling the method should effectively
-        undo the last apply_move() call.
-        """
-        raise NotImplementedError()
-
-    def clone(self):
-        """
-        If supports_undo() returns False, then this method must be implemented. Returns a deep copy of self.
-        """
-        raise NotImplementedError()
 
     @abstractmethod
     def get_valid_actions(self) -> ActionMask:
@@ -117,16 +85,28 @@ class AbstractGameState(ABC):
         pass
 
     @abstractmethod
-    def get_game_result(self) -> Optional[ValueProbDistr]:
+    def get_signature(self) -> Hashable:
         """
-        Returns None if game is not over. Else, returns a vector of non-negative win/loss values summing to 1.
-        These values can be fractional in the event of a tie.
+        Returns an object that will serve as the dict-key for a neural network evaluation cache.
+
+        This can be simply :self:
         """
         pass
 
+
+class AbstractGameTensorizor(ABC):
     @abstractmethod
-    def vectorize(self) -> NeuralNetworkInput:
+    def vectorize(self, state: AbstractGameState) -> NeuralNetworkInput:
         """
         Returns a tensor that will be fed into the neural network.
         """
         pass
+
+    @abstractmethod
+    def receive_state_change(self,  state: AbstractGameState):
+        """
+        Notify the tensorizor of a new game state. This can be useful if move history
+        information is part of the vectorized representation of the state.
+        """
+        pass
+

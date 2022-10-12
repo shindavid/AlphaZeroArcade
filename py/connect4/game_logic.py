@@ -1,9 +1,15 @@
+import os
 import random
-from typing import List
+import sys
+from typing import List, Optional, Hashable
 
 import numpy as np
+import torch
 from termcolor import colored
 
+sys.path.append(os.path.join(sys.path[0], '..'))
+from interface import AbstractGameState, ValueProbDistr, ActionIndex, ActionMask, AbstractGameTensorizor, \
+    NeuralNetworkInput
 
 NUM_COLUMNS = 7
 NUM_ROWS = 6
@@ -19,16 +25,29 @@ RIGHT_TACK = chr(8866)
 PRETTY_COLORS = [colored(CIRCLE_CHAR, c) for c in ('red', 'yellow')]
 
 
-class Game:
+class C4GameState(AbstractGameState):
     RED = 0  # first player
     YELLOW = 1
 
     def __init__(self, piece_mask=None, current_player=None):
         self.piece_mask = np.zeros((2, NUM_COLUMNS, NUM_ROWS), dtype=bool) if piece_mask is None else piece_mask
-        self.current_player = Game.RED if current_player is None else current_player
+        self.current_player = C4GameState.RED if current_player is None else current_player
 
-    def clone(self) -> 'Game':
-        return Game(np.copy(self.piece_mask), self.current_player)
+    def clone(self) -> 'C4GameState':
+        return C4GameState(np.copy(self.piece_mask), self.current_player)
+
+    def get_signature(self) -> Hashable:
+        return self.piece_mask.data.tobytes(), self.current_player
+
+    @staticmethod
+    def get_num_global_actions() -> int:
+        return NUM_COLUMNS
+
+    def debug_dump(self, file_handle):
+        file_handle.write(self.to_ascii_drawing(pretty_print=False))
+
+    def compact_repr(self) -> str:
+        return self.get_board_str()
 
     def get_num_moves_played(self) -> int:
         return int(np.sum(self.piece_mask))
@@ -37,6 +56,12 @@ class Game:
         cur_heights = np.sum(np.sum(self.piece_mask, axis=0), axis=1)
         assert cur_heights.shape == (NUM_COLUMNS, )
         return [c+1 for c, h in enumerate(cur_heights) if h < NUM_ROWS]
+
+    def get_valid_actions(self) -> ActionMask:
+        actions = np.array(self.get_valid_moves())
+        mask = torch.zeros(C4GameState.get_num_global_actions(), dtype=bool)
+        mask[actions-1] = 1
+        return mask
 
     def get_current_player(self) -> Color:
         return self.current_player
@@ -55,7 +80,15 @@ class Game:
         self.piece_mask[:, column-1, cur_height-1] = 0
         self.current_player = 1 - self.current_player
 
-    def apply_move(self, column: int, announce: bool = False) -> List[Color]:
+    def apply_move(self, action_index: ActionIndex) -> Optional[ValueProbDistr]:
+        winners = self._add_piece(action_index + 1)
+        if winners:
+            arr = np.zeros(2)
+            arr[winners] = 1.0 / len(winners)
+            return arr
+        return None
+
+    def _add_piece(self, column: int, announce: bool = False) -> List[Color]:
         """
         column is 1-indexed
 
@@ -73,10 +106,10 @@ class Game:
         move_color = self.current_player
         self.current_player = 1 - self.current_player
 
-        winners = self.compute_winners(column, cur_height, move_color)
+        winners = self._compute_winners(column, cur_height, move_color)
 
         if announce and winners:
-            cur_color = 'R' if self.current_player == Game.RED else 'Y'
+            cur_color = 'R' if self.current_player == C4GameState.RED else 'Y'
             print(f'** {cur_color} playing in column {column}')
             if len(winners) == 2:
                 print('Tied!')
@@ -84,7 +117,7 @@ class Game:
                 print(f'Winner! {cur_color}')
         return winners
 
-    def compute_winners(self, column, cur_height, move_color):
+    def _compute_winners(self, column, cur_height, move_color):
         mask = self.piece_mask[move_color]
         dir_tuple_set = (
             ((-1, 0), (+1, 0)),  # horizontal
@@ -109,7 +142,7 @@ class Game:
                 if count == 4:
                     return [move_color]
         if self.get_num_moves_played() == MAX_MOVES_PER_GAME:
-            return [Game.RED, Game.YELLOW]
+            return [C4GameState.RED, C4GameState.YELLOW]
         return []
 
     def get_board_str(self) -> str:
@@ -151,17 +184,18 @@ class Game:
     def __hash__(self):
         return hash(tuple(self.piece_mask.data))
 
-    def __eq__(self, other: 'Game'):
+    def __eq__(self, other: 'C4GameState'):
         return all(np.all(m1 == m2) for m1, m2 in (self.piece_mask, other.piece_mask))
+
 
 
 if __name__ == '__main__':
     for _ in range(1000):
-        game = Game()
+        game = C4GameState()
         while True:
             moves = game.get_valid_moves()
             assert moves
-            results = game.apply_move(random.choice(moves), announce=False)
+            results = game._add_piece(random.choice(moves), announce=False)
             if results:
                 break
 
