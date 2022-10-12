@@ -112,7 +112,7 @@ def launch(args):
                 value_arr[cp] = cur_player_value
                 value_arr[1-cp] = 1 - cur_player_value
 
-                input_matrix = tensorizor.vectorize()
+                input_matrix = tensorizor.vectorize(state)
 
                 input_dataset[write_index] = input_matrix
                 value_dataset[write_index] = value_arr
@@ -123,8 +123,9 @@ def launch(args):
                 moves = state.get_valid_moves()
                 assert moves
                 move = random.choice(moves)
-                results = state.apply_move(move-1)
-                tensorizor.receive_state_change(state)
+                action_index = move - 1
+                results = state.apply_move(action_index)
+                tensorizor.receive_state_change(state, action_index)
                 if results is not None:
                     break
 

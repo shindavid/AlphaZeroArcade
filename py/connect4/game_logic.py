@@ -9,7 +9,7 @@ from termcolor import colored
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import AbstractGameState, ValueProbDistr, ActionIndex, ActionMask, AbstractGameTensorizor, \
-    NeuralNetworkInput
+    NeuralNetworkInput, GameResult
 
 NUM_COLUMNS = 7
 NUM_ROWS = 6
@@ -80,7 +80,7 @@ class C4GameState(AbstractGameState):
         self.piece_mask[:, column-1, cur_height-1] = 0
         self.current_player = 1 - self.current_player
 
-    def apply_move(self, action_index: ActionIndex) -> Optional[ValueProbDistr]:
+    def apply_move(self, action_index: ActionIndex) -> GameResult:
         winners = self._add_piece(action_index + 1)
         if winners:
             arr = np.zeros(2)

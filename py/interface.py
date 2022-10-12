@@ -1,8 +1,7 @@
 from torch import Tensor
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Hashable, List
-import xml.etree.ElementTree as ET
+from typing import Optional, Tuple, Hashable
 
 
 """
@@ -26,7 +25,7 @@ LocalPolicyProbDistr = Tensor  # size=# locally legal actions, prob terms
 LocalPolicyLogitDistr = Tensor  # size=# locally legal actions, logit terms
 ValueProbDistr = Tensor  # size=# players, prob terms
 ValueLogitDistr = Tensor  # size=# players, logit terms
-
+GameResult = Optional[ValueProbDistr]
 Shape = Tuple[int, ...]
 
 
@@ -37,7 +36,6 @@ class AbstractNeuralNetwork(ABC):
 
 
 class AbstractGameState(ABC):
-
     @staticmethod
     @abstractmethod
     def get_num_global_actions() -> int:
@@ -68,7 +66,7 @@ class AbstractGameState(ABC):
         pass
 
     @abstractmethod
-    def apply_move(self, action_index: ActionIndex) -> Optional[ValueProbDistr]:
+    def apply_move(self, action_index: ActionIndex) -> GameResult:
         """
         Apply a move, modifying the game state.
 
@@ -103,10 +101,35 @@ class AbstractGameTensorizor(ABC):
         pass
 
     @abstractmethod
-    def receive_state_change(self,  state: AbstractGameState):
+    def receive_state_change(self,  state: AbstractGameState, action_index: ActionIndex):
         """
         Notify the tensorizor of a new game state. This can be useful if move history
         information is part of the vectorized representation of the state.
         """
         pass
 
+    @staticmethod
+    @abstractmethod
+    def supports_undo() -> bool:
+        """
+        Returns whether the class implements an undo_last_move() method. If it does, the MCTS implementation will use
+        it. Otherwise, the class must support a clone() method.
+        """
+        pass
+
+    def undo(self, state: AbstractGameState):
+        """
+        If supports_undo() returns True, then this method must be implemented.
+
+        Calling the method should effectively undo both the last state.apply_move() call and the last
+        self.receive_state_change() call.
+        """
+        raise NotImplemented()
+
+    def clone(self, state: AbstractGameState) -> Tuple['AbstractGameTensorizor', AbstractGameState]:
+        """
+        If supports_undo() returns False, then this method must be implemented.
+
+        Returns a deep copy of self, and a deep copy of state.
+        """
+        raise NotImplemented()

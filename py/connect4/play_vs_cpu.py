@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from game_logic import Color, C4GameState, NUM_COLUMNS, PRETTY_COLORS
-from neural_net import Net, HistoryBuffer, NetWrapper, C4Tensorizor
+from neural_net import Net, NetWrapper, C4Tensorizor
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from mcts import MCTSParams, MCTS
@@ -88,17 +88,17 @@ class GameRunner:
         self.num_previous_states = C4Tensorizor.get_num_previous_states(net.input_shape)
         self.tensor_shape = tuple([1] + list(net.input_shape))
 
-        self.mcts = None
-        self.mcts_params = None
-        if not Args.neural_network_only:
-            self.mcts = MCTS(self.net, debug_filename=Args.debug_filename)
-            self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters, dirichlet_mult=0)
-
         self.player_names = ['???', '???']
         self.last_move = None
         self.history_buffer = None
         self.state = C4GameState()
         self.tensorizor = C4Tensorizor(self.num_previous_states)
+
+        self.mcts = None
+        self.mcts_params = None
+        if not Args.neural_network_only:
+            self.mcts = MCTS(self.net, debug_filename=Args.debug_filename)
+            self.mcts_params = MCTSParams(treeSizeLimit=Args.num_mcts_iters, dirichlet_mult=0)
 
     def run(self, my_color: Optional[Color] = None):
         if my_color is None:
@@ -107,7 +107,6 @@ class GameRunner:
         self.player_names = ['CPU', 'CPU']
         self.player_names[my_color] = 'Human'
         self.last_move = None
-        # self.history_buffer = HistoryBuffer(self.num_previous_states)
         self.state = C4GameState()
         self.tensorizor = C4Tensorizor(self.num_previous_states)
 
@@ -126,7 +125,7 @@ class GameRunner:
                 continue
 
             if self.mcts is not None:
-                self.mcts.record_final_position(self.tensorizor)
+                self.mcts.record_final_position(self.state)
             if result[my_color] == 1:
                 print('Congratulations! You win!')
             elif result[cpu_color] == 1:
@@ -161,14 +160,15 @@ class GameRunner:
                 continue
 
         self.last_move = my_move
-        self.state.apply_move(my_move - 1)
-        self.tensorizor.receive_state_change(self.state)
+        action_index = my_move - 1
+        result = self.state.apply_move(action_index)
+        self.tensorizor.receive_state_change(self.state, action_index)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
-        return self.tensorizor.get_game_result()
+        return result
 
     def handle_cpu_move_mcts(self, valid_moves):
-        results = self.mcts.sim(self.tensorizor, self.mcts_params)
+        results = self.mcts.sim(self.tensorizor, self.state, self.mcts_params)
         mcts_counts = results.counts
         if self.temperature:
             heated_counts = mcts_counts.pow(1.0 / self.temperature)
@@ -223,8 +223,9 @@ class GameRunner:
         assert cpu_move in valid_moves
 
         self.last_move = cpu_move
-        self.state.apply_move(cpu_move - 1)
-        self.tensorizor.receive_state_change(self.state)
+        action_index = cpu_move - 1
+        result = self.state.apply_move(action_index)
+        self.tensorizor.receive_state_change(self.state, action_index)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
@@ -250,7 +251,7 @@ class GameRunner:
 
             print('')
 
-        return self.tensorizor.get_game_result()
+        return result
 
 
 if __name__ == '__main__':
