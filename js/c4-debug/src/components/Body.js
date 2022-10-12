@@ -1,4 +1,7 @@
 import React, { Component } from "react";
+import { useEffect, useRef } from 'react';
+import { RangeSlider } from 'toolcool-range-slider';
+import 'toolcool-range-slider';
 import leftarrow from '../images/left.svg';
 import rightarrow from '../images/right.svg';
 import redcircle from '../images/red.svg';
@@ -138,6 +141,35 @@ function GameHistory(props) {
   );
 }
 
+function NAVSlider(props) {
+  const sliderRef = useRef();
+
+  useEffect(() => {
+    const slider = sliderRef.current;
+    const onChange = (evt) => {
+      console.log('NAVSlider.' + props.name + '.onChange() ' + evt.detail.value);
+      props.update(evt.detail.value);
+    }
+    slider?.addEventListener('change', onChange);
+    return () => {
+      slider?.removeEventListener('change', onChange);
+    }
+  }, []);
+
+  const disabled = props.max === 1;
+
+  return (
+    <toolcool-range-slider
+      disabled={disabled}
+      min={0}
+      max={props.max-1}
+      value={props.value}
+      step="1"
+      ref={sliderRef}
+    />
+  );
+}
+
 function MCTSNav(props) {
   const history = props.history;
   const move_index = props.move_index;
@@ -165,46 +197,55 @@ function MCTSNav(props) {
     <table className="center">
       <tbody>
       <tr>
-        <td>MCTS Iter:</td>
-        <td align="right">{iter_index+1}</td>
+        <td align="right">MCTS Iter:</td>
+        <td align="right" style={{width:25}}>{iter_index+1}</td>
         <td>/</td>
-        <td>{num_iters}</td>
+        <td style={{width:25}}>{num_iters}</td>
         <td>
           <MiniLeftNAVArrow max_index={num_iters} index={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
         <td>
           <MiniRightNAVArrow max_index={num_iters} index={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
+        <td style={{paddingLeft:10}}>
+          <NAVSlider name="iter" max={num_iters} value={iter_index} update={(i) => props.updateIterIndex(i)} />
+        </td>
       </tr>
       <tr>
-        <td>Top Depth:</td>
-        <td align="right">{top_depth}</td>
+        <td align="right">Top Depth:</td>
+        <td align="right" style={{width:25}}>{top_depth}</td>
         <td>/</td>
-        <td>{max_depth}</td>
+        <td style={{width:25}}>{max_depth}</td>
         <td>
           <MiniLeftNAVArrow max_index={num_visits} index={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
         <td>
           <MiniRightNAVArrow max_index={num_visits} index={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
+        <td style={{paddingLeft:10}}>
+          {/*<NAVSlider name="top" max={num_visits} value={top_index} update={(i) => props.updateTopIndex(i)} />*/}
+        </td>
       </tr>
       <tr>
-        <td>Bot Depth:</td>
-        <td align="right">{bot_depth}</td>
+        <td align="right">Bot Depth:</td>
+        <td align="right" style={{width:25}}>{bot_depth}</td>
         <td>/</td>
-        <td>{max_depth}</td>
+        <td style={{width:25}}>{max_depth}</td>
         <td>
           <MiniLeftNAVArrow max_index={num_visits} index={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
         <td>
           <MiniRightNAVArrow max_index={num_visits} index={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
+        <td style={{paddingLeft:10}}>
+          {/*<NAVSlider name="bot" max={num_visits} value={bot_index} update={(i) => props.updateBotIndex(i)} />*/}
+        </td>
       </tr>
       <tr>
-        <td>Top Scan:</td>
-        <td align="right">{top.board_visit_num + 1}</td>
+        <td align="right">Top Scan:</td>
+        <td align="right" style={{width:25}}>{top.board_visit_num + 1}</td>
         <td>/</td>
-        <td>{board_history.length}</td>
+        <td style={{width:25}}>{board_history.length}</td>
         <td>
           <MiniLeftNAVArrow
             max_index={board_history.length}
@@ -216,6 +257,14 @@ function MCTSNav(props) {
           <MiniRightNAVArrow
             max_index={board_history.length}
             index={top.board_visit_num}
+            update={(i) => props.updateTopScanIndex(board_history, i)}
+          />
+        </td>
+        <td style={{paddingLeft:10}}>
+          <NAVSlider
+            name="scan"
+            max={board_history.length}
+            value={top.board_visit_num}
             update={(i) => props.updateTopScanIndex(board_history, i)}
           />
         </td>
@@ -413,6 +462,12 @@ class Body extends Component {
     const iter = move.iters[iter_index];
     const bot_index = iter.visits.length - 1;
 
+    console.log('updateIterIndex()');
+    // console.log(' move_index: ' + this.state.move_index);
+    // console.log(' iter_index: ' + iter_index);
+    // console.log(' iter.visits.length: ' + iter.visits.length);
+    // console.log(' bot_index: ' + bot_index);
+
     this.setState({
       iter_index: iter_index,
       top_index: 0,
@@ -421,6 +476,7 @@ class Body extends Component {
   }
 
   updateTopIndex(top_index) {
+    console.log('updateTopIndex()');
     let bot_index = this.state.bot_index;
     if (top_index > bot_index) {
       bot_index = top_index;
@@ -432,6 +488,7 @@ class Body extends Component {
   }
 
   updateBotIndex(bot_index) {
+    console.log('updateBotIndex()');
     this.setState({
       bot_index: bot_index,
     });
@@ -440,6 +497,11 @@ class Body extends Component {
   updateTopScanIndex(board_history, scan_index) {
     const visit = board_history[scan_index];
     const iter = visit.parent;
+
+    console.log('updateTopScanIndex(scan_index=' + scan_index + ')');
+    // console.log(' iter_index: ' + iter.index);
+    // console.log(' iter.visits.length: ' + iter.visits.length);
+    // console.log(' visit.depth: ' + visit.depth);
 
     this.setState({
       iter_index: iter.index,
@@ -463,6 +525,13 @@ class Body extends Component {
     const iter = move.iters[iter_index];
     const top = iter?.visits[top_index];
     const bot = iter?.visits[bot_index];
+
+    console.log('render()');
+    // console.log(' move_index: ' + move_index);
+    // console.log(' iter_index: ' + iter_index);
+    // console.log(' iter.visits.length: ' + iter.visits.length);
+    // console.log(' top_index: ' + top_index);
+    // console.log(' bot_index: ' + bot_index);
 
     return (
       <div className="center">
