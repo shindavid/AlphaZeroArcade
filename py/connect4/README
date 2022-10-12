@@ -1,3 +1,10 @@
+Generating training data:
+mpirun -n 6 ./generate_training_data.py -c=~/connect4/ -n 10000
+
+Training a model:
+./train_ny.py 
+
+
 Installing Node/React dependencies for the log replay tool:
 
 conda install nodejs

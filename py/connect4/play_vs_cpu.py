@@ -76,8 +76,8 @@ def main():
     runner.run(Args.my_starting_color)
 
 
-class GamePlayer:
-    def play_move(self, ):
+#class GamePlayer:
+#    def play_move(self, ):
 
 class GameRunner:
     def __init__(self, net: Net):
@@ -85,7 +85,7 @@ class GameRunner:
         self.temperature = Args.temperature
         self.neural_network_only = Args.neural_network_only
         self.verbose = Args.verbose
-        self.num_previous_states = HistoryBuffer.get_num_previous_states(net.input_shape)
+        self.num_previous_states = C4Tensorizor.get_num_previous_states(net.input_shape)
         self.tensor_shape = tuple([1] + list(net.input_shape))
 
         self.mcts = None
@@ -97,8 +97,8 @@ class GameRunner:
         self.player_names = ['???', '???']
         self.last_move = None
         self.history_buffer = None
-        self.game = C4GameState()
-        self.game_state = None
+        self.state = C4GameState()
+        self.tensorizor = C4Tensorizor(self.num_previous_states)
 
     def run(self, my_color: Optional[Color] = None):
         if my_color is None:
@@ -107,13 +107,13 @@ class GameRunner:
         self.player_names = ['CPU', 'CPU']
         self.player_names[my_color] = 'Human'
         self.last_move = None
-        self.history_buffer = HistoryBuffer(self.num_previous_states)
-        self.game = C4GameState()
-        self.game_state = C4Tensorizor(self.game, self.history_buffer)
+        # self.history_buffer = HistoryBuffer(self.num_previous_states)
+        self.state = C4GameState()
+        self.tensorizor = C4Tensorizor(self.num_previous_states)
 
         while True:
-            cur_player = self.game.get_current_player()
-            valid_moves = self.game.get_valid_moves()
+            cur_player = self.state.get_current_player()
+            valid_moves = self.state.get_valid_moves()
             assert valid_moves
             if cur_player == my_color:
                 result = self.handle_my_move(valid_moves)
@@ -126,7 +126,7 @@ class GameRunner:
                 continue
 
             if self.mcts is not None:
-                self.mcts.record_final_position(self.game_state)
+                self.mcts.record_final_position(self.tensorizor)
             if result[my_color] == 1:
                 print('Congratulations! You win!')
             elif result[cpu_color] == 1:
@@ -143,7 +143,7 @@ class GameRunner:
             print('Thank you for playing! Good-bye!')
 
     def handle_my_move(self, valid_moves):
-        game = self.game
+        game = self.state
         player_names = self.player_names
 
         my_move = None
@@ -161,13 +161,14 @@ class GameRunner:
                 continue
 
         self.last_move = my_move
-        self.game_state.apply_move(my_move - 1)
+        self.state.apply_move(my_move - 1)
+        self.tensorizor.receive_state_change(self.state)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
-        return self.game_state.get_game_result()
+        return self.tensorizor.get_game_result()
 
     def handle_cpu_move_mcts(self, valid_moves):
-        results = self.mcts.sim(self.game_state, self.mcts_params)
+        results = self.mcts.sim(self.tensorizor, self.mcts_params)
         mcts_counts = results.counts
         if self.temperature:
             heated_counts = mcts_counts.pow(1.0 / self.temperature)
@@ -208,7 +209,7 @@ class GameRunner:
 
     def handle_cpu_move_helper(self, valid_moves, net_policy, net_value,
                                mcts_counts=None, mcts_policy=None, mcts_value=None):
-        game = self.game
+        game = self.state
         player_names = self.player_names
 
         policy = net_policy if mcts_policy is None else mcts_policy
@@ -222,7 +223,8 @@ class GameRunner:
         assert cpu_move in valid_moves
 
         self.last_move = cpu_move
-        self.game_state.apply_move(cpu_move)
+        self.state.apply_move(cpu_move - 1)
+        self.tensorizor.receive_state_change(self.state)
         os.system('clear')
         print(game.to_ascii_drawing(add_legend=True, player_names=player_names, highlight_column=self.last_move))
         if self.verbose:
@@ -248,7 +250,7 @@ class GameRunner:
 
             print('')
 
-        return self.game_state.get_game_result()
+        return self.tensorizor.get_game_result()
 
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ import torch
 from torch import Tensor
 
 from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
-    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr
+    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor
 
 GlobalPolicyCountDistr = Tensor
 
@@ -60,7 +60,8 @@ class MCTSResults:
 
 @dataclass
 class StateEvaluation:
-    def __init__(self, network: AbstractNeuralNetwork, state: AbstractGameState):
+    def __init__(self, network: AbstractNeuralNetwork, state: AbstractGameState, tensorizor: AbstractGameTensorizor):
+        self.tensorizor = tensorizor
         self.current_player: PlayerIndex = state.get_current_player()
         self.game_result: Optional[ValueProbDistr] = state.get_game_result()
 
@@ -175,7 +176,9 @@ class MCTS:
     - disable Dirichlet noise + explorative settings (maximizing strength)
     - do NOT export for nnet training
     """
-    def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2, debug_filename: Optional[str] = None):
+    def __init__(self, network: AbstractNeuralNetwork, tensorizor: AbstractGameTensorizor,
+                 n_players: int = 2, debug_filename: Optional[str] = None):
+        self.tensorizor = tensorizor
         self.debug_filename = debug_filename
         self.network = network
         self.n_players = n_players

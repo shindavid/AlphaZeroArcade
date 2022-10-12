@@ -188,10 +188,6 @@ class HistoryBuffer:
     def get_shape(self) -> Shape:
         return self.num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
 
-    @staticmethod
-    def get_num_previous_states(shape: Shape) -> int:
-        return (shape[0] - 2) // 2
-
 
 class NetWrapper(AbstractNeuralNetwork):
     def __init__(self, net: Net):
@@ -206,6 +202,10 @@ class C4Tensorizor(AbstractGameTensorizor):
     def __init__(self, num_previous_states: int):
         self.num_previous_states = num_previous_states
         self.history_buffer = HistoryBuffer(num_previous_states)
+
+    @staticmethod
+    def get_num_previous_states(shape: Shape) -> int:
+        return (shape[0] - 2) // 2
 
     @staticmethod
     def get_input_shape(num_previous_states) -> Shape:
