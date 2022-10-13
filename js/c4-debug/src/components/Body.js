@@ -142,6 +142,8 @@ function MCTSNav(props) {
   const history = props.history;
   const move_index = props.move_index;
   const move = history[move_index];
+  if (move.iters.length === 0) return "";
+
   const iter_index = props.iter_index;
   const top_index = props.top_index;
   const bot_index = props.bot_index;
@@ -348,6 +350,8 @@ function MCTSDisplay(props) {
   const top = props.top;
   const bot = props.bot;
 
+  if (move.iters.length === 0) return "";
+
   return (
     <table className="center">
       <tbody>
@@ -381,9 +385,12 @@ class Body extends Component {
 
   updateMoveIndex(move_index) {
     const iter_index = 0;
-    const move = this.props.history[this.state.move_index];
-    const iter = move.iters[iter_index];
-    const bot_index = iter.visits.length - 1;
+    const move = this.props.history[move_index];
+    let bot_index = 0;
+    if (move.iters.length) {
+      const iter = move.iters[iter_index];
+      bot_index = iter.visits.length - 1;
+    }
 
     this.setState({
       move_index: move_index,
@@ -446,8 +453,8 @@ class Body extends Component {
 
     const move = history[move_index];
     const iter = move.iters[iter_index];
-    const top = iter.visits[top_index];
-    const bot = iter.visits[bot_index];
+    const top = iter?.visits[top_index];
+    const bot = iter?.visits[bot_index];
 
     return (
       <div className="center">
