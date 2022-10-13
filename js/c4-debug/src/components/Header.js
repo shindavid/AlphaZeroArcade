@@ -8,9 +8,11 @@ function MySlider(props) {
   useEffect(() => {
     const slider = sliderRef.current;
     const onChange = (evt) => {
-      const x = evt.detail.value;
-      console.log(props.name + ": " + x);
-      props.update(x);
+      if (evt.target.id === props.name) {
+        const x = evt.detail.value;
+        console.log("Slider " + props.name + " was dragged to: " + x + " [" + evt.target.id + "]");
+        props.update(x);
+      }
     }
     slider?.addEventListener('change', onChange);
     return () => {
@@ -20,6 +22,7 @@ function MySlider(props) {
 
   return (
     <toolcool-range-slider
+      id={props.name}
       min={0}
       max={100}
       value={props.value}
