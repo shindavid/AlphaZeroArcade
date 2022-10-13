@@ -1,3 +1,5 @@
+import copy
+
 from torch import Tensor
 
 from abc import ABC, abstractmethod
@@ -91,6 +93,12 @@ class AbstractGameState(ABC):
         """
         pass
 
+    def clone(self) -> 'AbstractGameState':
+        """
+        Return a copy of self.
+        """
+        return copy.deepcopy(self)
+
 
 class AbstractGameTensorizor(ABC):
     @abstractmethod
@@ -113,7 +121,7 @@ class AbstractGameTensorizor(ABC):
     def supports_undo() -> bool:
         """
         Returns whether the class implements an undo_last_move() method. If it does, the MCTS implementation will use
-        it. Otherwise, the class must support a clone() method.
+        it. Otherwise, it will rely on clone(), which could be costlier.
         """
         pass
 
@@ -126,10 +134,8 @@ class AbstractGameTensorizor(ABC):
         """
         raise NotImplemented()
 
-    def clone(self, state: AbstractGameState) -> Tuple['AbstractGameTensorizor', AbstractGameState]:
+    def clone(self) -> 'AbstractGameTensorizor':
         """
-        If supports_undo() returns False, then this method must be implemented.
-
-        Returns a deep copy of self, and a deep copy of state.
+        Returns a copy of self.
         """
-        raise NotImplemented()
+        return copy.deepcopy(self)

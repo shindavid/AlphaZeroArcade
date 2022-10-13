@@ -82,8 +82,6 @@ class StateEvaluation:
 
 class Tree:
     def __init__(self, n_players: int, action_index: Optional[ActionIndex] = None, parent: Optional['Tree'] = None):
-        self.tensorizor: Optional[AbstractGameTensorizor] = None  # use only when relying on state-clones
-        self.state: Optional[AbstractGameState] = None  # use only when relying on state-clones
         self.evaluation: Optional[StateEvaluation] = None
         self.valid_action_indices: Optional[List[ActionIndex]] = None
         self.children: Optional[List[Tree]] = None
@@ -94,11 +92,6 @@ class Tree:
         self.value_avg = torch.zeros(n_players)
         self.value_prior: Optional[ValueProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
-
-    def store_cloned_data(self, tensorizor: AbstractGameTensorizor, state: AbstractGameState):
-        if self.state is not None:
-            self.tensorizor, self.state = tensorizor.clone(state)
-        return self.tensorizor, self.state
 
     @property
     def n_players(self) -> int:
@@ -203,14 +196,24 @@ class MCTS:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
                 self.debug_tree.getroot().set('player', str(self.player_index))
+
         move_tree = None
         if self.debug_tree is not None:
             move_tree = ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
         self.root = Tree(self.n_players)
+
+        orig_tensorizor, orig_state = tensorizor, state
+        tensorizor = orig_tensorizor.clone()
+        state = orig_state.clone()
+
         for i in range(params.treeSizeLimit):
             iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
             self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=iter_tree)
+            if not tensorizor.supports_undo():
+                tensorizor = orig_tensorizor.clone()
+                state = orig_state.clone()
 
+        # TODO: return local distrs instead of global distrs. I'm returning global for now only for debugging.
         n = state.get_num_global_actions()
         counts = torch.zeros(n, dtype=int)
         for child in self.root.children:
@@ -279,9 +282,6 @@ class MCTS:
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
         else:
-            if not tensorizor.supports_undo():
-                tensorizor, state = best_child.store_cloned_data(tensorizor, state)
-
             result = state.apply_move(best_child.action_index)
             tensorizor.receive_state_change(state, best_child.action_index)
             self.visit(best_child, tensorizor, state, params, depth + 1, result, debug_subtree)
