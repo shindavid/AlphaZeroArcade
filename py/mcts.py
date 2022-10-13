@@ -20,7 +20,7 @@ import torch
 from torch import Tensor
 
 from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
-    GlobalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor, \
+    LocalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor, \
     GameResult
 
 GlobalPolicyCountDistr = Tensor
@@ -279,6 +279,8 @@ class MCTS:
 
         best_child: Tree = tree.children[np.argmax(PUCT)]
 
+        board = state.compact_repr() if self.debug_filename else None
+
         if leaf:
             tree.backprop(evaluation.value_prob_distr)
         else:
@@ -292,7 +294,7 @@ class MCTS:
         if self.debug_filename:
             tree_dict = {
                 'depth': depth,
-                'board': state.compact_repr(),
+                'board': board,
                 'eval': evaluation.value_prob_distr,
                 'leaf': leaf,
                 'value_sum': value_sum,
