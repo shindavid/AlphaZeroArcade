@@ -168,7 +168,6 @@ class HistoryBuffer:
         Undo last update() call.
         """
         self.next_color = self.prev_color
-        self.full_mask[self.next_color][self.ref_indices[self.next_color]] = 0
         self.ref_indices[self.next_color] -= 1
 
     @property
