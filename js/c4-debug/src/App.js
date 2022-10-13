@@ -20,6 +20,7 @@ class Visit {
   constructor(elem, parent) {
     this.board_visit_num = null;
     this.parent = parent;
+    this.player = parseInt(elem.getAttribute('player'));
     this.depth = parseInt(elem.getAttribute('depth'));
     this.board = elem.getAttribute('board');
     this.leaf = parseInt(elem.getAttribute('leaf'));
@@ -50,10 +51,7 @@ class Iter {
 
 class Move {
   constructor(elem) {
-    const cp = elem.getAttribute('cp');
-    const board = elem.getAttribute('board');
-    this.cp = cp;
-    this.board = board;
+    this.board = elem.getAttribute('board');
     this.iters = Array.from(elem.children).map(i => new Iter(i, this));
 
     this.board_to_visits = {};

@@ -171,11 +171,13 @@ class MCTS:
         self.debug_tree = None if debug_filename is None else ET.ElementTree(ET.Element('Game'))
         self.player_index: Optional[PlayerIndex] = None
 
-    def _terminal_visit_debug(self, depth: int, state: AbstractGameState, game_result: GameResult, tree: Tree,
-                     debug_subtree: Optional[ET.Element]):
+    def _terminal_visit_debug(
+            self, player: PlayerIndex, depth: int, state: AbstractGameState, game_result: GameResult, tree: Tree,
+            debug_subtree: Optional[ET.Element]):
         if not self.debug_filename:
             return
         tree_dict = {
+            'player': player,
             'depth': depth,
             'board': state.compact_repr(),
             'terminal': True,
@@ -189,12 +191,14 @@ class MCTS:
         debug_subtree.insert(0, elem)
 
     def _internal_visit_debug(
-            self, depth: int, board: str, evaluation: StateEvaluation, leaf: bool, value_sum: Tensor, tree: Tree,
-            debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor, N: Tensor, PUCT: Tensor):
+            self, player: PlayerIndex, depth: int, board: str, evaluation: StateEvaluation, leaf: bool,
+            value_sum: Tensor, tree: Tree, debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor,
+            N: Tensor, PUCT: Tensor):
         if not self.debug_filename:
             return
 
         tree_dict = {
+            'player': player,
             'depth': depth,
             'board': board,
             'eval': evaluation.value_prob_distr,
@@ -286,7 +290,7 @@ class MCTS:
 
         if game_result is not None:
             tree.backprop(game_result)
-            self._terminal_visit_debug(depth, state, game_result, tree, debug_subtree)
+            self._terminal_visit_debug(current_player, depth, state, game_result, tree, debug_subtree)
             return
 
         leaf = not tree.has_children()
@@ -320,8 +324,8 @@ class MCTS:
                 tensorizor.undo(state)
 
         self._internal_visit_debug(
-            depth=depth, board=board, evaluation=evaluation, leaf=leaf, value_sum=value_sum, tree=tree,
-            debug_subtree=debug_subtree, P=P, noise=noise, V=V, N=N, PUCT=PUCT)
+            player=current_player, depth=depth, board=board, evaluation=evaluation, leaf=leaf, value_sum=value_sum,
+            tree=tree, debug_subtree=debug_subtree, P=P, noise=noise, V=V, N=N, PUCT=PUCT)
 
 
 def stringify(value):

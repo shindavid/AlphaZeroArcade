@@ -284,6 +284,7 @@ function PolicyTable(props) {
 function ValueTable(props) {
   const visit = props.visit;
 
+  const player = visit.player;
   const eval_total = visit.eval.reduce((a, b) => a+b, 0);
   const value_sum_total = visit.value_sum.reduce((a, b) => a+b, 0);
 
@@ -291,20 +292,27 @@ function ValueTable(props) {
     <table className="collapsed"><tbody>
     <tr>
       <td className="vert">Color</td>
+      <td className="vert">CurP</td>
       <td className="vert">NN.V</td>
       <td className="vert">V</td>
     </tr>
     <tr>
       <td className="vert">
-        <span className="minicircle center"><img src={redcircle} alt="color" /></span>
+        <span className="minicircle center">
+          <img src={redcircle} alt="color" />
+        </span>
       </td>
+      <td className="vert">{player===0 ? "X" : ""}</td>
       <td className="vert">{displayBar(visit.eval[0], eval_total)}</td>
       <td className="vert">{displayBar(visit.value_sum[0], value_sum_total)}</td>
     </tr>
     <tr>
       <td className="vert">
-        <span className="minicircle center"><img src={yellowcircle} alt="color" /></span>
+        <span className="minicircle center">
+          <img src={yellowcircle} alt="color" />
+        </span>
       </td>
+      <td className="vert">{player===1 ? "X" : ""}</td>
       <td className="vert">{displayBar(visit.eval[1], eval_total)}</td>
       <td className="vert">{displayBar(visit.value_sum[1], value_sum_total)}</td>
     </tr>
