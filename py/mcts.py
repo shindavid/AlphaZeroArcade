@@ -67,7 +67,7 @@ class StateEvaluation:
         self.game_result = result
 
         self.valid_action_mask: Optional[ActionMask] = None
-        self.policy_logit_distr: Optional[GlobalPolicyLogitDistr] = None
+        self.local_policy_logit_distr: Optional[LocalPolicyLogitDistr] = None
         self.value_prob_distr: Optional[ValueProbDistr] = None
 
         if self.game_result is not None:
@@ -76,7 +76,7 @@ class StateEvaluation:
 
         self.valid_action_mask = state.get_valid_actions()
         policy_output, value_output = network.evaluate(tensorizor.vectorize(state))
-        self.policy_logit_distr = policy_output
+        self.local_policy_logit_distr = policy_output[self.valid_action_mask]
         self.value_prob_distr = value_output.softmax(dim=0)
 
 
@@ -132,14 +132,12 @@ class Tree:
         if self.policy_prior is not None:
             return self.policy_prior
 
-        valid_action_mask = evaluation.valid_action_mask
-        policy_output = evaluation.policy_logit_distr
+        policy_output = evaluation.local_policy_logit_distr
 
         is_root = self.is_root()
         inv_temp = (1.0 / params.root_softmax_temperature) if is_root else 1.0
 
-        valid_action_indices = torch.where(valid_action_mask)[0]
-        P = torch.softmax(policy_output[valid_action_indices] * inv_temp, dim=0)
+        P = torch.softmax(policy_output * inv_temp, dim=0)
         self.value_prior = evaluation.value_prob_distr
         self.policy_prior = P
         return P
