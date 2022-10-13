@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 import torch
 from torch import Tensor
+from torch.distributions.dirichlet import Dirichlet
 
 from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
     LocalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor, \
@@ -179,6 +180,54 @@ class MCTS:
         self.debug_tree = None if debug_filename is None else ET.ElementTree(ET.Element('Game'))
         self.player_index: Optional[PlayerIndex] = None
 
+    def _terminal_visit_debug(self, depth: int, state: AbstractGameState, game_result: GameResult, tree: Tree,
+                     debug_subtree: Optional[ET.Element]):
+        if not self.debug_filename:
+            return
+        tree_dict = {
+            'depth': depth,
+            'board': state.compact_repr(),
+            'terminal': True,
+            'eval': game_result,
+            'value_sum': tree.value_sum,
+        }
+        if tree.action_index is not None:
+            tree_dict['action'] = tree.action_index
+        tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
+        elem = debug_subtree.makeelement('Visit', tree_dict)
+        debug_subtree.insert(0, elem)
+
+    def _internal_visit_debug(
+            self, depth: int, board: str, evaluation: StateEvaluation, leaf: bool, value_sum: Tensor, tree: Tree,
+            debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor, N: Tensor, PUCT: Tensor):
+        if not self.debug_filename:
+            return
+
+        tree_dict = {
+            'depth': depth,
+            'board': board,
+            'eval': evaluation.value_prob_distr,
+            'leaf': leaf,
+            'value_sum': value_sum,
+        }
+        if tree.action_index is not None:
+            tree_dict['action'] = tree.action_index
+        tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
+        elem = debug_subtree.makeelement('Visit', tree_dict)
+        debug_subtree.insert(0, elem)
+        for ac, rp, p, no, v, n, puct in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT):
+            attribs = {
+                'action': ac,
+                'rP': rp,
+                'P': p,
+                'dir': no,
+                'V': v,
+                'N': n,
+                'PUCT': puct,
+            }
+            attribs = {k: stringify(v) for k, v in attribs.items()}
+            ET.SubElement(elem, 'Child', attribs)
+
     def close_debug_file(self):
         if self.debug_filename is None:
             return
@@ -246,19 +295,7 @@ class MCTS:
 
         if game_result is not None:
             tree.backprop(game_result)
-            if self.debug_filename:
-                tree_dict = {
-                    'depth': depth,
-                    'board': state.compact_repr(),
-                    'terminal': True,
-                    'eval': game_result,
-                    'value_sum': tree.value_sum,
-                    }
-                if tree.action_index is not None:
-                    tree_dict['action'] = tree.action_index
-                tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
-                elem = debug_subtree.makeelement('Visit', tree_dict)
-                debug_subtree.insert(0, elem)
+            self._terminal_visit_debug(depth, state, game_result, tree, debug_subtree)
             return
 
         leaf = not tree.has_children()
@@ -266,9 +303,9 @@ class MCTS:
 
         c_PUCT = params.c_PUCT
         P = tree.compute_policy_prior(evaluation, params)
-        noise = np.zeros(len(P))
+        noise = torch.zeros(len(P))
         if tree.is_root() and params.dirichlet_mult:
-            noise = np.random.dirichlet([params.dirichlet_alpha] * len(P))
+            noise = Dirichlet([params.dirichlet_alpha] * len(P)).sample()
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
 
         V = torch.Tensor([c.value_avg[current_player] for c in tree.children])
@@ -291,31 +328,9 @@ class MCTS:
             if tensorizor.supports_undo():
                 tensorizor.undo(state)
 
-        if self.debug_filename:
-            tree_dict = {
-                'depth': depth,
-                'board': board,
-                'eval': evaluation.value_prob_distr,
-                'leaf': leaf,
-                'value_sum': value_sum,
-            }
-            if tree.action_index is not None:
-                tree_dict['action'] = tree.action_index
-            tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
-            elem = debug_subtree.makeelement('Visit', tree_dict)
-            debug_subtree.insert(0, elem)
-            for ac, rp, p, no, v, n, puct in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT):
-                attribs = {
-                    'action': ac,
-                    'rP': rp,
-                    'P': p,
-                    'dir': no,
-                    'V': v,
-                    'N': n,
-                    'PUCT': puct,
-                }
-                attribs = {k: stringify(v) for k, v in attribs.items()}
-                ET.SubElement(elem, 'Child', attribs)
+        self._internal_visit_debug(
+            depth=depth, board=board, evaluation=evaluation, leaf=leaf, value_sum=value_sum, tree=tree,
+            debug_subtree=debug_subtree, P=P, noise=noise, V=V, N=N, PUCT=PUCT)
 
 
 def stringify(value):
