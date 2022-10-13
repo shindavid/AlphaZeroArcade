@@ -27,15 +27,6 @@ from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, Act
 GlobalPolicyCountDistr = Tensor
 
 
-def simple_float_tensor_repr(t: Optional[Tensor]) -> str:
-    """
-    I'm sure there's a better way to do this.
-    """
-    if t is None:
-        return '-'
-    return ' '.join(['%.3f' % x for x in t.tolist()])
-
-
 @dataclass
 class MCTSParams:
     treeSizeLimit: int
