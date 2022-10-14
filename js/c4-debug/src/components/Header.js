@@ -8,11 +8,9 @@ function MySlider(props) {
   useEffect(() => {
     const slider = sliderRef.current;
     const onChange = (evt) => {
-      if (evt.target.id === props.name) {
-        const x = evt.detail.value;
-        console.log("Slider " + props.name + " was dragged to: " + x + " [" + evt.target.id + "]");
-        props.update(x);
-      }
+      const v = evt.detail.value;
+      console.log("Slider " + props.name + " was dragged to: " + v);
+      props.update(v);
     }
     slider?.addEventListener('change', onChange);
     return () => {
@@ -23,8 +21,8 @@ function MySlider(props) {
   return (
     <toolcool-range-slider
       id={props.name}
-      min={0}
-      max={100}
+      min={props.min}
+      max={props.max}
       value={props.value}
       step="1"
       ref={sliderRef}
@@ -36,20 +34,41 @@ class Header extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      x: 0,
+      x: 10,
+      y: 5,
     };
   }
 
   updateX(x) {
-    this.setState({x: x});
+    this.setState({
+      x: x,
+      y: Math.ceil(x/2),
+    });
+  }
+
+  updateY(y) {
+    this.setState({y: y});
   }
 
   render() {
+    const x = this.state.x;
+    const y = this.state.y;
+    const minY = Math.ceil(x/2);
+    const maxY = x;
     return (
       <div>
-        <MySlider name="1" value={this.state.x} update={(x) => this.updateX(x) } />
-        <p/>
-        <MySlider name="2" value={this.state.x} update={(x) => this.updateX(x) } />
+        <table><tbody>
+          <tr>
+            <td>Choose x:</td>
+            <td style={{padding:10}}><MySlider name="x" min={10} max={50} value={this.state.x} update={(x) => this.updateX(x) } /></td>
+            <td>{x}</td>
+          </tr>
+          <tr>
+            <td>Choose a y in the range [x/2, x]:</td>
+            <td style={{padding:10}}><MySlider name="y" min={minY} max={maxY} value={this.state.y} update={(y) => this.updateY(y) } /></td>
+            <td>{y}</td>
+          </tr>
+        </tbody></table>
       </div>
     );
 
