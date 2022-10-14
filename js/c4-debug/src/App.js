@@ -12,6 +12,7 @@ class Child {
     this.V = parseFloat(elem.getAttribute('V'));
     this.N = parseFloat(elem.getAttribute('N'));
     this.PUCT = parseFloat(elem.getAttribute('PUCT'));
+    this.E = parseFloat(elem.getAttribute('E'));
   }
 }
 
@@ -27,7 +28,7 @@ class Visit {
     this.eval = elem.getAttribute('eval').split(',').map(parseFloat);
     this.terminal = parseInt(elem.getAttribute('terminal'));
     this.action = elem.getAttribute('action');
-    this.value_sum = elem.getAttribute('value_sum').split(',').map(parseFloat);
+    this.value_avg = elem.getAttribute('value_avg').split(',').map(parseFloat);
 
     this.children = Array.from(elem.children).map(c => new Child(c));
     this.rP_sum = this.children.map((x) => x.rP).reduce((a, b) => a+b, 0);

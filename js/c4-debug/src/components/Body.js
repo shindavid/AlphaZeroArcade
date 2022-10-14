@@ -304,6 +304,7 @@ function PolicyTable(props) {
           <td className="vert">{displayBar(child.P, visit.P_sum)}</td>
           <td className="vert">{displayBar(child.V, visit.V_sum)}</td>
           <td className="vert">{displayBar(child.N, visit.N_sum)}</td>
+          <td className="vert">{displayBar(child.E, 1)}</td>
           <td className="vert">{displayBar(child.PUCT, visit.PUCT_sum)}</td>
         </tr>
       ));
@@ -321,6 +322,7 @@ function PolicyTable(props) {
       <td className="vert">P</td>
       <td className="vert">V</td>
       <td className="vert">N</td>
+      <td className="vert">E</td>
       <td className="vert">PUCT</td>
     </tr>
     { render_children() }
@@ -334,7 +336,7 @@ function ValueTable(props) {
 
   const player = visit.player;
   const eval_total = visit.eval.reduce((a, b) => a+b, 0);
-  const value_sum_total = visit.value_sum.reduce((a, b) => a+b, 0);
+  const value_avg_total = visit.value_avg.reduce((a, b) => a+b, 0);
 
   return (
     <table className="collapsed"><tbody>
@@ -352,7 +354,7 @@ function ValueTable(props) {
       </td>
       <td className="vert">{player===0 ? "X" : ""}</td>
       <td className="vert">{displayBar(visit.eval[0], eval_total)}</td>
-      <td className="vert">{displayBar(visit.value_sum[0], value_sum_total)}</td>
+      <td className="vert">{displayBar(visit.value_avg[0], value_avg_total)}</td>
     </tr>
     <tr>
       <td className="vert">
@@ -362,7 +364,7 @@ function ValueTable(props) {
       </td>
       <td className="vert">{player===1 ? "X" : ""}</td>
       <td className="vert">{displayBar(visit.eval[1], eval_total)}</td>
-      <td className="vert">{displayBar(visit.value_sum[1], value_sum_total)}</td>
+      <td className="vert">{displayBar(visit.value_avg[1], value_avg_total)}</td>
     </tr>
     </tbody></table>
   );
