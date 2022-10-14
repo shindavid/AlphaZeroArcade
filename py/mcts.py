@@ -68,7 +68,7 @@ class StateEvaluation:
 
         self.valid_action_mask = state.get_valid_actions()
         policy_output, value_output = network.evaluate(tensorizor.vectorize(state))
-        self.local_policy_logit_distr = policy_output[self.valid_action_mask]
+        self.local_policy_logit_distr = policy_output[torch.where(self.valid_action_mask)[0]]
         self.value_prob_distr = value_output.softmax(dim=0)
 
 
