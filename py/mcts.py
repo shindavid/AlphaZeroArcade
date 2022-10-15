@@ -17,10 +17,11 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 import torch
+from torch import nn as nn
 from torch import Tensor
 from torch.distributions.dirichlet import Dirichlet
 
-from interface import AbstractGameState, AbstractNeuralNetwork, ActionIndex, ActionMask, PlayerIndex, \
+from interface import AbstractGameState, ActionIndex, ActionMask, PlayerIndex, \
     LocalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor, \
     GameResult
 
@@ -53,7 +54,7 @@ class MCTSResults:
 
 @dataclass
 class StateEvaluation:
-    def __init__(self, network: AbstractNeuralNetwork, tensorizor: AbstractGameTensorizor, state: AbstractGameState,
+    def __init__(self, net: nn.Module, tensorizor: AbstractGameTensorizor, state: AbstractGameState,
                  result: GameResult):
         self.current_player: PlayerIndex = state.get_current_player()
         self.game_result = result
@@ -67,7 +68,7 @@ class StateEvaluation:
             return
 
         self.valid_action_mask = state.get_valid_actions()
-        policy_output, value_output = network.evaluate(tensorizor.vectorize(state))
+        policy_output, value_output = [t.flatten() for t in net(tensorizor.vectorize(state))]
         self.local_policy_logit_distr = policy_output[torch.where(self.valid_action_mask)[0]]
         self.value_prob_distr = value_output.softmax(dim=0)
 
@@ -162,8 +163,8 @@ class MCTS:
     - disable Dirichlet noise + explorative settings (maximizing strength)
     - do NOT export for nnet training
     """
-    def __init__(self, network: AbstractNeuralNetwork, n_players: int = 2, debug_filename: Optional[str] = None):
-        self.network = network
+    def __init__(self, net: nn.Module, n_players: int = 2, debug_filename: Optional[str] = None):
+        self.net = net
         self.debug_filename = debug_filename
         self.n_players = n_players
         self.root: Optional[Tree] = None
@@ -276,7 +277,7 @@ class MCTS:
         signature = state.get_signature()
         evaluation = self.cache.get(signature, None)
         if evaluation is None:
-            evaluation = StateEvaluation(self.network, tensorizor, state,  result)
+            evaluation = StateEvaluation(self.net, tensorizor, state,  result)
             self.cache[signature] = evaluation
 
         tree.evaluation = evaluation

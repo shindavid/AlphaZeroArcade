@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Tuple, List
+from typing import List
 
 import numpy as np
 import torch
@@ -11,8 +11,7 @@ from game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS
 from game_logic import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 sys.path.append(os.path.join(sys.path[0], '..'))
-from interface import AbstractNeuralNetwork, NeuralNetworkInput, GlobalPolicyLogitDistr, ValueLogitDistr, \
-    ActionIndex, AbstractGameTensorizor, Shape
+from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape
 
 
 class ConvBlock(nn.Module):
@@ -185,15 +184,6 @@ class HistoryBuffer:
 
     def get_shape(self) -> Shape:
         return self.num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
-
-
-class NetWrapper(AbstractNeuralNetwork):
-    def __init__(self, net: Net):
-        self.net = net
-
-    def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
-        p, v = self.net(vec)
-        return p.flatten(), v.flatten()
 
 
 class C4Tensorizor(AbstractGameTensorizor):

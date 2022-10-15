@@ -3,8 +3,7 @@ import copy
 from torch import Tensor
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Hashable
-
+from typing import Optional, Tuple, Hashable, List
 
 """
 Various type aliases.
@@ -29,12 +28,6 @@ ValueProbDistr = Tensor  # size=# players, prob terms
 ValueLogitDistr = Tensor  # size=# players, logit terms
 GameResult = Optional[ValueProbDistr]
 Shape = Tuple[int, ...]
-
-
-class AbstractNeuralNetwork(ABC):
-    @abstractmethod
-    def evaluate(self, vec: NeuralNetworkInput) -> Tuple[GlobalPolicyLogitDistr, ValueLogitDistr]:
-        pass
 
 
 class AbstractGameState(ABC):
@@ -100,6 +93,25 @@ class AbstractGameState(ABC):
         return copy.deepcopy(self)
 
 
+class AbstractPlayer(ABC):
+    @abstractmethod
+    def get_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def start_game(self, players: List['AbstractPlayer'], seat_assignment: PlayerIndex):
+        pass
+
+    @abstractmethod
+    def receive_state_change(self, p: PlayerIndex, state: AbstractGameState,
+                             action_index: ActionIndex, result: GameResult):
+        pass
+
+    @abstractmethod
+    def get_action(self, state: AbstractGameState, valid_actions: ActionMask) -> ActionIndex:
+        pass
+
+
 class AbstractGameTensorizor(ABC):
     @abstractmethod
     def vectorize(self, state: AbstractGameState) -> NeuralNetworkInput:
@@ -109,7 +121,7 @@ class AbstractGameTensorizor(ABC):
         pass
 
     @abstractmethod
-    def receive_state_change(self,  state: AbstractGameState, action_index: ActionIndex):
+    def receive_state_change(self, state: AbstractGameState, action_index: ActionIndex):
         """
         Notify the tensorizor of a new game state. This can be useful if move history
         information is part of the vectorized representation of the state.
