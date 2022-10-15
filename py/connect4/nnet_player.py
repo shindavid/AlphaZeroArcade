@@ -64,6 +64,10 @@ class NNetPlayer(AbstractPlayer):
         if self.my_index == p and self.params.verbose:
             self.verbose_dump()
 
+        if result is not None:
+            self.mcts.record_final_position(state)
+            self.mcts.close_debug_file()
+
     def verbose_dump(self):
         if not self.verbose_info:
             return
