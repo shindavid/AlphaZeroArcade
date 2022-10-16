@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import { useEffect, useRef } from 'react';
 import 'toolcool-range-slider';
+import Box from '@mui/material/Box';
+import Slider from '@mui/material/Slider';
 import leftarrow from '../images/left.svg';
 import rightarrow from '../images/right.svg';
 import redcircle from '../images/red.svg';
@@ -141,31 +143,26 @@ function GameHistory(props) {
 }
 
 function NAVSlider(props) {
-  const sliderRef = useRef();
-
-  useEffect(() => {
-    const slider = sliderRef.current;
-    const onChange = (evt) => {
-      if (document.activeElement !== slider) return;
-      props.update(evt.detail.value);
-    }
-    slider?.addEventListener('change', onChange);
-    return () => {
-      slider?.removeEventListener('change', onChange);
-    }
-  }, []);
+  const onChange = (evt, value) => {
+    props.update(value);
+  }
 
   const disabled = props.max === 1;
 
   return (
-    <toolcool-range-slider
-      disabled={disabled}
-      min={0}
-      max={props.max-1}
-      value={props.value}
-      step="1"
-      ref={sliderRef}
-    />
+    <Box width={300}>
+      <Slider
+        size="small"
+        aria-label="Small"
+        valueLabelDisplay="auto"
+        disabled={disabled}
+        min={0}
+        max={props.max-1}
+        value={props.value}
+        step={1}
+        onChange={onChange}
+      />
+    </Box>
   );
 }
 
@@ -192,6 +189,9 @@ function MCTSNav(props) {
   const top_board = top.board;
   const board_history = move.board_to_visits[top_board];
 
+  const td_width = 25;
+  const slider_padding = 25;
+
   return (
     <table className="center">
       <tbody>
@@ -199,14 +199,14 @@ function MCTSNav(props) {
         <td align="right">MCTS Iter:</td>
         <td align="right" style={{width:25}}>{iter_index+1}</td>
         <td>/</td>
-        <td style={{width:25}}>{num_iters}</td>
+        <td style={{width:td_width}}>{num_iters}</td>
         <td>
           <MiniLeftNAVArrow max_index={num_iters} index={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
         <td>
           <MiniRightNAVArrow max_index={num_iters} index={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
-        <td style={{paddingLeft:10}}>
+        <td style={{paddingLeft:slider_padding}}>
           <NAVSlider name="iter" max={num_iters} value={iter_index} update={(i) => props.updateIterIndex(i)} />
         </td>
       </tr>
@@ -214,37 +214,37 @@ function MCTSNav(props) {
         <td align="right">Top Depth:</td>
         <td align="right" style={{width:25}}>{top_depth}</td>
         <td>/</td>
-        <td style={{width:25}}>{max_depth}</td>
+        <td style={{width:td_width}}>{max_depth}</td>
         <td>
           <MiniLeftNAVArrow max_index={num_visits} index={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
         <td>
           <MiniRightNAVArrow max_index={num_visits} index={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
-        <td style={{paddingLeft:10}}>
-          {/*<NAVSlider name="top" max={num_visits} value={top_index} update={(i) => props.updateTopIndex(i)} />*/}
+        <td style={{paddingLeft:slider_padding}}>
+          <NAVSlider name="top" max={num_visits} value={top_index} update={(i) => props.updateTopIndex(i)} />
         </td>
       </tr>
       <tr>
         <td align="right">Bot Depth:</td>
         <td align="right" style={{width:25}}>{bot_depth}</td>
         <td>/</td>
-        <td style={{width:25}}>{max_depth}</td>
+        <td style={{width:td_width}}>{max_depth}</td>
         <td>
           <MiniLeftNAVArrow max_index={num_visits} index={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
         <td>
           <MiniRightNAVArrow max_index={num_visits} index={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
-        <td style={{paddingLeft:10}}>
-          {/*<NAVSlider name="bot" max={num_visits} value={bot_index} update={(i) => props.updateBotIndex(i)} />*/}
+        <td style={{paddingLeft:slider_padding}}>
+          <NAVSlider name="bot" max={num_visits} value={bot_index} update={(i) => props.updateBotIndex(i)} />
         </td>
       </tr>
       <tr>
         <td align="right">Top Scan:</td>
         <td align="right" style={{width:25}}>{top.board_visit_num + 1}</td>
         <td>/</td>
-        <td style={{width:25}}>{board_history.length}</td>
+        <td style={{width:td_width}}>{board_history.length}</td>
         <td>
           <MiniLeftNAVArrow
             max_index={board_history.length}
@@ -259,7 +259,7 @@ function MCTSNav(props) {
             update={(i) => props.updateTopScanIndex(i)}
           />
         </td>
-        <td style={{paddingLeft:10}}>
+        <td style={{paddingLeft:slider_padding}}>
           <NAVSlider
             name="scan"
             max={board_history.length}
