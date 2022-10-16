@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 import { useEffect, useRef } from 'react';
-import { RangeSlider } from 'toolcool-range-slider';
 import 'toolcool-range-slider';
 import leftarrow from '../images/left.svg';
 import rightarrow from '../images/right.svg';
@@ -148,7 +147,6 @@ function NAVSlider(props) {
     const slider = sliderRef.current;
     const onChange = (evt) => {
       if (document.activeElement !== slider) return;
-      console.log('NAVSlider.' + props.name + '.onChange() ' + evt.detail.value);
       props.update(evt.detail.value);
     }
     slider?.addEventListener('change', onChange);
@@ -193,8 +191,6 @@ function MCTSNav(props) {
 
   const top_board = top.board;
   const board_history = move.board_to_visits[top_board];
-
-  console.log('MCTSNav() ' + top_board + ' | ' + board_history[0].board);
 
   return (
     <table className="center">
@@ -253,16 +249,14 @@ function MCTSNav(props) {
           <MiniLeftNAVArrow
             max_index={board_history.length}
             index={top.board_visit_num}
-            update={(i) => props.updateTopScanIndex2(i)}
-            //update={(i) => props.updateTopScanIndex(top_board, board_history, i)}
+            update={(i) => props.updateTopScanIndex(i)}
           />
         </td>
         <td>
           <MiniRightNAVArrow
             max_index={board_history.length}
             index={top.board_visit_num}
-            update={(i) => props.updateTopScanIndex2(i)}
-            //update={(i) => props.updateTopScanIndex(top_board, board_history, i)}
+            update={(i) => props.updateTopScanIndex(i)}
           />
         </td>
         <td style={{paddingLeft:10}}>
@@ -270,8 +264,7 @@ function MCTSNav(props) {
             name="scan"
             max={board_history.length}
             value={top.board_visit_num}
-            update={(i) => props.updateTopScanIndex2(i)}
-            //update={(i) => props.updateTopScanIndex(top_board, board_history, i)}
+            update={(i) => props.updateTopScanIndex(i)}
           />
         </td>
       </tr>
@@ -468,12 +461,6 @@ class Body extends Component {
     const iter = move.iters[iter_index];
     const bot_index = iter.visits.length - 1;
 
-    console.log('updateIterIndex()');
-    // console.log(' move_index: ' + this.state.move_index);
-    // console.log(' iter_index: ' + iter_index);
-    // console.log(' iter.visits.length: ' + iter.visits.length);
-    // console.log(' bot_index: ' + bot_index);
-
     this.setState({
       iter_index: iter_index,
       top_index: 0,
@@ -482,7 +469,6 @@ class Body extends Component {
   }
 
   updateTopIndex(top_index) {
-    console.log('updateTopIndex()');
     let bot_index = this.state.bot_index;
     if (top_index > bot_index) {
       bot_index = top_index;
@@ -494,29 +480,12 @@ class Body extends Component {
   }
 
   updateBotIndex(bot_index) {
-    console.log('updateBotIndex()');
     this.setState({
       bot_index: bot_index,
     });
   }
 
-  updateTopScanIndex(board, board_history, scan_index) {
-    console.log('updateTopScanIndex(' + board + ', ' + board_history.length + ', ' + scan_index + ')');
-
-    const visit = board_history[scan_index];
-    const iter = visit.parent;
-
-    console.log('updateTopScanIndex(scan_index=' + scan_index + ')  iter_index:' + iter.index +
-      ' iter.visits.length:' + iter.visits.length + ' visit.depth:' + visit.depth + 'visit.board:' + visit.board);
-
-    this.setState({
-      iter_index: iter.index,
-      top_index: visit.depth - 1,
-      bot_index: iter.visits.length - 1,
-    });
-  }
-
-  updateTopScanIndex2(scan_index) {
+  updateTopScanIndex(scan_index) {
     const move_index = this.state.move_index;
     const iter_index = this.state.iter_index;
     const top_index = this.state.top_index;
@@ -554,9 +523,6 @@ class Body extends Component {
     const top = iter?.visits[top_index];
     const bot = iter?.visits[bot_index];
 
-    console.log('render() move_index:' + move_index + ' iter_index:' + iter_index + ' iter.visits.length:' +
-      iter.visits.length + ' top_index:' + top_index + ' bot_index:' + bot_index);
-
     return (
       <div className="center">
         <MyColor
@@ -573,8 +539,7 @@ class Body extends Component {
           updateIterIndex={(m) => this.updateIterIndex(m)}
           updateTopIndex={(m) => this.updateTopIndex(m)}
           updateBotIndex={(m) => this.updateBotIndex(m)}
-          updateTopScanIndex={(b, h, i) => this.updateTopScanIndex(b, h, i)}
-          updateTopScanIndex2={(i) => this.updateTopScanIndex2(i)}
+          updateTopScanIndex={(i) => this.updateTopScanIndex(i)}
           history={history}
           move_index={move_index}
           iter_index={iter_index}
