@@ -230,17 +230,14 @@ class MCTS:
             attribs = {k: stringify(v) for k, v in attribs.items()}
             ET.SubElement(elem, 'Child', attribs)
 
-    def close_debug_file(self):
-        if self.debug_filename is None:
-            return
-        ET.indent(self.debug_tree)
-        self.debug_tree.write(self.debug_filename, encoding='utf-8', xml_declaration=True)
-        self.debug_filename = None
-        self.debug_tree = None
-
-    def record_final_position(self, state: AbstractGameState):
-        if self.debug_tree:
+    def receive_state_change(self, p: PlayerIndex, state: AbstractGameState,
+                             action_index: ActionIndex, result: GameResult):
+        if result is not None and self.debug_tree:
             ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
+            ET.indent(self.debug_tree)
+            self.debug_tree.write(self.debug_filename, encoding='utf-8', xml_declaration=True)
+            self.debug_filename = None
+            self.debug_tree = None
 
     def sim(self, tensorizor: AbstractGameTensorizor, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
         if self.player_index is None:

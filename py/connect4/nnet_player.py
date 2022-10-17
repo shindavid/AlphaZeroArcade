@@ -60,14 +60,12 @@ class NNetPlayer(AbstractPlayer):
     def receive_state_change(self, p: PlayerIndex, state: C4GameState,
                              action_index: ActionIndex, result: GameResult):
         self.tensorizor.receive_state_change(state, action_index)
+        if self.mcts:
+            self.mcts.receive_state_change(p, state, action_index, result)
         self.last_action = action_index
 
         if self.my_index == p and self.params.verbose:
             self.verbose_dump()
-
-        if result is not None:
-            self.mcts.record_final_position(state)
-            self.mcts.close_debug_file()
 
     def verbose_dump(self):
         if not self.verbose_info:
