@@ -36,6 +36,7 @@ class MCTSParams:
     c_PUCT: float = 1.1
     dirichlet_mult: float = 0.25
     dirichlet_alpha: float = 0.03
+    allow_eliminations: bool = True
 
     def can_reuse_subtree(self) -> bool:
         return not bool(self.dirichlet_mult)
@@ -330,6 +331,8 @@ class MCTS:
             self.debug_tree = None
 
     def sim(self, tensorizor: AbstractGameTensorizor, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
+        assert torch.cuda.is_available()  # cuda sometimes randomly disables, don't want slow-ass runs
+
         if self.player_index is None:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
@@ -386,7 +389,7 @@ class MCTS:
         current_player = evaluation.current_player
 
         if game_result is not None:
-            tree.backprop(game_result, terminal=True)
+            tree.backprop(game_result, terminal=params.allow_eliminations)
             self._terminal_visit_debug(current_player, depth, state, game_result, tree, debug_subtree)
             return
 

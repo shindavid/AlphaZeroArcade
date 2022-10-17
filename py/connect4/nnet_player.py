@@ -23,6 +23,7 @@ class NNetPlayerParams:
     verbose: bool = False
     neural_network_only: bool = False
     num_mcts_iters: int = 100  # set to 0 for no mcts
+    allow_eliminations: bool = True
     temperature: float = 0.0
 
 
@@ -41,7 +42,8 @@ class NNetPlayer(AbstractPlayer):
         self.mcts_params = None
         if not self.params.neural_network_only:
             self.mcts = MCTS(self.net, debug_filename=params.debug_filename)
-            self.mcts_params = MCTSParams(treeSizeLimit=params.num_mcts_iters, dirichlet_mult=0)
+            self.mcts_params = MCTSParams(treeSizeLimit=params.num_mcts_iters, dirichlet_mult=0,
+                                          allow_eliminations=params.allow_eliminations)
 
         self.verbose_info = {}
 
