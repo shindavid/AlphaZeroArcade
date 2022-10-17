@@ -4,6 +4,7 @@ from typing import Optional
 
 import numpy as np
 
+from perfect_player import PerfectPlayerParams, PerfectPlayer
 from game_logic import Color, C4GameState
 from game_runner import GameRunner
 from human_tui_player import C4HumanTuiPlayer
@@ -14,6 +15,7 @@ class Args:
     model_file: str = 'c4_model.pt'
     debug_filename: str = None
     verbose: bool = False
+    perfect: bool = False
     my_starting_color: Optional[Color] = None
     neural_network_only: bool = False
     num_mcts_iters: int = 100
@@ -34,6 +36,7 @@ class Args:
         Args.model_file = args.model_file
         Args.debug_filename = args.debug_filename
         Args.verbose = args.verbose
+        Args.perfect = args.perfect
         Args.my_starting_color = Args.str_to_color(args.my_starting_color)
         Args.neural_network_only = args.neural_network_only
         Args.num_mcts_iters = args.num_mcts_iters
@@ -46,6 +49,7 @@ def load_args():
                         help='model output location (default: %(default)s)')
     parser.add_argument("-d", "--debug-filename", help='debug output file')
     parser.add_argument("-v", "--verbose", action='store_true', help='verbose mode')
+    parser.add_argument("-p", "--perfect", action='store_true', help='play against perfect player')
     parser.add_argument("-c", "--my-starting-color", help='my starting color (R or Y). Default: random')
     parser.add_argument("-o", "--neural-network-only", action='store_true', help='neural network only')
     parser.add_argument("-n", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
@@ -60,10 +64,15 @@ def load_args():
 def main():
     load_args()
 
-    params = NNetPlayerParams(Args.model_file, Args.debug_filename, Args.verbose, Args.neural_network_only,
-                              Args.num_mcts_iters, Args.temperature)
     human = C4HumanTuiPlayer()
-    cpu = NNetPlayer(params)
+
+    if Args.perfect:
+        cpu = PerfectPlayer(PerfectPlayerParams())
+    else:
+        params = NNetPlayerParams(Args.model_file, Args.debug_filename, Args.verbose, Args.neural_network_only,
+                                  Args.num_mcts_iters, Args.temperature)
+        cpu = NNetPlayer(params)
+
     my_color = np.random.randint(0, 2) if Args.my_starting_color is None else Args.my_starting_color
     cpu_color = 1 - my_color
     players = [None, None]
