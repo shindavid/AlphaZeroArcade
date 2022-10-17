@@ -1,4 +1,5 @@
 import os
+import random
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -105,8 +106,11 @@ class NNetPlayer(AbstractPlayer):
     def get_net_only_action(self, state: C4GameState, valid_actions: ActionMask) -> ActionIndex:
         input_matrix = self.tensorizor.vectorize(state)
         in_tensor = torch.reshape(input_matrix, self.tensor_shape).float()
+        transform = random.choice(self.tensorizor.get_symmetries(state))
+        in_tensor = transform.transform_input(in_tensor)
 
         logit_policy, logit_value = [t.flatten() for t in self.net(in_tensor)]
+        logit_policy = transform.transform_policy(logit_policy)
 
         if self.params.temperature:
             heated_policy = logit_policy / self.params.temperature

@@ -11,6 +11,7 @@ Action items:
 
 4. Root parallelism. In turn demands multiprocess setup, virtual loss, etc.
 """
+import random
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 import xml.etree.ElementTree as ET
@@ -67,8 +68,13 @@ class StateEvaluation:
             # game is over, don't bother computing other fields
             return
 
+        tensor_input = tensorizor.vectorize(state)
+        transform = random.choice(tensorizor.get_symmetries(state))
+        tensor_input = transform.transform_input(tensor_input)
+        policy_output, value_output = [t.flatten() for t in net(tensor_input)]
+        policy_output = transform.transform_policy(policy_output)
+
         self.valid_action_mask = state.get_valid_actions()
-        policy_output, value_output = [t.flatten() for t in net(tensorizor.vectorize(state))]
         self.local_policy_logit_distr = policy_output[torch.where(self.valid_action_mask)[0]]
         self.value_prob_distr = value_output.softmax(dim=0)
 

@@ -1,9 +1,10 @@
 import copy
 
+import torch
 from torch import Tensor
 
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Hashable, List
+from typing import Optional, Tuple, Hashable, List, Type
 
 """
 Various type aliases.
@@ -20,6 +21,7 @@ ActionIndex = int
 ActionMask = Tensor  # bool
 PlayerIndex = int
 NeuralNetworkInput = Tensor
+PolicyTensor = Tensor
 GlobalPolicyProbDistr = Tensor  # size=# global actions, prob terms
 GlobalPolicyLogitDistr = Tensor  # size=# global actions, logit terms
 LocalPolicyProbDistr = Tensor  # size=# locally legal actions, prob terms
@@ -112,6 +114,33 @@ class AbstractPlayer(ABC):
         pass
 
 
+class AbstractSymmetryTransform(ABC):
+    """
+    Corresponds to a specific transformation to the board, like a rotation or a reflection.
+    """
+    @abstractmethod
+    def transform_input(self, net_input: NeuralNetworkInput) -> NeuralNetworkInput:
+        """
+        Returns the result of applying the transformation corresponding to :self: to :net_input:.
+        """
+        pass
+
+    @abstractmethod
+    def transform_policy(self, policy: PolicyTensor) -> PolicyTensor:
+        """
+        Returns the result of applying the transformation corresponding to :self: to :policy:.
+        """
+        pass
+
+
+class IdentifyTransform(AbstractSymmetryTransform):
+    def transform_input(self, net_input: NeuralNetworkInput) -> NeuralNetworkInput:
+        return net_input
+
+    def transform_policy(self, policy: PolicyTensor) -> PolicyTensor:
+        return policy
+
+
 class AbstractGameTensorizor(ABC):
     @abstractmethod
     def vectorize(self, state: AbstractGameState) -> NeuralNetworkInput:
@@ -151,3 +180,7 @@ class AbstractGameTensorizor(ABC):
         Returns a copy of self.
         """
         return copy.deepcopy(self)
+
+    @abstractmethod
+    def get_symmetries(self, state: AbstractGameState) -> List[AbstractSymmetryTransform]:
+        pass

@@ -11,7 +11,8 @@ from game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS
 from game_logic import NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 sys.path.append(os.path.join(sys.path[0], '..'))
-from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape
+from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape, AbstractSymmetryTransform, \
+    IdentifyTransform, PolicyTensor
 
 
 class ConvBlock(nn.Module):
@@ -186,11 +187,20 @@ class HistoryBuffer:
         return self.num_previous_states*2+2, NUM_COLUMNS, NUM_ROWS
 
 
+class C4ReflectionTransform(AbstractSymmetryTransform):
+    def transform_input(self, net_input: NeuralNetworkInput) -> NeuralNetworkInput:
+        return torch.flip(net_input, (2, ))
+
+    def transform_policy(self, policy: PolicyTensor) -> PolicyTensor:
+        return torch.flip(policy, (0,))
+
+
 class C4Tensorizor(AbstractGameTensorizor):
     def __init__(self, num_previous_states: int):
         self.num_previous_states = num_previous_states
         self.history_buffer = HistoryBuffer(num_previous_states)
         self.move_stack: List[ActionIndex] = []
+        self.symmetries = [IdentifyTransform(), C4ReflectionTransform()]
 
     @staticmethod
     def get_num_previous_states(shape: Shape) -> int:
@@ -218,3 +228,6 @@ class C4Tensorizor(AbstractGameTensorizor):
         shape = i.shape
         tensor_shape = tuple([1] + list(shape))
         return torch.reshape(torch.from_numpy(i), tensor_shape).float()
+
+    def get_symmetries(self, state: C4GameState) -> List[AbstractSymmetryTransform]:
+        return self.symmetries

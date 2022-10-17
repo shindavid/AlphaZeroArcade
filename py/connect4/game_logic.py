@@ -1,7 +1,8 @@
 import os
 import random
 import sys
-from typing import List, Optional, Hashable
+from abc import ABC
+from typing import List, Optional, Hashable, Type
 
 import numpy as np
 import torch
@@ -9,7 +10,7 @@ from termcolor import colored
 
 sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import AbstractGameState, ValueProbDistr, ActionIndex, ActionMask, AbstractGameTensorizor, \
-    NeuralNetworkInput, GameResult
+    NeuralNetworkInput, GameResult, AbstractSymmetryTransform
 
 NUM_COLUMNS = 7
 NUM_ROWS = 6
@@ -186,7 +187,6 @@ class C4GameState(AbstractGameState):
 
     def __eq__(self, other: 'C4GameState'):
         return all(np.all(m1 == m2) for m1, m2 in (self.piece_mask, other.piece_mask))
-
 
 
 if __name__ == '__main__':
