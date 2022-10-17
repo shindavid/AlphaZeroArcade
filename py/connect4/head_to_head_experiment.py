@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""
+Pit two players against each other.
+"""
+from collections import defaultdict
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from game_runner import GameRunner
+from connect4.game_logic import C4GameState
+from connect4.nnet_player import NNetPlayer, NNetPlayerParams
+
+
+def main():
+    num_games = 100
+
+    params1 = NNetPlayerParams(neural_network_only=True)
+    params2 = NNetPlayerParams()
+
+    cpu1 = NNetPlayer(params1)
+    cpu2 = NNetPlayer(params2)
+
+    cpu1.set_name('NNetOnly')
+    cpu2.set_name('MCTS-' + str(params2.num_mcts_iters))
+
+    stats = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # name -> color -> W/L/D -> count
+
+    def stats_str(name, color):
+        counts = stats[name][color]
+        w = counts[1]
+        l = counts[0]
+        d = counts[0.5]
+        return f'{w}W {l}L {d}D'
+
+    results_str_dict = {
+        0: 'Y wins',
+        0.5: 'draw  ',
+        1: 'R wins',
+    }
+
+    for n in range(num_games):
+        players = [None, None]
+        m = n % 2
+        players[m] = cpu1
+        players[1-m] = cpu2
+
+        runner = GameRunner(C4GameState, players)
+        result = runner.run()
+
+        for c in (0, 1):
+            stats[players[c].get_name()][c][result[c]] += 1
+
+        result_str = results_str_dict[result[0]]
+        cumulative_result_str = ' '.join([
+            f'R:{players[0].get_name()}:[{stats_str(players[0].get_name(), 0)}]',
+            f'Y:{players[1].get_name()}:[{stats_str(players[1].get_name(), 1)}]',
+        ])
+        print(f'R:{players[0].get_name()} Y:{players[1].get_name()} Res:{result_str} {cumulative_result_str}')
+
+
+if __name__ == '__main__':
+    main()
