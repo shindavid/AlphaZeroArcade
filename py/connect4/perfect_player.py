@@ -45,7 +45,7 @@ class PerfectPlayer(AbstractPlayer):
         self.move_history = ''
 
     def start_game(self, players: List[AbstractPlayer], seat_assignment: PlayerIndex):
-        pass
+        self.move_history = ''
 
     def receive_state_change(self, p: PlayerIndex, state: C4GameState,
                              action_index: ActionIndex, result: GameResult):
