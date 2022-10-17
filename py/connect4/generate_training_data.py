@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 import argparse
+import os
+import random
+import subprocess
+import sys
 from typing import Tuple
 
 import h5py
 from mpi4py import MPI
 import numpy as np
-import os
-import random
-import subprocess
 from tqdm import tqdm
 
 import game_logic
-from connect4.game_logic import C4GameState
 from connect4.neural_net import C4Tensorizor
 from game_logic import NUM_ROWS, NUM_COLUMNS
-from neural_net import HistoryBuffer
+
+sys.path.append(os.path.join(sys.path[0], '..'))
+from config import Config
+
 
 RANK = MPI.COMM_WORLD.Get_rank()
 SIZE = MPI.COMM_WORLD.Get_size()
@@ -22,18 +25,25 @@ SIZE = MPI.COMM_WORLD.Get_size()
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", '--c4-solver-dir', required=True,
-                        help="base directory containing c4solver bin and 7x6.book")
+    parser.add_argument("-c", '--c4-solver-dir',
+                        help="base directory containing c4solver bin and 7x6.book. Uses c4.solver_dir from config.txt"
+                        " if available. Else required arg.")
     parser.add_argument("-n", "--num-training-games", type=int, help="number of training games")
-    parser.add_argument("-g", "--games-dir", default="c4_games")
+    parser.add_argument("-g", "--games-dir", default="c4_games", help="Where to write games (default: %(default)s)")
     parser.add_argument("-s", "--num-previous-states", type=int, default=0,
-                        help='how many previous board states to use')
+                        help='how many previous board states to use (default: %(default)s)')
 
     return parser.parse_args()
 
 
 def main():
     args = get_args()
+
+    if args.c4_solver_dir is None:
+        args.c4_solver_dir = Config.instance().get('c4.solver_dir')
+        if args.c4_solver_dir is None:
+            raise Exception('Required option: -c/--c4-solver-dir. Can add mapping for "c4.solver_dir" in config.txt '
+                            'as a convenience.')
 
     if not RANK:
         if os.path.exists(args.games_dir):
