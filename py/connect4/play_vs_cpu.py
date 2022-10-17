@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 import argparse
+import os
+import sys
 from typing import Optional
 
 import numpy as np
 
-from perfect_player import PerfectPlayerParams, PerfectPlayer
-from game_logic import Color, C4GameState
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from game_runner import GameRunner
-from human_tui_player import C4HumanTuiPlayer
-from nnet_player import NNetPlayer, NNetPlayerParams
+from connect4.perfect_player import PerfectPlayerParams, PerfectPlayer
+from connect4.game_logic import Color, C4GameState
+from connect4.human_tui_player import C4HumanTuiPlayer
+from connect4.nnet_player import NNetPlayer, NNetPlayerParams
 
 
 class Args:

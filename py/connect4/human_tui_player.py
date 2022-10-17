@@ -3,10 +3,10 @@ import sys
 from io import StringIO
 from typing import List, Optional
 
-from connect4.game_logic import C4GameState
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import AbstractPlayer, PlayerIndex, ActionIndex, GameResult, ActionMask
+from connect4.game_logic import C4GameState
 
 
 class C4HumanTuiPlayer(AbstractPlayer):

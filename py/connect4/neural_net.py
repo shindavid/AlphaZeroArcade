@@ -7,12 +7,11 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS
-from game_logic import NUM_COLORS, Color, MAX_MOVES_PER_GAME
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-sys.path.append(os.path.join(sys.path[0], '..'))
 from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape, AbstractSymmetryTransform, \
     IdentifyTransform, PolicyTensor
+from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 
 class ConvBlock(nn.Module):

@@ -3,6 +3,7 @@ import argparse
 import copy
 import os
 import random
+import sys
 import time
 
 import h5py
@@ -15,7 +16,9 @@ from torch.optim.lr_scheduler import LambdaLR
 from natsort import natsorted
 from torch.utils.data import DataLoader, Dataset
 
-from neural_net import Net
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from connect4.neural_net import Net
 
 
 def get_args():

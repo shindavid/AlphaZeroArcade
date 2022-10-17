@@ -11,12 +11,11 @@ from mpi4py import MPI
 import numpy as np
 from tqdm import tqdm
 
-import game_logic
-from connect4.neural_net import C4Tensorizor
-from game_logic import NUM_ROWS, NUM_COLUMNS
-
-sys.path.append(os.path.join(sys.path[0], '..'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from config import Config
+from connect4 import game_logic
+from connect4.neural_net import C4Tensorizor
+from connect4.game_logic import NUM_ROWS, NUM_COLUMNS
 
 
 RANK = MPI.COMM_WORLD.Get_rank()
