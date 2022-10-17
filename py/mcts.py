@@ -181,6 +181,10 @@ class MCTS:
         self.debug_tree = None if debug_filename is None else ET.ElementTree(ET.Element('Game'))
         self.player_index: Optional[PlayerIndex] = None
 
+    def clear(self):
+        self.root = None
+        self.cache = {}
+
     def _terminal_visit_debug(
             self, player: PlayerIndex, depth: int, state: AbstractGameState, game_result: GameResult, tree: Tree,
             debug_subtree: Optional[ET.Element]):

@@ -201,6 +201,10 @@ class C4Tensorizor(AbstractGameTensorizor):
         self.move_stack: List[ActionIndex] = []
         self.symmetries = [IdentifyTransform(), C4ReflectionTransform()]
 
+    def clear(self):
+        self.history_buffer = HistoryBuffer(self.num_previous_states)
+        self.move_stack = []
+
     @staticmethod
     def get_num_previous_states(shape: Shape) -> int:
         return (shape[0] - 2) // 2

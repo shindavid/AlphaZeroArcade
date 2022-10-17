@@ -58,6 +58,9 @@ class NNetPlayer(AbstractPlayer):
 
     def start_game(self, players: List[AbstractPlayer], seat_assignment: PlayerIndex):
         self.my_index = seat_assignment
+        self.tensorizor.clear()
+        if self.mcts:
+            self.mcts.clear()
 
     def receive_state_change(self, p: PlayerIndex, state: C4GameState,
                              action_index: ActionIndex, result: GameResult):
