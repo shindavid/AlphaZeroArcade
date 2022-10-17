@@ -11,18 +11,23 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 from game_runner import GameRunner
 from connect4.game_logic import C4GameState
 from connect4.nnet_player import NNetPlayer, NNetPlayerParams
+from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 
 
 def main():
+    use_perfect = True
     num_games = 100
 
-    params1 = NNetPlayerParams(neural_network_only=True)
-    params2 = NNetPlayerParams()
+    if use_perfect:
+        cpu1 = PerfectPlayer(PerfectPlayerParams())
+        cpu1.set_name('Perfect')
+    else:
+        params1 = NNetPlayerParams(neural_network_only=True)
+        cpu1 = NNetPlayer(params1)
+        cpu1.set_name('NetOnly')
 
-    cpu1 = NNetPlayer(params1)
+    params2 = NNetPlayerParams(num_mcts_iters=1600)
     cpu2 = NNetPlayer(params2)
-
-    cpu1.set_name('NNetOnly')
     cpu2.set_name('MCTS-' + str(params2.num_mcts_iters))
 
     stats = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # name -> color -> W/L/D -> count
@@ -40,7 +45,8 @@ def main():
         1: 'R wins',
     }
 
-    for n in range(num_games):
+    r = range(1, num_games, 2) if use_perfect else range(num_games)
+    for n in r:
         players = [None, None]
         m = n % 2
         players[m] = cpu1
