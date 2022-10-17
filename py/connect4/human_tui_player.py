@@ -24,7 +24,8 @@ class C4HumanTuiPlayer(AbstractPlayer):
     def receive_state_change(self, p: PlayerIndex, state: C4GameState,
                              action_index: ActionIndex, result: GameResult):
         self.last_action = action_index
-        self.print_state(state)
+        if self.my_index != p:
+            self.print_state(state)
 
     def print_state(self, state: C4GameState):
         column = self.last_action + 1
