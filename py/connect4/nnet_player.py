@@ -114,6 +114,7 @@ class NNetPlayer(AbstractPlayer):
 
         logit_policy, logit_value = [t.flatten() for t in self.net(in_tensor)]
         logit_policy = transform.transform_policy(logit_policy)
+        logit_policy[~valid_actions] = -torch.inf
 
         if self.params.temperature:
             heated_policy = logit_policy / self.params.temperature
@@ -121,9 +122,6 @@ class NNetPlayer(AbstractPlayer):
         else:
             policy = (logit_policy == logit_policy.max()).float()
 
-        mask = torch.zeros_like(policy)
-        mask[valid_actions] = 1
-        policy *= mask
         policy /= sum(policy)
         assert not torch.any(policy.isnan()), (logit_policy, policy)
         value = logit_value.softmax(dim=0)
