@@ -96,9 +96,7 @@ class PolicyHead(nn.Module):
 
 
 class ValueHead(nn.Module):
-    def __init__(self, n_input_channels: int):
-        super(ValueHead, self).__init__()
-        """
+    """
     From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
 
     The value head applies the following modules:
@@ -114,8 +112,10 @@ class ValueHead(nn.Module):
     https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 
     Here, we are choosing to replace the scalar with a length-p array to generalize for p-player games. The output
-    will be interpreted as logit probabilities for the corresponding player's expected win shares. 
+    will be interpreted as logit probabilities for the corresponding player's expected win shares.
     """
+    def __init__(self, n_input_channels: int):
+        super(ValueHead, self).__init__()
         self.conv = nn.Conv2d(n_input_channels, 1, kernel_size=1, stride=1, bias=False)
         self.batch = nn.BatchNorm2d(1)
         self.linear1 = nn.Linear(NUM_COLUMNS * NUM_ROWS, 256)

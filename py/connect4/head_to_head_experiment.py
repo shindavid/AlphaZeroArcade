@@ -15,18 +15,19 @@ from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 
 
 def main():
-    use_perfect = True
+    use_perfect = False
     num_games = 100
+    num_mcts_iters = 400
 
     if use_perfect:
         cpu1 = PerfectPlayer(PerfectPlayerParams())
         cpu1.set_name('Perfect')
     else:
-        params1 = NNetPlayerParams(neural_network_only=True)
+        params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters, allow_eliminations=False)
         cpu1 = NNetPlayer(params1)
-        cpu1.set_name('NetOnly')
+        cpu1.set_name('MCTS-' + str(params1.num_mcts_iters) + '-NoElims')
 
-    params2 = NNetPlayerParams(num_mcts_iters=1600)
+    params2 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
     cpu2 = NNetPlayer(params2)
     cpu2.set_name('MCTS-' + str(params2.num_mcts_iters))
 

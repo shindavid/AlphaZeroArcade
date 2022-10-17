@@ -36,6 +36,7 @@ class MCTSParams:
     c_PUCT: float = 1.1
     dirichlet_mult: float = 0.25
     dirichlet_alpha: float = 0.03
+    allow_eliminations: bool = True
 
     def can_reuse_subtree(self) -> bool:
         return not bool(self.dirichlet_mult)
@@ -83,6 +84,17 @@ class StateEvaluation:
 
 
 class Tree:
+    """
+    Implementation notes:
+
+    ** Terminal states **
+
+    When we reach a terminal game state, we have certainty over the game result, but vanilla MCTS does not provide
+    the mechanics to reflect this certainty. This implementation achieves the certainty by maintaining a member
+    :self.V_floor:, which tracks a provable score floor for each player from the given node. This is back-propagated up
+    the tree in minimax fashion. When a node has :max(self.V_floor)==1:, it is a provably won or lost position, and so
+    we trim it from the tree, pretending that corresponding visits to that node never happened.
+    """
     def __init__(self, n_players: int, action_index: Optional[ActionIndex] = None, parent: Optional['Tree'] = None):
         self.evaluation: Optional[StateEvaluation] = None
         self.valid_action_indices: Optional[List[ActionIndex]] = None
@@ -94,6 +106,31 @@ class Tree:
         self.value_avg = torch.zeros(n_players)
         self.value_prior: Optional[ValueProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
+
+        self.V_floor = torch.zeros(n_players)
+        self.eliminated = False
+
+    def get_effective_visit_counts(self, num_global_actions) -> GlobalPolicyCountDistr:
+        current_player = self.evaluation.current_player
+        counts = torch.zeros(num_global_actions, dtype=int)
+
+        if self.eliminated:
+            # identify the child(ren) with maximal V_floor, and put all counts there
+            max_V_floor = max(c.V_floor[current_player] for c in self.children)
+            for child in self.children:
+                if child.V_floor[current_player] == max_V_floor:
+                    counts[child.action_index] = 1
+            return counts
+
+        for child in self.children:
+            counts[child.action_index] = child.effective_count()
+        return counts
+
+    def effective_count(self) -> int:
+        return 0 if self.eliminated else self.count
+
+    def effective_value_avg(self, p: PlayerIndex):
+        return self.V_floor[p] if self.has_certain_outcome() else self.value_avg[p]
 
     @property
     def n_players(self) -> int:
@@ -108,6 +145,9 @@ class Tree:
     def has_children(self) -> bool:
         return bool(self.children)
 
+    def is_leaf(self) -> bool:
+        return not self.has_children()
+
     def expand_children(self, evaluation: StateEvaluation):
         if self.children is not None:
             return
@@ -116,12 +156,44 @@ class Tree:
         self.valid_action_indices = np.where(valid_action_mask)[0]
         self.children = [Tree(self.n_players, action_index, self) for action_index in self.valid_action_indices]
 
-    def backprop(self, result: ValueProbDistr):
+    def has_certain_outcome(self) -> bool:
+        """
+        This includes certain wins/losses AND certain draws.
+        """
+        return float(sum(self.V_floor)) == 1
+
+    def can_be_eliminated(self) -> bool:
+        """
+        We only eliminate won or lost positions, not drawn positions.
+
+        Drawn positions are not eliminated because MCTS still needs some way to compare a provably-drawn position vs an
+        uncertain position. It needs to accumulate visits to provably-drawn positions to do this.
+        """
+        return float(max(self.V_floor)) == 1
+
+    def backprop(self, result: ValueProbDistr, terminal: bool = False):
         self.count += 1
         self.value_sum += result
         self.value_avg = self.value_sum / self.count
         if self.parent:
             self.parent.backprop(result)
+
+        if terminal:
+            self.terminal_backprop(result)
+
+    def terminal_backprop(self, result: GameResult = None):
+        if result is None:
+            current_player = self.evaluation.current_player
+            for p in range(self.n_players):
+                minimax = max if p == current_player else min
+                self.V_floor[p] = minimax(c.V_floor[p] for c in self.children)
+        else:
+            self.V_floor = result
+
+        if self.can_be_eliminated():
+            self.eliminated = True
+            if self.parent:
+                self.parent.terminal_backprop()
 
     def compute_policy_prior(self, evaluation: StateEvaluation, params: MCTSParams) -> LocalPolicyProbDistr:
         if self.policy_prior is not None:
@@ -196,7 +268,7 @@ class MCTS:
             'board': state.compact_repr(),
             'terminal': True,
             'eval': game_result,
-            'value_sum': tree.value_sum,
+            'value_avg': tree.value_sum,
         }
         if tree.action_index is not None:
             tree_dict['action'] = tree.action_index
@@ -206,8 +278,8 @@ class MCTS:
 
     def _internal_visit_debug(
             self, player: PlayerIndex, depth: int, board: str, evaluation: StateEvaluation, leaf: bool,
-            value_sum: Tensor, tree: Tree, debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor,
-            N: Tensor, PUCT: Tensor):
+            value_avg: Tensor, tree: Tree, debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor,
+            N: Tensor, PUCT: Tensor, E: Tensor):
         if not self.debug_filename:
             return
 
@@ -217,14 +289,14 @@ class MCTS:
             'board': board,
             'eval': evaluation.value_prob_distr,
             'leaf': leaf,
-            'value_sum': value_sum,
+            'value_avg': value_avg,
         }
         if tree.action_index is not None:
             tree_dict['action'] = tree.action_index
         tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
         elem = debug_subtree.makeelement('Visit', tree_dict)
         debug_subtree.insert(0, elem)
-        for ac, rp, p, no, v, n, puct in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT):
+        for ac, rp, p, no, v, n, puct, e in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT, E):
             attribs = {
                 'action': ac,
                 'rP': rp,
@@ -232,9 +304,10 @@ class MCTS:
                 'dir': no,
                 'V': v,
                 'N': n,
+                'E': e,
                 'PUCT': puct,
             }
-            attribs = {k: stringify(v) for k, v in attribs.items()}
+            attribs = {key: stringify(value) for key, value in attribs.items()}
             ET.SubElement(elem, 'Child', attribs)
 
     def receive_state_change(self, p: PlayerIndex, state: AbstractGameState,
@@ -258,6 +331,8 @@ class MCTS:
             self.debug_tree = None
 
     def sim(self, tensorizor: AbstractGameTensorizor, state: AbstractGameState, params: MCTSParams) -> MCTSResults:
+        assert torch.cuda.is_available()  # cuda sometimes randomly disables, don't want slow-ass runs
+
         if self.player_index is None:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
@@ -275,19 +350,18 @@ class MCTS:
         state = orig_state.clone()
 
         i = 0
-        while self.root.count < params.treeSizeLimit:
+        while self.root.effective_count() < params.treeSizeLimit and not self.root.eliminated:
             iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
             i += 1
             self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=iter_tree)
             if not tensorizor.supports_undo():
                 tensorizor = orig_tensorizor.clone()
                 state = orig_state.clone()
+            i += 1
 
         # TODO: return local distrs instead of global distrs. I'm returning global for now only for debugging.
         n = state.get_num_global_actions()
-        counts = torch.zeros(n, dtype=int)
-        for child in self.root.children:
-            counts[child.action_index] = child.count
+        counts = self.root.get_effective_visit_counts(n)
         win_rates = self.root.win_rates()
         policy_prior = torch.zeros(n)
         policy_prior[self.root.valid_action_indices] = self.root.policy_prior
@@ -315,11 +389,11 @@ class MCTS:
         current_player = evaluation.current_player
 
         if game_result is not None:
-            tree.backprop(game_result)
+            tree.backprop(game_result, terminal=params.allow_eliminations)
             self._terminal_visit_debug(current_player, depth, state, game_result, tree, debug_subtree)
             return
 
-        leaf = not tree.has_children()
+        leaf = tree.is_leaf()
         tree.expand_children(evaluation)
 
         c_PUCT = params.c_PUCT
@@ -329,14 +403,15 @@ class MCTS:
             noise = Dirichlet([params.dirichlet_alpha] * len(P)).sample()
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
 
-        V = torch.Tensor([c.value_avg[current_player] for c in tree.children])
-        N = torch.Tensor([c.count for c in tree.children])
+        V = torch.Tensor([c.effective_value_avg(current_player) for c in tree.children])
+        N = torch.Tensor([c.effective_count() for c in tree.children])
         eps = 1e-6  # needed when N == 0
         PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
-        value_sum = torch.Tensor(tree.value_sum)
+        value_avg = torch.Tensor([tree.effective_value_avg(p) for p in range(tree.n_players)])
+        E = torch.Tensor([c.eliminated for c in tree.children])
+        PUCT *= 1 - E
 
         best_child: Tree = tree.children[np.argmax(PUCT)]
-
         board = state.compact_repr() if self.debug_filename else None
 
         if leaf:
@@ -350,8 +425,8 @@ class MCTS:
                 tensorizor.undo(state)
 
         self._internal_visit_debug(
-            player=current_player, depth=depth, board=board, evaluation=evaluation, leaf=leaf, value_sum=value_sum,
-            tree=tree, debug_subtree=debug_subtree, P=P, noise=noise, V=V, N=N, PUCT=PUCT)
+            player=current_player, depth=depth, board=board, evaluation=evaluation, leaf=leaf, value_avg=value_avg,
+            tree=tree, debug_subtree=debug_subtree, P=P, noise=noise, V=V, N=N, E=E, PUCT=PUCT)
 
 
 def stringify(value):
