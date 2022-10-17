@@ -30,6 +30,7 @@ class PerfectPlayer(AbstractPlayer):
     In drawn positions, randomly chooses a drawing move.
     """
     def __init__(self, params: PerfectPlayerParams):
+        super(PerfectPlayer, self).__init__('Perfect')
         c4_solver_dir = os.path.expanduser(params.c4_solver_dir)
         c4_solver_bin = os.path.join(c4_solver_dir, 'c4solver')
         c4_solver_book = os.path.join(c4_solver_dir, '7x6.book')
@@ -42,9 +43,6 @@ class PerfectPlayer(AbstractPlayer):
         self.proc = proc
         self.strong_mode = params.strong
         self.move_history = ''
-
-    def get_name(self) -> str:
-        return 'Perfect'
 
     def start_game(self, players: List[AbstractPlayer], seat_assignment: PlayerIndex):
         pass

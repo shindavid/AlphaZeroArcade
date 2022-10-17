@@ -96,9 +96,14 @@ class AbstractGameState(ABC):
 
 
 class AbstractPlayer(ABC):
-    @abstractmethod
+    def __init__(self, name: str):
+        self._name: str = name
+
+    def set_name(self, name: str):
+        self._name = name
+
     def get_name(self) -> str:
-        pass
+        return self._name
 
     @abstractmethod
     def start_game(self, players: List['AbstractPlayer'], seat_assignment: PlayerIndex):

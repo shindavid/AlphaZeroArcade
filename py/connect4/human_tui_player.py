@@ -11,13 +11,11 @@ from connect4.game_logic import C4GameState
 
 class C4HumanTuiPlayer(AbstractPlayer):
     def __init__(self):
+        super(C4HumanTuiPlayer, self).__init__('Human')
         self.player_names = ['?', '?']
         self.my_index = None
         self.last_action: Optional[ActionIndex] = None
         self.buf = StringIO()
-
-    def get_name(self) -> str:
-        return 'Human'
 
     def start_game(self, players: List[AbstractPlayer], seat_assignment: PlayerIndex):
         self.player_names = [p.get_name() for p in players]

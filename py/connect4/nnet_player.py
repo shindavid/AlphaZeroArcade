@@ -28,6 +28,7 @@ class NNetPlayerParams:
 
 class NNetPlayer(AbstractPlayer):
     def __init__(self, params: NNetPlayerParams):
+        super(NNetPlayer, self).__init__('CPU')
         self.my_index: PlayerIndex = -1
         self.params = params
         self.last_action: Optional[ActionIndex] = None
@@ -54,9 +55,6 @@ class NNetPlayer(AbstractPlayer):
         net.eval()
         print('Model successfully loaded!')
         return net
-
-    def get_name(self) -> str:
-        return 'CPU'
 
     def start_game(self, players: List[AbstractPlayer], seat_assignment: PlayerIndex):
         self.my_index = seat_assignment
