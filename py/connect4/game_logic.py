@@ -1,16 +1,14 @@
 import os
 import random
 import sys
-from abc import ABC
-from typing import List, Optional, Hashable, Type
+from typing import List, Hashable
 
 import numpy as np
 import torch
 from termcolor import colored
 
 sys.path.append(os.path.join(sys.path[0], '..'))
-from interface import AbstractGameState, ValueProbDistr, ActionIndex, ActionMask, AbstractGameTensorizor, \
-    NeuralNetworkInput, GameResult, AbstractSymmetryTransform
+from interface import AbstractGameState, ActionIndex, ActionMask, GameResult
 
 NUM_COLUMNS = 7
 NUM_ROWS = 6
