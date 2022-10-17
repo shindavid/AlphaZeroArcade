@@ -37,6 +37,9 @@ class MCTSParams:
     dirichlet_mult: float = 0.25
     dirichlet_alpha: float = 0.03
 
+    def can_reuse_subtree(self) -> bool:
+        return not bool(self.dirichlet_mult)
+
 
 class MCTSNodeStats:
     def __init__(self):
@@ -232,6 +235,17 @@ class MCTS:
 
     def receive_state_change(self, p: PlayerIndex, state: AbstractGameState,
                              action_index: ActionIndex, result: GameResult):
+        if self.root:
+            root = self.root
+            assert root.evaluation.current_player == p
+            self.root = None
+            if root.children:
+                matching_children = [c for c in root.children if c.action_index == action_index]
+                assert len(matching_children) <= 1
+                if matching_children:
+                    child = matching_children[0]
+                    self.root = child
+
         if result is not None and self.debug_tree:
             ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
             ET.indent(self.debug_tree)
@@ -248,14 +262,18 @@ class MCTS:
         move_tree = None
         if self.debug_tree is not None:
             move_tree = ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
-        self.root = Tree(self.n_players)
+
+        if not params.can_reuse_subtree() or self.root is None:
+            self.root = Tree(self.n_players)
 
         orig_tensorizor, orig_state = tensorizor, state
         tensorizor = orig_tensorizor.clone()
         state = orig_state.clone()
 
-        for i in range(params.treeSizeLimit):
+        i = 0
+        while self.root.count < params.treeSizeLimit:
             iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
+            i += 1
             self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=iter_tree)
             if not tensorizor.supports_undo():
                 tensorizor = orig_tensorizor.clone()
