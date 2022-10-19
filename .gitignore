@@ -1,5 +1,16 @@
+# IDE
 .idea
-cmake-build-debug
+
+# python cache
 **/__pycache__
+
+# config framework
 config.txt
 
+# cmake-generated
+cmake-build-debug
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+bin
