@@ -22,11 +22,16 @@ class C4HumanTuiPlayer(AbstractPlayer):
         self.my_index = seat_assignment
         sys.stdout = self.buf
 
+    def sys_switch(self, state: C4GameState):
+        sys.stdout = sys.__stdout__
+        self.print_state(state)
+        sys.stdout.write(self.buf.getvalue())
+
     def receive_state_change(self, p: PlayerIndex, state: C4GameState,
                              action_index: ActionIndex, result: GameResult):
         self.last_action = action_index
         if result is not None:
-            sys.stdout = sys.__stdout__
+            self.sys_switch(state)
 
     def print_state(self, state: C4GameState):
         column = None if self.last_action is None else self.last_action + 1
@@ -34,9 +39,7 @@ class C4HumanTuiPlayer(AbstractPlayer):
         print(state.to_ascii_drawing(add_legend=True, player_names=self.player_names, highlight_column=column))
 
     def get_action(self, state: C4GameState, valid_actions: ActionMask) -> ActionIndex:
-        sys.stdout = sys.__stdout__
-        self.print_state(state)
-        sys.stdout.write(self.buf.getvalue())
+        self.sys_switch(state)
 
         my_action = None
         while True:
