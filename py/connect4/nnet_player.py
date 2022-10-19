@@ -10,7 +10,7 @@ import torch
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from connect4.game_logic import C4GameState, NUM_COLUMNS, PRETTY_COLORS
-from connect4.neural_net import Net, C4Tensorizor
+from connect4.tensorizor import Net, C4Tensorizor
 
 from interface import AbstractPlayer, PlayerIndex, ActionIndex, GameResult, ActionMask
 from mcts import MCTS, MCTSParams

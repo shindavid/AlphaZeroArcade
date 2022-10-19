@@ -14,7 +14,7 @@ from tqdm import tqdm
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from config import Config
 from connect4 import game_logic
-from connect4.neural_net import C4Tensorizor
+from connect4.tensorizor import C4Tensorizor
 from connect4.game_logic import NUM_ROWS, NUM_COLUMNS
 
 

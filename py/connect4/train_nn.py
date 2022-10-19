@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from connect4.neural_net import Net
+from connect4.tensorizor import Net
 
 
 def get_args():
