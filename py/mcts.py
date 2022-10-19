@@ -122,6 +122,7 @@ class Tree:
         self.count = 0
         self.value_sum = torch.zeros(n_players)
         self.value_avg = torch.zeros(n_players)
+        self.effective_value_avg = torch.zeros(n_players)
         self.value_prior: Optional[ValueProbDistr] = None
         self.policy_prior: Optional[LocalPolicyProbDistr] = None
 
@@ -146,9 +147,6 @@ class Tree:
 
     def effective_count(self) -> int:
         return 0 if self.eliminated else self.count
-
-    def effective_value_avg(self, p: PlayerIndex):
-        return self.V_floor[p] if self.has_certain_outcome() else self.value_avg[p]
 
     @property
     def n_players(self) -> int:
@@ -193,6 +191,8 @@ class Tree:
         self.count += 1
         self.value_sum += result
         self.value_avg = self.value_sum / self.count
+        self.effective_value_avg = self.V_floor if self.has_certain_outcome() else self.value_avg
+
         if self.parent:
             self.parent.backprop(result)
 
@@ -205,8 +205,10 @@ class Tree:
             for p in range(self.n_players):
                 minimax = max if p == current_player else min
                 self.V_floor[p] = minimax(c.V_floor[p] for c in self.children)
+
         else:
             self.V_floor = result
+        self.effective_value_avg = self.V_floor if self.has_certain_outcome() else self.value_avg
 
         if self.can_be_eliminated():
             self.eliminated = True
@@ -416,20 +418,23 @@ class MCTS:
 
         c_PUCT = params.c_PUCT
         P = tree.compute_policy_prior(evaluation, params)
+        ProfilerRegistry['PUCT'].start()
+
         noise = torch.zeros(len(P))
         if tree.is_root() and params.dirichlet_mult:
             noise = Dirichlet([params.dirichlet_alpha] * len(P)).sample()
             P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
 
-        V = torch.Tensor([c.effective_value_avg(current_player) for c in tree.children])
+        V = torch.Tensor([c.effective_value_avg[current_player] for c in tree.children])
         N = torch.Tensor([c.effective_count() for c in tree.children])
         eps = 1e-6  # needed when N == 0
         PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
-        value_avg = torch.Tensor([tree.effective_value_avg(p) for p in range(tree.n_players)])
+        value_avg = torch.Tensor([tree.effective_value_avg[p] for p in range(tree.n_players)])
         E = torch.Tensor([c.eliminated for c in tree.children])
         PUCT *= 1 - E
 
         best_child: Tree = tree.children[np.argmax(PUCT)]
+        ProfilerRegistry['PUCT'].stop()
         board = state.compact_repr() if self.debug_filename else None
 
         if leaf:
