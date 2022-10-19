@@ -2,6 +2,7 @@
 """
 Pit two players against each other.
 """
+import time
 from collections import defaultdict
 import os
 import sys
@@ -16,20 +17,20 @@ from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 
 def main():
     use_perfect = False
-    num_games = 100
-    num_mcts_iters = 400
+    num_games = 1
+    num_mcts_iters = 100
 
     if use_perfect:
         cpu1 = PerfectPlayer(PerfectPlayerParams())
         cpu1.set_name('Perfect')
     else:
-        params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters, allow_eliminations=False)
+        params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
         cpu1 = NNetPlayer(params1)
-        cpu1.set_name('MCTS-' + str(params1.num_mcts_iters) + '-NoElims')
+        cpu1.set_name('MCTS1-' + str(params1.num_mcts_iters))
 
     params2 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
     cpu2 = NNetPlayer(params2)
-    cpu2.set_name('MCTS-' + str(params2.num_mcts_iters))
+    cpu2.set_name('MCTS2-' + str(params2.num_mcts_iters))
 
     stats = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # name -> color -> W/L/D -> count
 
@@ -47,7 +48,10 @@ def main():
     }
 
     r = range(1, num_games, 2) if use_perfect else range(num_games)
+    t1 = time.time()
+    n_games_played = 0
     for n in r:
+        n_games_played += 1
         players = [None, None]
         m = n % 2
         players[m] = cpu1
@@ -65,6 +69,11 @@ def main():
             f'Y:{players[1].get_name()}:[{stats_str(players[1].get_name(), 1)}]',
         ])
         print(f'R:{players[0].get_name()} Y:{players[1].get_name()} Res:{result_str} {cumulative_result_str}')
+
+    t2 = time.time()
+    elapsed = t2 - t1
+    avg_runtime = elapsed / n_games_played
+    print('Avg runtime: %.3fs/game' % avg_runtime)
 
 
 if __name__ == '__main__':
