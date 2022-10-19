@@ -240,10 +240,6 @@ class C4Tensorizor(AbstractGameTensorizor):
         tensor_shape = tuple([1] + list(shape))
         v = torch.reshape(torch.from_numpy(i), tensor_shape).float()
         ProfilerRegistry['vectorize'].stop()
-        if ENABLE_CUDA:
-            ProfilerRegistry['gpu.transfer1'].start()
-            v = v.to('cuda')
-            ProfilerRegistry['gpu.transfer1'].stop()
         return v
 
     def get_symmetries(self, state: C4GameState) -> List[AbstractSymmetryTransform]:

@@ -76,6 +76,12 @@ class StateEvaluation:
         tensor_input = tensorizor.vectorize(state)
         transform = random.choice(tensorizor.get_symmetries(state))
         tensor_input = transform.transform_input(tensor_input)
+
+        if ENABLE_CUDA:
+            ProfilerRegistry['gpu.transfer1'].start()
+            tensor_input = tensor_input.to('cuda', non_blocking=True)
+            ProfilerRegistry['gpu.transfer1'].stop()
+
         ProfilerRegistry['net.eval'].start()
         policy_output, value_output = net(tensor_input)
         ProfilerRegistry['net.eval'].stop()

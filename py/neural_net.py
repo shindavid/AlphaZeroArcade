@@ -37,7 +37,7 @@ class NeuralNet(nn.Module):
             net = cls(*model_data['model.constructor_args'])
             net.load_state_dict(model_data['model.state_dict'])
             if ENABLE_CUDA:
-                net.cuda()
+                net.to('cuda')
             torch.set_grad_enabled(False)
             net.eval()
             NeuralNet._filename_to_net[filename] = net
