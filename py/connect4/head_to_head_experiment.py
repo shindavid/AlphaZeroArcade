@@ -10,6 +10,8 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from game_runner import GameRunner
+from profiling import ProfilerRegistry, Profiler
+
 from connect4.game_logic import C4GameState
 from connect4.nnet_player import NNetPlayer, NNetPlayerParams
 from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
@@ -18,7 +20,7 @@ from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 def main():
     use_perfect = False
     num_games = 5
-    num_mcts_iters = 100
+    num_mcts_iters = 400
 
     if use_perfect:
         cpu1 = PerfectPlayer(PerfectPlayerParams())
@@ -93,6 +95,10 @@ def main():
     print('Avg runtime: %.3fs' % avg_runtime)
     print('Max runtime: %.3fs' % max_runtime)
     print('Min runtime: %.3fs' % min_runtime)
+
+    Profiler.print_header()
+    for key, profiler in ProfilerRegistry.items():
+        profiler.dump(key)
 
 
 if __name__ == '__main__':

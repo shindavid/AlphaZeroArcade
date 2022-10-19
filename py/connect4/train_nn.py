@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from connect4.tensorizor import Net
+from connect4.tensorizor import C4Net
 
 
 def get_args():
@@ -147,7 +147,7 @@ def main():
 
     c4_data_loader = C4DataLoader(args)
 
-    net = Net(c4_data_loader.input_shape, n_res_blocks=args.num_residual_blocks)
+    net = C4Net(c4_data_loader.input_shape, n_res_blocks=args.num_residual_blocks)
     net.cuda()
 
     """
@@ -282,14 +282,7 @@ def main():
     ms_per_train_row = 1000 * sec_per_epoch / c4_data_loader.train_n
 
     print('Finished Training (%.3fms/train-row)' % ms_per_train_row)
-    output_dir = os.path.split(args.model_file)[0]
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-    torch.save({
-        'model.constructor_args': best_net.constructor_args,
-        'model.state_dict': best_net.state_dict(),
-    }, args.model_file)
-    print(f'Model saved to {args.model_file}')
+    net.save(args.model_file, verbose=True)
 
 
 if __name__ == '__main__':

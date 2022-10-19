@@ -9,11 +9,12 @@ import torch
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from connect4.game_logic import C4GameState, NUM_COLUMNS, PRETTY_COLORS
-from connect4.tensorizor import Net, C4Tensorizor
-
 from interface import AbstractPlayer, PlayerIndex, ActionIndex, GameResult, ActionMask
+from profiling import ProfilerRegistry
 from mcts import MCTS, MCTSParams
+
+from connect4.game_logic import C4GameState, NUM_COLUMNS, PRETTY_COLORS
+from connect4.tensorizor import C4Net, C4Tensorizor
 
 
 @dataclass
@@ -33,7 +34,7 @@ class NNetPlayer(AbstractPlayer):
         self.my_index: PlayerIndex = -1
         self.params = params
         self.last_action: Optional[ActionIndex] = None
-        self.net = self.load_net()
+        self.net = C4Net.load(params.model_file, verbose=True)
         self.num_previous_states = C4Tensorizor.get_num_previous_states(self.net.input_shape)
         self.tensor_shape = tuple([1] + list(self.net.input_shape))
         self.tensorizor = C4Tensorizor(self.num_previous_states)
@@ -46,17 +47,6 @@ class NNetPlayer(AbstractPlayer):
                                           allow_eliminations=params.allow_eliminations)
 
         self.verbose_info = {}
-
-    def load_net(self):
-        model_file = self.params.model_file
-        print(f'Loading model from {model_file}')
-        model_data = torch.load(model_file)
-        net = Net(*model_data['model.constructor_args'])
-        net.load_state_dict(model_data['model.state_dict'])
-        torch.set_grad_enabled(False)
-        net.eval()
-        print('Model successfully loaded!')
-        return net
 
     def start_game(self, players: List[AbstractPlayer], seat_assignment: PlayerIndex):
         self.my_index = seat_assignment
@@ -130,7 +120,9 @@ class NNetPlayer(AbstractPlayer):
         return self.get_action_helper(policy, value)
 
     def get_mcts_action(self, state: C4GameState) -> ActionIndex:
+        ProfilerRegistry['sim'].start()
         results = self.mcts.sim(self.tensorizor, state, self.mcts_params)
+        ProfilerRegistry['sim'].stop()
         mcts_counts = results.counts
         if self.params.temperature:
             heated_counts = mcts_counts.pow(1.0 / self.params.temperature)

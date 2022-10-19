@@ -11,6 +11,8 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 
 from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape, AbstractSymmetryTransform, \
     IdentifyTransform, PolicyTensor
+from neural_net import NeuralNet, ENABLE_CUDA
+from profiling import ProfilerRegistry
 from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
 
@@ -129,15 +131,18 @@ class ValueHead(nn.Module):
         return x
 
 
-class Net(nn.Module):
+class C4Net(NeuralNet):
     def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
-        super(Net, self).__init__()
-        self.constructor_args = (input_shape, n_conv_filters, n_res_blocks)  # to aid in loading of saved model object
-        self.input_shape = input_shape
+        constructor_args = (input_shape, n_conv_filters, n_res_blocks)
+        super(C4Net, self).__init__(constructor_args)
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(n_conv_filters)
         self.value_head = ValueHead(n_conv_filters)
+
+    @property
+    def input_shape(self) -> Shape:
+        return self.constructor_args[0]
 
     def forward(self, x):
         x = self.conv_block(x)
@@ -157,10 +162,12 @@ class HistoryBuffer:
         self.ref_indices = [self.num_previous_states, self.num_previous_states]
 
     def update(self, game: C4GameState):
+        ProfilerRegistry['histbuff.upd'].start()
         self.ref_indices[self.next_color] += 1
         self.full_mask[self.next_color][self.ref_indices[self.next_color]] = game.get_mask(self.next_color)
         self.next_color = self.prev_color
         assert self.next_color == game.get_current_player()
+        ProfilerRegistry['histbuff.upd'].stop()
 
     def undo(self):
         """
@@ -227,10 +234,17 @@ class C4Tensorizor(AbstractGameTensorizor):
         self.history_buffer.undo()
 
     def vectorize(self, state: C4GameState) -> NeuralNetworkInput:
+        ProfilerRegistry['vectorize'].start()
         i = self.history_buffer.get_input()
         shape = i.shape
         tensor_shape = tuple([1] + list(shape))
-        return torch.reshape(torch.from_numpy(i), tensor_shape).float()
+        v = torch.reshape(torch.from_numpy(i), tensor_shape).float()
+        ProfilerRegistry['vectorize'].stop()
+        if ENABLE_CUDA:
+            ProfilerRegistry['gpu.transfer1'].start()
+            v = v.to('cuda')
+            ProfilerRegistry['gpu.transfer1'].stop()
+        return v
 
     def get_symmetries(self, state: C4GameState) -> List[AbstractSymmetryTransform]:
         return self.symmetries

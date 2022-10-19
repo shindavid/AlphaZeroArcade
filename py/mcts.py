@@ -25,6 +25,8 @@ from torch.distributions.dirichlet import Dirichlet
 from interface import AbstractGameState, ActionIndex, ActionMask, PlayerIndex, \
     LocalPolicyLogitDistr, LocalPolicyProbDistr, ValueProbDistr, GlobalPolicyProbDistr, AbstractGameTensorizor, \
     GameResult
+from neural_net import ENABLE_CUDA
+from profiling import ProfilerRegistry
 
 GlobalPolicyCountDistr = Tensor
 
@@ -57,7 +59,6 @@ class MCTSResults:
     value_prior: ValueProbDistr
 
 
-@dataclass
 class StateEvaluation:
     def __init__(self, net: nn.Module, tensorizor: AbstractGameTensorizor, state: AbstractGameState,
                  result: GameResult):
@@ -75,7 +76,17 @@ class StateEvaluation:
         tensor_input = tensorizor.vectorize(state)
         transform = random.choice(tensorizor.get_symmetries(state))
         tensor_input = transform.transform_input(tensor_input)
-        policy_output, value_output = [t.flatten() for t in net(tensor_input)]
+        ProfilerRegistry['net.eval'].start()
+        policy_output, value_output = net(tensor_input)
+        ProfilerRegistry['net.eval'].stop()
+        if ENABLE_CUDA:
+            ProfilerRegistry['gpu.transfer2'].start()
+            policy_output = policy_output.to('cpu')
+            value_output = value_output.to('cpu')
+            ProfilerRegistry['gpu.transfer2'].stop()
+
+        policy_output = policy_output.flatten()
+        value_output = value_output.flatten()
         policy_output = transform.transform_policy(policy_output)
 
         self.valid_action_mask = state.get_valid_actions()
