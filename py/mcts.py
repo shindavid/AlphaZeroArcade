@@ -80,6 +80,7 @@ class StateEvaluation:
         if ENABLE_CUDA:
             ProfilerRegistry['gpu.transfer1'].start()
             tensor_input = tensor_input.to('cuda', non_blocking=True)
+            net.to('cuda')  # just in case the tensorizor.clone() changed this? Doesn't seem to make a difference
             ProfilerRegistry['gpu.transfer1'].stop()
 
         ProfilerRegistry['net.eval'].start()
