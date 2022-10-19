@@ -11,7 +11,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 
 from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape, AbstractSymmetryTransform, \
     IdentifyTransform, PolicyTensor
-from neural_net import NeuralNet, ENABLE_CUDA
+from neural_net import NeuralNet
 from profiling import ProfilerRegistry
 from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, Color, MAX_MOVES_PER_GAME
 
