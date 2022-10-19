@@ -20,7 +20,7 @@ from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 def main():
     use_perfect = False
     num_games = 5
-    num_mcts_iters = 400
+    num_mcts_iters = 100
 
     if use_perfect:
         cpu1 = PerfectPlayer(PerfectPlayerParams())
