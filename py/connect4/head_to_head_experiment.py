@@ -17,7 +17,7 @@ from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 
 def main():
     use_perfect = False
-    num_games = 1
+    num_games = 5
     num_mcts_iters = 100
 
     if use_perfect:
@@ -48,17 +48,18 @@ def main():
     }
 
     r = range(1, num_games, 2) if use_perfect else range(num_games)
-    t1 = time.time()
-    n_games_played = 0
+    runtimes = []
     for n in r:
-        n_games_played += 1
         players = [None, None]
         m = n % 2
         players[m] = cpu1
         players[1-m] = cpu2
 
+        t1 = time.time()
         runner = GameRunner(C4GameState, players)
         result = runner.run()
+        t2 = time.time()
+        runtimes.append(t2 - t1)
 
         for c in (0, 1):
             stats[players[c].get_name()][c][result[c]] += 1
@@ -70,10 +71,28 @@ def main():
         ])
         print(f'R:{players[0].get_name()} Y:{players[1].get_name()} Res:{result_str} {cumulative_result_str}')
 
-    t2 = time.time()
-    elapsed = t2 - t1
-    avg_runtime = elapsed / n_games_played
-    print('Avg runtime: %.3fs/game' % avg_runtime)
+    print('Final results:')
+    for name, stats_by_color in stats.items():
+        rw = stats_by_color[0][1]
+        rl = stats_by_color[0][0]
+        rd = stats_by_color[0][0.5]
+        yw = stats_by_color[1][1]
+        yl = stats_by_color[1][0]
+        yd = stats_by_color[1][0.5]
+        ow = rw + yw
+        ol = rl + yl
+        od = rd + yd
+        print(f'{name}:')
+        print(f'  as red:     {rw}W {rl}L {rd}D')
+        print(f'  as yellow:  {yw}W {yl}L {yd}D')
+        print(f'  as overall: {ow}W {ol}L {od}D')
+
+    avg_runtime = sum(runtimes) / len(runtimes)
+    max_runtime = max(runtimes)
+    min_runtime = min(runtimes)
+    print('Avg runtime: %.3fs' % avg_runtime)
+    print('Max runtime: %.3fs' % max_runtime)
+    print('Min runtime: %.3fs' % min_runtime)
 
 
 if __name__ == '__main__':
