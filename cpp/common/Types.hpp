@@ -55,6 +55,11 @@ concept AbstractGameState = requires(S state) {
    * A compact string representation, used for debugging purposes in conjunction with javascript visualizer.
    */
   { state.compact_repr() } -> std::same_as<std::string>;
+
+  /*
+   * Must be hashable.
+   */
+  { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
 };
 
 }  // namespace common

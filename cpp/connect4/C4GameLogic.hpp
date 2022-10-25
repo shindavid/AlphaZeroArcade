@@ -59,7 +59,6 @@ private:
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell
   mask_t masks_[kNumPlayers] = {};
 };
-static_assert(common::AbstractGameState<GameState>);
 
 }  // namespace c4
 
@@ -67,6 +66,10 @@ template <>
 struct std::hash<c4::GameState> {
   std::size_t operator()(const c4::GameState& state) const { return state.hash(); }
 };
+
+namespace c4 {
+static_assert(common::AbstractGameState<GameState>);
+}  // namespace c4
 
 #include <connect4/C4GameLogicINLINES.cpp>
 
