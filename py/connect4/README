@@ -1,19 +1,26 @@
-Generating training data:
-mpirun -n 6 ./generate_training_data.py -c=~/connect4/ -n 10000
+STEPS
 
-Training a model:
-./train_ny.py 
+* Set up external perfect solver
+  * Clone this repo: https://github.com/PascalPons/connect4
+  * Download the opening book ("7x6.book") from here and copy to that cloned dir: https://github.com/PascalPons/connect4/releases/tag/book
+  * Build the binary via make
+  * Will refer to that directory as $CONNECT4
+  * TODO: take care of above via git-submodule + setup script?
 
+* Generate training data
+  * mpirun -n 6 ./generate_training_data.py -c $CONNECT4 -n 10000
+  * Above uses 6 cores. Pass different value based on your hardware. Leave out "mpirun -n 6" for single-process.
+  * Writes data to c4_games/ by default
 
-Installing Node/React dependencies for the log replay tool:
+* Train a model:
+  * ./train_nn.py
+  * Reads data from c4_games/ by default, writes to c4_model.pt by default
 
-conda install nodejs
+* Play against the CPU, creating a debug file:
+  * ./play_vs_cpu.py -d debug.xml
+  * Loads c4_model.pt by default
 
-Generating a play log:
-
-python3 play_vs_cpu.py -d first_run.xml
-
-Launching the node server:
-
-npm start
+* Visualize the debug file:
+  * cd $REPO_ROOT/js; npm start
+  * Should open up http://localhost:3000/ in browser, upload your file
 
