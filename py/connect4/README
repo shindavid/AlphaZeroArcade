@@ -2,9 +2,9 @@ STEPS
 
 * Set up external perfect solver
   * Clone this repo: https://github.com/PascalPons/connect4
-  * Download the opening book ("7x6.book") from here and copy to that cloned dir: https://github.com/PascalPons/connect4/releases/tag/book
-  * Build the binary via make
   * Will refer to that directory as $CONNECT4
+  * Download the opening book ("7x6.book") from here and copy to $CONNECT4/: https://github.com/PascalPons/connect4/releases/tag/book
+  * Build the binary via make
   * TODO: take care of above via git-submodule + setup script?
 
 * Generate training data
