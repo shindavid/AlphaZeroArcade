@@ -10,6 +10,7 @@ STEPS
 * Generate training data
   * mpirun -n 6 ./generate_training_data.py -c $CONNECT4 -n 10000
   * Above uses 6 cores. Pass different value based on your hardware. Leave out "mpirun -n 6" for single-process.
+  * Instead of passing -c $CONNECT4, can add a mapping for "c4.solver_dir" in the git-ignored $REPO_ROOT/config.txt
   * Writes data to c4_games/ by default
 
 * Train a model:
