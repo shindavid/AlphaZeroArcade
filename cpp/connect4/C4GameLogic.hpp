@@ -1,38 +1,72 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
+#include <boost/functional/hash.hpp>
+
+#include <common/Types.hpp>
 #include <util/BitSet.hpp>
 
 namespace c4 {
 
 using column_t = int8_t;
+using mask_t = uint64_t;
 const int kNumColumns = 7;
 const int kNumRows = 6;
+const int kNumCells = kNumColumns * kNumRows;
+const int kNumPlayers = 2;
+
+const common::player_index_t kRed = 0;
+const common::player_index_t kYellow = 1;
 
 using ActionMask = util::BitSet<kNumColumns>;
+using GameResult = common::GameResult<kNumPlayers>;
 
+/*
+ * Bit order encoding for the board:
+ *
+ * 12 19 26 33 40 47 54
+ * 11 18 25 32 39 46 53
+ * 10 17 24 31 38 45 52
+ *  9 16 23 30 37 44 51
+ *  8 15 22 29 36 43 50
+ *  7 14 21 28 35 42 49
+ *
+ *  NOT:
+ *
+ *  5 13 21 29 37 45 53
+ *  4 12 20 28 36 44 52
+ *  3 11 19 27 35 43 51
+ *  2 10 18 26 34 42 50
+ *  1  9 17 25 33 41 49
+ *  0  8 16 24 32 40 48
+ */
 class GameState {
 public:
-    enum Color : uint8_t {
-        eRed = 0,
-        eYellow = 1,
-        eNumColors = 2
-    };
+  static int get_num_global_actions() { return kNumColumns; }
+  common::player_index_t get_current_player() const;
+  GameResult apply_move(common::action_index_t action);
+  ActionMask get_valid_actions() const;
+  std::string compact_repr() const;
 
-    GameState();
-
-    static int get_num_global_actions() { return kNumColumns; }
-
-    Color get_current_player() const { return current_player_; }
-
-
+  bool operator==(const GameState& other) const;
+  std::size_t hash() const { return boost::hash_range(masks_, masks_ + kNumPlayers); }
 
 private:
-    uint64_t masks_[eNumColors] = {};
-    Color current_player_ = eRed;
+  static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
+  static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell
+  static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell
+  mask_t masks_[kNumPlayers] = {};
 };
+static_assert(common::AbstractGameState<GameState>);
 
 }  // namespace c4
 
+template <>
+struct std::hash<c4::GameState> {
+  std::size_t operator()(const c4::GameState& state) const { return state.hash(); }
+};
+
 #include <connect4/C4GameLogicINLINES.cpp>
+

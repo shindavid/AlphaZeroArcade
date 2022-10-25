@@ -1,6 +1,6 @@
 #include <iostream>
 
-//#include <connect4/C4GameState.hpp>
+#include <connect4/C4GameLogic.hpp>
 #include <util/BitSet.hpp>
 
 #include <Eigen/Core>
@@ -25,5 +25,7 @@ int main() {
 
   std::cout << "m3\n" << m3 << "\nm4:\n"
     << m4 << "\nv4:\n" << v4 << std::endl;
+
+  c4::GameState state;
   return 0;
 }
