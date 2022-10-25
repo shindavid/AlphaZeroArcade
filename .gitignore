@@ -11,3 +11,7 @@ config.txt
 # cmake build dir
 target
 
+# connect4 defaults
+py/connect4/c4_games
+py/connect4/c4_model.pt
+py/connect4/debug.xml
