@@ -377,7 +377,6 @@ class MCTS:
             if not tensorizor.supports_undo():
                 tensorizor = orig_tensorizor.clone()
                 state = orig_state.clone()
-            i += 1
 
         # TODO: return local distrs instead of global distrs. I'm returning global for now only for debugging.
         n = state.get_num_global_actions()

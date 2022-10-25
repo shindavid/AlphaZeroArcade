@@ -72,8 +72,13 @@ def main():
     if Args.perfect:
         cpu = PerfectPlayer(PerfectPlayerParams())
     else:
-        params = NNetPlayerParams(Args.model_file, Args.debug_filename, Args.verbose, Args.neural_network_only,
-                                  Args.num_mcts_iters, Args.temperature)
+        params = NNetPlayerParams(
+            model_file=Args.model_file,
+            debug_filename=Args.debug_filename,
+            verbose=Args.verbose,
+            neural_network_only=Args.neural_network_only,
+            num_mcts_iters=Args.num_mcts_iters,
+            temperature=Args.temperature)
         cpu = NNetPlayer(params)
 
     my_color = np.random.randint(0, 2) if Args.my_starting_color is None else Args.my_starting_color
