@@ -21,7 +21,7 @@ private:
   int8_t ref_indices_[kNumPlayers] = {tNumPreviousStates, tNumPreviousStates};
 };
 
-class C4ReflectionTransform {
+class ReflectionTransform {
 public:
   void transform_input(torch::Tensor& input) const;
   void transform_policy(torch::Tensor& policy) const;
@@ -29,6 +29,7 @@ public:
 
 class Tensorizor {
 public:
+  static constexpr std::initializer_list<size_t> kShape = {2, kNumColumns, kNumRows};
 
   void clear();
 
