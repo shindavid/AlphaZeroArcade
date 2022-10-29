@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <iostream>
+#include <map>
 #include <string>
 #include <thread>
 #include <vector>
@@ -16,6 +18,7 @@
 #include <util/HighFiveUtil.hpp>
 #include <util/ProgressBar.hpp>
 #include <util/StringUtil.hpp>
+#include <util/TorchUtil.hpp>
 
 void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_bin,
          const boost::filesystem::path& c4_solver_book, const boost::filesystem::path& games_dir)
@@ -30,16 +33,12 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
   std::string output_filename = util::create_string("%d.h5", thread_id);
   boost::filesystem::path output_path = games_dir / output_filename;
 
-  HighFive::File h5file(output_path.string(), HighFive::File::ReadWrite | HighFive::File::Create);
-
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
-  hi5::shape_t shape = hi5::to_shape(max_rows, c4::Tensorizor::kShape);
-  HighFive::DataSpace space(shape);
-  HighFive::DataSet dataset = h5file.createDataSet<float>("input", space);
+  torch::Tensor input_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::Tensorizor::kShape));
+  torch::Tensor value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
+  torch::Tensor policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
 
-  hi5::shape_t offset = hi5::zeros_like(shape);
-  hi5::shape_t count = hi5::to_shape(1, c4::Tensorizor::kShape);
-
+  int row = 0;
   progressbar bar(num_games);
   for (int i = 0; i < num_games; ++i) {
     bar.update();
@@ -54,10 +53,48 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
 
       char buf[1024];
       out.read(buf, sizeof(buf));
+      auto tokens = util::split(buf);
+      int move_scores[c4::kNumColumns];
+      for (int j = 0; j < c4::kNumColumns; ++j) {
+        int score = std::atoi(tokens[tokens.size() - c4::kNumColumns + j].c_str());
+        move_scores[j] = score;
+      }
 
+      common::player_index_t cp = state.get_current_player();
+      int best_score = *std::max_element(move_scores, move_scores + c4::kNumColumns);
+
+      float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5);
+
+      float value_arr[c4::kNumPlayers] = {};
+      float best_move_arr[c4::kNumColumns] = {};
+
+      int best_score_count = 0;
+      for (int j = 0; j < c4::kNumColumns; ++j) {
+        int best = move_scores[j] == best_score;
+        best_move_arr[j] = best;
+        best_score_count += best;
+      }
+      float best_normalizer = 1.0 / best_score_count;
+      for (int j = 0; j < c4::kNumColumns; ++j) {
+        best_move_arr[j] *= best_normalizer;
+      }
+
+      value_arr[cp] = cur_player_value;
+      value_arr[1 - cp] = 1 - cur_player_value;
+
+      tensorizor.tensorize(input_tensor.index({row}), state);
+      torch_util::copy_to(value_tensor.index({row}), value_arr, c4::kNumPlayers);
+      torch_util::copy_to(policy_tensor.index({row}), best_move_arr, c4::kNumColumns);
+      ++row;
     }
 
-    dataset.select(offset, count).write(data);
+    auto slice = torch::indexing::Slice(torch::indexing::None, row);
+    using tensor_map_t = std::map<std::string, torch::Tensor>;
+    tensor_map_t tensor_map;
+    tensor_map["input"] = input_tensor.index({slice});
+    tensor_map["value"] = value_tensor.index({slice});
+    tensor_map["policy"] = policy_tensor.index({slice});
+    torch_util::save(tensor_map, output_path.string());
   }
 }
 

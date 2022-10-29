@@ -37,13 +37,16 @@ public:
   std::string compact_repr() const;
 
   bool operator==(const GameState& other) const;
-  std::size_t hash() const { return boost::hash_range(masks_, masks_ + kNumPlayers); }
+  std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
 private:
   static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
   static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell
-  mask_t masks_[kNumPlayers] = {};
+
+  mask_t full_mask_ = 0;  // spaces occupied by either player
+  mask_t cur_player_mask_ = 0;  // spaces occupied by current player
+  //mask_t masks_[kNumPlayers] = {};
 };
 
 }  // namespace c4

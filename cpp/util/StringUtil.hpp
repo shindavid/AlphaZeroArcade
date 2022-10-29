@@ -25,21 +25,7 @@ std::vector<std::string> split(const std::string& s);
  * The template parameter N dictates the char buffer size. In case of overflow, throws an exception.
  */
 template<int N=1024>
-inline std::string create_string(char const* fmt, ...) __attribute__((format(printf, 1, 2))) {
-  char text[N];
-  va_list ap;
-  va_start(ap, fmt);
-  int n = vsnprintf(text, sizeof(text), fmt, ap);
-  va_end(ap);
-
-  if (n < 0) {
-    throw Exception("create_string<%d>(): encountered encoding error (fmt=%s)", N, fmt);
-  }
-  if (n >= N) {
-    throw Exception("create_string<%d>(): char buffer overflow (%d)", N, n);
-  }
-  return std::string(text);
-}
+inline std::string create_string(char const* fmt, ...);
 
 }  // namespace util
 

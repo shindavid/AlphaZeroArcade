@@ -15,7 +15,8 @@ int main() {
     std::cout << it << std::endl;
   }
   torch::Tensor tensor = torch::rand({2, 3});
-  std::cout << tensor << std::endl;
+  torch::Tensor tensor2 = torch::rand({5, 3});
+  torch::save({tensor, tensor2}, "test.pt");
 
   using namespace Eigen;
   Matrix3f m3;

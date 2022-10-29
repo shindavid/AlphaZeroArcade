@@ -6,16 +6,16 @@
 namespace c4 {
 
 inline common::player_index_t GameState::get_current_player() const {
-  return std::popcount(masks_[kRed]) != std::popcount(masks_[kYellow]);
+  return std::popcount(full_mask_) % 2;
 }
 
 inline GameResult GameState::apply_move(common::action_index_t action) {
   column_t col = action;
-  mask_t full_mask = masks_[kRed] | masks_[kYellow];
-  mask_t piece_mask = (full_mask + _bottom_mask(col)) & _column_mask(col);
+  mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   common::player_index_t current_player = get_current_player();
 
-  masks_[current_player] |= piece_mask;
+  cur_player_mask_ ^= full_mask_;
+  full_mask_ |= piece_mask;
 
   bool win = false;
 
@@ -39,7 +39,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
       (piece_mask << 27) * sw_ne_diagonal_block  // sw-ne diagonal 4
   };
 
-  mask_t updated_mask = masks_[current_player];
+  mask_t updated_mask = full_mask_ ^ cur_player_mask_;
   for (mask_t mask : masks) {
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
@@ -51,7 +51,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
   GameResult result;
   if (win) {
     result(current_player) = 1.0;
-  } else if (std::popcount(full_mask) == 41) {
+  } else if (std::popcount(full_mask_) == kNumCells) {
     result(0) = 0.5;
     result(1) = 0.5;
   }
@@ -60,8 +60,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
 }
 
 inline ActionMask GameState::get_valid_actions() const {
-  mask_t full_mask = masks_[kRed] | masks_[kYellow];
-  mask_t bottomed_full_mask = full_mask + _full_bottom_mask();
+  mask_t bottomed_full_mask = full_mask_ + _full_bottom_mask();
 
   ActionMask mask;
   for (int col = 0; col < kNumColumns; ++col) {
@@ -74,12 +73,16 @@ inline ActionMask GameState::get_valid_actions() const {
 inline std::string GameState::compact_repr() const {
   char buffer[kNumCells + 1];
 
+  common::player_index_t current_player = get_current_player();
+  char cur_color = current_player == kRed ? 'R' : 'Y';
+  char opp_color = current_player == kRed ? 'Y' : 'R';
+
   for (int i = 0; i < kNumCells; ++i) {
     mask_t piece_mask = 1UL << i;
-    if (masks_[kRed] & piece_mask) {
-      buffer[i] = 'R';
-    } else if (masks_[kYellow] & piece_mask) {
-      buffer[i] = 'Y';
+    if (cur_player_mask_ & piece_mask) {
+      buffer[i] = cur_color;
+    } else if (full_mask_ & piece_mask) {
+      buffer[i] = opp_color;
     } else {
       buffer[i] = '.';
     }
@@ -89,7 +92,7 @@ inline std::string GameState::compact_repr() const {
 }
 
 inline bool GameState::operator==(const GameState& other) const {
-  return masks_[kRed] == other.masks_[kRed] && masks_[kYellow] == other.masks_[kYellow];
+  return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
 }
 
 inline constexpr mask_t GameState::_column_mask(column_t col) {

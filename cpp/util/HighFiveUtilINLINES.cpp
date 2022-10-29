@@ -17,11 +17,7 @@ template<typename... Ts> shape_t to_shape(Ts&&... ts, const std::initializer_lis
 }
 
 inline shape_t zeros_like(const shape_t& shape) {
-  shape_t zeros;
-  for (auto x : shape) {
-    zeros.push_back(0);
-  }
-  return zeros;
+  return shape_t(shape.size(), 0);
 }
 
 }

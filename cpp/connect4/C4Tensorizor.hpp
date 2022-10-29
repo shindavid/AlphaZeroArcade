@@ -31,13 +31,12 @@ class Tensorizor {
 public:
   static constexpr std::initializer_list<size_t> kShape = {2, kNumColumns, kNumRows};
 
-  void clear();
+  void clear() {}
+  void receive_state_change(const GameState& state, common::action_index_t action_index) {}
 
-  void receive_state_change(const GameState& state, common::action_index_t action_index);
+  void tensorize(torch::Tensor tensor, const GameState& state);
 
-  auto tensorize(const GameState& state);
-
-  auto get_symmetries(const GameState& state);
+  // auto get_symmetries(const GameState& state);
 
 
 private:
