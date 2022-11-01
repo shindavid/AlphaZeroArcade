@@ -9,15 +9,15 @@ namespace detail {
 
 template<> int_vec_t to_shape_helper() { return {}; }
 
-template<typename... Ts> int_vec_t to_shape_helper(Ts&&... ts, int64_t s) {
+template<typename... Ts, typename T> int_vec_t to_shape_helper(Ts&&... ts, const std::initializer_list<T>& s) {
   int_vec_t shape = to_shape_helper(std::forward<Ts>(ts)...);
-  shape.push_back(s);
+  shape.insert(shape.end(), s);
   return shape;
 }
 
-template<typename... Ts> int_vec_t to_shape_helper(Ts&&... ts, const std::initializer_list<int64_t>& s) {
+template<typename... Ts, typename T> int_vec_t to_shape_helper(Ts&&... ts, T s) {
   int_vec_t shape = to_shape_helper(std::forward<Ts>(ts)...);
-  shape.insert(shape.end(), s);
+  shape.push_back(s);
   return shape;
 }
 

@@ -1,4 +1,4 @@
-//#include <connect4/C4GameLogic.hpp>
+#include <connect4/C4GameLogic.hpp>
 
 #include <bit>
 #include <iostream>

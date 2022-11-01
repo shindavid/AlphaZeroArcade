@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.17)
 project(C4Experiment)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
-find_package(Torch REQUIRED)
-find_package(Boost 1.78.0 COMPONENTS filesystem program_options REQUIRED)
+find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
+find_package(Boost COMPONENTS program_options filesystem  REQUIRED)
 
 set(CMAKE_CXX_STANDARD  20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 ${TORCH_CXX_FLAGS}")
@@ -18,8 +18,11 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 set(SOURCES cpp/main/GenerateTrainingData.cpp)
 
 add_executable(c4_gen_training_data ${SOURCES})
-target_link_libraries(c4_gen_training_data "${TORCH_LIBRARIES}")
+link_directories(${Boost_LIBRARY_DIRS})
+target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})
 target_link_libraries(c4_gen_training_data ${Boost_LIBRARIES})
+
+set_property(TARGET c4_gen_training_data PROPERTY CXX_STANDARD 20)
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)

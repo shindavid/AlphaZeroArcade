@@ -35,6 +35,7 @@ class Config:
     _instance = None
 
     def __init__(self, filename: str = DEFAULT_FILENAME):
+        self.filename = filename
         self._dict = {}
         if not os.path.isfile(filename):
             return
@@ -42,6 +43,8 @@ class Config:
         with open(filename, 'r') as f:
             for orig_line in f:
                 line = decomment(orig_line)
+                if not line:
+                    continue
                 eq = line.find('=')
                 assert eq != -1, orig_line
                 key = line[:eq].strip()
