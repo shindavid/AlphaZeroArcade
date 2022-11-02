@@ -7,18 +7,25 @@ namespace torch_util {
 
 namespace detail {
 
-template<> int_vec_t to_shape_helper() { return {}; }
+using int_vec_t = std::vector<int64_t>;
 
-template<typename... Ts, typename T> int_vec_t to_shape_helper(Ts&&... ts, const std::initializer_list<T>& s) {
-  int_vec_t shape = to_shape_helper(std::forward<Ts>(ts)...);
-  shape.insert(shape.end(), s);
-  return shape;
+inline int_vec_t to_shape_helper() { return {}; }
+
+template<typename T, typename... Ts> int_vec_t to_shape_helper(const std::initializer_list<T>& t, Ts&&... ts) {
+  int_vec_t vec1;
+  for (auto x : t) {
+    vec1.push_back(x);
+  }
+  int_vec_t vec2 = to_shape_helper(std::forward<Ts>(ts)...);
+  vec1.insert(vec1.end(), vec2.begin(), vec2.end());
+  return vec1;
 }
 
-template<typename... Ts, typename T> int_vec_t to_shape_helper(Ts&&... ts, T s) {
-  int_vec_t shape = to_shape_helper(std::forward<Ts>(ts)...);
-  shape.push_back(s);
-  return shape;
+template<typename T, typename... Ts> int_vec_t to_shape_helper(T t, Ts&&... ts) {
+  int_vec_t vec1 = {int64_t(t)};
+  int_vec_t vec2 = to_shape_helper(std::forward<Ts>(ts)...);
+  vec1.insert(vec1.end(), vec2.begin(), vec2.end());
+  return vec1;
 }
 
 }  // namespace detail

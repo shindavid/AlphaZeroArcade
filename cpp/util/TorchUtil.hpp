@@ -15,11 +15,6 @@
 
 namespace torch_util {
 
-namespace detail {
-using int_vec_t = std::vector<int64_t>;
-template<typename... Ts> int_vec_t to_shape_helper(Ts&&... ts);
-}  // namespace detail
-
 using shape_t = at::IntArrayRef;
 
 /*

@@ -18,6 +18,7 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 set(SOURCES cpp/main/GenerateTrainingData.cpp)
 
 add_executable(c4_gen_training_data ${SOURCES})
+add_subdirectory("cpp/util")
 link_directories(${Boost_LIBRARY_DIRS})
 target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})
 target_link_libraries(c4_gen_training_data ${Boost_LIBRARIES})

@@ -45,10 +45,13 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
 
     c4::GameState state;
     c4::Tensorizor tensorizor;
-    std::string move_history;
+    char move_history[64];
+    int mh = 0;
 
     while (true) {
-      in.write((move_history + "\n").c_str(), move_history.size() + 1);
+      move_history[mh] = '\n';
+      move_history[mh+1] = 0;
+      in.write(move_history, mh + 2);
       in.flush();
 
       char buf[1024];
@@ -63,7 +66,7 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
       common::player_index_t cp = state.get_current_player();
       int best_score = *std::max_element(move_scores, move_scores + c4::kNumColumns);
 
-      float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5);
+      float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
 
       float value_arr[c4::kNumPlayers] = {};
       float best_move_arr[c4::kNumColumns] = {};
@@ -86,6 +89,14 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
       torch_util::copy_to(value_tensor.index({row}), value_arr, c4::kNumPlayers);
       torch_util::copy_to(policy_tensor.index({row}), best_move_arr, c4::kNumColumns);
       ++row;
+
+      c4::ActionMask moves = state.get_valid_actions();
+      int move = moves.choose_random_set_bit();
+      auto result = state.apply_move(move);
+      tensorizor.receive_state_change(state, move);
+      if (result.is_terminal()) break;
+
+      mh += sprintf(&move_history[mh], "%d", move);
     }
 
     auto slice = torch::indexing::Slice(torch::indexing::None, row);

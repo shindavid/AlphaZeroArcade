@@ -1,6 +1,7 @@
 #pragma once
 /*
- * util::BitSet<N> is like std::bitset<N>. It extends the interface by providing a way to iterate over the set bits.
+ * util::BitSet<N> is like std::bitset<N>. It extends the interface by providing a way to iterate over the set bits,
+ * along with various other auxiliary helpers.
  *
  * For now, the implementation just wraps std::bitset<N>, and the set-bits-iterator is no more efficient than
  * stepping through all N bits and branching. Later, we can optimize the implementation.
@@ -12,6 +13,9 @@
 
 namespace util {
 
+/*
+ * TODO: optimize by using custom implementation powered by c++20's <bits> module.
+ */
 template<int N>
 class BitSet : public std::bitset<N> {
 public:
@@ -31,6 +35,8 @@ public:
 
   SetBitsIterator begin() const { return SetBitsIterator(this, 0); }
   SetBitsIterator end() const { return SetBitsIterator(this, N); }
+
+  int choose_random_set_bit() const;
 };
 
 /*
@@ -95,3 +101,5 @@ template<typename T> struct is_bit_set { static const bool value = false; };
 template<int N> struct is_bit_set<util::BitSet<N>> { static const bool value = true; };
 template<typename T> inline constexpr bool is_bit_set_v = is_bit_set<T>::value;
 template <typename T> concept is_bit_set_c = is_bit_set_v<T>;
+
+#include <util/BitSetINLINES.cpp>
