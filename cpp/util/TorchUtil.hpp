@@ -18,7 +18,8 @@ namespace torch_util {
 using shape_t = at::IntArrayRef;
 
 /*
- * Smash together int64_t and std::initializer_list<int64_t> arguments into a single shape_t.
+ * Smash together integral arguments and std::initializer_list arguments into a single shape_t. Without this helper
+ * function, constructing shapes through concatenation is cumbersome.
  */
 template<typename... Ts> shape_t to_shape(Ts&&... ts);
 
@@ -35,7 +36,7 @@ void pickle_dump(const torch::Tensor& tensor, const boost::filesystem::path& pat
  * "2" -> vec[2]
  * ...
  *
- * Our torch_util::save() function is similar, except we get to choose mapping keys explicitly.
+ * Our torch_util::save() function is similar, except we get to choose the string keys explicitly.
  */
 template<typename... SaveToArgs>
 void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&... args);

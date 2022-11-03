@@ -14,7 +14,9 @@
 namespace util {
 
 /*
- * TODO: optimize by using custom implementation powered by c++20's <bits> module.
+ * TODO: optimize by using custom implementation powered by c++20's <bits> module. As-is, finding all the set-bits of
+ * an empty BitSet<256> entails checking 256 bits, when in fact only 4 uint64_t's should need to be checked, so this
+ * implementation is ~64x inefficient.
  */
 template<int N>
 class BitSet : public std::bitset<N> {

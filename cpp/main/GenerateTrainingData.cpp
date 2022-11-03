@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <iostream>
 #include <map>
 #include <string>
@@ -8,18 +7,28 @@
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
-#include <highfive/H5File.hpp>
 #include <torch/torch.h>
 
 #include <connect4/Constants.hpp>
 #include <connect4/C4GameLogic.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <util/Exception.hpp>
-#include <util/HighFiveUtil.hpp>
 #include <util/ProgressBar.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
+/*
+ * This interfaces with the connect4 perfect solver binary by creating a child-process that we interact with via
+ * stdin/stdout, just like is done in the python version. It should be noted that an alternative is to compile a
+ * perfect solver library, and to invoke its API directly, without creating a child-process. This alternative is
+ * probably better. For example, we do away with the overhead of interprocess communication and string
+ * construction/parsing. Also, the perfect solver has a cache under its hood, and direct usage would allow for
+ * cache-sharing across the different threads (although a mutex might need to be added).
+ *
+ * On the other hand, this implementation was easier to write, this part of the pipeline is not a bottleneck, and
+ * it is only a temporary fill-in until we get the self-play loop rolling. So, practically speaking, this is not worth
+ * improving.
+ */
 void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_bin,
          const boost::filesystem::path& c4_solver_book, const boost::filesystem::path& games_dir)
 {

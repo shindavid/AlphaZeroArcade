@@ -13,14 +13,6 @@ namespace c4 {
  * Bit order encoding for the board:
  *
  * 12 19 26 33 40 47 54
- * 11 18 25 32 39 46 53
- * 10 17 24 31 38 45 52
- *  9 16 23 30 37 44 51
- *  8 15 22 29 36 43 50
- *  7 14 21 28 35 42 49
- *
- *  NOT:
- *
  *  5 13 21 29 37 45 53
  *  4 12 20 28 36 44 52
  *  3 11 19 27 35 43 51
@@ -46,7 +38,6 @@ private:
 
   mask_t full_mask_ = 0;  // spaces occupied by either player
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
-  //mask_t masks_[kNumPlayers] = {};
 };
 
 }  // namespace c4

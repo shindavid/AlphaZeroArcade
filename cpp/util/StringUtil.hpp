@@ -15,12 +15,12 @@ namespace util {
 /*
  * split(s) behaves just like s.split() in python.
  *
- * TODO: suppose split(s, t), to behave like s.split(t).
+ * TODO: support split(s, t), to behave like s.split(t).
  */
 std::vector<std::string> split(const std::string& s);
 
 /*
- * Like sprintf(), but conveniently bypasses need to declare the char buffer.
+ * Like sprintf(), but conveniently bypasses need to declare the char buffer at the call-site.
  *
  * The template parameter N dictates the char buffer size. In case of overflow, throws an exception.
  */
