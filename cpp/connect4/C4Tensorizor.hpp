@@ -22,7 +22,7 @@ public:
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
 
-  void tensorize(torch::Tensor tensor, const GameState& state);
+  void tensorize(torch::Tensor tensor, const GameState& state) { state.tensorize(tensor); }
 
   // auto get_symmetries(const GameState& state);
 

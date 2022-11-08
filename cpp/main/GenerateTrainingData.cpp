@@ -105,7 +105,7 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
       tensorizor.receive_state_change(state, move);
       if (result.is_terminal()) break;
 
-      mh += sprintf(&move_history[mh], "%d", move);
+      mh += sprintf(&move_history[mh], "%d", move + 1);
     }
 
     auto slice = torch::indexing::Slice(torch::indexing::None, row);

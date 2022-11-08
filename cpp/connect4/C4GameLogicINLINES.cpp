@@ -91,6 +91,24 @@ inline std::string GameState::compact_repr() const {
   return buffer;
 }
 
+inline void GameState::tensorize(torch::Tensor tensor) const {
+  mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
+  for (int col = 0; col < kNumColumns; ++col) {
+    for (int row = 0; row < kNumRows; ++row) {
+      int index = 8 * col + row;
+      bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
+      tensor.index_put_({0, col, row}, occupied_by_cur_player);
+    }
+  }
+  for (int col = 0; col < kNumColumns; ++col) {
+    for (int row = 0; row < kNumRows; ++row) {
+      int index = 8 * col + row;
+      bool occupied_by_opp_player = (1UL << index) & opp_player_mask;
+      tensor.index_put_({1, col, row}, occupied_by_opp_player);
+    }
+  }
+}
+
 inline bool GameState::operator==(const GameState& other) const {
   return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
 }

@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <boost/functional/hash.hpp>
+#include <torch/torch.h>
 
 #include <connect4/Constants.hpp>
 
@@ -12,13 +13,14 @@ namespace c4 {
 /*
  * Bit order encoding for the board:
  *
- * 12 19 26 33 40 47 54
  *  5 13 21 29 37 45 53
  *  4 12 20 28 36 44 52
  *  3 11 19 27 35 43 51
  *  2 10 18 26 34 42 50
  *  1  9 17 25 33 41 49
  *  0  8 16 24 32 40 48
+ *
+ * Unlike the connect4 package, we use 0-indexing for column indices.
  */
 class GameState {
 public:
@@ -27,6 +29,7 @@ public:
   GameResult apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
+  void tensorize(torch::Tensor) const;
 
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
