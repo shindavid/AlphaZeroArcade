@@ -6,6 +6,7 @@
 namespace c4 {
 
 using column_t = int8_t;
+using row_t = int8_t;
 using mask_t = uint64_t;
 const int kNumColumns = 7;
 const int kNumRows = 6;

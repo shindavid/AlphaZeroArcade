@@ -35,6 +35,7 @@ public:
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
 private:
+  static constexpr int _to_bit_index(column_t col, row_t row);
   static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
   static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell

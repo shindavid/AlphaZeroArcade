@@ -26,21 +26,25 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
   mask_t masks[] = {
       (piece_mask << 1) - (piece_mask >> 3),  // vertical
       piece_mask * horizontal_block,  // horizontal 1
-      (piece_mask << 8) * horizontal_block,  // horizontal 2
-      (piece_mask << 16) * horizontal_block,  // horizontal 3
-      (piece_mask << 24) * horizontal_block,  // horizontal 4
+      (piece_mask >> 8) * horizontal_block,  // horizontal 2
+      (piece_mask >> 16) * horizontal_block,  // horizontal 3
+      (piece_mask >> 24) * horizontal_block,  // horizontal 4
       piece_mask * nw_se_diagonal_block,  // nw-se diagonal 1
-      (piece_mask << 7) * nw_se_diagonal_block,  // nw-se diagonal 2
-      (piece_mask << 14) * nw_se_diagonal_block,  // nw-se diagonal 3
-      (piece_mask << 21) * nw_se_diagonal_block,  // nw-se diagonal 4
+      (piece_mask >> 7) * nw_se_diagonal_block,  // nw-se diagonal 2
+      (piece_mask >> 14) * nw_se_diagonal_block,  // nw-se diagonal 3
+      (piece_mask >> 21) * nw_se_diagonal_block,  // nw-se diagonal 4
       piece_mask * sw_ne_diagonal_block,  // sw-ne diagonal 1
-      (piece_mask << 9) * sw_ne_diagonal_block,  // sw-ne diagonal 2
-      (piece_mask << 18) * sw_ne_diagonal_block,  // sw-ne diagonal 3
-      (piece_mask << 27) * sw_ne_diagonal_block  // sw-ne diagonal 4
+      (piece_mask >> 9) * sw_ne_diagonal_block,  // sw-ne diagonal 2
+      (piece_mask >> 18) * sw_ne_diagonal_block,  // sw-ne diagonal 3
+      (piece_mask >> 27) * sw_ne_diagonal_block  // sw-ne diagonal 4
   };
 
   mask_t updated_mask = full_mask_ ^ cur_player_mask_;
+//  int k = 0;
   for (mask_t mask : masks) {
+//    printf("DBG masks[%d] %#016lx & %#016lx = %#016lx [%d] %d\n", k, mask, updated_mask, mask & updated_mask,
+//           (mask & updated_mask) == mask, int(std::popcount(mask)));
+//    k++;
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
       win = true;
@@ -49,6 +53,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
   }
 
   GameResult result;
+  result.setZero();
   if (win) {
     result(current_player) = 1.0;
   } else if (std::popcount(full_mask_) == kNumCells) {
@@ -56,6 +61,8 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
     result(1) = 0.5;
   }
 
+//  printf("Applied move %d: [%#016lx] [%#016lx] %f [%s]\n", int(action), cur_player_mask_, full_mask_, float(result.sum()), compact_repr().c_str());
+//  std::cout << std::endl;
   return result;
 }
 
@@ -77,14 +84,18 @@ inline std::string GameState::compact_repr() const {
   char cur_color = current_player == kRed ? 'R' : 'Y';
   char opp_color = current_player == kRed ? 'Y' : 'R';
 
-  for (int i = 0; i < kNumCells; ++i) {
-    mask_t piece_mask = 1UL << i;
-    if (cur_player_mask_ & piece_mask) {
-      buffer[i] = cur_color;
-    } else if (full_mask_ & piece_mask) {
-      buffer[i] = opp_color;
-    } else {
-      buffer[i] = '.';
+  for (int col = 0; col < kNumColumns; ++col) {
+    for (int row = 0; row < kNumRows; ++row) {
+      int read_index = _to_bit_index(col, row);
+      mask_t piece_mask = 1UL << read_index;
+      int write_index = 6 * col + row;
+      if (cur_player_mask_ & piece_mask) {
+        buffer[write_index] = cur_color;
+      } else if (full_mask_ & piece_mask) {
+        buffer[write_index] = opp_color;
+      } else {
+        buffer[write_index] = '.';
+      }
     }
   }
   buffer[kNumCells] = 0;
@@ -95,14 +106,14 @@ inline void GameState::tensorize(torch::Tensor tensor) const {
   mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
-      int index = 8 * col + row;
+      int index = _to_bit_index(col, row);
       bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
       tensor.index_put_({0, col, row}, occupied_by_cur_player);
     }
   }
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
-      int index = 8 * col + row;
+      int index = _to_bit_index(col, row);
       bool occupied_by_opp_player = (1UL << index) & opp_player_mask;
       tensor.index_put_({1, col, row}, occupied_by_opp_player);
     }
@@ -111,6 +122,10 @@ inline void GameState::tensorize(torch::Tensor tensor) const {
 
 inline bool GameState::operator==(const GameState& other) const {
   return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
+}
+
+inline constexpr int GameState::_to_bit_index(column_t col, row_t row) {
+  return 8 * col + row;
 }
 
 inline constexpr mask_t GameState::_column_mask(column_t col) {
