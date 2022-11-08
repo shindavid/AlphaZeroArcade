@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
+set(CMAKE_DEBUG_POSTFIX d)
 project(C4Experiment)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
@@ -23,6 +24,8 @@ link_directories(${Boost_LIBRARY_DIRS})
 target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})
 target_link_libraries(c4_gen_training_data ${Boost_LIBRARIES})
 
+set_target_properties(c4_gen_training_data PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+
 set_property(TARGET c4_gen_training_data PROPERTY CXX_STANDARD 20)
 
 # https://stackoverflow.com/a/31390758/543913
@@ -35,4 +38,4 @@ macro(print_all_variables)
     message(STATUS "print_all_variables------------------------------------------}")
 endmacro()
 
-print_all_variables()
+#print_all_variables()
