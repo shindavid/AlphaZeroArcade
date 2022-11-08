@@ -37,7 +37,9 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
   std::string c4_cmd = util::create_string("%s -b %s -a", c4_solver_bin.c_str(), c4_solver_book.c_str());
   bp::ipstream out;
   bp::opstream in;
-  bp::child proc(c4_cmd, bp::std_out > out, bp::std_in < in);
+  bp::child proc(c4_cmd, bp::std_out > out,
+                 bp::std_err > bp::null,
+                 bp::std_in < in);
 
   std::string output_filename = util::create_string("%d.h5", thread_id);
   boost::filesystem::path output_path = games_dir / output_filename;
@@ -47,10 +49,11 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
   torch::Tensor value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
   torch::Tensor policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
 
+  bool use_progress_bar = thread_id == 0;
   int row = 0;
-  progressbar bar(num_games);
+  progressbar* bar = use_progress_bar ? new progressbar(num_games) : nullptr;
   for (int i = 0; i < num_games; ++i) {
-    bar.update();
+    if (use_progress_bar) bar->update();
 
     c4::GameState state;
     c4::Tensorizor tensorizor;
@@ -59,13 +62,12 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
 
     while (true) {
       move_history[mh] = '\n';
-      move_history[mh+1] = 0;
-      in.write(move_history, mh + 2);
+      in.write(move_history, mh + 1);
       in.flush();
 
-      char buf[1024];
-      out.read(buf, sizeof(buf));
-      auto tokens = util::split(buf);
+      std::string s;
+      std::getline(out, s);
+      auto tokens = util::split(s);
       int move_scores[c4::kNumColumns];
       for (int j = 0; j < c4::kNumColumns; ++j) {
         int score = std::atoi(tokens[tokens.size() - c4::kNumColumns + j].c_str());
@@ -103,7 +105,10 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
       int move = moves.choose_random_set_bit();
       auto result = state.apply_move(move);
       tensorizor.receive_state_change(state, move);
-      if (result.is_terminal()) break;
+      if (result.is_terminal()) {
+//        printf("Game terminated! %s\n", state.compact_repr().c_str());
+        break;
+      }
 
       mh += sprintf(&move_history[mh], "%d", move + 1);
     }
@@ -115,6 +120,9 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
     tensor_map["value"] = value_tensor.index({slice});
     tensor_map["policy"] = policy_tensor.index({slice});
     torch_util::save(tensor_map, output_path.string());
+  }
+  if (use_progress_bar) {
+    delete bar;
   }
 }
 
@@ -128,8 +136,8 @@ int main(int ac, char* av[]) {
   po::options_description desc("Generate training data from perfect solver");
   desc.add_options()
       ("help,h", "product help message")
-      ("num-training-games,n", po::value<int>(&num_training_games)->default_value(4), "num training games")
-      ("num-threads,t", po::value<int>(&num_threads)->default_value(1), "num threads")
+      ("num-training-games,n", po::value<int>(&num_training_games)->default_value(100), "num training games")
+      ("num-threads,t", po::value<int>(&num_threads)->default_value(4), "num threads")
       ("games-dir,g", po::value<std::string>(&games_dir_str)->default_value("c4_games"), "where to write games")
       ("c4-solver-dir,c", po::value<std::string>(&c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ;
@@ -165,13 +173,17 @@ int main(int ac, char* av[]) {
   }
   boost::filesystem::create_directories(games_dir);
 
-  std::vector<std::thread> threads;
-  for (int i=0; i<num_threads; ++i) {
-    int num_games = ((i + 1) * num_training_games / num_threads) - (i * num_training_games / num_threads);
-    threads.emplace_back(run, i, num_games, c4_solver_bin, c4_solver_book, games_dir);
+  if (num_threads == 1) {  // specialize for easier to parse core-dumps
+    run(0, num_training_games, c4_solver_bin, c4_solver_book, games_dir);
+  } else {
+    std::vector<std::thread> threads;
+    for (int i=0; i<num_threads; ++i) {
+      int num_games = ((i + 1) * num_training_games / num_threads) - (i * num_training_games / num_threads);
+      threads.emplace_back(run, i, num_games, c4_solver_bin, c4_solver_book, games_dir);
+    }
+
+    for (auto& th : threads) th.join();
   }
-
-  for (auto& th : threads) th.join();
-
+  printf("\nWrote data to: %s\n", games_dir.c_str());
   return 0;
 }
