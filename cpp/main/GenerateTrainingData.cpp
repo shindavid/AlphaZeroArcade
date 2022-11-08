@@ -41,7 +41,7 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
                  bp::std_err > bp::null,
                  bp::std_in < in);
 
-  std::string output_filename = util::create_string("%d.h5", thread_id);
+  std::string output_filename = util::create_string("%d.pt", thread_id);
   boost::filesystem::path output_path = games_dir / output_filename;
 
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
