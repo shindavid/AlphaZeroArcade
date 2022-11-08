@@ -15,7 +15,7 @@
 
 namespace torch_util {
 
-using shape_t = at::IntArrayRef;
+using shape_t = std::vector<int64_t>;
 
 /*
  * Smash together integral arguments and std::initializer_list arguments into a single shape_t. Without this helper

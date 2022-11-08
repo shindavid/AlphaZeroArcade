@@ -5,37 +5,27 @@
 
 namespace torch_util {
 
-namespace detail {
+inline shape_t to_shape() { return {}; }
 
-using int_vec_t = std::vector<int64_t>;
-
-inline int_vec_t to_shape_helper() { return {}; }
-
-template<typename T, typename... Ts> int_vec_t to_shape_helper(const std::initializer_list<T>& t, Ts&&... ts) {
-  int_vec_t vec1;
+template<typename T, typename... Ts> shape_t to_shape(const std::initializer_list<T>& t, Ts&&... ts) {
+  shape_t vec1;
   for (auto x : t) {
     vec1.push_back(x);
   }
-  int_vec_t vec2 = to_shape_helper(std::forward<Ts>(ts)...);
+  shape_t vec2 = to_shape(std::forward<Ts>(ts)...);
   vec1.insert(vec1.end(), vec2.begin(), vec2.end());
   return vec1;
 }
 
-template<typename T, typename... Ts> int_vec_t to_shape_helper(T t, Ts&&... ts) {
-  int_vec_t vec1 = {int64_t(t)};
-  int_vec_t vec2 = to_shape_helper(std::forward<Ts>(ts)...);
+template<typename T, typename... Ts> shape_t to_shape(T t, Ts&&... ts) {
+  shape_t vec1 = {int64_t(t)};
+  shape_t vec2 = to_shape(std::forward<Ts>(ts)...);
   vec1.insert(vec1.end(), vec2.begin(), vec2.end());
   return vec1;
-}
-
-}  // namespace detail
-
-template<typename... Ts> shape_t to_shape(Ts&&... ts) {
-  return detail::to_shape_helper(std::forward<Ts>(ts)...);
 }
 
 inline shape_t zeros_like(const shape_t& shape) {
-  return detail::int_vec_t(shape.size(), 0);
+  return shape_t(shape.size(), 0);
 }
 
 inline void pickle_dump(const torch::Tensor& tensor, const boost::filesystem::path& path) {
