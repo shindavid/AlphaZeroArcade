@@ -82,15 +82,9 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
       float value_arr[c4::kNumPlayers] = {};
       float best_move_arr[c4::kNumColumns] = {};
 
-      int best_score_count = 0;
       for (int j = 0; j < c4::kNumColumns; ++j) {
         int best = move_scores[j] == best_score;
         best_move_arr[j] = best;
-        best_score_count += best;
-      }
-      float best_normalizer = 1.0 / best_score_count;
-      for (int j = 0; j < c4::kNumColumns; ++j) {
-        best_move_arr[j] *= best_normalizer;
       }
 
       value_arr[cp] = cur_player_value;
