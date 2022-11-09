@@ -1,5 +1,8 @@
 #include <connect4/C4GameLogic.hpp>
 
+#include <util/AnsiCodes.hpp>
+#include <util/PrintUtil.hpp>
+
 #include <bit>
 #include <iostream>
 
@@ -40,11 +43,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
   };
 
   mask_t updated_mask = full_mask_ ^ cur_player_mask_;
-//  int k = 0;
   for (mask_t mask : masks) {
-//    printf("DBG masks[%d] %#016lx & %#016lx = %#016lx [%d] %d\n", k, mask, updated_mask, mask & updated_mask,
-//           (mask & updated_mask) == mask, int(std::popcount(mask)));
-//    k++;
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
       win = true;
@@ -61,8 +60,6 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
     result(1) = 0.5;
   }
 
-//  printf("Applied move %d: [%#016lx] [%#016lx] %f [%s]\n", int(action), cur_player_mask_, full_mask_, float(result.sum()), compact_repr().c_str());
-//  std::cout << std::endl;
   return result;
 }
 
@@ -118,6 +115,39 @@ inline void GameState::tensorize(torch::Tensor tensor) const {
       tensor.index_put_({1, col, row}, occupied_by_opp_player);
     }
   }
+}
+
+inline void GameState::xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const {
+  column_t blink_column = last_action;
+  row_t blink_row = -1;
+  if (blink_column >= 0) {
+    blink_row = std::countr_one(full_mask_ >> (blink_column * 8)) - 1;
+  }
+  for (row_t row = kNumRows - 1; row >= 0; --row) {
+    xprintf_row_dump(row, row == blink_row ? blink_column : -1);
+  }
+  util::xprintf("|0|1|2|3|4|5|6|\n");
+  util::xprintf("%s: %s\n", ansi::kRed, player_names[kRed].c_str());
+  util::xprintf("%s: %s\n\n", ansi::kYellow, player_names[kYellow].c_str());
+}
+
+inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const {
+  common::player_index_t current_player = get_current_player();
+  const char* cur_color = current_player == kRed ? ansi::kRed : ansi::kYellow;
+  const char* opp_color = current_player == kRed ? ansi::kYellow : ansi::kRed;
+
+  for (int col = 0; col < kNumColumns; ++col) {
+    int index = _to_bit_index(col, row);
+    bool occupied = (1UL << index) & full_mask_;
+    bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
+
+    const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
+    const char* c = occupied ? ansi::kCircle : " ";
+
+    util::xprintf("|%s%s%s%s|", col == blink_column ? ansi::kBlink : "", color, c, occupied ? ansi::kReset : "");
+  }
+
+  util::xprintf("|\n");
 }
 
 inline bool GameState::operator==(const GameState& other) const {

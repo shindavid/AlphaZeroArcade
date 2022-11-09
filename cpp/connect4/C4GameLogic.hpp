@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <functional>
 
@@ -30,12 +31,15 @@ public:
   GameResult apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
-  void tensorize(torch::Tensor) const;
 
+  void tensorize(torch::Tensor) const;
+  void xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
 private:
+  void xprintf_row_dump(row_t row, column_t blink_column) const;
+
   static constexpr int _to_bit_index(column_t col, row_t row);
   static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
   static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell

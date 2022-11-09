@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 set(CMAKE_DEBUG_POSTFIX d)
-project(c4_gen_training_data)
+project(project_name)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
@@ -16,17 +16,21 @@ include_directories("cpp")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
-set(SOURCES cpp/main/GenerateTrainingData.cpp)
+add_executable(c4_gen_training_data cpp/main/GenerateTrainingData.cpp)
+add_executable(c4_play_vs_cpu cpp/main/PlayVsCpu.cpp)
 
-add_executable(c4_gen_training_data ${SOURCES})
 add_subdirectory("cpp/util")
 link_directories(${Boost_LIBRARY_DIRS})
+
 target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})
 target_link_libraries(c4_gen_training_data ${Boost_LIBRARIES})
-
 set_target_properties(c4_gen_training_data PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-
 set_property(TARGET c4_gen_training_data PROPERTY CXX_STANDARD 20)
+
+target_link_libraries(c4_play_vs_cpu ${TORCH_LIBRARIES})
+target_link_libraries(c4_play_vs_cpu ${Boost_LIBRARIES})
+set_target_properties(c4_play_vs_cpu PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+set_property(TARGET c4_play_vs_cpu PROPERTY CXX_STANDARD 20)
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)
