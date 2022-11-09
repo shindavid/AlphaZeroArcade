@@ -2,6 +2,7 @@
 
 #include <Eigen/Core>
 
+#include <array>
 #include <cstdint>
 #include <string>
 
@@ -24,10 +25,15 @@ template<typename T> inline constexpr bool is_game_result_v = is_game_result<T>:
 template <typename T> concept is_game_result_c = is_game_result_v<T>;
 
 /*
- * All GameState classes must satisfy the AbstractGameState concept.
+ * All GameState classes must satisfy the GameStateConcept concept.
  */
 template <class S>
-concept AbstractGameState = requires(S state) {
+concept GameStateConcept = requires(S state) {
+  /*
+   * The number of players in the game.
+   */
+  { S::get_num_players() } -> std::same_as<int>;
+
   /*
    * Return the total number of global actions in the game.
    *
@@ -60,6 +66,26 @@ concept AbstractGameState = requires(S state) {
    * Must be hashable.
    */
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
+};
+
+template<GameStateConcept GameState>
+class AbstractPlayer {
+public:
+  using Result = GameResult<GameState::get_num_players()>;
+  using ActionMask = util::BitSet<GameState::get_num_global_actions()>;
+  using player_array_t = std::array<AbstractPlayer*, GameState::get_num_players()>;
+
+  AbstractPlayer(const std::string& name) : name_(name) {}
+  virtual ~AbstractPlayer() = default;
+  void set_name(const std::string& name) { name_ = name; }
+  std::string get_name() const { return name_; }
+
+  virtual void start_game(const player_array_t& players, player_index_t seat_assignment) {}
+  virtual void receive_state_change(player_index_t, const GameState&, action_index_t, const Result&) {}
+  virtual action_index_t get_action(const GameState&, const ActionMask&) = 0;
+
+private:
+  std::string name_;
 };
 
 }  // namespace common
