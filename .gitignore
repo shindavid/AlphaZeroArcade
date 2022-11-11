@@ -12,6 +12,6 @@ config.txt
 target
 
 # connect4 defaults
-py/connect4/c4_games
-py/connect4/c4_model.pt
-py/connect4/debug.xml
+**/c4_games
+**/c4_model.pt
+**/debug.xml
