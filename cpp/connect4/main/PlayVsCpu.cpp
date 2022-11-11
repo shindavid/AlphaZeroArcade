@@ -4,10 +4,10 @@
 
 #include <common/GameRunner.hpp>
 #include <common/Types.hpp>
-#include <connect4/C4GameLogic.hpp>
+#include <connect4/C4Constants.hpp>
+#include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayer.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
-#include <connect4/Constants.hpp>
 #include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/Random.hpp>

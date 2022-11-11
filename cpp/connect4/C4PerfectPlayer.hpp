@@ -4,8 +4,8 @@
 #include <boost/process.hpp>
 
 #include <common/Types.hpp>
-#include <connect4/C4GameLogic.hpp>
-#include <connect4/Constants.hpp>
+#include <connect4/C4Constants.hpp>
+#include <connect4/C4GameState.hpp>
 
 namespace c4 {
 

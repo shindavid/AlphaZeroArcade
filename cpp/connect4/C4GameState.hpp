@@ -7,7 +7,7 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <connect4/Constants.hpp>
+#include <connect4/C4Constants.hpp>
 
 namespace c4 {
 
@@ -60,5 +60,5 @@ namespace c4 {
 static_assert(common::GameStateConcept<GameState>);
 }  // namespace c4
 
-#include <connect4/C4GameLogicINLINES.cpp>
+#include <connect4/C4GameStateINLINES.cpp>
 

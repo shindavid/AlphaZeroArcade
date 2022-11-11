@@ -1,4 +1,4 @@
-#include <connect4/C4GameLogic.hpp>
+#include <connect4/C4GameState.hpp>
 
 #include <util/AnsiCodes.hpp>
 #include <util/PrintUtil.hpp>

@@ -5,17 +5,14 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
-#include <boost/process.hpp>
 #include <boost/program_options.hpp>
 #include <torch/torch.h>
 
-#include <connect4/Constants.hpp>
-#include <connect4/C4GameLogic.hpp>
+#include <connect4/C4Constants.hpp>
+#include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
-#include <util/Config.hpp>
-#include <util/Exception.hpp>
-#include <util/ProgressBar.hpp>
+#include <third_party/ProgressBar.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 

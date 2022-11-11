@@ -16,8 +16,8 @@ include_directories("cpp")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
-add_executable(c4_gen_training_data cpp/main/GenerateTrainingData.cpp)
-add_executable(c4_play_vs_cpu cpp/main/PlayVsCpu.cpp)
+add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
+add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
 
 add_subdirectory("cpp/util")
 link_directories(${Boost_LIBRARY_DIRS})
