@@ -2,6 +2,8 @@
 
 #include <array>
 
+#include <common/AbstractPlayer.hpp>
+#include <common/GameStateConcept.hpp>
 #include <common/Types.hpp>
 
 namespace common {

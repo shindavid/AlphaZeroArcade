@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 
+#include <common/GameResult.hpp>
 #include <common/Types.hpp>
 #include <util/BitSet.hpp>
 
