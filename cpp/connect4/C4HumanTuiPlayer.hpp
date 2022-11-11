@@ -1,4 +1,4 @@
-#pragma
+#pragma once
 
 #include <ostream>
 
@@ -28,3 +28,5 @@ private:
 };
 
 }  // namespace c4
+
+#include <connect4/C4HumanTuiPlayerINLINES.cpp>

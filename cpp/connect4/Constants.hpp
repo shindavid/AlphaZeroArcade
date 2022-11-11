@@ -14,6 +14,7 @@ using mask_t = uint64_t;
 const int kNumColumns = 7;
 const int kNumRows = 6;
 const int kNumCells = kNumColumns * kNumRows;
+const int kMaxMovesPerGame = kNumColumns * kNumRows;
 const int kNumPlayers = 2;
 
 const common::player_index_t kRed = 0;

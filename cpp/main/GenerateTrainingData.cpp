@@ -11,11 +11,15 @@
 
 #include <connect4/Constants.hpp>
 #include <connect4/C4GameLogic.hpp>
+#include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
+#include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/ProgressBar.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
+
+namespace bf = boost::filesystem;
 
 /*
  * This interfaces with the connect4 perfect solver binary by creating a child-process that we interact with via
@@ -29,20 +33,11 @@
  * it is only a temporary fill-in until we get the self-play loop rolling. So, practically speaking, this is not worth
  * improving.
  */
-void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_bin,
-         const boost::filesystem::path& c4_solver_book, const boost::filesystem::path& games_dir)
+void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::path& games_dir)
 {
-  namespace bp = boost::process;
-
-  std::string c4_cmd = util::create_string("%s -b %s -a", c4_solver_bin.c_str(), c4_solver_book.c_str());
-  bp::ipstream out;
-  bp::opstream in;
-  bp::child proc(c4_cmd, bp::std_out > out,
-                 bp::std_err > bp::null,
-                 bp::std_in < in);
-
+  c4::PerfectOracle oracle(c4_solver_dir);
   std::string output_filename = util::create_string("%d.pt", thread_id);
-  boost::filesystem::path output_path = games_dir / output_filename;
+  bf::path output_path = games_dir / output_filename;
 
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
   torch::Tensor input_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::Tensorizor::kShape));
@@ -57,42 +52,24 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
 
     c4::GameState state;
     c4::Tensorizor tensorizor;
-    char move_history[64];
-    int mh = 0;
+    c4::PerfectOracle::MoveHistory move_history;
 
     while (true) {
-      move_history[mh] = '\n';
-      in.write(move_history, mh + 1);
-      in.flush();
-
-      std::string s;
-      std::getline(out, s);
-      auto tokens = util::split(s);
-      int move_scores[c4::kNumColumns];
-      for (int j = 0; j < c4::kNumColumns; ++j) {
-        int score = std::atoi(tokens[tokens.size() - c4::kNumColumns + j].c_str());
-        move_scores[j] = score;
-      }
+      auto query_result = oracle.get_best_moves(move_history);
+      c4::ActionMask best_moves = query_result.moves;
+      int best_score = query_result.score;
 
       common::player_index_t cp = state.get_current_player();
-      int best_score = *std::max_element(move_scores, move_scores + c4::kNumColumns);
-
       float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
-
-      float value_arr[c4::kNumPlayers] = {};
-      float best_move_arr[c4::kNumColumns] = {};
-
-      for (int j = 0; j < c4::kNumColumns; ++j) {
-        int best = move_scores[j] == best_score;
-        best_move_arr[j] = best;
-      }
-
+      std::array<float, c4::kNumPlayers> value_arr;
       value_arr[cp] = cur_player_value;
       value_arr[1 - cp] = 1 - cur_player_value;
 
+      auto best_move_arr = best_moves.to_float_array();
+
       tensorizor.tensorize(input_tensor.index({row}), state);
-      torch_util::copy_to(value_tensor.index({row}), value_arr, c4::kNumPlayers);
-      torch_util::copy_to(policy_tensor.index({row}), best_move_arr, c4::kNumColumns);
+      torch_util::copy_to(value_tensor.index({row}), value_arr);
+      torch_util::copy_to(policy_tensor.index({row}), best_move_arr);
       ++row;
 
       c4::ActionMask moves = state.get_valid_actions();
@@ -100,11 +77,10 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
       auto result = state.apply_move(move);
       tensorizor.receive_state_change(state, move);
       if (result.is_terminal()) {
-//        printf("Game terminated! %s\n", state.compact_repr().c_str());
         break;
       }
 
-      mh += sprintf(&move_history[mh], "%d", move + 1);
+      move_history.append(move);
     }
 
     auto slice = torch::indexing::Slice(torch::indexing::None, row);
@@ -120,20 +96,25 @@ void run(int thread_id, int num_games, const boost::filesystem::path& c4_solver_
   }
 }
 
-int main(int ac, char* av[]) {
+struct Args {
   int num_threads;
   int num_training_games;
   std::string c4_solver_dir_str;
   std::string games_dir_str;
+};
+
+int main(int ac, char* av[]) {
+  Args args;
 
   namespace po = boost::program_options;
   po::options_description desc("Generate training data from perfect solver");
   desc.add_options()
-      ("help,h", "product help message")
-      ("num-training-games,n", po::value<int>(&num_training_games)->default_value(100), "num training games")
-      ("num-threads,t", po::value<int>(&num_threads)->default_value(4), "num threads")
-      ("games-dir,g", po::value<std::string>(&games_dir_str)->default_value("c4_games"), "where to write games")
-      ("c4-solver-dir,c", po::value<std::string>(&c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
+      ("help,h", "help")
+      ("num-training-games,n", po::value<int>(&args.num_training_games)->default_value(10000), "num training games")
+      ("num-threads,t", po::value<int>(&args.num_threads)->default_value(8), "num threads")
+      ("games-dir,g", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"), "where to write games")
+      ("c4-solver-dir,c", po::value<std::string>(&args.c4_solver_dir_str),
+          "base dir containing c4solver bin and 7x6 book. Looks up in config.txt by default")
       ;
 
   po::variables_map vm;
@@ -144,36 +125,28 @@ int main(int ac, char* av[]) {
     std::cout << desc << std::endl;
     return 0;
   }
-  if (!num_training_games) {
-    throw std::runtime_error("Required option: -n");
-  }
 
-  boost::filesystem::path c4_solver_dir(c4_solver_dir_str);
-  if (!boost::filesystem::is_directory(c4_solver_dir)) {
-    throw util::Exception("Directory does not exist: %s", c4_solver_dir.c_str());
+  bf::path c4_solver_dir(args.c4_solver_dir_str);
+  if (args.c4_solver_dir_str.empty()) {
+    c4_solver_dir = c4::PerfectOracle::get_default_c4_solver_dir();
   }
-  boost::filesystem::path c4_solver_bin = c4_solver_dir / "c4solver";
-  boost::filesystem::path c4_solver_book = c4_solver_dir / "7x6.book";
-  if (!boost::filesystem::is_regular_file(c4_solver_bin)) {
-    throw util::Exception("File does not exist: %s", c4_solver_bin.c_str());
-  }
-  if (!boost::filesystem::is_regular_file(c4_solver_book)) {
-    throw util::Exception("File does not exist: %s", c4_solver_book.c_str());
-  }
+  c4::PerfectOracle oracle(c4_solver_dir);  // create a single oracle on main thread to get clearer exceptions
 
-  boost::filesystem::path games_dir(games_dir_str);
-  if (boost::filesystem::is_directory(games_dir)) {
-    boost::filesystem::remove_all(games_dir);
+  bf::path games_dir(args.games_dir_str);
+  if (bf::is_directory(games_dir)) {
+    bf::remove_all(games_dir);
   }
-  boost::filesystem::create_directories(games_dir);
+  bf::create_directories(games_dir);
 
-  if (num_threads == 1) {  // specialize for easier to parse core-dumps
-    run(0, num_training_games, c4_solver_bin, c4_solver_book, games_dir);
+  if (args.num_threads == 1) {  // specialize for easier to parse core-dumps
+    run(0, args.num_training_games, c4_solver_dir, games_dir);
   } else {
     std::vector<std::thread> threads;
-    for (int i=0; i<num_threads; ++i) {
-      int num_games = ((i + 1) * num_training_games / num_threads) - (i * num_training_games / num_threads);
-      threads.emplace_back(run, i, num_games, c4_solver_bin, c4_solver_book, games_dir);
+    for (int i=0; i<args.num_threads; ++i) {
+      int start = (i * args.num_training_games / args.num_threads);
+      int end = ((i + 1) * args.num_training_games / args.num_threads);
+      int num_games = end - start;
+      threads.emplace_back(run, i, num_games, c4_solver_dir, games_dir);
     }
 
     for (auto& th : threads) th.join();

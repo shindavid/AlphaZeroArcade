@@ -4,6 +4,7 @@
  * Various util functions that make the torch library more pleasnt to use.
  */
 
+#include <array>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -42,10 +43,10 @@ template<typename... SaveToArgs>
 void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&... args);
 
 /*
- * Copy arr[0], arr[1], ..., arr[n-1] to tensor[0], tensor[1], ..., tensor[n-1].
+ * Copy arr[0], arr[1], ..., arr[N-1] to tensor[0], tensor[1], ..., tensor[N-1].
  */
-template<typename T>
-void copy_to(torch::Tensor tensor, const T* arr, int n);
+template<typename T, size_t N>
+void copy_to(torch::Tensor tensor, const std::array<T, N>& arr);
 
 }  // namespace torch_util
 

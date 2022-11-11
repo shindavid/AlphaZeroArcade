@@ -4,11 +4,12 @@
 #include <iostream>
 
 #include <util/PrintUtil.hpp>
+#include <util/ScreenUtil.hpp>
 
 namespace c4 {
 
 inline void HumanTuiPlayer::start_game(const player_array_t& players, common::player_index_t seat_assignment) {
-  for (int p = 0; p < player_names_.size(); ++p) {
+  for (int p = 0; p < int(player_names_.size()); ++p) {
     player_names_[p] = players[p]->get_name();
   }
   my_index_ = seat_assignment;
@@ -36,6 +37,8 @@ inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state,
       printf("Invalid input!\n");
     }
     complain = true;
+    std::cout << "Enter move [0-6]: ";
+    std::cout.flush();
     std::string input;
     std::getline(std::cin, input);
     try {
@@ -55,10 +58,12 @@ inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state,
 inline void HumanTuiPlayer::xprintf_switch(const GameState& state) {
   util::clear_xprintf_target();
   print_state(state);
+  std::cout << buf_.str();
+  std::cout.flush();
 }
 
 inline void HumanTuiPlayer::print_state(const GameState& state) {
-  if (system("CLS")) system("clear");  // https://cplusplus.com/articles/4z18T05o/
+  util::clearscreen();
   state.xprintf_dump(player_names_, last_action_);
 }
 

@@ -127,8 +127,9 @@ inline void GameState::xprintf_dump(const player_name_array_t& player_names, com
     xprintf_row_dump(row, row == blink_row ? blink_column : -1);
   }
   util::xprintf("|0|1|2|3|4|5|6|\n");
-  util::xprintf("%s: %s\n", ansi::kRed, player_names[kRed].c_str());
-  util::xprintf("%s: %s\n\n", ansi::kYellow, player_names[kYellow].c_str());
+  util::xprintf("%s%s%s: %s\n", ansi::kRed, ansi::kCircle, ansi::kReset, player_names[kRed].c_str());
+  util::xprintf("%s%s%s: %s\n\n", ansi::kYellow, ansi::kCircle, ansi::kReset, player_names[kYellow].c_str());
+  util::xflush();
 }
 
 inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const {
@@ -144,7 +145,7 @@ inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle : " ";
 
-    util::xprintf("|%s%s%s%s|", col == blink_column ? ansi::kBlink : "", color, c, occupied ? ansi::kReset : "");
+    util::xprintf("|%s%s%s%s", col == blink_column ? ansi::kBlink : "", color, c, occupied ? ansi::kReset : "");
   }
 
   util::xprintf("|\n");

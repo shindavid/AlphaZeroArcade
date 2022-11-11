@@ -49,9 +49,9 @@ void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&..
  * TODO: there might be more efficient ways of doing this. One candidate is to use torch::from_blob() to create a
  * tensor from arr. We should profile and change this implementation if appropriate.
  */
-template<typename T>
-inline void copy_to(torch::Tensor tensor, const T* arr, int n) {
-  for (int i = 0; i < n; ++i) {
+template<typename T, size_t N>
+inline void copy_to(torch::Tensor tensor, const std::array<T, N>& arr) {
+  for (int i = 0; i < int(N); ++i) {
     tensor.index_put_({i}, arr[i]);
   }
 }

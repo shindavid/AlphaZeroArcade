@@ -5,8 +5,8 @@
 namespace common {
 
 template<GameStateConcept GameState>
-auto GameRunner<GameState>::run() {
-  for (int p = 0; p < players_.size(); ++p) {
+typename GameRunner<GameState>::Result GameRunner<GameState>::run() {
+  for (size_t p = 0; p < players_.size(); ++p) {
     players_[p]->start_game(players_, p);
   }
 
@@ -17,7 +17,7 @@ auto GameRunner<GameState>::run() {
     auto valid_actions = state.get_valid_actions();
     action_index_t action = player->get_action(state, valid_actions);
     if (!valid_actions[action]) {
-      throw util::Exception("Player %d (%s) attempted an illegal action (%d)", p, player->get_name(), action);
+      throw util::Exception("Player %d (%s) attempted an illegal action (%d)", p, player->get_name().c_str(), action);
     }
     auto result = state.apply_move(action);
     for (auto player2 : players_) {

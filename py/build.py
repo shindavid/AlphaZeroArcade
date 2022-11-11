@@ -64,10 +64,12 @@ def main():
     run(cmake_cmd)
 
     os.chdir(target_dir)
-    run('make')
+    run('make -j2')  # currently we have 2 main targets
     bin_postfix = 'd' if debug else ''
-    bin_loc = os.path.join(repo_root, target_dir, 'bin', f'c4_gen_training_data{bin_postfix}')
-    print(f'Binary location: {bin_loc}')
+    bin_loc1 = os.path.join(repo_root, target_dir, 'bin', f'c4_gen_training_data{bin_postfix}')
+    bin_loc2 = os.path.join(repo_root, target_dir, 'bin', f'c4_play_vs_cpu{bin_postfix}')
+    print(f'Binary location: {bin_loc1}')
+    print(f'Binary location: {bin_loc2}')
 
 
 if __name__ == '__main__':

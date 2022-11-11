@@ -20,4 +20,13 @@ int BitSet<N>::choose_random_set_bit() const {
   return p - 1;
 }
 
+template<int N>
+std::array<float, N> BitSet<N>::to_float_array() const {
+  std::array<float, N> arr;
+  for (int i = 0; i < N; ++i) {
+    arr[i] = (*this)[i];
+  }
+  return arr;
+}
+
 }  // namespace util
