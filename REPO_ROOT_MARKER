@@ -1,0 +1,1 @@
+This file simply marks the root of the repo. The c++ function util::Repo::root() works by looking for this file.
