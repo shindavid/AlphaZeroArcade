@@ -8,7 +8,7 @@
  */
 #include <cstdarg>
 #include <iostream>
-#include <ostream>
+#include <sstream>
 
 namespace util {
 
@@ -33,6 +33,11 @@ void clear_xprintf_target();
  * Else, simply dispatches to printf().
  */
 int xprintf(char const* fmt, ...) __attribute__((format(printf, 1, 2)));
+
+/*
+ * Calls std::cout.flush() if no xprintf target is currently set.
+ */
+void xflush();
 
 }  // namespace util
 

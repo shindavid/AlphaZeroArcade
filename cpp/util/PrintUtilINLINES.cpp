@@ -21,22 +21,22 @@ public:
     target_ = nullptr;
   }
 
-  int xprintf(char const* fmt, ...) __attribute__((format(printf, 2, 3))) {
+  int xprintf(char const* fmt, va_list* args) {
     if (target_) {
       int n = buf_size_;
       for (; n >= buf_size_; resize(2 * n)) {
-        va_list ap;
-        va_start(ap, fmt);
-        n = snprintf(buf_, buf_size_, fmt, ap);
-        va_end(ap);
+        n = vsnprintf(buf_, buf_size_, fmt, *args);
       }
+      (*target_) << buf_;
       return n;
     } else {
-      va_list ap;
-      va_start(ap, fmt);
-      int n = printf(fmt, ap);
-      va_end(ap);
-      return n;
+      return vprintf(fmt, *args);
+    }
+  }
+
+  void xflush() {
+    if (!target_) {
+      std::cout.flush();
     }
   }
 
@@ -66,11 +66,15 @@ inline void clear_xprintf_target() {
 }
 
 inline int xprintf(char const* fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  int n = detail::_xprintf_helper::instance().xprintf(fmt, ap);
-  va_end(ap);
+  va_list args;
+  va_start(args, fmt);
+  int n = detail::_xprintf_helper::instance().xprintf(fmt, &args);
+  va_end(args);
   return n;
+}
+
+inline void xflush() {
+  detail::_xprintf_helper::instance().xflush();
 }
 
 }  // namespace util
