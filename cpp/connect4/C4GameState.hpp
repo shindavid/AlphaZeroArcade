@@ -7,6 +7,7 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
+#include <common/AbstractPlayer.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Types.hpp>
 #include <connect4/C4Constants.hpp>
@@ -59,7 +60,11 @@ struct std::hash<c4::GameState> {
 };
 
 namespace c4 {
+
 static_assert(common::GameStateConcept<GameState>);
+
+using Player = common::AbstractPlayer<GameState>;
+
 }  // namespace c4
 
 #include <connect4/C4GameStateINLINES.cpp>

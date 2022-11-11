@@ -8,7 +8,7 @@
 
 namespace c4 {
 
-class HumanTuiPlayer : public common::AbstractPlayer<GameState> {
+class HumanTuiPlayer : public Player {
 public:
   using base_t = common::AbstractPlayer<GameState>;
 

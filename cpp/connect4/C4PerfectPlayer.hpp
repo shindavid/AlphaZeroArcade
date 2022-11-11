@@ -42,9 +42,9 @@ private:
   boost::process::child* proc_ = nullptr;
 };
 
-class PerfectPlayer : public common::AbstractPlayer<GameState> {
+class PerfectPlayer : public Player {
 public:
-  using base_t = common::AbstractPlayer<GameState>;
+  using base_t = Player;
 
   struct Params {
     Params(const boost::filesystem::path& c, bool s=true) : c4_solver_dir(c), strong_mode(s) {}
