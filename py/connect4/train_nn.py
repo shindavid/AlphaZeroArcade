@@ -272,7 +272,7 @@ def main():
     ms_per_train_row = 1000 * sec_per_epoch / c4_data_loader.train_n
 
     print('Finished Training (%.3fms/train-row)' % ms_per_train_row)
-    net.save(args.model_file, verbose=True)
+    best_net.save(args.model_file, verbose=True)
 
 
 if __name__ == '__main__':
