@@ -16,6 +16,7 @@ from config import Config
 from connect4 import game_logic
 from connect4.tensorizor import C4Tensorizor
 from connect4.game_logic import NUM_ROWS, NUM_COLUMNS
+from util.torch_util import Shape
 
 
 RANK = MPI.COMM_WORLD.Get_rank()
@@ -51,9 +52,6 @@ def main():
 
     MPI.COMM_WORLD.barrier()
     launch(args)
-
-
-Shape = Tuple[int, ...]
 
 
 def chunkify(shape: Shape, size=1024) -> Shape:

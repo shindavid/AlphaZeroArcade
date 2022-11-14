@@ -35,8 +35,13 @@ class NNetPlayer(AbstractPlayer):
         self.params = params
         self.last_action: Optional[ActionIndex] = None
         self.net = C4Net.load(params.model_file, verbose=True)
-        self.num_previous_states = C4Tensorizor.get_num_previous_states(self.net.input_shape)
-        self.tensor_shape = tuple([1] + list(self.net.input_shape))
+
+        # TODO: https://discuss.pytorch.org/t/deduce-input-shape-from-torch-jit-scriptmodule/165957
+        # self.num_previous_states = C4Tensorizor.get_num_previous_states(self.net.input_shape)
+        # self.tensor_shape = tuple([1] + list(self.net.input_shape))
+        self.num_previous_states = 0
+        self.tensor_shape = (1, 2, 7, 6)
+
         self.tensorizor = C4Tensorizor(self.num_previous_states)
 
         self.mcts = None

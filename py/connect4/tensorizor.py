@@ -9,11 +9,12 @@ from torch.nn import functional as F
 
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, Shape, AbstractSymmetryTransform, \
+from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, AbstractSymmetryTransform, \
     IdentifyTransform, PolicyTensor
 from neural_net import NeuralNet
 from profiling import ProfilerRegistry
 from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, Color, MAX_MOVES_PER_GAME
+from util.torch_util import Shape
 
 
 class ConvBlock(nn.Module):
@@ -133,16 +134,11 @@ class ValueHead(nn.Module):
 
 class C4Net(NeuralNet):
     def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
-        constructor_args = (input_shape, n_conv_filters, n_res_blocks)
-        super(C4Net, self).__init__(constructor_args)
+        super(C4Net, self).__init__(input_shape)
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(n_conv_filters)
         self.value_head = ValueHead(n_conv_filters)
-
-    @property
-    def input_shape(self) -> Shape:
-        return self.constructor_args[0]
 
     def forward(self, x):
         x = self.conv_block(x)

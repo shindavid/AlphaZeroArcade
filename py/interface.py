@@ -1,10 +1,8 @@
 import copy
-
-import torch
-from torch import Tensor
-
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Hashable, List, Type
+from typing import Optional, Tuple, Hashable, List
+
+from torch import Tensor
 
 """
 Various type aliases.
@@ -29,7 +27,6 @@ LocalPolicyLogitDistr = Tensor  # size=# locally legal actions, logit terms
 ValueProbDistr = Tensor  # size=# players, prob terms
 ValueLogitDistr = Tensor  # size=# players, logit terms
 GameResult = Optional[ValueProbDistr]
-Shape = Tuple[int, ...]
 
 
 class AbstractGameState(ABC):
