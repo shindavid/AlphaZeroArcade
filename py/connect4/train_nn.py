@@ -20,6 +20,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 
 from connect4.tensorizor import C4Net
 from util.repo_util import Repo
+from util.str_util import center_text
 
 
 def get_args():
@@ -127,14 +128,6 @@ class C4DataLoader:
         self.input_shape = full_input_data[0].shape
         self.train_loader = train_loader
         self.test_loader = test_loader
-
-
-def center_text(text: str, n: int) -> str:
-    m = n - len(text)
-    assert m>=0
-    a = m // 2
-    b = m - a
-    return (' ' * a) + text + (' ' * b)
 
 
 def main():
