@@ -4,8 +4,7 @@
 #include <cstdint>
 #include <initializer_list>
 
-template <class T>
-std::decay_t<T> decay_copy(T&&);
+#include <util/CppUtil.hpp>
 
 namespace common {
 
@@ -17,7 +16,7 @@ concept TensorizorConcept = requires(T tensorizor) {
   /*
    * The number of players in the game.
    */
-  { decay_copy(T::kShape) } -> std::same_as<std::initializer_list<size_t>>;
+  { util::decay_copy(T::kShape) } -> std::same_as<std::initializer_list<size_t>>;
 };
 
 }  // namespace common

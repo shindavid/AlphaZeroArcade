@@ -11,9 +11,9 @@ namespace common {
 template<GameStateConcept GameState>
 class AbstractPlayer {
 public:
-  using Result = GameResult<GameState::get_num_players()>;
-  using ActionMask = util::BitSet<GameState::get_num_global_actions()>;
-  using player_array_t = std::array<AbstractPlayer *, GameState::get_num_players()>;
+  using Result = GameResult<GameState::kNumPlayers>;
+  using ActionMask = util::BitSet<GameState::kNumGlobalActions>;
+  using player_array_t = std::array<AbstractPlayer *, GameState::kNumPlayers>;
 
   AbstractPlayer(const std::string &name) : name_(name) {}
   virtual ~AbstractPlayer() = default;

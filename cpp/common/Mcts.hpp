@@ -14,9 +14,9 @@ namespace common {
 template<GameStateConcept GameState, TensorizorConcept Tensorizor>
 class Mcts {
 public:
-  static constexpr int kNumGlobalActions = GameState::get_num_global_actions();
-  static constexpr int kMaxNumLocalActions = GameState::get_max_num_local_actions();
-  static constexpr int kNumPlayers = GameState::get_num_players();
+  static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
+  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
   using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
   using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;

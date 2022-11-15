@@ -5,6 +5,7 @@
 #include <common/GameResult.hpp>
 #include <common/Types.hpp>
 #include <util/BitSet.hpp>
+#include <util/CppUtil.hpp>
 
 namespace common {
 
@@ -16,7 +17,7 @@ concept GameStateConcept = requires(S state) {
   /*
    * The number of players in the game.
    */
-  { S::get_num_players() } -> std::same_as<int>;
+  { util::decay_copy(S::kNumPlayers) } -> std::same_as<int>;
 
   /*
    * Return the total number of global actions in the game.
@@ -24,7 +25,7 @@ concept GameStateConcept = requires(S state) {
    * For go, this is 19*19+1 = 362 (+1 because you can pass).
    * For connect-four, this is 7.
    */
-  { S::get_num_global_actions() } -> std::same_as<int>;
+  { util::decay_copy(S::kNumGlobalActions) } -> std::same_as<int>;
 
   /*
    * Return an upper bound on the number of local actions in the game.
@@ -35,7 +36,7 @@ concept GameStateConcept = requires(S state) {
    * In a game like chess, this number can be much smaller than the global number, potentially as small as 218
    * (see: https://chess.stackexchange.com/a/8392).
    */
-  { S::get_max_num_local_actions() } -> std::same_as<int>;
+  { util::decay_copy(S::kMaxNumLocalActions) } -> std::same_as<int>;
 
   /*
    * Return the current player.

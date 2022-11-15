@@ -18,7 +18,7 @@ public:
 
 class Tensorizor {
 public:
-  static constexpr std::initializer_list<size_t> kShape = {2, kNumColumns, kNumRows};
+  static constexpr std::initializer_list<size_t> kShape = {kNumPlayers, kNumColumns, kNumRows};
 
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
