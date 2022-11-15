@@ -4,6 +4,7 @@
 
 #include <torch/torch.h>
 
+#include <common/TensorizorConcept.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 
@@ -32,5 +33,7 @@ private:
 };
 
 }  // namespace c4
+
+static_assert(common::TensorizorConcept<c4::Tensorizor>);
 
 #include <connect4/C4TensorizorINLINES.cpp>

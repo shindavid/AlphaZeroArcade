@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include <common/GameResult.hpp>
 #include <common/Types.hpp>
 #include <util/BitSet.hpp>
@@ -23,6 +25,17 @@ concept GameStateConcept = requires(S state) {
    * For connect-four, this is 7.
    */
   { S::get_num_global_actions() } -> std::same_as<int>;
+
+  /*
+   * Return an upper bound on the number of local actions in the game.
+   *
+   * This can return the same value as get_num_global_actions(). Setting it to a smaller value allows for more
+   * compact data structures, which should reduce overall memory footprint and improve performance.
+   *
+   * In a game like chess, this number can be much smaller than the global number, potentially as small as 218
+   * (see: https://chess.stackexchange.com/a/8392).
+   */
+  { S::get_max_num_local_actions() } -> std::same_as<int>;
 
   /*
    * Return the current player.

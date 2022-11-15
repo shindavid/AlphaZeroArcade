@@ -14,11 +14,11 @@ namespace common {
  *
  * If the game is not yet over, the result will have all zeros.
  *
- * I chose to build on top of Eigen::Matrix, to take advantage of the built-in sum() and operator+ methods. It might
+ * I chose to build on top of Eigen::Vector, to take advantage of the built-in sum() and operator+ methods. It might
  * be better to just use std::array instead, to avoid unnecessary header dependencies.
  */
 template <int tNumPlayers>
-class GameResult : public Eigen::Matrix<float, tNumPlayers, 1> {
+class GameResult : public Eigen::Vector<float, tNumPlayers> {
 public:
   bool is_terminal() const { return this->sum() > 0; }
 };

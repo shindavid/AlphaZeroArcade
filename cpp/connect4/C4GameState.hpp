@@ -30,6 +30,7 @@ class GameState {
 public:
   static constexpr int get_num_players() { return kNumPlayers; }
   static constexpr int get_num_global_actions() { return kNumColumns; }
+  static constexpr int get_max_num_local_actions() { return kNumColumns; }
   common::player_index_t get_current_player() const;
   GameResult apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
@@ -59,9 +60,9 @@ struct std::hash<c4::GameState> {
   std::size_t operator()(const c4::GameState& state) const { return state.hash(); }
 };
 
-namespace c4 {
+static_assert(common::GameStateConcept<c4::GameState>);
 
-static_assert(common::GameStateConcept<GameState>);
+namespace c4 {
 
 using Player = common::AbstractPlayer<GameState>;
 

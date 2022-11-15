@@ -7,6 +7,7 @@
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayer.hpp>
+#include <connect4/C4NNetPlayer.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <util/Config.hpp>
 #include <util/Exception.hpp>
@@ -15,6 +16,7 @@
 struct Args {
   std::string c4_solver_dir_str;
   std::string my_starting_color;
+  bool perfect;
 };
 
 common::player_index_t parse_color(const std::string& str) {
@@ -35,6 +37,7 @@ int main(int ac, char* av[]) {
       ("help,h", "help")
       ("my-starting-color,s", po::value<std::string>(&args.my_starting_color), "human's starting color (R or Y). Default: random")
       ("c4-solver-dir,c", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
+      ("perfect,p", po::value<bool>(&args.perfect), "play against perfect player")
       ;
 
   po::variables_map vm;
@@ -52,11 +55,17 @@ int main(int ac, char* av[]) {
   }
 
   boost::filesystem::path c4_solver_dir(args.c4_solver_dir_str);
-  auto human = c4::HumanTuiPlayer();
+  c4::Player* human = new c4::HumanTuiPlayer();
 
-  c4::PerfectPlayer::Params cpu_params;
-  cpu_params.c4_solver_dir = c4_solver_dir;
-  auto cpu = c4::PerfectPlayer(cpu_params);
+  c4::Player* cpu;
+  if (args.perfect) {
+    c4::PerfectPlayer::Params cpu_params;
+    cpu_params.c4_solver_dir = c4_solver_dir;
+    cpu = new c4::PerfectPlayer(cpu_params);
+  } else {
+    c4::NNetPlayer::Params cpu_params;
+    cpu = new c4::NNetPlayer(cpu_params);
+  }
 
   common::player_index_t my_color = parse_color(args.my_starting_color);
   common::player_index_t cpu_color = 1 - my_color;
@@ -65,8 +74,8 @@ int main(int ac, char* av[]) {
   using player_array_t = std::array<player_t*, c4::kNumPlayers>;
 
   player_array_t players;
-  players[my_color] = &human;
-  players[cpu_color] = &cpu;
+  players[my_color] = human;
+  players[cpu_color] = cpu;
 
   common::GameRunner<c4::GameState> runner(players);
   auto result = runner.run();
@@ -78,6 +87,9 @@ int main(int ac, char* av[]) {
   } else {
     std::cout << "The game has ended in a draw!" << std::endl;
   }
+
+  delete cpu;
+  delete human;
 
   return 0;
 }
