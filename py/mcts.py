@@ -44,13 +44,6 @@ class MCTSParams:
         return not bool(self.dirichlet_mult)
 
 
-class MCTSNodeStats:
-    def __init__(self):
-        self.count = 0
-        self.value_sum = 0
-        self.policy_prior = 0.0
-
-
 @dataclass
 class MCTSResults:
     counts: GlobalPolicyCountDistr
