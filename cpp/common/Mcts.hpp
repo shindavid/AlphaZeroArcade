@@ -24,6 +24,7 @@ public:
   using Result = GameResult<kNumPlayers>;
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyLogitDistr = Eigen::Vector<float, kMaxNumLocalActions>;
+  using LocalPolicyProbDistr = Eigen::Vector<float, kMaxNumLocalActions>;
 
   struct Params {
     int tree_size_limit;
@@ -38,8 +39,8 @@ public:
 
   struct Results {
     GlobalPolicyCountDistr counts;
-    ValueProbDistr win_rates;
     GlobalPolicyProbDistr policy_prior;
+    ValueProbDistr win_rates;
     ValueProbDistr value_prior;
   };
 
@@ -62,6 +63,8 @@ private:
 
 public:
   Mcts();
+  void clear();
+  void receive_state_change(player_index_t, const GameState&, action_index_t, const Result&);
 };
 
 }  // namespace common

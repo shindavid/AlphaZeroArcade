@@ -27,7 +27,7 @@ public:
     float temperature = 0;
   };
 
-  using base_t = common::AbstractPlayer<GameState>;
+  using Mcts = common::Mcts<GameState, Tensorizor>;
 
   NNetPlayer(const Params&);
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
@@ -35,9 +35,28 @@ public:
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:
+  struct VerboseInfo {
+    Mcts::ValueProbDistr value;
+    Mcts::ValueProbDistr mcts_value;
+    Mcts::ValueProbDistr net_value;
+
+    // TODO: Make all these local
+    Mcts::GlobalPolicyProbDistr policy;
+    Mcts::GlobalPolicyProbDistr mcts_policy;
+    Mcts::GlobalPolicyCountDistr  mcts_counts;
+    Mcts::GlobalPolicyProbDistr net_policy;
+  };
+
+  common::action_index_t get_net_only_action(const GameState&, const ActionMask&);
+  common::action_index_t get_mcts_action(const GameState&, const ActionMask&);
+  void verbose_dump() const;
+
   const Params& params_;
   common::NeuralNet net_;
   Tensorizor tensorizor_;
+  torch::Tensor tensor_;
+  Mcts mcts_;
+  Mcts::Params mcts_params_;
   common::action_index_t last_action_ = -1;
   common::player_index_t my_index_ = -1;
 };

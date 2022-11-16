@@ -19,7 +19,7 @@ namespace torch_util {
 using shape_t = std::vector<int64_t>;
 
 /*
- * Smash together integral arguments and std::initializer_list arguments into a single shape_t. Without this helper
+ * Smash together integral  and std::array arguments into a single shape_t. Without this helper
  * function, constructing shapes through concatenation is cumbersome.
  */
 template<typename... Ts> shape_t to_shape(Ts&&... ts);

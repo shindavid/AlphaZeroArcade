@@ -1,27 +1,17 @@
-#include <torch/serialize/archive.h>
-#include <torch/serialize/tensor.h>
-
 #include <util/TorchUtil.hpp>
+
+#include <type_traits>
+
+#include <torch/serialize/archive.h>
+
+#include <util/CppUtil.hpp>
 
 namespace torch_util {
 
-inline shape_t to_shape() { return {}; }
-
-template<typename T, typename... Ts> shape_t to_shape(const std::initializer_list<T>& t, Ts&&... ts) {
-  shape_t vec1;
-  for (auto x : t) {
-    vec1.push_back(x);
-  }
-  shape_t vec2 = to_shape(std::forward<Ts>(ts)...);
-  vec1.insert(vec1.end(), vec2.begin(), vec2.end());
-  return vec1;
-}
-
-template<typename T, typename... Ts> shape_t to_shape(T t, Ts&&... ts) {
-  shape_t vec1 = {int64_t(t)};
-  shape_t vec2 = to_shape(std::forward<Ts>(ts)...);
-  vec1.insert(vec1.end(), vec2.begin(), vec2.end());
-  return vec1;
+template<typename... Ts> shape_t to_shape(Ts&&... ts) {
+  auto arr = util::to_std_array<int64_t>(std::forward<Ts>(ts)...);
+  shape_t vec(arr.begin(), arr.end());
+  return vec;
 }
 
 inline shape_t zeros_like(const shape_t& shape) {

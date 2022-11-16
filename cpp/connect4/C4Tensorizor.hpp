@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include <torch/torch.h>
@@ -18,7 +19,7 @@ public:
 
 class Tensorizor {
 public:
-  static constexpr std::initializer_list<size_t> kShape = {kNumPlayers, kNumColumns, kNumRows};
+  static constexpr auto kShape = std::array{kNumPlayers, kNumColumns, kNumRows};
 
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}

@@ -2,7 +2,7 @@
 
 #include <concepts>
 #include <cstdint>
-#include <initializer_list>
+#include <type_traits>
 
 #include <util/CppUtil.hpp>
 
@@ -16,7 +16,7 @@ concept TensorizorConcept = requires(T tensorizor) {
   /*
    * The number of players in the game.
    */
-  { util::decay_copy(T::kShape) } -> std::same_as<std::initializer_list<size_t>>;
+  { util::decay_copy(T::kShape) } -> util::is_std_array_c;
 };
 
 }  // namespace common

@@ -16,7 +16,9 @@
 struct Args {
   std::string c4_solver_dir_str;
   std::string my_starting_color;
-  bool perfect;
+  bool perfect = false;
+  bool neural_network_only = false;
+  bool verbose = false;
 };
 
 common::player_index_t parse_color(const std::string& str) {
@@ -38,6 +40,8 @@ int main(int ac, char* av[]) {
       ("my-starting-color,s", po::value<std::string>(&args.my_starting_color), "human's starting color (R or Y). Default: random")
       ("c4-solver-dir,c", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("perfect,p", po::value<bool>(&args.perfect), "play against perfect player")
+      ("neural-network-only,o", po::value<bool>(&args.neural_network_only), "neural network only")
+      ("verbose,v", po::value<bool>(&args.verbose), "verbose mode")
       ;
 
   po::variables_map vm;
@@ -64,6 +68,8 @@ int main(int ac, char* av[]) {
     cpu = new c4::PerfectPlayer(cpu_params);
   } else {
     c4::NNetPlayer::Params cpu_params;
+    cpu_params.neural_network_only = args.neural_network_only;
+    cpu_params.verbose = args.verbose;
     cpu = new c4::NNetPlayer(cpu_params);
   }
 
