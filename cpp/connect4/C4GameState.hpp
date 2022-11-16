@@ -68,4 +68,4 @@ using Player = common::AbstractPlayer<GameState>;
 
 }  // namespace c4
 
-#include <connect4/C4GameStateINLINES.cpp>
+#include <connect4/inl/C4GameState.inl>

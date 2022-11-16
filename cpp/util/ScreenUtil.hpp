@@ -6,4 +6,4 @@ void clearscreen();
 
 }  // namespace util
 
-#include <util/ScreenUtilINLINES.cpp>
+#include <util/inl/ScreenUtil.inl>

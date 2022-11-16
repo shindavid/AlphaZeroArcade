@@ -63,4 +63,4 @@ private:
 
 }  // namespace c4
 
-#include <connect4/C4NNetPlayerINLINES.cpp>
+#include <connect4/inl/C4NNetPlayer.inl>

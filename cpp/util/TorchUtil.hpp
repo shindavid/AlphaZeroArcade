@@ -50,4 +50,4 @@ void copy_to(torch::Tensor tensor, const std::array<T, N>& arr);
 
 }  // namespace torch_util
 
-#include <util/TorchUtilINLINES.cpp>
+#include <util/inl/TorchUtil.inl>

@@ -20,4 +20,4 @@ private:
 
 }  // namespace util
 
-#include <util/RepoUtilINLINES.cpp>
+#include <util/inl/RepoUtil.inl>

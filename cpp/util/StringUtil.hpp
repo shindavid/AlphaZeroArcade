@@ -29,4 +29,4 @@ inline std::string create_string(char const* fmt, ...);
 
 }  // namespace util
 
-#include <util/StringUtilINLINES.cpp>
+#include <util/inl/StringUtil.inl>

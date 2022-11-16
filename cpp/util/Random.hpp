@@ -26,4 +26,4 @@ private:
 
 }  // namespace util
 
-#include <util/RandomINLINES.cpp>
+#include <util/inl/Random.inl>

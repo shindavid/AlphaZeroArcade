@@ -69,4 +69,4 @@ public:
 
 }  // namespace common
 
-#include <common/MctsINLINES.cpp>
+#include <common/inl/Mcts.inl>

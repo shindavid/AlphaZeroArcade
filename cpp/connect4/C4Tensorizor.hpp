@@ -37,4 +37,4 @@ private:
 
 static_assert(common::TensorizorConcept<c4::Tensorizor>);
 
-#include <connect4/C4TensorizorINLINES.cpp>
+#include <connect4/inl/C4Tensorizor.inl>

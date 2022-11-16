@@ -29,4 +29,4 @@ private:
 
 }  // namespace util
 
-#include <util/ConfigINLINES.cpp>
+#include <util/inl/Config.inl>

@@ -25,4 +25,4 @@ private:
 
 }  // namespace common
 
-#include <common/GameRunnerINLINES.cpp>
+#include <common/inl/GameRunner.inl>

@@ -54,4 +54,4 @@ template<typename A, typename... Ts> constexpr auto to_std_array(const Ts&... ts
 
 }  // namespace util
 
-#include <util/CppUtilINLINES.cpp>
+#include <util/inl/CppUtil.inl>

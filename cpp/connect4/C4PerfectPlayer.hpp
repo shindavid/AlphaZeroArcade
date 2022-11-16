@@ -68,4 +68,4 @@ private:
 
 }  // namespace c4
 
-#include <connect4/C4PerfectPlayerINLINES.cpp>
+#include <connect4/inl/C4PerfectPlayer.inl>

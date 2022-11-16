@@ -20,4 +20,4 @@ private:
 
 }  // namespace common
 
-#include <common/NeuralNetINLINES.cpp>
+#include <common/inl/NeuralNet.inl>
