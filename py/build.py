@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
+
+"""
+TODO: incorporate ninja.
+"""
 import argparse
 import os
+import subprocess
 import sys
+from typing import List
 
 from config import Config
 
 
-def run(cmd):
+def run(cmd: str):
     print(cmd)
     if os.system(cmd):
         sys.exit(1)
@@ -15,7 +21,28 @@ def run(cmd):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
+    parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
+    parser.add_argument("-j", '--parallel', type=int,
+                        help='make -j value (for build parallelism). Uses config value cmake.j if available. '
+                             'Else uses cmake default')
     return parser.parse_args()
+
+
+def get_bins(targets: List[str], args) -> List[str]:
+    if targets:
+        bin_postfix = 'd' if args.debug else ''
+        return [f'{t}{bin_postfix}' for t in targets]
+    try:
+        cmd = 'cmake --build . --target help'
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, encoding='utf-8')
+        stdout = proc.communicate()[0]
+        bins = []
+        for line in stdout.splitlines():
+            if line.startswith('... '):
+                bins.append(line.split()[1])
+        return bins
+    except:
+        return ['???']
 
 
 def main():
@@ -23,6 +50,11 @@ def main():
     debug = bool(args.debug)
 
     torch_dir = Config.instance().get('libtorch_dir')
+    j_value = args.parallel
+    if not j_value:
+        j_value = int(Config.instance().get('cmake.j', 0))
+
+    targets = args.target.split(',') if args.target else []
 
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     cfg = Config.instance().filename
@@ -64,12 +96,24 @@ def main():
     run(cmake_cmd)
 
     os.chdir(target_dir)
-    run('make -j2')  # currently we have 2 main targets
-    bin_postfix = 'd' if debug else ''
-    bin_loc1 = os.path.join(repo_root, target_dir, 'bin', f'c4_gen_training_data{bin_postfix}')
-    bin_loc2 = os.path.join(repo_root, target_dir, 'bin', f'c4_play_vs_cpu{bin_postfix}')
-    print(f'Binary location: {bin_loc1}')
-    print(f'Binary location: {bin_loc2}')
+    build_cmd_tokens = [
+        'cmake',
+        '--build',
+        '.'
+    ]
+    for t in targets:
+        build_cmd_tokens.extend(['--target', t])
+    if j_value:
+        build_cmd_tokens.append(f'-j{j_value}')
+
+    build_cmd = ' '.join(build_cmd_tokens)
+    run(build_cmd)
+
+    bins = get_bins(targets, args)
+    for b in bins:
+        bin_loc = os.path.join(repo_root, target_dir, 'bin', b)
+        if os.path.isfile(bin_loc):
+            print(f'Binary location: {bin_loc}')
 
 
 if __name__ == '__main__':
