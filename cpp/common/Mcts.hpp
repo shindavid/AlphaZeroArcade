@@ -11,7 +11,7 @@
 
 namespace common {
 
-template<GameStateConcept GameState, TensorizorConcept Tensorizor>
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;

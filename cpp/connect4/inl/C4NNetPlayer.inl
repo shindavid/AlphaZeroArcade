@@ -2,6 +2,7 @@
 
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
+#include <util/TorchUtil.hpp>
 
 namespace c4 {
 
@@ -16,6 +17,8 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   if (!params_.neural_network_only) {
     throw util::Exception("!neural_network_only not yet supported");
   }
+  input_ = torch::zeros(kTensorShape).to(at::kCUDA);
+  input_vec_.push_back(input_);
 }
 
 inline void NNetPlayer::start_game(const player_array_t& players, common::player_index_t seat_assignment) {
@@ -48,8 +51,20 @@ inline common::action_index_t NNetPlayer::get_action(const GameState& state, con
 }
 
 inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& state, const ActionMask& valid_actions) {
-  tensorizor_.tensorize(tensor_, state);
-//  tensor_.reshape();
+  CATCH_TENSOR_MALLOCS(input_);
+  tensorizor_.tensorize(input_[0], state);
+  auto transform = tensorizor_.get_random_symmetry(state);
+  transform->transform_input(input_[0]);
+
+  net_.predict(input_vec_, policy_, value_);
+  transform->transform_policy(policy_);
+
+  if (params_.temperature) {
+    policy_ /= params_.temperature;
+    torch::softmax_out(policy_, policy_, 0);
+  } else {
+
+  }
   throw std::exception();
 }
 

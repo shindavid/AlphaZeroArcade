@@ -10,6 +10,7 @@
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
+#include <util/CppUtil.hpp>
 
 namespace c4 {
 
@@ -28,6 +29,7 @@ public:
   };
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
+  static constexpr auto kTensorShape = util::to_std_array<int64_t>(1, Tensorizor::kShape);
 
   NNetPlayer(const Params&);
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
@@ -54,7 +56,8 @@ private:
   const Params& params_;
   common::NeuralNet net_;
   Tensorizor tensorizor_;
-  torch::Tensor tensor_;
+  common::NeuralNet::input_vec_t input_vec_;
+  torch::Tensor input_, policy_, value_;
   Mcts mcts_;
   Mcts::Params mcts_params_;
   common::action_index_t last_action_ = -1;

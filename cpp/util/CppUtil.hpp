@@ -34,7 +34,10 @@ template <class T> std::decay_t<T> decay_copy(T&&);
 template<typename T> struct is_std_array { static const bool value = false; };
 template<typename T, size_t N> struct is_std_array<std::array<T, N>> { static const bool value = true; };
 template<typename T> inline constexpr bool is_std_array_v = is_std_array<T>::value;
-template <typename T> concept is_std_array_c = is_std_array_v<T>;
+template<typename T> concept is_std_array_c = is_std_array_v<T>;
+
+template<typename DerivedPtr, typename Base> concept is_pointer_derived_from =
+  std::is_pointer_v<DerivedPtr> && std::derived_from<Base, std::remove_pointer_t<DerivedPtr>>;
 
 template<typename T, size_t N>
 constexpr size_t array_size(const std::array<T, N>&) { return N; }
