@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.17)
 set(CMAKE_DEBUG_POSTFIX d)
 project(project_name)
 
+if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
+    add_definitions(-DNDEBUG)
+endif()
+
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
 find_package(Boost COMPONENTS program_options filesystem  REQUIRED)
