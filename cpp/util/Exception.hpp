@@ -8,13 +8,15 @@
 
 namespace util {
 
+/*
+ * TODO: dynamic resizing in case the error text exceeds 1024 chars. See <util/inl/PrintUtil.inl> for similar use case.
+ */
 class Exception : public std::exception {
 public:
   Exception(char const* fmt, ...) __attribute__((format(printf, 2, 3))) {
-    char text[1024];
     va_list ap;
     va_start(ap, fmt);
-    vsnprintf(text, sizeof(text), fmt, ap);
+    vsnprintf(text_, sizeof(text_), fmt, ap);
     va_end(ap);
   }
 
