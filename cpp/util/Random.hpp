@@ -11,10 +11,9 @@ namespace util {
 class Random {
 public:
   /*
-   * Uniformly randomly picks an int in the closed range [lower, upper].
+   * Uniformly randomly picks a value in the half-open range [lower, upper).
    */
-  template<typename T>
-  static T uniform_draw(T lower, T upper);
+  template<typename T, typename U> static auto uniform_draw(T lower, U upper);
 
 private:
   static Random* instance();

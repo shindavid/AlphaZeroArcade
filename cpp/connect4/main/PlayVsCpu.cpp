@@ -24,7 +24,7 @@ struct Args {
 common::player_index_t parse_color(const std::string& str) {
   if (str == "R") return c4::kRed;
   if (str == "Y") return c4::kYellow;
-  if (str.empty()) return util::Random::uniform_draw(0, 1);
+  if (str.empty()) return util::Random::uniform_draw(0, c4::kNumPlayers);
   throw util::Exception("Invalid --my-starting-color/-s value: \"%s\"", str.c_str());
 }
 

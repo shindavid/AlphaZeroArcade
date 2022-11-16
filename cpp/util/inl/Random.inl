@@ -4,11 +4,11 @@
 
 namespace util {
 
-
-template<typename T>
-inline T Random::uniform_draw(T lower, T upper) {
+template<typename T, typename U>
+inline auto Random::uniform_draw(T lower, U upper) {
   Random* random = instance();
-  std::uniform_int_distribution<T> dist{lower, upper};
+  using V = decltype(std::declval<T>() + std::declval<U>());
+  std::uniform_int_distribution<V> dist{(V)lower, (V)upper};
   return dist(random->prng_);
 }
 
