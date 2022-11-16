@@ -5,8 +5,26 @@
 #include <torch/serialize/archive.h>
 
 #include <util/CppUtil.hpp>
+#include <util/Exception.hpp>
 
 namespace torch_util {
+
+inline CatchTensorMallocs::CatchTensorMallocs(
+    const torch::Tensor& tensor, const char* var, const char* file, int line, bool ignore)
+: tensor_(tensor)
+, data_ptr_(tensor.data_ptr())
+, var_(var)
+, file_(file)
+, line_(line)
+, ignore_(ignore)
+{}
+
+inline CatchTensorMallocs::~CatchTensorMallocs() noexcept(false) {
+  if (ignore_) return;
+  if (data_ptr_ == tensor_.data_ptr()) return;
+  throw util::Exception("The data memory address of Tensor %s changed since it was snapshotted at %s:%d",
+                        var_, file_, line_);
+}
 
 template<typename... Ts> shape_t to_shape(Ts&&... ts) {
   auto arr = util::to_std_array<int64_t>(std::forward<Ts>(ts)...);

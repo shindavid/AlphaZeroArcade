@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <type_traits>
 
+#define CONCAT_HELPER(x, y) x ## y
+#define CONCAT(x, y) CONCAT_HELPER(x, y)
+
 namespace util {
 
 /*
