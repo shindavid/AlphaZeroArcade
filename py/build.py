@@ -28,19 +28,18 @@ def get_args():
     return parser.parse_args()
 
 
-def get_bins(targets: List[str], args) -> List[str]:
+def get_targets(targets: List[str], args) -> List[str]:
     if targets:
-        bin_postfix = 'd' if args.debug else ''
-        return [f'{t}{bin_postfix}' for t in targets]
+        return targets
     try:
         cmd = 'cmake --build . --target help'
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, encoding='utf-8')
         stdout = proc.communicate()[0]
-        bins = []
+        targets = []
         for line in stdout.splitlines():
             if line.startswith('... '):
-                bins.append(line.split()[1])
-        return bins
+                targets.append(line.split()[1])
+        return targets
     except:
         return ['???']
 
@@ -109,9 +108,10 @@ def main():
     build_cmd = ' '.join(build_cmd_tokens)
     run(build_cmd)
 
-    bins = get_bins(targets, args)
+    bin_postfix = 'd' if args.debug else ''
+    bins = get_targets(targets, args)
     for b in bins:
-        bin_loc = os.path.join(repo_root, target_dir, 'bin', b)
+        bin_loc = os.path.join(repo_root, target_dir, 'bin', f'{b}{bin_postfix}')
         if os.path.isfile(bin_loc):
             print(f'Binary location: {bin_loc}')
 
