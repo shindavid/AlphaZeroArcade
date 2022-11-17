@@ -10,20 +10,22 @@
 namespace torch_util {
 
 inline CatchTensorMallocs::CatchTensorMallocs(
-    const torch::Tensor& tensor, const char* var, const char* file, int line, bool ignore)
-: tensor_(tensor)
+    int& catch_count, const torch::Tensor& tensor, const char* var, const char* file, int line, int ignore_count)
+: catch_count_(catch_count)
+, tensor_(tensor)
 , data_ptr_(tensor.data_ptr())
 , var_(var)
 , file_(file)
 , line_(line)
-, ignore_(ignore)
+, ignore_count_(ignore_count)
 {}
 
 inline CatchTensorMallocs::~CatchTensorMallocs() noexcept(false) {
-  if (ignore_) return;
   if (data_ptr_ == tensor_.data_ptr()) return;
-  throw util::Exception("The data memory address of Tensor %s changed since it was snapshotted at %s:%d",
-                        var_, file_, line_);
+  catch_count_++;
+  if (catch_count_ <= ignore_count_) return;
+  throw util::Exception("The data memory address of Tensor %s changed %d time%s since it was snapshotted at %s:%d",
+                        var_, catch_count_, catch_count_ > 1 ? "s" : "", file_, line_);
 }
 
 template<typename... Ts> shape_t to_shape(Ts&&... ts) {
