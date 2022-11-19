@@ -135,7 +135,7 @@ class AbstractSymmetryTransform(ABC):
         pass
 
 
-class IdentifyTransform(AbstractSymmetryTransform):
+class IdentityTransform(AbstractSymmetryTransform):
     def transform_input(self, net_input: NeuralNetworkInput) -> NeuralNetworkInput:
         return net_input
 

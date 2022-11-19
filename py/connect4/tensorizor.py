@@ -10,7 +10,7 @@ from torch.nn import functional as F
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, AbstractSymmetryTransform, \
-    IdentifyTransform, PolicyTensor
+    IdentityTransform, PolicyTensor
 from neural_net import NeuralNet
 from profiling import ProfilerRegistry
 from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, Color, MAX_MOVES_PER_GAME
@@ -202,7 +202,7 @@ class C4Tensorizor(AbstractGameTensorizor):
         self.num_previous_states = num_previous_states
         self.history_buffer = HistoryBuffer(num_previous_states)
         self.move_stack: List[ActionIndex] = []
-        self.symmetries = [IdentifyTransform(), C4ReflectionTransform()]
+        self.symmetries = [IdentityTransform(), C4ReflectionTransform()]
 
     def clear(self):
         self.history_buffer = HistoryBuffer(self.num_previous_states)
