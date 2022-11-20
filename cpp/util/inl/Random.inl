@@ -8,7 +8,7 @@ template<typename T, typename U>
 inline auto Random::uniform_draw(T lower, U upper) {
   Random* random = instance();
   using V = decltype(std::declval<T>() + std::declval<U>());
-  std::uniform_int_distribution<V> dist{(V)lower, (V)upper};
+  std::uniform_int_distribution<V> dist{(V)lower, (V)(upper - 1)};
   return dist(random->prng_);
 }
 
