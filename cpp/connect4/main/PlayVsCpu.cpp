@@ -3,7 +3,7 @@
 #include <boost/program_options.hpp>
 
 #include <common/GameRunner.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayer.hpp>

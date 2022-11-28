@@ -5,7 +5,7 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 
 namespace common {
 

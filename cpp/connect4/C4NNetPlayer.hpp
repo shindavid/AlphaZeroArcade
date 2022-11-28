@@ -8,7 +8,7 @@
 #include <common/DerivedTypes.hpp>
 #include <common/Mcts.hpp>
 #include <common/NeuralNet.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>

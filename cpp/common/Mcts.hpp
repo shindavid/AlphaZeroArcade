@@ -6,7 +6,7 @@
 #include <common/GameStateConcept.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <util/BitSet.hpp>
 
 namespace common {

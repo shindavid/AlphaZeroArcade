@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include <common/AbstractSymmetryTransform.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <util/CppUtil.hpp>
 
 namespace common {

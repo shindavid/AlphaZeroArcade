@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <util/BitSet.hpp>
 
 namespace c4 {

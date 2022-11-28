@@ -5,7 +5,7 @@
 #include <Eigen/Core>
 
 #include <common/DerivedTypes.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 
