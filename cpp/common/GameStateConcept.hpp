@@ -2,7 +2,9 @@
 
 #include <concepts>
 
-#include <common/GameResult.hpp>
+#include <Eigen/Core>
+
+#include <common/DerivedTypes.hpp>
 #include <common/Types.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
@@ -44,9 +46,9 @@ concept GameStateConcept = requires(S state) {
   { state.get_current_player() } -> std::same_as<player_index_t>;
 
   /*
-   * Apply a given action to the state, and return a GameResult.
+   * Apply a given action to the state, and return a Result.
    */
-  { state.apply_move(action_index_t()) } -> is_game_result_c;
+  { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes<S>::Result>;
 
   /*
    * Get the valid actions, as a util::BitSet.

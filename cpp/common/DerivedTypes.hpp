@@ -8,11 +8,24 @@
 
 namespace common {
 
+/*
+ * Represents the result of a game, as a length-t array of non-negative floats, where t is the number of players in
+ * the game.
+ *
+ * If the result represents a terminal game state, the array will have sum 1. Normally, one slot in the array,
+ * corresponding to the winner, will equal 1, and the other slots will equal 0. In the even of a draw, the tied
+ * players will typically each equal the same fractional value.
+ *
+ * If the game is not yet over, the result will have all zeros.
+ */
+template<int NumPlayers> using GameResult = Eigen::Vector<float, NumPlayers>;
+template<int NumPlayers> bool is_terminal_result(const GameResult<NumPlayers>& result) { return result.sum() > 0; }
+
 template<typename GameState>
 struct GameStateTypes {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
 
-  using Result = Eigen::TensorFixedSize<float, Eigen::Sizes<kNumPlayers>>;
+  using Result = GameResult<kNumPlayers>;
 };
 
 template<typename Tensorizor>

@@ -3,6 +3,7 @@
 #include <array>
 
 #include <common/AbstractPlayer.hpp>
+#include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Types.hpp>
 
@@ -11,7 +12,7 @@ namespace common {
 template<GameStateConcept GameState>
 class GameRunner {
 public:
-  using Result = GameResult<GameState::kNumPlayers>;
+  using Result = typename GameStateTypes<GameState>::Result;
   using Player = AbstractPlayer<GameState>;
   using player_array_t = std::array<Player*, GameState::kNumPlayers>;
 

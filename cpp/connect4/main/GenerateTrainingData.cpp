@@ -8,6 +8,7 @@
 #include <boost/program_options.hpp>
 #include <torch/torch.h>
 
+#include <common/DerivedTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
@@ -74,7 +75,7 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       int move = moves.choose_random_set_bit();
       auto result = state.apply_move(move);
       tensorizor.receive_state_change(state, move);
-      if (result.is_terminal()) {
+      if (common::is_terminal_result(result)) {
         break;
       }
 

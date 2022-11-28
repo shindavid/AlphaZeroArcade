@@ -12,7 +12,7 @@ inline common::player_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline GameResult GameState::apply_move(common::action_index_t action) {
+inline common::GameStateTypes<GameState>::Result GameState::apply_move(common::action_index_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   common::player_index_t current_player = get_current_player();
@@ -51,7 +51,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
     }
   }
 
-  GameResult result;
+  Result result;
   result.setZero();
   if (win) {
     result(current_player) = 1.0;

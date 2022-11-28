@@ -2,7 +2,7 @@
 
 #include <Eigen/Core>
 
-#include <common/GameResult.hpp>
+#include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
@@ -21,7 +21,7 @@ public:
   using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
   using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
   using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
-  using Result = GameResult<kNumPlayers>;
+  using Result = typename GameStateTypes<GameState>::Result;
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyLogitDistr = Eigen::Vector<float, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Vector<float, kMaxNumLocalActions>;
@@ -49,7 +49,7 @@ private:
   class StateEvaluation {
   public:
     StateEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result);
-    bool is_terminal() const { return result_.is_terminal(); }
+    bool is_terminal() const { return is_terminal_result(result_); }
 
   private:
     player_index_t current_player_;

@@ -8,6 +8,7 @@
 #include <torch/torch.h>
 
 #include <common/AbstractPlayer.hpp>
+#include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Types.hpp>
 #include <connect4/C4Constants.hpp>
@@ -31,8 +32,11 @@ public:
   static constexpr int kNumPlayers = c4::kNumPlayers;
   static constexpr int kNumGlobalActions = kNumColumns;
   static constexpr int kMaxNumLocalActions = kNumColumns;
+
+  using Result = common::GameStateTypes<GameState>::Result;
+
   common::player_index_t get_current_player() const;
-  GameResult apply_move(common::action_index_t action);
+  Result apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
 

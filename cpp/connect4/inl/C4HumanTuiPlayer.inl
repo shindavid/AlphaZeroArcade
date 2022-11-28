@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <common/DerivedTypes.hpp>
 #include <util/PrintUtil.hpp>
 #include <util/ScreenUtil.hpp>
 
@@ -20,7 +21,7 @@ inline void HumanTuiPlayer::receive_state_change(
     common::player_index_t, const GameState& state, common::action_index_t action, const Result& result)
 {
   last_action_ = action;
-  if (result.is_terminal()) {
+  if (common::is_terminal_result(result)) {
     xprintf_switch(state);
   }
 }
