@@ -37,7 +37,8 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
   bf::path output_path = games_dir / output_filename;
 
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
-  torch::Tensor input_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::Tensorizor::kShape));
+  torch::Tensor input_tensor = torch::zeros(torch_util::to_shape(
+      max_rows, util::std_array_v<int, c4::Tensorizor::Shape>));
   torch::Tensor value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
   torch::Tensor policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
 

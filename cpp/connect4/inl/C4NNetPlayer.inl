@@ -17,7 +17,9 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   if (!params_.neural_network_only) {
     throw util::Exception("!neural_network_only not yet supported");
   }
-  input_ = torch::zeros(kTensorShape).to(at::kCUDA);
+  torch_util::init_tensor(policy_);
+  torch_util::init_tensor(value_);
+  input_ = torch::zeros(util::std_array_v<int64_t, TensorShape>).to(at::kCUDA);
   input_vec_.push_back(input_);
 }
 
@@ -52,6 +54,8 @@ inline common::action_index_t NNetPlayer::get_action(const GameState& state, con
 
 inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& state, const ActionMask& valid_actions) {
   CATCH_TENSOR_MALLOCS(input_);
+  CATCH_TENSOR_MALLOCS(policy_);
+  CATCH_TENSOR_MALLOCS(value_);
   tensorizor_.tensorize(input_[0], state);
   auto transform = tensorizor_.get_random_symmetry(state);
   transform->transform_input(input_[0]);
@@ -63,12 +67,19 @@ inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& s
     policy_ /= params_.temperature;
     torch::softmax_out(policy_, policy_, 0);
   } else {
-
+    // TODO: I think there is multiple dynamic memory allocation in below
+    // 2 lines. Fix me!
+    policy_ -= torch::max(policy_);
+    policy_ = (policy_ >= 0).to(torch::kFloat);
   }
   throw std::exception();
 }
 
 inline common::action_index_t NNetPlayer::get_mcts_action(const GameState& state, const ActionMask& valid_actions) {
+  throw std::exception();
+}
+
+inline common::action_index_t NNetPlayer::get_action_helper() {
   throw std::exception();
 }
 

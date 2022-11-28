@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unsupported/Eigen/CXX11/Tensor>
+
 #include <util/CppUtil.hpp>
 
 /*
@@ -90,7 +92,7 @@ private:
 using shape_t = std::vector<int64_t>;
 
 /*
- * Smash together integral  and std::array arguments into a single shape_t. Without this helper
+ * Smash together integral and std::array arguments into a single shape_t. Without this helper
  * function, constructing shapes through concatenation is cumbersome.
  */
 template<typename... Ts> shape_t to_shape(Ts&&... ts);
@@ -118,6 +120,27 @@ void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&..
  */
 template<typename T, size_t N>
 void copy_to(torch::Tensor tensor, const std::array<T, N>& arr);
+
+/*
+ * Copy the Eigen::TensorFixedSize to the torch::Tensor.
+ *
+ * Note, there may be more efficient, or even "free" ways to do this:
+ *
+ * https://discuss.pytorch.org/t/data-transfer-between-libtorch-c-and-eigen/54156
+ * https://pytorch.org/cppdocs/api/function_namespacetorch_1ad7fb2a7759ef8c9443b489ddde494787.html
+ *
+ * Deserves some more investigation later.
+ */
+template<typename T, std::ptrdiff_t... P>
+void copy_to(torch::Tensor to_tensor,
+             const Eigen::TensorFixedSize<T, Eigen::Sizes<P...>>& from_tensor);
+
+/*
+ * A default-constructed torch::Tensor cannot be used. This function assigns
+ * the tensor to an arbitrary value, so that the tensor can be re-assigned
+ * later.
+ */
+void init_tensor(torch::Tensor& tensor);
 
 }  // namespace torch_util
 

@@ -10,6 +10,7 @@
 #include <common/TensorizorConcept.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
+#include <util/CppUtil.hpp>
 
 namespace c4 {
 
@@ -21,7 +22,7 @@ public:
 
 class Tensorizor {
 public:
-  static constexpr auto kShape = std::array{kNumPlayers, kNumColumns, kNumRows};
+  using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
 
   Tensorizor();
   void clear() {}

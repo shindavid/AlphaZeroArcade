@@ -3,7 +3,9 @@
 #include <ostream>
 
 #include <boost/filesystem.hpp>
+#include <unsupported/Eigen/CXX11/Tensor>
 
+#include <common/DerivedTypes.hpp>
 #include <common/Mcts.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/Types.hpp>
@@ -29,7 +31,7 @@ public:
   };
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
-  static constexpr auto kTensorShape = util::to_std_array<int64_t>(1, Tensorizor::kShape);
+  using TensorShape = common::TensorizorTypes<Tensorizor>::TensorShape;
 
   NNetPlayer(const Params&);
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
@@ -51,6 +53,7 @@ private:
 
   common::action_index_t get_net_only_action(const GameState&, const ActionMask&);
   common::action_index_t get_mcts_action(const GameState&, const ActionMask&);
+  common::action_index_t get_action_helper();
   void verbose_dump() const;
 
   const Params& params_;

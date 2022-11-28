@@ -66,4 +66,17 @@ inline void copy_to(torch::Tensor tensor, const std::array<T, N>& arr) {
   }
 }
 
+template<typename T, std::ptrdiff_t... P>
+inline void copy_to(
+    torch::Tensor to_tensor,
+    const Eigen::TensorFixedSize<T, Eigen::Sizes<P...>>& from_tensor)
+{
+  throw std::exception();
+//  from_tensor.slice()
+}
+
+inline void init_tensor(torch::Tensor& tensor) {
+  tensor = torch::zeros(1);
+}
+
 }  // namespace torch_util

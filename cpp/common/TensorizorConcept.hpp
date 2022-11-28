@@ -20,7 +20,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state) {
   /*
    * The shape of the tensor representation of a game state.
    */
-  { util::decay_copy(Tensorizor::kShape) } -> util::is_std_array_c;
+  { typename Tensorizor::Shape{} } -> util::is_int_sequence_c;
 
   /*
    * Used to clear state between games. (Is this necessary?)
