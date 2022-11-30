@@ -12,6 +12,7 @@
 #include <common/GameStateConcept.hpp>
 #include <common/BasicTypes.hpp>
 #include <connect4/C4Constants.hpp>
+#include <util/EigenUtil.hpp>
 
 namespace c4 {
 
@@ -40,7 +41,7 @@ public:
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
 
-  void tensorize(torch::Tensor) const;
+  template<eigen_util::FixedTensorConcept InputTensor> void tensorize(int slice, InputTensor&) const;
   void xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }

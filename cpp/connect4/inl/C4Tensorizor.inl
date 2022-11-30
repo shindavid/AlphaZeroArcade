@@ -4,11 +4,11 @@
 
 namespace c4 {
 
-inline void ReflectionTransform::transform_input(torch::Tensor input) {
+inline void Tensorizor::ReflectionTransform::transform_input(Tensorizor::InputTensor&) {
   throw std::exception();
 }
 
-inline void ReflectionTransform::transform_policy(torch::Tensor input) {
+inline void Tensorizor::ReflectionTransform::transform_policy(Tensorizor::PolicyTensor&) {
   throw std::exception();
 }
 
@@ -16,7 +16,7 @@ inline Tensorizor::Tensorizor()
 : transforms_{&identity_transform_, &reflection_transform_}
 {}
 
-inline common::AbstractSymmetryTransform* Tensorizor::get_random_symmetry(const GameState&) const {
+inline Tensorizor::SymmetryTransform* Tensorizor::get_random_symmetry(const GameState&) const {
   return *(transforms_.begin() + util::Random::uniform_draw(0, transforms_.size()));
 }
 

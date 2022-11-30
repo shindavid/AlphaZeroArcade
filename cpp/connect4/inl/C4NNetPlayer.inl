@@ -13,14 +13,18 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   : Player("CPU")
   , params_(params)
   , net_(params.model_filename)
+  , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
   if (!params_.neural_network_only) {
     throw util::Exception("!neural_network_only not yet supported");
   }
-  torch_util::init_tensor(policy_);
-  torch_util::init_tensor(value_);
-  input_ = torch::zeros(util::std_array_v<int64_t, TensorShape>).to(at::kCUDA);
-  input_vec_.push_back(input_);
+
+  torch_input_ = eigen_util::eigen2torch(input_);
+  torch_policy_ = eigen_util::eigen2torch(policy_);
+  torch_value_ = eigen_util::eigen2torch(value_);
+
+  torch_input_gpu_ = torch_input_.clone().to(torch::kCUDA);
+  input_vec_.push_back(torch_input_gpu_);
 }
 
 inline void NNetPlayer::start_game(const player_array_t& players, common::player_index_t seat_assignment) {
@@ -53,24 +57,19 @@ inline common::action_index_t NNetPlayer::get_action(const GameState& state, con
 }
 
 inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& state, const ActionMask& valid_actions) {
-  CATCH_TENSOR_MALLOCS(input_);
-  CATCH_TENSOR_MALLOCS(policy_);
-  CATCH_TENSOR_MALLOCS(value_);
-  tensorizor_.tensorize(input_[0], state);
+  tensorizor_.tensorize(0, input_, state);
   auto transform = tensorizor_.get_random_symmetry(state);
-  transform->transform_input(input_[0]);
-
-  net_.predict(input_vec_, policy_, value_);
+  transform->transform_input(input_);
+  torch_input_gpu_ = torch_input_;
+  net_.predict(input_vec_, torch_policy_, torch_value_);
   transform->transform_policy(policy_);
 
   if (params_.temperature) {
-    policy_ /= params_.temperature;
-    torch::softmax_out(policy_, policy_, 0);
+    policy_ = policy_ * inv_temperature_;
+    policy_ = eigen_util::softmax(policy_).eval();  // eval to avoid potential aliasing issue (?)
   } else {
-    // TODO: I think there is multiple dynamic memory allocation in below
-    // 2 lines. Fix me!
-    policy_ -= torch::max(policy_);
-    policy_ = (policy_ >= 0).to(torch::kFloat);
+    throw std::exception();  // TODO
+//    policy_ = (policy_ == policy_.maximum());
   }
   throw std::exception();
 }

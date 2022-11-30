@@ -40,12 +40,12 @@ template <class T> std::decay_t<T> decay_copy(T&&);
 template<int... Ints> using int_sequence = std::integer_sequence<int, Ints...>;
 
 /*
- * is_int_sequence<T> is for concept requirements.
+ * IntSequenceConcept<T> is for concept requirements.
  */
 template<typename T> struct is_int_sequence { static const bool value = false; };
 template<int... Ints> struct is_int_sequence<int_sequence<Ints...>> { static const bool value = true; };
 template<typename T> inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
-template<typename T> concept is_int_sequence_c = is_int_sequence_v<T>;
+template<typename T> concept IntSequenceConcept = is_int_sequence_v<T>;
 
 /*
  * The following are equivalent:
@@ -84,14 +84,6 @@ struct std_array<T, std::integer_sequence<I, Ints...>> {
 };
 template<typename T, typename S>
 static constexpr auto std_array_v = std_array<T, S>::value;
-
-/*
- * is_std_array_c is for concept requirements for functions that should return std::array's
- */
-template<typename T> struct is_std_array { static const bool value = false; };
-template<typename T, size_t N> struct is_std_array<std::array<T, N>> { static const bool value = true; };
-template<typename T> inline constexpr bool is_std_array_v = is_std_array<T>::value;
-template<typename T> concept is_std_array_c = is_std_array_v<T>;
 
 template<typename DerivedPtr, typename Base> concept is_pointer_derived_from =
   std::is_pointer_v<DerivedPtr> && std::derived_from<Base, std::remove_pointer_t<DerivedPtr>>;

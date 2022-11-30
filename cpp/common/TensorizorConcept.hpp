@@ -20,7 +20,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state) {
   /*
    * The shape of the tensor representation of a game state.
    */
-  { typename Tensorizor::Shape{} } -> util::is_int_sequence_c;
+  { typename Tensorizor::Shape{} } -> util::IntSequenceConcept;
 
   /*
    * Used to clear state between games. (Is this necessary?)
@@ -32,7 +32,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state) {
    */
   { tensorizor.receive_state_change(state, action_index_t()) };
 
-  { tensorizor.get_random_symmetry(state) } -> util::is_pointer_derived_from<AbstractSymmetryTransform>;
+  { tensorizor.get_random_symmetry(state) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
 };
 
 }  // namespace common

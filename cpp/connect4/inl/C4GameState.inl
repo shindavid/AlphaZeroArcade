@@ -99,20 +99,21 @@ inline std::string GameState::compact_repr() const {
   return buffer;
 }
 
-inline void GameState::tensorize(torch::Tensor tensor) const {
+
+template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(int slice, InputTensor& tensor) const {
   mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
       int index = _to_bit_index(col, row);
       bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
-      tensor.index_put_({0, col, row}, occupied_by_cur_player);
+      tensor(slice, 0, col, row) = occupied_by_cur_player;
     }
   }
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
       int index = _to_bit_index(col, row);
       bool occupied_by_opp_player = (1UL << index) & opp_player_mask;
-      tensor.index_put_({1, col, row}, occupied_by_opp_player);
+      tensor(slice, 1, col, row) = occupied_by_opp_player;
     }
   }
 }

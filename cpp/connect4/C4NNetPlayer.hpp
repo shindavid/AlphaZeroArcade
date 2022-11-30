@@ -5,10 +5,10 @@
 #include <boost/filesystem.hpp>
 #include <unsupported/Eigen/CXX11/Tensor>
 
+#include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/Mcts.hpp>
 #include <common/NeuralNet.hpp>
-#include <common/BasicTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
@@ -31,7 +31,9 @@ public:
   };
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
-  using TensorShape = common::TensorizorTypes<Tensorizor>::TensorShape;
+  using PolicyTensor = common::GameStateTypes<GameState>::PolicyTensor;
+  using ValueTensor = common::GameStateTypes<GameState>::ValueTensor;
+  using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
 
   NNetPlayer(const Params&);
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
@@ -59,10 +61,27 @@ private:
   const Params& params_;
   common::NeuralNet net_;
   Tensorizor tensorizor_;
+
+  /*
+   * torch_input_ is backed by input_
+   * torch_policy_ is backed by policy_
+   * torch_value_ is backed by value_
+   *
+   * These backings allow us to use Eigen API's to modify the tensors. The Eigen objects have compile-time-known
+   * dtypes/dimensions and the torch counterparts do not. Doing modifications on the Eigen objects thus allows for more
+   * efficient modification operations, as well as better control over memory allocations.
+   */
+  torch::Tensor torch_input_, torch_policy_, torch_value_;
+  InputTensor input_;
+  PolicyTensor policy_;
+  ValueTensor value_;
+
   common::NeuralNet::input_vec_t input_vec_;
-  torch::Tensor input_, policy_, value_;
+  torch::Tensor torch_input_gpu_;
+
   Mcts mcts_;
   Mcts::Params mcts_params_;
+  const float inv_temperature_;
   common::action_index_t last_action_ = -1;
   common::player_index_t my_index_ = -1;
 };

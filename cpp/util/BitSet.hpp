@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <type_traits>
 
+#include <util/EigenUtil.hpp>
+
 namespace util {
 
 /*
@@ -41,7 +43,7 @@ public:
   SetBitsIterator end() const { return SetBitsIterator(this, N); }
 
   int choose_random_set_bit() const;
-  std::array<float, N> to_float_array() const;
+  eigen_util::fixed_tensor_t<float, Eigen::Sizes<N>> to_float_tensor() const;
 };
 
 /*

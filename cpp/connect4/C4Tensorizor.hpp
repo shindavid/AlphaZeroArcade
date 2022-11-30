@@ -6,6 +6,7 @@
 #include <torch/torch.h>
 
 #include <common/AbstractSymmetryTransform.hpp>
+#include <common/DerivedTypes.hpp>
 #include <common/IdentityTransform.hpp>
 #include <common/TensorizorConcept.hpp>
 #include <connect4/C4Constants.hpp>
@@ -14,28 +15,32 @@
 
 namespace c4 {
 
-class ReflectionTransform : public common::AbstractSymmetryTransform {
-public:
-  void transform_input(torch::Tensor input) override;
-  void transform_policy(torch::Tensor policy) override;
-};
-
 class Tensorizor {
 public:
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
+  using PolicyTensor = common::GameStateTypes<GameState>::PolicyTensor;
+  using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
+  using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
+  using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
+
+  class ReflectionTransform : public SymmetryTransform {
+  public:
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
+  };
 
   Tensorizor();
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
 
-  void tensorize(torch::Tensor tensor, const GameState& state) { state.tensorize(tensor); }
+  void tensorize(int slice, InputTensor& tensor, const GameState& state) { state.tensorize(slice, tensor); }
 
-  common::AbstractSymmetryTransform* get_random_symmetry(const GameState&) const;
+  SymmetryTransform* get_random_symmetry(const GameState&) const;
 
 private:
-  common::IdentityTransform identity_transform_;
+  IdentityTransform identity_transform_;
   ReflectionTransform reflection_transform_;
-  std::array<common::AbstractSymmetryTransform*, 2> transforms_;
+  std::array<SymmetryTransform*, 2> transforms_;
 };
 
 }  // namespace c4

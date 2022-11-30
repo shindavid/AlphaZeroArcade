@@ -1,13 +1,8 @@
 #pragma once
 
-#include <unsupported/Eigen/CXX11/Tensor>
-
-#include <util/CppUtil.hpp>
-
 /*
  * Various util functions that make the torch library more pleasant to use.
  */
-
 #include <array>
 #include <cstdint>
 #include <map>
@@ -15,8 +10,10 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
-
 #include <torch/torch.h>
+#include <unsupported/Eigen/CXX11/Tensor>
+
+#include <util/CppUtil.hpp>
 
 /*
  * Some torch::Tensor API's lead to dynamic memory allocation under the hood. It is desirable to avoid this wherever
@@ -114,26 +111,6 @@ void pickle_dump(const torch::Tensor& tensor, const boost::filesystem::path& pat
  */
 template<typename... SaveToArgs>
 void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&... args);
-
-/*
- * Copy arr[0], arr[1], ..., arr[N-1] to tensor[0], tensor[1], ..., tensor[N-1].
- */
-template<typename T, size_t N>
-void copy_to(torch::Tensor tensor, const std::array<T, N>& arr);
-
-/*
- * Copy the Eigen::TensorFixedSize to the torch::Tensor.
- *
- * Note, there may be more efficient, or even "free" ways to do this:
- *
- * https://discuss.pytorch.org/t/data-transfer-between-libtorch-c-and-eigen/54156
- * https://pytorch.org/cppdocs/api/function_namespacetorch_1ad7fb2a7759ef8c9443b489ddde494787.html
- *
- * Deserves some more investigation later.
- */
-template<typename T, std::ptrdiff_t... P>
-void copy_to(torch::Tensor to_tensor,
-             const Eigen::TensorFixedSize<T, Eigen::Sizes<P...>>& from_tensor);
 
 /*
  * A default-constructed torch::Tensor cannot be used. This function assigns

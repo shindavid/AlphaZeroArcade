@@ -4,6 +4,7 @@
 #include <thread>
 #include <vector>
 
+#include <boost/core/demangle.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <torch/torch.h>
@@ -38,10 +39,10 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
   bf::path output_path = games_dir / output_filename;
 
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
-  torch::Tensor input_tensor = torch::zeros(torch_util::to_shape(
+  torch::Tensor full_input_tensor = torch::zeros(torch_util::to_shape(
       max_rows, util::std_array_v<int, c4::Tensorizor::Shape>));
-  torch::Tensor value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
-  torch::Tensor policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
+  torch::Tensor full_value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
+  torch::Tensor full_policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
 
   bool use_progress_bar = thread_id == 0;
   int row = 0;
@@ -60,15 +61,26 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
       common::player_index_t cp = state.get_current_player();
       float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
-      std::array<float, c4::kNumPlayers> value_arr;
-      value_arr[cp] = cur_player_value;
-      value_arr[1 - cp] = 1 - cur_player_value;
 
-      auto best_move_arr = best_moves.to_float_array();
+      common::GameStateTypes<c4::GameState>::ValueTensor value_tensor;
+      value_tensor(cp) = cur_player_value;
+      value_tensor(1 - cp) = 1 - cur_player_value;
 
-      tensorizor.tensorize(input_tensor.index({row}), state);
-      torch_util::copy_to(value_tensor.index({row}), value_arr);
-      torch_util::copy_to(policy_tensor.index({row}), best_move_arr);
+      auto policy_tensor = best_moves.to_float_tensor();
+
+      /*
+       * TODO: it would be more efficient and cleaner to do a reinterpret_cast-style operation on full_input_tensor,
+       * and to pass the resultant Eigen::Tensor reference directly to tensorize(). Not sure if this is supported.
+       * See:
+       *
+       * https://stackoverflow.com/questions/74606736/converting-a-torchtensor-to-an-eigentensorfixedsize
+       */
+      common::TensorizorTypes<c4::Tensorizor>::InputTensor input_tensor;
+      tensorizor.tensorize(0, input_tensor, state);
+
+      full_input_tensor.index_put_({row}, eigen_util::eigen2torch(input_tensor));
+      full_value_tensor.index_put_({row}, eigen_util::eigen2torch(value_tensor));
+      full_policy_tensor.index_put_({row}, eigen_util::eigen2torch(policy_tensor));
       ++row;
 
       c4::ActionMask moves = state.get_valid_actions();
@@ -85,9 +97,9 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
     auto slice = torch::indexing::Slice(torch::indexing::None, row);
     using tensor_map_t = std::map<std::string, torch::Tensor>;
     tensor_map_t tensor_map;
-    tensor_map["input"] = input_tensor.index({slice});
-    tensor_map["value"] = value_tensor.index({slice});
-    tensor_map["policy"] = policy_tensor.index({slice});
+    tensor_map["input"] = full_input_tensor.index({slice});
+    tensor_map["value"] = full_value_tensor.index({slice});
+    tensor_map["policy"] = full_policy_tensor.index({slice});
     torch_util::save(tensor_map, output_path.string());
   }
   if (use_progress_bar) {
