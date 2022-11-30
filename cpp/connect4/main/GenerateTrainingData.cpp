@@ -62,11 +62,11 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       common::player_index_t cp = state.get_current_player();
       float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
 
-      common::GameStateTypes<c4::GameState>::ValueTensor value_tensor;
-      value_tensor(cp) = cur_player_value;
-      value_tensor(1 - cp) = 1 - cur_player_value;
+      common::GameStateTypes<c4::GameState>::ValueVector value_vector;
+      value_vector(cp) = cur_player_value;
+      value_vector(1 - cp) = 1 - cur_player_value;
 
-      auto policy_tensor = best_moves.to_float_tensor();
+      auto policy_vector = best_moves.to_float_vector();
 
       /*
        * TODO: it would be more efficient and cleaner to do a reinterpret_cast-style operation on full_input_tensor,
@@ -79,8 +79,8 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       tensorizor.tensorize(0, input_tensor, state);
 
       full_input_tensor.index_put_({row}, eigen_util::eigen2torch(input_tensor));
-      full_value_tensor.index_put_({row}, eigen_util::eigen2torch(value_tensor));
-      full_policy_tensor.index_put_({row}, eigen_util::eigen2torch(policy_tensor));
+      full_value_tensor.index_put_({row}, eigen_util::eigen2torch(value_vector));
+      full_policy_tensor.index_put_({row}, eigen_util::eigen2torch(policy_vector));
       ++row;
 
       c4::ActionMask moves = state.get_valid_actions();

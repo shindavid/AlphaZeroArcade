@@ -8,7 +8,7 @@ inline void Tensorizor::ReflectionTransform::transform_input(Tensorizor::InputTe
   throw std::exception();
 }
 
-inline void Tensorizor::ReflectionTransform::transform_policy(Tensorizor::PolicyTensor&) {
+inline void Tensorizor::ReflectionTransform::transform_policy(Tensorizor::PolicyVector&) {
   throw std::exception();
 }
 

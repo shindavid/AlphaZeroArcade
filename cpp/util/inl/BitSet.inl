@@ -21,12 +21,12 @@ int BitSet<N>::choose_random_set_bit() const {
 }
 
 template<int N>
-eigen_util::fixed_tensor_t<float, Eigen::Sizes<N>> BitSet<N>::to_float_tensor() const {
-  eigen_util::fixed_tensor_t<float, Eigen::Sizes<N>> tensor;
+Eigen::Vector<float, N> BitSet<N>::to_float_vector() const {
+  Eigen::Vector<float, N> vector;
   for (int i = 0; i < N; ++i) {
-    tensor(i) = (*this)[i];
+    vector(i) = (*this)[i];
   }
-  return tensor;
+  return vector;
 }
 
 }  // namespace util

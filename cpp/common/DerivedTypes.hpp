@@ -28,8 +28,8 @@ struct GameStateTypes {
 
   using Result = GameResult<kNumPlayers>;
 
-  using PolicyTensor = eigen_util::fixed_tensor_t<float, Eigen::Sizes<kNumGlobalActions>>;
-  using ValueTensor = eigen_util::fixed_tensor_t<float, Eigen::Sizes<kNumPlayers>>;
+  using PolicyVector = Eigen::Vector<float, kNumGlobalActions>;
+  using ValueVector = Eigen::Vector<float, kNumPlayers>;
 };
 
 template<typename Tensorizor>

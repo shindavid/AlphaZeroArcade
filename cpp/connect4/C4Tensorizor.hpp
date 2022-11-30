@@ -18,7 +18,7 @@ namespace c4 {
 class Tensorizor {
 public:
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
-  using PolicyTensor = common::GameStateTypes<GameState>::PolicyTensor;
+  using PolicyVector = common::GameStateTypes<GameState>::PolicyVector;
   using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
@@ -26,7 +26,7 @@ public:
   class ReflectionTransform : public SymmetryTransform {
   public:
     void transform_input(InputTensor& input) override;
-    void transform_policy(PolicyTensor& policy) override;
+    void transform_policy(PolicyVector& policy) override;
   };
 
   Tensorizor();

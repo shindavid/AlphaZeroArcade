@@ -31,8 +31,8 @@ public:
   };
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
-  using PolicyTensor = common::GameStateTypes<GameState>::PolicyTensor;
-  using ValueTensor = common::GameStateTypes<GameState>::ValueTensor;
+  using PolicyVector = common::GameStateTypes<GameState>::PolicyVector;
+  using ValueVector = common::GameStateTypes<GameState>::ValueVector;
   using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
 
   NNetPlayer(const Params&);
@@ -73,8 +73,8 @@ private:
    */
   torch::Tensor torch_input_, torch_policy_, torch_value_;
   InputTensor input_;
-  PolicyTensor policy_;
-  ValueTensor value_;
+  PolicyVector policy_;
+  ValueVector value_;
 
   common::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;

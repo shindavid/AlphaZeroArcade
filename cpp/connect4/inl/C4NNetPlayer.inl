@@ -65,8 +65,8 @@ inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& s
   transform->transform_policy(policy_);
 
   if (params_.temperature) {
-    policy_ = policy_ * inv_temperature_;
-    policy_ = eigen_util::softmax(policy_).eval();  // eval to avoid potential aliasing issue (?)
+//    policy_ = policy_ * inv_temperature_;
+    policy_ = eigen_util::softmax(policy_* inv_temperature_).eval();  // eval() to avoid potential aliasing issue (?)
   } else {
     throw std::exception();  // TODO
 //    policy_ = (policy_ == policy_.maximum());

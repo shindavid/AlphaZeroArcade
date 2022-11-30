@@ -70,6 +70,14 @@ template<typename T> inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T
 template<typename T> concept FixedTensorConcept = is_fixed_tensor_v<T>;
 
 /*
+ * FixedVectorConcept is a concept corresponding to Eigen::Vector<T, N>
+ */
+template<typename T> struct is_fixed_vector { static const bool value = false; };
+template<typename T, int S> struct is_fixed_vector<Eigen::Vector<T, S>> { static const bool value = true; };
+template<typename T> inline constexpr bool is_fixed_vector_v = is_fixed_vector<T>::value;
+template<typename T> concept FixedVectorConcept = is_fixed_vector_v<T>;
+
+/*
  * The following are equivalent:
  *
  * using S = Eigen::Sizes<1, 2, 3>;
@@ -84,32 +92,9 @@ template<typename T, typename S> struct extract_sizes<fixed_tensor_t<T, S>> {
 template<typename T> using extract_sizes_t = typename extract_sizes<T>::type;
 
 /*
- * In numpy, you can easily broadcast arrays with scalars, like:
- *
- * a = np.array([1, 2, 3])
- * b = a / sum(a)  # broadcast
- * c = a - max(a)  # broadcast
- *
- * In Eigen, we don't get this nice sort of broadcasting for free:
- *
- * auto b = a / a.maximum();  // returns garbage!
- * auto c = a - a.sum();  // returns garbage!
- *
- * You could try to do the appropriate broadcasting yourself, but this is stupidly tricky, due the presence of a
- * zero-dimensional tensor bug in Eigen 3.4.0: https://stackoverflow.com/a/74158117/543913
- *
- * eigen_util::fixed_op_to_scalar() exists to better simulate the numpy idioms when working with fixed_tensor_t objects.
- * You can use it like so:
- *
- * auto b = a / eigen_util::fixed_op_to_scalar<float>(a.maximum());
- * auto c = a - eigen_util::fixed_op_to_scalar<float>(a.sum());
+ * Returns a float vector op of the same shape as the input, whose values are positive and summing to 1.
  */
-template<typename T, typename TensorOp> T fixed_op_to_scalar(const TensorOp& op);
-
-/*
- * Returns a float tensor op of the same shape as the input, whose values are positive and summing to 1.
- */
-template<FixedTensorConcept Tensor> auto softmax(const Tensor& tensor);
+template<typename Vector> auto softmax(const Vector& vector);
 
 /*
  * Reinterprets an eigen_util::fixed_tensor_t as a torch::Tensor.
@@ -117,6 +102,13 @@ template<FixedTensorConcept Tensor> auto softmax(const Tensor& tensor);
  * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
  */
 template<typename T, typename S> torch::Tensor eigen2torch(fixed_tensor_t<T, S>& tensor);
+
+/*
+ * Reinterprets an Eigen::Vector as a torch::Tensor.
+ *
+ * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
+ */
+template<typename T, int S> torch::Tensor eigen2torch(Eigen::Vector<T, S>& vector);
 
 }  // namespace eigen_util
 

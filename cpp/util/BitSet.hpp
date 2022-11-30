@@ -43,7 +43,7 @@ public:
   SetBitsIterator end() const { return SetBitsIterator(this, N); }
 
   int choose_random_set_bit() const;
-  eigen_util::fixed_tensor_t<float, Eigen::Sizes<N>> to_float_tensor() const;
+  Eigen::Vector<float, N> to_float_vector() const;
 };
 
 /*
