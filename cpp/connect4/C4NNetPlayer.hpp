@@ -64,9 +64,9 @@ private:
   Tensorizor tensorizor_;
 
   /*
-   * torch_input_ is backed by input_
-   * torch_policy_ is backed by policy_
-   * torch_value_ is backed by value_
+   * torch_input_ and input_ are backed by the same float*
+   * torch_policy_ and policy_ are backed by the same float*
+   * torch_value_ and value_ are backed by the same float*
    *
    * These backings allow us to use Eigen API's to modify the tensors. The Eigen objects have compile-time-known
    * dtypes/dimensions and the torch counterparts do not. Doing modifications on the Eigen objects thus allows for more
