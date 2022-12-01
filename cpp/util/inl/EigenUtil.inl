@@ -21,4 +21,13 @@ template<util::IntSequenceConcept Shape, typename T, int N> torch::Tensor eigen2
   return torch::from_blob(vector.data(), util::std_array_v<int64_t, Shape>);
 }
 
+template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim) {
+  using Sizes = extract_sizes_t<Tensor>;
+  constexpr int N = Sizes::count;
+  Eigen::array<bool, N> rev;
+  rev.fill(false);
+  rev[dim] = true;
+  return tensor.reverse(rev);
+}
+
 }  // namespace eigen_util

@@ -110,6 +110,13 @@ template<typename T, typename N> torch::Tensor eigen2torch(fixed_tensor_t<T, N>&
  */
 template<util::IntSequenceConcept Shape, typename T, int N> torch::Tensor eigen2torch(Eigen::Vector<T, N>& vector);
 
+/*
+ * Reverses the elements of tensor along the given dimension.
+ *
+ * This is a convenience wrapper to tensor.reverse(), as tensor.reverse() has a bulkier API.
+ */
+template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim);
+
 }  // namespace eigen_util
 
 #include <util/inl/EigenUtil.inl>
