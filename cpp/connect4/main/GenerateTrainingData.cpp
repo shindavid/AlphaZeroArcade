@@ -68,6 +68,9 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
       auto policy_vector = best_moves.to_float_vector();
 
+      using ValueVector = decltype(value_vector);
+      using PolicyVector = decltype(policy_vector);
+
       /*
        * TODO: it would be more efficient and cleaner to do a reinterpret_cast-style operation on full_input_tensor,
        * and to pass the resultant Eigen::Tensor reference directly to tensorize(). Not sure if this is supported.
@@ -79,8 +82,8 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       tensorizor.tensorize(0, input_tensor, state);
 
       full_input_tensor.index_put_({row}, eigen_util::eigen2torch(input_tensor));
-      full_value_tensor.index_put_({row}, eigen_util::eigen2torch(value_vector));
-      full_policy_tensor.index_put_({row}, eigen_util::eigen2torch(policy_vector));
+      full_value_tensor.index_put_({row}, eigen_util::eigen2torch<util::int_sequence<ValueVector::RowsAtCompileTime>>(value_vector));
+      full_policy_tensor.index_put_({row}, eigen_util::eigen2torch<util::int_sequence<PolicyVector::RowsAtCompileTime>>(policy_vector));
       ++row;
 
       c4::ActionMask moves = state.get_valid_actions();

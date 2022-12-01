@@ -5,11 +5,11 @@
 namespace c4 {
 
 inline void Tensorizor::ReflectionTransform::transform_input(Tensorizor::InputTensor&) {
-  throw std::exception();
+  // TODO
 }
 
 inline void Tensorizor::ReflectionTransform::transform_policy(Tensorizor::PolicyVector&) {
-  throw std::exception();
+  // TODO
 }
 
 inline Tensorizor::Tensorizor()
@@ -17,7 +17,7 @@ inline Tensorizor::Tensorizor()
 {}
 
 inline Tensorizor::SymmetryTransform* Tensorizor::get_random_symmetry(const GameState&) const {
-  return *(transforms_.begin() + util::Random::uniform_draw(0, transforms_.size()));
+  return *(transforms_.begin() + util::Random::uniform_sample(0, transforms_.size()));
 }
 
 }  // namespace c4

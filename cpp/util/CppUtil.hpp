@@ -43,9 +43,25 @@ template<int... Ints> using int_sequence = std::integer_sequence<int, Ints...>;
  * IntSequenceConcept<T> is for concept requirements.
  */
 template<typename T> struct is_int_sequence { static const bool value = false; };
-template<int... Ints> struct is_int_sequence<int_sequence<Ints...>> { static const bool value = true; };
+template<int... Ints> struct is_int_sequence<int_sequence<Ints...>> { static constexpr bool value = true; };
 template<typename T> inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
 template<typename T> concept IntSequenceConcept = is_int_sequence_v<T>;
+
+/*
+ * The following are equivalent:
+ *
+ * auto n = util::int_sequence_product_v<util::int_sequence<1, 2, 3, 4>>;
+ *
+ * and:
+ *
+ * auto n = 1 * 2 * 3 * 4;
+ */
+template<typename T> struct int_sequence_product {};
+template<> struct int_sequence_product<int_sequence<>> { static constexpr int value = 1; };
+template<int I, int... Is> struct int_sequence_product<int_sequence<I, Is...>> {
+  static constexpr int value = I * int_sequence_product<int_sequence<Is...>>::value;
+};
+template<typename T> constexpr int int_sequence_product_v = int_sequence_product<T>::value;
 
 /*
  * The following are equivalent:

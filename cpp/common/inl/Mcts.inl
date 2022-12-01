@@ -27,4 +27,12 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
   throw std::exception();
 }
 
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline const Mcts<GameState, Tensorizor>::Results* Mcts<GameState, Tensorizor>::sim(
+    const Tensorizor& tensorizor, const GameState& game_state, const Params& params)
+{
+  throw std::exception();
+}
+
+
 }  // namespace common

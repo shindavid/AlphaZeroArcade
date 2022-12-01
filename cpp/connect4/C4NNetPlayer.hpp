@@ -36,26 +36,27 @@ public:
   using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
 
   NNetPlayer(const Params&);
+  ~NNetPlayer();
+
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const Result&) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:
   struct VerboseInfo {
-    Mcts::ValueProbDistr value;
     Mcts::ValueProbDistr mcts_value;
     Mcts::ValueProbDistr net_value;
 
     // TODO: Make all these local
-    Mcts::GlobalPolicyProbDistr policy;
+    Mcts::GlobalPolicyCountDistr mcts_counts;
     Mcts::GlobalPolicyProbDistr mcts_policy;
-    Mcts::GlobalPolicyCountDistr  mcts_counts;
     Mcts::GlobalPolicyProbDistr net_policy;
+
+    bool initialized = false;
   };
 
   common::action_index_t get_net_only_action(const GameState&, const ActionMask&);
   common::action_index_t get_mcts_action(const GameState&, const ActionMask&);
-  common::action_index_t get_action_helper();
   void verbose_dump() const;
 
   const Params& params_;
@@ -84,6 +85,7 @@ private:
   const float inv_temperature_;
   common::action_index_t last_action_ = -1;
   common::player_index_t my_index_ = -1;
+  VerboseInfo* verbose_info_ = nullptr;
 };
 
 }  // namespace c4

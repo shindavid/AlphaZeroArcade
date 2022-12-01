@@ -101,14 +101,14 @@ template<typename Vector> auto softmax(const Vector& vector);
  *
  * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
  */
-template<typename T, typename S> torch::Tensor eigen2torch(fixed_tensor_t<T, S>& tensor);
+template<typename T, typename N> torch::Tensor eigen2torch(fixed_tensor_t<T, N>& tensor);
 
 /*
- * Reinterprets an Eigen::Vector as a torch::Tensor.
+ * Reinterprets an Eigen::Vector as a torch::Tensor of the provided Shape
  *
  * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
  */
-template<typename T, int S> torch::Tensor eigen2torch(Eigen::Vector<T, S>& vector);
+template<util::IntSequenceConcept Shape, typename T, int N> torch::Tensor eigen2torch(Eigen::Vector<T, N>& vector);
 
 }  // namespace eigen_util
 

@@ -12,13 +12,13 @@ template<typename Vector> auto softmax(const Vector& vector) {
   return z / z.sum();
 }
 
-template<typename T, typename S> torch::Tensor eigen2torch(fixed_tensor_t<T, S>& tensor) {
-  return torch::from_blob(tensor.data(), to_int64_std_array_v<S>);
+template<typename T, typename N> torch::Tensor eigen2torch(fixed_tensor_t<T, N>& tensor) {
+  return torch::from_blob(tensor.data(), to_int64_std_array_v<N>);
 }
 
-template<typename T, int S> torch::Tensor eigen2torch(Eigen::Vector<T, S>& vector) {
-  std::array<int64_t, 1> arr{S};
-  return torch::from_blob(vector.data(), arr);
+template<util::IntSequenceConcept Shape, typename T, int N> torch::Tensor eigen2torch(Eigen::Vector<T, N>& vector) {
+  static_assert(util::int_sequence_product_v<Shape> == N);
+  return torch::from_blob(vector.data(), util::std_array_v<int64_t, Shape>);
 }
 
 }  // namespace eigen_util

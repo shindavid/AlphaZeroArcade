@@ -45,7 +45,6 @@ public:
   };
 
 private:
-
   class StateEvaluation {
   public:
     StateEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result);
@@ -65,6 +64,10 @@ public:
   Mcts();
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const Result&);
+  const Results* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
+
+private:
+  Results results_;
 };
 
 }  // namespace common
