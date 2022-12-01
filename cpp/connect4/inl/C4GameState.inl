@@ -127,7 +127,7 @@ inline void GameState::xprintf_dump(const player_name_array_t& player_names, com
   for (row_t row = kNumRows - 1; row >= 0; --row) {
     xprintf_row_dump(row, row == blink_row ? blink_column : -1);
   }
-  util::xprintf("|0|1|2|3|4|5|6|\n");
+  util::xprintf("|1|2|3|4|5|6|7|\n");
   util::xprintf("%s%s%s: %s\n", ansi::kRed, ansi::kCircle, ansi::kReset, player_names[kRed].c_str());
   util::xprintf("%s%s%s: %s\n\n", ansi::kYellow, ansi::kCircle, ansi::kReset, player_names[kYellow].c_str());
   util::xflush();

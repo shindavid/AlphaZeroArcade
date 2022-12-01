@@ -38,12 +38,12 @@ inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state,
       printf("Invalid input!\n");
     }
     complain = true;
-    std::cout << "Enter move [0-6]: ";
+    std::cout << "Enter move [1-7]: ";
     std::cout.flush();
     std::string input;
     std::getline(std::cin, input);
     try {
-      my_action = std::stoi(input);
+      my_action = std::stoi(input) - 1;
       if (!valid_actions.test(my_action)) continue;
     } catch(...) {
       continue;
