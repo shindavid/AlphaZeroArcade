@@ -77,17 +77,17 @@ inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& s
   asm volatile("": : :"memory");  // memory barrier - ensures proper read/write order of torch_policy_ and policy_
   transform->transform_policy(policy_);
 
+  value_ = eigen_util::softmax(value_).eval();  // eval() to avoid potential aliasing issue (?)
+  if (verbose_info_) {
+    verbose_info_->net_value = value_;
+    verbose_info_->net_policy = eigen_util::softmax(policy_);
+    verbose_info_->initialized = true;
+  }
+
   if (inv_temperature_) {
     policy_ = eigen_util::softmax(policy_* inv_temperature_).eval();  // eval() to avoid potential aliasing issue (?)
   } else {
     policy_ = (policy_.array() == policy_.maxCoeff()).cast<float>();
-  }
-
-  value_ = eigen_util::softmax(value_).eval();  // eval() to avoid potential aliasing issue (?)
-  if (verbose_info_) {
-    verbose_info_->net_value = value_;
-    verbose_info_->net_policy = policy_ / policy_.sum();
-    verbose_info_->initialized = true;
   }
   return util::Random::weighted_sample(policy_.begin(), policy_.end());
 }
