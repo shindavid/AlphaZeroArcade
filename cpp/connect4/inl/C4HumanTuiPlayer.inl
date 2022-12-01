@@ -60,6 +60,8 @@ inline void HumanTuiPlayer::xprintf_switch(const GameState& state) {
   util::clear_xprintf_target();
   print_state(state);
   std::cout << buf_.str();
+  buf_.str("");
+  buf_.clear();
   std::cout.flush();
 }
 
