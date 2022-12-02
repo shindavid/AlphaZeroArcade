@@ -79,7 +79,7 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
        * https://stackoverflow.com/questions/74606736/converting-a-torchtensor-to-an-eigentensorfixedsize
        */
       common::TensorizorTypes<c4::Tensorizor>::InputTensor input_tensor;
-      tensorizor.tensorize(0, input_tensor, state);
+      tensorizor.tensorize(input_tensor, state);
 
       full_input_tensor.index_put_({row}, eigen_util::eigen2torch(input_tensor));
       full_value_tensor.index_put_({row}, eigen_util::eigen2torch<util::int_sequence<ValueVector::RowsAtCompileTime>>(value_vector));

@@ -8,8 +8,8 @@ inline NeuralNet::NeuralNet(const boost::filesystem::path& path)
   module_.to(torch::kCUDA);
 }
 
-inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) {
-  auto outputs = module_.forward(input).toTuple();
+inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) const {
+  auto outputs = const_cast<torch::jit::script::Module*>(&module_)->forward(input).toTuple();
   policy.copy_(outputs->elements()[0].toTensor());
   value.copy_(outputs->elements()[1].toTensor());
 }

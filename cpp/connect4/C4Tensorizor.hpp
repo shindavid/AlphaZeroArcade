@@ -32,8 +32,7 @@ public:
   Tensorizor();
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
-
-  void tensorize(int slice, InputTensor& tensor, const GameState& state) { state.tensorize(slice, tensor); }
+  void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
   SymmetryTransform* get_random_symmetry(const GameState&) const;
 

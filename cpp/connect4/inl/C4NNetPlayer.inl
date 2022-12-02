@@ -17,10 +17,6 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   , net_(params.model_filename)
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
-  if (!params_.neural_network_only) {
-    throw util::Exception("!neural_network_only not yet supported");
-  }
-
   torch_input_ = eigen_util::eigen2torch(input_);
   torch_policy_ = eigen_util::eigen2torch<util::int_sequence<1, PolicyVector::RowsAtCompileTime>>(policy_);
   torch_value_ = eigen_util::eigen2torch<util::int_sequence<1, ValueVector::RowsAtCompileTime>>(value_);
@@ -69,7 +65,7 @@ inline common::action_index_t NNetPlayer::get_action(const GameState& state, con
 }
 
 inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& state, const ActionMask& valid_actions) {
-  tensorizor_.tensorize(0, input_, state);
+  tensorizor_.tensorize(input_, state);
   auto transform = tensorizor_.get_random_symmetry(state);
   transform->transform_input(input_);
   torch_input_gpu_.copy_(torch_input_);

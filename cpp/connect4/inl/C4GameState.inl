@@ -100,20 +100,20 @@ inline std::string GameState::compact_repr() const {
 }
 
 
-template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(int slice, InputTensor& tensor) const {
+template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {
   mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
       int index = _to_bit_index(col, row);
       bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
-      tensor(slice, 0, col, row) = occupied_by_cur_player;
+      tensor(0, 0, col, row) = occupied_by_cur_player;
     }
   }
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
       int index = _to_bit_index(col, row);
       bool occupied_by_opp_player = (1UL << index) & opp_player_mask;
-      tensor(slice, 1, col, row) = occupied_by_opp_player;
+      tensor(0, 1, col, row) = occupied_by_opp_player;
     }
   }
 }

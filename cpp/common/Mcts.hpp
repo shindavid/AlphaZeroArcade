@@ -47,7 +47,8 @@ public:
 private:
   class StateEvaluation {
   public:
-    StateEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result);
+    StateEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result,
+                    common::NeuralNet::input_vec_t& input_vec);
     bool is_terminal() const { return is_terminal_result(result_); }
 
   private:
@@ -67,6 +68,7 @@ public:
   const Results* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
 
 private:
+  torch::Tensor torch_input_gpu_;
   Results results_;
 };
 
