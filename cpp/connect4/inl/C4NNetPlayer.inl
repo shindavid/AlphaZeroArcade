@@ -74,7 +74,7 @@ inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& s
   net_.predict(input_vec_, policy_.asTorch(), value_.asTorch());
   transform->transform_policy(policy);
 
-  value = eigen_util::softmax(value).eval();  // eval() to avoid potential aliasing issue (?)
+  value = eigen_util::softmax(value);
   if (verbose_info_) {
     verbose_info_->net_value = value;
     verbose_info_->net_policy = eigen_util::softmax(policy);
@@ -82,7 +82,7 @@ inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& s
   }
 
   if (inv_temperature_) {
-    policy = eigen_util::softmax(policy * inv_temperature_).eval();  // eval() to avoid potential aliasing issue (?)
+    policy = eigen_util::softmax(policy * inv_temperature_);
   } else {
     policy = (policy.array() == policy.maxCoeff()).cast<float>();
   }
