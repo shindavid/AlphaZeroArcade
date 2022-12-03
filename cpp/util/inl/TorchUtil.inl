@@ -5,6 +5,7 @@
 #include <torch/serialize/archive.h>
 
 #include <util/CppUtil.hpp>
+#include <util/EigenUtil.hpp>
 #include <util/Exception.hpp>
 
 namespace torch_util {
@@ -55,15 +56,8 @@ void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&..
   archive.save_to(std::forward<SaveToArgs>(args)...);
 }
 
-/*
- * TODO: there might be more efficient ways of doing this. One candidate is to use torch::from_blob() to create a
- * tensor from arr. We should profile and change this implementation if appropriate.
- */
-template<typename T, size_t N>
-inline void copy_to(torch::Tensor tensor, const std::array<T, N>& arr) {
-  for (int i = 0; i < int(N); ++i) {
-    tensor.index_put_({i}, arr[i]);
-  }
+inline void init_tensor(torch::Tensor& tensor) {
+  tensor = torch::zeros(1);
 }
 
 }  // namespace torch_util

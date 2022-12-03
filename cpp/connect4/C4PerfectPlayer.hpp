@@ -4,7 +4,7 @@
 #include <boost/process.hpp>
 
 #include <common/AbstractPlayer.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 

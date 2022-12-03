@@ -4,19 +4,26 @@
 #include <thread>
 #include <vector>
 
+#include <boost/core/demangle.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <torch/torch.h>
 
+#include <common/DerivedTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <third_party/ProgressBar.hpp>
+#include <util/EigenTorch.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
 namespace bf = boost::filesystem;
+
+using EigenTorchInput = eigentorch::to_eigentorch_t<common::TensorizorTypes<c4::Tensorizor>::InputTensor>;
+using EigenTorchValue = eigentorch::to_eigentorch_t<common::GameStateTypes<c4::GameState>::ValueVector>;
+using EigenTorchPolicy = eigentorch::to_eigentorch_t<common::GameStateTypes<c4::GameState>::PolicyVector>;
 
 /*
  * This interfaces with the connect4 perfect solver binary by creating a child-process that we interact with via
@@ -37,9 +44,14 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
   bf::path output_path = games_dir / output_filename;
 
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
-  torch::Tensor input_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::Tensorizor::kShape));
-  torch::Tensor value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
-  torch::Tensor policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
+  torch::Tensor full_input_tensor = torch::zeros(torch_util::to_shape(
+      max_rows, util::std_array_v<int, c4::Tensorizor::Shape>));
+  torch::Tensor full_value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
+  torch::Tensor full_policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
+
+  EigenTorchValue value(std::array<int64_t, 1>{c4::kNumPlayers});
+  EigenTorchPolicy policy(std::array<int64_t, 1>{c4::kNumColumns});
+  EigenTorchInput input;
 
   bool use_progress_bar = thread_id == 0;
   int row = 0;
@@ -58,22 +70,30 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
       common::player_index_t cp = state.get_current_player();
       float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
-      std::array<float, c4::kNumPlayers> value_arr;
-      value_arr[cp] = cur_player_value;
-      value_arr[1 - cp] = 1 - cur_player_value;
 
-      auto best_move_arr = best_moves.to_float_array();
+      value.asEigen()(cp) = cur_player_value;
+      value.asEigen()(1 - cp) = 1 - cur_player_value;
+      best_moves.to_float_vector(policy.asEigen());
 
-      tensorizor.tensorize(input_tensor.index({row}), state);
-      torch_util::copy_to(value_tensor.index({row}), value_arr);
-      torch_util::copy_to(policy_tensor.index({row}), best_move_arr);
+      /*
+       * TODO: it would be more efficient and cleaner to do a reinterpret_cast-style operation on full_input_tensor,
+       * and to pass the resultant Eigen::Tensor reference directly to tensorize(). Not sure if this is supported.
+       * See:
+       *
+       * https://stackoverflow.com/questions/74606736/converting-a-torchtensor-to-an-eigentensorfixedsize
+       */
+      tensorizor.tensorize(input.asEigen(), state);
+
+      full_input_tensor.index_put_({row}, input.asTorch());
+      full_value_tensor.index_put_({row}, value.asTorch());
+      full_policy_tensor.index_put_({row}, policy.asTorch());
       ++row;
 
       c4::ActionMask moves = state.get_valid_actions();
       int move = moves.choose_random_set_bit();
       auto result = state.apply_move(move);
       tensorizor.receive_state_change(state, move);
-      if (result.is_terminal()) {
+      if (common::is_terminal_result(result)) {
         break;
       }
 
@@ -83,9 +103,9 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
     auto slice = torch::indexing::Slice(torch::indexing::None, row);
     using tensor_map_t = std::map<std::string, torch::Tensor>;
     tensor_map_t tensor_map;
-    tensor_map["input"] = input_tensor.index({slice});
-    tensor_map["value"] = value_tensor.index({slice});
-    tensor_map["policy"] = policy_tensor.index({slice});
+    tensor_map["input"] = full_input_tensor.index({slice});
+    tensor_map["value"] = full_value_tensor.index({slice});
+    tensor_map["policy"] = full_policy_tensor.index({slice});
     torch_util::save(tensor_map, output_path.string());
   }
   if (use_progress_bar) {

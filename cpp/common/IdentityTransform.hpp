@@ -4,10 +4,15 @@
 
 namespace common {
 
-class IdentityTransform : public AbstractSymmetryTransform {
+template<typename GameState, typename Tensorizor>
+class IdentityTransform : public AbstractSymmetryTransform<GameState, Tensorizor> {
 public:
-  void transform_input(torch::Tensor input) override {}
-  void transform_policy(torch::Tensor input) override {}
+  using base_t = AbstractSymmetryTransform<GameState, Tensorizor>;
+  using InputTensor = typename base_t::InputTensor;
+  using PolicyVector = typename base_t::PolicyVector;
+
+  void transform_input(InputTensor& input) override {}
+  void transform_policy(PolicyVector& policy) override {}
 };
 
 }

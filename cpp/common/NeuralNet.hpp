@@ -12,7 +12,7 @@ public:
   using input_vec_t = std::vector<torch::jit::IValue>;
 
   NeuralNet(const boost::filesystem::path& path);
-  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value);
+  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) const;
 
 private:
   torch::jit::script::Module module_;

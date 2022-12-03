@@ -3,7 +3,7 @@
 #include <boost/program_options.hpp>
 
 #include <common/GameRunner.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayer.hpp>
@@ -24,7 +24,7 @@ struct Args {
 common::player_index_t parse_color(const std::string& str) {
   if (str == "R") return c4::kRed;
   if (str == "Y") return c4::kYellow;
-  if (str.empty()) return util::Random::uniform_draw(0, c4::kNumPlayers);
+  if (str.empty()) return util::Random::uniform_sample(0, c4::kNumPlayers);
   throw util::Exception("Invalid --my-starting-color/-s value: \"%s\"", str.c_str());
 }
 
@@ -37,11 +37,11 @@ int main(int ac, char* av[]) {
   po::options_description desc("Generate training data from perfect solver");
   desc.add_options()
       ("help,h", "help")
-      ("my-starting-color,s", po::value<std::string>(&args.my_starting_color), "human's starting color (R or Y). Default: random")
-      ("c4-solver-dir,c", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
-      ("perfect,p", po::value<bool>(&args.perfect), "play against perfect player")
-      ("neural-network-only,o", po::value<bool>(&args.neural_network_only), "neural network only")
-      ("verbose,v", po::value<bool>(&args.verbose), "verbose mode")
+      ("my-starting-color,c", po::value<std::string>(&args.my_starting_color), "human's starting color (R or Y). Default: random")
+      ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
+      ("perfect,p", po::bool_switch(&args.perfect), "play against perfect player")
+      ("neural-network-only,o", po::bool_switch(&args.neural_network_only), "neural network only")
+      ("verbose,v", po::bool_switch(&args.verbose), "verbose mode")
       ;
 
   po::variables_map vm;

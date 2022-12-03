@@ -23,14 +23,23 @@ public:
 
   int xprintf(char const* fmt, va_list* args) {
     if (target_) {
-      int n = buf_size_;
-      for (; n >= buf_size_; resize(2 * n)) {
-        n = vsnprintf(buf_, buf_size_, fmt, *args);
+      int n = 0;
+      while (true) {
+        va_list args_copy;
+        va_copy(args_copy, *args);
+        n = vsnprintf(buf_, buf_size_, fmt, args_copy);
+        va_end(args_copy);
+        if (n >= buf_size_) {
+          resize(2 * n);
+          continue;
+        }
+        break;
       }
       (*target_) << buf_;
       return n;
     } else {
-      return vprintf(fmt, *args);
+      int n = vprintf(fmt, *args);
+      return n;
     }
   }
 
@@ -41,6 +50,15 @@ public:
   }
 
   static _xprintf_helper& instance() { return instance_; }
+
+  static void debug_dump() {
+    std::cout << "_xprintf_helper::target_: " << instance_.target_ << std::endl;
+    if (instance_.target_) {
+      std::cout << "BEGIN(" << instance_.target_->str().size() << ")" << std::endl;
+      std::cout << instance_.target_->str() << std::endl;
+      std::cout << "END" << std::endl;
+    }
+  }
 
 private:
   void resize(int buf_size) {

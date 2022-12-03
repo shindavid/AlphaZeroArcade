@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <common/DerivedTypes.hpp>
 #include <util/PrintUtil.hpp>
 #include <util/ScreenUtil.hpp>
 
@@ -20,7 +21,7 @@ inline void HumanTuiPlayer::receive_state_change(
     common::player_index_t, const GameState& state, common::action_index_t action, const Result& result)
 {
   last_action_ = action;
-  if (result.is_terminal()) {
+  if (common::is_terminal_result(result)) {
     xprintf_switch(state);
   }
 }
@@ -37,12 +38,12 @@ inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state,
       printf("Invalid input!\n");
     }
     complain = true;
-    std::cout << "Enter move [0-6]: ";
+    std::cout << "Enter move [1-7]: ";
     std::cout.flush();
     std::string input;
     std::getline(std::cin, input);
     try {
-      my_action = std::stoi(input);
+      my_action = std::stoi(input) - 1;
       if (!valid_actions.test(my_action)) continue;
     } catch(...) {
       continue;
@@ -59,6 +60,8 @@ inline void HumanTuiPlayer::xprintf_switch(const GameState& state) {
   util::clear_xprintf_target();
   print_state(state);
   std::cout << buf_.str();
+  buf_.str("");
+  buf_.clear();
   std::cout.flush();
 }
 

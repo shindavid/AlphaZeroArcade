@@ -12,7 +12,7 @@ inline common::player_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline GameResult GameState::apply_move(common::action_index_t action) {
+inline common::GameStateTypes<GameState>::Result GameState::apply_move(common::action_index_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   common::player_index_t current_player = get_current_player();
@@ -51,7 +51,7 @@ inline GameResult GameState::apply_move(common::action_index_t action) {
     }
   }
 
-  GameResult result;
+  Result result;
   result.setZero();
   if (win) {
     result(current_player) = 1.0;
@@ -99,20 +99,21 @@ inline std::string GameState::compact_repr() const {
   return buffer;
 }
 
-inline void GameState::tensorize(torch::Tensor tensor) const {
+
+template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {
   mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
       int index = _to_bit_index(col, row);
       bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
-      tensor.index_put_({0, col, row}, occupied_by_cur_player);
+      tensor(0, 0, col, row) = occupied_by_cur_player;
     }
   }
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {
       int index = _to_bit_index(col, row);
       bool occupied_by_opp_player = (1UL << index) & opp_player_mask;
-      tensor.index_put_({1, col, row}, occupied_by_opp_player);
+      tensor(0, 1, col, row) = occupied_by_opp_player;
     }
   }
 }
@@ -126,7 +127,7 @@ inline void GameState::xprintf_dump(const player_name_array_t& player_names, com
   for (row_t row = kNumRows - 1; row >= 0; --row) {
     xprintf_row_dump(row, row == blink_row ? blink_column : -1);
   }
-  util::xprintf("|0|1|2|3|4|5|6|\n");
+  util::xprintf("|1|2|3|4|5|6|7|\n");
   util::xprintf("%s%s%s: %s\n", ansi::kRed, ansi::kCircle, ansi::kReset, player_names[kRed].c_str());
   util::xprintf("%s%s%s: %s\n\n", ansi::kYellow, ansi::kCircle, ansi::kReset, player_names[kYellow].c_str());
   util::xflush();

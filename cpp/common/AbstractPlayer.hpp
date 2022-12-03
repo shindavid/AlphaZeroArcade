@@ -3,15 +3,16 @@
 #include <array>
 #include <string>
 
+#include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/Types.hpp>
+#include <common/BasicTypes.hpp>
 
 namespace common {
 
 template<GameStateConcept GameState>
 class AbstractPlayer {
 public:
-  using Result = GameResult<GameState::kNumPlayers>;
+  using Result = typename common::GameStateTypes<GameState>::Result;
   using ActionMask = util::BitSet<GameState::kNumGlobalActions>;
   using player_array_t = std::array<AbstractPlayer *, GameState::kNumPlayers>;
 

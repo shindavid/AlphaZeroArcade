@@ -105,7 +105,7 @@ class NNetPlayer(AbstractPlayer):
         transform = random.choice(self.tensorizor.get_symmetries(state))
         in_tensor = transform.transform_input(in_tensor)
 
-        logit_policy, logit_value = [t.flatten() for t in self.net(in_tensor)]
+        logit_policy, logit_value = [t.cpu().flatten() for t in self.net(in_tensor.to(device='cuda'))]
         logit_policy = transform.transform_policy(logit_policy)
         logit_policy[~valid_actions] = -torch.inf
 

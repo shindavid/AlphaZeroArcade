@@ -1,11 +1,8 @@
 #pragma once
 
-#include <util/CppUtil.hpp>
-
 /*
  * Various util functions that make the torch library more pleasant to use.
  */
-
 #include <array>
 #include <cstdint>
 #include <map>
@@ -13,8 +10,10 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
-
 #include <torch/torch.h>
+#include <unsupported/Eigen/CXX11/Tensor>
+
+#include <util/CppUtil.hpp>
 
 /*
  * Some torch::Tensor API's lead to dynamic memory allocation under the hood. It is desirable to avoid this wherever
@@ -90,7 +89,7 @@ private:
 using shape_t = std::vector<int64_t>;
 
 /*
- * Smash together integral  and std::array arguments into a single shape_t. Without this helper
+ * Smash together integral and std::array arguments into a single shape_t. Without this helper
  * function, constructing shapes through concatenation is cumbersome.
  */
 template<typename... Ts> shape_t to_shape(Ts&&... ts);
@@ -114,10 +113,11 @@ template<typename... SaveToArgs>
 void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&... args);
 
 /*
- * Copy arr[0], arr[1], ..., arr[N-1] to tensor[0], tensor[1], ..., tensor[N-1].
+ * A default-constructed torch::Tensor cannot be used. This function assigns
+ * the tensor to an arbitrary value, so that the tensor can be re-assigned
+ * later.
  */
-template<typename T, size_t N>
-void copy_to(torch::Tensor tensor, const std::array<T, N>& arr);
+void init_tensor(torch::Tensor& tensor);
 
 }  // namespace torch_util
 

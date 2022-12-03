@@ -29,12 +29,77 @@ namespace util {
 template <class T> std::decay_t<T> decay_copy(T&&);
 
 /*
- * is_std_array_c is for concept requirements for functions that should return std::array's
+ * The following are equivalent:
+ *
+ * using T = util::int_sequence<1, 2, 3>;
+ *
+ * and:
+ *
+ * using T = std::integer_sequence<int, 1, 2, 3>;
  */
-template<typename T> struct is_std_array { static const bool value = false; };
-template<typename T, size_t N> struct is_std_array<std::array<T, N>> { static const bool value = true; };
-template<typename T> inline constexpr bool is_std_array_v = is_std_array<T>::value;
-template<typename T> concept is_std_array_c = is_std_array_v<T>;
+template<int... Ints> using int_sequence = std::integer_sequence<int, Ints...>;
+
+/*
+ * IntSequenceConcept<T> is for concept requirements.
+ */
+template<typename T> struct is_int_sequence { static const bool value = false; };
+template<int... Ints> struct is_int_sequence<int_sequence<Ints...>> { static constexpr bool value = true; };
+template<typename T> inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
+template<typename T> concept IntSequenceConcept = is_int_sequence_v<T>;
+
+/*
+ * The following are equivalent:
+ *
+ * auto n = util::int_sequence_product_v<util::int_sequence<1, 2, 3, 4>>;
+ *
+ * and:
+ *
+ * auto n = 1 * 2 * 3 * 4;
+ */
+template<typename T> struct int_sequence_product {};
+template<> struct int_sequence_product<int_sequence<>> { static constexpr int value = 1; };
+template<int I, int... Is> struct int_sequence_product<int_sequence<I, Is...>> {
+  static constexpr int value = I * int_sequence_product<int_sequence<Is...>>::value;
+};
+template<typename T> constexpr int int_sequence_product_v = int_sequence_product<T>::value;
+
+/*
+ * The following are equivalent:
+ *
+ * using S = util::int_sequence<1, 2>;
+ * using T = util::int_sequence<3>;
+ * using U = util::concat_int_sequence_t<S, T>;
+ *
+ * and:
+ *
+ * using U = util::int_sequence<1, 2, 3>;
+ */
+template<typename T, typename U> struct concat_int_sequence {};
+template<int... Ints1, int... Ints2>
+struct concat_int_sequence<std::integer_sequence<int, Ints1...>, std::integer_sequence<int, Ints2...>> {
+  using type = std::integer_sequence<int, Ints1..., Ints2...>;
+};
+template<typename T, typename U>
+using concat_int_sequence_t = typename concat_int_sequence<T, U>::type;
+
+/*
+ * The following are equivalent:
+ *
+ * using S = util::int_sequence<1, 23>;
+ * auto arr = util::std_array_v<int64_t, S>;
+ *
+ * and:
+ *
+ * using S = util::int_sequence<1, 23>;
+ * auto arr = std::array<int64_t, 2>{1, 23};
+ */
+template<typename T, typename S> struct std_array {};
+template<typename T, typename I, I... Ints>
+struct std_array<T, std::integer_sequence<I, Ints...>> {
+  static constexpr auto value = std::array<T, sizeof...(Ints)>{Ints...};
+};
+template<typename T, typename S>
+static constexpr auto std_array_v = std_array<T, S>::value;
 
 template<typename DerivedPtr, typename Base> concept is_pointer_derived_from =
   std::is_pointer_v<DerivedPtr> && std::derived_from<Base, std::remove_pointer_t<DerivedPtr>>;

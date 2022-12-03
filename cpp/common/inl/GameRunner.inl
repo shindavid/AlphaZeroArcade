@@ -1,5 +1,6 @@
 #include <common/GameRunner.hpp>
 
+#include <common/DerivedTypes.hpp>
 #include <util/Exception.hpp>
 
 namespace common {
@@ -23,7 +24,7 @@ typename GameRunner<GameState>::Result GameRunner<GameState>::run() {
     for (auto player2 : players_) {
       player2->receive_state_change(p, state, action, result);
     }
-    if (result.is_terminal()) {
+    if (is_terminal_result(result)) {
       return result;
     }
   }
