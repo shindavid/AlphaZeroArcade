@@ -15,10 +15,15 @@
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <third_party/ProgressBar.hpp>
+#include <util/EigenTorch.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
 namespace bf = boost::filesystem;
+
+using EigenTorchInput = eigentorch::to_eigentorch_t<common::TensorizorTypes<c4::Tensorizor>::InputTensor>;
+using EigenTorchValue = eigentorch::to_eigentorch_t<common::GameStateTypes<c4::GameState>::ValueVector>;
+using EigenTorchPolicy = eigentorch::to_eigentorch_t<common::GameStateTypes<c4::GameState>::PolicyVector>;
 
 /*
  * This interfaces with the connect4 perfect solver binary by creating a child-process that we interact with via
@@ -44,6 +49,10 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
   torch::Tensor full_value_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumPlayers));
   torch::Tensor full_policy_tensor = torch::zeros(torch_util::to_shape(max_rows, c4::kNumColumns));
 
+  EigenTorchValue value(std::array<int64_t, 1>{c4::kNumPlayers});
+  EigenTorchPolicy policy(std::array<int64_t, 1>{c4::kNumColumns});
+  EigenTorchInput input;
+
   bool use_progress_bar = thread_id == 0;
   int row = 0;
   progressbar* bar = use_progress_bar ? new progressbar(num_games) : nullptr;
@@ -62,14 +71,9 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       common::player_index_t cp = state.get_current_player();
       float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
 
-      common::GameStateTypes<c4::GameState>::ValueVector value_vector;
-      value_vector(cp) = cur_player_value;
-      value_vector(1 - cp) = 1 - cur_player_value;
-
-      auto policy_vector = best_moves.to_float_vector();
-
-      using ValueVector = decltype(value_vector);
-      using PolicyVector = decltype(policy_vector);
+      value.asEigen()(cp) = cur_player_value;
+      value.asEigen()(1 - cp) = 1 - cur_player_value;
+      best_moves.to_float_vector(policy.asEigen());
 
       /*
        * TODO: it would be more efficient and cleaner to do a reinterpret_cast-style operation on full_input_tensor,
@@ -78,12 +82,11 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
        *
        * https://stackoverflow.com/questions/74606736/converting-a-torchtensor-to-an-eigentensorfixedsize
        */
-      common::TensorizorTypes<c4::Tensorizor>::InputTensor input_tensor;
-      tensorizor.tensorize(input_tensor, state);
+      tensorizor.tensorize(input.asEigen(), state);
 
-      full_input_tensor.index_put_({row}, eigen_util::eigen2torch(input_tensor));
-      full_value_tensor.index_put_({row}, eigen_util::eigen2torch<util::int_sequence<ValueVector::RowsAtCompileTime>>(value_vector));
-      full_policy_tensor.index_put_({row}, eigen_util::eigen2torch<util::int_sequence<PolicyVector::RowsAtCompileTime>>(policy_vector));
+      full_input_tensor.index_put_({row}, input.asTorch());
+      full_value_tensor.index_put_({row}, value.asTorch());
+      full_policy_tensor.index_put_({row}, policy.asTorch());
       ++row;
 
       c4::ActionMask moves = state.get_valid_actions();

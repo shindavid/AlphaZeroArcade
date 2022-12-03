@@ -1,5 +1,7 @@
 #include <common/Mcts.hpp>
 
+#include <util/EigenTorch.hpp>
+
 namespace common {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -17,7 +19,7 @@ inline Mcts<GameState, Tensorizor>::StateEvaluation::StateEvaluation(
   auto transform = tensorizor.get_random_symmetry(state);
   transform->transform_input(input);
 
-  auto torch_input = eigen_util::eigen2torch(input);
+  auto torch_input = eigentorch::eigen2torch(input);
   input_vec[0].toTensor().copy_(torch_input);
 //  net.predict(input_vec, torch_policy_, torch_value_);
 

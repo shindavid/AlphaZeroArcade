@@ -97,20 +97,6 @@ template<typename T> using extract_sizes_t = typename extract_sizes<T>::type;
 template<typename Vector> auto softmax(const Vector& vector);
 
 /*
- * Reinterprets an eigen_util::fixed_tensor_t as a torch::Tensor.
- *
- * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
- */
-template<typename T, typename N> torch::Tensor eigen2torch(fixed_tensor_t<T, N>& tensor);
-
-/*
- * Reinterprets an Eigen::Vector as a torch::Tensor of the provided Shape
- *
- * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
- */
-template<util::IntSequenceConcept Shape, typename T, int N> torch::Tensor eigen2torch(Eigen::Vector<T, N>& vector);
-
-/*
  * Reverses the elements of tensor along the given dimension.
  *
  * This is a convenience wrapper to tensor.reverse(), as tensor.reverse() has a bulkier API.

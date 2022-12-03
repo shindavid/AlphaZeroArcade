@@ -13,6 +13,7 @@
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <util/CppUtil.hpp>
+#include <util/EigenTorch.hpp>
 
 namespace c4 {
 
@@ -34,6 +35,10 @@ public:
   using PolicyVector = common::GameStateTypes<GameState>::PolicyVector;
   using ValueVector = common::GameStateTypes<GameState>::ValueVector;
   using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
+
+  using EigenTorchPolicy = eigentorch::to_eigentorch_t<PolicyVector>;
+  using EigenTorchValue = eigentorch::to_eigentorch_t<ValueVector>;
+  using EigenTorchInput = eigentorch::to_eigentorch_t<InputTensor>;
 
   NNetPlayer(const Params&);
   ~NNetPlayer();
@@ -63,19 +68,9 @@ private:
   common::NeuralNet net_;
   Tensorizor tensorizor_;
 
-  /*
-   * torch_input_ and input_ are backed by the same float*
-   * torch_policy_ and policy_ are backed by the same float*
-   * torch_value_ and value_ are backed by the same float*
-   *
-   * These backings allow us to use Eigen API's to modify the tensors. The Eigen objects have compile-time-known
-   * dtypes/dimensions and the torch counterparts do not. Doing modifications on the Eigen objects thus allows for more
-   * efficient modification operations, as well as better control over memory allocations.
-   */
-  torch::Tensor torch_input_, torch_policy_, torch_value_;
-  InputTensor input_;
-  PolicyVector policy_;
-  ValueVector value_;
+  EigenTorchPolicy policy_;
+  EigenTorchValue value_;
+  EigenTorchInput input_;
 
   common::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;

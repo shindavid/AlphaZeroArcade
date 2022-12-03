@@ -15,13 +15,11 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   : Player("CPU")
   , params_(params)
   , net_(params.model_filename)
+  , policy_(std::array<int64_t, 2>{1, kNumColumns})
+  , value_(std::array<int64_t, 2>{1, kNumPlayers})
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
-  torch_input_ = eigen_util::eigen2torch(input_);
-  torch_policy_ = eigen_util::eigen2torch<util::int_sequence<1, PolicyVector::RowsAtCompileTime>>(policy_);
-  torch_value_ = eigen_util::eigen2torch<util::int_sequence<1, ValueVector::RowsAtCompileTime>>(value_);
-
-  torch_input_gpu_ = torch_input_.clone().to(torch::kCUDA);
+  torch_input_gpu_ = input_.asTorch().clone().to(torch::kCUDA);
   input_vec_.push_back(torch_input_gpu_);
 
   if (params.verbose) {
@@ -65,48 +63,54 @@ inline common::action_index_t NNetPlayer::get_action(const GameState& state, con
 }
 
 inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& state, const ActionMask& valid_actions) {
-  tensorizor_.tensorize(input_, state);
-  auto transform = tensorizor_.get_random_symmetry(state);
-  transform->transform_input(input_);
-  torch_input_gpu_.copy_(torch_input_);
-  net_.predict(input_vec_, torch_policy_, torch_value_);
-  asm volatile("": : :"memory");  // memory barrier - ensures proper read/write order of torch_policy_ and policy_
-  transform->transform_policy(policy_);
+  auto& policy = policy_.asEigen();
+  auto& value = value_.asEigen();
+  auto& input = input_.asEigen();
 
-  value_ = eigen_util::softmax(value_).eval();  // eval() to avoid potential aliasing issue (?)
+  tensorizor_.tensorize(input, state);
+  auto transform = tensorizor_.get_random_symmetry(state);
+  transform->transform_input(input);
+  torch_input_gpu_.copy_(input_.asTorch());
+  net_.predict(input_vec_, policy_.asTorch(), value_.asTorch());
+  transform->transform_policy(policy);
+
+  value = eigen_util::softmax(value).eval();  // eval() to avoid potential aliasing issue (?)
   if (verbose_info_) {
-    verbose_info_->net_value = value_;
-    verbose_info_->net_policy = eigen_util::softmax(policy_);
+    verbose_info_->net_value = value;
+    verbose_info_->net_policy = eigen_util::softmax(policy);
     verbose_info_->initialized = true;
   }
 
   if (inv_temperature_) {
-    policy_ = eigen_util::softmax(policy_* inv_temperature_).eval();  // eval() to avoid potential aliasing issue (?)
+    policy = eigen_util::softmax(policy * inv_temperature_).eval();  // eval() to avoid potential aliasing issue (?)
   } else {
-    policy_ = (policy_.array() == policy_.maxCoeff()).cast<float>();
+    policy = (policy.array() == policy.maxCoeff()).cast<float>();
   }
-  return util::Random::weighted_sample(policy_.begin(), policy_.end());
+  return util::Random::weighted_sample(policy.begin(), policy.end());
 }
 
 inline common::action_index_t NNetPlayer::get_mcts_action(const GameState& state, const ActionMask& valid_actions) {
+  auto& policy = policy_.asEigen();
+  auto& value = value_.asEigen();
+
   auto results = mcts_.sim(tensorizor_, state, mcts_params_);
-  policy_ = results->counts.cast<float>();
+  policy = results->counts.cast<float>();
   if (inv_temperature_) {
-    policy_ = policy_.array().pow(inv_temperature_);
+    policy = policy.array().pow(inv_temperature_);
   } else {
-    policy_ = (policy_.array() == policy_.maxCoeff()).cast<float>();
+    policy = (policy.array() == policy.maxCoeff()).cast<float>();
   }
 
-  value_ = results->win_rates.cast<float>();
+  value = results->win_rates.cast<float>();
   if (verbose_info_) {
-    verbose_info_->mcts_value = value_;
+    verbose_info_->mcts_value = value;
     verbose_info_->net_value = results->value_prior;
     verbose_info_->mcts_counts = results->counts;
-    verbose_info_->mcts_policy = policy_ / policy_.sum();
+    verbose_info_->mcts_policy = policy / policy.sum();
     verbose_info_->net_policy = results->policy_prior;
     verbose_info_->initialized = true;
   }
-  return util::Random::weighted_sample(policy_.begin(), policy_.end());
+  return util::Random::weighted_sample(policy.begin(), policy.end());
 }
 
 inline void NNetPlayer::verbose_dump() const {

@@ -21,12 +21,10 @@ int BitSet<N>::choose_random_set_bit() const {
 }
 
 template<int N>
-Eigen::Vector<float, N> BitSet<N>::to_float_vector() const {
-  Eigen::Vector<float, N> vector;
+void BitSet<N>::to_float_vector(Eigen::Vector<float, N>& vector) const {
   for (int i = 0; i < N; ++i) {
     vector(i) = (*this)[i];
   }
-  return vector;
 }
 
 }  // namespace util
