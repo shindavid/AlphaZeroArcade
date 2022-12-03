@@ -23,8 +23,7 @@ public:
   using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
   using Result = typename GameStateTypes<GameState>::Result;
   using ActionMask = util::BitSet<kNumGlobalActions>;
-  using LocalPolicyLogitDistr = Eigen::Vector<float, kMaxNumLocalActions>;
-  using LocalPolicyProbDistr = Eigen::Vector<float, kMaxNumLocalActions>;
+  using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   struct Params {
     int tree_size_limit;
@@ -47,8 +46,8 @@ public:
 private:
   class StateEvaluation {
   public:
-    StateEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result,
-                    common::NeuralNet::input_vec_t& input_vec);
+    void init(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result,
+              common::NeuralNet::input_vec_t& input_vec);
     bool is_terminal() const { return is_terminal_result(result_); }
 
   private:
@@ -57,8 +56,27 @@ private:
 
     // Below members are only valid if !is_terminal()
     ActionMask valid_action_mask_;
-    LocalPolicyLogitDistr local_policy_logit_distr_;
+    LocalPolicyProbDistr local_policy_prob_distr_;
     ValueProbDistr value_prob_distr_;
+    bool initialized_ = false;
+  };
+
+  class Tree {
+  public:
+    Tree(action_index_t action=-1, Tree* parent=nullptr);
+
+  private:
+    StateEvaluation evaluation_;  // only valid if evaluated_
+    Tree* parent_;
+    Tree* first_child_ = nullptr;
+    int num_children_ = 0;
+    action_index_t action_;
+    int count_ = 0;
+    Eigen::Vector<float, kNumPlayers> value_sum_;
+    Eigen::Vector<float, kNumPlayers> value_avg_;
+    Eigen::Vector<float, kNumPlayers> effective_value_avg_;
+    Eigen::Vector<float, kNumPlayers> V_floor_;
+    bool eliminated_ = false;
   };
 
 public:
@@ -68,6 +86,7 @@ public:
   const Results* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
 
 private:
+  Tree* root_ = nullptr;
   torch::Tensor torch_input_gpu_;
   Results results_;
 };
