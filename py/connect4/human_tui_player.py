@@ -3,8 +3,6 @@ import sys
 from io import StringIO
 from typing import List, Optional
 
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
 from interface import AbstractPlayer, PlayerIndex, ActionIndex, GameResult, ActionMask
 from connect4.game_logic import C4GameState
 

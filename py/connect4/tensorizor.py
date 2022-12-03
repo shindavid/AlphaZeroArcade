@@ -1,13 +1,9 @@
-import os
-import sys
 from typing import List
 
 import numpy as np
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
-
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from interface import NeuralNetworkInput, ActionIndex, AbstractGameTensorizor, AbstractSymmetryTransform, \
     IdentityTransform, PolicyTensor

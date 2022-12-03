@@ -4,10 +4,6 @@ Pit two players against each other.
 """
 import time
 from collections import defaultdict
-import os
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from game_runner import GameRunner
 from profiling import ProfilerRegistry, Profiler

@@ -158,4 +158,3 @@ dependencies:
   - xz=5.2.6=h166bdaf_0
   - zlib=1.2.12=h166bdaf_2
   - zstd=1.5.2=h6239696_4
-prefix: /home/dshin/anaconda3/envs/dev

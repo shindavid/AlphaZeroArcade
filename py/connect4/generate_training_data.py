@@ -3,15 +3,12 @@ import argparse
 import os
 import random
 import subprocess
-import sys
-from typing import Tuple
 
 import h5py
 from mpi4py import MPI
 import numpy as np
 from tqdm import tqdm
 
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from config import Config
 from connect4 import game_logic
 from connect4.tensorizor import C4Tensorizor
