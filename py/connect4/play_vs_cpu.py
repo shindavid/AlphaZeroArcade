@@ -6,7 +6,6 @@ from typing import Optional
 
 import numpy as np
 
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from game_runner import GameRunner
 from connect4.perfect_player import PerfectPlayerParams, PerfectPlayer
 from connect4.game_logic import Color, C4GameState

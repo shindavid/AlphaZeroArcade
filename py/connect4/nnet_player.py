@@ -1,13 +1,9 @@
-import os
 import random
-import sys
 from dataclasses import dataclass
 from typing import List, Optional
 
 import numpy as np
 import torch
-
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from interface import AbstractPlayer, PlayerIndex, ActionIndex, GameResult, ActionMask
 from profiling import ProfilerRegistry

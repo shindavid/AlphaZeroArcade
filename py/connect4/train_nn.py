@@ -3,7 +3,6 @@ import argparse
 import copy
 import os
 import random
-import sys
 import time
 
 import h5py
@@ -16,9 +15,8 @@ from torch.optim.lr_scheduler import LambdaLR
 from natsort import natsorted
 from torch.utils.data import DataLoader, Dataset
 
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from connect4.tensorizor import C4Net
+from tensorizor import C4Net
 from util.repo_util import Repo
 from util.str_util import center_text
 

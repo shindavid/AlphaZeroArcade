@@ -1,13 +1,10 @@
 import os
 import random
 import subprocess
-import sys
 from dataclasses import dataclass
 from typing import List, Optional
 
 import numpy as np
-
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from config import Config
 from interface import AbstractPlayer, PlayerIndex, ActionIndex, GameResult, ActionMask
