@@ -23,6 +23,7 @@ public:
   using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
   using Result = typename GameStateTypes<GameState>::Result;
   using ActionMask = util::BitSet<kNumGlobalActions>;
+  using LocalPolicyLogitDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   struct Params {
@@ -44,31 +45,55 @@ public:
   };
 
 private:
-  class StateEvaluation {
-  public:
+  struct StateEvaluation {
     void init(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state, const Result& result,
-              common::NeuralNet::input_vec_t& input_vec);
-    bool is_terminal() const { return is_terminal_result(result_); }
+              common::NeuralNet::input_vec_t& input_vec, float inv_temp);
+    bool is_terminal() const { return is_terminal_result(result); }
 
-  private:
-    player_index_t current_player_;
-    Result result_;
+    player_index_t current_player;
+    Result result;
 
     // Below members are only valid if !is_terminal()
-    ActionMask valid_action_mask_;
-    LocalPolicyProbDistr local_policy_prob_distr_;
-    ValueProbDistr value_prob_distr_;
-    bool initialized_ = false;
+    ActionMask valid_action_mask;
+    LocalPolicyProbDistr local_policy_prob_distr;
+    ValueProbDistr value_prob_distr;
+    bool initialized = false;
   };
 
   class Tree {
   public:
     Tree(action_index_t action=-1, Tree* parent=nullptr);
 
+    GlobalPolicyCountDistr get_effective_counts() const;
+    void expand_children();
+    void backprop(const ValueProbDistr& result, bool terminal=false);
+    void terminal_backprop(const ValueProbDistr& result);
+
+    int effective_count() const { return eliminated_ ? 0 : count_; }
+    bool is_root() const { return !parent_; }
+    bool has_children() const { return num_children_; }
+    bool is_leaf() const { return !has_children(); }
+
+    /*
+     * This includes certain wins/losses AND certain draws.
+     */
+    bool has_certain_outcome() const { return V_floor_.sum() == 1; }
+
+    /*
+     * We only eliminate won or lost positions, not drawn positions.
+     *
+     * Drawn positions are not eliminated because MCTS still needs some way to compare a provably-drawn position vs an
+     * uncertain position. It needs to accumulate visits to provably-drawn positions to do this.
+     */
+    bool can_be_eliminated() const { return V_floor_.maxCoeff() == 1; }
+
   private:
+    float get_max_V_floor_among_children(player_index_t p) const;
+    float get_min_V_floor_among_children(player_index_t p) const;
+
     StateEvaluation evaluation_;  // only valid if evaluated_
     Tree* parent_;
-    Tree* first_child_ = nullptr;
+    Tree** children_ = nullptr;
     int num_children_ = 0;
     action_index_t action_;
     int count_ = 0;
