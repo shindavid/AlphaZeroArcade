@@ -22,7 +22,7 @@ from util.str_util import center_text
 
 
 def get_args():
-    default_games_dir = os.path.join(Repo.root(), 'c4_games')
+    default_games_dir = os.path.join(Repo.root(), 'connect4', 'c4_games')
     default_model_file = os.path.join(Repo.root(), 'c4_model.pt')
 
     parser = argparse.ArgumentParser()
