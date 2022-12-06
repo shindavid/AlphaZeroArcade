@@ -24,6 +24,7 @@ add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
 add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
 
 add_subdirectory("cpp/util")
+add_subdirectory("cpp/connect4")
 link_directories(${Boost_LIBRARY_DIRS})
 
 target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})

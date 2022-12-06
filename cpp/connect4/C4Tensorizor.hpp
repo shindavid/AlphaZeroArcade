@@ -22,6 +22,7 @@ public:
   using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
+  using transform_array_t = std::array<SymmetryTransform*, 2>;
 
   class ReflectionTransform : public SymmetryTransform {
   public:
@@ -29,7 +30,6 @@ public:
     void transform_policy(PolicyVector& policy) override;
   };
 
-  Tensorizor();
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
   void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
@@ -38,9 +38,10 @@ public:
   SymmetryTransform* get_symmetry(const GameState&, common::symmetry_index_t index) const;
 
 private:
-  IdentityTransform identity_transform_;
-  ReflectionTransform reflection_transform_;
-  std::array<SymmetryTransform*, 2> transforms_;
+  static transform_array_t transforms();
+
+  static IdentityTransform identity_transform_;
+  static ReflectionTransform reflection_transform_;
 };
 
 }  // namespace c4
