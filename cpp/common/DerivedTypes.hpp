@@ -1,8 +1,11 @@
 #pragma once
 
+#include <utility>
+
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 
+#include <common/BasicTypes.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -23,6 +26,16 @@ template<int NumPlayers> bool is_terminal_result(const GameResult<NumPlayers>& r
 template<int NumPlayers> auto make_non_terminal_result() { GameResult<NumPlayers> r; r.setZero(); return r; }
 
 template<typename GameState>
+struct StateSymmetryIndex {
+  GameState state;
+  symmetry_index_t sym_index;
+
+  bool operator==(const StateSymmetryIndex& other) const {
+    return state == other.state && sym_index == other.sym_index;
+  }
+};
+
+template<typename GameState>
 struct GameStateTypes {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
@@ -41,3 +54,11 @@ struct TensorizorTypes {
 };
 
 }  // namespace common
+
+template <typename GameState>
+struct std::hash<common::StateSymmetryIndex<GameState>> {
+  std::size_t operator()(const common::StateSymmetryIndex<GameState> ssi) const {
+    constexpr size_t some_prime = 1113859;
+    return some_prime * std::hash(ssi.state) + ssi.sym_index;
+  }
+};

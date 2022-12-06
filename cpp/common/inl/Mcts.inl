@@ -1,5 +1,8 @@
 #include <common/Mcts.hpp>
 
+#include <thread>
+#include <vector>
+
 #include <util/EigenTorch.hpp>
 
 namespace common {
@@ -50,8 +53,14 @@ inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
 , current_player_(state.get_current_player()) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
+{
+  *this = data;
+  if (prune_parent) parent_ = nullptr;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
-//  value_sum_.setZero();
   value_avg_.setZero();
   effective_value_avg_.setZero();
   V_floor_.setZero();
@@ -61,6 +70,24 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::Node(
     const GameState& state, const Result& result, Node* parent, action_index_t action)
 : stable_data_(state, result, parent, action) {}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
+: stable_data_(node.stable_data_, prune_parent)
+, children_data_(node.children_data_)
+, evaluation_(node.evaluation_)
+, stats_(node.stats_) {}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts<GameState, Tensorizor>::Node::release(Node* protected_child) {
+  for (int i = 0; i < children_data_.num_children_; ++i) {
+    Node* child = children_data_.first_child_ + i;
+    if (child != protected_child) child->release();
+  }
+
+  if (children_data_.first_child_) delete[] children_data_.first_child_;
+  delete this;
+}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline typename Mcts<GameState, Tensorizor>::GlobalPolicyCountDistr
@@ -74,13 +101,13 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
   if (stats_.eliminated_) {
     float max_V_floor = get_max_V_floor_among_children();
     for (int i = 0; i < children_data_.num_children_; ++i) {
-      Node* child = *children_data_.first_child_ + i;
+      Node* child = children_data_.first_child_ + i;
       counts(child->action_) = (child->V_floor_(cp) == max_V_floor);
     }
     return counts;
   }
   for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = *children_data_.children_ + i;
+    Node* child = children_data_.first_child_ + i;
     counts(child->action_) = child->effective_count();
   }
   return counts;
@@ -152,10 +179,20 @@ inline void Mcts<GameState, Tensorizor>::Node::terminal_backprop(const ValueProb
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::Node* Mcts<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
+  // TODO: technically we can do a binary search here, as children should be in sorted order by action
+  for (int i = 0; i < children_data_.num_children_; ++i) {
+    Node *child = children_data_.first_child_ + i;
+    if (child->stable_data_.action_ == action) return child;
+  }
+  return nullptr;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline float Mcts<GameState, Tensorizor>::Node::get_max_V_floor_among_children(player_index_t p) const {
   float max_V_floor = 0;
   for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = *children_data_.first_child_ + i;
+    Node* child = children_data_.first_child_ + i;
     max_V_floor = std::max(max_V_floor, child->V_floor_(p));
   }
   return max_V_floor;
@@ -165,10 +202,42 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline float Mcts<GameState, Tensorizor>::Node::get_min_V_floor_among_children(player_index_t p) const {
   float min_V_floor = 1;
   for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = *children_data_.first_child_ + i;
+    Node* child = children_data_.first_child_ + i;
     min_V_floor = std::min(min_V_floor, child->V_floor_(p));
   }
   return min_V_floor;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::SearchThread::SearchThread(Mcts* mcts, int thread_id)
+: mcts_(mcts)
+, thread_id_(thread_id)
+{
+  throw std::exception();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts<GameState, Tensorizor>::SearchThread::run() {
+  throw std::exception();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::NNEvaluationThread::NNEvaluationThread(int batch_size, int64_t timeout_ns)
+: timeout_ns_(timeout_ns)
+{
+  for (int i = 0; i < batch_size; ++i) {
+    input_vec_.push_back(torch::Tensor().to(torch::kCUDA));
+  }
+  throw std::exception();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::NNEvaluation*
+Mcts<GameState, Tensorizor>::NNEvaluationThread::evaluate(
+    const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index)
+{
+  // TODO: appropriate changes for multi-threaded context. Assumes single-threading for now.
+  throw std::exception();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -184,7 +253,18 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const Result& result)
 {
-  throw std::exception();
+  if (root_) {
+    Node* new_root = root_->find_child(action);
+    if (new_root) {
+      Node* new_root_copy = new Node(*new_root, true);
+      root_->release(new_root);
+      root_ = new_root_copy;
+    } else {
+      root_ = new Node(state, result);
+    }
+  } else {
+    root_ = new Node(state, result);
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -195,8 +275,35 @@ inline const Mcts<GameState, Tensorizor>::Results* Mcts<GameState, Tensorizor>::
     auto result = make_non_terminal_result<kNumPlayers>();
     root_ = new Node(game_state, result);  // TODO: use memory pool
   }
+
+  if (params.num_threads == 1) {
+    // run everything in main thread for simplicity
+    while (root_->effective_count() < params.tree_size_limit && !root_->eliminated()) {
+      visit(root_, tensorizor, game_state, params, 1);
+    }
+  } else {
+    std::vector<std::thread> threads;
+    for (int i = 0; i < params.num_threads; ++i) {
+      SearchThread thread(this, i);
+      threads.emplace_back(run_search, this, i);
+    }
+
+    for (auto& th : threads) th.join();
+  }
   throw std::exception();
 }
 
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts<GameState, Tensorizor>::visit(
+    Node* tree, const Tensorizor& tensorizor, const GameState& state, const Params& params, int depth)
+{
+
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts<GameState, Tensorizor>::run_search(Mcts* mcts, int thread_id) {
+  SearchThread thread(mcts, thread_id);
+  thread.run();
+}
 
 }  // namespace common

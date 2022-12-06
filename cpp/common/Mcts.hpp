@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mutex>
+#include <unordered_map>
 
 #include <Eigen/Core>
 
@@ -35,6 +36,7 @@ public:
     float dirichlet_mult = 0.25;
     float dirichlet_alpha = 0.03;
     bool allow_eliminations = true;
+    int num_threads = 1;
 
     bool can_reuse_subtree() const { return dirichlet_mult == 0; }
   };
@@ -78,6 +80,21 @@ private:
   class Node {
   public:
     Node(const GameState& state, const Result& result, Node* parent=nullptr, action_index_t action=-1);
+    Node(const Node& node, bool prune_parent=false);
+
+    /*
+     * Releases the memory occupied by this and by all descendents, EXCEPT for the descendents of
+     * protected_child (which is guaranteed to be an immediate child of this if non-null). Note that the memory of
+     * protected_child itself IS released; only the *descendents* of protected_child are protected.
+     *
+     * In the current implementation, this works by calling delete and delete[] and by recursing down the tree.
+     *
+     * In future implementations, if we have object pools, this might work by releasing to an object pool.
+     *
+     * Also, in the future, we might have Monte Carlo *Graph* Search (MCGS) instead of MCTS. In this future, a given
+     * Node might have multiple parents, so release() might decrement smart-pointer reference counts instead.
+     */
+    void release(Node* protected_child=nullptr);
 
     GlobalPolicyCountDistr get_effective_counts() const;
     void expand_children();
@@ -89,6 +106,8 @@ private:
     bool is_root() const { return !stable_data_.parent_; }
     bool has_children() const { return children_data_.num_children_; }
     bool is_leaf() const { return !has_children(); }
+    bool eliminated() const { return stats_.eliminated_; }
+    Node* find_child(action_index_t action) const;
 
     /*
      * This includes certain wins/losses AND certain draws.
@@ -111,13 +130,14 @@ private:
 
     struct stable_data_t {
       stable_data_t(const GameState& state, const Result& result, Node* parent, action_index_t action);
+      stable_data_t(const stable_data_t& data, bool prune_parent);
 
       GameState state_;
       Result result_;
       ActionMask valid_action_mask_;
       Node* parent_;
       action_index_t action_;
-      player_index_t current_player_;
+      player_index_t current_player_;  // is this needed?
     };
 
     struct children_data_t {
@@ -128,7 +148,6 @@ private:
     struct stats_t {
       stats_t();
 
-//      Eigen::Vector<float, kNumPlayers> value_sum_;
       Eigen::Vector<float, kNumPlayers> value_avg_;
       Eigen::Vector<float, kNumPlayers> effective_value_avg_;
       Eigen::Vector<float, kNumPlayers> V_floor_;
@@ -143,13 +162,41 @@ private:
     stats_t stats_;
   };
 
+  class SearchThread {
+  public:
+    SearchThread(Mcts* mcts, int thread_id);
+    void run();
+
+  private:
+    Mcts* const mcts_;
+    const int thread_id_;
+  };
+
+  class NNEvaluationThread {
+  public:
+    NNEvaluationThread(int batch_size, int64_t timeout_ns);
+    NNEvaluation* evaluate(const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index);
+
+  private:
+    using cache_key_t = StateSymmetryIndex<GameState>;
+    using cache_t = std::unordered_map<cache_key_t, NNEvaluation*>;  // TODO: use LRU cache or similar
+
+    common::NeuralNet::input_vec_t input_vec_;
+    cache_t cache_;
+    const int64_t timeout_ns_;
+  };
+
 public:
   Mcts(NeuralNet& net);
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const Result&);
   const Results* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
+  void visit(Node*, const Tensorizor&, const GameState&, const Params&, int depth);
+
+  static void run_search(Mcts* mcts, int thread_id);
 
 private:
+  NNEvaluationThread* nn_eval_thread_;
   NeuralNet& net_;
   Node* root_ = nullptr;
   torch::Tensor torch_input_gpu_;
