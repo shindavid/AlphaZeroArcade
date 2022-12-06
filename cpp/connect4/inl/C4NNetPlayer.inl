@@ -17,6 +17,7 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   , net_(params.model_filename)
   , policy_(std::array<int64_t, 2>{1, kNumColumns})
   , value_(std::array<int64_t, 2>{1, kNumPlayers})
+  , mcts_(net_)
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
   torch_input_gpu_ = input_.asTorch().clone().to(torch::kCUDA);
@@ -68,7 +69,7 @@ inline common::action_index_t NNetPlayer::get_net_only_action(const GameState& s
   auto& input = input_.asEigen();
 
   tensorizor_.tensorize(input, state);
-  auto transform = tensorizor_.get_random_symmetry(state);
+  auto transform = tensorizor_.get_symmetry(state, tensorizor_.get_random_symmetry_index(state));
   transform->transform_input(input);
   torch_input_gpu_.copy_(input_.asTorch());
   net_.predict(input_vec_, policy_.asTorch(), value_.asTorch());

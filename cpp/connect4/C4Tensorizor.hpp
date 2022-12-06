@@ -34,7 +34,8 @@ public:
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
   void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
-  SymmetryTransform* get_random_symmetry(const GameState&) const;
+  common::symmetry_index_t get_random_symmetry_index(const GameState&) const;
+  SymmetryTransform* get_symmetry(const GameState&, common::symmetry_index_t index) const;
 
 private:
   IdentityTransform identity_transform_;

@@ -37,7 +37,9 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state, typ
    */
   { tensorizor.tensorize(input, GameState{}) };
 
-  { tensorizor.get_random_symmetry(state) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
+  { tensorizor.get_random_symmetry_index(state) } -> std::same_as<symmetry_index_t>;
+
+  { tensorizor.get_symmetry(state, symmetry_index_t{}) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
 };
 
 }  // namespace common

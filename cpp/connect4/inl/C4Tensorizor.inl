@@ -17,8 +17,12 @@ inline Tensorizor::Tensorizor()
 : transforms_{&identity_transform_, &reflection_transform_}
 {}
 
-inline Tensorizor::SymmetryTransform* Tensorizor::get_random_symmetry(const GameState&) const {
-  return *(transforms_.begin() + util::Random::uniform_sample(0, transforms_.size()));
+inline common::symmetry_index_t Tensorizor::get_random_symmetry_index(const GameState&) const {
+  return util::Random::uniform_sample(0, transforms_.size());
+}
+
+inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(const GameState&, common::symmetry_index_t index) const {
+  return *(transforms_.begin() + index);
 }
 
 }  // namespace c4

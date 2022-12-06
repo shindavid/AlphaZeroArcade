@@ -20,6 +20,7 @@ namespace common {
  */
 template<int NumPlayers> using GameResult = Eigen::Vector<float, NumPlayers>;
 template<int NumPlayers> bool is_terminal_result(const GameResult<NumPlayers>& result) { return result.sum() > 0; }
+template<int NumPlayers> auto make_non_terminal_result() { GameResult<NumPlayers> r; r.setZero(); return r; }
 
 template<typename GameState>
 struct GameStateTypes {
