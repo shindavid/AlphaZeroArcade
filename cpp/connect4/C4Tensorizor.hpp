@@ -18,16 +18,16 @@ namespace c4 {
 class Tensorizor {
 public:
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
-  using PolicyVector = common::GameStateTypes<GameState>::PolicyVector;
-  using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
+  using PolicyVector = common::GameStateTypes<GameState>::PolicyVector::EigenType;
+  using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, 2>;
 
   class ReflectionTransform : public SymmetryTransform {
   public:
-    void transform_input(InputTensor& input) override;
-    void transform_policy(PolicyVector& policy) override;
+    void transform_input(InputEigenTensor& input) override;
+    void transform_policy(PolicyEigenVector& policy) override;
   };
 
   void clear() {}

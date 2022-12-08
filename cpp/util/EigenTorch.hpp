@@ -1,7 +1,8 @@
 #pragma once
 
-#include <unsupported/Eigen/CXX11/Tensor>
+#include <Eigen/Core>
 #include <torch/torch.h>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -28,40 +29,16 @@
  *
  * The answer is YES, and this module provides classes to do exactly that.
  *
- * eigentorch::FixedSizeTensor can be thought of as a c++ union of torch::Tensor and Eigen::TensorFixedSize.
+ * eigentorch::TensorFixedSize can be thought of as a c++ union of torch::Tensor and Eigen::TensorFixedSize.
  *
- * eigentorch::FixedSizeMatrix can be thought of as a c++ union of torch::Tensor and a fixed-sized Eigen::Matrix.
+ * eigentorch::Tensor can be thought of as a c++ union of torch::Tensor and Eigen::Tensor.
  *
- * eigentorch::FixedSizeVector is a template specialization of eigentorch::FixedSizeMatrix, where the second dimension
- * is 1 (analogously to how Eigen::Vector is a template specialization of Eigen::Matrix).
+ * eigentorch::Matrix can be thought of as a c++ union of torch::Tensor and Eigen::Matrix.
+ *
+ * eigentorch::Vector is a template specialization of eigentorch::Matrix, where the second dimension is 1
+ * (analogously to how Eigen::Vector is a template specialization of Eigen::Matrix).
  */
 namespace eigentorch {
-
-/*
- * Reinterprets an eigen_util::fixed_tensor_t as a torch::Tensor. Can optionally pass in a new shape for the
- * torch tensor. By default, uses the same shape as the eigen tensor.
- *
- * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
- */
-template<typename Scalar, typename Sizes, int Options>
-torch::Tensor eigen2torch(Eigen::TensorFixedSize<Scalar, Sizes, Options>& tensor);
-
-template<typename Scalar, typename Sizes, int Options, size_t N>
-torch::Tensor eigen2torch(Eigen::TensorFixedSize<Scalar, Sizes, Options>& tensor,
-                          const std::array<int64_t, N>& torch_shape);
-
-/*
- * Reinterprets an Eigen::Matrix as a torch::Tensor. Can optionally pass in a new shape for the torch tensor. By
- * default, uses the same shape as the eigen matrix.
- *
- * This is NOT a copy. Modifying the outputted value will result in modifications to the inputted value.
- */
-template<typename Scalar, int Rows, int Cols, int Options>
-torch::Tensor eigen2torch(Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix);
-
-template<typename Scalar, int Rows, int Cols, int Options, size_t N>
-torch::Tensor eigen2torch(Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix,
-                          const std::array<int64_t, N>& torch_shape);
 
 /*
  * Can be thought of as a c++ union of torch::Tensor and Eigen::TensorFixedSize.
@@ -72,115 +49,124 @@ torch::Tensor eigen2torch(Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix,
  * The recommendation is to do all operations and manipulations via asEigen(), and to only use asTorch() when
  * absolutely needed (i.e., when using as input for neural network evaluation input/output).
  *
- * Warning: when mixing reading of t.asTorch() with writing of t.asEigen() or similar, I'm not sure if the compiler
- * will know that reordering is
+ * WARNING: when mixing reading of t.asTorch() with writing of t.asEigen() or similar, I'm not sure if the compiler
+ * will know not to reorder those operations.
  */
 template <typename Scalar_, typename Sizes_, int Options_=Eigen::RowMajor>
-class FixedSizeTensor {
+class TensorFixedSize {
 public:
   using Scalar = Scalar_;
   using Sizes = Sizes_;
   static constexpr int Options = Options_;
-  using EigenTensor = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
-  using TorchTensor = torch::Tensor;
+  using EigenType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
+  using TorchType = torch::Tensor;
 
-  FixedSizeTensor() : torch_tensor_(eigentorch::eigen2torch(eigen_tensor_)) {}
+  TensorFixedSize();
+  template<typename IntT, size_t N> TensorFixedSize(const std::array<IntT, N>& torch_shape);
 
-  template<size_t N>
-  FixedSizeTensor(const std::array<int64_t, N>& shape) : torch_tensor_(eigentorch::eigen2torch(eigen_tensor_, shape)) {}
+  EigenType& asEigen() { return eigen_tensor_; }
+  const EigenType& asEigen() const { return eigen_tensor_; }
 
-  EigenTensor& asEigen() { return eigen_tensor_; }
-  const EigenTensor& asEigen() const { return eigen_tensor_; }
-
-  TorchTensor& asTorch() { return torch_tensor_; }
-  const TorchTensor& asTorch() const { return torch_tensor_; }
+  TorchType& asTorch() { return torch_tensor_; }
+  const TorchType& asTorch() const { return torch_tensor_; }
 
 private:
-  EigenTensor eigen_tensor_;
-  TorchTensor torch_tensor_;
+  EigenType eigen_tensor_;
+  TorchType torch_tensor_;
 };
 
 /*
- * Can be thought of as a c++ union of torch::Tensor and Eigen::Matrix (with fixed shape).
+ * Can be thought of as a c++ union of torch::Tensor and Eigen::Tensor.
  *
- * The torch tensor and eigen vector will share the same datatype, specified by Scalar_. By default, they will also
- * share the same 2-dimensional shape, specified by Rows_ and Cols_. The torch shape can be overridden by passing it in
- * as a constructor argument.
+ * The torch and eigen tensors will share the same datatype, specified by Scalar_, and the same shape, passed in
+ * by constructor argument. The torch shape can be overridden by passing it in as an additional constructor argument.
  *
  * The recommendation is to do all operations and manipulations via asEigen(), and to only use asTorch() when
  * absolutely needed (i.e., when using as input for neural network evaluation input/output).
+ *
+ * WARNING: when mixing reading of t.asTorch() with writing of t.asEigen() or similar, I'm not sure if the compiler
+ * will know not to reorder those operations.
+ */
+template <typename Scalar_, int Rank_, int Options_=Eigen::RowMajor>
+class Tensor {
+public:
+  using Scalar = Scalar_;
+  static constexpr int Rank = Rank_;
+  static constexpr int Options = Options_;
+  using EigenType = Eigen::Tensor<Scalar, Rank, Options>;
+  template<typename Sizes> using EigenSlabType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
+  using TorchType = torch::Tensor;
+
+  template<typename IntT, size_t N> Tensor(const std::array<IntT, N>& eigen_shape);
+
+  template<typename IntT1, size_t N1, typename IntT2, size_t N2>
+  Tensor(const std::array<IntT1, N1>& eigen_shape, const std::array<IntT2, N2>& torch_shape);
+
+  template<typename Sizes> const EigenSlabType<Sizes>& eigenSlab(int row) const;
+  template<typename Sizes> EigenSlabType<Sizes>& eigenSlab(int row);
+
+  EigenType& asEigen() { return eigen_tensor_; }
+  const EigenType& asEigen() const { return eigen_tensor_; }
+
+  TorchType& asTorch() { return torch_tensor_; }
+  const TorchType& asTorch() const { return torch_tensor_; }
+
+private:
+  EigenType eigen_tensor_;
+  TorchType torch_tensor_;
+};
+
+/*
+ * Can be thought of as a c++ union of torch::Tensor and Eigen::Matrix. The
+ *
+ * The torch tensor and eigen vector will share the same datatype, specified by Scalar_. By default, they will also
+ * share the same 2-dimensional shape, specified by Rows_ and Cols_ (or by constructor args if either are Dynamic).
+ * The torch shape can be overridden by passing it in as a constructor argument.
+ *
+ * The recommendation is to do all operations and manipulations via asEigen(), and to only use asTorch() when
+ * absolutely needed (i.e., when using as input for neural network evaluation input/output).
+ *
+ * WARNING: when mixing reading of t.asTorch() with writing of t.asEigen() or similar, I'm not sure if the compiler
+ * will know not to reorder those operations.
  */
 template <typename Scalar_, int Rows_, int Cols_, int Options_=Eigen::RowMajor>
-class FixedSizeMatrix {
+class Matrix {
 public:
   using Scalar = Scalar_;
   static constexpr int Rows = Rows_;
   static constexpr int Cols = Cols_;
   static constexpr int Options = Options_;
-  using EigenMatrix = Eigen::Matrix<Scalar, Rows, Cols, Options>;
-  using TorchTensor = torch::Tensor;
+  using EigenType = Eigen::Matrix<Scalar, Rows, Cols, Options>;
+  using EigenSlabType = Eigen::Matrix<Scalar, 1, Cols, Options>;
+  using TorchType = torch::Tensor;
 
-  FixedSizeMatrix() : torch_tensor_(eigentorch::eigen2torch(eigen_matrix_)) {}
+  /*
+   * The first two constructors have the torch Tensor exactly match the eigen Tensor in shape. The default constructor
+   * is only appropriate in the case where Rows_ and Cols_ are fixed, while the second constructor is only
+   * appropriate when at least one of the two is Dynamic.
+   *
+   * The third and fourth constructor are similar, but also allow you to explicitly specify the torch shape.
+   */
+  Matrix();
+  Matrix(int rows, int cols);
+  template<typename IntT, size_t N> Matrix(const std::array<IntT, N>& torch_shape);
+  template<typename IntT, size_t N> Matrix(int rows, int cols, const std::array<IntT, N>& torch_shape);
 
-  template<size_t N>
-  FixedSizeMatrix(const std::array<int64_t, N>& shape) : torch_tensor_(eigentorch::eigen2torch(eigen_matrix_, shape)) {}
+  const EigenSlabType& eigenSlab(int row) const;
+  EigenSlabType& eigenSlab(int row);
 
-  EigenMatrix& asEigen() { return eigen_matrix_; }
-  const EigenMatrix& asEigen() const { return eigen_matrix_; }
+  EigenType& asEigen() { return eigen_matrix_; }
+  const EigenType& asEigen() const { return eigen_matrix_; }
 
-  TorchTensor& asTorch() { return torch_tensor_; }
-  const TorchTensor& asTorch() const { return torch_tensor_; }
+  TorchType& asTorch() { return torch_tensor_; }
+  const TorchType& asTorch() const { return torch_tensor_; }
 
 private:
-  EigenMatrix eigen_matrix_;
-  TorchTensor torch_tensor_;
+  EigenType eigen_matrix_;
+  TorchType torch_tensor_;
 };
 
-template<typename Scalar, int Rows> using FixedSizeVector = FixedSizeMatrix<Scalar, Rows, 1>;
-
-/*
- *********************************************************************
- * The following are equivalent:
- *
- * using S = eigen_util::fixed_tensor_t<float, Eigen::Sizes<1, 2>>;
- * using T = eigentorch::to_eigentorch_t<S>;
- *
- * and:
- *
- * using T = eigentorch::FixedSizeTensor<float, Eigen::Sizes<1, 2>>;
- *********************************************************************
- * Also, the following are equivalent:
- *
- * using S = Eigen::Matrix<float, 3, 4>;
- * using T = eigentorch::to_eigentorch_t<S>;
- *
- * and:
- *
- * using T = eigentorch::FixedSizeMatrix<float, 3, 4>;
- *********************************************************************
- * Also, the following are equivalent:
- *
- * using S = Eigen::Vector<float, 3>;
- * using T = eigentorch::to_eigentorch_t<S>;
- *
- * and:
- *
- * using T = eigentorch::FixedSizeVector<float, 3>;
- *********************************************************************
- */
-template<typename T> struct to_eigentorch {};
-
-template<typename Scalar, typename Sizes, int Options>
-struct to_eigentorch<Eigen::TensorFixedSize<Scalar, Sizes, Options>> {
-  using type = FixedSizeTensor<Scalar, Sizes>;
-};
-
-template<typename Scalar, int Rows, int Cols, int Options>
-struct to_eigentorch<Eigen::Matrix<Scalar, Rows, Cols, Options>> {
-  using type = FixedSizeMatrix<Scalar, Rows, Cols, Options>;
-};
-
-template<typename T> using to_eigentorch_t = typename to_eigentorch<T>::type;
+template<typename Scalar, int Rows> using Vector = Matrix<Scalar, Rows, 1>;
 
 }  // namespace eigentorch
 

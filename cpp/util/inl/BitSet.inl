@@ -21,9 +21,10 @@ int BitSet<N>::choose_random_set_bit() const {
 }
 
 template<int N>
-void BitSet<N>::to_float_vector(Eigen::Vector<float, N>& vector) const {
+template<typename T>
+void BitSet<N>::to_array(T* arr) const {
   for (int i = 0; i < N; ++i) {
-    vector(i) = (*this)[i];
+    arr[i] = (*this)[i];
   }
 }
 

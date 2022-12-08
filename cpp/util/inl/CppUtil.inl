@@ -32,4 +32,13 @@ template<typename A>
    return r;
  }
 
+template<typename T, typename U, size_t N> std::array<T, N> array_cast(const std::array<U, N>& arr) {
+  std::array<T, N> out;
+  for (size_t i = 0; i < N; ++i) {
+    out[i] = arr[i];
+  }
+  return out;
+}
+
+
 }  // namespace util

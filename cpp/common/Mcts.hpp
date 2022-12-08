@@ -5,15 +5,20 @@
 
 #include <Eigen/Core>
 
+#include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
-#include <common/BasicTypes.hpp>
 #include <util/BitSet.hpp>
+#include <util/EigenTorch.hpp>
+#include <util/LRUCache.hpp>
 
 namespace common {
 
+/*
+ * TODO: move the various inner-classes of Mcts into separate files as standalone-classes.
+ */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts {
 public:
@@ -21,13 +26,20 @@ public:
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
+  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
+  using GameStateTypes = common::GameStateTypes<c4::GameState>;
+
   using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
   using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
   using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
-  using Result = typename GameStateTypes<GameState>::Result;
+  using Result = typename GameStateTypes::Result;
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyLogitDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+
+  using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
+  using FullValueMatrix = GameStateTypes::ValueMatrix<Eigen::Dynamic>;
+  using FullPolicyMatrix = GameStateTypes::PolicyMatrix<Eigen::Dynamic>;
 
   struct Params {
     int tree_size_limit;
@@ -50,8 +62,8 @@ public:
 
 private:
   struct NNEvaluation {
-    NNEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state,
-                 common::NeuralNet::input_vec_t& input_vec, symmetry_index_t, float inv_temp);
+//    NNEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state,
+//                 common::NeuralNet::input_vec_t& input_vec, symmetry_index_t, float inv_temp);
 
     LocalPolicyProbDistr local_policy_prob_distr;
     ValueProbDistr value_prob_distr;
@@ -174,20 +186,29 @@ private:
 
   class NNEvaluationThread {
   public:
-    NNEvaluationThread(int batch_size, int64_t timeout_ns);
-    NNEvaluation* evaluate(const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index);
+    NNEvaluationThread(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size);
+    void evaluate(const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index);
 
   private:
     using cache_key_t = StateSymmetryIndex<GameState>;
-    using cache_t = std::unordered_map<cache_key_t, NNEvaluation*>;  // TODO: use LRU cache or similar
+    using cache_t = util::LRUCache<cache_key_t, NNEvaluation*>;
+
+    NeuralNet& net_;
+    FullPolicyMatrix policy_;
+    FullValueMatrix value_;
+    FullInputTensor input_;
 
     common::NeuralNet::input_vec_t input_vec_;
+    torch::Tensor torch_input_gpu_;
+
     cache_t cache_;
     const int64_t timeout_ns_;
+    const int batch_size_;
+    int batch_write_index_ = 0;
   };
 
 public:
-  Mcts(NeuralNet& net);
+  Mcts(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size);
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const Result&);
   const Results* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
@@ -196,8 +217,7 @@ public:
   static void run_search(Mcts* mcts, int thread_id);
 
 private:
-  NNEvaluationThread* nn_eval_thread_;
-  NeuralNet& net_;
+  NNEvaluationThread nn_eval_thread_;
   Node* root_ = nullptr;
   torch::Tensor torch_input_gpu_;
   Results results_;

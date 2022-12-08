@@ -7,6 +7,7 @@
 
 namespace common {
 
+/*
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
     const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state,
@@ -16,13 +17,9 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
   using ValueVector = typename GameStateTypes<GameState>::ValueVector;
   using InputTensor = typename Tensorizor::InputTensor;
 
-  using EigenTorchPolicy = eigentorch::to_eigentorch_t<PolicyVector>;
-  using EigenTorchValue = eigentorch::to_eigentorch_t<ValueVector>;
-  using EigenTorchInput = eigentorch::to_eigentorch_t<InputTensor>;
-
-  EigenTorchPolicy policy;
-  EigenTorchValue value;
-  EigenTorchInput input;
+  PolicyVector policy;
+  ValueVector value;
+  InputTensor input;
 
   tensorizor.tensorize(input.toEigen(), state);
   auto transform = tensorizor.get_symmetry(state, symmetry_index);
@@ -41,6 +38,7 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
   value_prob_distr = eigen_util::softmax(value.asEigen());
   local_policy_prob_distr = eigen_util::softmax(local_policy_prob_distr * inv_temp);
 }
+ */
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
@@ -222,30 +220,48 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::run() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::NNEvaluationThread::NNEvaluationThread(int batch_size, int64_t timeout_ns)
-: timeout_ns_(timeout_ns)
+inline Mcts<GameState, Tensorizor>::NNEvaluationThread::NNEvaluationThread(
+    NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size)
+: net_(net)
+, policy_(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
+, value_(batch_size, kNumPlayers, util::to_std_array<int>(batch_size, kNumPlayers))
+, input_(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::Shape>))
+, cache_(cache_size)
+, timeout_ns_(timeout_ns)
+, batch_size_(batch_size)
 {
-  for (int i = 0; i < batch_size; ++i) {
-    input_vec_.push_back(torch::Tensor().to(torch::kCUDA));
-  }
-  throw std::exception();
+  torch_input_gpu_ = input_.asTorch().clone().to(torch::kCUDA);
+  input_vec_.push_back(torch_input_gpu_);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::NNEvaluation*
-Mcts<GameState, Tensorizor>::NNEvaluationThread::evaluate(
+void Mcts<GameState, Tensorizor>::NNEvaluationThread::evaluate(
     const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index)
 {
-  // TODO: appropriate changes for multi-threaded context. Assumes single-threading for now.
+  cache_key_t key{state, index};
+  auto cached = cache_.get(key);
+  if (cached.has_value()) {
+    return cached.value();
+  }
+
+  auto& input = input_.eigenSlab<TensorizorTypes::Shape>(batch_write_index_);
+  ++batch_write_index_;
+  if (batch_write_index_ == batch_size_) {
+    // TODO: make net evaluation, update cache, write to memory where search threads can read, notify search
+    // threads
+  }
+
+  // TODO: respect timeout_ns_
   throw std::exception();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Mcts(NeuralNet& net) : net_(net) {
-}
+inline Mcts<GameState, Tensorizor>::Mcts(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size)
+: nn_eval_thread_(net, batch_size, timeout_ns, cache_size) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::clear() {
+  root_->release();
   root_ = nullptr;
 }
 

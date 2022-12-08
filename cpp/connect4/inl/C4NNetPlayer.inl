@@ -17,7 +17,7 @@ inline NNetPlayer::NNetPlayer(const Params& params)
   , net_(params.model_filename)
   , policy_(std::array<int64_t, 2>{1, kNumColumns})
   , value_(std::array<int64_t, 2>{1, kNumPlayers})
-  , mcts_(net_)
+  , mcts_(net_, 1, 0, 4096)
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
   torch_input_gpu_ = input_.asTorch().clone().to(torch::kCUDA);

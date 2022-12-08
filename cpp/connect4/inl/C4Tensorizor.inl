@@ -5,11 +5,11 @@
 
 namespace c4 {
 
-inline void Tensorizor::ReflectionTransform::transform_input(Tensorizor::InputTensor& tensor) {
+inline void Tensorizor::ReflectionTransform::transform_input(InputEigenTensor& tensor) {
   tensor = eigen_util::reverse(tensor, 2).eval();  // axis 2 corresponds to columns
 }
 
-inline void Tensorizor::ReflectionTransform::transform_policy(Tensorizor::PolicyVector& vector) {
+inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenVector& vector) {
   std::reverse(vector.begin(), vector.end());
 }
 

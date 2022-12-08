@@ -50,22 +50,6 @@ template<typename T> concept IntSequenceConcept = is_int_sequence_v<T>;
 /*
  * The following are equivalent:
  *
- * auto n = util::int_sequence_product_v<util::int_sequence<1, 2, 3, 4>>;
- *
- * and:
- *
- * auto n = 1 * 2 * 3 * 4;
- */
-template<typename T> struct int_sequence_product {};
-template<> struct int_sequence_product<int_sequence<>> { static constexpr int value = 1; };
-template<int I, int... Is> struct int_sequence_product<int_sequence<I, Is...>> {
-  static constexpr int value = I * int_sequence_product<int_sequence<Is...>>::value;
-};
-template<typename T> constexpr int int_sequence_product_v = int_sequence_product<T>::value;
-
-/*
- * The following are equivalent:
- *
  * using S = util::int_sequence<1, 2>;
  * using T = util::int_sequence<3>;
  * using U = util::concat_int_sequence_t<S, T>;
@@ -122,6 +106,12 @@ constexpr size_t array_size(const std::array<T, N>&) { return N; }
  * The fact that this function is constexpr allows for elegant compile-time constructions of std::array's.
  */
 template<typename A, typename... Ts> constexpr auto to_std_array(const Ts&... ts);
+
+/*
+ * std::array<int, 3> a{1, 2, 3};
+ * std::array<int64_t, 3> b = util::array_cast<int64_t>(a);
+ */
+template<typename T, typename U, size_t N> std::array<T, N> array_cast(const std::array<U, N>&);
 
 }  // namespace util
 

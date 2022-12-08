@@ -36,10 +36,6 @@ public:
   using ValueVector = common::GameStateTypes<GameState>::ValueVector;
   using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
 
-  using EigenTorchPolicy = eigentorch::to_eigentorch_t<PolicyVector>;
-  using EigenTorchValue = eigentorch::to_eigentorch_t<ValueVector>;
-  using EigenTorchInput = eigentorch::to_eigentorch_t<InputTensor>;
-
   NNetPlayer(const Params&);
   ~NNetPlayer();
 
@@ -68,9 +64,9 @@ private:
   common::NeuralNet net_;
   Tensorizor tensorizor_;
 
-  EigenTorchPolicy policy_;
-  EigenTorchValue value_;
-  EigenTorchInput input_;
+  PolicyVector policy_;
+  ValueVector value_;
+  InputTensor input_;
 
   common::NeuralNet::input_vec_t input_vec_;
   torch::Tensor torch_input_gpu_;
