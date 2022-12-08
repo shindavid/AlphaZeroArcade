@@ -2,15 +2,24 @@
 
 #include <ostream>
 
+#include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
-#include <connect4/C4Constants.hpp>
-#include <connect4/C4GameState.hpp>
+#include <common/DerivedTypes.hpp>
+#include <common/GameStateConcept.hpp>
 
-namespace c4 {
+namespace common {
 
-class HumanTuiPlayer : public Player {
+template<GameStateConcept GameState_>
+class HumanTuiPlayer : public AbstractPlayer<GameState_> {
 public:
-  using base_t = common::AbstractPlayer<GameState>;
+  using base_t = AbstractPlayer<GameState_>;
+  using GameState = GameState_;
+  using GameStateTypes = GameStateTypes_<GameState>;
+
+  using ActionMask = typename GameStateTypes::ActionMask;
+  using GameResult = typename GameStateTypes::GameResult;
+  using player_name_array_t = typename GameStateTypes::player_name_array_t;
+  using player_array_t = typename base_t::player_array_t;
 
   HumanTuiPlayer() : base_t("Human") {}
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
@@ -27,6 +36,6 @@ private:
   common::action_index_t last_action_ = -1;
 };
 
-}  // namespace c4
+}  // namespace common
 
-#include <connect4/inl/C4HumanTuiPlayer.inl>
+#include <common/inl/HumanTuiPlayer.inl>
