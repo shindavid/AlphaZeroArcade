@@ -15,7 +15,7 @@ public:
   void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) const;
 
 private:
-  torch::jit::script::Module module_;
+  mutable torch::jit::script::Module module_;
 };
 
 }  // namespace common
