@@ -12,7 +12,7 @@ inline common::player_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline common::GameStateTypes<GameState>::Result GameState::apply_move(common::action_index_t action) {
+inline common::GameStateTypes_<GameState>::GameResult GameState::apply_move(common::action_index_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   common::player_index_t current_player = get_current_player();
@@ -51,7 +51,7 @@ inline common::GameStateTypes<GameState>::Result GameState::apply_move(common::a
     }
   }
 
-  Result result;
+  GameResult result;
   result.setZero();
   if (win) {
     result(current_player) = 1.0;
@@ -154,6 +154,37 @@ inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const 
 
 inline bool GameState::operator==(const GameState& other) const {
   return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
+}
+
+inline void GameState::xdump_nnet_output(const MctsResults& results) {
+  const auto& value = results.value_prior;
+  const auto& policy = results.policy_prior;
+
+  util::xprintf("%s%s%s: %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * value(kRed));
+  util::xprintf("%s%s%s: %6.3f\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * value(kYellow));
+  util::xprintf("\n");
+  util::xprintf("%3s %8s\n", "Col", "Net");
+  for (int i = 0; i < kNumColumns; ++i) {
+    util::xprintf("%3d %8.3f\n", i + 1, policy(i));
+  }
+}
+
+inline void GameState::xdump_mcts_output(
+    const ValueProbDistr& mcts_value, const GlobalPolicyProbDistr& mcts_policy, const MctsResults& results)
+{
+  const auto& net_value = results.value_prior;
+  const auto& net_policy = results.policy_prior;
+  const auto& mcts_counts = results.counts;
+
+  util::xprintf("%s%s%s: %6.3f -> %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
+                100 * mcts_value(kRed));
+  util::xprintf("%s%s%s: %6.3f -> %6.3f\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * net_value(kYellow),
+                100 * mcts_value(kYellow));
+  util::xprintf("\n");
+  util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
+  for (int i = 0; i < kNumColumns; ++i) {
+    util::xprintf("%3d %8.3f %8d %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+  }
 }
 
 inline constexpr int GameState::_to_bit_index(column_t col, row_t row) {

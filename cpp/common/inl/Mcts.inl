@@ -9,12 +9,12 @@ namespace common {
 
 /*
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
+inline Mcts_<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
     const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state,
     common::NeuralNet::input_vec_t& input_vec, symmetry_index_t symmetry_index, float inv_temp)
 {
-  using PolicyVector = typename GameStateTypes<GameState>::PolicyVector;
-  using ValueVector = typename GameStateTypes<GameState>::ValueVector;
+  using PolicyVector = typename GameStateTypes_<GameState>::PolicyVector;
+  using ValueVector = typename GameStateTypes_<GameState>::ValueVector;
   using InputTensor = typename Tensorizor::InputTensor;
 
   PolicyVector policy;
@@ -41,8 +41,8 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
  */
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    const GameState& state, const Result& result, Node* parent, action_index_t action)
+inline Mcts_<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
+    const GameState& state, const GameResult& result, Node* parent, action_index_t action)
 : state_(state)
 , result_(result)
 , valid_action_mask_(state.get_valid_actions())
@@ -51,33 +51,33 @@ inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
 , current_player_(state.get_current_player()) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
+inline Mcts_<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
 {
   *this = data;
   if (prune_parent) parent_ = nullptr;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
+inline Mcts_<GameState, Tensorizor>::Node::stats_t::stats_t() {
   value_avg_.setZero();
   effective_value_avg_.setZero();
   V_floor_.setZero();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::Node(
-    const GameState& state, const Result& result, Node* parent, action_index_t action)
+inline Mcts_<GameState, Tensorizor>::Node::Node(
+    const GameState& state, const GameResult& result, Node* parent, action_index_t action)
 : stable_data_(state, result, parent, action) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
+inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
 : stable_data_(node.stable_data_, prune_parent)
 , children_data_(node.children_data_)
 , evaluation_(node.evaluation_)
 , stats_(node.stats_) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::release(Node* protected_child) {
+inline void Mcts_<GameState, Tensorizor>::Node::release(Node* protected_child) {
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
     if (child != protected_child) child->release();
@@ -88,8 +88,8 @@ inline void Mcts<GameState, Tensorizor>::Node::release(Node* protected_child) {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline typename Mcts<GameState, Tensorizor>::GlobalPolicyCountDistr
-Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
+inline typename Mcts_<GameState, Tensorizor>::GlobalPolicyCountDistr
+Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 {
   std::lock_guard<std::mutex> guard(mutex_);
 
@@ -112,7 +112,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::expand_children() {
+inline void Mcts_<GameState, Tensorizor>::Node::expand_children() {
   std::lock_guard<std::mutex> guard(mutex_);
 
   if (has_children()) return;
@@ -126,13 +126,13 @@ inline void Mcts<GameState, Tensorizor>::Node::expand_children() {
     action_index_t action = *it;
     // TODO: consider making the state copy and applying move lazily?
     GameState state_copy = stable_data_.state_;
-    Result result = state_copy.apply_move(action);
+    GameResult result = state_copy.apply_move(action);
     new(node++) Node(state_copy, result, this, action);
   }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& result, bool terminal) {
+inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& result, bool terminal) {
   {
     std::lock_guard<std::mutex> guard(mutex_);
 
@@ -146,7 +146,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& re
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::terminal_backprop(const ValueProbDistr& result) {
+inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValueProbDistr& result) {
   bool recurse = false;
   {
     std::lock_guard<std::mutex> guard(mutex_);
@@ -177,7 +177,7 @@ inline void Mcts<GameState, Tensorizor>::Node::terminal_backprop(const ValueProb
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-Mcts<GameState, Tensorizor>::Node* Mcts<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
+Mcts_<GameState, Tensorizor>::Node* Mcts_<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
   // TODO: technically we can do a binary search here, as children should be in sorted order by action
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node *child = children_data_.first_child_ + i;
@@ -187,7 +187,7 @@ Mcts<GameState, Tensorizor>::Node* Mcts<GameState, Tensorizor>::Node::find_child
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts<GameState, Tensorizor>::Node::get_max_V_floor_among_children(player_index_t p) const {
+inline float Mcts_<GameState, Tensorizor>::Node::get_max_V_floor_among_children(player_index_t p) const {
   float max_V_floor = 0;
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
@@ -197,7 +197,7 @@ inline float Mcts<GameState, Tensorizor>::Node::get_max_V_floor_among_children(p
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts<GameState, Tensorizor>::Node::get_min_V_floor_among_children(player_index_t p) const {
+inline float Mcts_<GameState, Tensorizor>::Node::get_min_V_floor_among_children(player_index_t p) const {
   float min_V_floor = 1;
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
@@ -207,7 +207,7 @@ inline float Mcts<GameState, Tensorizor>::Node::get_min_V_floor_among_children(p
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::SearchThread::SearchThread(Mcts* mcts, int thread_id)
+inline Mcts_<GameState, Tensorizor>::SearchThread::SearchThread(Mcts_* mcts, int thread_id)
 : mcts_(mcts)
 , thread_id_(thread_id)
 {
@@ -215,12 +215,12 @@ inline Mcts<GameState, Tensorizor>::SearchThread::SearchThread(Mcts* mcts, int t
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::SearchThread::run() {
+inline void Mcts_<GameState, Tensorizor>::SearchThread::run() {
   throw std::exception();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::NNEvaluationThread::NNEvaluationThread(
+inline Mcts_<GameState, Tensorizor>::NNEvaluationThread::NNEvaluationThread(
     NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size)
 : net_(net)
 , policy_(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
@@ -235,7 +235,7 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationThread::NNEvaluationThread(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::NNEvaluationThread::evaluate(
+void Mcts_<GameState, Tensorizor>::NNEvaluationThread::evaluate(
     const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index)
 {
   cache_key_t key{state, index};
@@ -256,18 +256,18 @@ void Mcts<GameState, Tensorizor>::NNEvaluationThread::evaluate(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Mcts(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size)
+inline Mcts_<GameState, Tensorizor>::Mcts_(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size)
 : nn_eval_thread_(net, batch_size, timeout_ns, cache_size) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::clear() {
+inline void Mcts_<GameState, Tensorizor>::clear() {
   root_->release();
   root_ = nullptr;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::receive_state_change(
-    player_index_t player, const GameState& state, action_index_t action, const Result& result)
+inline void Mcts_<GameState, Tensorizor>::receive_state_change(
+    player_index_t player, const GameState& state, action_index_t action, const GameResult& result)
 {
   if (root_) {
     Node* new_root = root_->find_child(action);
@@ -284,7 +284,7 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline const Mcts<GameState, Tensorizor>::Results* Mcts<GameState, Tensorizor>::sim(
+inline const Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState, Tensorizor>::sim(
     const Tensorizor& tensorizor, const GameState& game_state, const Params& params)
 {
   if (!params.can_reuse_subtree() || !root_) {
@@ -310,14 +310,14 @@ inline const Mcts<GameState, Tensorizor>::Results* Mcts<GameState, Tensorizor>::
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::visit(
+inline void Mcts_<GameState, Tensorizor>::visit(
     Node* tree, const Tensorizor& tensorizor, const GameState& state, const Params& params, int depth)
 {
 
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::run_search(Mcts* mcts, int thread_id) {
+inline void Mcts_<GameState, Tensorizor>::run_search(Mcts_* mcts, int thread_id) {
   SearchThread thread(mcts, thread_id);
   thread.run();
 }

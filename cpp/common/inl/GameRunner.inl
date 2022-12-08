@@ -6,7 +6,7 @@
 namespace common {
 
 template<GameStateConcept GameState>
-typename GameRunner<GameState>::Result GameRunner<GameState>::run() {
+typename GameRunner<GameState>::GameResult GameRunner<GameState>::run() {
   for (size_t p = 0; p < players_.size(); ++p) {
     players_[p]->start_game(players_, p);
   }
