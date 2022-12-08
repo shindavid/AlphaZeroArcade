@@ -5,6 +5,7 @@
 
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
+#include <common/DerivedTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 
@@ -12,6 +13,9 @@ namespace c4 {
 
 class PerfectOracle {
 public:
+  using GameStateTypes = common::GameStateTypes_<c4::GameState>;
+  using ActionMask = GameStateTypes::ActionMask;
+
   class MoveHistory {
   public:
     MoveHistory();

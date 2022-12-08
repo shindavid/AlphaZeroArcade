@@ -1,10 +1,6 @@
 #pragma once
 
-#include <array>
-#include <string>
-
 #include <common/BasicTypes.hpp>
-#include <util/BitSet.hpp>
 
 namespace c4 {
 
@@ -19,8 +15,5 @@ const int kNumPlayers = 2;
 
 const common::player_index_t kRed = 0;
 const common::player_index_t kYellow = 1;
-
-using ActionMask = util::BitSet<kNumColumns>;
-using player_name_array_t = std::array<std::string, kNumPlayers>;
 
 }  //namespace c4

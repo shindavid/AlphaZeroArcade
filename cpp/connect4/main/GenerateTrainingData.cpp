@@ -43,6 +43,7 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
   using TensorizorTypes = common::TensorizorTypes_<c4::Tensorizor>;
   using GameStateTypes = common::GameStateTypes_<c4::GameState>;
+  using ActionMask = GameStateTypes::ActionMask;
 
   using FullEigenTorchInput = TensorizorTypes::DynamicInputTensor;
   using FullEigenTorchValue = GameStateTypes::ValueMatrix<Eigen::Dynamic>;
@@ -68,7 +69,7 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
     while (true) {
       auto query_result = oracle.get_best_moves(move_history);
-      c4::ActionMask best_moves = query_result.moves;
+      ActionMask best_moves = query_result.moves;
       int best_score = query_result.score;
 
       common::player_index_t cp = state.get_current_player();
@@ -85,7 +86,7 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       tensorizor.tensorize(input, state);
       ++row;
 
-      c4::ActionMask moves = state.get_valid_actions();
+      ActionMask moves = state.get_valid_actions();
       int move = moves.choose_random_set_bit();
       auto result = state.apply_move(move);
       tensorizor.receive_state_change(state, move);

@@ -36,10 +36,11 @@ public:
   static constexpr int kMaxNumLocalActions = kNumColumns;
 
   using GameStateTypes = common::GameStateTypes_<GameState>;
+  using ActionMask = GameStateTypes::ActionMask;
+  using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueProbDistr = GameStateTypes::ValueProbDistr;
   using MctsResults = common::MctsResults_<GameState>;
   using GlobalPolicyProbDistr = GameStateTypes::GlobalPolicyProbDistr;
-  using GlobalPolicyCountDistr = GameStateTypes::GlobalPolicyCountDistr;
   using GameResult = GameStateTypes::GameResult;
 
   common::player_index_t get_current_player() const;

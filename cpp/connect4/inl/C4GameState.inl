@@ -63,7 +63,7 @@ inline common::GameStateTypes_<GameState>::GameResult GameState::apply_move(comm
   return result;
 }
 
-inline ActionMask GameState::get_valid_actions() const {
+inline GameState::ActionMask GameState::get_valid_actions() const {
   mask_t bottomed_full_mask = full_mask_ + _full_bottom_mask();
 
   ActionMask mask;
