@@ -2,13 +2,14 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/GameRunner.hpp>
 #include <common/BasicTypes.hpp>
+#include <common/GameRunner.hpp>
+#include <common/NNetPlayer.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayer.hpp>
-#include <connect4/C4NNetPlayer.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/C4Tensorizor.hpp>
 #include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
@@ -67,10 +68,11 @@ int main(int ac, char* av[]) {
     cpu_params.c4_solver_dir = c4_solver_dir;
     cpu = new c4::PerfectPlayer(cpu_params);
   } else {
-    c4::NNetPlayer::Params cpu_params;
+    using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
+    C4NNetPlayer::Params cpu_params;
     cpu_params.neural_network_only = args.neural_network_only;
     cpu_params.verbose = args.verbose;
-    cpu = new c4::NNetPlayer(cpu_params);
+    cpu = new C4NNetPlayer(cpu_params);
   }
 
   common::player_index_t my_color = parse_color(args.my_starting_color);

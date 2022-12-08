@@ -18,7 +18,7 @@ inline void HumanTuiPlayer::start_game(const player_array_t& players, common::pl
 }
 
 inline void HumanTuiPlayer::receive_state_change(
-    common::player_index_t, const GameState& state, common::action_index_t action, const Result& result)
+    common::player_index_t, const GameState& state, common::action_index_t action, const GameResult& result)
 {
   last_action_ = action;
   if (common::is_terminal_result(result)) {

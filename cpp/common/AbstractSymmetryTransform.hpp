@@ -18,8 +18,8 @@ namespace common {
 template<typename GameState, typename Tensorizor>
 class AbstractSymmetryTransform {
 public:
-  using InputEigenTensor = typename TensorizorTypes<Tensorizor>::InputTensor::EigenType;
-  using PolicyEigenVector = typename GameStateTypes<GameState>::PolicyVector::EigenType;
+  using InputEigenTensor = typename TensorizorTypes_<Tensorizor>::InputTensor::EigenType;
+  using PolicyEigenVector = typename GameStateTypes_<GameState>::PolicyVector::EigenType;
 
   virtual ~AbstractSymmetryTransform() {}
 

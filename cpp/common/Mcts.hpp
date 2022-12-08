@@ -8,6 +8,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
+#include <common/MctsResults.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
 #include <util/BitSet.hpp>
@@ -17,29 +18,30 @@
 namespace common {
 
 /*
- * TODO: move the various inner-classes of Mcts into separate files as standalone-classes.
+ * TODO: move the various inner-classes of Mcts_ into separate files as standalone-classes.
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-class Mcts {
+class Mcts_ {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
-  using GameStateTypes = common::GameStateTypes<c4::GameState>;
+  using TensorizorTypes = TensorizorTypes_<Tensorizor>;
+  using GameStateTypes = GameStateTypes_<GameState>;
 
-  using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
-  using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
-  using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
-  using Result = typename GameStateTypes::Result;
+  using MctsResults = MctsResults_<GameState>;
+  using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
+  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
+  using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
+  using GameResult = typename GameStateTypes::GameResult;
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyLogitDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
-  using FullValueMatrix = GameStateTypes::ValueMatrix<Eigen::Dynamic>;
-  using FullPolicyMatrix = GameStateTypes::PolicyMatrix<Eigen::Dynamic>;
+  using FullValueMatrix = typename GameStateTypes::template ValueMatrix<Eigen::Dynamic>;
+  using FullPolicyMatrix = typename GameStateTypes::template PolicyMatrix<Eigen::Dynamic>;
 
   struct Params {
     int tree_size_limit;
@@ -51,13 +53,6 @@ public:
     int num_threads = 1;
 
     bool can_reuse_subtree() const { return dirichlet_mult == 0; }
-  };
-
-  struct Results {
-    GlobalPolicyCountDistr counts;
-    GlobalPolicyProbDistr policy_prior;
-    ValueProbDistr win_rates;
-    ValueProbDistr value_prior;
   };
 
 private:
@@ -91,7 +86,7 @@ private:
    */
   class Node {
   public:
-    Node(const GameState& state, const Result& result, Node* parent=nullptr, action_index_t action=-1);
+    Node(const GameState& state, const GameResult& result, Node* parent=nullptr, action_index_t action=-1);
     Node(const Node& node, bool prune_parent=false);
 
     /*
@@ -141,11 +136,11 @@ private:
     bool is_terminal() const { return is_terminal_result(stable_data_.result_); }
 
     struct stable_data_t {
-      stable_data_t(const GameState& state, const Result& result, Node* parent, action_index_t action);
+      stable_data_t(const GameState& state, const GameResult& result, Node* parent, action_index_t action);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
       GameState state_;
-      Result result_;
+      GameResult result_;
       ActionMask valid_action_mask_;
       Node* parent_;
       action_index_t action_;
@@ -176,11 +171,11 @@ private:
 
   class SearchThread {
   public:
-    SearchThread(Mcts* mcts, int thread_id);
+    SearchThread(Mcts_* mcts, int thread_id);
     void run();
 
   private:
-    Mcts* const mcts_;
+    Mcts_* const mcts_;
     const int thread_id_;
   };
 
@@ -208,19 +203,19 @@ private:
   };
 
 public:
-  Mcts(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size);
+  Mcts_(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size);
   void clear();
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const Result&);
-  const Results* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
+  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameResult&);
+  const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
   void visit(Node*, const Tensorizor&, const GameState&, const Params&, int depth);
 
-  static void run_search(Mcts* mcts, int thread_id);
+  static void run_search(Mcts_* mcts, int thread_id);
 
 private:
   NNEvaluationThread nn_eval_thread_;
   Node* root_ = nullptr;
   torch::Tensor torch_input_gpu_;
-  Results results_;
+  MctsResults results_;
   player_index_t player_index_ = -1;
 };
 

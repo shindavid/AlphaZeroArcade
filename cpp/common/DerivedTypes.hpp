@@ -6,6 +6,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 
 #include <common/BasicTypes.hpp>
+#include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/EigenUtil.hpp>
@@ -22,26 +23,33 @@ namespace common {
  *
  * If the game is not yet over, the result will have all zeros.
  */
-template<int NumPlayers> using GameResult = Eigen::Vector<float, NumPlayers>;
-template<int NumPlayers> bool is_terminal_result(const GameResult<NumPlayers>& result) { return result.sum() > 0; }
-template<int NumPlayers> auto make_non_terminal_result() { GameResult<NumPlayers> r; r.setZero(); return r; }
+template<int NumPlayers> using GameResult_ = Eigen::Vector<float, NumPlayers>;
+template<int NumPlayers> bool is_terminal_result(const GameResult_<NumPlayers>& result) { return result.sum() > 0; }
+template<int NumPlayers> auto make_non_terminal_result() { GameResult_<NumPlayers> r; r.setZero(); return r; }
 
 template<typename GameState>
-struct GameStateTypes {
+struct GameStateTypes_ {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
 
-  using Result = GameResult<kNumPlayers>;
+  using GameResult = GameResult_<kNumPlayers>;
 
   template <int NumRows> using PolicyMatrix = eigentorch::Matrix<float, NumRows, kNumGlobalActions, Eigen::RowMajor>;
   template <int NumRows> using ValueMatrix = eigentorch::Matrix<float, NumRows, kNumPlayers, Eigen::RowMajor>;
 
   using PolicyVector = PolicyMatrix<1>;
   using ValueVector = ValueMatrix<1>;
+
+  using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
+  using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
+  using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
+
+  using ActionMask = util::BitSet<kNumGlobalActions>;
+  using player_name_array_t = std::array<std::string, kNumPlayers>;
 };
 
 template<typename Tensorizor>
-struct TensorizorTypes {
+struct TensorizorTypes_ {
   using BaseShape = typename Tensorizor::Shape;
   using Shape = eigen_util::to_sizes_t<util::concat_int_sequence_t<util::int_sequence<1>, BaseShape>>;
   using InputTensor = eigentorch::TensorFixedSize<float, Shape>;

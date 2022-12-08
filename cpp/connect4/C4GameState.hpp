@@ -8,9 +8,10 @@
 #include <torch/torch.h>
 
 #include <common/AbstractPlayer.hpp>
+#include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/BasicTypes.hpp>
+#include <common/MctsResults.hpp>
 #include <connect4/C4Constants.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -34,10 +35,15 @@ public:
   static constexpr int kNumGlobalActions = kNumColumns;
   static constexpr int kMaxNumLocalActions = kNumColumns;
 
-  using Result = common::GameStateTypes<GameState>::Result;
+  using GameStateTypes = common::GameStateTypes_<GameState>;
+  using ValueProbDistr = GameStateTypes::ValueProbDistr;
+  using MctsResults = common::MctsResults_<GameState>;
+  using GlobalPolicyProbDistr = GameStateTypes::GlobalPolicyProbDistr;
+  using GlobalPolicyCountDistr = GameStateTypes::GlobalPolicyCountDistr;
+  using GameResult = GameStateTypes::GameResult;
 
   common::player_index_t get_current_player() const;
-  Result apply_move(common::action_index_t action);
+  GameResult apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
 
@@ -45,6 +51,9 @@ public:
   void xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
+  static void xdump_nnet_output(const MctsResults& results);
+  static void xdump_mcts_output(
+      const ValueProbDistr& mcts_value, const GlobalPolicyProbDistr& mcts_policy, const MctsResults& results);
 
 private:
   void xprintf_row_dump(row_t row, column_t blink_column) const;
