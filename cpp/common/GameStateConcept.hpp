@@ -67,6 +67,11 @@ concept GameStateConcept = requires(S state) {
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
 
   /*
+   * For TUI-playing. Print a prompt to cout requesting an input, and then parse cin into an action.
+   */
+  { S::prompt_for_action() } -> std::same_as<common::action_index_t>;
+
+  /*
    * Pretty-print neural network output to terminal for debugging purposes.
    */
   { S::xdump_nnet_output(MctsResults_<S>{}) };

@@ -156,6 +156,14 @@ inline bool GameState::operator==(const GameState& other) const {
   return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
 }
 
+inline common::action_index_t GameState::prompt_for_action() {
+  std::cout << "Enter move [1-7]: ";
+  std::cout.flush();
+  std::string input;
+  std::getline(std::cin, input);
+  return std::stoi(input) - 1;
+}
+
 inline void GameState::xdump_nnet_output(const MctsResults& results) {
   const auto& value = results.value_prior;
   const auto& policy = results.policy_prior;

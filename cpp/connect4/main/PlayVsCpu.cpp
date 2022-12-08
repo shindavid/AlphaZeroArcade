@@ -4,10 +4,10 @@
 
 #include <common/BasicTypes.hpp>
 #include <common/GameRunner.hpp>
+#include <common/HumanTuiPlayer.hpp>
 #include <common/NNetPlayer.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4HumanTuiPlayer.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <util/Config.hpp>
@@ -60,7 +60,8 @@ int main(int ac, char* av[]) {
   }
 
   boost::filesystem::path c4_solver_dir(args.c4_solver_dir_str);
-  c4::Player* human = new c4::HumanTuiPlayer();
+  using C4HumanTuiPlayer = common::HumanTuiPlayer<c4::GameState>;
+  c4::Player* human = new C4HumanTuiPlayer();
 
   c4::Player* cpu;
   if (args.perfect) {

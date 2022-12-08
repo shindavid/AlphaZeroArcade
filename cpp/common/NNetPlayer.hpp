@@ -8,9 +8,11 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
+#include <common/GameStateConcept.hpp>
 #include <common/Mcts.hpp>
 #include <common/MctsResults.hpp>
 #include <common/NeuralNet.hpp>
+#include <common/TensorizorConcept.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 
