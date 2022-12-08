@@ -117,7 +117,7 @@ private:
 };
 
 /*
- * Can be thought of as a c++ union of torch::Tensor and Eigen::Matrix. The
+ * Can be thought of as a c++ union of torch::Tensor and Eigen::Matrix.
  *
  * The torch tensor and eigen vector will share the same datatype, specified by Scalar_. By default, they will also
  * share the same 2-dimensional shape, specified by Rows_ and Cols_ (or by constructor args if either are Dynamic).
@@ -150,7 +150,7 @@ public:
   Matrix();
   Matrix(int rows, int cols);
   template<typename IntT, size_t N> Matrix(const std::array<IntT, N>& torch_shape);
-  template<typename IntT, size_t N> Matrix(int rows, int cols, const std::array<IntT, N>& torch_shape);
+  template<typename IntT, size_t N> Matrix(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape);
 
   const EigenSlabType& eigenSlab(int row) const;
   EigenSlabType& eigenSlab(int row);

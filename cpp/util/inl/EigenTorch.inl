@@ -124,8 +124,8 @@ Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(const std::array<IntT, N>& torch
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
 template <typename IntT, size_t N>
-Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(int rows, int cols, const std::array<IntT, N>& torch_shape)
-: eigen_matrix_(rows, cols)
+Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape)
+: eigen_matrix_(eigen_rows, eigen_cols)
 , torch_tensor_(detail::eigen2torch(eigen_matrix_, util::array_cast<int64_t>(torch_shape)))
 {
   static_assert((Rows_ == Eigen::Dynamic) || Cols_ == Eigen::Dynamic);
