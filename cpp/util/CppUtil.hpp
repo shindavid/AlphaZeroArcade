@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <tuple>
 #include <type_traits>
 
 #define CONCAT_HELPER(x, y) x ## y
@@ -112,6 +113,8 @@ template<typename A, typename... Ts> constexpr auto to_std_array(const Ts&... ts
  * std::array<int64_t, 3> b = util::array_cast<int64_t>(a);
  */
 template<typename T, typename U, size_t N> std::array<T, N> array_cast(const std::array<U, N>&);
+
+template<typename... T> size_t tuple_hash(const std::tuple<T...>& arg);
 
 }  // namespace util
 

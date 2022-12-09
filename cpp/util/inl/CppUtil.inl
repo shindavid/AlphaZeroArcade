@@ -2,6 +2,30 @@
 
 namespace util {
 
+namespace detail {
+
+/*
+ * Adapted from: https://www.linkedin.com/pulse/generic-tuple-hashing-modern-c-alex-dathskovsky/
+ */
+inline auto lazy_hasher = [](size_t hash, auto&&... values) {
+  auto lazy_combiner = [&hash](auto&& val) {
+    hash ^= std::hash<std::decay_t<decltype(val)>>{}(val) + 0Xeeffddcc + (hash << 5) + (hash >> 3);
+  };
+  (lazy_combiner(std::forward<decltype(values)>(values)), ...);
+  return hash;
+};
+
+struct TupleHasher {
+  template<typename... T>
+  size_t operator()(const std::tuple<T...>& tup) {
+    size_t hash = 0;
+    std::apply(lazy_hasher, std::tuple_cat(std::tuple(0), tup));
+    return hash;
+  }
+};
+
+}  // namespace detail
+
 template<typename A>
  constexpr auto to_std_array() {
    return std::array<A, 0>();
@@ -40,5 +64,8 @@ template<typename T, typename U, size_t N> std::array<T, N> array_cast(const std
   return out;
 }
 
+template<typename... T> size_t tuple_hash(const std::tuple<T...>& tup) {
+  return detail::TupleHasher{}(tup);
+}
 
 }  // namespace util
