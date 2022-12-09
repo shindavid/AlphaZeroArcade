@@ -13,6 +13,12 @@
 namespace eigen_util {
 
 /*
+ * Flattens a fixed-size Matrix into a Vector
+ */
+template <typename Scalar, int Rows, int Cols, int Options>
+auto to_vector(const Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix);
+
+/*
  * The following are equivalent:
  *
  * using T = Eigen::Sizes<1, 2, 3>;
@@ -68,14 +74,6 @@ template<typename T> struct is_fixed_tensor { static const bool value = false; }
 template<typename T, typename S> struct is_fixed_tensor<fixed_tensor_t<T, S>> { static const bool value = true; };
 template<typename T> inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T>::value;
 template<typename T> concept FixedTensorConcept = is_fixed_tensor_v<T>;
-
-/*
- * FixedVectorConcept is a concept corresponding to Eigen::Vector<T, N>
- */
-template<typename T> struct is_fixed_vector { static const bool value = false; };
-template<typename T, int S> struct is_fixed_vector<Eigen::Vector<T, S>> { static const bool value = true; };
-template<typename T> inline constexpr bool is_fixed_vector_v = is_fixed_vector<T>::value;
-template<typename T> concept FixedVectorConcept = is_fixed_vector_v<T>;
 
 /*
  * The following are equivalent:

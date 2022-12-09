@@ -5,8 +5,22 @@
 
 namespace eigen_util {
 
+template <typename Scalar, int Rows, int Cols, int Options>
+auto to_vector(const Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix) {
+  static_assert(Rows>0);
+  static_assert(Cols>0);
+  constexpr int N = Rows * Cols;
+  using Vector = Eigen::Vector<Scalar, N>;
+  Vector v;
+
+  for (int i = 0; i < N; ++i) {
+    v(i) = matrix.data()[i];
+  }
+
+  return v;
+}
+
 template<typename Vector> auto softmax(const Vector& vector) {
-  Eigen::Vector<float, 3> v;
   auto normalized_vector = vector.array() - vector.maxCoeff();
   auto z = normalized_vector.exp();
   return z / z.sum();
