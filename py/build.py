@@ -57,6 +57,17 @@ def get_torch_dir():
     return torch_dir
 
 
+def get_eigenrand_dir():
+    cfg = Config.instance().filename
+
+    eigenrand_dir = Config.instance().get('eigenrand_dir')
+    eigenrand_link = 'https://github.com/bab2min/EigenRand.git'
+    assert eigenrand_dir, (f'Please git clone {eigenrand_link} to EIGENRAND_PATH and add an '
+                           f'entry "eigenrand_dir=EIGENRAND_PATH" to {cfg}.')
+    assert os.path.isdir(eigenrand_dir)
+    return eigenrand_dir
+
+
 def get_conda_prefix():
     conda_prefix = os.environ.get('CONDA_PREFIX', None)
     assert conda_prefix, 'It appears you do not have a conda environment activated. Please activate!'
@@ -90,6 +101,7 @@ def main():
     os.chdir(repo_root)
 
     torch_dir = get_torch_dir()
+    eigenrand_dir = get_eigenrand_dir()
     conda_prefix = get_conda_prefix()
     check_for_eigen_dir(conda_prefix)
     check_for_boost_dir(conda_prefix)
@@ -101,6 +113,7 @@ def main():
         'CMakeLists.txt',
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
+        f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DCMAKE_PREFIX_PATH={conda_prefix}'
     ]
     if debug:

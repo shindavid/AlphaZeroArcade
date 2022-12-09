@@ -19,6 +19,7 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 include_directories("cpp")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
+include_directories(${MY_EIGENRAND_DIR})
 
 add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
 add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
