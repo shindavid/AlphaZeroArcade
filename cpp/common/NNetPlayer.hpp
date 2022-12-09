@@ -43,8 +43,8 @@ public:
   using Mcts = Mcts_<GameState, Tensorizor>;
   using MctsResults = MctsResults_<GameState>;
 
-  using PolicyVector = typename GameStateTypes::PolicyVector;
-  using ValueVector = typename GameStateTypes::ValueVector;
+  using PolicySlab = typename GameStateTypes::PolicySlab;
+  using ValueSlab = typename GameStateTypes::ValueSlab;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameResult = typename GameStateTypes::GameResult;
   using player_array_t = typename base_t::player_array_t;
@@ -77,8 +77,8 @@ private:
   NeuralNet net_;
   Tensorizor tensorizor_;
 
-  PolicyVector policy_;
-  ValueVector value_;
+  PolicySlab policy_;
+  ValueSlab value_;
   InputTensor input_;
 
   NeuralNet::input_vec_t input_vec_;

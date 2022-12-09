@@ -9,7 +9,7 @@ inline void Tensorizor::ReflectionTransform::transform_input(InputEigenTensor& t
   tensor = eigen_util::reverse(tensor, 2).eval();  // axis 2 corresponds to columns
 }
 
-inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenVector& vector) {
+inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenSlab& vector) {
   std::reverse(vector.begin(), vector.end());
 }
 
@@ -22,7 +22,7 @@ inline common::symmetry_index_t Tensorizor::get_random_symmetry_index(const Game
   return util::Random::uniform_sample(0, transforms().size());
 }
 
-inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(const GameState&, common::symmetry_index_t index) const {
+inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(common::symmetry_index_t index) const {
   return *(transforms().begin() + index);
 }
 

@@ -9,10 +9,10 @@ class IdentityTransform : public AbstractSymmetryTransform<GameState, Tensorizor
 public:
   using base_t = AbstractSymmetryTransform<GameState, Tensorizor>;
   using InputEigenTensor = typename base_t::InputEigenTensor;
-  using PolicyEigenVector = typename base_t::PolicyEigenVector;
+  using PolicyEigenSlab = typename base_t::PolicyEigenSlab;
 
   void transform_input(InputEigenTensor& input) override {}
-  void transform_policy(PolicyEigenVector& policy) override {}
+  void transform_policy(PolicyEigenSlab& policy) override {}
 };
 
 }

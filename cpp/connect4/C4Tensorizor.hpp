@@ -18,7 +18,6 @@ namespace c4 {
 class Tensorizor {
 public:
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
-  using PolicyVector = common::GameStateTypes_<GameState>::PolicyVector::EigenType;
   using InputTensor = common::TensorizorTypes_<Tensorizor>::InputTensor::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
@@ -27,7 +26,7 @@ public:
   class ReflectionTransform : public SymmetryTransform {
   public:
     void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenVector& policy) override;
+    void transform_policy(PolicyEigenSlab& policy) override;
   };
 
   void clear() {}
@@ -35,7 +34,7 @@ public:
   void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
   common::symmetry_index_t get_random_symmetry_index(const GameState&) const;
-  SymmetryTransform* get_symmetry(const GameState&, common::symmetry_index_t index) const;
+  SymmetryTransform* get_symmetry(common::symmetry_index_t index) const;
 
 private:
   static transform_array_t transforms();

@@ -63,7 +63,9 @@ inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
+    const GameState& state, const ActionMask& valid_actions)
+{
   if (params_.neural_network_only) {
     return get_net_only_action(state, valid_actions);
   } else {
@@ -80,7 +82,7 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_net_only_action(
   auto& input = input_.asEigen();
 
   tensorizor_.tensorize(input, state);
-  auto transform = tensorizor_.get_symmetry(state, tensorizor_.get_random_symmetry_index(state));
+  auto transform = tensorizor_.get_symmetry(tensorizor_.get_random_symmetry_index(state));
   transform->transform_input(input);
   torch_input_gpu_.copy_(input_.asTorch());
   net_.predict(input_vec_, policy_.asTorch(), value_.asTorch());

@@ -19,7 +19,7 @@ template<typename GameState, typename Tensorizor>
 class AbstractSymmetryTransform {
 public:
   using InputEigenTensor = typename TensorizorTypes_<Tensorizor>::InputTensor::EigenType;
-  using PolicyEigenVector = typename GameStateTypes_<GameState>::PolicyVector::EigenType;
+  using PolicyEigenSlab = typename GameStateTypes_<GameState>::PolicySlab::EigenType;
 
   virtual ~AbstractSymmetryTransform() {}
 
@@ -31,7 +31,7 @@ public:
   /*
    * Transforms a policy tensor in place.
    */
-  virtual void transform_policy(PolicyEigenVector& policy) = 0;
+  virtual void transform_policy(PolicyEigenSlab& policy) = 0;
 };
 
 }  // namespace common

@@ -36,12 +36,13 @@ public:
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
   using GameResult = typename GameStateTypes::GameResult;
   using ActionMask = util::BitSet<kNumGlobalActions>;
-  using LocalPolicyLogitDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
   using FullValueMatrix = typename GameStateTypes::template ValueMatrix<Eigen::Dynamic>;
   using FullPolicyMatrix = typename GameStateTypes::template PolicyMatrix<Eigen::Dynamic>;
+  using ValueVector = typename GameStateTypes::ValueVector;
+  using PolicyVector = typename GameStateTypes::PolicyVector;
 
   struct Params {
     int tree_size_limit;
@@ -56,12 +57,15 @@ public:
   };
 
 private:
-  struct NNEvaluation {
-//    NNEvaluation(const NeuralNet& net, const Tensorizor& tensorizor, const GameState& state,
-//                 common::NeuralNet::input_vec_t& input_vec, symmetry_index_t, float inv_temp);
+  class NNEvaluation {
+  public:
+    NNEvaluation(const ValueVector& value, const PolicyVector& policy, const ActionMask& valid_actions, float inv_temp);
+    const ValueProbDistr& value_prob_distr() const { return value_prob_distr_; }
+    const LocalPolicyProbDistr& local_policy_prob_distr() const { return local_policy_prob_distr_; }
 
-    LocalPolicyProbDistr local_policy_prob_distr;
-    ValueProbDistr value_prob_distr;
+  protected:
+    ValueProbDistr value_prob_distr_;
+    LocalPolicyProbDistr local_policy_prob_distr_;
   };
 
   /*
@@ -86,7 +90,8 @@ private:
    */
   class Node {
   public:
-    Node(const GameState& state, const GameResult& result, Node* parent=nullptr, action_index_t action=-1);
+    Node(const Tensorizor& tensorizor, const GameState& state, const GameResult& result, symmetry_index_t sym_index,
+         Node* parent=nullptr, action_index_t action=-1);
     Node(const Node& node, bool prune_parent=false);
 
     /*
@@ -108,13 +113,16 @@ private:
     void backprop(const ValueProbDistr& result, bool terminal=false);
     void terminal_backprop(const ValueProbDistr& result);
 
+    const GameResult& result() const { return stable_data_.result_; }
     Node* parent() const { return stable_data_.parent_; }
     int effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
     bool is_root() const { return !stable_data_.parent_; }
     bool has_children() const { return children_data_.num_children_; }
     bool is_leaf() const { return !has_children(); }
     bool eliminated() const { return stats_.eliminated_; }
+    symmetry_index_t get_sym_index() const { return stable_data_.sym_index_; }
     Node* find_child(action_index_t action) const;
+    const Eigen::Vector<float, kNumPlayers>& V_floor() const { return stats_.V_floor_; }
 
     /*
      * This includes certain wins/losses AND certain draws.
@@ -136,13 +144,16 @@ private:
     bool is_terminal() const { return is_terminal_result(stable_data_.result_); }
 
     struct stable_data_t {
-      stable_data_t(const GameState& state, const GameResult& result, Node* parent, action_index_t action);
+      stable_data_t(const Tensorizor& tensorizor, const GameState& state, const GameResult& result, Node* parent,
+                    symmetry_index_t sym_index, action_index_t action);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
+      Tensorizor tensorizor_;
       GameState state_;
       GameResult result_;
       ActionMask valid_action_mask_;
       Node* parent_;
+      symmetry_index_t sym_index_;
       action_index_t action_;
       player_index_t current_player_;  // is this needed?
     };
@@ -182,23 +193,35 @@ private:
   class NNEvaluationThread {
   public:
     NNEvaluationThread(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size);
-    void evaluate(const Tensorizor& tensorizor, const GameState& state, symmetry_index_t index);
+    ~NNEvaluationThread() { delete[] evaluation_data_arr_; }
+    void evaluate(const Tensorizor& tensorizor, const GameState& state, symmetry_index_t sym_index, float inv_temp,
+                  NNEvaluation** eval_ptr);
 
   private:
+    struct evaluation_data_t {
+      NNEvaluation** eval_ptr;
+      ActionMask valid_actions;
+      float inv_temp;
+      symmetry_index_t sym_index;
+    };
+
     using cache_key_t = StateSymmetryIndex<GameState>;
     using cache_t = util::LRUCache<cache_key_t, NNEvaluation*>;
+    using evaluation_pool_t = std::vector<NNEvaluation>;  // TODO: use something better than vector?
 
     NeuralNet& net_;
-    FullPolicyMatrix policy_;
-    FullValueMatrix value_;
-    FullInputTensor input_;
+    FullPolicyMatrix policy_batch_;
+    FullValueMatrix value_batch_;
+    FullInputTensor input_batch_;
+    evaluation_data_t* evaluation_data_arr_;
+    evaluation_pool_t evaluation_pool_;
 
     common::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;
 
     cache_t cache_;
     const int64_t timeout_ns_;
-    const int batch_size_;
+    const int batch_size_limit_;
     int batch_write_index_ = 0;
   };
 

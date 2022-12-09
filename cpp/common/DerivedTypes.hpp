@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tuple>
 #include <utility>
 
 #include <Eigen/Core>
@@ -37,8 +38,11 @@ struct GameStateTypes_ {
   template <int NumRows> using PolicyMatrix = eigentorch::Matrix<float, NumRows, kNumGlobalActions, Eigen::RowMajor>;
   template <int NumRows> using ValueMatrix = eigentorch::Matrix<float, NumRows, kNumPlayers, Eigen::RowMajor>;
 
-  using PolicyVector = PolicyMatrix<1>;
-  using ValueVector = ValueMatrix<1>;
+  using PolicySlab = PolicyMatrix<1>;
+  using ValueSlab = ValueMatrix<1>;
+
+  using PolicyVector = Eigen::Vector<float, kNumGlobalActions>;
+  using ValueVector = Eigen::Vector<float, kNumPlayers>;
 
   using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
   using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
@@ -59,10 +63,11 @@ struct TensorizorTypes_ {
 template<typename GameState>
 struct StateSymmetryIndex {
   GameState state;
+  float inv_temp;
   symmetry_index_t sym_index;
 
   bool operator==(const StateSymmetryIndex& other) const {
-    return state == other.state && sym_index == other.sym_index;
+    return state == other.state && inv_temp == other.inv_temp && sym_index == other.sym_index;
   }
 };
 
@@ -71,7 +76,6 @@ struct StateSymmetryIndex {
 template <typename GameState>
 struct std::hash<common::StateSymmetryIndex<GameState>> {
   std::size_t operator()(const common::StateSymmetryIndex<GameState> ssi) const {
-    constexpr size_t some_prime = 1113859;
-    return some_prime * std::hash(ssi.state) + ssi.sym_index;
+    return util::tuple_hash(std::make_tuple(ssi.state, ssi.inv_temp, ssi.sym_index));
   }
 };
