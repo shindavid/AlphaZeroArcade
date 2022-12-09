@@ -44,41 +44,55 @@ def get_targets(targets: List[str], args) -> List[str]:
         return ['???']
 
 
-def main():
-    args = get_args()
-    debug = bool(args.debug)
+def get_torch_dir():
+    cfg = Config.instance().filename
 
     torch_dir = Config.instance().get('libtorch_dir')
-    j_value = args.parallel
-    if not j_value:
-        j_value = int(Config.instance().get('cmake.j', 0))
-
-    targets = args.target.split(',') if args.target else []
-
-    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    cfg = Config.instance().filename
     torch_link = 'https://pytorch.org/get-started/locally/'
     assert torch_dir, (f'Please download torch for C++ from {torch_link}, unzip to a path LIBTORCH_PATH, and then add an '
                        f'entry "libtorch_dir=LIBTORCH_PATH" to {cfg}. '
                        'An explicitly downloaded libtorch must be used instead of the one that ships with conda, '
                        'due to the cxx11-abi issue. See here: https://github.com/pytorch/pytorch/issues/17492')
     assert os.path.isdir(torch_dir)
+    return torch_dir
 
+
+def get_conda_prefix():
     conda_prefix = os.environ.get('CONDA_PREFIX', None)
     assert conda_prefix, 'It appears you do not have a conda environment activated. Please activate!'
+    return conda_prefix
+
+
+def check_for_eigen_dir(conda_prefix):
     eigen_dir = os.path.join(conda_prefix, 'share/eigen3/cmake')
     assert os.path.isdir(eigen_dir), 'Please conda install eigen.'
 
+
+def check_for_boost_dir(conda_prefix):
     lib_cmake_dir = os.path.join(conda_prefix, 'lib/cmake')
     assert os.path.isdir(lib_cmake_dir)
-    found_boost = False
     for path in os.listdir(lib_cmake_dir):
         if path.startswith('Boost-') and os.path.isdir(os.path.join(lib_cmake_dir, path)):
-            found_boost = True
-            break
-    assert found_boost, 'Please conda install boost.'
+            return
+    raise Exception('Please conda install boost.')
 
+
+def main():
+    args = get_args()
+    debug = bool(args.debug)
+
+    j_value = args.parallel
+    if not j_value:
+        j_value = int(Config.instance().get('cmake.j', 0))
+
+    targets = args.target.split(',') if args.target else []
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     os.chdir(repo_root)
+
+    torch_dir = get_torch_dir()
+    conda_prefix = get_conda_prefix()
+    check_for_eigen_dir(conda_prefix)
+    check_for_boost_dir(conda_prefix)
 
     build_name = 'Debug' if debug else 'Release'
     target_dir = f'target/{build_name}'
