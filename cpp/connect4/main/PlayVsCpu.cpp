@@ -17,6 +17,8 @@
 struct Args {
   std::string c4_solver_dir_str;
   std::string my_starting_color;
+  int num_mcts_iters = 100;
+  float temperature = 0.0;
   bool perfect = false;
   bool neural_network_only = false;
   bool verbose = false;
@@ -42,6 +44,8 @@ int main(int ac, char* av[]) {
       ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("perfect,p", po::bool_switch(&args.perfect), "play against perfect player")
       ("neural-network-only,o", po::bool_switch(&args.neural_network_only), "neural network only")
+      ("num-mcts-iters,n", po::value<int>(&args.num_mcts_iters), "num mcts iterations to do per move")
+      ("temperature,t", po::value<float>(&args.temperature), "temperature. Must be >=0. Higher=more random play")
       ("verbose,v", po::bool_switch(&args.verbose), "verbose mode")
       ;
 
@@ -72,6 +76,8 @@ int main(int ac, char* av[]) {
     using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
     C4NNetPlayer::Params cpu_params;
     cpu_params.neural_network_only = args.neural_network_only;
+    cpu_params.num_mcts_iters = args.num_mcts_iters;
+    cpu_params.temperature = args.temperature;
     cpu_params.verbose = args.verbose;
     cpu = new C4NNetPlayer(cpu_params);
   }

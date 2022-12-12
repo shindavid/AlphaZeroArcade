@@ -45,8 +45,8 @@ public:
   using PolicyVector = typename GameStateTypes::PolicyVector;
 
   struct Params {
-    int tree_size_limit;
-    float root_softmax_temperature;
+    int tree_size_limit = 100;
+    float root_softmax_temperature = 1.03;
     float cPUCT = 1.1;
     float dirichlet_mult = 0.25;
     float dirichlet_alpha = 0.03;

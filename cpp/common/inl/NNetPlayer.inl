@@ -25,6 +25,8 @@ inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params)
   torch_input_gpu_ = input_.asTorch().clone().to(torch::kCUDA);
   input_vec_.push_back(torch_input_gpu_);
 
+  mcts_params_.tree_size_limit = params.num_mcts_iters;
+  mcts_params_.dirichlet_mult = 0;
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
