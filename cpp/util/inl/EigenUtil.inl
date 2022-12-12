@@ -5,6 +5,25 @@
 
 namespace eigen_util {
 
+template<typename Scalar>
+template<typename Matrix, typename Urng, typename... DimTs>
+Matrix UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&... dims) {
+  static_assert(Matrix::MaxColsAtCompileTime > 0);
+  static_assert(Matrix::MaxRowsAtCompileTime > 0);
+
+  if (alpha != alpha_) {
+    alpha_ = alpha;
+    new(&gamma_) GammaGen(alpha);
+  }
+
+  Matrix out(dims...);
+  for (int i = 0; i < out.size(); ++i) {
+    out.data()[i] = gamma_.template generate<Eigen::Matrix<Scalar, 1, 1>>(1, 1, urng)(0);
+  }
+  out /= out.sum();
+  return out;
+}
+
 template <typename Scalar, int Rows, int Cols, int Options>
 auto to_vector(const Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix) {
   static_assert(Rows>0);
