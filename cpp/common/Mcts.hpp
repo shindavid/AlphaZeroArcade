@@ -111,6 +111,13 @@ private:
      */
     void _release(Node* protected_child=nullptr);
 
+    /*
+     * Set child->parent = this for all children of this.
+     *
+     * This is the only reason that stable_data_ is not const.
+     */
+    void _adopt_children();
+
     std::mutex& evaluation_mutex() { return evaluation_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
@@ -181,7 +188,7 @@ private:
     mutable std::mutex children_data_mutex_;
     mutable std::mutex evaluation_mutex_;
     mutable std::mutex stats_mutex_;
-    const stable_data_t stable_data_;
+    stable_data_t stable_data_;  // effectively const
     children_data_t children_data_;
     NNEvaluation* evaluation_ = nullptr;  // TODO: use smart-pointer
     stats_t stats_;

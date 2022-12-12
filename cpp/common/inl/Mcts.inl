@@ -76,6 +76,14 @@ inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) 
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::Node::_adopt_children() {
+  for (int i = 0; i < children_data_.num_children_; ++i) {
+    Node* child = children_data_.first_child_ + i;
+    child->stable_data_.parent_ = this;
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline typename Mcts_<GameState, Tensorizor>::LocalPolicyCountDistr
 Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 {
@@ -94,13 +102,13 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
     float max_V_floor = _get_max_V_floor_among_children(cp);
     for (int i = 0; i < children_data_.num_children_; ++i) {
       Node* child = children_data_.first_child_ + i;
-      counts(child->action()) = (child->_V_floor(cp) == max_V_floor);
+      counts(i) = (child->_V_floor(cp) == max_V_floor);
     }
     return counts;
   }
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
-    counts(child->action()) = child->_effective_count();
+    counts(i) = child->_effective_count();
   }
   return counts;
 }
@@ -323,6 +331,7 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
   root_->_release(new_root);
   delete root_;
   root_ = new_root_copy;
+  root_->_adopt_children();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
