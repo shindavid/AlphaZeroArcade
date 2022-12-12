@@ -165,24 +165,34 @@ inline common::action_index_t GameState::prompt_for_action() {
 }
 
 inline void GameState::xdump_nnet_output(const MctsResults& results) {
+  const auto& valid_actions = results.valid_actions;
   const auto& value = results.value_prior;
   const auto& policy = results.policy_prior;
+
+  assert(policy.size() == valid_actions.count());
 
   util::xprintf("%s%s%s: %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * value(kRed));
   util::xprintf("%s%s%s: %6.3f\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * value(kYellow));
   util::xprintf("\n");
   util::xprintf("%3s %8s\n", "Col", "Net");
-  for (int i = 0; i < kNumColumns; ++i) {
-    util::xprintf("%3d %8.3f\n", i + 1, policy(i));
+
+  int i = 0;
+  for (common::action_index_t action : valid_actions) {
+    util::xprintf("%3d %8.3f\n", action + 1, policy(i++));
   }
 }
 
 inline void GameState::xdump_mcts_output(
-    const ValueProbDistr& mcts_value, const GlobalPolicyProbDistr& mcts_policy, const MctsResults& results)
+    const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
 {
+  const auto& valid_actions = results.valid_actions;
   const auto& net_value = results.value_prior;
   const auto& net_policy = results.policy_prior;
   const auto& mcts_counts = results.counts;
+
+  assert(net_value.size() == valid_actions.count());
+  assert(net_policy.size() == valid_actions.count());
+  assert(mcts_counts.size() == valid_actions.count());
 
   util::xprintf("%s%s%s: %6.3f -> %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
                 100 * mcts_value(kRed));
@@ -190,8 +200,11 @@ inline void GameState::xdump_mcts_output(
                 100 * mcts_value(kYellow));
   util::xprintf("\n");
   util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
-  for (int i = 0; i < kNumColumns; ++i) {
-    util::xprintf("%3d %8.3f %8d %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+
+  int i = 0;
+  for (common::action_index_t action : valid_actions) {
+    util::xprintf("%3d %8.3f %8d %8.3f\n", action + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+    i++;
   }
 }
 

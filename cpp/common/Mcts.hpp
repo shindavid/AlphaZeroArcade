@@ -32,12 +32,11 @@ public:
   using GameStateTypes = GameStateTypes_<GameState>;
 
   using MctsResults = MctsResults_<GameState>;
-  using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
-  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
   using GameResult = typename GameStateTypes::GameResult;
   using ActionMask = util::BitSet<kNumGlobalActions>;
-  using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+  using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
+  using LocalPolicyCountDistr = typename GameStateTypes::LocalPolicyCountDistr;
 
   using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
   using FullValueMatrix = typename GameStateTypes::template ValueMatrix<Eigen::Dynamic>;
@@ -112,9 +111,10 @@ private:
      */
     void _release(Node* protected_child=nullptr);
 
+    std::mutex& evaluation_mutex() { return evaluation_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
-    GlobalPolicyCountDistr get_effective_counts() const;
+    LocalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
     void backprop(const ValueProbDistr& result, bool terminal=false);
     void terminal_backprop(const ValueProbDistr& result);
@@ -122,6 +122,7 @@ private:
     const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }
     const GameState& state() const { return stable_data_.state_; }
     const GameResult& result() const { return stable_data_.result_; }
+    action_index_t action() const { return stable_data_.action_; }
     Node* parent() const { return stable_data_.parent_; }
     bool is_root() const { return !stable_data_.parent_; }
     symmetry_index_t sym_index() const { return stable_data_.sym_index_; }
@@ -134,11 +135,14 @@ private:
     Node* _find_child(action_index_t action) const;
 
     bool _eliminated() const { return stats_.eliminated_; }
-    const Eigen::Vector<float, kNumPlayers>& _V_floor() const { return stats_.V_floor_; }
+    float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
     float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
     int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
     bool _has_certain_outcome() const { return stats_.V_floor_.sum() == 1; }  // won, lost, OR drawn positions
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+
+    NNEvaluation* _evaluation() const { return evaluation_; }
+    NNEvaluation** _evaluation_ptr() { return &evaluation_; }
 
   private:
     float _get_max_V_floor_among_children(player_index_t p) const;
@@ -179,7 +183,7 @@ private:
     mutable std::mutex stats_mutex_;
     const stable_data_t stable_data_;
     children_data_t children_data_;
-    NNEvaluation* evaluation_ = nullptr;
+    NNEvaluation* evaluation_ = nullptr;  // TODO: use smart-pointer
     stats_t stats_;
   };
 
@@ -201,16 +205,15 @@ private:
                   NNEvaluation** eval_ptr);
 
   private:
+    using cache_key_t = StateEvaluationKey<GameState>;
+    using cache_t = util::LRUCache<cache_key_t, NNEvaluation*>;
+    using evaluation_pool_t = std::vector<NNEvaluation>;  // TODO: use smart-pointer-compatible object-pool
+
     struct evaluation_data_t {
       NNEvaluation** eval_ptr;
+      cache_key_t cache_key;
       ActionMask valid_actions;
-      float inv_temp;
-      symmetry_index_t sym_index;
     };
-
-    using cache_key_t = StateSymmetryIndex<GameState>;
-    using cache_t = util::LRUCache<cache_key_t, NNEvaluation*>;
-    using evaluation_pool_t = std::vector<NNEvaluation>;  // TODO: use something better than vector?
 
     NeuralNet& net_;
     FullPolicyMatrix policy_batch_;

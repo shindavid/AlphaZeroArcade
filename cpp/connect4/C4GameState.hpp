@@ -40,7 +40,7 @@ public:
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueProbDistr = GameStateTypes::ValueProbDistr;
   using MctsResults = common::MctsResults_<GameState>;
-  using GlobalPolicyProbDistr = GameStateTypes::GlobalPolicyProbDistr;
+  using LocalPolicyProbDistr = GameStateTypes::LocalPolicyProbDistr;
   using GameResult = GameStateTypes::GameResult;
 
   common::player_index_t get_current_player() const;
@@ -55,8 +55,8 @@ public:
 
   static common::action_index_t prompt_for_action();
   static void xdump_nnet_output(const MctsResults& results);
-  static void xdump_mcts_output(
-      const ValueProbDistr& mcts_value, const GlobalPolicyProbDistr& mcts_policy, const MctsResults& results);
+  static void xdump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
+                                const MctsResults& results);
 
 private:
   void xprintf_row_dump(row_t row, column_t blink_column) const;

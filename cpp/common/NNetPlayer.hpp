@@ -50,8 +50,7 @@ public:
   using player_array_t = typename base_t::player_array_t;
   using InputTensor = typename TensorizorTypes::InputTensor;
   using ValueProbDistr = typename Mcts::ValueProbDistr;
-  using GlobalPolicyCountDistr = typename Mcts::GlobalPolicyCountDistr;
-  using GlobalPolicyProbDistr = typename Mcts::GlobalPolicyProbDistr;
+  using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
 
   NNetPlayer(const Params&);
   ~NNetPlayer();
@@ -63,7 +62,7 @@ public:
 private:
   struct VerboseInfo {
     ValueProbDistr mcts_value;
-    GlobalPolicyProbDistr mcts_policy;
+    LocalPolicyProbDistr mcts_policy;
     MctsResults mcts_results;
 
     bool initialized = false;

@@ -83,7 +83,7 @@ concept GameStateConcept = requires(S state) {
    */
   { S::xdump_mcts_output(
       typename GameStateTypes_<S>::ValueProbDistr{},
-      typename GameStateTypes_<S>::GlobalPolicyProbDistr{},
+      typename GameStateTypes_<S>::LocalPolicyProbDistr{},
       MctsResults_<S>{})
   };
 };

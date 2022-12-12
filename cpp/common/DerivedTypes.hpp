@@ -32,6 +32,7 @@ template<typename GameState>
 struct GameStateTypes_ {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
+  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
   using GameResult = GameResult_<kNumPlayers>;
 
@@ -44,9 +45,9 @@ struct GameStateTypes_ {
   using PolicyVector = Eigen::Vector<float, kNumGlobalActions>;
   using ValueVector = Eigen::Vector<float, kNumPlayers>;
 
-  using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
-  using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
   using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
+  using LocalPolicyCountDistr = Eigen::Matrix<int, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+  using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
@@ -61,12 +62,12 @@ struct TensorizorTypes_ {
 };
 
 template<typename GameState>
-struct StateSymmetryIndex {
+struct StateEvaluationKey {
   GameState state;
   float inv_temp;
   symmetry_index_t sym_index;
 
-  bool operator==(const StateSymmetryIndex& other) const {
+  bool operator==(const StateEvaluationKey& other) const {
     return state == other.state && inv_temp == other.inv_temp && sym_index == other.sym_index;
   }
 };
@@ -74,8 +75,8 @@ struct StateSymmetryIndex {
 }  // namespace common
 
 template <typename GameState>
-struct std::hash<common::StateSymmetryIndex<GameState>> {
-  std::size_t operator()(const common::StateSymmetryIndex<GameState> ssi) const {
+struct std::hash<common::StateEvaluationKey<GameState>> {
+  std::size_t operator()(const common::StateEvaluationKey<GameState> ssi) const {
     return util::tuple_hash(std::make_tuple(ssi.state, ssi.inv_temp, ssi.sym_index));
   }
 };

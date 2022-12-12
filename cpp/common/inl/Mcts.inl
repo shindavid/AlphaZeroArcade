@@ -77,7 +77,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) 
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline typename Mcts_<GameState, Tensorizor>::GlobalPolicyCountDistr
+inline typename Mcts_<GameState, Tensorizor>::LocalPolicyCountDistr
 Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 {
   bool eliminated;
@@ -88,20 +88,20 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 
   std::lock_guard<std::mutex> guard(children_data_mutex_);
 
-  player_index_t cp = stable_data_.current_player;
-  GlobalPolicyCountDistr counts;
+  player_index_t cp = stable_data_.current_player_;
+  LocalPolicyCountDistr counts(children_data_.num_children_);
   counts.setZero();
   if (eliminated) {
-    float max_V_floor = _get_max_V_floor_among_children();
+    float max_V_floor = _get_max_V_floor_among_children(cp);
     for (int i = 0; i < children_data_.num_children_; ++i) {
       Node* child = children_data_.first_child_ + i;
-      counts(child->action_) = (child->V_floor_(cp) == max_V_floor);
+      counts(child->action()) = (child->_V_floor(cp) == max_V_floor);
     }
     return counts;
   }
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
-    counts(child->action_) = child->effective_count();
+    counts(child->action()) = child->_effective_count();
   }
   return counts;
 }
@@ -196,7 +196,7 @@ inline float Mcts_<GameState, Tensorizor>::Node::_get_max_V_floor_among_children
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
     std::lock_guard<std::mutex> guard(child->stats_mutex_);
-    max_V_floor = std::max(max_V_floor, child->_V_floor()(p));
+    max_V_floor = std::max(max_V_floor, child->_V_floor(p));
   }
   return max_V_floor;
 }
@@ -207,7 +207,7 @@ inline float Mcts_<GameState, Tensorizor>::Node::_get_min_V_floor_among_children
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
     std::lock_guard<std::mutex> guard(child->stats_mutex_);
-    min_V_floor = std::min(min_V_floor, child->_V_floor()(p));
+    min_V_floor = std::min(min_V_floor, child->_V_floor(p));
   }
   return min_V_floor;
 }
@@ -259,7 +259,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationThread::evaluate(
   auto transform = tensorizor.get_symmetry(sym_index);
   transform->transform_input(input);
 
-  evaluation_data_t edata{eval_ptr, state.get_valid_actions(), inv_temp, sym_index};
+  evaluation_data_t edata{eval_ptr, key, state.get_valid_actions()};
   evaluation_data_arr_[batch_write_index_] = edata;
   ++batch_write_index_;
 
@@ -273,11 +273,14 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationThread::evaluate(
     const evaluation_data_t& edata_i = evaluation_data_arr_[i];
     auto& policy_i = policy_batch_.eigenSlab(i);
     auto& value_i = value_batch_.eigenSlab(i);
+    auto sym_index_i = edata_i.cache_key.sym_index;
+    auto inv_temp_i = edata_i.cache_key.inv_temp;
 
-    tensorizor.get_symmetry(edata_i.sym_index)->transform_policy(policy_i);
+    tensorizor.get_symmetry(sym_index_i)->transform_policy(policy_i);
     evaluation_pool_.template emplace_back(
-        eigen_util::to_vector(value_i), eigen_util::to_vector(policy_i), edata_i.valid_actions, edata_i.inv_temp);
-    *eval_ptr = &evaluation_pool_.back();  // FIXME: this assumes batch_size_limit_ is 1
+        eigen_util::to_vector(value_i), eigen_util::to_vector(policy_i), edata_i.valid_actions, inv_temp_i);
+    *edata_i.eval_ptr = &evaluation_pool_.back();
+    cache_.insert(edata_i.cache_key, *edata_i.eval_ptr);
   }
   batch_write_index_ = 0;
 }
@@ -335,7 +338,10 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
       visit(root_, params, 1);
     }
 
-    throw std::exception();
+    results_.valid_actions = game_state.get_valid_actions();
+    results_.counts = root_->get_effective_counts();
+    results_.policy_prior = root_->_evaluation()->local_policy_prob_distr();
+    return &results_;
   } else {
     std::vector<std::thread> threads;
     for (int i = 0; i < params.num_threads; ++i) {
@@ -363,10 +369,13 @@ inline void Mcts_<GameState, Tensorizor>::visit(
   float inv_temp = (1.0 / params.root_softmax_temperature) ? tree->is_root() : 1.0;
   symmetry_index_t sym_index = tree->sym_index();
 
-  // TODO: make this block on asynchronous call via condition_variable
-  NNEvaluation* evaluation = nullptr;
-  nn_eval_thread_->evaluate(tree->tensorizor(), tree->state(), sym_index, inv_temp, &evaluation);
+  {
+    std::lock_guard<std::mutex> guard(tree->evaluation_mutex());
+    // TODO: make this block on asynchronous call via condition_variable
+    nn_eval_thread_->evaluate(tree->tensorizor(), tree->state(), sym_index, inv_temp, tree->_evaluation_ptr());
+  }
 
+  const NNEvaluation* evaluation = tree->_evaluation();
   bool leaf = tree->expand_children();
 
   auto cPUCT = params.cPUCT;
