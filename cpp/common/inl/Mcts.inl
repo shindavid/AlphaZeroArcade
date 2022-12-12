@@ -1,8 +1,11 @@
 #include <common/Mcts.hpp>
 
+#include <cmath>
 #include <thread>
 #include <utility>
 #include <vector>
+
+#include <EigenRand/EigenRand>
 
 #include <util/EigenTorch.hpp>
 
@@ -63,10 +66,10 @@ inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_par
 , stats_(node.stats_) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::release(Node* protected_child) {
+inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) {
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
-    if (child != protected_child) child->release();
+    if (child != protected_child) child->_release();
   }
 
   if (children_data_.first_child_) delete[] children_data_.first_child_;
@@ -77,13 +80,19 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline typename Mcts_<GameState, Tensorizor>::GlobalPolicyCountDistr
 Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 {
-  std::lock_guard<std::mutex> guard(mutex_);
+  bool eliminated;
+  {
+    std::lock_guard<std::mutex> guard(stats_mutex_);
+    eliminated = stats_.eliminated_;
+  }
+
+  std::lock_guard<std::mutex> guard(children_data_mutex_);
 
   player_index_t cp = stable_data_.current_player;
   GlobalPolicyCountDistr counts;
   counts.setZero();
-  if (stats_.eliminated_) {
-    float max_V_floor = get_max_V_floor_among_children();
+  if (eliminated) {
+    float max_V_floor = _get_max_V_floor_among_children();
     for (int i = 0; i < children_data_.num_children_; ++i) {
       Node* child = children_data_.first_child_ + i;
       counts(child->action_) = (child->V_floor_(cp) == max_V_floor);
@@ -98,35 +107,40 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::expand_children() {
-  std::lock_guard<std::mutex> guard(mutex_);
+inline bool Mcts_<GameState, Tensorizor>::Node::expand_children() {
+  std::lock_guard<std::mutex> guard(children_data_mutex_);
 
-  if (has_children()) return;
+  if (_has_children()) return false;
 
   // TODO: use object pool
   children_data_.num_children_ = stable_data_.valid_action_mask_.count();
   void* raw_memory = operator new[](children_data_.num_children_ * sizeof(Node));
   Node* node = static_cast<Node*>(raw_memory);
+
   children_data_.first_child_ = node;
   for (auto it : stable_data_.valid_action_mask_) {
     action_index_t action = it;
     Tensorizor tensorizor_copy = stable_data_.tensorizor_;
     GameState state_copy = stable_data_.state_;
 
+    // TODO: consider lazily doing these steps in visit(), since we only read them for Node's that win PUCT selection.
     symmetry_index_t sym_index = tensorizor_copy.get_random_symmetry_index(state_copy);
     GameResult result = state_copy.apply_move(action);
+    tensorizor_copy.receive_state_change(state_copy, action);
+
     new(node++) Node(tensorizor_copy, state_copy, result, sym_index, this, action);
   }
+  return true;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& result, bool terminal) {
   {
-    std::lock_guard<std::mutex> guard(mutex_);
+    std::lock_guard<std::mutex> guard(stats_mutex_);
 
     stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + result) / (stats_.count_ + 1);
     stats_.count_++;
-    stats_.effective_value_avg_ = has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
   if (parent()) parent()->backprop(result);
@@ -137,23 +151,24 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValueProbDistr& result) {
   bool recurse = false;
   {
-    std::lock_guard<std::mutex> guard(mutex_);
+    std::lock_guard<std::mutex> guard(stats_mutex_);
 
     if (is_terminal_result(result)) {
       stats_.V_floor_ = result;
     } else {
       player_index_t cp = stable_data_.current_player_;
+      std::lock_guard<std::mutex> guard2(children_data_mutex_);
       for (player_index_t p = 0; p < kNumPlayers; ++p) {
         if (p == cp) {
-          stats_.V_floor_[p] = get_max_V_floor_among_children(p);
+          stats_.V_floor_[p] = _get_max_V_floor_among_children(p);
         } else {
-          stats_.V_floor_[p] = get_min_V_floor_among_children(p);
+          stats_.V_floor_[p] = _get_min_V_floor_among_children(p);
         }
       }
     }
 
-    stats_.effective_value_avg_ = has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-    if (can_be_eliminated()) {
+    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+    if (_can_be_eliminated()) {
       stats_.eliminated_ = true;
       recurse = parent();
     }
@@ -166,7 +181,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValuePro
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::Node*
-Mcts_<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
+Mcts_<GameState, Tensorizor>::Node::_find_child(action_index_t action) const {
   // TODO: technically we can do a binary search here, as children should be in sorted order by action
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node *child = children_data_.first_child_ + i;
@@ -176,23 +191,23 @@ Mcts_<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts_<GameState, Tensorizor>::Node::get_max_V_floor_among_children(player_index_t p) const {
+inline float Mcts_<GameState, Tensorizor>::Node::_get_max_V_floor_among_children(player_index_t p) const {
   float max_V_floor = 0;
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
-    std::lock_guard<std::mutex> guard(child->mutex_);
-    max_V_floor = std::max(max_V_floor, child->V_floor()(p));
+    std::lock_guard<std::mutex> guard(child->stats_mutex_);
+    max_V_floor = std::max(max_V_floor, child->_V_floor()(p));
   }
   return max_V_floor;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts_<GameState, Tensorizor>::Node::get_min_V_floor_among_children(player_index_t p) const {
+inline float Mcts_<GameState, Tensorizor>::Node::_get_min_V_floor_among_children(player_index_t p) const {
   float min_V_floor = 1;
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
-    std::lock_guard<std::mutex> guard(child->mutex_);
-    min_V_floor = std::min(min_V_floor, child->V_floor()(p));
+    std::lock_guard<std::mutex> guard(child->stats_mutex_);
+    min_V_floor = std::min(min_V_floor, child->_V_floor()(p));
   }
   return min_V_floor;
 }
@@ -268,12 +283,19 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationThread::evaluate(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts_<GameState, Tensorizor>::Mcts_(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size)
-: nn_eval_thread_(net, batch_size, timeout_ns, cache_size) {}
+inline Mcts_<GameState, Tensorizor>::Mcts_(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size) {
+  nn_eval_thread_ = new NNEvaluationThread(net, batch_size, timeout_ns, cache_size);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts_<GameState, Tensorizor>::~Mcts_() {
+  if (nn_eval_thread_) delete nn_eval_thread_;
+  clear();
+}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::clear() {
-  root_->release();
+  root_->_release();
   root_ = nullptr;
 }
 
@@ -281,17 +303,19 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameResult& result)
 {
+  // TODO - wait until all search threads are paused here
+
   if (!root_) return;
 
-  Node* new_root = root_->find_child(action);
+  Node* new_root = root_->_find_child(action);
   if (!new_root) {
-    root_->release();
+    root_->_release();
     root_ = nullptr;
     return;
   }
 
   Node* new_root_copy = new Node(*new_root, true);
-  root_->release(new_root);
+  root_->_release(new_root);
   root_ = new_root_copy;
 }
 
@@ -307,10 +331,8 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 
   if (params.num_threads == 1) {
     // run everything in main thread for simplicity
-    while (root_->effective_count() < params.tree_size_limit && !root_->eliminated()) {
-      GameState game_state_copy(game_state);
-      Tensorizor tensorizor_copy(tensorizor);
-      visit(root_, tensorizor_copy, game_state_copy, params, 1);
+    while (root_->_effective_count() < params.tree_size_limit && !root_->_eliminated()) {
+      visit(root_, params, 1);
     }
 
     throw std::exception();
@@ -323,13 +345,13 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 
     for (auto& th : threads) th.join();
 
-    throw std::exception();
+    throw std::exception();  // TODO - implement me!
   }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::visit(
-    Node* tree, const Tensorizor& tensorizor, const GameState& state, const Params& params, int depth)
+    Node* tree, const Params& params, int depth)
 {
   const auto& result = tree->result();
   if (is_terminal_result(result)) {
@@ -337,26 +359,62 @@ inline void Mcts_<GameState, Tensorizor>::visit(
     return;
   }
 
+  player_index_t cp = tree->current_player();
   float inv_temp = (1.0 / params.root_softmax_temperature) ? tree->is_root() : 1.0;
-  symmetry_index_t sym_index = tree->get_sym_index();
+  symmetry_index_t sym_index = tree->sym_index();
 
   // TODO: make this block on asynchronous call via condition_variable
   NNEvaluation* evaluation = nullptr;
-  nn_eval_thread_.evaluate(tensorizor, state, sym_index, inv_temp, &evaluation);
+  nn_eval_thread_->evaluate(tree->tensorizor(), tree->state(), sym_index, inv_temp, &evaluation);
 
-//  bool leaf = tree->is_leaf();
-  tree->expand_children();
+  bool leaf = tree->expand_children();
 
-//  auto cPUCT = params.cPUCT;
+  auto cPUCT = params.cPUCT;
   LocalPolicyProbDistr P = evaluation->local_policy_prob_distr();
+  const int rows = P.rows();
 
-  LocalPolicyProbDistr noise;
+  using PVec = LocalPolicyProbDistr;
+
+  PVec noise(rows);
   if (tree->is_root() && params.dirichlet_mult) {
-//    noise = dirichlet();
+    noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(rng_, params.dirichlet_alpha, rows);
     P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise;
   } else {  // TODO - only need to setZero() if generating debug file
     noise = P;
     noise.setZero();
+  }
+
+  PVec V(rows);
+  PVec N(rows);
+  PVec E(rows);
+  for (int c = 0; c < tree->_num_children(); ++c) {
+    Node* child = tree->_get_child(c);
+    std::lock_guard<std::mutex> guard(child->stats_mutex());
+
+    V(c) = child->_effective_value_avg(cp);
+    N(c) = child->_effective_count();
+    E(c) = child->_eliminated();
+  }
+
+  constexpr float eps = 1e-6;  // needed when N == 0
+  PVec PUCT = V.array() + cPUCT * P.array() * sqrt(N.sum() + eps) / (N.array() + 1);
+  PUCT.array() *= (1 - E.array());
+
+//  // value_avg used for debugging
+//  using VVec = ValueVector;
+//  VVec value_avg;
+//  for (int p = 0; p < kNumPlayers; ++p) {
+//    value_avg(p) = tree->effective_value_avg(p);
+//  }
+
+  int argmax_index;
+  PUCT.maxCoeff(&argmax_index);
+  Node* best_child = tree->_get_child(argmax_index);
+
+  if (leaf) {
+    tree->backprop(evaluation->value_prob_distr());
+  } else {
+    visit(best_child, params, depth + 1);
   }
 }
 

@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <Eigen/Core>
+#include <EigenRand/EigenRand>
 
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
@@ -84,9 +85,12 @@ private:
    *
    * See for example this 2009 paper: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
    *
-   * For now, I am achieving thread-safety through brute-force, caveman-style. That is, all reads/writes to all Node
-   * members will be protected by a single per-Node mutex. Once we have appropriate tooling to profile performance and
-   * detect bottlenecks, we can improve this implementation.
+   * For now, I am achieving thread-safety by having three mutexes per-Node, one for each of the above three
+   * categories. Once we have appropriate tooling to profile performance and detect bottlenecks, we can improve this
+   * implementation.
+   *
+   * NAMING NOTE: Methods with a leading underscore are NOT thread-safe. Such methods are expected to be called in
+   * a context that guarantees the appropriate level of thread-safety.
    */
   class Node {
   public:
@@ -106,42 +110,39 @@ private:
      * Also, in the future, we might have Monte Carlo *Graph* Search (MCGS) instead of MCTS. In this future, a given
      * Node might have multiple parents, so release() might decrement smart-pointer reference counts instead.
      */
-    void release(Node* protected_child=nullptr);
+    void _release(Node* protected_child=nullptr);
+
+    std::mutex& stats_mutex() { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
-    void expand_children();
+    bool expand_children();  // returns false iff already has children
     void backprop(const ValueProbDistr& result, bool terminal=false);
     void terminal_backprop(const ValueProbDistr& result);
 
+    const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }
+    const GameState& state() const { return stable_data_.state_; }
     const GameResult& result() const { return stable_data_.result_; }
     Node* parent() const { return stable_data_.parent_; }
-    int effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
     bool is_root() const { return !stable_data_.parent_; }
-    bool has_children() const { return children_data_.num_children_; }
-    bool is_leaf() const { return !has_children(); }
-    bool eliminated() const { return stats_.eliminated_; }
-    symmetry_index_t get_sym_index() const { return stable_data_.sym_index_; }
-    Node* find_child(action_index_t action) const;
-    const Eigen::Vector<float, kNumPlayers>& V_floor() const { return stats_.V_floor_; }
+    symmetry_index_t sym_index() const { return stable_data_.sym_index_; }
+    player_index_t current_player() const { return stable_data_.current_player_; }
+    bool is_terminal() const { return is_terminal_result(stable_data_.result_); }
 
-    /*
-     * This includes certain wins/losses AND certain draws.
-     */
-    bool has_certain_outcome() const { return stats_.V_floor_.sum() == 1; }
+    bool _has_children() const { return children_data_.num_children_; }
+    int _num_children() const { return children_data_.num_children_; }
+    Node* _get_child(int c) const { return children_data_.first_child_ + c; }
+    Node* _find_child(action_index_t action) const;
 
-    /*
-     * We only eliminate won or lost positions, not drawn positions.
-     *
-     * Drawn positions are not eliminated because MCTS still needs some way to compare a provably-drawn position vs an
-     * uncertain position. It needs to accumulate visits to provably-drawn positions to do this.
-     */
-    bool can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }
+    bool _eliminated() const { return stats_.eliminated_; }
+    const Eigen::Vector<float, kNumPlayers>& _V_floor() const { return stats_.V_floor_; }
+    float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
+    int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
+    bool _has_certain_outcome() const { return stats_.V_floor_.sum() == 1; }  // won, lost, OR drawn positions
+    bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
   private:
-    float get_max_V_floor_among_children(player_index_t p) const;
-    float get_min_V_floor_among_children(player_index_t p) const;
-
-    bool is_terminal() const { return is_terminal_result(stable_data_.result_); }
+    float _get_max_V_floor_among_children(player_index_t p) const;
+    float _get_min_V_floor_among_children(player_index_t p) const;
 
     struct stable_data_t {
       stable_data_t(const Tensorizor& tensorizor, const GameState& state, const GameResult& result, Node* parent,
@@ -155,7 +156,7 @@ private:
       Node* parent_;
       symmetry_index_t sym_index_;
       action_index_t action_;
-      player_index_t current_player_;  // is this needed?
+      player_index_t current_player_;
     };
 
     struct children_data_t {
@@ -173,7 +174,9 @@ private:
       bool eliminated_ = false;
     };
 
-    mutable std::mutex mutex_;
+    mutable std::mutex children_data_mutex_;
+    mutable std::mutex evaluation_mutex_;
+    mutable std::mutex stats_mutex_;
     const stable_data_t stable_data_;
     children_data_t children_data_;
     NNEvaluation* evaluation_ = nullptr;
@@ -227,15 +230,20 @@ private:
 
 public:
   Mcts_(NeuralNet& net, int batch_size, int64_t timeout_ns, int cache_size);
+  ~Mcts_();
+
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameResult&);
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
-  void visit(Node*, const Tensorizor&, const GameState&, const Params&, int depth);
+  void visit(Node*, const Params&, int depth);
 
   static void run_search(Mcts_* mcts, int thread_id);
 
 private:
-  NNEvaluationThread nn_eval_thread_;
+  eigen_util::UniformDirichletGen<float> dirichlet_gen_;
+  Eigen::Rand::P8_mt19937_64 rng_;
+
+  NNEvaluationThread* nn_eval_thread_ = nullptr;
   Node* root_ = nullptr;
   torch::Tensor torch_input_gpu_;
   MctsResults results_;
