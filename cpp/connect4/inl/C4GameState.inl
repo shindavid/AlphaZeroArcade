@@ -169,7 +169,7 @@ inline void GameState::xdump_nnet_output(const MctsResults& results) {
   const auto& value = results.value_prior;
   const auto& policy = results.policy_prior;
 
-  assert(policy.size() == valid_actions.count());
+  assert(policy.size() == (int)valid_actions.count());
 
   util::xprintf("%s%s%s: %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * value(kRed));
   util::xprintf("%s%s%s: %6.3f\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * value(kYellow));
@@ -190,9 +190,9 @@ inline void GameState::xdump_mcts_output(
   const auto& net_policy = results.policy_prior;
   const auto& mcts_counts = results.counts;
 
-  assert(net_value.size() == valid_actions.count());
-  assert(net_policy.size() == valid_actions.count());
-  assert(mcts_counts.size() == valid_actions.count());
+  assert(net_value.size() == (int)valid_actions.count());
+  assert(net_policy.size() == (int)valid_actions.count());
+  assert(mcts_counts.size() == (int)valid_actions.count());
 
   util::xprintf("%s%s%s: %6.3f -> %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
                 100 * mcts_value(kRed));
