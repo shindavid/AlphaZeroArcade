@@ -369,7 +369,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(
   }
 
   player_index_t cp = tree->current_player();
-  float inv_temp = (1.0 / params.root_softmax_temperature) ? tree->is_root() : 1.0;
+  float inv_temp = tree->is_root() ? (1.0 / params.root_softmax_temperature) : 1.0;
   symmetry_index_t sym_index = tree->sym_index();
 
   {
