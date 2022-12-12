@@ -73,7 +73,6 @@ inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) 
   }
 
   if (children_data_.first_child_) delete[] children_data_.first_child_;
-  delete this;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -298,7 +297,9 @@ inline Mcts_<GameState, Tensorizor>::~Mcts_() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::clear() {
+  if (!root_) return;
   root_->_release();
+  delete root_;
   root_ = nullptr;
 }
 
@@ -313,12 +314,14 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
   Node* new_root = root_->_find_child(action);
   if (!new_root) {
     root_->_release();
+    delete root_;
     root_ = nullptr;
     return;
   }
 
   Node* new_root_copy = new Node(*new_root, true);
   root_->_release(new_root);
+  delete root_;
   root_ = new_root_copy;
 }
 
@@ -373,6 +376,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(
     std::lock_guard<std::mutex> guard(tree->evaluation_mutex());
     // TODO: make this block on asynchronous call via condition_variable
     nn_eval_thread_->evaluate(tree->tensorizor(), tree->state(), sym_index, inv_temp, tree->_evaluation_ptr());
+    assert(tree->_evaluation());
   }
 
   const NNEvaluation* evaluation = tree->_evaluation();
@@ -389,7 +393,6 @@ inline void Mcts_<GameState, Tensorizor>::visit(
     noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(rng_, params.dirichlet_alpha, rows);
     P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise;
   } else {  // TODO - only need to setZero() if generating debug file
-    noise = P;
     noise.setZero();
   }
 

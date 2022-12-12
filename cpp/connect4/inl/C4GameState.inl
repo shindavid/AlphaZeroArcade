@@ -190,7 +190,6 @@ inline void GameState::xdump_mcts_output(
   const auto& net_policy = results.policy_prior;
   const auto& mcts_counts = results.counts;
 
-  assert(net_value.size() == (int)valid_actions.count());
   assert(net_policy.size() == (int)valid_actions.count());
   assert(mcts_counts.size() == (int)valid_actions.count());
 
