@@ -160,7 +160,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValuePro
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    if (is_terminal_result(result)) {
+    if (!is_terminal_result(result)) {
       stats_.V_floor_ = result;
     } else {
       player_index_t cp = stable_data_.current_player_;
