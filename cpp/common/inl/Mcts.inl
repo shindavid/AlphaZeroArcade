@@ -346,7 +346,7 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 
   if (params.num_threads == 1) {
     // run everything in main thread for simplicity
-    while (root_->_effective_count() < params.tree_size_limit && !root_->_eliminated()) {
+    while (root_->_effective_count() <= params.tree_size_limit && !root_->_eliminated()) {
       visit(root_, params, 1);
     }
 
