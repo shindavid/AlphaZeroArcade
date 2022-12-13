@@ -84,7 +84,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::_adopt_children() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline typename Mcts_<GameState, Tensorizor>::LocalPolicyCountDistr
+inline typename Mcts_<GameState, Tensorizor>::GlobalPolicyCountDistr
 Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 {
   bool eliminated;
@@ -96,19 +96,19 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
   std::lock_guard<std::mutex> guard(children_data_mutex_);
 
   player_index_t cp = stable_data_.current_player_;
-  LocalPolicyCountDistr counts(children_data_.num_children_);
+  GlobalPolicyCountDistr counts;
   counts.setZero();
   if (eliminated) {
     float max_V_floor = _get_max_V_floor_among_children(cp);
     for (int i = 0; i < children_data_.num_children_; ++i) {
       Node* child = children_data_.first_child_ + i;
-      counts(i) = (child->_V_floor(cp) == max_V_floor);
+      counts(child->action()) = (child->_V_floor(cp) == max_V_floor);
     }
     return counts;
   }
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
-    counts(i) = child->_effective_count();
+    counts(child->action()) = child->_effective_count();
   }
   return counts;
 }
@@ -353,6 +353,8 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
     results_.valid_actions = game_state.get_valid_actions();
     results_.counts = root_->get_effective_counts();
     results_.policy_prior = root_->_evaluation()->local_policy_prob_distr();
+    results_.win_rates = root_->_value_avg();
+    results_.value_prior = root_->_evaluation()->value_prob_distr();
     return &results_;
   } else {
     std::vector<std::thread> threads;

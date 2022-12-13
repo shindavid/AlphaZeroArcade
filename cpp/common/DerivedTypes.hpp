@@ -49,6 +49,9 @@ struct GameStateTypes_ {
   using LocalPolicyCountDistr = Eigen::Matrix<int, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
+  using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
+  using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
+
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 };

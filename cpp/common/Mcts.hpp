@@ -37,6 +37,8 @@ public:
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
   using LocalPolicyCountDistr = typename GameStateTypes::LocalPolicyCountDistr;
+  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
+  using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
 
   using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
   using FullValueMatrix = typename GameStateTypes::template ValueMatrix<Eigen::Dynamic>;
@@ -121,7 +123,7 @@ private:
     std::mutex& evaluation_mutex() { return evaluation_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
-    LocalPolicyCountDistr get_effective_counts() const;
+    GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
     void backprop(const ValueProbDistr& result, bool terminal=false);
     void terminal_backprop(const ValueProbDistr& result);
@@ -141,6 +143,7 @@ private:
     Node* _get_child(int c) const { return children_data_.first_child_ + c; }
     Node* _find_child(action_index_t action) const;
 
+    const auto& _value_avg() const { return stats_.value_avg_; }
     bool _eliminated() const { return stats_.eliminated_; }
     float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
     float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }

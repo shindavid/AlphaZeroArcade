@@ -51,6 +51,7 @@ public:
   using InputTensor = typename TensorizorTypes::InputTensor;
   using ValueProbDistr = typename Mcts::ValueProbDistr;
   using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
+  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
 
   NNetPlayer(const Params&);
   ~NNetPlayer();

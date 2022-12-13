@@ -9,12 +9,12 @@ struct MctsResults_ {
   using GameStateTypes = GameStateTypes_<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
-  using LocalPolicyCountDistr = typename GameStateTypes::LocalPolicyCountDistr;
+  using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
 
   ActionMask valid_actions;
-  LocalPolicyCountDistr counts;
+  GlobalPolicyCountDistr counts;
   LocalPolicyProbDistr policy_prior;
   ValueProbDistr win_rates;
   ValueProbDistr value_prior;

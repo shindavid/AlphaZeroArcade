@@ -92,8 +92,16 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_net_only_action(
 
   value = eigen_util::softmax(value);
   if (verbose_info_) {
-    verbose_info_->mcts_results.policy_prior = eigen_util::softmax(policy);
+    int num_valid_actions = valid_actions.count();
+    verbose_info_->mcts_results.policy_prior.resize(num_valid_actions);
+    int i = 0;
+    for (auto it : valid_actions) {
+      verbose_info_->mcts_results.policy_prior(i++) = policy(it);
+    }
+
+    verbose_info_->mcts_results.policy_prior = eigen_util::softmax(verbose_info_->mcts_results.policy_prior);
     verbose_info_->mcts_results.value_prior = value;
+    verbose_info_->mcts_results.valid_actions = valid_actions;
     verbose_info_->initialized = true;
   }
 
@@ -109,18 +117,15 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_mcts_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  auto& policy = policy_.asEigen();
-  auto& value = value_.asEigen();
-
   auto results = mcts_.sim(tensorizor_, state, mcts_params_);
-  policy = results->counts.template cast<float>();
+  GlobalPolicyProbDistr policy = results->counts.template cast<float>();
   if (inv_temperature_) {
     policy = policy.array().pow(inv_temperature_);
   } else {
     policy = (policy.array() == policy.maxCoeff()).template cast<float>();
   }
 
-  value = results->win_rates.template cast<float>();
+  ValueProbDistr value = results->win_rates;
   if (verbose_info_) {
     verbose_info_->mcts_value = value;
     verbose_info_->mcts_policy = policy / policy.sum();

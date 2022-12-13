@@ -171,8 +171,8 @@ inline void GameState::xdump_nnet_output(const MctsResults& results) {
 
   assert(policy.size() == (int)valid_actions.count());
 
-  util::xprintf("%s%s%s: %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * value(kRed));
-  util::xprintf("%s%s%s: %6.3f\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * value(kYellow));
+  util::xprintf("%s%s%s: %6.3f%%\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * value(kRed));
+  util::xprintf("%s%s%s: %6.3f%%\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * value(kYellow));
   util::xprintf("\n");
   util::xprintf("%3s %8s\n", "Col", "Net");
 
@@ -191,18 +191,17 @@ inline void GameState::xdump_mcts_output(
   const auto& mcts_counts = results.counts;
 
   assert(net_policy.size() == (int)valid_actions.count());
-  assert(mcts_counts.size() == (int)valid_actions.count());
 
-  util::xprintf("%s%s%s: %6.3f -> %6.3f\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
+  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
                 100 * mcts_value(kRed));
-  util::xprintf("%s%s%s: %6.3f -> %6.3f\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * net_value(kYellow),
+  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * net_value(kYellow),
                 100 * mcts_value(kYellow));
   util::xprintf("\n");
   util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
 
   int i = 0;
   for (common::action_index_t action : valid_actions) {
-    util::xprintf("%3d %8.3f %8d %8.3f\n", action + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+    util::xprintf("%3d %8.3f %8d %8.3f\n", action + 1, net_policy(i), mcts_counts(action), mcts_policy(i));
     i++;
   }
 }
