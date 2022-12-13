@@ -305,7 +305,9 @@ inline Mcts_<GameState, Tensorizor>::~Mcts_() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::clear() {
+  // TODO - wait until all search threads are paused here
   if (!root_) return;
+
   root_->_release();
   delete root_;
   root_ = nullptr;
@@ -316,7 +318,6 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
   // TODO - wait until all search threads are paused here
-
   if (!root_) return;
 
   Node* new_root = root_->_find_child(action);
