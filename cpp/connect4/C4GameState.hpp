@@ -15,6 +15,13 @@
 #include <connect4/C4Constants.hpp>
 #include <util/EigenUtil.hpp>
 
+namespace c4 { class GameState; }
+
+template <>
+struct std::hash<c4::GameState> {
+  std::size_t operator()(const c4::GameState& state) const;
+};
+
 namespace c4 {
 
 /*
@@ -69,16 +76,7 @@ private:
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
 };
 
-}  // namespace c4
-
-template <>
-struct std::hash<c4::GameState> {
-  std::size_t operator()(const c4::GameState& state) const { return state.hash(); }
-};
-
 static_assert(common::GameStateConcept<c4::GameState>);
-
-namespace c4 {
 
 using Player = common::AbstractPlayer<GameState>;
 

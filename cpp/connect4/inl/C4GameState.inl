@@ -6,6 +6,10 @@
 #include <bit>
 #include <iostream>
 
+inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& state) const {
+  return state.hash();
+}
+
 namespace c4 {
 
 inline common::player_index_t GameState::get_current_player() const {
