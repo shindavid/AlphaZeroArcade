@@ -17,11 +17,11 @@
 struct Args {
   std::string c4_solver_dir_str;
   std::string my_starting_color;
-  int num_mcts_iters = 100;
-  float temperature = 0.0;
-  bool perfect = false;
-  bool neural_network_only = false;
-  bool verbose = false;
+  int num_mcts_iters;
+  float temperature;
+  bool perfect;
+  bool neural_network_only;
+  bool verbose;
 };
 
 common::player_index_t parse_color(const std::string& str) {
@@ -42,11 +42,11 @@ int main(int ac, char* av[]) {
       ("help,h", "help")
       ("my-starting-color,c", po::value<std::string>(&args.my_starting_color), "human's starting color (R or Y). Default: random")
       ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
-      ("perfect,p", po::bool_switch(&args.perfect), "play against perfect player")
-      ("neural-network-only,o", po::bool_switch(&args.neural_network_only), "neural network only")
-      ("num-mcts-iters,n", po::value<int>(&args.num_mcts_iters), "num mcts iterations to do per move")
-      ("temperature,t", po::value<float>(&args.temperature), "temperature. Must be >=0. Higher=more random play")
-      ("verbose,v", po::bool_switch(&args.verbose), "verbose mode")
+      ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect player")
+      ("neural-network-only,o", po::bool_switch(&args.neural_network_only)->default_value(false), "neural network only")
+      ("num-mcts-iters,n", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
+      ("temperature,t", po::value<float>(&args.temperature)->default_value(0.0), "temperature. Must be >=0. Higher=more random play")
+      ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose mode")
       ;
 
   po::variables_map vm;
