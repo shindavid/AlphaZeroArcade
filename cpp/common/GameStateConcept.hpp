@@ -72,11 +72,6 @@ concept GameStateConcept = requires(S state) {
   { S::prompt_for_action() } -> std::same_as<common::action_index_t>;
 
   /*
-   * Pretty-print neural network output to terminal for debugging purposes.
-   */
-  { S::xdump_nnet_output(MctsResults_<S>{}) };
-
-  /*
    * Pretty-print mcts output to terminal for debugging purposes.
    *
    * TODO: clean up this interface

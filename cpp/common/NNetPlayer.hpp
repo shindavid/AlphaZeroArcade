@@ -31,24 +31,19 @@ public:
     boost::filesystem::path model_filename;
     boost::filesystem::path debug_filename;
     bool verbose = false;
-    bool neural_network_only = false;
     bool allow_eliminations = true;
     int num_mcts_iters = 100;
     float temperature = 0;
   };
 
   using GameStateTypes = GameStateTypes_<GameState>;
-  using TensorizorTypes = TensorizorTypes_<Tensorizor>;
 
   using Mcts = Mcts_<GameState, Tensorizor>;
   using MctsResults = MctsResults_<GameState>;
 
-  using PolicySlab = typename GameStateTypes::PolicySlab;
-  using ValueSlab = typename GameStateTypes::ValueSlab;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameResult = typename GameStateTypes::GameResult;
   using player_array_t = typename base_t::player_array_t;
-  using InputTensor = typename TensorizorTypes::InputTensor;
   using ValueProbDistr = typename Mcts::ValueProbDistr;
   using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
   using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
@@ -69,25 +64,15 @@ private:
     bool initialized = false;
   };
 
-  action_index_t get_net_only_action(const GameState&, const ActionMask&);
-  action_index_t get_mcts_action(const GameState&, const ActionMask&);
   void verbose_dump() const;
 
   const Params& params_;
   NeuralNet net_;
   Tensorizor tensorizor_;
 
-  PolicySlab policy_;
-  ValueSlab value_;
-  InputTensor input_;
-
-  NeuralNet::input_vec_t input_vec_;
-  torch::Tensor torch_input_gpu_;
-
   Mcts mcts_;
   typename Mcts::Params mcts_params_;
   const float inv_temperature_;
-  action_index_t last_action_ = -1;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
 };

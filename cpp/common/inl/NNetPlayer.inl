@@ -17,14 +17,9 @@ inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params)
   : base_t("CPU")
   , params_(params)
   , net_(params.model_filename)
-  , policy_(std::array<int64_t, 2>{1, GameState::kNumGlobalActions})
-  , value_(std::array<int64_t, 2>{1, GameState::kNumPlayers})
   , mcts_(net_, 1, 0, 4096)
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
-  torch_input_gpu_ = input_.asTorch().clone().to(torch::kCUDA);
-  input_vec_.push_back(torch_input_gpu_);
-
   mcts_params_.tree_size_limit = params.num_mcts_iters;
   mcts_params_.dirichlet_mult = 0;
   mcts_params_.allow_eliminations = params.allow_eliminations;
@@ -46,9 +41,7 @@ inline void NNetPlayer<GameState_, Tensorizor_>::start_game(
 {
   my_index_ = seat_assignment;
   tensorizor_.clear();
-  if (!params_.neural_network_only) {
-    mcts_.clear();
-  }
+  mcts_.clear();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -56,10 +49,7 @@ inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameResult& result)
 {
   tensorizor_.receive_state_change(state, action);
-  if (!params_.neural_network_only) {
-    mcts_.receive_state_change(player, state, action, result);
-  }
-  last_action_ = action;
+  mcts_.receive_state_change(player, state, action, result);
   if (my_index_ == player && params_.verbose) {
     verbose_dump();
   }
@@ -67,55 +57,6 @@ inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
-    const GameState& state, const ActionMask& valid_actions)
-{
-  if (params_.neural_network_only) {
-    return get_net_only_action(state, valid_actions);
-  } else {
-    return get_mcts_action(state, valid_actions);
-  }
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_net_only_action(
-    const GameState& state, const ActionMask& valid_actions)
-{
-  auto& policy = policy_.asEigen();
-  auto& value = value_.asEigen();
-  auto& input = input_.asEigen();
-
-  tensorizor_.tensorize(input, state);
-  auto transform = tensorizor_.get_symmetry(tensorizor_.get_random_symmetry_index(state));
-  transform->transform_input(input);
-  torch_input_gpu_.copy_(input_.asTorch());
-  net_.predict(input_vec_, policy_.asTorch(), value_.asTorch());
-  transform->transform_policy(policy);
-
-  value = eigen_util::softmax(value);
-  if (verbose_info_) {
-    int num_valid_actions = valid_actions.count();
-    verbose_info_->mcts_results.policy_prior.resize(num_valid_actions);
-    int i = 0;
-    for (auto it : valid_actions) {
-      verbose_info_->mcts_results.policy_prior(i++) = policy(it);
-    }
-
-    verbose_info_->mcts_results.policy_prior = eigen_util::softmax(verbose_info_->mcts_results.policy_prior);
-    verbose_info_->mcts_results.value_prior = value;
-    verbose_info_->mcts_results.valid_actions = valid_actions;
-    verbose_info_->initialized = true;
-  }
-
-  if (inv_temperature_) {
-    policy = eigen_util::softmax(policy * inv_temperature_);
-  } else {
-    policy = (policy.array() == policy.maxCoeff()).template cast<float>();
-  }
-  return util::Random::weighted_sample(policy.begin(), policy.end());
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_mcts_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto results = mcts_.sim(tensorizor_, state, mcts_params_);
@@ -145,11 +86,7 @@ inline void NNetPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   util::xprintf("CPU pos eval:\n");
-  if (params_.neural_network_only) {
-    GameState::xdump_nnet_output(mcts_results);
-  } else {
-    GameState::xdump_mcts_output(mcts_value, mcts_policy, mcts_results);
-  }
+  GameState::xdump_mcts_output(mcts_value, mcts_policy, mcts_results);
   util::xprintf("\n");
   util::xflush();
 }

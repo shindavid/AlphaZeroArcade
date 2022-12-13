@@ -164,24 +164,6 @@ inline common::action_index_t GameState::prompt_for_action() {
   return std::stoi(input) - 1;
 }
 
-inline void GameState::xdump_nnet_output(const MctsResults& results) {
-  const auto& valid_actions = results.valid_actions;
-  const auto& value = results.value_prior;
-  const auto& policy = results.policy_prior;
-
-  assert(policy.size() == (int)valid_actions.count());
-
-  util::xprintf("%s%s%s: %6.3f%%\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * value(kRed));
-  util::xprintf("%s%s%s: %6.3f%%\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * value(kYellow));
-  util::xprintf("\n");
-  util::xprintf("%3s %8s\n", "Col", "Net");
-
-  int i = 0;
-  for (common::action_index_t action : valid_actions) {
-    util::xprintf("%3d %8.3f\n", action + 1, policy(i++));
-  }
-}
-
 inline void GameState::xdump_mcts_output(
     const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
 {
