@@ -13,7 +13,7 @@ namespace common {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
-    const ValueVector& value, const PolicyVector& policy, const ActionMask& valid_actions, float inv_temp)
+    const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions, float inv_temp)
 {
   int num_valid_actions = valid_actions.count();
   local_policy_prob_distr_.resize(num_valid_actions);
@@ -285,7 +285,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationThread::evaluate(
 
     tensorizor.get_symmetry(sym_index_i)->transform_policy(policy_i);
     evaluation_pool_.template emplace_back(
-        eigen_util::to_vector(value_i), eigen_util::to_vector(policy_i), edata_i.valid_actions, inv_temp_i);
+        eigen_util::to_array1d(value_i), eigen_util::to_array1d(policy_i), edata_i.valid_actions, inv_temp_i);
     *edata_i.eval_ptr = &evaluation_pool_.back();
     cache_.insert(edata_i.cache_key, *edata_i.eval_ptr);
   }
@@ -420,11 +420,11 @@ inline void Mcts_<GameState, Tensorizor>::visit(
   }
 
   constexpr float eps = 1e-6;  // needed when N == 0
-  PVec PUCT = V.array() + cPUCT * P.array() * sqrt(N.sum() + eps) / (N.array() + 1);
-  PUCT.array() *= (1 - E.array());
+  PVec PUCT = V + cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  PUCT *= 1 - E;
 
 //  // value_avg used for debugging
-//  using VVec = ValueVector;
+//  using VVec = ValueArray1D;
 //  VVec value_avg;
 //  for (int p = 0; p < kNumPlayers; ++p) {
 //    value_avg(p) = tree->effective_value_avg(p);

@@ -28,18 +28,18 @@ namespace eigen_util {
  * Eigen::Rand::P8_mt19937_64 rng{ 42 };
  *
  * // fixed size case
- * using Matrix = Eigen::Matrix<float, 4, 1>;
- * Matrix mat = gen.generate<Matrix>(rng, alpha);
+ * using Array = Eigen::Array<float, 4, 1>;
+ * Array arr = gen.generate<Array>(rng, alpha);
  *
  * // dynamic size case with runtime size
- * using Matrix = Eigen::Matrix<float>;
- * Matrix mat = gen.generate<Matrix>(rng, alpha, 4, 1);  // returns 4x1 dynamic matrix
+ * using Array = Eigen::Array<float>;
+ * Array arr = gen.generate<Array>(rng, alpha, 4, 1);  // returns 4x1 dynamic matrix
  */
 template<typename Scalar>
 class UniformDirichletGen {
 public:
-  template<typename Matrix, typename Urng, typename... DimTs>
-  Matrix generate(Urng&& urng, Scalar alpha, DimTs&&... dims);
+  template<typename Array, typename Urng, typename... DimTs>
+  Array generate(Urng&& urng, Scalar alpha, DimTs&&... dims);
 
 private:
   using GammaGen = Eigen::Rand::GammaGen<Scalar>;
@@ -48,10 +48,10 @@ private:
 };
 
 /*
- * Flattens a fixed-size Matrix into a Vector
+ * Flattens an Array<T, M, N, ..> into an Array<T, M*N, 1>
  */
 template <typename Scalar, int Rows, int Cols, int Options>
-auto to_vector(const Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix);
+auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array);
 
 /*
  * The following are equivalent:
@@ -125,9 +125,9 @@ template<typename T, typename S> struct extract_sizes<fixed_tensor_t<T, S>> {
 template<typename T> using extract_sizes_t = typename extract_sizes<T>::type;
 
 /*
- * Returns a float vector op of the same shape as the input, whose values are positive and summing to 1.
+ * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */
-template<typename Vector> auto softmax(const Vector& vector);
+template<typename Array> auto softmax(const Array& arr);
 
 /*
  * Reverses the elements of tensor along the given dimension.

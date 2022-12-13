@@ -9,7 +9,7 @@
 
 /*
  * Eigen and torch are two different third-party libraries that supply API's to interpret a float[] as a
- * mathematical tensor/matrix/vector of floats. The two libraries have their pros and cons:
+ * mathematical tensor of floats. The two libraries have their pros and cons:
  *
  * Reasons to prefer Eigen:
  * - torch does not allow for specifying the datatype at compile time. This adds some overhead to all operations, as
@@ -33,10 +33,7 @@
  *
  * eigentorch::Tensor can be thought of as a c++ union of torch::Tensor and Eigen::Tensor.
  *
- * eigentorch::Matrix can be thought of as a c++ union of torch::Tensor and Eigen::Matrix.
- *
- * eigentorch::Vector is a template specialization of eigentorch::Matrix, where the second dimension is 1
- * (analogously to how Eigen::Vector is a template specialization of Eigen::Matrix).
+ * eigentorch::Array can be thought of as a c++ union of torch::Tensor and Eigen::Array.
  */
 namespace eigentorch {
 
@@ -117,9 +114,9 @@ private:
 };
 
 /*
- * Can be thought of as a c++ union of torch::Tensor and Eigen::Matrix.
+ * Can be thought of as a c++ union of torch::Tensor and Eigen::Array.
  *
- * The torch tensor and eigen vector will share the same datatype, specified by Scalar_. By default, they will also
+ * The torch tensor and eigen array will share the same datatype, specified by Scalar_. By default, they will also
  * share the same 2-dimensional shape, specified by Rows_ and Cols_ (or by constructor args if either are Dynamic).
  * The torch shape can be overridden by passing it in as a constructor argument.
  *
@@ -130,14 +127,14 @@ private:
  * will know not to reorder those operations.
  */
 template <typename Scalar_, int Rows_, int Cols_, int Options_=Eigen::RowMajor>
-class Matrix {
+class Array {
 public:
   using Scalar = Scalar_;
   static constexpr int Rows = Rows_;
   static constexpr int Cols = Cols_;
   static constexpr int Options = Options_;
-  using EigenType = Eigen::Matrix<Scalar, Rows, Cols, Options>;
-  using EigenSlabType = Eigen::Matrix<Scalar, 1, Cols, Options>;
+  using EigenType = Eigen::Array<Scalar, Rows, Cols, Options>;
+  using EigenSlabType = Eigen::Array<Scalar, 1, Cols, Options>;
   using TorchType = torch::Tensor;
 
   /*
@@ -147,10 +144,10 @@ public:
    *
    * The third and fourth constructor are similar, but also allow you to explicitly specify the torch shape.
    */
-  Matrix();
-  Matrix(int rows, int cols);
-  template<typename IntT, size_t N> Matrix(const std::array<IntT, N>& torch_shape);
-  template<typename IntT, size_t N> Matrix(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape);
+  Array();
+  Array(int rows, int cols);
+  template<typename IntT, size_t N> Array(const std::array<IntT, N>& torch_shape);
+  template<typename IntT, size_t N> Array(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape);
 
   const EigenSlabType& eigenSlab(int row) const;
   EigenSlabType& eigenSlab(int row);
@@ -165,8 +162,6 @@ private:
   EigenType eigen_matrix_;
   TorchType torch_tensor_;
 };
-
-template<typename Scalar, int Rows> using Vector = Matrix<Scalar, Rows, 1>;
 
 }  // namespace eigentorch
 

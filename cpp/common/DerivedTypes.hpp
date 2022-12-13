@@ -24,7 +24,7 @@ namespace common {
  *
  * If the game is not yet over, the result will have all zeros.
  */
-template<int NumPlayers> using GameResult_ = Eigen::Vector<float, NumPlayers>;
+template<int NumPlayers> using GameResult_ = Eigen::Array<float, NumPlayers, 1>;
 template<int NumPlayers> bool is_terminal_result(const GameResult_<NumPlayers>& result) { return result.sum() > 0; }
 template<int NumPlayers> auto make_non_terminal_result() { GameResult_<NumPlayers> r; r.setZero(); return r; }
 
@@ -36,21 +36,20 @@ struct GameStateTypes_ {
 
   using GameResult = GameResult_<kNumPlayers>;
 
-  template <int NumRows> using PolicyMatrix = eigentorch::Matrix<float, NumRows, kNumGlobalActions, Eigen::RowMajor>;
-  template <int NumRows> using ValueMatrix = eigentorch::Matrix<float, NumRows, kNumPlayers, Eigen::RowMajor>;
+  template <int NumRows> using PolicyArray = eigentorch::Array<float, NumRows, kNumGlobalActions, Eigen::RowMajor>;
+  template <int NumRows> using ValueArray = eigentorch::Array<float, NumRows, kNumPlayers, Eigen::RowMajor>;
 
-  using PolicySlab = PolicyMatrix<1>;
-  using ValueSlab = ValueMatrix<1>;
+  using PolicySlab = PolicyArray<1>;
 
-  using PolicyVector = Eigen::Vector<float, kNumGlobalActions>;
-  using ValueVector = Eigen::Vector<float, kNumPlayers>;
+  using PolicyArray1D = Eigen::Array<float, kNumGlobalActions, 1>;
+  using ValueArray1D = Eigen::Array<float, kNumPlayers, 1>;
 
-  using ValueProbDistr = Eigen::Vector<float, kNumPlayers>;
-  using LocalPolicyCountDistr = Eigen::Matrix<int, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
-  using LocalPolicyProbDistr = Eigen::Matrix<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+  using ValueProbDistr = Eigen::Array<float, kNumPlayers, 1>;
+  using LocalPolicyCountDistr = Eigen::Array<int, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+  using LocalPolicyProbDistr = Eigen::Array<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
-  using GlobalPolicyCountDistr = Eigen::Vector<int, kNumGlobalActions>;
-  using GlobalPolicyProbDistr = Eigen::Vector<float, kNumGlobalActions>;
+  using GlobalPolicyCountDistr = Eigen::Array<int, kNumGlobalActions, 1>;
+  using GlobalPolicyProbDistr = Eigen::Array<float, kNumGlobalActions, 1>;
 
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;

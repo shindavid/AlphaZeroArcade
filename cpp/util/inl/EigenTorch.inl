@@ -40,7 +40,7 @@ torch::Tensor eigen2torch(Eigen::TensorFixedSize<Scalar, Sizes, Options> &tensor
 }
 
 template<typename Scalar, int Rows, int Cols, int Options, size_t N>
-torch::Tensor eigen2torch(Eigen::Matrix<Scalar, Rows, Cols, Options> &matrix,
+torch::Tensor eigen2torch(Eigen::Array<Scalar, Rows, Cols, Options> &matrix,
                           const std::array<int64_t, N> &torch_shape)
 {
   static_assert((Options & Eigen::RowMajorBit) || (Cols == 1) || (Rows == 1));
@@ -48,7 +48,7 @@ torch::Tensor eigen2torch(Eigen::Matrix<Scalar, Rows, Cols, Options> &matrix,
 }
 
 template<typename Scalar, int Rows, int Cols, int Options>
-torch::Tensor eigen2torch(Eigen::Matrix<Scalar, Rows, Cols, Options> &matrix)
+torch::Tensor eigen2torch(Eigen::Array<Scalar, Rows, Cols, Options> &matrix)
 {
   return eigen2torch(matrix, std::array<int64_t, 2>{Rows, Cols});
 }
@@ -98,7 +98,7 @@ Tensor<Scalar_, Rank_, Options_>::eigenSlab(int row) {
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
-Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix()
+Array<Scalar_, Rows_, Cols_, Options_>::Array()
 : torch_tensor_(detail::eigen2torch(eigen_matrix_))
 {
   static_assert(Rows_ > 0);
@@ -106,7 +106,7 @@ Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix()
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
-Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(int rows, int cols)
+Array<Scalar_, Rows_, Cols_, Options_>::Array(int rows, int cols)
 : eigen_matrix_(rows, cols)
 , torch_tensor_(detail::eigen2torch(eigen_matrix_))
 {
@@ -115,7 +115,7 @@ Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(int rows, int cols)
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
 template <typename IntT, size_t N>
-Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(const std::array<IntT, N>& torch_shape)
+Array<Scalar_, Rows_, Cols_, Options_>::Array(const std::array<IntT, N>& torch_shape)
 : torch_tensor_(detail::eigen2torch(eigen_matrix_, util::array_cast<int64_t>(torch_shape)))
 {
   static_assert(Rows_ > 0);
@@ -124,7 +124,7 @@ Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(const std::array<IntT, N>& torch
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
 template <typename IntT, size_t N>
-Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape)
+Array<Scalar_, Rows_, Cols_, Options_>::Array(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape)
 : eigen_matrix_(eigen_rows, eigen_cols)
 , torch_tensor_(detail::eigen2torch(eigen_matrix_, util::array_cast<int64_t>(torch_shape)))
 {
@@ -132,8 +132,8 @@ Matrix<Scalar_, Rows_, Cols_, Options_>::Matrix(int eigen_rows, int eigen_cols, 
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
-const typename Matrix<Scalar_, Rows_, Cols_, Options_>::EigenSlabType&
-Matrix<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) const {
+const typename Array<Scalar_, Rows_, Cols_, Options_>::EigenSlabType&
+Array<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) const {
   static_assert(Cols != Eigen::Dynamic);
   Scalar* data = eigen_matrix_.data();
   data += Cols * row;
@@ -141,8 +141,8 @@ Matrix<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) const {
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
-typename Matrix<Scalar_, Rows_, Cols_, Options_>::EigenSlabType&
-Matrix<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) {
+typename Array<Scalar_, Rows_, Cols_, Options_>::EigenSlabType&
+Array<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) {
   static_assert(Cols != Eigen::Dynamic);
   Scalar* data = eigen_matrix_.data();
   data += Cols * row;

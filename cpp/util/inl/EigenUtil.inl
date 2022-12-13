@@ -6,42 +6,41 @@
 namespace eigen_util {
 
 template<typename Scalar>
-template<typename Matrix, typename Urng, typename... DimTs>
-Matrix UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&... dims) {
-  static_assert(Matrix::MaxColsAtCompileTime > 0);
-  static_assert(Matrix::MaxRowsAtCompileTime > 0);
+template<typename Array, typename Urng, typename... DimTs>
+Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&... dims) {
+  static_assert(Array::MaxColsAtCompileTime > 0);
+  static_assert(Array::MaxRowsAtCompileTime > 0);
 
   if (alpha != alpha_) {
     alpha_ = alpha;
     new(&gamma_) GammaGen(alpha);
   }
 
-  Matrix out(dims...);
+  Array out(dims...);
   for (int i = 0; i < out.size(); ++i) {
-    out.data()[i] = gamma_.template generate<Eigen::Matrix<Scalar, 1, 1>>(1, 1, urng)(0);
+    out.data()[i] = gamma_.template generate<Eigen::Array<Scalar, 1, 1>>(1, 1, urng)(0);
   }
   out /= out.sum();
   return out;
 }
 
 template <typename Scalar, int Rows, int Cols, int Options>
-auto to_vector(const Eigen::Matrix<Scalar, Rows, Cols, Options>& matrix) {
+auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array) {
   static_assert(Rows>0);
   static_assert(Cols>0);
   constexpr int N = Rows * Cols;
-  using Vector = Eigen::Vector<Scalar, N>;
-  Vector v;
-
+  using Array1D = Eigen::Array<Scalar, N, 1>;
+  Array1D a;
   for (int i = 0; i < N; ++i) {
-    v(i) = matrix.data()[i];
+    a(i) = array.data()[i];
   }
 
-  return v;
+  return a;
 }
 
-template<typename Vector> auto softmax(const Vector& vector) {
-  auto normalized_vector = vector.array() - vector.maxCoeff();
-  auto z = normalized_vector.exp();
+template<typename Array> auto softmax(const Array& array) {
+  auto normalized_array = array - array.maxCoeff();
+  auto z = normalized_array.exp();
   return z / z.sum();
 }
 

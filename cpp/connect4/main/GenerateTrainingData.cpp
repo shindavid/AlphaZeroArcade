@@ -46,8 +46,8 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
   using ActionMask = GameStateTypes::ActionMask;
 
   using FullEigenTorchInput = TensorizorTypes::DynamicInputTensor;
-  using FullEigenTorchValue = GameStateTypes::ValueMatrix<Eigen::Dynamic>;
-  using FullEigenTorchPolicy = GameStateTypes::PolicyMatrix<Eigen::Dynamic>;
+  using FullEigenTorchValue = GameStateTypes::ValueArray<Eigen::Dynamic>;
+  using FullEigenTorchPolicy = GameStateTypes::PolicyArray<Eigen::Dynamic>;
 
   auto full_input_shape = util::to_std_array<int>(max_rows, util::std_array_v<int, c4::Tensorizor::Shape>);
   auto full_value_shape = util::to_std_array<int>(max_rows, c4::kNumPlayers);

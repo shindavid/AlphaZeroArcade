@@ -62,9 +62,9 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
   auto results = mcts_.sim(tensorizor_, state, mcts_params_);
   GlobalPolicyProbDistr policy = results->counts.template cast<float>();
   if (inv_temperature_) {
-    policy = policy.array().pow(inv_temperature_);
+    policy = policy.pow(inv_temperature_);
   } else {
-    policy = (policy.array() == policy.maxCoeff()).template cast<float>();
+    policy = (policy == policy.maxCoeff()).template cast<float>();
   }
 
   ValueProbDistr value = results->win_rates;

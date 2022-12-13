@@ -36,15 +36,13 @@ public:
   using GameResult = typename GameStateTypes::GameResult;
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
-  using LocalPolicyCountDistr = typename GameStateTypes::LocalPolicyCountDistr;
-  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
   using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
 
   using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
-  using FullValueMatrix = typename GameStateTypes::template ValueMatrix<Eigen::Dynamic>;
-  using FullPolicyMatrix = typename GameStateTypes::template PolicyMatrix<Eigen::Dynamic>;
-  using ValueVector = typename GameStateTypes::ValueVector;
-  using PolicyVector = typename GameStateTypes::PolicyVector;
+  using FullValueArray = typename GameStateTypes::template ValueArray<Eigen::Dynamic>;
+  using FullPolicyArray = typename GameStateTypes::template PolicyArray<Eigen::Dynamic>;
+  using ValueArray1D = typename GameStateTypes::ValueArray1D;
+  using PolicyArray1D = typename GameStateTypes::PolicyArray1D;
 
   struct Params {
     int tree_size_limit = 100;
@@ -61,7 +59,7 @@ public:
 private:
   class NNEvaluation {
   public:
-    NNEvaluation(const ValueVector& value, const PolicyVector& policy, const ActionMask& valid_actions, float inv_temp);
+    NNEvaluation(const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions, float inv_temp);
     const ValueProbDistr& value_prob_distr() const { return value_prob_distr_; }
     const LocalPolicyProbDistr& local_policy_prob_distr() const { return local_policy_prob_distr_; }
 
@@ -181,9 +179,9 @@ private:
     struct stats_t {
       stats_t();
 
-      Eigen::Vector<float, kNumPlayers> value_avg_;
-      Eigen::Vector<float, kNumPlayers> effective_value_avg_;
-      Eigen::Vector<float, kNumPlayers> V_floor_;
+      ValueArray1D value_avg_;
+      ValueArray1D effective_value_avg_;
+      ValueArray1D V_floor_;
       int count_ = 0;
       bool eliminated_ = false;
     };
@@ -226,8 +224,8 @@ private:
     };
 
     NeuralNet& net_;
-    FullPolicyMatrix policy_batch_;
-    FullValueMatrix value_batch_;
+    FullPolicyArray policy_batch_;
+    FullValueArray value_batch_;
     FullInputTensor input_batch_;
     evaluation_data_t* evaluation_data_arr_;
     evaluation_pool_t evaluation_pool_;
