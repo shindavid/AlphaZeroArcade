@@ -32,7 +32,7 @@ public:
     boost::filesystem::path debug_filename;
     bool verbose = false;
     bool neural_network_only = false;
-    bool allow_elimination = true;
+    bool allow_eliminations = true;
     int num_mcts_iters = 100;
     float temperature = 0;
   };

@@ -27,6 +27,7 @@ inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params)
 
   mcts_params_.tree_size_limit = params.num_mcts_iters;
   mcts_params_.dirichlet_mult = 0;
+  mcts_params_.allow_eliminations = params.allow_eliminations;
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
