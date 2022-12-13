@@ -47,9 +47,9 @@ concept GameStateConcept = requires(S state) {
   { state.get_current_player() } -> std::same_as<player_index_t>;
 
   /*
-   * Apply a given action to the state, and return a GameResult.
+   * Apply a given action to the state, and return a GameOutcome.
    */
-  { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes_<S>::GameResult>;
+  { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes_<S>::GameOutcome>;
 
   /*
    * Get the valid actions, as a util::BitSet.

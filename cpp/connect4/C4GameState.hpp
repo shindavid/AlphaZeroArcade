@@ -48,10 +48,10 @@ public:
   using ValueProbDistr = GameStateTypes::ValueProbDistr;
   using MctsResults = common::MctsResults_<GameState>;
   using LocalPolicyProbDistr = GameStateTypes::LocalPolicyProbDistr;
-  using GameResult = GameStateTypes::GameResult;
+  using GameOutcome = GameStateTypes::GameOutcome;
 
   common::player_index_t get_current_player() const;
-  GameResult apply_move(common::action_index_t action);
+  GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
 

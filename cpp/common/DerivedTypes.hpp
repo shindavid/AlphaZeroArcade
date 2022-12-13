@@ -15,18 +15,18 @@
 namespace common {
 
 /*
- * Represents the result of a game, as a length-t array of non-negative floats, where t is the number of players in
+ * Represents the outcome of a game, as a length-t array of non-negative floats, where t is the number of players in
  * the game.
  *
- * If the result represents a terminal game state, the array will have sum 1. Normally, one slot in the array,
+ * If the outcome represents a terminal game state, the array will have sum 1. Normally, one slot in the array,
  * corresponding to the winner, will equal 1, and the other slots will equal 0. In the even of a draw, the tied
  * players will typically each equal the same fractional value.
  *
- * If the game is not yet over, the result will have all zeros.
+ * If the game is not yet over, the outcome will have all zeros.
  */
-template<int NumPlayers> using GameResult_ = Eigen::Array<float, NumPlayers, 1>;
-template<int NumPlayers> bool is_terminal_result(const GameResult_<NumPlayers>& result) { return result.sum() > 0; }
-template<int NumPlayers> auto make_non_terminal_result() { GameResult_<NumPlayers> r; r.setZero(); return r; }
+template<int NumPlayers> using GameOutcome_ = Eigen::Array<float, NumPlayers, 1>;
+template<int NumPlayers> bool is_terminal_outcome(const GameOutcome_<NumPlayers>& outcome) { return outcome.sum() > 0; }
+template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome_<NumPlayers> o; o.setZero(); return o; }
 
 template<typename GameState>
 struct GameStateTypes_ {
@@ -34,7 +34,7 @@ struct GameStateTypes_ {
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using GameResult = GameResult_<kNumPlayers>;
+  using GameOutcome = GameOutcome_<kNumPlayers>;
 
   template <int NumRows> using PolicyArray = eigentorch::Array<float, NumRows, kNumGlobalActions, Eigen::RowMajor>;
   template <int NumRows> using ValueArray = eigentorch::Array<float, NumRows, kNumPlayers, Eigen::RowMajor>;

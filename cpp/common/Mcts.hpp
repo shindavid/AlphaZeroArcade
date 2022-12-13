@@ -33,7 +33,7 @@ public:
 
   using MctsResults = MctsResults_<GameState>;
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
-  using GameResult = typename GameStateTypes::GameResult;
+  using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = util::BitSet<kNumGlobalActions>;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
   using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
@@ -93,7 +93,7 @@ private:
    */
   class Node {
   public:
-    Node(const Tensorizor& tensorizor, const GameState& state, const GameResult& result, symmetry_index_t sym_index,
+    Node(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, symmetry_index_t sym_index,
          Node* parent=nullptr, action_index_t action=-1);
     Node(const Node& node, bool prune_parent=false);
 
@@ -123,18 +123,18 @@ private:
 
     GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
-    void backprop(const ValueProbDistr& result, bool terminal=false);
-    void terminal_backprop(const ValueProbDistr& result);
+    void backprop(const ValueProbDistr& value, bool terminal=false);
+    void terminal_backprop(const ValueProbDistr& outcome);
 
     const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }
     const GameState& state() const { return stable_data_.state_; }
-    const GameResult& result() const { return stable_data_.result_; }
+    const GameOutcome& outcome() const { return stable_data_.outcome_; }
     action_index_t action() const { return stable_data_.action_; }
     Node* parent() const { return stable_data_.parent_; }
     bool is_root() const { return !stable_data_.parent_; }
     symmetry_index_t sym_index() const { return stable_data_.sym_index_; }
     player_index_t current_player() const { return stable_data_.current_player_; }
-    bool is_terminal() const { return is_terminal_result(stable_data_.result_); }
+    bool is_terminal() const { return is_terminal_outcome(stable_data_.outcome_); }
 
     bool _has_children() const { return children_data_.num_children_; }
     int _num_children() const { return children_data_.num_children_; }
@@ -157,13 +157,13 @@ private:
     float _get_min_V_floor_among_children(player_index_t p) const;
 
     struct stable_data_t {
-      stable_data_t(const Tensorizor& tensorizor, const GameState& state, const GameResult& result, Node* parent,
+      stable_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, Node* parent,
                     symmetry_index_t sym_index, action_index_t action);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
       Tensorizor tensorizor_;
       GameState state_;
-      GameResult result_;
+      GameOutcome outcome_;
       ActionMask valid_action_mask_;
       Node* parent_;
       symmetry_index_t sym_index_;
@@ -244,7 +244,7 @@ public:
   ~Mcts_();
 
   void clear();
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameResult&);
+  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const Params& params);
   void visit(Node*, const Params&, int depth);
 

@@ -88,9 +88,9 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
       ActionMask moves = state.get_valid_actions();
       int move = moves.choose_random_set_bit();
-      auto result = state.apply_move(move);
+      auto outcome = state.apply_move(move);
       tensorizor.receive_state_change(state, move);
-      if (common::is_terminal_result(result)) {
+      if (common::is_terminal_outcome(outcome)) {
         break;
       }
 

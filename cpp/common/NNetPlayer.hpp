@@ -42,7 +42,7 @@ public:
   using MctsResults = MctsResults_<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
-  using GameResult = typename GameStateTypes::GameResult;
+  using GameOutcome = typename GameStateTypes::GameOutcome;
   using player_array_t = typename base_t::player_array_t;
   using ValueProbDistr = typename Mcts::ValueProbDistr;
   using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
@@ -52,7 +52,7 @@ public:
   ~NNetPlayer();
 
   void start_game(const player_array_t& players, player_index_t seat_assignment) override;
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameResult&) override;
+  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:

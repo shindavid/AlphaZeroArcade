@@ -27,11 +27,11 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    const Tensorizor& tensorizor, const GameState& state, const GameResult& result, Node* parent,
+    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, Node* parent,
     symmetry_index_t sym_index, action_index_t action)
 : tensorizor_(tensorizor)
 , state_(state)
-, result_(result)
+, outcome_(outcome)
 , valid_action_mask_(state.get_valid_actions())
 , parent_(parent)
 , sym_index_(sym_index)
@@ -54,9 +54,9 @@ inline Mcts_<GameState, Tensorizor>::Node::stats_t::stats_t() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(
-    const Tensorizor& tensorizor, const GameState& state, const GameResult& result, symmetry_index_t sym_index,
+    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, symmetry_index_t sym_index,
     Node* parent, action_index_t action)
-: stable_data_(tensorizor, state, result, parent, sym_index, action) {}
+: stable_data_(tensorizor, state, outcome, parent, sym_index, action) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
@@ -132,36 +132,36 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children() {
 
     // TODO: consider lazily doing these steps in visit(), since we only read them for Node's that win PUCT selection.
     symmetry_index_t sym_index = tensorizor_copy.get_random_symmetry_index(state_copy);
-    GameResult result = state_copy.apply_move(action);
+    GameOutcome outcome = state_copy.apply_move(action);
     tensorizor_copy.receive_state_change(state_copy, action);
 
-    new(node++) Node(tensorizor_copy, state_copy, result, sym_index, this, action);
+    new(node++) Node(tensorizor_copy, state_copy, outcome, sym_index, this, action);
   }
   return true;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& result, bool terminal) {
+inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& value, bool terminal) {
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + result) / (stats_.count_ + 1);
+    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + value) / (stats_.count_ + 1);
     stats_.count_++;
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
-  if (parent()) parent()->backprop(result);
-  if (terminal) terminal_backprop(result);
+  if (parent()) parent()->backprop(value);
+  if (terminal) terminal_backprop(value);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValueProbDistr& result) {
+inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValueProbDistr& outcome) {
   bool recurse = false;
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    if (!is_terminal_result(result)) {
-      stats_.V_floor_ = result;
+    if (!is_terminal_outcome(outcome)) {
+      stats_.V_floor_ = outcome;
     } else {
       player_index_t cp = stable_data_.current_player_;
       std::lock_guard<std::mutex> guard2(children_data_mutex_);
@@ -182,7 +182,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValuePro
   }
 
   if (recurse) {
-    parent()->terminal_backprop(result);
+    parent()->terminal_backprop(outcome);
   }
 }
 
@@ -313,7 +313,7 @@ inline void Mcts_<GameState, Tensorizor>::clear() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::receive_state_change(
-    player_index_t player, const GameState& state, action_index_t action, const GameResult& result)
+    player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
   // TODO - wait until all search threads are paused here
 
@@ -339,9 +339,9 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
     const Tensorizor& tensorizor, const GameState& game_state, const Params& params)
 {
   if (!params.can_reuse_subtree() || !root_) {
-    auto result = make_non_terminal_result<kNumPlayers>();
+    auto outcome = make_non_terminal_outcome<kNumPlayers>();
     symmetry_index_t sym_index = tensorizor.get_random_symmetry_index(game_state);
-    root_ = new Node(tensorizor, game_state, result, sym_index);  // TODO: use memory pool
+    root_ = new Node(tensorizor, game_state, outcome, sym_index);  // TODO: use memory pool
   }
 
   if (params.num_threads == 1) {
@@ -373,9 +373,9 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::visit(
     Node* tree, const Params& params, int depth)
 {
-  const auto& result = tree->result();
-  if (is_terminal_result(result)) {
-    tree->backprop(result, params.allow_eliminations);
+  const auto& outcome = tree->outcome();
+  if (is_terminal_outcome(outcome)) {
+    tree->backprop(outcome, params.allow_eliminations);
     return;
   }
 

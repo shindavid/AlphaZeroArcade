@@ -6,7 +6,7 @@
 namespace common {
 
 template<GameStateConcept GameState>
-typename GameRunner<GameState>::GameResult GameRunner<GameState>::run() {
+typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run() {
   for (size_t p = 0; p < players_.size(); ++p) {
     players_[p]->start_game(players_, p);
   }
@@ -20,12 +20,12 @@ typename GameRunner<GameState>::GameResult GameRunner<GameState>::run() {
     if (!valid_actions[action]) {
       throw util::Exception("Player %d (%s) attempted an illegal action (%d)", p, player->get_name().c_str(), action);
     }
-    auto result = state.apply_move(action);
+    auto outcome = state.apply_move(action);
     for (auto player2 : players_) {
-      player2->receive_state_change(p, state, action, result);
+      player2->receive_state_change(p, state, action, outcome);
     }
-    if (is_terminal_result(result)) {
-      return result;
+    if (is_terminal_outcome(outcome)) {
+      return outcome;
     }
   }
   throw std::runtime_error("should not get here");

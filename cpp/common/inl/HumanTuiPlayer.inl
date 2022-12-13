@@ -22,10 +22,10 @@ inline void HumanTuiPlayer<GameState_>::start_game(
 
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::receive_state_change(
-    common::player_index_t, const GameState& state, common::action_index_t action, const GameResult& result)
+    common::player_index_t, const GameState& state, common::action_index_t action, const GameOutcome& outcome)
 {
   last_action_ = action;
-  if (common::is_terminal_result(result)) {
+  if (common::is_terminal_outcome(outcome)) {
     xprintf_switch(state);
   }
 }

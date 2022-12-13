@@ -90,11 +90,11 @@ int main(int ac, char* av[]) {
   players[cpu_color] = cpu;
 
   common::GameRunner<c4::GameState> runner(players);
-  auto result = runner.run();
+  auto outcome = runner.run();
 
-  if (result[my_color] == 1) {
+  if (outcome[my_color] == 1) {
     std::cout << "Congratulations, you win!" << std::endl;
-  } else if (result[cpu_color] == 1) {
+  } else if (outcome[cpu_color] == 1) {
     std::cout << "Sorry! You lose!" << std::endl;
   } else {
     std::cout << "The game has ended in a draw!" << std::endl;

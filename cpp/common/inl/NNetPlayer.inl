@@ -46,10 +46,10 @@ inline void NNetPlayer<GameState_, Tensorizor_>::start_game(
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
-    player_index_t player, const GameState& state, action_index_t action, const GameResult& result)
+    player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
   tensorizor_.receive_state_change(state, action);
-  mcts_.receive_state_change(player, state, action, result);
+  mcts_.receive_state_change(player, state, action, outcome);
   if (my_index_ == player && params_.verbose) {
     verbose_dump();
   }
