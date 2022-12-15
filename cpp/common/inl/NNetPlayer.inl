@@ -10,19 +10,16 @@ namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline NNetPlayer<GameState_, Tensorizor_>::Params::Params()
-  : model_filename(util::Repo::root() / "c4_model.pt") {}
+  : nnet_filename(util::Repo::root() / "c4_model.pt") {}
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params)
   : base_t("CPU")
   , params_(params)
-  , net_(params.model_filename)
-  , mcts_(net_, 1, 0, 4096)
+  , mcts_(get_mcts_params(params))
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
-  mcts_params_.tree_size_limit = params.num_mcts_iters;
-  mcts_params_.dirichlet_mult = 0;
-  mcts_params_.allow_eliminations = params.allow_eliminations;
+  sim_params_.tree_size_limit = params.num_mcts_iters;
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
@@ -41,7 +38,7 @@ inline void NNetPlayer<GameState_, Tensorizor_>::start_game(
 {
   my_index_ = seat_assignment;
   tensorizor_.clear();
-  mcts_.clear();
+  mcts_.start();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -59,7 +56,7 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  auto results = mcts_.sim(tensorizor_, state, mcts_params_);
+  auto results = mcts_.sim(tensorizor_, state, sim_params_);
   GlobalPolicyProbDistr policy = results->counts.template cast<float>();
   if (inv_temperature_) {
     policy = policy.pow(inv_temperature_);
@@ -75,6 +72,17 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
     verbose_info_->initialized = true;
   }
   return util::Random::weighted_sample(policy.begin(), policy.end());
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+typename NNetPlayer<GameState_, Tensorizor_>::MctsParams
+NNetPlayer<GameState_, Tensorizor_>::get_mcts_params(const Params& params) {
+  MctsParams mcts_params;
+  mcts_params.nnet_filename = params.nnet_filename;
+  mcts_params.num_search_threads = params.num_search_threads;
+  mcts_params.allow_eliminations = params.allow_eliminations;
+  mcts_params.dirichlet_mult = 0;
+  return mcts_params;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

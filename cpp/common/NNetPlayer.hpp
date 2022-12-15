@@ -11,7 +11,6 @@
 #include <common/GameStateConcept.hpp>
 #include <common/Mcts.hpp>
 #include <common/MctsResults.hpp>
-#include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
@@ -28,10 +27,11 @@ public:
   struct Params {
     Params();
 
-    boost::filesystem::path model_filename;
+    boost::filesystem::path nnet_filename;
     boost::filesystem::path debug_filename;
     bool verbose = false;
     bool allow_eliminations = true;
+    int num_search_threads = 1;
     int num_mcts_iters = 100;
     float temperature = 0;
   };
@@ -39,6 +39,8 @@ public:
   using GameStateTypes = GameStateTypes_<GameState>;
 
   using Mcts = Mcts_<GameState, Tensorizor>;
+  using MctsParams = typename Mcts::Params;
+  using MctsSimParams = typename Mcts::SimParams;
   using MctsResults = MctsResults_<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -64,14 +66,14 @@ private:
     bool initialized = false;
   };
 
+  static MctsParams get_mcts_params(const Params& params);
   void verbose_dump() const;
 
   const Params& params_;
-  NeuralNet net_;
   Tensorizor tensorizor_;
 
   Mcts mcts_;
-  typename Mcts::Params mcts_params_;
+  MctsSimParams sim_params_;
   const float inv_temperature_;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
