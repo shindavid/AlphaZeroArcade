@@ -521,7 +521,7 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
   if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
     symmetry_index_t sym_index = tensorizor.get_random_symmetry_index(game_state);
-    root_ = new Node(tensorizor, game_state, outcome, sym_index, false);  // TODO: use memory pool
+    root_ = new Node(tensorizor, game_state, outcome, sym_index, params.disable_noise);  // TODO: use memory pool
   }
 
   if (num_search_threads() == 1) {
