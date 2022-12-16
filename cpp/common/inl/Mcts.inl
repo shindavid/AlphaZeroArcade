@@ -151,16 +151,16 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::backprop_outcome(const ValueProbDistr& value)
+inline void Mcts_<GameState, Tensorizor>::Node::backprop_outcome(const ValueProbDistr& outcome)
 {
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
-    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + value) / (stats_.count_ + 1);
+    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + outcome) / (stats_.count_ + 1);
     stats_.count_++;
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
-  if (parent()) parent()->backprop_outcome(value);
+  if (parent()) parent()->backprop_outcome(outcome);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

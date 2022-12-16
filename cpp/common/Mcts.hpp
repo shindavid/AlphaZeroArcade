@@ -153,7 +153,7 @@ private:
     GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
     void backprop_evaluation(const ValueProbDistr& value);
-    void backprop_outcome(const ValueProbDistr& value);
+    void backprop_outcome(const ValueProbDistr& outcome);
     void virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
 
