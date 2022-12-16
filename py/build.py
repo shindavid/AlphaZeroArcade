@@ -21,6 +21,7 @@ def run(cmd: str):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
+    parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
     parser.add_argument("-j", '--parallel', type=int,
                         help='make -j value (for build parallelism). Uses config value cmake.j if available. '
@@ -90,6 +91,10 @@ def check_for_boost_dir(conda_prefix):
 
 def main():
     args = get_args()
+
+    if args.clear_core_dumps:
+        run('rm -f core.*')
+
     debug = bool(args.debug)
 
     j_value = args.parallel
@@ -145,3 +150,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
