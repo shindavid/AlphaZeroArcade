@@ -151,6 +151,7 @@ private:
     GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
     void backprop(const ValueProbDistr& value, bool terminal=false);
+    void virtual_backprop();
     void terminal_backprop(const ValueProbDistr& outcome);
 
     const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }
@@ -163,6 +164,7 @@ private:
     player_index_t current_player() const { return stable_data_.current_player_; }
     ActionMask valid_action_mask() const { return stable_data_.valid_action_mask_; }
     bool disable_noise() const { return stable_data_.disable_noise_; }
+    ValueArray1D make_virtual_loss() const;
 
     bool _has_children() const { return children_data_.num_children_; }
     int _num_children() const { return children_data_.num_children_; }

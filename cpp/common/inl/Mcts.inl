@@ -149,13 +149,23 @@ inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& v
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + value) / (stats_.count_ + 1);
-    stats_.count_++;
+    stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
   if (parent()) parent()->backprop(value);
   if (terminal) terminal_backprop(value);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::Node::virtual_backprop() {
+  {
+    std::lock_guard<std::mutex> guard(stats_mutex_);
+    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + make_virtual_loss()) / (stats_.count_ + 1);
+    stats_.count_++;
+    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  }
+  if (parent()) parent()->virtual_backprop();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -188,6 +198,16 @@ inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValuePro
   if (recurse) {
     parent()->terminal_backprop(outcome);
   }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+typename Mcts_<GameState, Tensorizor>::ValueArray1D
+Mcts_<GameState, Tensorizor>::Node::make_virtual_loss() const {
+  constexpr float x = 1.0 / (kNumPlayers - 1);
+  ValueArray1D virtual_loss;
+  virtual_loss = x;
+  virtual_loss[stable_data_.current_player_] = 0;
+  return virtual_loss;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -536,6 +556,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
     std::lock_guard<std::mutex> guard(tree->evaluation_mutex());
     NNEvaluation* eval = tree->_evaluation();
     if (!eval) {
+      tree->virtual_backprop();
       eval = nn_eval_service_->evaluate(
           tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
           num_search_threads() == 1);
