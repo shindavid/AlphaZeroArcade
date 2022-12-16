@@ -146,16 +146,22 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& value, bool terminal) {
+template<typename Mcts_<GameState, Tensorizor>::BackPropRule rule>
+inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& value)
+{
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
+    if (rule == eUndoVirtual) {
+      stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
+    } else {
+      stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + make_virtual_loss()) / (stats_.count_ + 1);
+      stats_.count_++;
+    }
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
-  if (parent()) parent()->backprop(value);
-  if (terminal) terminal_backprop(value);
+  if (parent()) parent()->template backprop<rule>(value);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -313,6 +319,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::disconnect() {
 
   num_connections_--;
   if (num_connections_ == 0) {
+    if (thread_->joinable()) thread_->detach();
     delete thread_;
   }
 }
@@ -458,14 +465,12 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::loop() {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
 : params_(params) {
+  int batch_size_limit = NNEvaluationService::kDefaultBatchSizeLimit;
+  batch_size_limit = std::min(batch_size_limit, params.num_search_threads);
   nn_eval_service_ = NNEvaluationService::create(
-      params.nnet_filename, params.batch_size_limit, params.nn_eval_timeout_ns, params.cache_size);
+      params.nnet_filename, batch_size_limit, params.nn_eval_timeout_ns, params.cache_size);
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
-  }
-  if (num_search_threads() < params.batch_size_limit) {
-    throw util::Exception("Num search threads (%d) < batch size limit (%d)",
-                          num_search_threads(), params.batch_size_limit);
   }
   if (params.run_offline && num_search_threads() == 1) {
     throw util::Exception("run_offline does not work with only 1 search thread");
@@ -477,8 +482,8 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::~Mcts_() {
-  nn_eval_service_->disconnect();
   clear();
+  nn_eval_service_->disconnect();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -555,7 +560,10 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
   const auto& outcome = tree->outcome();
   if (is_terminal_outcome(outcome)) {
-    tree->backprop(outcome, params_.allow_eliminations);
+    tree->template backprop<eVanilla>(outcome);
+    if (params_.allow_eliminations) {
+      tree->terminal_backprop(outcome);
+    }
     return;
   }
 
@@ -620,7 +628,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
   Node* best_child = tree->_get_child(argmax_index);
 
   if (leaf) {
-    tree->backprop(evaluation->value_prob_distr());
+    tree->template backprop<eUndoVirtual>(evaluation->value_prob_distr());
   } else {
     visit(best_child, depth + 1);
   }

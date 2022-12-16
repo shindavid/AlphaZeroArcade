@@ -30,6 +30,11 @@ namespace common {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts_ {
 public:
+  enum BackPropRule {
+    eVanilla = 0,
+    eUndoVirtual = 1
+  };
+
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
@@ -60,7 +65,6 @@ public:
     boost::filesystem::path nnet_filename;
     int num_search_threads = 1;
     int max_tree_size_limit = 4096;
-    int batch_size_limit = 1;
     int64_t nn_eval_timeout_ns = 10 * 1000 * 1000;
     size_t cache_size = 4096;
     bool run_offline = false;
@@ -151,7 +155,7 @@ private:
 
     GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
-    void backprop(const ValueProbDistr& value, bool terminal=false);
+    template<BackPropRule type> void backprop(const ValueProbDistr& value);
     void virtual_backprop();
     void terminal_backprop(const ValueProbDistr& outcome);
 
@@ -297,6 +301,18 @@ private:
    */
   class NNEvaluationService {
   public:
+    /*
+     * "Positions in the queue are evaluated by the neural network using a mini-batch size of 8"
+     *
+     * From page 26 of AlphaGoZero paper
+     *
+     * "https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+     *
+     * Since there is no point in having a batch size greater than the number of search threads, the actual batch
+     * size used is set to the min of kDefaultBatchSizeLimit and the number of search threads.
+     */
+    static constexpr int kDefaultBatchSizeLimit = 8;
+
     /*
      * Constructs an evaluation thread and returns it.
      *
