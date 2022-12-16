@@ -63,6 +63,7 @@ public:
     int batch_size_limit = 1;
     int64_t nn_eval_timeout_ns = 10 * 1000 * 1000;
     size_t cache_size = 4096;
+    bool run_offline = false;
 
     float root_softmax_temperature = 1.03;
     float cPUCT = 1.1;
@@ -229,11 +230,12 @@ private:
   class SearchThread {
   public:
     SearchThread(Mcts_* mcts, int thread_id);
-    void launch();
+    ~SearchThread();
+    void join();
+    void kill();
+    void launch(int tree_size_limit);
 
   private:
-    void run();
-
     Mcts_* const mcts_;
     std::thread* thread_ = nullptr;
     const int thread_id_;
@@ -404,10 +406,11 @@ public:
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params);
   void visit(Node*, int depth);
 
-  int max_tree_size_limit() const { return params_.max_tree_size_limit; }
   int num_search_threads() const { return params_.num_search_threads; }
 
-  void wait_on_search_threads();
+  void start_search_threads(int tree_size_limit);
+  void wait_for_search_threads();
+  void stop_search_threads();
   void run_search(int tree_size_limit);
 
 private:
@@ -421,6 +424,11 @@ private:
   Node* root_ = nullptr;
   torch::Tensor torch_input_gpu_;
   MctsResults results_;
+
+  std::mutex search_mutex_;
+  std::condition_variable cv_search_;
+  int num_active_search_threads_ = 0;
+  bool search_active_ = false;
 };
 
 }  // namespace common

@@ -8,6 +8,7 @@
 #include <EigenRand/EigenRand>
 
 #include <util/EigenTorch.hpp>
+#include <util/Exception.hpp>
 
 namespace common {
 
@@ -249,16 +250,25 @@ inline Mcts_<GameState, Tensorizor>::SearchThread::SearchThread(Mcts_* mcts, int
 , thread_id_(thread_id) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::SearchThread::launch() {
-  if (thread_) {
-    delete thread_;
-  }
-  thread_ = new std::thread([&] { this->run(); });
+inline Mcts_<GameState, Tensorizor>::SearchThread::~SearchThread() {
+  kill();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::SearchThread::run() {
-  mcts_->run_search(mcts_->max_tree_size_limit());
+inline void Mcts_<GameState, Tensorizor>::SearchThread::join() {
+  if (thread_ && thread_->joinable()) thread_->join();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::kill() {
+  join();
+  if (thread_) delete thread_;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::launch(int tree_size_limit) {
+  kill();
+  thread_ = new std::thread([&] { mcts_->run_search(tree_size_limit); });
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -457,6 +467,12 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
     throw util::Exception("Num search threads (%d) < batch size limit (%d)",
                           num_search_threads(), params.batch_size_limit);
   }
+  if (params.run_offline && num_search_threads() == 1) {
+    throw util::Exception("run_offline does not work with only 1 search thread");
+  }
+  for (int i = 0; i < num_search_threads(); ++i) {
+    search_threads_.emplace_back(this, i);
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -474,15 +490,11 @@ inline void Mcts_<GameState, Tensorizor>::start() {
   }
 
   nn_eval_service_->connect();
-  search_threads_.clear();
-  for (int i = 0; i < num_search_threads(); ++i) {
-    search_threads_.template emplace_back(this, i);
-  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::clear() {
-  wait_on_search_threads();
+  stop_search_threads();
   if (!root_) return;
 
   root_->_release();
@@ -494,7 +506,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
-  wait_on_search_threads();
+  stop_search_threads();
   if (!root_) return;
 
   Node* new_root = root_->_find_child(action);
@@ -510,13 +522,17 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
   delete root_;
   root_ = new_root_copy;
   root_->_adopt_children();
+
+  if (params_.run_offline) {
+    start_search_threads(params_.max_tree_size_limit);
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState, Tensorizor>::sim(
     const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params)
 {
-  wait_on_search_threads();
+  stop_search_threads();
 
   if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
@@ -524,24 +540,15 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
     root_ = new Node(tensorizor, game_state, outcome, sym_index, params.disable_noise);  // TODO: use memory pool
   }
 
-  if (num_search_threads() == 1) {
-    // run everything in main thread for simplicity
-    while (root_->_effective_count() <= params.tree_size_limit && !root_->_eliminated()) {
-      visit(root_, 1);
-    }
+  start_search_threads(params.tree_size_limit);
+  wait_for_search_threads();
 
-    results_.valid_actions = root_->valid_action_mask();
-    results_.counts = root_->get_effective_counts();
-    results_.policy_prior = root_->_evaluation()->local_policy_prob_distr();
-    results_.win_rates = root_->_value_avg();
-    results_.value_prior = root_->_evaluation()->value_prob_distr();
-    return &results_;
-  } else {
-    for (auto& search_thread : search_threads_) {
-      search_thread.launch();
-    }
-    throw std::exception();
-  }
+  results_.valid_actions = root_->valid_action_mask();
+  results_.counts = root_->get_effective_counts();
+  results_.policy_prior = root_->_evaluation()->local_policy_prob_distr();
+  results_.win_rates = root_->_value_avg();
+  results_.value_prior = root_->_evaluation()->value_prob_distr();
+  return &results_;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -620,7 +627,39 @@ inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::wait_on_search_threads() {
+inline void Mcts_<GameState, Tensorizor>::start_search_threads(int tree_size_limit) {
+  assert(!search_active_);
+  search_active_ = true;
+  num_active_search_threads_ = num_search_threads();
+
+  if (num_search_threads() == 1) {
+    // do everything in main thread
+    run_search(tree_size_limit);
+    return;
+  }
+
+  for (auto& thread : search_threads_) {
+    thread.launch(tree_size_limit);
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::wait_for_search_threads() {
+  assert(search_active_);
+  if (num_search_threads() == 1) return;
+
+  for (auto& thread : search_threads_) {
+    thread.join();
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::stop_search_threads() {
+  search_active_ = false;
+  if (num_search_threads() == 1) return;
+
+  std::unique_lock<std::mutex> lock(search_mutex_);
+  cv_search_.wait(lock, [&]{ return num_active_search_threads_ == 0; });
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -628,16 +667,20 @@ inline void Mcts_<GameState, Tensorizor>::run_search(int tree_size_limit) {
   /*
    * Thread-safety analysis:
    *
-   * - changes in root_ are always synchronized via wait_on_search_threads()
+   * - changes in root_ are always synchronized via stop_search_threads()
    * - _effective_count() and _eliminated() read root_->stats_.{eliminated_, count_}
    *   - eliminated_ starts false and gets flipped to true at most once.
    *   - count_ is monotonoically increasing
    *   - Race-conditions can lead us to read stale values of these. That is ok - that merely causes us to possibly to
    *     more visits than a thread-safe alternative would do.
    */
-  while (root_->_effective_count() <= tree_size_limit && !root_->_eliminated()) {
+  while (search_active_ && root_->_effective_count() <= tree_size_limit && !root_->_eliminated()) {
     visit(root_, 1);
   }
+
+  std::unique_lock<std::mutex> lock(search_mutex_);
+  num_active_search_threads_--;
+  cv_search_.notify_one();
 }
 
 }  // namespace common
