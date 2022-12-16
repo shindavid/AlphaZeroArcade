@@ -453,6 +453,10 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
   }
+  if (num_search_threads() < params.batch_size_limit) {
+    throw util::Exception("Num search threads (%d) < batch size limit (%d)",
+                          num_search_threads(), params.batch_size_limit);
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
