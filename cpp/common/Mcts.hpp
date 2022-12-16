@@ -30,11 +30,6 @@ namespace common {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts_ {
 public:
-  enum BackPropRule {
-    eVanilla = 0,
-    eUndoVirtual = 1
-  };
-
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
@@ -155,9 +150,10 @@ private:
 
     GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children();  // returns false iff already has children
-    template<BackPropRule type> void backprop(const ValueProbDistr& value);
+    void backprop_evaluation(const ValueProbDistr& value);
+    void backprop_outcome(const ValueProbDistr& value);
     void virtual_backprop();
-    void terminal_backprop(const ValueProbDistr& outcome);
+    void perform_eliminations(const ValueProbDistr& outcome);
 
     const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }
     const GameState& state() const { return stable_data_.state_; }

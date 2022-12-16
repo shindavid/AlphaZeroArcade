@@ -146,22 +146,28 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-template<typename Mcts_<GameState, Tensorizor>::BackPropRule rule>
-inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& value)
+inline void Mcts_<GameState, Tensorizor>::Node::backprop_outcome(const ValueProbDistr& value)
 {
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
-
-    if (rule == eUndoVirtual) {
-      stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
-    } else {
-      stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + make_virtual_loss()) / (stats_.count_ + 1);
-      stats_.count_++;
-    }
+    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + value) / (stats_.count_ + 1);
+    stats_.count_++;
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
-  if (parent()) parent()->template backprop<rule>(value);
+  if (parent()) parent()->backprop_outcome(value);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::Node::backprop_evaluation(const ValueProbDistr& value)
+{
+  {
+    std::lock_guard<std::mutex> guard(stats_mutex_);
+    stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
+    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  }
+
+  if (parent()) parent()->backprop_evaluation(value);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -176,14 +182,13 @@ inline void Mcts_<GameState, Tensorizor>::Node::virtual_backprop() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValueProbDistr& outcome) {
+inline void Mcts_<GameState, Tensorizor>::Node::perform_eliminations(const ValueProbDistr& outcome) {
   bool recurse = false;
   {
+    // TODO: tighten mutex grabs
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    if (!is_terminal_outcome(outcome)) {
-      stats_.V_floor_ = outcome;
-    } else {
+    {
       player_index_t cp = stable_data_.current_player_;
       std::lock_guard<std::mutex> guard2(children_data_mutex_);
       for (player_index_t p = 0; p < kNumPlayers; ++p) {
@@ -203,7 +208,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::terminal_backprop(const ValuePro
   }
 
   if (recurse) {
-    parent()->terminal_backprop(outcome);
+    parent()->perform_eliminations(outcome);
   }
 }
 
@@ -560,9 +565,9 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
   const auto& outcome = tree->outcome();
   if (is_terminal_outcome(outcome)) {
-    tree->template backprop<eVanilla>(outcome);
+    tree->backprop_outcome(outcome);
     if (params_.allow_eliminations) {
-      tree->terminal_backprop(outcome);
+      tree->perform_eliminations(outcome);
     }
     return;
   }
@@ -628,7 +633,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
   Node* best_child = tree->_get_child(argmax_index);
 
   if (leaf) {
-    tree->template backprop<eUndoVirtual>(evaluation->value_prob_distr());
+    tree->backprop_evaluation(evaluation->value_prob_distr());
   } else {
     visit(best_child, depth + 1);
   }
