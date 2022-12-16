@@ -124,6 +124,8 @@ private:
          bool disable_noise, Node* parent=nullptr, action_index_t action=-1);
     Node(const Node& node, bool prune_parent=false);
 
+    void debug_dump() const;
+
     /*
      * Releases the memory occupied by this and by all descendents, EXCEPT for the descendents of
      * protected_child (which is guaranteed to be an immediate child of this if non-null). Note that the memory of

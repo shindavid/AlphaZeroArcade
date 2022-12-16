@@ -72,6 +72,11 @@ inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_par
 , stats_(node.stats_) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::Node::debug_dump() const {
+  std::cout << "value[" << stats_.count_ << "]: " << stats_.value_avg_.transpose() << std::endl;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) {
   for (int i = 0; i < children_data_.num_children_; ++i) {
     Node* child = children_data_.first_child_ + i;
