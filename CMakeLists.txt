@@ -22,6 +22,7 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 
 add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
+add_executable(c4_mcts_vs_perfect cpp/connect4/main/MctsVsPerfect.cpp)
 add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
 
 add_subdirectory("cpp/util")
@@ -32,6 +33,11 @@ target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})
 target_link_libraries(c4_gen_training_data ${Boost_LIBRARIES})
 set_target_properties(c4_gen_training_data PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
 set_property(TARGET c4_gen_training_data PROPERTY CXX_STANDARD 20)
+
+target_link_libraries(c4_mcts_vs_perfect ${TORCH_LIBRARIES})
+target_link_libraries(c4_mcts_vs_perfect ${Boost_LIBRARIES})
+set_target_properties(c4_mcts_vs_perfect PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+set_property(TARGET c4_mcts_vs_perfect PROPERTY CXX_STANDARD 20)
 
 target_link_libraries(c4_play_vs_cpu ${TORCH_LIBRARIES})
 target_link_libraries(c4_play_vs_cpu ${Boost_LIBRARIES})
