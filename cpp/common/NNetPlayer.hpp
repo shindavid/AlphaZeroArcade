@@ -69,7 +69,7 @@ private:
   static MctsParams get_mcts_params(const Params& params);
   void verbose_dump() const;
 
-  const Params& params_;
+  const Params params_;
   Tensorizor tensorizor_;
 
   Mcts mcts_;
