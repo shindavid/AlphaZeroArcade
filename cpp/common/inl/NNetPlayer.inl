@@ -80,6 +80,7 @@ NNetPlayer<GameState_, Tensorizor_>::get_mcts_params(const Params& params) {
   MctsParams mcts_params;
   mcts_params.nnet_filename = params.nnet_filename;
   mcts_params.num_search_threads = params.num_search_threads;
+  mcts_params.batch_size_limit = params.batch_size_limit;
   mcts_params.allow_eliminations = params.allow_eliminations;
   mcts_params.dirichlet_mult = 0;
   return mcts_params;

@@ -528,10 +528,8 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::record_for_profiling(reg
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
 : params_(params) {
-  int batch_size_limit = NNEvaluationService::kDefaultBatchSizeLimit;
-  batch_size_limit = std::min(batch_size_limit, params.num_search_threads);
   nn_eval_service_ = NNEvaluationService::create(
-      params.nnet_filename, batch_size_limit, params.nn_eval_timeout_ns, params.cache_size);
+      params.nnet_filename, params.batch_size_limit, params.nn_eval_timeout_ns, params.cache_size);
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
   }

@@ -19,10 +19,13 @@ struct Args {
   std::string my_starting_color;
   int num_mcts_iters;
   int num_search_threads;
+  int batch_size_limit;
   float temperature;
   bool perfect;
   bool verbose;
 };
+
+using Mcts = common::Mcts_<c4::GameState, c4::Tensorizor>;
 
 common::player_index_t parse_color(const std::string& str) {
   if (str == "R") return c4::kRed;
@@ -45,6 +48,8 @@ int main(int ac, char* av[]) {
       ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect player")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
       ("num-search-threads,s", po::value<int>(&args.num_search_threads)->default_value(8), "num mcts search threads")
+      ("batch-size-limit,b", po::value<int>(&args.batch_size_limit)->default_value(Mcts::kDefaultBatchSize),
+       "num mcts search threads")
       ("temperature,t", po::value<float>(&args.temperature)->default_value(0.0), "temperature. Must be >=0. Higher=more random play")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose mode")
       ;
@@ -77,6 +82,7 @@ int main(int ac, char* av[]) {
     C4NNetPlayer::Params cpu_params;
     cpu_params.num_mcts_iters = args.num_mcts_iters;
     cpu_params.num_search_threads = args.num_search_threads;
+    cpu_params.batch_size_limit = args.batch_size_limit;
     cpu_params.temperature = args.temperature;
     cpu_params.verbose = args.verbose;
     cpu = new C4NNetPlayer(cpu_params);

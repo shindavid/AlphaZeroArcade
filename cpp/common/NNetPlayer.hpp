@@ -32,6 +32,7 @@ public:
     bool verbose = false;
     bool allow_eliminations = true;
     int num_search_threads = 1;
+    int batch_size_limit = 1;
     int num_mcts_iters = 100;
     float temperature = 0;
   };

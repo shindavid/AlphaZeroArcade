@@ -28,10 +28,21 @@ namespace common {
 
 /*
  * TODO: move the various inner-classes of Mcts_ into separate files as standalone-classes.
+ *
+ * TODO: use CRTP for slightly more elegant inheritance mechanics.
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts_ {
 public:
+  /*
+   * "Positions in the queue are evaluated by the neural network using a mini-batch size of 8"
+   *
+   * From page 26 of AlphaGoZero paper
+   *
+   * "https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+   */
+  static constexpr int kDefaultBatchSize = 8;
+
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
   static boost::filesystem::path kProfilingDir;
   static boost::filesystem::path default_profiling_dir();
@@ -65,6 +76,7 @@ public:
   struct Params {
     boost::filesystem::path nnet_filename;
     int num_search_threads = 1;
+    int batch_size_limit = kDefaultBatchSize;
     int max_tree_size_limit = 4096;
     int64_t nn_eval_timeout_ns = 10 * 1000 * 1000;
     size_t cache_size = 4096;
@@ -305,18 +317,6 @@ private:
    */
   class NNEvaluationService {
   public:
-    /*
-     * "Positions in the queue are evaluated by the neural network using a mini-batch size of 8"
-     *
-     * From page 26 of AlphaGoZero paper
-     *
-     * "https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
-     *
-     * Since there is no point in having a batch size greater than the number of search threads, the actual batch
-     * size used is set to the min of kDefaultBatchSizeLimit and the number of search threads.
-     */
-    static constexpr int kDefaultBatchSizeLimit = 8;
-
     /*
      * Constructs an evaluation thread and returns it.
      *
