@@ -25,6 +25,10 @@
 
 namespace util {
 
+int64_t constexpr inline s_to_ns(int64_t s) { return s * 1000 * 1000 * 1000; }
+int64_t constexpr inline us_to_ns(int64_t us) { return us * 1000; }
+int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }
+
 /*
  * Usage:
  *
