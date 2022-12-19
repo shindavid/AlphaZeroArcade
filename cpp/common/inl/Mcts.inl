@@ -704,21 +704,20 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
   symmetry_index_t sym_index = tree->sym_index();
 
-  {
-    thread->record_for_profiling(SearchThread::kAcquiringEvaluationMutex);
-    std::lock_guard<std::mutex> guard(tree->evaluation_mutex());
-    NNEvaluation* eval = tree->_evaluation();
-    if (!eval) {
-      thread->record_for_profiling(SearchThread::kVirtualBackprop);
-      tree->virtual_backprop();
-      eval = nn_eval_service_->evaluate(
-          thread, tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
-          num_search_threads() == 1);
-      tree->_set_evaluation(eval);
-    }
+  /*
+   * Note: race-conditions can cause redundant setting of a given tree's evaluation. This is ok - it just leads to
+   * redundant evaluation by the eval thread. It is preferable to inserting a mutex here.
+   */
+  NNEvaluation* evaluation = tree->_evaluation();
+  if (!evaluation) {
+    thread->record_for_profiling(SearchThread::kVirtualBackprop);
+    tree->virtual_backprop();
+    evaluation = nn_eval_service_->evaluate(
+        thread, tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
+        num_search_threads() == 1);
+    tree->_set_evaluation(evaluation);
   }
 
-  const NNEvaluation* evaluation = tree->_evaluation();
   bool leaf = tree->expand_children(thread);
 
   thread->record_for_profiling(SearchThread::kPUCT);
@@ -826,11 +825,9 @@ inline void Mcts_<GameState, Tensorizor>::run_search(SearchThread* thread, int t
     thread->dump_profiling_stats();
   }
 
-//  thread->record_for_profiling(SearchThread::kFinishingUp);
   std::unique_lock<std::mutex> lock(search_mutex_);
   num_active_search_threads_--;
   cv_search_.notify_one();
-//  thread->dump_profiling_stats();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

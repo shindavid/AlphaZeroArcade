@@ -170,7 +170,6 @@ private:
      */
     void _adopt_children();
 
-    std::mutex& evaluation_mutex() { return evaluation_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
@@ -244,7 +243,6 @@ private:
     };
 
     mutable std::mutex children_data_mutex_;
-    mutable std::mutex evaluation_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
     children_data_t children_data_;
@@ -266,22 +264,20 @@ private:
       kBackpropOutcome = 2,
       kPerformEliminations = 3,
       kMisc = 4,
-      kAcquiringEvaluationMutex = 5,
-      kCheckingCache = 6,
-      kAcquiringBatchMutex = 7,
-      kWaitingUntilBatchReservable = 8,
-      kTensorizing = 9,
-      kIncrementingCommitCount = 10,
-      kWaitingForReservationProcessing = 11,
-      kVirtualBackprop = 12,
-      kWaitingForChildrenDataMutex = 13,
-      kAllocationChildrenMemory = 14,
-      kConstructingChildren = 15,
-      kPUCT = 16,
-      kWaitingForStatsMutex = 17,
-      kBackpropEvaluation = 18,
-      kFinishingUp = 19,
-      kNumRegions = 20
+      kCheckingCache = 5,
+      kAcquiringBatchMutex = 6,
+      kWaitingUntilBatchReservable = 7,
+      kTensorizing = 8,
+      kIncrementingCommitCount = 9,
+      kWaitingForReservationProcessing = 10,
+      kVirtualBackprop = 11,
+      kWaitingForChildrenDataMutex = 12,
+      kAllocationChildrenMemory = 13,
+      kConstructingChildren = 14,
+      kPUCT = 15,
+      kWaitingForStatsMutex = 16,
+      kBackpropEvaluation = 17,
+      kNumRegions = 18
     };
 
     void record_for_profiling(region_t);
