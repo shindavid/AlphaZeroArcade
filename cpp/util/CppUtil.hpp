@@ -8,6 +8,21 @@
 #define CONCAT_HELPER(x, y) x ## y
 #define CONCAT(x, y) CONCAT_HELPER(x, y)
 
+#define XSTR(a) STR(a)
+#define STR(a) #a
+
+/*
+ * Useful macro for constexpr-detection of whether a macro is assigned to 1. This is useful given the behavior of the
+ * -D option in py/build.py.
+ *
+ * #define FOO 1
+ * // #define BAR
+ *
+ * static_assert(IS_MACRO_ASSIGNED_TO_1(FOO))
+ * static_assert(!IS_MACRO_ASSIGNED_TO_1(BAR))
+ */
+#define IS_MACRO_ASSIGNED_TO_1(macro) (XSTR(macro)[0] == '1')
+
 namespace util {
 
 /*
