@@ -1,5 +1,7 @@
 #include <util/CppUtil.hpp>
 
+#include <chrono>
+
 namespace util {
 
 namespace detail {
@@ -25,6 +27,10 @@ struct TupleHasher {
 };
 
 }  // namespace detail
+
+template<typename TimePoint> int64_t ns_since_epoch(const TimePoint& t) {
+  return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();
+}
 
 template<typename A>
  constexpr auto to_std_array() {

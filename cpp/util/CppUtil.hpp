@@ -26,6 +26,13 @@
 namespace util {
 
 /*
+ * Usage:
+ *
+ * int64_t ns = util::ns_since_epoch(std::chrono::steady_clock::now());
+ */
+template<typename TimePoint> int64_t ns_since_epoch(const TimePoint&);
+
+/*
  * This identity function is intended to be used to declare required members in concepts.
  *
  * Example usage:
