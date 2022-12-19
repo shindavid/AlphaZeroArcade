@@ -49,7 +49,7 @@ int main(int ac, char* av[]) {
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
       ("num-search-threads,s", po::value<int>(&args.num_search_threads)->default_value(8), "num mcts search threads")
       ("batch-size-limit,b", po::value<int>(&args.batch_size_limit)->default_value(Mcts::kDefaultBatchSize),
-       "num mcts search threads")
+       "batch size limit")
       ("temperature,t", po::value<float>(&args.temperature)->default_value(0.0), "temperature. Must be >=0. Higher=more random play")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose mode")
       ;

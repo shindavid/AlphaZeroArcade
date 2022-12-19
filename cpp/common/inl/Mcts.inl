@@ -705,7 +705,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   symmetry_index_t sym_index = tree->sym_index();
 
   {
-    thread->record_for_profiling(SearchThread::kWaitingForEvaluationMutex);
+    thread->record_for_profiling(SearchThread::kAcquiringEvaluationMutex);
     std::lock_guard<std::mutex> guard(tree->evaluation_mutex());
     NNEvaluation* eval = tree->_evaluation();
     if (!eval) {

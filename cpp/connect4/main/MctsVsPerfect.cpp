@@ -60,7 +60,7 @@ int main(int ac, char* av[]) {
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
       ("num-search-threads,s", po::value<int>(&args.num_search_threads)->default_value(8), "num mcts search threads")
       ("batch-size-limit,b", po::value<int>(&args.batch_size_limit)->default_value(Mcts::kDefaultBatchSize),
-          "num mcts search threads")
+          "batch size limit")
       ("num-games,g", po::value<int>(&args.num_games)->default_value(100), "num games to simulate")
 #ifdef PROFILE_MCTS
       ("mcts-profiling-dir,p", po::value<std::string>(&args.mcts_profiling_dir)->default_value(

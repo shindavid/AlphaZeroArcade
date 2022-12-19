@@ -266,7 +266,7 @@ private:
       kBackpropOutcome = 2,
       kPerformEliminations = 3,
       kMisc = 4,
-      kWaitingForEvaluationMutex = 5,
+      kAcquiringEvaluationMutex = 5,
       kCheckingCache = 6,
       kAcquiringBatchMutex = 7,
       kWaitingUntilBatchReservable = 8,
