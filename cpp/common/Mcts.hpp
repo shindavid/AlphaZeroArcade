@@ -83,7 +83,7 @@ public:
     int num_search_threads = 1;
     int batch_size_limit = kDefaultBatchSize;
     int max_tree_size_limit = 4096;
-    int64_t nn_eval_timeout_ns = 10 * 1000 * 1000;
+    int64_t nn_eval_timeout_ns = util::ms_to_ns(5);;
     size_t cache_size = 4096;
     bool run_offline = false;
 
