@@ -11,6 +11,9 @@ config.txt
 # cmake build dir
 target
 
+# output
+output
+
 # connect4 defaults
 **/c4_games
 **/c4_model.pt

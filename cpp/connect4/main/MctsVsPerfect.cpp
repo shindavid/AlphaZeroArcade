@@ -17,9 +17,11 @@ struct Args {
   int num_mcts_iters;
   int num_search_threads;
   int num_games;
+  std::string mcts_profiling_dir;
 };
 
 using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
+using Mcts = common::Mcts_<c4::GameState, c4::Tensorizor>;
 
 C4NNetPlayer* create_nnet_player(const Args& args) {
   C4NNetPlayer::Params params;
@@ -56,6 +58,10 @@ int main(int ac, char* av[]) {
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
       ("num-search-threads,s", po::value<int>(&args.num_search_threads)->default_value(8), "num mcts search threads")
       ("num-games,g", po::value<int>(&args.num_games)->default_value(100), "num games to simulate")
+#ifdef PROFILE_MCTS
+      ("mcts-profiling-dir,p", po::value<std::string>(&args.mcts_profiling_dir)->default_value(
+          Mcts::default_profiling_dir().string()), "directory in which to dump mcts profiling stats")
+#endif  // PROFILE_MCTS
       ;
 
   po::variables_map vm;
@@ -65,6 +71,14 @@ int main(int ac, char* av[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     return 0;
+  }
+
+  if (Mcts::kEnableProfiling) {
+    if (args.mcts_profiling_dir.empty()) {
+      throw util::Exception("Required: -p. Alternatively, add entry for 'mcts_profiling_dir' in config.txt");
+    } else {
+      Mcts::set_profiling_dir(args.mcts_profiling_dir);
+    }
   }
 
   using player_t = common::AbstractPlayer<c4::GameState>;

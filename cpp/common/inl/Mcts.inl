@@ -7,14 +7,25 @@
 
 #include <EigenRand/EigenRand>
 
+#include <util/Config.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/Exception.hpp>
+#include <util/RepoUtil.hpp>
 
 namespace common {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+boost::filesystem::path Mcts_<GameState, Tensorizor>::kProfilingDir;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::NNEvaluationService::instance_map_t
 Mcts_<GameState, Tensorizor>::NNEvaluationService::instance_map_;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline boost::filesystem::path Mcts_<GameState, Tensorizor>::default_profiling_dir() {
+  boost::filesystem::path default_dir = util::Repo::root() / "output" / "mcts_profiling";
+  return util::Config::instance()->get("mcts_profiling_dir", default_dir.string());
+}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
@@ -351,12 +362,16 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
   torch_input_gpu_ = input_batch_.asTorch().clone().to(torch::kCUDA);
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
+
+  auto profiling_filename = kProfilingDir / "eval.txt";
+  set_profiling_file(profiling_filename.c_str());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService() {
   disconnect();
   delete[] evaluation_data_batch_;
+  close_profiling_file();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -433,9 +448,12 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   assert(batch_reserve_index_ > 0);
   assert(batch_reserve_index_ == batch_commit_count_);
 
+  record_for_profiling(kCopyingCpuToGpu);
   torch_input_gpu_.copy_(input_batch_.asTorch());
+  record_for_profiling(kEvaluatingNeuralNet, batch_reserve_index_);
   net_.predict(input_vec_, policy_batch_.asTorch(), value_batch_.asTorch());
 
+  record_for_profiling(kCopyingToPool);
   for (int i = 0; i < batch_reserve_index_; ++i) {
     evaluation_data_t &edata = evaluation_data_batch_[i];
     auto &policy = policy_batch_.eigenSlab(i);
@@ -447,28 +465,63 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
     edata.eval_ptr = &evaluation_pool_.back();
   }
 
-  std::lock_guard<std::mutex> guard(cache_mutex_);
-  for (int i = 0; i < batch_reserve_index_; ++i) {
-    const evaluation_data_t &edata = evaluation_data_batch_[i];
-    cache_.insert(edata.cache_key, edata.eval_ptr);
+  record_for_profiling(kAcquiringCacheMutex);
+  {
+    std::lock_guard<std::mutex> guard(cache_mutex_);
+    record_for_profiling(kFinishingUp);
+    for (int i = 0; i < batch_reserve_index_; ++i) {
+      const evaluation_data_t &edata = evaluation_data_batch_[i];
+      cache_.insert(edata.cache_key, edata.eval_ptr);
+    }
   }
 
   batch_unread_count_ = batch_commit_count_;
   batch_reserve_index_ = 0;
   batch_commit_count_ = 0;
   cv_evaluate_.notify_all();
+  record_for_profiling(kNumRegions);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::loop() {
   while (num_connections_) {
+    record_for_profiling(kAcquiringBatchMutex);
     std::unique_lock<std::mutex> lock(batch_mutex_);
 
+    record_for_profiling(kWaitingForFirstReservation);
     cv_service_loop_.wait(lock, [&]{ return !batch_reservations_empty(); });
+    record_for_profiling(kWaitingForLastReservation);
     cv_service_loop_.wait_until(lock, deadline_, [&]{ return batch_reservations_full(); });
+    record_for_profiling(kWaitingForCommits);
     cv_service_loop_.wait(lock, [&]{ return all_batch_reservations_committed(); });
 
     batch_evaluate();
+  }
+}
+
+/*
+ * The seemingly haphazard combination of macros and runtime-branches for profiling logic is actually carefully
+ * concocted! As written, we get the dual benefit of:
+ *
+ * 1. Zero-branching/pointer-redirection overhead in both profiling and non-profiling mode, thanks to compiler.
+ * 2. Compiler checking of profiling methods even when compiled without profiling enabled.
+ */
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::NNEvaluationService::record_for_profiling(region_t region, int batch_size) {
+  profiling_stats_t* stats = get_profiling_stats();
+  if (!stats) return;  // compile-time branch
+
+  stats->start_times[region] = std::chrono::steady_clock::now();
+  if (batch_size >= 0) {
+    stats->batch_size = batch_size;
+  }
+  if (region != kNumRegions) return;
+
+  FILE* f = get_profiling_file();
+  fprintf(f, "loop size=%d\n", stats->batch_size);
+  for (int r = 0; r < int(kNumRegions); ++r) {
+    std::chrono::nanoseconds duration = stats->start_times[r + 1] - stats->start_times[r];
+    fprintf(f, "%d %ld\n", r, duration.count());
   }
 }
 
@@ -699,6 +752,16 @@ inline void Mcts_<GameState, Tensorizor>::run_search(int tree_size_limit) {
   std::unique_lock<std::mutex> lock(search_mutex_);
   num_active_search_threads_--;
   cv_search_.notify_one();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::set_profiling_dir(const boost::filesystem::path& path) {
+  namespace bf = boost::filesystem;
+  if (bf::is_directory(path)) {
+    bf::remove_all(path);
+  }
+  bf::create_directories(path);
+  kProfilingDir = path;
 }
 
 }  // namespace common

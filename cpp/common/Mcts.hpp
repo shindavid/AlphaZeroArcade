@@ -2,6 +2,7 @@
 
 #include <condition_variable>
 #include <cstdint>
+#include <cstdio>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -19,6 +20,7 @@
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
 #include <util/BitSet.hpp>
+#include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/LRUCache.hpp>
 
@@ -30,6 +32,10 @@ namespace common {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts_ {
 public:
+  static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
+  static boost::filesystem::path kProfilingDir;
+  static boost::filesystem::path default_profiling_dir();
+
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
@@ -374,6 +380,41 @@ private:
       float inv_temp;
     };
 
+    enum region_t {
+      kAcquiringBatchMutex = 0,
+      kWaitingForFirstReservation = 1,
+      kWaitingForLastReservation = 2,
+      kWaitingForCommits = 3,
+      kCopyingCpuToGpu = 4,
+      kEvaluatingNeuralNet = 5,
+      kCopyingToPool = 6,
+      kAcquiringCacheMutex = 7,
+      kFinishingUp = 8,
+      kNumRegions = 9
+    };
+
+    struct profiling_stats_t {
+      time_point_t start_times[kNumRegions + 1];
+      int batch_size;
+    };
+
+    void record_for_profiling(region_t, int batch_size=-1);
+
+#ifdef PROFILE_MCTS
+    profiling_stats_t* get_profiling_stats() { return &profiling_stats_; }
+    FILE* get_profiling_file() { return profiling_file_; }
+    void set_profiling_file(const char* filename) { profiling_file_ = fopen(filename, "w"); }
+    void close_profiling_file() { fclose(profiling_file_); }
+
+    profiling_stats_t profiling_stats_;
+    FILE* profiling_file_ = nullptr;
+#else  // PROFILE_MCTS
+    constexpr profiling_stats_t* get_profiling_stats() const { return nullptr; }
+    static FILE* get_profiling_file() { return nullptr; }
+    void set_profiling_file(const char* filename) {}
+    void close_profiling_file() {}
+#endif  // PROFILE_MCTS
+
     static instance_map_t instance_map_;
 
     std::thread* thread_ = nullptr;
@@ -426,6 +467,8 @@ public:
   void wait_for_search_threads();
   void stop_search_threads();
   void run_search(int tree_size_limit);
+
+  static void set_profiling_dir(const boost::filesystem::path& path);
 
 private:
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;
