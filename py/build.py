@@ -26,6 +26,8 @@ def get_args():
     parser.add_argument("-j", '--parallel', type=int,
                         help='make -j value (for build parallelism). Uses config value cmake.j if available. '
                              'Else uses cmake default')
+    parser.add_argument('-D', '--macro-defines', action='append',
+                        help='macro definitions to forward to make cmd (-D FOO -D BAR=2)')
     return parser.parse_args()
 
 
@@ -111,6 +113,9 @@ def main():
     check_for_eigen_dir(conda_prefix)
     check_for_boost_dir(conda_prefix)
 
+    macro_defines = args.macro_defines if args.macro_defines else []
+    extra_definitions = ' '.join(f'-D{d}' for d in macro_defines)
+
     build_name = 'Debug' if debug else 'Release'
     target_dir = f'target/{build_name}'
     cmake_cmd_tokens = [
@@ -119,10 +124,12 @@ def main():
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
-        f'-DCMAKE_PREFIX_PATH={conda_prefix}'
+        f'-DCMAKE_PREFIX_PATH={conda_prefix}',
+        f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
     if debug:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
+
     cmake_cmd = ' '.join(cmake_cmd_tokens)
     run(cmake_cmd)
 
