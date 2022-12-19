@@ -11,6 +11,7 @@
 #include <util/EigenTorch.hpp>
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
+#include <util/StringUtil.hpp>
 
 namespace common {
 
@@ -136,16 +137,19 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline bool Mcts_<GameState, Tensorizor>::Node::expand_children() {
+inline bool Mcts_<GameState, Tensorizor>::Node::expand_children(SearchThread* thread) {
+  thread->record_for_profiling(SearchThread::kWaitingForChildrenDataMutex);
   std::lock_guard<std::mutex> guard(children_data_mutex_);
 
   if (_has_children()) return false;
 
   // TODO: use object pool
+  thread->record_for_profiling(SearchThread::kAllocationChildrenMemory);
   children_data_.num_children_ = stable_data_.valid_action_mask_.count();
   void* raw_memory = operator new[](children_data_.num_children_ * sizeof(Node));
   Node* node = static_cast<Node*>(raw_memory);
 
+  thread->record_for_profiling(SearchThread::kConstructingChildren);
   children_data_.first_child_ = node;
   for (action_index_t action : stable_data_.valid_action_mask_) {
     Tensorizor tensorizor_copy = stable_data_.tensorizor_;
@@ -274,11 +278,15 @@ inline float Mcts_<GameState, Tensorizor>::Node::_get_min_V_floor_among_children
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::SearchThread::SearchThread(Mcts_* mcts, int thread_id)
 : mcts_(mcts)
-, thread_id_(thread_id) {}
+, thread_id_(thread_id) {
+  auto profiling_filename = kProfilingDir / util::create_string("search%d.txt", thread_id);
+  set_profiling_file(profiling_filename.c_str());
+}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::SearchThread::~SearchThread() {
   kill();
+  close_profiling_file();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -295,7 +303,52 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::kill() {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::SearchThread::launch(int tree_size_limit) {
   kill();
-  thread_ = new std::thread([&] { mcts_->run_search(tree_size_limit); });
+  thread_ = new std::thread([&] { mcts_->run_search(this, tree_size_limit); });
+}
+
+/*
+ * The seemingly haphazard combination of macros and runtime-branches for profiling logic is actually carefully
+ * concocted! As written, we get the dual benefit of:
+ *
+ * 1. Zero-branching/pointer-redirection overhead in both profiling and non-profiling mode, thanks to compiler.
+ * 2. Compiler checking of profiling methods even when compiled without profiling enabled.
+ */
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::record_for_profiling(region_t region) {
+  profiling_stats_t* stats = get_profiling_stats();
+  if (!stats) return;  // compile-time branch
+
+  time_point_t now = std::chrono::steady_clock::now();
+  if (stats->cur_region != kNumRegions) {
+    std::chrono::nanoseconds duration = now - stats->last_time;
+    stats->durations[stats->cur_region] += duration;
+  }
+  stats->last_time = now;
+  stats->cur_region = region;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
+  profiling_stats_t* stats = get_profiling_stats();
+  if (!stats) return;  // compile-time branch
+
+  FILE* f = get_profiling_file();
+
+  fprintf(f, "run_search()\n");
+  for (int r = 0; r < int(kNumRegions); ++r) {
+    int64_t ns = stats->durations[r].count();
+    if (!ns) continue;
+    fprintf(f, "%2d %ld\n", r, ns);
+  }
+  stats->clear();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::profiling_stats_t::clear() {
+  for (int r = 0; r < int(kNumRegions); ++r) {
+    durations[r] *= 0;
+  }
+  cur_region = kNumRegions;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -377,9 +430,10 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService()
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::NNEvaluation*
 Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
-    const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
+    SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
     symmetry_index_t sym_index, float inv_temp, bool single_threaded)
 {
+  thread->record_for_profiling(SearchThread::kCheckingCache);
   cache_key_t key{state, inv_temp, sym_index};
 
   {
@@ -392,8 +446,11 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
 
   int my_index;
   {
+    thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
     std::unique_lock<std::mutex> lock(batch_mutex_);
+    thread->record_for_profiling(SearchThread::kWaitingUntilBatchReservable);
     cv_evaluate_.wait(lock, [&]{ return batch_reservable(); });
+    thread->record_for_profiling(SearchThread::kMisc);
 
     my_index = batch_reserve_index_;
     assert(my_index < batch_size_limit_);
@@ -413,6 +470,8 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
    * The significance of not yet being committed is that the service thread won't yet proceed with nnet eval.
    */
   assert(batch_commit_count_ < batch_reserve_index_);
+  thread->record_for_profiling(SearchThread::kTensorizing);
+
   auto& input = input_batch_.template eigenSlab<typename TensorizorTypes::Shape>(my_index);
   tensorizor.tensorize(input, state);
   auto transform = tensorizor.get_symmetry(sym_index);
@@ -422,6 +481,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
   evaluation_data_batch_[my_index] = edata;
 
   {
+    thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
     std::unique_lock<std::mutex> lock(batch_mutex_);
     batch_commit_count_++;
   }
@@ -429,8 +489,10 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
 
   NNEvaluation* eval_ptr;
   {
+    thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
     std::unique_lock<std::mutex> lock(batch_mutex_);
     if (single_threaded) batch_evaluate();
+    thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
     cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
 
     eval_ptr = evaluation_data_batch_[my_index].eval_ptr;
@@ -521,7 +583,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::record_for_profiling(reg
   fprintf(f, "loop size=%d\n", stats->batch_size);
   for (int r = 0; r < int(kNumRegions); ++r) {
     std::chrono::nanoseconds duration = stats->start_times[r + 1] - stats->start_times[r];
-    fprintf(f, "%d %ld\n", r, duration.count());
+    fprintf(f, "%2d %ld\n", r, duration.count());
   }
 }
 
@@ -536,8 +598,11 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
   if (params.run_offline && num_search_threads() == 1) {
     throw util::Exception("run_offline does not work with only 1 search thread");
   }
+  if (kEnableProfiling && num_search_threads() == 1) {
+    throw util::Exception("Profiling mode assumes >1 search thread");
+  }
   for (int i = 0; i < num_search_threads(); ++i) {
-    search_threads_.emplace_back(this, i);
+    search_threads_.push_back(new SearchThread(this, i));
   }
 }
 
@@ -545,6 +610,9 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::~Mcts_() {
   clear();
   nn_eval_service_->disconnect();
+  for (auto* thread : search_threads_) {
+    delete thread;
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -618,35 +686,42 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
+inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree, int depth) {
+  thread->record_for_profiling(SearchThread::kStartingVisit);
   const auto& outcome = tree->outcome();
   if (is_terminal_outcome(outcome)) {
+    thread->record_for_profiling(SearchThread::kBackpropOutcome);
     tree->backprop_outcome(outcome);
     if (params_.allow_eliminations) {
+      thread->record_for_profiling(SearchThread::kPerformEliminations);
       tree->perform_eliminations(outcome);
     }
     return;
   }
 
+  thread->record_for_profiling(SearchThread::kMisc);
   player_index_t cp = tree->current_player();
   float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
   symmetry_index_t sym_index = tree->sym_index();
 
   {
+    thread->record_for_profiling(SearchThread::kWaitingForEvaluationMutex);
     std::lock_guard<std::mutex> guard(tree->evaluation_mutex());
     NNEvaluation* eval = tree->_evaluation();
     if (!eval) {
+      thread->record_for_profiling(SearchThread::kVirtualBackprop);
       tree->virtual_backprop();
       eval = nn_eval_service_->evaluate(
-          tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
+          thread, tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
           num_search_threads() == 1);
       tree->_set_evaluation(eval);
     }
   }
 
   const NNEvaluation* evaluation = tree->_evaluation();
-  bool leaf = tree->expand_children();
+  bool leaf = tree->expand_children(thread);
 
+  thread->record_for_profiling(SearchThread::kPUCT);
   auto cPUCT = params_.cPUCT;
   LocalPolicyProbDistr P = evaluation->local_policy_prob_distr();
   const int rows = P.rows();
@@ -666,7 +741,9 @@ inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
   PVec E(rows);
   for (int c = 0; c < tree->_num_children(); ++c) {
     Node* child = tree->_get_child(c);
+    thread->record_for_profiling(SearchThread::kWaitingForStatsMutex);
     std::lock_guard<std::mutex> guard(child->stats_mutex());
+    thread->record_for_profiling(SearchThread::kPUCT);
 
     V(c) = child->_effective_value_avg(cp);
     N(c) = child->_effective_count();
@@ -689,9 +766,10 @@ inline void Mcts_<GameState, Tensorizor>::visit(Node* tree, int depth) {
   Node* best_child = tree->_get_child(argmax_index);
 
   if (leaf) {
+    thread->record_for_profiling(SearchThread::kBackpropEvaluation);
     tree->backprop_evaluation(evaluation->value_prob_distr());
   } else {
-    visit(best_child, depth + 1);
+    visit(thread, best_child, depth + 1);
   }
 }
 
@@ -703,12 +781,12 @@ inline void Mcts_<GameState, Tensorizor>::start_search_threads(int tree_size_lim
 
   if (num_search_threads() == 1) {
     // do everything in main thread
-    run_search(tree_size_limit);
+    run_search(search_threads_[0], tree_size_limit);
     return;
   }
 
-  for (auto& thread : search_threads_) {
-    thread.launch(tree_size_limit);
+  for (auto* thread : search_threads_) {
+    thread->launch(tree_size_limit);
   }
 }
 
@@ -717,8 +795,8 @@ inline void Mcts_<GameState, Tensorizor>::wait_for_search_threads() {
   assert(search_active_);
   if (num_search_threads() == 1) return;
 
-  for (auto& thread : search_threads_) {
-    thread.join();
+  for (auto* thread : search_threads_) {
+    thread->join();
   }
 }
 
@@ -732,7 +810,7 @@ inline void Mcts_<GameState, Tensorizor>::stop_search_threads() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::run_search(int tree_size_limit) {
+inline void Mcts_<GameState, Tensorizor>::run_search(SearchThread* thread, int tree_size_limit) {
   /*
    * Thread-safety analysis:
    *
@@ -743,13 +821,16 @@ inline void Mcts_<GameState, Tensorizor>::run_search(int tree_size_limit) {
    *   - Race-conditions can lead us to read stale values of these. That is ok - that merely causes us to possibly to
    *     more visits than a thread-safe alternative would do.
    */
-  while (search_active_ && root_->_effective_count() <= tree_size_limit && !root_->_eliminated()) {
-    visit(root_, 1);
+  while (check_visit_ready(thread, tree_size_limit)) {
+    visit(thread, root_, 1);
+    thread->dump_profiling_stats();
   }
 
+//  thread->record_for_profiling(SearchThread::kFinishingUp);
   std::unique_lock<std::mutex> lock(search_mutex_);
   num_active_search_threads_--;
   cv_search_.notify_one();
+//  thread->dump_profiling_stats();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -760,6 +841,12 @@ void Mcts_<GameState, Tensorizor>::set_profiling_dir(const boost::filesystem::pa
   }
   bf::create_directories(path);
   kProfilingDir = path;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline bool Mcts_<GameState, Tensorizor>::check_visit_ready(SearchThread* thread, int tree_size_limit) const {
+  thread->record_for_profiling(SearchThread::kCheckVisitReady);
+  return search_active_ && root_->_effective_count() <= tree_size_limit && !root_->_eliminated();
 }
 
 }  // namespace common

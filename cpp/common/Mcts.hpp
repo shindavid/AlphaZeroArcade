@@ -33,6 +33,9 @@ namespace common {
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class Mcts_ {
+private:
+  class SearchThread;
+
 public:
   /*
    * "Positions in the queue are evaluated by the neural network using a mini-batch size of 8"
@@ -67,6 +70,8 @@ public:
   using FullPolicyArray = typename GameStateTypes::template PolicyArray<Eigen::Dynamic>;
   using ValueArray1D = typename GameStateTypes::ValueArray1D;
   using PolicyArray1D = typename GameStateTypes::PolicyArray1D;
+
+  using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
   /*
    * Params pertains to a single Mcts instance.
@@ -169,7 +174,7 @@ private:
     std::mutex& stats_mutex() { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
-    bool expand_children();  // returns false iff already has children
+    bool expand_children(SearchThread*);  // returns false iff already has children
     void backprop_evaluation(const ValueProbDistr& value);
     void backprop_outcome(const ValueProbDistr& outcome);
     void virtual_backprop();
@@ -255,13 +260,64 @@ private:
     void kill();
     void launch(int tree_size_limit);
 
+    enum region_t {
+      kCheckVisitReady = 0,
+      kStartingVisit = 1,
+      kBackpropOutcome = 2,
+      kPerformEliminations = 3,
+      kMisc = 4,
+      kWaitingForEvaluationMutex = 5,
+      kCheckingCache = 6,
+      kAcquiringBatchMutex = 7,
+      kWaitingUntilBatchReservable = 8,
+      kTensorizing = 9,
+      kIncrementingCommitCount = 10,
+      kWaitingForReservationProcessing = 11,
+      kVirtualBackprop = 12,
+      kWaitingForChildrenDataMutex = 13,
+      kAllocationChildrenMemory = 14,
+      kConstructingChildren = 15,
+      kPUCT = 16,
+      kWaitingForStatsMutex = 17,
+      kBackpropEvaluation = 18,
+      kFinishingUp = 19,
+      kNumRegions = 20
+    };
+
+    void record_for_profiling(region_t);
+    void dump_profiling_stats();
+
+    struct profiling_stats_t {
+      profiling_stats_t() { clear(); }
+      void clear();
+
+      std::chrono::nanoseconds durations[kNumRegions];
+      time_point_t last_time;
+      region_t cur_region;
+    };
+
+#ifdef PROFILE_MCTS
+    profiling_stats_t* get_profiling_stats() { return &profiling_stats_; }
+    FILE* get_profiling_file() { return profiling_file_; }
+    void set_profiling_file(const char* filename) { profiling_file_ = fopen(filename, "w"); }
+    void close_profiling_file() { fclose(profiling_file_); }
+
+    profiling_stats_t profiling_stats_;
+    FILE* profiling_file_ = nullptr;
+#else  // PROFILE_MCTS
+    constexpr profiling_stats_t* get_profiling_stats() const { return nullptr; }
+    static FILE* get_profiling_file() { return nullptr; }
+    void set_profiling_file(const char* filename) {}
+    void close_profiling_file() {}
+#endif  // PROFILE_MCTS
+
   private:
     Mcts_* const mcts_;
     std::thread* thread_ = nullptr;
     const int thread_id_;
   };
 
-  using search_thread_vec_t = std::vector<SearchThread>;
+  using search_thread_vec_t = std::vector<SearchThread*>;
 
   /*
    * The NNEvaluationService services multiple search threads, which may belong to multiple Mcts instances (if two
@@ -349,8 +405,9 @@ private:
      *
      * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
      */
-    NNEvaluation* evaluate(const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
-                           symmetry_index_t sym_index, float inv_temp, bool single_threaded);
+    NNEvaluation* evaluate(
+        SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
+        symmetry_index_t sym_index, float inv_temp, bool single_threaded);
 
   private:
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
@@ -369,7 +426,6 @@ private:
     using cache_key_t = StateEvaluationKey<GameState>;
     using cache_t = util::LRUCache<cache_key_t, NNEvaluation*>;
     using evaluation_pool_t = std::vector<NNEvaluation>;  // TODO: use smart-pointer-compatible object-pool
-    using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
     struct evaluation_data_t {
       NNEvaluation* eval_ptr;
@@ -459,18 +515,20 @@ public:
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params);
-  void visit(Node*, int depth);
+  void visit(SearchThread* thread, Node*, int depth);
 
   int num_search_threads() const { return params_.num_search_threads; }
 
   void start_search_threads(int tree_size_limit);
   void wait_for_search_threads();
   void stop_search_threads();
-  void run_search(int tree_size_limit);
+  void run_search(SearchThread* thread, int tree_size_limit);
 
   static void set_profiling_dir(const boost::filesystem::path& path);
 
 private:
+  bool check_visit_ready(SearchThread* thread, int tree_size_limit) const;
+
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;
   Eigen::Rand::P8_mt19937_64 rng_;
 
