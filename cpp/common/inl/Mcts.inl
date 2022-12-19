@@ -319,6 +319,11 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::record_for_profiling(reg
   if (!stats) return;  // compile-time branch
 
   time_point_t now = std::chrono::steady_clock::now();
+  if (kEnableVerboseProfiling) {
+    int64_t ns = util::ns_since_epoch(now);
+    printf("%lu.%09lu s%-3d %d\n", ns / 1000000000, ns % 1000000000, thread_id_, (int) region);
+  }
+
   if (stats->cur_region != kNumRegions) {
     std::chrono::nanoseconds duration = now - stats->last_time;
     stats->durations[stats->cur_region] += duration;
@@ -573,7 +578,13 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::record_for_profiling(reg
   profiling_stats_t* stats = get_profiling_stats();
   if (!stats) return;  // compile-time branch
 
-  stats->start_times[region] = std::chrono::steady_clock::now();
+  auto now = std::chrono::steady_clock::now();
+  stats->start_times[region] = now;
+  if (kEnableVerboseProfiling) {
+    int64_t ns = util::ns_since_epoch(now);
+    printf("%lu.%09lu eval %d\n", ns / 1000000000, ns % 1000000000, (int) region);
+  }
+
   if (batch_size >= 0) {
     stats->batch_size = batch_size;
   }

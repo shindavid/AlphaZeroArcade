@@ -47,6 +47,7 @@ public:
   static constexpr int kDefaultBatchSize = 8;
 
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
+  static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
   static boost::filesystem::path kProfilingDir;
   static boost::filesystem::path default_profiling_dir();
 
