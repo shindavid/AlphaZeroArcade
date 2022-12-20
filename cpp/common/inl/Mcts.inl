@@ -7,6 +7,7 @@
 
 #include <EigenRand/EigenRand>
 
+#include <util/BoostUtil.hpp>
 #include <util/Config.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/Exception.hpp>
@@ -21,6 +22,7 @@ typename Mcts_<GameState, Tensorizor>::Params Mcts_<GameState, Tensorizor>::glob
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::add_options(boost::program_options::options_description& desc) {
   namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
 
   boost::filesystem::path default_nnet_filename_path = util::Repo::root() / "c4_model.pt";
   std::string default_nnet_filename = util::Config::instance()->get(
@@ -46,13 +48,10 @@ void Mcts_<GameState, Tensorizor>::add_options(boost::program_options::options_d
           params.nn_eval_timeout_ns), "nn eval thread timeout in ns")
       ("mcts-cache-size", po::value<size_t>(&params.cache_size)->default_value(params.cache_size),
           "nn eval thread cache size")
-      ("mcts-root-softmax-temp", po::value<float>(&params.root_softmax_temperature)->default_value(
-          params.root_softmax_temperature), "root softmax temperature")
-      ("mcts-cpuct", po::value<float>(&params.cPUCT)->default_value(params.cPUCT), "cPUCT value")
-      ("mcts-dirichlet-mult", po::value<float>(&params.dirichlet_mult)->default_value(params.dirichlet_mult),
-          "dirichlet mult")
-      ("mcts-dirichlet-alpha", po::value<float>(&params.dirichlet_alpha)->default_value(params.dirichlet_alpha),
-          "dirichlet alpha")
+      ("mcts-root-softmax-temp", po2::float_value("%.2f", &params.root_softmax_temperature), "root softmax temperature")
+      ("mcts-cpuct", po2::float_value("%.2f", &params.cPUCT), "cPUCT value")
+      ("mcts-dirichlet-mult", po2::float_value("%.2f", &params.dirichlet_mult), "dirichlet mult")
+      ("mcts-dirichlet-alpha", po2::float_value("%.2f", &params.dirichlet_alpha), "dirichlet alpha")
       ("mcts-allow-eliminations", po::bool_switch(&params.allow_eliminations)->default_value(
           params.allow_eliminations), "allow eliminations")
 #ifdef PROFILE_MCTS
