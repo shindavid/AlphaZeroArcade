@@ -45,7 +45,7 @@ def main():
         1: 'R wins',
     }
 
-    r = range(1, num_games, 2) if use_perfect else range(num_games)
+    r = range(1, 2 * num_games, 2) if use_perfect else range(num_games)
     runtimes = []
     for n in r:
         players = [None, None]
