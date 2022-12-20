@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 #include <Eigen/Core>
 #include <EigenRand/EigenRand>
 
@@ -48,8 +49,6 @@ public:
 
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
   static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
-  static boost::filesystem::path kProfilingDir;
-  static boost::filesystem::path default_profiling_dir();
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
@@ -80,20 +79,26 @@ public:
    * By contrast, SimParams pertains to each individual sim() call.
    */
   struct Params {
-    boost::filesystem::path nnet_filename;
+    std::string nnet_filename;
     int num_search_threads = 1;
     int batch_size_limit = kDefaultBatchSize;
-    int max_tree_size_limit = 4096;
+    bool run_offline = false;
+    int offline_tree_size_limit = 4096;
     int64_t nn_eval_timeout_ns = util::ms_to_ns(5);;
     size_t cache_size = 4096;
-    bool run_offline = false;
 
     float root_softmax_temperature = 1.03;
     float cPUCT = 1.1;
     float dirichlet_mult = 0.25;
     float dirichlet_alpha = 0.03;
     bool allow_eliminations = true;
+#ifdef PROFILE_MCTS
+    std::string profiling_dir;
+#endif  // PROFILE_MCTS
   };
+
+  static Params global_params_;
+  static void add_options(boost::program_options::options_description& desc);
 
   /*
    * SimParams pertain to a single call to sim(). Even given a single Mcts instance, different sim() calls can have
@@ -377,8 +382,7 @@ private:
      * thread does not match the thread parameters (batch_size, nn_eval_timeout_ns, cache_size), then raises an
      * exception.
      */
-    static NNEvaluationService* create(
-        const boost::filesystem::path& net_filename, int batch_size_limit, int64_t timeout_ns, size_t cache_size);
+    static NNEvaluationService* create(const Mcts_* mcts);
 
     /*
      * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -408,7 +412,8 @@ private:
 
   private:
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
-                        std::chrono::nanoseconds timeout_duration, size_t cache_size);
+                        std::chrono::nanoseconds timeout_duration, size_t cache_size,
+                        const boost::filesystem::path& profiling_dir);
     ~NNEvaluationService();
 
     void batch_evaluate();
@@ -506,8 +511,10 @@ public:
   static constexpr int kDefaultMaxTreeSize =  4096;
 
   Mcts_(const Params& params);
+  Mcts_() : Mcts_(global_params_) {}
   ~Mcts_();
 
+  const Params& params() const { return params_; }
   void start();
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
@@ -521,9 +528,14 @@ public:
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
 
-  static void set_profiling_dir(const boost::filesystem::path& path);
+#ifdef PROFILE_MCTS
+  boost::filesystem::path profiling_dir() const { return boost::filesystem::path(params_.profiling_dir); }
+#else  // PROFILE_MCTS
+  boost::filesystem::path profiling_dir() const { return {}; }
+#endif  // PROFILE_MCTS
 
 private:
+  static void init_profiling_dir(const std::string& profiling_dir);
   bool check_visit_ready(SearchThread* thread, int tree_size_limit) const;
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;

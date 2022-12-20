@@ -15,10 +15,7 @@
 struct Args {
   std::string c4_solver_dir_str;
   int num_mcts_iters;
-  int num_search_threads;
-  int batch_size_limit;
   int num_games;
-  std::string mcts_profiling_dir;
 };
 
 using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
@@ -27,11 +24,9 @@ using Mcts = common::Mcts_<c4::GameState, c4::Tensorizor>;
 C4NNetPlayer* create_nnet_player(const Args& args) {
   C4NNetPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
-  params.num_search_threads = args.num_search_threads;
-  params.batch_size_limit = args.batch_size_limit;
   params.temperature = 0;
   auto player = new C4NNetPlayer(params);
-  player->set_name(util::create_string("MCTS-m%d-s%d", args.num_mcts_iters, args.num_search_threads));
+  player->set_name(util::create_string("MCTS-m%d", args.num_mcts_iters));
   return player;
 }
 
@@ -53,19 +48,16 @@ int main(int ac, char* av[]) {
   std::string default_c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
 
   namespace po = boost::program_options;
-  po::options_description desc("Generate training data from perfect solver");
+  po::options_description desc("Pit Mcts as red against perfect as yellow");
+  desc.add_options()("help,h", "help");
+
+  Mcts::global_params_.dirichlet_mult = 0;
+  Mcts::add_options(desc);
+
   desc.add_options()
-      ("help,h", "help")
       ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
-      ("num-search-threads,s", po::value<int>(&args.num_search_threads)->default_value(8), "num mcts search threads")
-      ("batch-size-limit,b", po::value<int>(&args.batch_size_limit)->default_value(Mcts::kDefaultBatchSize),
-          "batch size limit")
       ("num-games,g", po::value<int>(&args.num_games)->default_value(100), "num games to simulate")
-#ifdef PROFILE_MCTS
-      ("mcts-profiling-dir,p", po::value<std::string>(&args.mcts_profiling_dir)->default_value(
-          Mcts::default_profiling_dir().string()), "directory in which to dump mcts profiling stats")
-#endif  // PROFILE_MCTS
       ;
 
   po::variables_map vm;
@@ -75,14 +67,6 @@ int main(int ac, char* av[]) {
   if (vm.count("help")) {
     std::cout << desc << std::endl;
     return 0;
-  }
-
-  if (Mcts::kEnableProfiling) {
-    if (args.mcts_profiling_dir.empty()) {
-      throw util::Exception("Required: -p. Alternatively, add entry for 'mcts_profiling_dir' in config.txt");
-    } else {
-      Mcts::set_profiling_dir(args.mcts_profiling_dir);
-    }
   }
 
   using player_t = common::AbstractPlayer<c4::GameState>;

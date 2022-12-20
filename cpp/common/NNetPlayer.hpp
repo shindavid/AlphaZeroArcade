@@ -25,22 +25,15 @@ public:
   using Tensorizor = Tensorizor_;
 
   struct Params {
-    Params();
-
-    boost::filesystem::path nnet_filename;
     boost::filesystem::path debug_filename;
-    bool verbose = false;
-    bool allow_eliminations = true;
-    int num_search_threads = 1;
-    int batch_size_limit = 1;
     int num_mcts_iters = 100;
     float temperature = 0;
+    bool verbose = false;
   };
 
   using GameStateTypes = GameStateTypes_<GameState>;
 
   using Mcts = Mcts_<GameState, Tensorizor>;
-  using MctsParams = typename Mcts::Params;
   using MctsSimParams = typename Mcts::SimParams;
   using MctsResults = MctsResults_<GameState>;
 
@@ -67,7 +60,6 @@ private:
     bool initialized = false;
   };
 
-  static MctsParams get_mcts_params(const Params& params);
   void verbose_dump() const;
 
   const Params params_;

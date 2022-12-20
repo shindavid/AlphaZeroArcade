@@ -9,14 +9,9 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline NNetPlayer<GameState_, Tensorizor_>::Params::Params()
-  : nnet_filename(util::Repo::root() / "c4_model.pt") {}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params)
   : base_t("CPU")
   , params_(params)
-  , mcts_(get_mcts_params(params))
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
   sim_params_.tree_size_limit = params.num_mcts_iters;
@@ -72,18 +67,6 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
     verbose_info_->initialized = true;
   }
   return util::Random::weighted_sample(policy.begin(), policy.end());
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-typename NNetPlayer<GameState_, Tensorizor_>::MctsParams
-NNetPlayer<GameState_, Tensorizor_>::get_mcts_params(const Params& params) {
-  MctsParams mcts_params;
-  mcts_params.nnet_filename = params.nnet_filename;
-  mcts_params.num_search_threads = params.num_search_threads;
-  mcts_params.batch_size_limit = params.batch_size_limit;
-  mcts_params.allow_eliminations = params.allow_eliminations;
-  mcts_params.dirichlet_mult = 0;
-  return mcts_params;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
