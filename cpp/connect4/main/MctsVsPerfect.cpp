@@ -25,6 +25,7 @@ C4NNetPlayer* create_nnet_player(const Args& args) {
   C4NNetPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
   params.temperature = 0;
+  params.verbose = true;
   auto player = new C4NNetPlayer(params);
   player->set_name(util::create_string("MCTS-m%d", args.num_mcts_iters));
   return player;
@@ -88,7 +89,7 @@ int main(int ac, char* av[]) {
     auto outcome = runner.run();
     if (outcome[c4::kRed] == 1) {
       win++;
-    } else if (outcome[c4::kYellow]) {
+    } else if (outcome[c4::kYellow] == 1) {
       loss++;
     } else {
       draw++;
