@@ -180,9 +180,10 @@ private:
 
     GlobalPolicyCountDistr get_effective_counts() const;
     bool expand_children(SearchThread*);  // returns false iff already has children
-    void backprop_evaluation(const ValueProbDistr& value);
-    void backprop_outcome(const ValueProbDistr& outcome);
+    void backprop(const ValueProbDistr& value);
+    void backprop_with_virtual_undo(const ValueProbDistr& value);
     void virtual_backprop();
+    void undo_virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
 
     const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }

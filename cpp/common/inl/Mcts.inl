@@ -198,7 +198,7 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children(SearchThread* th
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::backprop_outcome(const ValueProbDistr& outcome)
+inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& outcome)
 {
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
@@ -207,11 +207,12 @@ inline void Mcts_<GameState, Tensorizor>::Node::backprop_outcome(const ValueProb
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
-  if (parent()) parent()->backprop_outcome(outcome);
+  if (parent()) parent()->backprop(outcome);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::backprop_evaluation(const ValueProbDistr& value)
+inline void Mcts_<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
+    const ValueProbDistr& value)
 {
   {
     std::lock_guard<std::mutex> guard(stats_mutex_);
@@ -219,7 +220,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::backprop_evaluation(const ValueP
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
 
-  if (parent()) parent()->backprop_evaluation(value);
+  if (parent()) parent()->backprop_with_virtual_undo(value);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -231,6 +232,17 @@ inline void Mcts_<GameState, Tensorizor>::Node::virtual_backprop() {
     stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   }
   if (parent()) parent()->virtual_backprop();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::Node::undo_virtual_backprop() {
+  {
+    std::lock_guard<std::mutex> guard(stats_mutex_);
+    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ - make_virtual_loss()) / std::max(1, stats_.count_ - 1);
+    stats_.count_--;
+    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  }
+  if (parent()) parent()->undo_virtual_backprop();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -746,7 +758,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   const auto& outcome = tree->outcome();
   if (is_terminal_outcome(outcome)) {
     thread->record_for_profiling(SearchThread::kBackpropOutcome);
-    tree->backprop_outcome(outcome);
+    tree->backprop(outcome);
     if (params_.allow_eliminations) {
       thread->record_for_profiling(SearchThread::kPerformEliminations);
       tree->perform_eliminations(outcome);
@@ -764,9 +776,11 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
    * redundant evaluation by the eval thread. It is preferable to inserting a mutex here.
    */
   NNEvaluation* evaluation = tree->_evaluation();
+  bool undo_virtual_loss = false;
   if (!evaluation) {
     thread->record_for_profiling(SearchThread::kVirtualBackprop);
     tree->virtual_backprop();
+    undo_virtual_loss = true;
     evaluation = nn_eval_service_->evaluate(
         thread, tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
         num_search_threads() == 1);
@@ -779,6 +793,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   auto cPUCT = params_.cPUCT;
   LocalPolicyProbDistr P = evaluation->local_policy_prob_distr();
   const int rows = P.rows();
+  assert(rows == int(tree->valid_action_mask().count()));
 
   using PVec = LocalPolicyProbDistr;
 
@@ -821,8 +836,16 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
 
   if (leaf) {
     thread->record_for_profiling(SearchThread::kBackpropEvaluation);
-    tree->backprop_evaluation(evaluation->value_prob_distr());
+    if (undo_virtual_loss) {
+      tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
+    } else {
+      tree->backprop(evaluation->value_prob_distr());
+    }
   } else {
+    if (undo_virtual_loss) {
+      // unlikely race condition, but possible
+      tree->undo_virtual_backprop();
+    }
     visit(thread, best_child, depth + 1);
   }
 }
