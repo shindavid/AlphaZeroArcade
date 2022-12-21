@@ -16,6 +16,7 @@ struct Args {
   std::string c4_solver_dir_str;
   int num_mcts_iters;
   int num_games;
+  bool verbose;
 };
 
 using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
@@ -25,6 +26,7 @@ C4NNetPlayer* create_nnet_player(const Args& args) {
   C4NNetPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
   params.temperature = 0;
+  params.verbose = args.verbose;
   auto player = new C4NNetPlayer(params);
   player->set_name(util::create_string("MCTS-m%d", args.num_mcts_iters));
   return player;
@@ -58,6 +60,7 @@ int main(int ac, char* av[]) {
       ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
       ("num-games,g", po::value<int>(&args.num_games)->default_value(100), "num games to simulate")
+      ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
       ;
 
   po::variables_map vm;
