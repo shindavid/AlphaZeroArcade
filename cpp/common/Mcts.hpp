@@ -193,7 +193,7 @@ private:
     bool is_root() const { return !stable_data_.parent_; }
     symmetry_index_t sym_index() const { return stable_data_.sym_index_; }
     player_index_t current_player() const { return stable_data_.current_player_; }
-    ActionMask valid_action_mask() const { return stable_data_.valid_action_mask_; }
+    const ActionMask& valid_action_mask() const { return stable_data_.valid_action_mask_; }
     bool disable_noise() const { return stable_data_.disable_noise_; }
     ValueArray1D make_virtual_loss() const;
 
@@ -263,6 +263,7 @@ private:
     void join();
     void kill();
     void launch(int tree_size_limit);
+    int thread_id() const { return thread_id_; }
 
     enum region_t {
       kCheckVisitReady = 0,
