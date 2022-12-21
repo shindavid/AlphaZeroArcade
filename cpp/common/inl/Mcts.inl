@@ -69,12 +69,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
     const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions, float inv_temp)
 {
-  int num_valid_actions = valid_actions.count();
-  local_policy_prob_distr_.resize(num_valid_actions);
-  int i = 0;
-  for (action_index_t action : valid_actions) {
-    local_policy_prob_distr_[i++] = policy(action);
-  }
+  GameStateTypes::global_to_local(policy, valid_actions, local_policy_prob_distr_);
   value_prob_distr_ = eigen_util::softmax(value);
   local_policy_prob_distr_ = eigen_util::softmax(local_policy_prob_distr_ * inv_temp);
 }

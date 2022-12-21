@@ -61,8 +61,9 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
 
   ValueProbDistr value = results->win_rates;
   if (verbose_info_) {
+    policy /= policy.sum();
     verbose_info_->mcts_value = value;
-    verbose_info_->mcts_policy = policy / policy.sum();
+    GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->mcts_policy);
     verbose_info_->mcts_results = *results;
     verbose_info_->initialized = true;
   }
