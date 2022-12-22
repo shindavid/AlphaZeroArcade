@@ -127,7 +127,15 @@ inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) 
     if (child != protected_child) child->_release();
   }
 
-  if (children_data_.first_child_) delete[] children_data_.first_child_;
+  if (!children_data_.first_child_) return;
+
+  // https://stackoverflow.com/a/4756306/543913
+  for (int i = children_data_.num_children_ - 1; i >= 0; --i) {
+    Node* child = children_data_.first_child_ + i;
+    child->~Node();
+  }
+  void* raw_memory = static_cast<void*>(children_data_.first_child_);
+  operator delete[](raw_memory);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
