@@ -5,6 +5,7 @@ TODO: incorporate ninja.
 """
 import argparse
 import os
+import pkg_resources
 import subprocess
 import sys
 from typing import List
@@ -31,6 +32,50 @@ def get_args():
                         ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
                         ' IS_MACRO_ASSIGNED_TO_1() macro function defined in cpp/util/CppUtil.hpp')
     return parser.parse_args()
+
+
+def validate_gcc_version():
+    """
+    Our c++ code uses std::atomic<std::shared_ptr>>, which is only supported in gcc-12+.
+
+    See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
+    """
+    output = subprocess.getoutput('gcc --version')
+    version_str = output.splitlines()[0].split()[-1]
+    version = pkg_resources.parse_version(version_str)
+    required_version_str = '12'
+    required_version = pkg_resources.parse_version(required_version_str)
+    if version >= required_version:
+        return
+
+    print(f'Your gcc version ({version_str}) is old. Please update to version {required_version_str}+')
+    print('Recommended action:')
+    print('')
+    print('sudo apt-get install gcc-12')
+    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
+    sys.exit(0)
+
+
+def validate_gxx_version():
+    """
+    Our c++ code uses std::atomic<std::shared_ptr>>, which is only supported in gcc-12+.
+
+    See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
+    """
+    output = subprocess.getoutput('g++ --version')
+    version_str = output.splitlines()[0].split()[-1]
+    version = pkg_resources.parse_version(version_str)
+    required_version_str = '12'
+    required_version = pkg_resources.parse_version(required_version_str)
+    if version >= required_version:
+        return
+
+    print(f'Your g++ version ({version_str}) is old. Please update to version {required_version_str}+')
+    print('Recommended action:')
+    print('')
+    print('sudo apt install g++-12')
+    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
+    sys.exit(0)
 
 
 def get_targets(targets: List[str], args) -> List[str]:
@@ -98,6 +143,9 @@ def main():
 
     if args.clear_core_dumps:
         run('rm -f core.*')
+
+    validate_gcc_version()
+    validate_gxx_version()
 
     debug = bool(args.debug)
 
