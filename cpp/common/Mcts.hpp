@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -20,6 +21,7 @@
 #include <common/MctsResults.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
+#include <util/AtomicSharedPtr.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
@@ -123,6 +125,8 @@ private:
     ValueProbDistr value_prob_distr_;
     LocalPolicyProbDistr local_policy_prob_distr_;
   };
+  using NNEvaluation_sptr = std::shared_ptr<NNEvaluation>;
+  using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
 
   /*
    * A Node consists of 3 main groups of non-const member variables:
@@ -211,8 +215,8 @@ private:
     bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 0; }  // won, lost, OR drawn positions
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
-    NNEvaluation* _evaluation() const { return evaluation_; }
-    void _set_evaluation(NNEvaluation* eval) { evaluation_ = eval; }
+    NNEvaluation_sptr _evaluation() const { return evaluation_.load(); }
+    void _set_evaluation(NNEvaluation_sptr eval) { evaluation_.store(eval); }
 
   private:
     float _get_max_V_floor_among_children(player_index_t p) const;
@@ -253,7 +257,7 @@ private:
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
     children_data_t children_data_;
-    NNEvaluation* evaluation_ = nullptr;  // TODO: use smart-pointer
+    NNEvaluation_asptr evaluation_;
     stats_t stats_;
   };
 
@@ -408,7 +412,7 @@ private:
      *
      * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
      */
-    NNEvaluation* evaluate(
+    NNEvaluation_sptr evaluate(
         SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
         symmetry_index_t sym_index, float inv_temp, bool single_threaded);
 
@@ -428,11 +432,10 @@ private:
 
     using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
     using cache_key_t = StateEvaluationKey<GameState>;
-    using cache_t = util::LRUCache<cache_key_t, NNEvaluation*>;
-    using evaluation_pool_t = std::vector<NNEvaluation>;  // TODO: use smart-pointer-compatible object-pool
+    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
 
     struct evaluation_data_t {
-      NNEvaluation* eval_ptr;
+      NNEvaluation_asptr eval_ptr;
 
       cache_key_t cache_key;
       ActionMask valid_actions;
@@ -488,7 +491,6 @@ private:
     FullValueArray value_batch_;
     FullInputTensor input_batch_;
     evaluation_data_t* evaluation_data_batch_;
-    evaluation_pool_t evaluation_pool_;
 
     common::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;

@@ -470,7 +470,6 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
 , batch_size_limit_(batch_size)
 {
   evaluation_data_batch_ = new evaluation_data_t[batch_size];
-  evaluation_pool_.reserve(4096);
   torch_input_gpu_ = input_batch_.asTorch().clone().to(torch::kCUDA);
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -489,7 +488,7 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService()
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts_<GameState, Tensorizor>::NNEvaluation*
+typename Mcts_<GameState, Tensorizor>::NNEvaluation_sptr
 Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
     SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
     symmetry_index_t sym_index, float inv_temp, bool single_threaded)
@@ -538,8 +537,11 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
   auto transform = tensorizor.get_symmetry(sym_index);
   transform->transform_input(input);
 
-  evaluation_data_t edata{nullptr, key, valid_action_mask, transform, inv_temp};
-  evaluation_data_batch_[my_index] = edata;
+  evaluation_data_batch_[my_index].eval_ptr.store(nullptr);
+  evaluation_data_batch_[my_index].cache_key = key;
+  evaluation_data_batch_[my_index].valid_actions = valid_action_mask;
+  evaluation_data_batch_[my_index].transform = transform;
+  evaluation_data_batch_[my_index].inv_temp = inv_temp;
 
   {
     thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
@@ -548,7 +550,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
   }
   cv_service_loop_.notify_one();
 
-  NNEvaluation* eval_ptr;
+  NNEvaluation_sptr eval_ptr;
   {
     thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
     std::unique_lock<std::mutex> lock(batch_mutex_);
@@ -556,7 +558,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
     thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
     cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
 
-    eval_ptr = evaluation_data_batch_[my_index].eval_ptr;
+    eval_ptr = evaluation_data_batch_[my_index].eval_ptr.load();
     assert(batch_unread_count_ > 0);
     batch_unread_count_--;
   }
@@ -583,9 +585,8 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
     auto &value = value_batch_.eigenSlab(i);
 
     edata.transform->transform_policy(policy);
-    evaluation_pool_.emplace_back(eigen_util::to_array1d(value), eigen_util::to_array1d(policy),
-                                  edata.valid_actions, edata.inv_temp);
-    edata.eval_ptr = &evaluation_pool_.back();
+    edata.eval_ptr.store(std::make_shared<NNEvaluation>(
+        eigen_util::to_array1d(value), eigen_util::to_array1d(policy), edata.valid_actions, edata.inv_temp));
   }
 
   record_for_profiling(kAcquiringCacheMutex);
@@ -706,6 +707,7 @@ inline void Mcts_<GameState, Tensorizor>::clear() {
   stop_search_threads();
   if (!root_) return;
 
+  assert(root_->parent()==nullptr);
   root_->_release();
   delete root_;
   root_ = nullptr;
@@ -717,6 +719,8 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
 {
   stop_search_threads();
   if (!root_) return;
+
+  assert(root_->parent()==nullptr);
 
   Node* new_root = root_->_find_child(action);
   if (!new_root) {
@@ -752,11 +756,12 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
   start_search_threads(params.tree_size_limit);
   wait_for_search_threads();
 
+  NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->valid_action_mask();
   results_.counts = root_->get_effective_counts();
-  results_.policy_prior = root_->_evaluation()->local_policy_prob_distr();
+  results_.policy_prior = evaluation->local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
-  results_.value_prior = root_->_evaluation()->value_prob_distr();
+  results_.value_prior = evaluation->value_prob_distr();
   return &results_;
 }
 
@@ -783,7 +788,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
    * Note: race-conditions can cause redundant setting of a given tree's evaluation. This is ok - it just leads to
    * redundant evaluation by the eval thread. It is preferable to inserting a mutex here.
    */
-  NNEvaluation* evaluation = tree->_evaluation();
+  NNEvaluation_sptr evaluation = tree->_evaluation();
   bool undo_virtual_loss = false;
   if (!evaluation) {
     thread->record_for_profiling(SearchThread::kVirtualBackprop);
