@@ -1,9 +1,9 @@
+#include <chrono>
 #include <iostream>
 #include <string>
 
 #include <boost/program_options.hpp>
 
-#include <common/DerivedTypes.hpp>
 #include <common/GameRunner.hpp>
 #include <common/NNetPlayer.hpp>
 #include <connect4/C4GameState.hpp>
@@ -86,9 +86,17 @@ int main(int ac, char* av[]) {
   int loss = 0;
   int draw = 0;
 
+  using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
+  using duration_t = std::chrono::nanoseconds;
+  int64_t total_ns = 0;
+  int64_t min_ns = std::numeric_limits<int64_t>::max();
+  int64_t max_ns = 0;
+
   for (int i = 0; i < args.num_games; ++i) {
     common::GameRunner<c4::GameState> runner(players);
+    time_point_t t1 = std::chrono::steady_clock::now();
     auto outcome = runner.run();
+    time_point_t t2 = std::chrono::steady_clock::now();
     if (outcome[c4::kRed] == 1) {
       win++;
     } else if (outcome[c4::kYellow] == 1) {
@@ -97,8 +105,18 @@ int main(int ac, char* av[]) {
       draw++;
     }
 
+    duration_t duration = t2 - t1;
+    int64_t ns = duration.count();
+    total_ns += ns;
+    min_ns = std::min(min_ns, ns);
+    max_ns = std::max(max_ns, ns);
+
     printf("W%d L%d D%d", win, loss, draw);
     std::cout << std::endl;
   }
+
+  printf("Avg runtime: %.3fs\n", 1e-9 * total_ns / args.num_games);
+  printf("Min runtime: %.3fs\n", 1e-9 * min_ns);
+  printf("Max runtime: %.3fs\n", 1e-9 * max_ns);
   return 0;
 }
