@@ -25,19 +25,24 @@ add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
 add_executable(c4_mcts_vs_perfect cpp/connect4/main/MctsVsPerfect.cpp)
 add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
 
+set(executables c4_gen_training_data c4_mcts_vs_perfect c4_play_vs_cpu)
+
 add_subdirectory("cpp/util")
 add_subdirectory("cpp/connect4")
 
-foreach(tgt c4_gen_training_data c4_mcts_vs_perfect c4_play_vs_cpu util connect4)
+set(libraries util connect4)
+
+foreach(tgt ${executables} ${libraries})
     target_link_libraries(${tgt} ${TORCH_LIBRARIES})
     target_link_libraries(${tgt} ${Boost_LIBRARIES})
 endforeach()
 
 link_directories(${Boost_LIBRARY_DIRS})
 
-foreach(tgt c4_gen_training_data c4_mcts_vs_perfect c4_play_vs_cpu)
-    target_link_libraries(${tgt} util)
-    target_link_libraries(${tgt} connect4)
+foreach(tgt ${executables})
+    foreach(lib ${libraries})
+        target_link_libraries(${tgt} ${lib})
+    endforeach()
     set_target_properties(${tgt} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     set_property(TARGET ${tgt} PROPERTY CXX_STANDARD 20)
 endforeach()
