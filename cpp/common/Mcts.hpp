@@ -550,7 +550,6 @@ private:
   NNEvaluationService* nn_eval_service_ = nullptr;
 
   Node* root_ = nullptr;
-  torch::Tensor torch_input_gpu_;
   MctsResults results_;
 
   std::mutex search_mutex_;
