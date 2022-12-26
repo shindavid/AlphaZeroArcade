@@ -18,3 +18,6 @@ output
 **/c4_games
 **/c4_model.pt
 **/debug.xml
+
+# egg files
+**/blokus.egg-info
