@@ -24,8 +24,9 @@ include_directories(${MY_EIGENRAND_DIR})
 add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
 add_executable(c4_mcts_vs_perfect cpp/connect4/main/MctsVsPerfect.cpp)
 add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
+add_executable(c4_dshin_scratch cpp/connect4/main/DshinScratch.cpp)
 
-set(executables c4_gen_training_data c4_mcts_vs_perfect c4_play_vs_cpu)
+set(executables c4_gen_training_data c4_mcts_vs_perfect c4_play_vs_cpu c4_dshin_scratch)
 
 add_subdirectory("cpp/util")
 add_subdirectory("cpp/connect4")
