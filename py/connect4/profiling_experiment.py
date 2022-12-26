@@ -2,6 +2,7 @@
 """
 Pit two players against each other.
 """
+import argparse
 import time
 from collections import defaultdict
 
@@ -13,22 +14,48 @@ from connect4.nnet_player import NNetPlayer, NNetPlayerParams
 from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
 
 
+class Args:
+    use_perfect = False
+    num_games = 2
+    num_mcts_iters = 400
+
+    @staticmethod
+    def load(args):
+        Args.use_perfect = args.use_perfect
+        Args.num_games = args.num_games
+        Args.num_mcts_iters = args.num_mcts_iters
+
+
+def load_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--use-perfect", action='store_true', help='mcts vs perfect')
+    parser.add_argument("-g", "--num-games", default=Args.num_games, type=int,
+                        help='num games (default: %(default)s)')
+    parser.add_argument("-i", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
+                        help='num num iterations (default: %(default)s)')
+
+    args = parser.parse_args()
+    Args.load(args)
+
+
 def main():
-    use_perfect = True
-    num_games = 10
-    num_mcts_iters = 800
+    load_args()
+
+    use_perfect = Args.use_perfect
+    num_games = Args.num_games
+    num_mcts_iters = Args.num_mcts_iters
+
+    params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
+    cpu1 = NNetPlayer(params1)
+    cpu1.set_name('MCTS1-' + str(params1.num_mcts_iters))
 
     if use_perfect:
-        cpu1 = PerfectPlayer(PerfectPlayerParams())
-        cpu1.set_name('Perfect')
+        cpu2 = PerfectPlayer(PerfectPlayerParams())
+        cpu2.set_name('Perfect')
     else:
-        params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
-        cpu1 = NNetPlayer(params1)
-        cpu1.set_name('MCTS1-' + str(params1.num_mcts_iters))
-
-    params2 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
-    cpu2 = NNetPlayer(params2)
-    cpu2.set_name('MCTS2-' + str(params2.num_mcts_iters))
+        params2 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
+        cpu2 = NNetPlayer(params2)
+        cpu2.set_name('MCTS2-' + str(params2.num_mcts_iters))
 
     stats = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))  # name -> color -> W/L/D -> count
 
