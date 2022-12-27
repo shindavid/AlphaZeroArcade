@@ -83,7 +83,7 @@ public:
    */
   struct Params {
     std::string nnet_filename;
-    int num_search_threads = 1;
+    int num_search_threads = kDefaultBatchSize;
     int batch_size_limit = kDefaultBatchSize;
     bool run_offline = false;
     int offline_tree_size_limit = 4096;
