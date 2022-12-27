@@ -448,6 +448,8 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::connect() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::disconnect() {
+  close_profiling_file();
+
   if (!thread_) return;
 
   num_connections_--;
@@ -484,7 +486,6 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService() {
   disconnect();
   delete[] evaluation_data_batch_;
-  close_profiling_file();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -660,6 +661,13 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
 : params_(params) {
   namespace bf = boost::filesystem;
 
+  if (kEnableProfiling) {
+    if (profiling_dir().empty()) {
+      throw util::Exception("Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in config.txt");
+    }
+    init_profiling_dir(profiling_dir().string());
+  }
+
   nn_eval_service_ = NNEvaluationService::create(this);
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
@@ -672,13 +680,6 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
   }
   for (int i = 0; i < num_search_threads(); ++i) {
     search_threads_.push_back(new SearchThread(this, i));
-  }
-
-  if (kEnableProfiling) {
-    if (profiling_dir().empty()) {
-      throw util::Exception("Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in config.txt");
-    }
-    init_profiling_dir(profiling_dir().string());
   }
 }
 

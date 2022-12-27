@@ -118,5 +118,8 @@ int main(int ac, char* av[]) {
   printf("Avg runtime: %.3fs\n", 1e-9 * total_ns / args.num_games);
   printf("Min runtime: %.3fs\n", 1e-9 * min_ns);
   printf("Max runtime: %.3fs\n", 1e-9 * max_ns);
+
+  delete mcts_player;
+  delete perfect_player;
   return 0;
 }
