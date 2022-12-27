@@ -10,8 +10,8 @@ inline NeuralNet::NeuralNet(const boost::filesystem::path& path)
 
 inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) const {
   auto outputs = module_.forward(input).toTuple();
-  policy.copy_(outputs->elements()[0].toTensor());
-  value.copy_(outputs->elements()[1].toTensor());
+  policy.copy_(outputs->elements()[0].toTensor().detach());
+  value.copy_(outputs->elements()[1].toTensor().detach());
 }
 
 }  // namespace common
