@@ -332,12 +332,16 @@ inline Mcts_<GameState, Tensorizor>::SearchThread::SearchThread(Mcts_* mcts, int
 : mcts_(mcts)
 , thread_id_(thread_id) {
   auto profiling_filename = mcts->profiling_dir() / util::create_string("search%d.txt", thread_id);
-  set_profiling_file(profiling_filename.c_str());
+  init_profiling(profiling_filename.c_str(), util::create_string("s-%-2d", thread_id).c_str());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::SearchThread::~SearchThread() {
   kill();
+  profiler_t* profiler = get_profiler();
+  if (profiler) {
+    profiler->dump(get_profiling_file(), 1, get_profiler_name());
+  }
   close_profiling_file();
 }
 
@@ -367,45 +371,16 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::launch(int tree_size_lim
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::SearchThread::record_for_profiling(region_t region) {
-  profiling_stats_t* stats = get_profiling_stats();
-  if (!stats) return;  // compile-time branch
-
-  time_point_t now = std::chrono::steady_clock::now();
-  if (kEnableVerboseProfiling) {
-    int64_t ns = util::ns_since_epoch(now);
-    printf("%lu.%09lu s%-3d %d\n", ns / 1000000000, ns % 1000000000, thread_id_, (int) region);
-  }
-
-  if (stats->cur_region != kNumRegions) {
-    std::chrono::nanoseconds duration = now - stats->last_time;
-    stats->durations[stats->cur_region] += duration;
-  }
-  stats->last_time = now;
-  stats->cur_region = region;
+  profiler_t* profiler = get_profiler();
+  if (!profiler) return;  // compile-time branch
+  profiler->record(region, get_profiler_name());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
-  profiling_stats_t* stats = get_profiling_stats();
-  if (!stats) return;  // compile-time branch
-
-  FILE* f = get_profiling_file();
-
-  fprintf(f, "run_search()\n");
-  for (int r = 0; r < int(kNumRegions); ++r) {
-    int64_t ns = stats->durations[r].count();
-    if (!ns) continue;
-    fprintf(f, "%2d %ld\n", r, ns);
-  }
-  stats->clear();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::SearchThread::profiling_stats_t::clear() {
-  for (int r = 0; r < int(kNumRegions); ++r) {
-    durations[r] *= 0;
-  }
-  cur_region = kNumRegions;
+  profiler_t* profiler = get_profiler();
+  if (!profiler) return;  // compile-time branch
+  profiler->dump(get_profiling_file(), 64, get_profiler_name());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -448,15 +423,13 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::connect() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::disconnect() {
-  close_profiling_file();
-
-  if (!thread_) return;
-
-  num_connections_--;
-  if (num_connections_ == 0) {
+  if (thread_) {
+    num_connections_--;
+    if (num_connections_ > 0) return;
     if (thread_->joinable()) thread_->detach();
     delete thread_;
   }
+  close_profiling_file();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -476,10 +449,8 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
-  if (kEnableProfiling) {
-    auto profiling_filename = profiling_dir / "eval.txt";
-    set_profiling_file(profiling_filename.c_str());
-  }
+  auto profiling_filename = profiling_dir / "eval.txt";
+  init_profiling(profiling_filename.c_str(), "eval");
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -576,7 +547,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
 
   record_for_profiling(kCopyingCpuToGpu);
   torch_input_gpu_.copy_(input_batch_.asTorch());
-  record_for_profiling(kEvaluatingNeuralNet, batch_reserve_index_);
+  record_for_profiling(kEvaluatingNeuralNet);
   net_.predict(input_vec_, policy_batch_.asTorch(), value_batch_.asTorch());
 
   record_for_profiling(kCopyingToPool);
@@ -604,7 +575,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   batch_reserve_index_ = 0;
   batch_commit_count_ = 0;
   cv_evaluate_.notify_all();
-  record_for_profiling(kNumRegions);
+  dump_profiling_stats();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -632,28 +603,17 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::loop() {
  * 2. Compiler checking of profiling methods even when compiled without profiling enabled.
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts_<GameState, Tensorizor>::NNEvaluationService::record_for_profiling(region_t region, int batch_size) {
-  profiling_stats_t* stats = get_profiling_stats();
-  if (!stats) return;  // compile-time branch
+void Mcts_<GameState, Tensorizor>::NNEvaluationService::record_for_profiling(region_t region) {
+  profiler_t* profiler = get_profiler();
+  if (!profiler) return;  // compile-time branch
+  profiler->record(region, get_profiler_name());
+}
 
-  auto now = std::chrono::steady_clock::now();
-  stats->start_times[region] = now;
-  if (kEnableVerboseProfiling) {
-    int64_t ns = util::ns_since_epoch(now);
-    printf("%lu.%09lu eval %d\n", ns / 1000000000, ns % 1000000000, (int) region);
-  }
-
-  if (batch_size >= 0) {
-    stats->batch_size = batch_size;
-  }
-  if (region != kNumRegions) return;
-
-  FILE* f = get_profiling_file();
-  fprintf(f, "loop size=%d\n", stats->batch_size);
-  for (int r = 0; r < int(kNumRegions); ++r) {
-    std::chrono::nanoseconds duration = stats->start_times[r + 1] - stats->start_times[r];
-    fprintf(f, "%2d %ld\n", r, duration.count());
-  }
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::NNEvaluationService::dump_profiling_stats() {
+  profiler_t* profiler = get_profiler();
+  if (!profiler) return;  // compile-time branch
+  profiler->dump(get_profiling_file(), 64, get_profiler_name());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

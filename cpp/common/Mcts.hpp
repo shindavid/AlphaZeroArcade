@@ -26,6 +26,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/LRUCache.hpp>
+#include <util/Profiler.hpp>
 
 namespace common {
 
@@ -292,30 +293,31 @@ private:
       kNumRegions = 18
     };
 
-    void record_for_profiling(region_t);
+    using profiler_t = util::Profiler<int(kNumRegions), kEnableVerboseProfiling>;
+
+    void record_for_profiling(region_t region);
     void dump_profiling_stats();
 
-    struct profiling_stats_t {
-      profiling_stats_t() { clear(); }
-      void clear();
-
-      std::chrono::nanoseconds durations[kNumRegions];
-      time_point_t last_time;
-      region_t cur_region;
-    };
-
 #ifdef PROFILE_MCTS
-    profiling_stats_t* get_profiling_stats() { return &profiling_stats_; }
-    FILE* get_profiling_file() { return profiling_file_; }
-    void set_profiling_file(const char* filename) { profiling_file_ = fopen(filename, "w"); }
+    profiler_t* get_profiler() { return &profiler_; }
+    FILE* get_profiling_file() const { return profiling_file_; }
+    const char* get_profiler_name() const { return profiler_name_.c_str(); }
+    void init_profiling(const char* filename, const char* name) {
+      profiling_file_ = fopen(filename, "w");
+      profiler_name_ = name;
+      profiler_.skip_next_n_dumps(5);
+    }
     void close_profiling_file() { fclose(profiling_file_); }
 
-    profiling_stats_t profiling_stats_;
+    profiler_t profiler_;
+    std::string profiler_name_;
     FILE* profiling_file_ = nullptr;
+    int profile_count_ = 0;
 #else  // PROFILE_MCTS
-    constexpr profiling_stats_t* get_profiling_stats() const { return nullptr; }
+    constexpr profiler_t* get_profiler() { return nullptr; }
     static FILE* get_profiling_file() { return nullptr; }
-    void set_profiling_file(const char* filename) {}
+    const char* get_profiler_name() const { return nullptr; }
+    void init_profiling(const char* filename, const char* name) {}
     void close_profiling_file() {}
 #endif  // PROFILE_MCTS
 
@@ -456,25 +458,36 @@ private:
       kNumRegions = 9
     };
 
+    using profiler_t = util::Profiler<int(kNumRegions), kEnableVerboseProfiling>;
+
     struct profiling_stats_t {
       time_point_t start_times[kNumRegions + 1];
       int batch_size;
     };
 
-    void record_for_profiling(region_t, int batch_size=-1);
+    void record_for_profiling(region_t region);
+    void dump_profiling_stats();
 
 #ifdef PROFILE_MCTS
-    profiling_stats_t* get_profiling_stats() { return &profiling_stats_; }
-    FILE* get_profiling_file() { return profiling_file_; }
-    void set_profiling_file(const char* filename) { profiling_file_ = fopen(filename, "w"); }
+    profiler_t* get_profiler() { return &profiler_; }
+    FILE* get_profiling_file() const { return profiling_file_; }
+    const char* get_profiler_name() const { return profiler_name_.c_str(); }
+    void init_profiling(const char* filename, const char* name) {
+      profiling_file_ = fopen(filename, "w");
+      profiler_name_ = name;
+      profiler_.skip_next_n_dumps(5);
+    }
     void close_profiling_file() { fclose(profiling_file_); }
 
-    profiling_stats_t profiling_stats_;
+    profiler_t profiler_;
+    std::string profiler_name_;
     FILE* profiling_file_ = nullptr;
+    int profile_count_ = 0;
 #else  // PROFILE_MCTS
-    constexpr profiling_stats_t* get_profiling_stats() const { return nullptr; }
+    constexpr profiler_t* get_profiler() { return nullptr; }
     static FILE* get_profiling_file() { return nullptr; }
-    void set_profiling_file(const char* filename) {}
+    const char* get_profiler_name() const { return nullptr; }
+    void init_profiling(const char* filename, const char* name) {}
     void close_profiling_file() {}
 #endif  // PROFILE_MCTS
 
