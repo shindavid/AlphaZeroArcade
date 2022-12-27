@@ -18,21 +18,21 @@ void experiment(const char* filename, bool use_copy) {
   std::vector<torch::jit::IValue> input_vec;
 
   for (int i = 0; i < 10000; ++i) {
-    torch::Tensor gpu_input = input.clone().to(torch::kCUDA);
-    input_vec.push_back(gpu_input);
-    auto gpu_output = module.forward(input_vec).toTuple()->elements()[0].toTensor();
-    if (use_copy) {
-      output.copy_(gpu_output);
-    } else {
-      output = gpu_output;
-      output.to(torch::kCPU);
-    }
-    input_vec.clear();
     if (i < 10 || i % 100 == 0) {
       printf("%6d ", i);
       std::cout << output.data_ptr() << " " << output.sizes() << " ";
       cuda::dump_memory_info();
     }
+    torch::Tensor gpu_input = input.clone().to(torch::kCUDA);
+    input_vec.push_back(gpu_input);
+    auto gpu_output = module.forward(input_vec).toTuple()->elements()[0].toTensor();
+    if (use_copy) {
+      output.copy_(gpu_output.detach());
+    } else {
+      output = gpu_output;
+      output.to(torch::kCPU);
+    }
+    input_vec.clear();
   }
 }
 
