@@ -67,7 +67,12 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
     verbose_info_->mcts_results = *results;
     verbose_info_->initialized = true;
   }
-  return util::Random::weighted_sample(policy.begin(), policy.end());
+  action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
+  if (!valid_actions[action]) {
+    // This happens rarely, due to MCTS elimination mechanics (I think?)
+    return valid_actions.choose_random_set_bit();
+  }
+  return action;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
