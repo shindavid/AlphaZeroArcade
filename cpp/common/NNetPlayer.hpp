@@ -50,6 +50,7 @@ public:
   void start_game(const player_array_t& players, player_index_t seat_assignment) override;
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
+  void get_cache_stats(int& hits, int& misses, int& size) { mcts_.get_cache_stats(hits, misses, size); }
 
 private:
   struct VerboseInfo {

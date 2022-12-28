@@ -472,9 +472,11 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
     std::lock_guard<std::mutex> guard(cache_mutex_);
     auto cached = cache_.get(key);
     if (cached.has_value()) {
+      cache_hits_++;
       return cached.value();
     }
   }
+  cache_misses_++;
 
   int my_index;
   {
@@ -538,6 +540,13 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
   // NOTE: might be able to notify_one(), if we add another notify_one() after the batch_reserve_index_++
   cv_evaluate_.notify_all();
   return eval_ptr;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::NNEvaluationService::get_cache_stats(int& hits, int& misses, int& size) {
+  hits = cache_hits_;
+  misses = cache_misses_;
+  size = cache_.size();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

@@ -92,6 +92,9 @@ int main(int ac, char* av[]) {
   int64_t min_ns = std::numeric_limits<int64_t>::max();
   int64_t max_ns = 0;
 
+  int last_cache_hits = 0;
+  int last_cache_misses = 0;
+
   for (int i = 0; i < args.num_games; ++i) {
     common::GameRunner<c4::GameState> runner(players);
     time_point_t t1 = std::chrono::steady_clock::now();
@@ -111,7 +114,18 @@ int main(int ac, char* av[]) {
     min_ns = std::min(min_ns, ns);
     max_ns = std::max(max_ns, ns);
 
-    printf("W%d L%d D%d", win, loss, draw);
+    int cache_hits;
+    int cache_misses;
+    int cache_size;
+    mcts_player->get_cache_stats(cache_hits, cache_misses, cache_size);
+    int cur_cache_hits = cache_hits - last_cache_hits;
+    int cur_cache_misses = cache_misses - last_cache_misses;
+    float cache_hit_rate = cur_cache_hits * 1.0 / std::max(1, cur_cache_hits + cur_cache_misses);
+    last_cache_hits = cache_hits;
+    last_cache_misses = cache_misses;
+    double ms = ns * 1e-6;
+
+    printf("W%d L%d D%d | cache:[%.2f%% %d] | %.3fms", win, loss, draw, 100 * cache_hit_rate, cache_size, ms);
     std::cout << std::endl;
   }
 
