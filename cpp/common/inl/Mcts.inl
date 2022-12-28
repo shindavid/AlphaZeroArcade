@@ -752,6 +752,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   NNEvaluation_sptr evaluation = tree->_evaluation();
   bool undo_virtual_loss = false;
   if (!evaluation) {
+    if (!search_active_) return;
     thread->record_for_profiling(SearchThread::kVirtualBackprop);
     tree->virtual_backprop();
     undo_virtual_loss = true;
