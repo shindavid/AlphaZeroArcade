@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import os
-import sys
 from typing import Optional
 
 import numpy as np
@@ -15,7 +13,7 @@ from util.repo_util import Repo
 
 
 class Args:
-    model_file: str = os.path.join(Repo.root(), 'py', 'c4_model.pt')
+    model_file: str = Repo.c4_model()
     debug_filename: str = None
     verbose: bool = False
     perfect: bool = False

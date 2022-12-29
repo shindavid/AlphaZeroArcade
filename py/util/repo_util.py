@@ -16,6 +16,14 @@ class Repo:
         assert os.path.isfile(marker), f'Missing repo root marker file: {marker}'
         self._root = root
 
-    @staticmethod
+    @classmethod
     def root():
         return Repo.instance()._root
+    
+    @classmethod
+    def c4_games():
+        return os.path.join(Repo.root(), 'c4_games')
+    
+    @classmethod
+    def c4_model():
+        return os.path.join(Repo.root(), 'c4_model.pt')

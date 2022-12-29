@@ -11,11 +11,11 @@ from mcts import MCTS, MCTSParams
 
 from connect4.game_logic import C4GameState, NUM_COLUMNS, PRETTY_COLORS
 from connect4.tensorizor import C4Net, C4Tensorizor
-
+from util.repo_util import Repo
 
 @dataclass
 class NNetPlayerParams:
-    model_file: str = 'c4_model.pt'
+    model_file: str = Repo.c4_model()
     debug_filename: str = None
     verbose: bool = False
     neural_network_only: bool = False
