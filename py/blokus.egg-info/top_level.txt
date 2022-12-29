@@ -1,2 +1,0 @@
-blokus
-connect4
