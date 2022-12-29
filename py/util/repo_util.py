@@ -21,9 +21,9 @@ class Repo:
         return Repo.instance()._root
     
     @classmethod
-    def c4_games():
+    def c4_games(cls):
         return os.path.join(Repo.root(), 'c4_games')
     
     @classmethod
-    def c4_model():
+    def c4_model(cls):
         return os.path.join(Repo.root(), 'c4_model.pt')
