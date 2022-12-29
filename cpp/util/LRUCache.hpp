@@ -36,6 +36,7 @@ public:
   void insert(const Key& key, const Value& value);
   boost::optional<Value> get(const Key& key);
   void clear();
+  float get_hash_balance_factor() const;  // (1 + size(largest_bucket)) / (1 + size(smallest_bucket))
 
 private:
   void evict();

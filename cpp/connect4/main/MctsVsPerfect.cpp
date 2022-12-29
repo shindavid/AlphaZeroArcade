@@ -117,7 +117,8 @@ int main(int ac, char* av[]) {
     int cache_hits;
     int cache_misses;
     int cache_size;
-    mcts_player->get_cache_stats(cache_hits, cache_misses, cache_size);
+    float hash_balance_factor;
+    mcts_player->get_cache_stats(cache_hits, cache_misses, cache_size, hash_balance_factor);
     int cur_cache_hits = cache_hits - last_cache_hits;
     int cur_cache_misses = cache_misses - last_cache_misses;
     float cache_hit_rate = cur_cache_hits * 1.0 / std::max(1, cur_cache_hits + cur_cache_misses);
@@ -125,7 +126,8 @@ int main(int ac, char* av[]) {
     last_cache_misses = cache_misses;
     double ms = ns * 1e-6;
 
-    printf("W%d L%d D%d | cache:[%.2f%% %d] | %.3fms", win, loss, draw, 100 * cache_hit_rate, cache_size, ms);
+    printf("W%d L%d D%d | cache:[%.2f%% %d %.3f] | %.3fms", win, loss, draw, 100 * cache_hit_rate, cache_size,
+           hash_balance_factor, ms);
     std::cout << std::endl;
   }
 

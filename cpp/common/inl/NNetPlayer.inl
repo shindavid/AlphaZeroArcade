@@ -76,6 +76,13 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline void NNetPlayer<GameState_, Tensorizor_>::get_cache_stats(
+    int& hits, int& misses, int& size, float& hash_balance_factor) const
+{
+  mcts_.get_cache_stats(hits, misses, size, hash_balance_factor);
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void NNetPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 

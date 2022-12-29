@@ -543,10 +543,13 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts_<GameState, Tensorizor>::NNEvaluationService::get_cache_stats(int& hits, int& misses, int& size) {
+void Mcts_<GameState, Tensorizor>::NNEvaluationService::get_cache_stats(
+    int& hits, int& misses, int& size, float& hash_balance_factor) const
+{
   hits = cache_hits_;
   misses = cache_misses_;
   size = cache_.size();
+  hash_balance_factor = cache_.get_hash_balance_factor();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -890,6 +893,13 @@ inline void Mcts_<GameState, Tensorizor>::run_search(SearchThread* thread, int t
   std::unique_lock<std::mutex> lock(search_mutex_);
   num_active_search_threads_--;
   cv_search_.notify_one();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::get_cache_stats(
+    int& hits, int& misses, int& size, float& hash_balance_factor) const
+{
+  nn_eval_service_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

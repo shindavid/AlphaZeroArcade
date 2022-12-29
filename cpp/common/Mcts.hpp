@@ -418,7 +418,7 @@ private:
         SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
         symmetry_index_t sym_index, float inv_temp, bool single_threaded);
 
-    void get_cache_stats(int& hits, int& misses, int& size);
+    void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
   private:
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
@@ -549,7 +549,7 @@ public:
   void wait_for_search_threads();
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
-  void get_cache_stats(int& hits, int& misses, int& size) { nn_eval_service_->get_cache_stats(hits, misses, size); }
+  void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
 #ifdef PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return boost::filesystem::path(params_.profiling_dir); }

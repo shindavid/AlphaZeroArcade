@@ -59,6 +59,20 @@ void LRUCache<Key_, Value_>::clear()
 }
 
 template<class Key_, class Value_>
+float LRUCache<Key_, Value_>::get_hash_balance_factor() const {
+  size_t min_size = std::numeric_limits<size_t>::max() - 1;
+  size_t max_size = 0;
+  for (size_t b = 0; b < map_.bucket_count(); ++b) {
+    size_t size = map_.bucket_size(b);
+    min_size = std::min(min_size, size);
+    max_size = std::max(max_size, size);
+  }
+  size_t den = std::max(min_size, 1UL);
+  size_t num = std::max(den, max_size);
+  return 1.0 * num / den;
+}
+
+template<class Key_, class Value_>
 void LRUCache<Key_, Value_>::evict()
 {
   // evict item from the end of most recently used list
