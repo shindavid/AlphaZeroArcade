@@ -18,7 +18,7 @@ class Repo:
 
     @staticmethod
     def root():
-        return cls.instance()._root
+        return Repo.instance()._root
     
     @staticmethod
     def c4_games():
