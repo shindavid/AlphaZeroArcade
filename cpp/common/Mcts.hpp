@@ -154,8 +154,8 @@ private:
    */
   class Node {
   public:
-    Node(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, symmetry_index_t sym_index,
-         bool disable_noise, Node* parent=nullptr, action_index_t action=-1);
+    Node(Node* parent, action_index_t action);
+    Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
     Node(const Node& node, bool prune_parent=false);
 
     void debug_dump() const;
@@ -190,18 +190,20 @@ private:
     void virtual_backprop();
     void undo_virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
+    ValueArray1D make_virtual_loss() const;
+    void _lazy_init();
 
-    const Tensorizor& tensorizor() const { return stable_data_.tensorizor_; }
-    const GameState& state() const { return stable_data_.state_; }
-    const GameOutcome& outcome() const { return stable_data_.outcome_; }
     action_index_t action() const { return stable_data_.action_; }
     Node* parent() const { return stable_data_.parent_; }
     bool is_root() const { return !stable_data_.parent_; }
-    symmetry_index_t sym_index() const { return stable_data_.sym_index_; }
-    player_index_t current_player() const { return stable_data_.current_player_; }
-    const ActionMask& valid_action_mask() const { return stable_data_.valid_action_mask_; }
     bool disable_noise() const { return stable_data_.disable_noise_; }
-    ValueArray1D make_virtual_loss() const;
+
+    const Tensorizor& _tensorizor() const { return union_.lazily_initialized_data_.tensorizor_; }
+    const GameState& _state() const { return union_.lazily_initialized_data_.state_; }
+    const GameOutcome& _outcome() const { return union_.lazily_initialized_data_.outcome_; }
+    symmetry_index_t _sym_index() const { return union_.lazily_initialized_data_.sym_index_; }
+    player_index_t _current_player() const { return union_.lazily_initialized_data_.current_player_; }
+    const ActionMask& _valid_action_mask() const { return union_.lazily_initialized_data_.valid_action_mask_; }
 
     bool _has_children() const { return children_data_.num_children_; }
     int _num_children() const { return children_data_.num_children_; }
@@ -224,19 +226,34 @@ private:
     float _get_min_V_floor_among_children(player_index_t p) const;
 
     struct stable_data_t {
-      stable_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, Node* parent,
-                    symmetry_index_t sym_index, action_index_t action, bool disable_noise);
+      stable_data_t(Node* parent, action_index_t action, bool disable_noise);
       stable_data_t(const stable_data_t& data, bool prune_parent);
+
+      Node* parent_;
+      action_index_t action_;
+      bool disable_noise_;
+    };
+
+    struct lazily_initialized_data_t {
+      lazily_initialized_data_t(Node* parent, action_index_t action);
+      lazily_initialized_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
 
       Tensorizor tensorizor_;
       GameState state_;
       GameOutcome outcome_;
       ActionMask valid_action_mask_;
-      Node* parent_;
-      symmetry_index_t sym_index_;
-      action_index_t action_;
       player_index_t current_player_;
-      bool disable_noise_;
+      symmetry_index_t sym_index_;
+    };
+
+    union union_t {
+      union_t() : dummy_(false) {}
+      union_t(const union_t& u) : lazily_initialized_data_(u.lazily_initialized_data_) {}
+      union_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+        : lazily_initialized_data_(tensorizor, state, outcome) {}
+
+      lazily_initialized_data_t lazily_initialized_data_;
+      bool dummy_;
     };
 
     struct children_data_t {
@@ -257,6 +274,7 @@ private:
     mutable std::mutex children_data_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
+    union_t union_;
     children_data_t children_data_;
     NNEvaluation_asptr evaluation_;
     stats_t stats_;

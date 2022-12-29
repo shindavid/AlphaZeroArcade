@@ -76,16 +76,9 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, Node* parent,
-    symmetry_index_t sym_index, action_index_t action, bool disable_noise)
-: tensorizor_(tensorizor)
-, state_(state)
-, outcome_(outcome)
-, valid_action_mask_(state.get_valid_actions())
-, parent_(parent)
-, sym_index_(sym_index)
+    Node* parent, action_index_t action, bool disable_noise)
+: parent_(parent)
 , action_(action)
-, current_player_(state.get_current_player())
 , disable_noise_(disable_noise) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -96,6 +89,30 @@ inline Mcts_<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const st
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::lazily_initialized_data_t(
+    Node* parent, action_index_t action)
+: tensorizor_(parent->_tensorizor())
+, state_(parent->_state())
+{
+  outcome_ = state_.apply_move(action);
+  valid_action_mask_ = state_.get_valid_actions();
+  current_player_ = state_.get_current_player();
+  sym_index_ = tensorizor_.get_random_symmetry_index(state_);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::lazily_initialized_data_t(
+    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+: tensorizor_(tensorizor)
+, state_(state)
+, outcome_(outcome)
+{
+  valid_action_mask_ = state_.get_valid_actions();
+  current_player_ = state_.get_current_player();
+  sym_index_ = tensorizor_.get_random_symmetry_index(state_);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::stats_t::stats_t() {
   value_avg_.setZero();
   effective_value_avg_.setZero();
@@ -103,14 +120,20 @@ inline Mcts_<GameState, Tensorizor>::Node::stats_t::stats_t() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts_<GameState, Tensorizor>::Node::Node(Node* parent, action_index_t action)
+: stable_data_(parent, action, true) {}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(
-    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, symmetry_index_t sym_index,
-    bool disable_noise, Node* parent, action_index_t action)
-: stable_data_(tensorizor, state, outcome, parent, sym_index, action, disable_noise) {}
+    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_noise)
+: stable_data_(nullptr, -1, disable_noise)
+, union_(tensorizor, state, outcome)
+{}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
 : stable_data_(node.stable_data_, prune_parent)
+, union_(node.union_)
 , children_data_(node.children_data_)
 , evaluation_(node.evaluation_)
 , stats_(node.stats_) {}
@@ -158,7 +181,7 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 
   std::lock_guard<std::mutex> guard(children_data_mutex_);
 
-  player_index_t cp = stable_data_.current_player_;
+  player_index_t cp = _current_player();
   GlobalPolicyCountDistr counts;
   counts.setZero();
   if (eliminated) {
@@ -185,22 +208,16 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children(SearchThread* th
 
   // TODO: use object pool
   thread->record_for_profiling(SearchThread::kAllocationChildrenMemory);
-  children_data_.num_children_ = stable_data_.valid_action_mask_.count();
+  children_data_.num_children_ = _valid_action_mask().count();
   void* raw_memory = operator new[](children_data_.num_children_ * sizeof(Node));
   Node* node = static_cast<Node*>(raw_memory);
 
   thread->record_for_profiling(SearchThread::kConstructingChildren);
   children_data_.first_child_ = node;
-  for (action_index_t action : stable_data_.valid_action_mask_) {
-    Tensorizor tensorizor_copy = stable_data_.tensorizor_;
-    GameState state_copy = stable_data_.state_;
-
-    // TODO: consider lazily doing these steps in visit(), since we only read them for Node's that win PUCT selection.
-    symmetry_index_t sym_index = tensorizor_copy.get_random_symmetry_index(state_copy);
-    GameOutcome outcome = state_copy.apply_move(action);
-    tensorizor_copy.receive_state_change(state_copy, action);
-
-    new(node++) Node(tensorizor_copy, state_copy, outcome, sym_index, true, this, action);
+  for (action_index_t action : _valid_action_mask()) {
+    new(node) Node(this, action);
+    node->_lazy_init();  // TODO: do this lazily in visit()
+    node++;
   }
   return true;
 }
@@ -261,7 +278,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::perform_eliminations(const Value
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
     {
-      player_index_t cp = stable_data_.current_player_;
+      player_index_t cp = _current_player();
       std::lock_guard<std::mutex> guard2(children_data_mutex_);
       for (player_index_t p = 0; p < kNumPlayers; ++p) {
         if (p == cp) {
@@ -290,8 +307,13 @@ Mcts_<GameState, Tensorizor>::Node::make_virtual_loss() const {
   constexpr float x = 1.0 / (kNumPlayers - 1);
   ValueArray1D virtual_loss;
   virtual_loss = x;
-  virtual_loss[stable_data_.current_player_] = 0;
+  virtual_loss[_current_player()] = 0;
   return virtual_loss;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::Node::_lazy_init() {
+  new(&union_.lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -722,15 +744,14 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 
   if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
-    symmetry_index_t sym_index = tensorizor.get_random_symmetry_index(game_state);
-    root_ = new Node(tensorizor, game_state, outcome, sym_index, params.disable_noise);  // TODO: use memory pool
+    root_ = new Node(tensorizor, game_state, outcome, params.disable_noise);  // TODO: use memory pool
   }
 
   start_search_threads(params.tree_size_limit);
   wait_for_search_threads();
 
   NNEvaluation_sptr evaluation = root_->_evaluation();
-  results_.valid_actions = root_->valid_action_mask();
+  results_.valid_actions = root_->_valid_action_mask();
   results_.counts = root_->get_effective_counts();
   results_.policy_prior = evaluation->local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
@@ -741,7 +762,7 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree, int depth) {
   thread->record_for_profiling(SearchThread::kStartingVisit);
-  const auto& outcome = tree->outcome();
+  const auto& outcome = tree->_outcome();
   if (is_terminal_outcome(outcome)) {
     thread->record_for_profiling(SearchThread::kBackpropOutcome);
     tree->backprop(outcome);
@@ -753,9 +774,9 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   }
 
   thread->record_for_profiling(SearchThread::kMisc);
-  player_index_t cp = tree->current_player();
+  player_index_t cp = tree->_current_player();
   float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
-  symmetry_index_t sym_index = tree->sym_index();
+  symmetry_index_t sym_index = tree->_sym_index();
 
   /*
    * Note: race-conditions can cause redundant setting of a given tree's evaluation. This is ok - it just leads to
@@ -769,7 +790,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
     tree->virtual_backprop();
     undo_virtual_loss = true;
     evaluation = nn_eval_service_->evaluate(
-        thread, tree->tensorizor(), tree->state(), tree->valid_action_mask(), sym_index, inv_temp,
+        thread, tree->_tensorizor(), tree->_state(), tree->_valid_action_mask(), sym_index, inv_temp,
         num_search_threads() == 1);
     tree->_set_evaluation(evaluation);
   }
@@ -780,7 +801,7 @@ inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree
   auto cPUCT = params_.cPUCT;
   LocalPolicyProbDistr P = evaluation->local_policy_prob_distr();
   const int rows = P.rows();
-  assert(rows == int(tree->valid_action_mask().count()));
+  assert(rows == int(tree->_valid_action_mask().count()));
 
   using PVec = LocalPolicyProbDistr;
 
