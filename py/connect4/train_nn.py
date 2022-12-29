@@ -22,12 +22,9 @@ from util.str_util import center_text
 
 
 def get_args():
-    default_games_dir = os.path.join(Repo.root(), 'c4_games')
-    default_model_file = os.path.join(Repo.root(), 'c4_model.pt')
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--games-dir", default=default_games_dir, help='c4 games dir (default: %(default)s)')
-    parser.add_argument("-m", "--model-file", default=default_model_file,
+    parser.add_argument("-g", "--games-dir", default=Repo.c4_games(), help='c4 games dir (default: %(default)s)')
+    parser.add_argument("-m", "--model-file", default=Repo.c4_model(),
                         help='model output location (default: %(default)s)')
     parser.add_argument("-w", "--weak-mode", action='store_true', help='Weak mode (default: strong)')
     parser.add_argument("-e", "--num-epochs", type=int, default=8, help='Num epochs (default: %(default)s)')

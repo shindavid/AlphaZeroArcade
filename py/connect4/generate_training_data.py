@@ -14,7 +14,7 @@ from connect4 import game_logic
 from connect4.tensorizor import C4Tensorizor
 from connect4.game_logic import NUM_ROWS, NUM_COLUMNS
 from util.torch_util import Shape
-
+from util.repo_util import Repo
 
 RANK = MPI.COMM_WORLD.Get_rank()
 SIZE = MPI.COMM_WORLD.Get_size()
@@ -26,7 +26,7 @@ def get_args():
                         help="base directory containing c4solver bin and 7x6.book. Uses c4.solver_dir from config.txt"
                         " if available. Else required arg.")
     parser.add_argument("-n", "--num-training-games", type=int, help="number of training games")
-    parser.add_argument("-g", "--games-dir", default="c4_games", help="Where to write games (default: %(default)s)")
+    parser.add_argument("-g", "--games-dir", default=Repo.c4_games(), help="Where to write games (default: %(default)s)")
     parser.add_argument("-s", "--num-previous-states", type=int, default=0,
                         help='how many previous board states to use (default: %(default)s)')
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import os
-import sys
 from typing import Optional
 
 import numpy as np
@@ -11,10 +9,11 @@ from connect4.perfect_player import PerfectPlayerParams, PerfectPlayer
 from connect4.game_logic import Color, C4GameState
 from connect4.human_tui_player import C4HumanTuiPlayer
 from connect4.nnet_player import NNetPlayer, NNetPlayerParams
+from util.repo_util import Repo
 
 
 class Args:
-    model_file: str = 'c4_model.pt'
+    model_file: str = Repo.c4_model()
     debug_filename: str = None
     verbose: bool = False
     perfect: bool = False

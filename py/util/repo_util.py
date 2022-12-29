@@ -19,3 +19,11 @@ class Repo:
     @staticmethod
     def root():
         return Repo.instance()._root
+    
+    @staticmethod
+    def c4_games():
+        return os.path.join(Repo.root(), 'c4_games')
+    
+    @staticmethod
+    def c4_model():
+        return os.path.join(Repo.root(), 'c4_model.pt')
