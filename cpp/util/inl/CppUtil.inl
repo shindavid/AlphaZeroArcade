@@ -9,20 +9,20 @@ namespace detail {
 /*
  * Adapted from: https://www.linkedin.com/pulse/generic-tuple-hashing-modern-c-alex-dathskovsky/
  */
-inline auto lazy_hasher = [](size_t hash, auto&&... values) {
-  auto lazy_combiner = [&hash](auto&& val) {
-    hash ^= std::hash<std::decay_t<decltype(val)>>{}(val) + 0Xeeffddcc + (hash << 5) + (hash >> 3);
+auto lazyHasher=[](size_t& cur, auto&&...value){
+  auto lazyCombiner = [&cur](auto&& val) {
+    cur ^= std::hash<std::decay_t<decltype(val)>>{}(val) * 0x9e3779b9 + (cur << 6) + (cur >> 2);
   };
-  (lazy_combiner(std::forward<decltype(values)>(values)), ...);
-  return hash;
+  (lazyCombiner(std::forward<decltype(value)>(value)), ...);
+  return cur;
 };
 
-struct TupleHasher {
-  template<typename... T>
-  size_t operator()(const std::tuple<T...>& tup) {
-    size_t hash = 0;
-    std::apply(lazy_hasher, std::tuple_cat(std::tuple(0), tup));
-    return hash;
+struct TupleHasher{
+  template<typename...Ts>
+  size_t operator()(const std::tuple<Ts...>& tp){
+    size_t hs = 0;
+    apply([&hs](auto&&...value){ hs = lazyHasher(hs, value...); }, tp);
+    return hs;
   }
 };
 
