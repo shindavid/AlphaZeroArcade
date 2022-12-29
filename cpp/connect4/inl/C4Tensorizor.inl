@@ -5,20 +5,25 @@
 
 namespace c4 {
 
-inline void Tensorizor::ReflectionTransform::transform_input(Tensorizor::InputTensor& tensor) {
+inline void Tensorizor::ReflectionTransform::transform_input(InputEigenTensor& tensor) {
   tensor = eigen_util::reverse(tensor, 2).eval();  // axis 2 corresponds to columns
 }
 
-inline void Tensorizor::ReflectionTransform::transform_policy(Tensorizor::PolicyVector& vector) {
+inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenSlab& vector) {
   std::reverse(vector.begin(), vector.end());
 }
 
-inline Tensorizor::Tensorizor()
-: transforms_{&identity_transform_, &reflection_transform_}
-{}
+inline Tensorizor::transform_array_t Tensorizor::transforms() {
+  transform_array_t arr{&identity_transform_, &reflection_transform_};
+  return arr;
+}
 
-inline Tensorizor::SymmetryTransform* Tensorizor::get_random_symmetry(const GameState&) const {
-  return *(transforms_.begin() + util::Random::uniform_sample(0, transforms_.size()));
+inline common::symmetry_index_t Tensorizor::get_random_symmetry_index(const GameState&) const {
+  return util::Random::uniform_sample(0, transforms().size());
+}
+
+inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(common::symmetry_index_t index) const {
+  return *(transforms().begin() + index);
 }
 
 }  // namespace c4

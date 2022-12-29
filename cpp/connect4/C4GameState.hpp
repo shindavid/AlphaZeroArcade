@@ -8,11 +8,19 @@
 #include <torch/torch.h>
 
 #include <common/AbstractPlayer.hpp>
+#include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/BasicTypes.hpp>
+#include <common/MctsResults.hpp>
 #include <connect4/C4Constants.hpp>
 #include <util/EigenUtil.hpp>
+
+namespace c4 { class GameState; }
+
+template <>
+struct std::hash<c4::GameState> {
+  std::size_t operator()(const c4::GameState& state) const;
+};
 
 namespace c4 {
 
@@ -34,10 +42,16 @@ public:
   static constexpr int kNumGlobalActions = kNumColumns;
   static constexpr int kMaxNumLocalActions = kNumColumns;
 
-  using Result = common::GameStateTypes<GameState>::Result;
+  using GameStateTypes = common::GameStateTypes_<GameState>;
+  using ActionMask = GameStateTypes::ActionMask;
+  using player_name_array_t = GameStateTypes::player_name_array_t;
+  using ValueProbDistr = GameStateTypes::ValueProbDistr;
+  using MctsResults = common::MctsResults_<GameState>;
+  using LocalPolicyProbDistr = GameStateTypes::LocalPolicyProbDistr;
+  using GameOutcome = GameStateTypes::GameOutcome;
 
   common::player_index_t get_current_player() const;
-  Result apply_move(common::action_index_t action);
+  GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
 
@@ -45,6 +59,10 @@ public:
   void xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
+
+  static common::action_index_t prompt_for_action();
+  static void xdump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
+                                const MctsResults& results);
 
 private:
   void xprintf_row_dump(row_t row, column_t blink_column) const;
@@ -58,16 +76,7 @@ private:
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
 };
 
-}  // namespace c4
-
-template <>
-struct std::hash<c4::GameState> {
-  std::size_t operator()(const c4::GameState& state) const { return state.hash(); }
-};
-
 static_assert(common::GameStateConcept<c4::GameState>);
-
-namespace c4 {
 
 using Player = common::AbstractPlayer<GameState>;
 

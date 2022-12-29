@@ -363,7 +363,7 @@ class MCTS:
         state = orig_state.clone()
 
         i = 0
-        while self.root.effective_count() < params.treeSizeLimit and not self.root.eliminated:
+        while self.root.effective_count() <= params.treeSizeLimit and not self.root.eliminated:
             iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
             i += 1
             self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=iter_tree)

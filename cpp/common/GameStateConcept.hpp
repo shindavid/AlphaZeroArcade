@@ -4,8 +4,9 @@
 
 #include <Eigen/Core>
 
-#include <common/DerivedTypes.hpp>
 #include <common/BasicTypes.hpp>
+#include <common/DerivedTypes.hpp>
+#include <common/MctsResults.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 
@@ -46,9 +47,9 @@ concept GameStateConcept = requires(S state) {
   { state.get_current_player() } -> std::same_as<player_index_t>;
 
   /*
-   * Apply a given action to the state, and return a Result.
+   * Apply a given action to the state, and return a GameOutcome.
    */
-  { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes<S>::Result>;
+  { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes_<S>::GameOutcome>;
 
   /*
    * Get the valid actions, as a util::BitSet.
@@ -64,6 +65,22 @@ concept GameStateConcept = requires(S state) {
    * Must be hashable.
    */
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
+
+  /*
+   * For TUI-playing. Print a prompt to cout requesting an input, and then parse cin into an action.
+   */
+  { S::prompt_for_action() } -> std::same_as<common::action_index_t>;
+
+  /*
+   * Pretty-print mcts output to terminal for debugging purposes.
+   *
+   * TODO: clean up this interface
+   */
+  { S::xdump_mcts_output(
+      typename GameStateTypes_<S>::ValueProbDistr{},
+      typename GameStateTypes_<S>::LocalPolicyProbDistr{},
+      MctsResults_<S>{})
+  };
 };
 
 }  // namespace common

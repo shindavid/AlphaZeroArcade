@@ -18,28 +18,29 @@ namespace c4 {
 class Tensorizor {
 public:
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
-  using PolicyVector = common::GameStateTypes<GameState>::PolicyVector;
-  using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor;
+  using InputTensor = common::TensorizorTypes_<Tensorizor>::InputTensor::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
+  using transform_array_t = std::array<SymmetryTransform*, 2>;
 
   class ReflectionTransform : public SymmetryTransform {
   public:
-    void transform_input(InputTensor& input) override;
-    void transform_policy(PolicyVector& policy) override;
+    void transform_input(InputEigenTensor& input) override;
+    void transform_policy(PolicyEigenSlab& policy) override;
   };
 
-  Tensorizor();
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
   void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
-  SymmetryTransform* get_random_symmetry(const GameState&) const;
+  common::symmetry_index_t get_random_symmetry_index(const GameState&) const;
+  SymmetryTransform* get_symmetry(common::symmetry_index_t index) const;
 
 private:
-  IdentityTransform identity_transform_;
-  ReflectionTransform reflection_transform_;
-  std::array<SymmetryTransform*, 2> transforms_;
+  static transform_array_t transforms();
+
+  static IdentityTransform identity_transform_;
+  static ReflectionTransform reflection_transform_;
 };
 
 }  // namespace c4

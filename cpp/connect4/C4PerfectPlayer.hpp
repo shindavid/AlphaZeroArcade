@@ -5,6 +5,7 @@
 
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
+#include <common/DerivedTypes.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 
@@ -12,6 +13,9 @@ namespace c4 {
 
 class PerfectOracle {
 public:
+  using GameStateTypes = common::GameStateTypes_<c4::GameState>;
+  using ActionMask = GameStateTypes::ActionMask;
+
   class MoveHistory {
   public:
     MoveHistory();
@@ -57,7 +61,7 @@ public:
   PerfectPlayer(const Params&);
 
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
-  void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const Result&) override;
+  void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:

@@ -5,10 +5,42 @@
 
 namespace eigen_util {
 
-template<typename Vector> auto softmax(const Vector& vector) {
-  Eigen::Vector<float, 3> v;
-  auto normalized_vector = vector.array() - vector.maxCoeff();
-  auto z = normalized_vector.exp();
+template<typename Scalar>
+template<typename Array, typename Urng, typename... DimTs>
+Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&... dims) {
+  static_assert(Array::MaxColsAtCompileTime > 0);
+  static_assert(Array::MaxRowsAtCompileTime > 0);
+
+  if (alpha != alpha_) {
+    alpha_ = alpha;
+    new(&gamma_) GammaGen(alpha);
+  }
+
+  Array out(dims...);
+  for (int i = 0; i < out.size(); ++i) {
+    out.data()[i] = gamma_.template generate<Eigen::Array<Scalar, 1, 1>>(1, 1, urng)(0);
+  }
+  out /= out.sum();
+  return out;
+}
+
+template <typename Scalar, int Rows, int Cols, int Options>
+auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array) {
+  static_assert(Rows>0);
+  static_assert(Cols>0);
+  constexpr int N = Rows * Cols;
+  using Array1D = Eigen::Array<Scalar, N, 1>;
+  Array1D a;
+  for (int i = 0; i < N; ++i) {
+    a(i) = array.data()[i];
+  }
+
+  return a;
+}
+
+template<typename Array> auto softmax(const Array& array) {
+  auto normalized_array = array - array.maxCoeff();
+  auto z = normalized_array.exp();
   return z / z.sum();
 }
 

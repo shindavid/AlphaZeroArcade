@@ -12,13 +12,13 @@ namespace common {
 template<GameStateConcept GameState>
 class GameRunner {
 public:
-  using Result = typename GameStateTypes<GameState>::Result;
+  using GameOutcome = typename GameStateTypes_<GameState>::GameOutcome;
   using Player = AbstractPlayer<GameState>;
   using player_array_t = std::array<Player*, GameState::kNumPlayers>;
 
   template<typename T> GameRunner(T&& players) : players_(players) {}
 
-  Result run();
+  GameOutcome run();
 
 private:
   player_array_t players_;

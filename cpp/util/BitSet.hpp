@@ -43,7 +43,7 @@ public:
   SetBitsIterator end() const { return SetBitsIterator(this, N); }
 
   int choose_random_set_bit() const;
-  void to_float_vector(Eigen::Vector<float, N>&) const;
+  template<typename T> void to_array(T* arr) const;
 };
 
 /*

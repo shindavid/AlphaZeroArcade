@@ -8,11 +8,11 @@ template<typename GameState, typename Tensorizor>
 class IdentityTransform : public AbstractSymmetryTransform<GameState, Tensorizor> {
 public:
   using base_t = AbstractSymmetryTransform<GameState, Tensorizor>;
-  using InputTensor = typename base_t::InputTensor;
-  using PolicyVector = typename base_t::PolicyVector;
+  using InputEigenTensor = typename base_t::InputEigenTensor;
+  using PolicyEigenSlab = typename base_t::PolicyEigenSlab;
 
-  void transform_input(InputTensor& input) override {}
-  void transform_policy(PolicyVector& policy) override {}
+  void transform_input(InputEigenTensor& input) override {}
+  void transform_policy(PolicyEigenSlab& policy) override {}
 };
 
 }

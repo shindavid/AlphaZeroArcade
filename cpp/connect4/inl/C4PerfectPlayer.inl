@@ -81,7 +81,7 @@ inline void PerfectPlayer::start_game(const player_array_t& players, common::pla
 }
 
 inline void PerfectPlayer::receive_state_change(
-    common::player_index_t, const GameState&, common::action_index_t action, const Result&)
+    common::player_index_t, const GameState&, common::action_index_t action, const GameOutcome&)
 {
   move_history_.append(action);
 }

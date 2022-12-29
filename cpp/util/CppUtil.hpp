@@ -2,12 +2,39 @@
 
 #include <array>
 #include <cstdint>
+#include <tuple>
 #include <type_traits>
 
 #define CONCAT_HELPER(x, y) x ## y
 #define CONCAT(x, y) CONCAT_HELPER(x, y)
 
+#define XSTR(a) STR(a)
+#define STR(a) #a
+
+/*
+ * Useful macro for constexpr-detection of whether a macro is assigned to 1. This is useful given the behavior of the
+ * -D option in py/build.py.
+ *
+ * #define FOO 1
+ * // #define BAR
+ *
+ * static_assert(IS_MACRO_ASSIGNED_TO_1(FOO))
+ * static_assert(!IS_MACRO_ASSIGNED_TO_1(BAR))
+ */
+#define IS_MACRO_ASSIGNED_TO_1(macro) (XSTR(macro)[0] == '1')
+
 namespace util {
+
+int64_t constexpr inline s_to_ns(int64_t s) { return s * 1000 * 1000 * 1000; }
+int64_t constexpr inline us_to_ns(int64_t us) { return us * 1000; }
+int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }
+
+/*
+ * Usage:
+ *
+ * int64_t ns = util::ns_since_epoch(std::chrono::steady_clock::now());
+ */
+template<typename TimePoint> int64_t ns_since_epoch(const TimePoint&);
 
 /*
  * This identity function is intended to be used to declare required members in concepts.
@@ -46,22 +73,6 @@ template<typename T> struct is_int_sequence { static const bool value = false; }
 template<int... Ints> struct is_int_sequence<int_sequence<Ints...>> { static constexpr bool value = true; };
 template<typename T> inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
 template<typename T> concept IntSequenceConcept = is_int_sequence_v<T>;
-
-/*
- * The following are equivalent:
- *
- * auto n = util::int_sequence_product_v<util::int_sequence<1, 2, 3, 4>>;
- *
- * and:
- *
- * auto n = 1 * 2 * 3 * 4;
- */
-template<typename T> struct int_sequence_product {};
-template<> struct int_sequence_product<int_sequence<>> { static constexpr int value = 1; };
-template<int I, int... Is> struct int_sequence_product<int_sequence<I, Is...>> {
-  static constexpr int value = I * int_sequence_product<int_sequence<Is...>>::value;
-};
-template<typename T> constexpr int int_sequence_product_v = int_sequence_product<T>::value;
 
 /*
  * The following are equivalent:
@@ -122,6 +133,14 @@ constexpr size_t array_size(const std::array<T, N>&) { return N; }
  * The fact that this function is constexpr allows for elegant compile-time constructions of std::array's.
  */
 template<typename A, typename... Ts> constexpr auto to_std_array(const Ts&... ts);
+
+/*
+ * std::array<int, 3> a{1, 2, 3};
+ * std::array<int64_t, 3> b = util::array_cast<int64_t>(a);
+ */
+template<typename T, typename U, size_t N> std::array<T, N> array_cast(const std::array<U, N>&);
+
+template<typename... T> size_t tuple_hash(const std::tuple<T...>& arg);
 
 }  // namespace util
 

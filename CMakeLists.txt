@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 set(CMAKE_DEBUG_POSTFIX d)
-project(project_name)
+project(alphazero)
 
 if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
     add_definitions(-DNDEBUG)
@@ -12,29 +12,41 @@ find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
 find_package(Boost COMPONENTS program_options filesystem  REQUIRED)
 
 set(CMAKE_CXX_STANDARD  20)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 ${TORCH_CXX_FLAGS} -fconcepts-diagnostics-depth=5")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_FLAGS} -fconcepts-diagnostics-depth=5 ${EXTRA_DEFINITIONS}")
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 include_directories("cpp")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
+include_directories(${MY_EIGENRAND_DIR})
 
 add_executable(c4_gen_training_data cpp/connect4/main/GenerateTrainingData.cpp)
+add_executable(c4_mcts_vs_perfect cpp/connect4/main/MctsVsPerfect.cpp)
 add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
+add_executable(c4_dshin_scratch cpp/connect4/main/DshinScratch.cpp)
+
+set(executables c4_gen_training_data c4_mcts_vs_perfect c4_play_vs_cpu c4_dshin_scratch)
 
 add_subdirectory("cpp/util")
+add_subdirectory("cpp/connect4")
+
+set(libraries util connect4)
+
+foreach(tgt ${executables} ${libraries})
+    target_link_libraries(${tgt} ${TORCH_LIBRARIES})
+    target_link_libraries(${tgt} ${Boost_LIBRARIES})
+endforeach()
+
 link_directories(${Boost_LIBRARY_DIRS})
 
-target_link_libraries(c4_gen_training_data ${TORCH_LIBRARIES})
-target_link_libraries(c4_gen_training_data ${Boost_LIBRARIES})
-set_target_properties(c4_gen_training_data PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-set_property(TARGET c4_gen_training_data PROPERTY CXX_STANDARD 20)
-
-target_link_libraries(c4_play_vs_cpu ${TORCH_LIBRARIES})
-target_link_libraries(c4_play_vs_cpu ${Boost_LIBRARIES})
-set_target_properties(c4_play_vs_cpu PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
-set_property(TARGET c4_play_vs_cpu PROPERTY CXX_STANDARD 20)
+foreach(tgt ${executables})
+    foreach(lib ${libraries})
+        target_link_libraries(${tgt} ${lib})
+    endforeach()
+    set_target_properties(${tgt} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+    set_property(TARGET ${tgt} PROPERTY CXX_STANDARD 20)
+endforeach()
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)

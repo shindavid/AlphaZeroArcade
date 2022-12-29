@@ -1,4 +1,4 @@
-#include <connect4/C4HumanTuiPlayer.hpp>
+#include <common/HumanTuiPlayer.hpp>
 
 #include <cstdlib>
 #include <iostream>
@@ -7,9 +7,12 @@
 #include <util/PrintUtil.hpp>
 #include <util/ScreenUtil.hpp>
 
-namespace c4 {
+namespace common {
 
-inline void HumanTuiPlayer::start_game(const player_array_t& players, common::player_index_t seat_assignment) {
+template<GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::start_game(
+    const player_array_t& players, common::player_index_t seat_assignment)
+{
   for (int p = 0; p < int(player_names_.size()); ++p) {
     player_names_[p] = players[p]->get_name();
   }
@@ -17,16 +20,20 @@ inline void HumanTuiPlayer::start_game(const player_array_t& players, common::pl
   util::set_xprintf_target(buf_);
 }
 
-inline void HumanTuiPlayer::receive_state_change(
-    common::player_index_t, const GameState& state, common::action_index_t action, const Result& result)
+template<GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::receive_state_change(
+    common::player_index_t, const GameState& state, common::action_index_t action, const GameOutcome& outcome)
 {
   last_action_ = action;
-  if (common::is_terminal_result(result)) {
+  if (common::is_terminal_outcome(outcome)) {
     xprintf_switch(state);
   }
 }
 
-inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+template<GameStateConcept GameState_>
+inline common::action_index_t HumanTuiPlayer<GameState_>::get_action(
+    const GameState& state, const ActionMask& valid_actions)
+{
   xprintf_switch(state);
 
   bool complain = false;
@@ -38,12 +45,8 @@ inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state,
       printf("Invalid input!\n");
     }
     complain = true;
-    std::cout << "Enter move [1-7]: ";
-    std::cout.flush();
-    std::string input;
-    std::getline(std::cin, input);
     try {
-      my_action = std::stoi(input) - 1;
+      my_action = GameState::prompt_for_action();
       if (!valid_actions.test(my_action)) continue;
     } catch(...) {
       continue;
@@ -56,7 +59,8 @@ inline common::action_index_t HumanTuiPlayer::get_action(const GameState& state,
   return my_action;
 }
 
-inline void HumanTuiPlayer::xprintf_switch(const GameState& state) {
+template<GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::xprintf_switch(const GameState& state) {
   util::clear_xprintf_target();
   print_state(state);
   std::cout << buf_.str();
@@ -65,9 +69,10 @@ inline void HumanTuiPlayer::xprintf_switch(const GameState& state) {
   std::cout.flush();
 }
 
-inline void HumanTuiPlayer::print_state(const GameState& state) {
+template<GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state) {
   util::clearscreen();
   state.xprintf_dump(player_names_, last_action_);
 }
 
-}  // namespace c4
+}  // namespace common

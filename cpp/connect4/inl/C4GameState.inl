@@ -6,13 +6,17 @@
 #include <bit>
 #include <iostream>
 
+inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& state) const {
+  return state.hash();
+}
+
 namespace c4 {
 
 inline common::player_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline common::GameStateTypes<GameState>::Result GameState::apply_move(common::action_index_t action) {
+inline common::GameStateTypes_<GameState>::GameOutcome GameState::apply_move(common::action_index_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   common::player_index_t current_player = get_current_player();
@@ -51,19 +55,19 @@ inline common::GameStateTypes<GameState>::Result GameState::apply_move(common::a
     }
   }
 
-  Result result;
-  result.setZero();
+  GameOutcome outcome;
+  outcome.setZero();
   if (win) {
-    result(current_player) = 1.0;
+    outcome(current_player) = 1.0;
   } else if (std::popcount(full_mask_) == kNumCells) {
-    result(0) = 0.5;
-    result(1) = 0.5;
+    outcome(0) = 0.5;
+    outcome(1) = 0.5;
   }
 
-  return result;
+  return outcome;
 }
 
-inline ActionMask GameState::get_valid_actions() const {
+inline GameState::ActionMask GameState::get_valid_actions() const {
   mask_t bottomed_full_mask = full_mask_ + _full_bottom_mask();
 
   ActionMask mask;
@@ -154,6 +158,38 @@ inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const 
 
 inline bool GameState::operator==(const GameState& other) const {
   return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
+}
+
+inline common::action_index_t GameState::prompt_for_action() {
+  std::cout << "Enter move [1-7]: ";
+  std::cout.flush();
+  std::string input;
+  std::getline(std::cin, input);
+  return std::stoi(input) - 1;
+}
+
+inline void GameState::xdump_mcts_output(
+    const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
+{
+  const auto& valid_actions = results.valid_actions;
+  const auto& net_value = results.value_prior;
+  const auto& net_policy = results.policy_prior;
+  const auto& mcts_counts = results.counts;
+
+  assert(net_policy.size() == (int)valid_actions.count());
+
+  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
+                100 * mcts_value(kRed));
+  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * net_value(kYellow),
+                100 * mcts_value(kYellow));
+  util::xprintf("\n");
+  util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
+
+  int i = 0;
+  for (common::action_index_t action : valid_actions) {
+    util::xprintf("%3d %8.3f %8d %8.3f\n", action + 1, net_policy(i), mcts_counts(action), mcts_policy(i));
+    i++;
+  }
 }
 
 inline constexpr int GameState::_to_bit_index(column_t col, row_t row) {

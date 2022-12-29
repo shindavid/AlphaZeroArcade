@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include <EigenRand/EigenRand>
 #include <boost/mp11.hpp>
 #include <torch/torch.h>
 #include <unsupported/Eigen/CXX11/Tensor>
@@ -11,6 +12,46 @@
 #include <util/CppUtil.hpp>
 
 namespace eigen_util {
+
+/*
+ * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not well-suited for
+ * usages with: (1) fixed dimension Matrices, and (2) a uniform alpha distribution.
+ *
+ * This implementation supports only the uniform-alpha case. When fixed-size matrices are used, it avoids
+ * unnecessary dynamic memory allocation.
+ *
+ * Usage:
+ *
+ * float alpha = 0.03;
+ * using Gen = eigen_util::UniformDirichletGen<float>;
+ * Gen gen;  // good to reuse same object repeatedly if same alpha will be used repeatedly
+ * Eigen::Rand::P8_mt19937_64 rng{ 42 };
+ *
+ * // fixed size case
+ * using Array = Eigen::Array<float, 4, 1>;
+ * Array arr = gen.generate<Array>(rng, alpha);
+ *
+ * // dynamic size case with runtime size
+ * using Array = Eigen::Array<float>;
+ * Array arr = gen.generate<Array>(rng, alpha, 4, 1);  // returns 4x1 dynamic matrix
+ */
+template<typename Scalar>
+class UniformDirichletGen {
+public:
+  template<typename Array, typename Urng, typename... DimTs>
+  Array generate(Urng&& urng, Scalar alpha, DimTs&&... dims);
+
+private:
+  using GammaGen = Eigen::Rand::GammaGen<Scalar>;
+  GammaGen gamma_;
+  Scalar alpha_ = 1.0;
+};
+
+/*
+ * Flattens an Array<T, M, N, ..> into an Array<T, M*N, 1>
+ */
+template <typename Scalar, int Rows, int Cols, int Options>
+auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array);
 
 /*
  * The following are equivalent:
@@ -70,14 +111,6 @@ template<typename T> inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T
 template<typename T> concept FixedTensorConcept = is_fixed_tensor_v<T>;
 
 /*
- * FixedVectorConcept is a concept corresponding to Eigen::Vector<T, N>
- */
-template<typename T> struct is_fixed_vector { static const bool value = false; };
-template<typename T, int S> struct is_fixed_vector<Eigen::Vector<T, S>> { static const bool value = true; };
-template<typename T> inline constexpr bool is_fixed_vector_v = is_fixed_vector<T>::value;
-template<typename T> concept FixedVectorConcept = is_fixed_vector_v<T>;
-
-/*
  * The following are equivalent:
  *
  * using S = Eigen::Sizes<1, 2, 3>;
@@ -92,9 +125,9 @@ template<typename T, typename S> struct extract_sizes<fixed_tensor_t<T, S>> {
 template<typename T> using extract_sizes_t = typename extract_sizes<T>::type;
 
 /*
- * Returns a float vector op of the same shape as the input, whose values are positive and summing to 1.
+ * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */
-template<typename Vector> auto softmax(const Vector& vector);
+template<typename Array> auto softmax(const Array& arr);
 
 /*
  * Reverses the elements of tensor along the given dimension.
