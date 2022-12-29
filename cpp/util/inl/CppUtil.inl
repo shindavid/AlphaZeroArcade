@@ -9,7 +9,7 @@ namespace detail {
 /*
  * Adapted from: https://www.linkedin.com/pulse/generic-tuple-hashing-modern-c-alex-dathskovsky/
  */
-auto lazyHasher=[](size_t& cur, auto&&...value){
+inline auto lazyHasher=[](size_t& cur, auto&&...value){
   auto lazyCombiner = [&cur](auto&& val) {
     cur ^= std::hash<std::decay_t<decltype(val)>>{}(val) * 0x9e3779b9 + (cur << 6) + (cur >> 2);
   };
