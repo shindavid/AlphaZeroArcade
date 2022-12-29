@@ -9,11 +9,11 @@
 #include <util/CudaUtil.hpp>
 #include <util/RepoUtil.hpp>
 
-void experiment(const char* filename, bool use_copy) {
+void experiment(const char* filename, int batch_size) {
   torch::jit::script::Module module(torch::jit::load(filename));
   module.to(torch::kCUDA);
-  torch::Tensor input = torch::zeros({8, 2, 7, 6});
-  torch::Tensor output = torch::zeros({8, 7});
+  torch::Tensor input = torch::zeros({batch_size, 2, 7, 6});
+  torch::Tensor output = torch::zeros({batch_size, 7});
 
   std::vector<torch::jit::IValue> input_vec;
 
@@ -26,17 +26,14 @@ void experiment(const char* filename, bool use_copy) {
     torch::Tensor gpu_input = input.clone().to(torch::kCUDA);
     input_vec.push_back(gpu_input);
     auto gpu_output = module.forward(input_vec).toTuple()->elements()[0].toTensor();
-    if (use_copy) {
-      output.copy_(gpu_output.detach());
-    } else {
-      output = gpu_output;
-      output.to(torch::kCPU);
-    }
+    output.copy_(gpu_output.detach());
     input_vec.clear();
   }
 }
 
 int main(int ac, char* av[]) {
+  int batch_size = atoi(av[1]);
+  printf("batch_size: %d\n", batch_size);
   auto path = util::Repo::root() / "c4_model.pt";
-  experiment(path.c_str(), true);
+  experiment(path.c_str(), batch_size);
 }
