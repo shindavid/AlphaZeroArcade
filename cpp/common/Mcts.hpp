@@ -130,14 +130,14 @@ private:
   using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
 
   /*
-   * A Node consists of 4 main groups of non-const member variables:
+   * A Node consists of n=4 main groups of non-const member variables:
    *
-   * LAZILY INITIALIZED DATA: state + action -> state', computed lazily since not immediately needed upon child expand
-   * CHILDREN DATA: the addresses/number of children nodes, needed for tree traversal
-   * NEURAL NETWORK EVALUATION: policy/value vectors that come from neural net evaluation
-   * STATS: values that get updated throughout MCTS via backpropagation
+   * lazily_initialized_data_: state + action -> state', computed lazily since not immediately needed upon child expand
+   * children_data_: the addresses/number of children nodes, needed for tree traversal
+   * evaluation_data_: policy/value vectors that come from neural net evaluation
+   * stats_: values that get updated throughout MCTS via backpropagation
    *
-   * Of these, only STATS are continuously changing. The others are written only once. They are non-const in the
+   * Of these, only stats_ are continuously changing. The others are written only once. They are non-const in the
    * sense that they are lazily written, after-object-construction.
    *
    * During MCTS, multiple search threads will try to read and write these values. The MCTS literature is filled with
@@ -146,8 +146,8 @@ private:
    *
    * See for example this 2009 paper: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
    *
-   * For now, I am achieving thread-safety by having three mutexes per-Node, one for each of the above three
-   * categories. Once we have appropriate tooling to profile performance and detect bottlenecks, we can improve this
+   * For now, I am achieving thread-safety by having n mutexes per-Node, one for each of the above n categories.
+   * Once we have appropriate tooling to profile performance and detect bottlenecks, we can improve this
    * implementation.
    *
    * NAMING NOTE: Methods with a leading underscore are NOT thread-safe. Such methods are expected to be called in
@@ -155,6 +155,12 @@ private:
    */
   class Node {
   public:
+//    enum evaluation_state_t : int8_t {
+//      kUnset,
+//      kPendingSet,
+//      kSet,
+//    };
+
     Node(Node* parent, action_index_t action);
     Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
     Node(const Node& node, bool prune_parent=false);
@@ -183,6 +189,7 @@ private:
     void _adopt_children();
 
     std::mutex& lazily_initialized_data_mutex() { return lazily_initialized_data_mutex_; }
+    std::mutex& evaluation_data_mutex() { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
@@ -221,8 +228,10 @@ private:
     bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 0; }  // won, lost, OR drawn positions
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
-    NNEvaluation_sptr _evaluation() const { return evaluation_.load(); }
-    void _set_evaluation(NNEvaluation_sptr eval) { evaluation_.store(eval); }
+    NNEvaluation_sptr _evaluation() const { return evaluation_data_.ptr_.load(); }
+    void _set_evaluation(NNEvaluation_sptr eval) { evaluation_data_.ptr_.store(eval); }
+//    evaluation_state_t _evaluation_state() const { return evaluation_data_.state_; }
+//    void _set_evaluation_state(evaluation_state_t state) { evaluation_data_.state_ = state; }
 
   private:
     float _get_max_V_floor_among_children(player_index_t p) const;
@@ -278,6 +287,11 @@ private:
       int num_children_ = 0;
     };
 
+    struct evaluation_data_t {
+      NNEvaluation_asptr ptr_;
+//      evaluation_state_t state_ = kUnset;
+    };
+
     struct stats_t {
       stats_t();
 
@@ -290,11 +304,12 @@ private:
 
     mutable std::mutex lazily_initialized_data_mutex_;
     mutable std::mutex children_data_mutex_;
+    mutable std::mutex evaluation_data_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
     lazily_initialized_data_t lazily_initialized_data_;
     children_data_t children_data_;
-    NNEvaluation_asptr evaluation_;
+    evaluation_data_t evaluation_data_;
     stats_t stats_;
   };
 

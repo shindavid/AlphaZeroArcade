@@ -134,7 +134,7 @@ inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_par
 : stable_data_(node.stable_data_, prune_parent)
 , lazily_initialized_data_(node.lazily_initialized_data_)
 , children_data_(node.children_data_)
-, evaluation_(node.evaluation_)
+, evaluation_data_(node.evaluation_data_)
 , stats_(node.stats_) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
