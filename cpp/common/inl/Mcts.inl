@@ -89,7 +89,7 @@ inline Mcts_<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const st
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::lazily_initialized_data_t(
+inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::data_t(
     Node* parent, action_index_t action)
 : tensorizor_(parent->_tensorizor())
 , state_(parent->_state())
@@ -101,7 +101,7 @@ inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::lazily_ini
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::lazily_initialized_data_t(
+inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::data_t(
     const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
 : tensorizor_(tensorizor)
 , state_(state)
@@ -127,13 +127,12 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(
     const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_noise)
 : stable_data_(nullptr, -1, disable_noise)
-, union_(tensorizor, state, outcome)
-{}
+, lazily_initialized_data_(tensorizor, state, outcome) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
 : stable_data_(node.stable_data_, prune_parent)
-, union_(node.union_)
+, lazily_initialized_data_(node.lazily_initialized_data_)
 , children_data_(node.children_data_)
 , evaluation_(node.evaluation_)
 , stats_(node.stats_) {}
@@ -215,9 +214,7 @@ inline bool Mcts_<GameState, Tensorizor>::Node::expand_children(SearchThread* th
   thread->record_for_profiling(SearchThread::kConstructingChildren);
   children_data_.first_child_ = node;
   for (action_index_t action : _valid_action_mask()) {
-    new(node) Node(this, action);
-    node->_lazy_init();  // TODO: do this lazily in visit()
-    node++;
+    new(node++) Node(this, action);
   }
   return true;
 }
@@ -313,7 +310,7 @@ Mcts_<GameState, Tensorizor>::Node::make_virtual_loss() const {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::Node::_lazy_init() {
-  new(&union_.lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
+  new(&lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -725,6 +722,7 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
     return;
   }
 
+  new_root->_lazy_init();
   Node* new_root_copy = new Node(*new_root, true);
   root_->_release(new_root);
   delete root_;
@@ -761,7 +759,14 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree, int depth) {
-  thread->record_for_profiling(SearchThread::kStartingVisit);
+  {
+    thread->record_for_profiling(SearchThread::kAcquiringLazilyInitializedDataMutex);
+    std::lock_guard<std::mutex> guard(tree->lazily_initialized_data_mutex());
+    if (!tree->_lazily_initialized()) {
+      thread->record_for_profiling(SearchThread::kLazyInit);
+      tree->_lazy_init();
+    }
+  }
   const auto& outcome = tree->_outcome();
   if (is_terminal_outcome(outcome)) {
     thread->record_for_profiling(SearchThread::kBackpropOutcome);

@@ -181,6 +181,7 @@ private:
      */
     void _adopt_children();
 
+    std::mutex& lazily_initialized_data_mutex() { return lazily_initialized_data_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
@@ -198,12 +199,13 @@ private:
     bool is_root() const { return !stable_data_.parent_; }
     bool disable_noise() const { return stable_data_.disable_noise_; }
 
-    const Tensorizor& _tensorizor() const { return union_.lazily_initialized_data_.tensorizor_; }
-    const GameState& _state() const { return union_.lazily_initialized_data_.state_; }
-    const GameOutcome& _outcome() const { return union_.lazily_initialized_data_.outcome_; }
-    symmetry_index_t _sym_index() const { return union_.lazily_initialized_data_.sym_index_; }
-    player_index_t _current_player() const { return union_.lazily_initialized_data_.current_player_; }
-    const ActionMask& _valid_action_mask() const { return union_.lazily_initialized_data_.valid_action_mask_; }
+    const Tensorizor& _tensorizor() const { return lazily_initialized_data_.union_.data_.tensorizor_; }
+    const GameState& _state() const { return lazily_initialized_data_.union_.data_.state_; }
+    const GameOutcome& _outcome() const { return lazily_initialized_data_.union_.data_.outcome_; }
+    symmetry_index_t _sym_index() const { return lazily_initialized_data_.union_.data_.sym_index_; }
+    player_index_t _current_player() const { return lazily_initialized_data_.union_.data_.current_player_; }
+    const ActionMask& _valid_action_mask() const { return lazily_initialized_data_.union_.data_.valid_action_mask_; }
+    bool _lazily_initialized() const { return lazily_initialized_data_.initialized_; }
 
     bool _has_children() const { return children_data_.num_children_; }
     int _num_children() const { return children_data_.num_children_; }
@@ -235,25 +237,39 @@ private:
     };
 
     struct lazily_initialized_data_t {
-      lazily_initialized_data_t(Node* parent, action_index_t action);
-      lazily_initialized_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
+      struct data_t {
+        data_t(Node* parent, action_index_t action);
+        data_t(const Tensorizor&, const GameState&, const GameOutcome&);
 
-      Tensorizor tensorizor_;
-      GameState state_;
-      GameOutcome outcome_;
-      ActionMask valid_action_mask_;
-      player_index_t current_player_;
-      symmetry_index_t sym_index_;
-    };
+        Tensorizor tensorizor_;
+        GameState state_;
+        GameOutcome outcome_;
+        ActionMask valid_action_mask_;
+        player_index_t current_player_;
+        symmetry_index_t sym_index_;
+      };
 
-    union union_t {
-      union_t() : dummy_(false) {}
-      union_t(const union_t& u) : lazily_initialized_data_(u.lazily_initialized_data_) {}
-      union_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-        : lazily_initialized_data_(tensorizor, state, outcome) {}
+      union union_t {
+        union_t() : dummy_(false) {}
+        union_t(const union_t& u) : data_(u.data_) {}
+        union_t(Node* parent, action_index_t action) : data_(parent, action) {}
+        union_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+            : data_(tensorizor, state, outcome) {}
 
-      lazily_initialized_data_t lazily_initialized_data_;
-      bool dummy_;
+        data_t data_;
+        bool dummy_;
+      };
+
+      lazily_initialized_data_t() = default;
+      lazily_initialized_data_t(Node* parent, action_index_t action)
+        : union_(parent, action)
+        , initialized_(true) {}
+      lazily_initialized_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+        : union_(tensorizor, state, outcome)
+        , initialized_(true) {}
+
+      union_t union_;
+      bool initialized_ = false;
     };
 
     struct children_data_t {
@@ -271,10 +287,11 @@ private:
       bool eliminated_ = false;
     };
 
+    mutable std::mutex lazily_initialized_data_mutex_;
     mutable std::mutex children_data_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
-    union_t union_;
+    lazily_initialized_data_t lazily_initialized_data_;
     children_data_t children_data_;
     NNEvaluation_asptr evaluation_;
     stats_t stats_;
@@ -291,24 +308,25 @@ private:
 
     enum region_t {
       kCheckVisitReady = 0,
-      kStartingVisit = 1,
-      kBackpropOutcome = 2,
-      kPerformEliminations = 3,
-      kMisc = 4,
-      kCheckingCache = 5,
-      kAcquiringBatchMutex = 6,
-      kWaitingUntilBatchReservable = 7,
-      kTensorizing = 8,
-      kIncrementingCommitCount = 9,
-      kWaitingForReservationProcessing = 10,
-      kVirtualBackprop = 11,
-      kWaitingForChildrenDataMutex = 12,
-      kAllocationChildrenMemory = 13,
-      kConstructingChildren = 14,
-      kPUCT = 15,
-      kWaitingForStatsMutex = 16,
-      kBackpropEvaluation = 17,
-      kNumRegions = 18
+      kAcquiringLazilyInitializedDataMutex = 1,
+      kLazyInit = 2,
+      kBackpropOutcome = 3,
+      kPerformEliminations = 4,
+      kMisc = 5,
+      kCheckingCache = 6,
+      kAcquiringBatchMutex = 7,
+      kWaitingUntilBatchReservable = 8,
+      kTensorizing = 9,
+      kIncrementingCommitCount = 10,
+      kWaitingForReservationProcessing = 11,
+      kVirtualBackprop = 12,
+      kWaitingForChildrenDataMutex = 13,
+      kAllocationChildrenMemory = 14,
+      kConstructingChildren = 15,
+      kPUCT = 16,
+      kWaitingForStatsMutex = 17,
+      kBackpropEvaluation = 18,
+      kNumRegions = 19
     };
 
     using profiler_t = util::Profiler<int(kNumRegions), kEnableVerboseProfiling>;
