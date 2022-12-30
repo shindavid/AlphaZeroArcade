@@ -130,13 +130,14 @@ private:
   using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
 
   /*
-   * A Node consists of 3 main groups of non-const member variables:
+   * A Node consists of 4 main groups of non-const member variables:
    *
+   * LAZILY INITIALIZED DATA: state + action -> state', computed lazily since not immediately needed upon child expand
    * CHILDREN DATA: the addresses/number of children nodes, needed for tree traversal
    * NEURAL NETWORK EVALUATION: policy/value vectors that come from neural net evaluation
    * STATS: values that get updated throughout MCTS via backpropagation
    *
-   * Of these 3, only STATS are continuously changing. The others are written only once. They are non-const in the
+   * Of these, only STATS are continuously changing. The others are written only once. They are non-const in the
    * sense that they are lazily written, after-object-construction.
    *
    * During MCTS, multiple search threads will try to read and write these values. The MCTS literature is filled with
