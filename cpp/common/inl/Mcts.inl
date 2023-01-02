@@ -199,27 +199,6 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline bool Mcts_<GameState, Tensorizor>::Node::expand_children(SearchThread* thread) {
-  thread->record_for_profiling(SearchThread::kWaitingForChildrenDataMutex);
-  std::lock_guard<std::mutex> guard(children_data_mutex_);
-
-  if (_has_children()) return false;
-
-  // TODO: use object pool
-  thread->record_for_profiling(SearchThread::kAllocationChildrenMemory);
-  children_data_.num_children_ = _valid_action_mask().count();
-  void* raw_memory = operator new[](children_data_.num_children_ * sizeof(Node));
-  Node* node = static_cast<Node*>(raw_memory);
-
-  thread->record_for_profiling(SearchThread::kConstructingChildren);
-  children_data_.first_child_ = node;
-  for (action_index_t action : _valid_action_mask()) {
-    new(node++) Node(this, action);
-  }
-  return true;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& outcome)
 {
   {
@@ -314,6 +293,18 @@ void Mcts_<GameState, Tensorizor>::Node::_lazy_init() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::Node::_expand_children() {
+  children_data_.num_children_ = _valid_action_mask().count();
+  void* raw_memory = operator new[](children_data_.num_children_ * sizeof(Node));
+  Node* node = static_cast<Node*>(raw_memory);
+
+  children_data_.first_child_ = node;
+  for (action_index_t action : _valid_action_mask()) {
+    new(node++) Node(this, action);
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::Node*
 Mcts_<GameState, Tensorizor>::Node::_find_child(action_index_t action) const {
   // TODO: technically we can do a binary search here, as children should be in sorted order by action
@@ -349,6 +340,7 @@ inline float Mcts_<GameState, Tensorizor>::Node::_get_min_V_floor_among_children
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::SearchThread::SearchThread(Mcts_* mcts, int thread_id)
 : mcts_(mcts)
+, params_(mcts->params())
 , thread_id_(thread_id) {
   auto profiling_filename = mcts->profiling_dir() / util::create_string("search%d.txt", thread_id);
   init_profiling(profiling_filename.c_str(), util::create_string("s-%-2d", thread_id).c_str());
@@ -379,6 +371,159 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::SearchThread::launch(int tree_size_limit) {
   kill();
   thread_ = new std::thread([&] { mcts_->run_search(this, tree_size_limit); });
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+bool Mcts_<GameState, Tensorizor>::SearchThread::needs_more_visits(Node* root, int tree_size_limit) {
+  record_for_profiling(kCheckVisitReady);
+  return mcts_->search_active() && root->_effective_count() <= tree_size_limit && !root->_eliminated();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
+  lazily_init(tree);
+  const auto& outcome = tree->_outcome();
+  if (is_terminal_outcome(outcome)) {
+    backprop_outcome(tree, outcome);
+    perform_eliminations(tree, outcome);
+    return;
+  }
+
+  if (!mcts_->search_active()) return;  // short-circuit
+
+  evaluate_and_expand_data_t data = evaluate_and_expand(tree);
+  NNEvaluation* evaluation = data.evaluation.get();
+  if (!evaluation) return;
+
+  Node* best_child = get_best_child(tree, evaluation);
+  bool undo_virtual_loss = data.performed_virtual_backprop;
+  if (data.was_leaf) {
+    record_for_profiling(kBackpropEvaluation);
+    if (undo_virtual_loss) {
+      tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
+    } else {
+      tree->backprop(evaluation->value_prob_distr());
+    }
+  } else {
+    if (undo_virtual_loss) {
+      // unlikely race condition, but possible
+      tree->undo_virtual_backprop();
+    }
+    visit(best_child, depth + 1);
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::lazily_init(Node* tree) {
+  record_for_profiling(kAcquiringLazilyInitializedDataMutex);
+  std::lock_guard<std::mutex> guard(tree->lazily_initialized_data_mutex());
+  if (tree->_lazily_initialized()) return;
+  record_for_profiling(kLazyInit);
+  tree->_lazy_init();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tree, const ValueProbDistr& outcome) {
+  record_for_profiling(kBackpropOutcome);
+  tree->backprop(outcome);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::perform_eliminations(
+    Node* tree, const ValueProbDistr& outcome)
+{
+  if (!params_.allow_eliminations) return;
+  record_for_profiling(kPerformEliminations);
+  tree->perform_eliminations(outcome);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+typename Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_data_t
+Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree) {
+  evaluate_and_expand_data_t data{tree->_evaluation(), false, false};
+
+  /*
+   * Note: race-conditions can cause redundant setting of a given tree's evaluation. This is ok - it just leads to
+   * redundant evaluation by the eval thread. It is preferable to inserting a mutex here.
+   */
+  if (!data.evaluation) {
+    symmetry_index_t sym_index = tree->_sym_index();
+    float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
+
+    record_for_profiling(kVirtualBackprop);
+    tree->virtual_backprop();
+    data.performed_virtual_backprop = true;
+    data.evaluation = mcts_->nn_eval_service()->evaluate(
+        this, tree->_tensorizor(), tree->_state(), tree->_valid_action_mask(), sym_index, inv_temp,
+        mcts_->num_search_threads() == 1);
+    tree->_set_evaluation(data.evaluation);
+  }
+
+  data.was_leaf = expand_children(tree);
+  return data;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+bool Mcts_<GameState, Tensorizor>::SearchThread::expand_children(Node* tree) {
+  record_for_profiling(kWaitingForChildrenDataMutex);
+  std::lock_guard<std::mutex> guard(tree->children_data_mutex());
+
+  if (tree->_has_children()) return false;
+
+  // TODO: use object pool
+  record_for_profiling(kConstructingChildren);
+  tree->_expand_children();
+  return true;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+typename Mcts_<GameState, Tensorizor>::Node*
+Mcts_<GameState, Tensorizor>::SearchThread::get_best_child(
+    Node* tree, NNEvaluation* evaluation)
+{
+  record_for_profiling(kPUCT);
+
+  using PVec = LocalPolicyProbDistr;
+
+  PVec P = evaluation->local_policy_prob_distr();
+  if (tree->is_root() && !tree->disable_noise() && params_.dirichlet_mult) {
+    mcts_->add_dirichlet_noise(P);
+  }
+
+  const int rows = P.rows();
+  assert(rows == int(tree->_valid_action_mask().count()));
+
+  PVec V(rows);
+  PVec N(rows);
+  PVec E(rows);
+  player_index_t cp = tree->_current_player();
+
+  for (int c = 0; c < tree->_num_children(); ++c) {
+    Node* child = tree->_get_child(c);
+    record_for_profiling(kWaitingForStatsMutex);
+    std::lock_guard<std::mutex> guard(child->stats_mutex());
+    record_for_profiling(kPUCT);
+
+    V(c) = child->_effective_value_avg(cp);
+    N(c) = child->_effective_count();
+    E(c) = child->_eliminated();
+  }
+
+  constexpr float eps = 1e-6;  // needed when N == 0
+  PVec PUCT = V + params_.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  PUCT *= 1 - E;
+
+//  // value_avg used for debugging
+//  using VVec = ValueArray1D;
+//  VVec value_avg;
+//  for (int p = 0; p < kNumPlayers; ++p) {
+//    value_avg(p) = tree->effective_value_avg(p);
+//  }
+
+  int argmax_index;
+  PUCT.maxCoeff(&argmax_index);
+  Node* best_child = tree->_get_child(argmax_index);
+  return best_child;
 }
 
 /*
@@ -758,109 +903,11 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::visit(SearchThread* thread, Node* tree, int depth) {
-  {
-    thread->record_for_profiling(SearchThread::kAcquiringLazilyInitializedDataMutex);
-    std::lock_guard<std::mutex> guard(tree->lazily_initialized_data_mutex());
-    if (!tree->_lazily_initialized()) {
-      thread->record_for_profiling(SearchThread::kLazyInit);
-      tree->_lazy_init();
-    }
-  }
-  const auto& outcome = tree->_outcome();
-  if (is_terminal_outcome(outcome)) {
-    thread->record_for_profiling(SearchThread::kBackpropOutcome);
-    tree->backprop(outcome);
-    if (params_.allow_eliminations) {
-      thread->record_for_profiling(SearchThread::kPerformEliminations);
-      tree->perform_eliminations(outcome);
-    }
-    return;
-  }
-
-  thread->record_for_profiling(SearchThread::kMisc);
-  player_index_t cp = tree->_current_player();
-  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
-  symmetry_index_t sym_index = tree->_sym_index();
-
-  /*
-   * Note: race-conditions can cause redundant setting of a given tree's evaluation. This is ok - it just leads to
-   * redundant evaluation by the eval thread. It is preferable to inserting a mutex here.
-   */
-  NNEvaluation_sptr evaluation = tree->_evaluation();
-  bool undo_virtual_loss = false;
-  if (!evaluation) {
-    if (!search_active_) return;
-    thread->record_for_profiling(SearchThread::kVirtualBackprop);
-    tree->virtual_backprop();
-    undo_virtual_loss = true;
-    evaluation = nn_eval_service_->evaluate(
-        thread, tree->_tensorizor(), tree->_state(), tree->_valid_action_mask(), sym_index, inv_temp,
-        num_search_threads() == 1);
-    tree->_set_evaluation(evaluation);
-  }
-
-  bool leaf = tree->expand_children(thread);
-
-  thread->record_for_profiling(SearchThread::kPUCT);
-  auto cPUCT = params_.cPUCT;
-  LocalPolicyProbDistr P = evaluation->local_policy_prob_distr();
-  const int rows = P.rows();
-  assert(rows == int(tree->_valid_action_mask().count()));
-
-  using PVec = LocalPolicyProbDistr;
-
-  PVec noise(rows);
-  if (tree->is_root() && !tree->disable_noise() && params_.dirichlet_mult) {
-    noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(rng_, params_.dirichlet_alpha, rows);
-    P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
-  } else {  // TODO - only need to setZero() if generating debug file
-    noise.setZero();
-  }
-
-  PVec V(rows);
-  PVec N(rows);
-  PVec E(rows);
-  for (int c = 0; c < tree->_num_children(); ++c) {
-    Node* child = tree->_get_child(c);
-    thread->record_for_profiling(SearchThread::kWaitingForStatsMutex);
-    std::lock_guard<std::mutex> guard(child->stats_mutex());
-    thread->record_for_profiling(SearchThread::kPUCT);
-
-    V(c) = child->_effective_value_avg(cp);
-    N(c) = child->_effective_count();
-    E(c) = child->_eliminated();
-  }
-
-  constexpr float eps = 1e-6;  // needed when N == 0
-  PVec PUCT = V + cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
-  PUCT *= 1 - E;
-
-//  // value_avg used for debugging
-//  using VVec = ValueArray1D;
-//  VVec value_avg;
-//  for (int p = 0; p < kNumPlayers; ++p) {
-//    value_avg(p) = tree->effective_value_avg(p);
-//  }
-
-  int argmax_index;
-  PUCT.maxCoeff(&argmax_index);
-  Node* best_child = tree->_get_child(argmax_index);
-
-  if (leaf) {
-    thread->record_for_profiling(SearchThread::kBackpropEvaluation);
-    if (undo_virtual_loss) {
-      tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
-    } else {
-      tree->backprop(evaluation->value_prob_distr());
-    }
-  } else {
-    if (undo_virtual_loss) {
-      // unlikely race condition, but possible
-      tree->undo_virtual_backprop();
-    }
-    visit(thread, best_child, depth + 1);
-  }
+inline void Mcts_<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDistr& P) {
+  int rows = P.rows();
+  LocalPolicyProbDistr noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(
+      rng_, params_.dirichlet_alpha, rows);
+  P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -911,8 +958,8 @@ inline void Mcts_<GameState, Tensorizor>::run_search(SearchThread* thread, int t
    *   - Race-conditions can lead us to read stale values of these. That is ok - that merely causes us to possibly to
    *     more visits than a thread-safe alternative would do.
    */
-  while (check_visit_ready(thread, tree_size_limit)) {
-    visit(thread, root_, 1);
+  while (thread->needs_more_visits(root_, tree_size_limit)) {
+    thread->visit(root_, 1);
     thread->dump_profiling_stats();
   }
 
@@ -943,12 +990,6 @@ void Mcts_<GameState, Tensorizor>::init_profiling_dir(const std::string& profili
     bf::remove_all(path);
   }
   bf::create_directories(path);
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline bool Mcts_<GameState, Tensorizor>::check_visit_ready(SearchThread* thread, int tree_size_limit) const {
-  thread->record_for_profiling(SearchThread::kCheckVisitReady);
-  return search_active_ && root_->_effective_count() <= tree_size_limit && !root_->_eliminated();
 }
 
 }  // namespace common

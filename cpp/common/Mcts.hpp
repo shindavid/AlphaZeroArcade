@@ -189,18 +189,20 @@ private:
     void _adopt_children();
 
     std::mutex& lazily_initialized_data_mutex() { return lazily_initialized_data_mutex_; }
+    std::mutex& children_data_mutex() { return children_data_mutex_; }
     std::mutex& evaluation_data_mutex() { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
-    bool expand_children(SearchThread*);  // returns false iff already has children
     void backprop(const ValueProbDistr& value);
     void backprop_with_virtual_undo(const ValueProbDistr& value);
     void virtual_backprop();
     void undo_virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
     ValueArray1D make_virtual_loss() const;
+
     void _lazy_init();
+    void _expand_children();
 
     action_index_t action() const { return stable_data_.action_; }
     Node* parent() const { return stable_data_.parent_; }
@@ -317,10 +319,14 @@ private:
   public:
     SearchThread(Mcts_* mcts, int thread_id);
     ~SearchThread();
+
+    int thread_id() const { return thread_id_; }
+
     void join();
     void kill();
     void launch(int tree_size_limit);
-    int thread_id() const { return thread_id_; }
+    bool needs_more_visits(Node* root, int tree_size_limit);
+    void visit(Node* tree, int depth);
 
     enum region_t {
       kCheckVisitReady = 0,
@@ -337,12 +343,11 @@ private:
       kWaitingForReservationProcessing = 11,
       kVirtualBackprop = 12,
       kWaitingForChildrenDataMutex = 13,
-      kAllocationChildrenMemory = 14,
-      kConstructingChildren = 15,
-      kPUCT = 16,
-      kWaitingForStatsMutex = 17,
-      kBackpropEvaluation = 18,
-      kNumRegions = 19
+      kConstructingChildren = 14,
+      kPUCT = 15,
+      kWaitingForStatsMutex = 16,
+      kBackpropEvaluation = 17,
+      kNumRegions = 18
     };
 
     using profiler_t = util::Profiler<int(kNumRegions), kEnableVerboseProfiling>;
@@ -374,7 +379,31 @@ private:
 #endif  // PROFILE_MCTS
 
   private:
+    struct evaluate_and_expand_data_t {
+      NNEvaluation_sptr evaluation;
+      bool was_leaf;
+      bool performed_virtual_backprop;
+    };
+
+    void lazily_init(Node* tree);
+    void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
+    void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
+    evaluate_and_expand_data_t evaluate_and_expand(Node* tree);
+    bool expand_children(Node* tree);  // returns false iff already has children
+
+    /*
+     * Used in visit().
+     *
+     * Applies PUCT criterion to select the best child to visit from the given Node.
+     *
+     * TODO: as we experiment with things like auxiliary NN output heads, dynamic cPUCT values, etc., this method will
+     * evolve. It probably makes sense to have the behavior as part of the Tensorizor, since there is coupling with NN
+     * architecture (in the form of output heads).
+     */
+    Node* get_best_child(Node* tree, NNEvaluation* evaluation);
+
     Mcts_* const mcts_;
+    const Params& params_;
     std::thread* thread_ = nullptr;
     const int thread_id_;
   };
@@ -589,13 +618,15 @@ public:
   ~Mcts_();
 
   const Params& params() const { return params_; }
+  int num_search_threads() const { return params_.num_search_threads; }
+  bool search_active() const { return search_active_; }
+  NNEvaluationService* nn_eval_service() const { return nn_eval_service_; }
+
   void start();
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params);
-  void visit(SearchThread* thread, Node*, int depth);
-
-  int num_search_threads() const { return params_.num_search_threads; }
+  void add_dirichlet_noise(LocalPolicyProbDistr& P);
 
   void start_search_threads(int tree_size_limit);
   void wait_for_search_threads();
@@ -611,7 +642,6 @@ public:
 
 private:
   static void init_profiling_dir(const std::string& profiling_dir);
-  bool check_visit_ready(SearchThread* thread, int tree_size_limit) const;
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;
   Eigen::Rand::P8_mt19937_64 rng_;
