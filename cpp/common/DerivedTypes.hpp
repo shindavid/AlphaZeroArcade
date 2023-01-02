@@ -57,7 +57,7 @@ struct GameStateTypes_ {
   static void global_to_local(const PolicyArray1D& policy, const ActionMask& mask, LocalPolicyProbDistr& out) {
     out.resize(mask.count());
     int i = 0;
-    for (action_index_t action : mask) {
+    for (action_index_t action : mask.set_bits()) {
       out[i++] = policy(action);
     }
   }

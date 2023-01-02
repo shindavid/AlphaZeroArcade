@@ -299,7 +299,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::_expand_children() {
   Node* node = static_cast<Node*>(raw_memory);
 
   children_data_.first_child_ = node;
-  for (action_index_t action : _valid_action_mask()) {
+  for (action_index_t action : _valid_action_mask().set_bits()) {
     new(node++) Node(this, action);
   }
 }
