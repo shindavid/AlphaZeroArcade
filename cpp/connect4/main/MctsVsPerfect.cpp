@@ -124,10 +124,11 @@ int main(int ac, char* av[]) {
     float cache_hit_rate = cur_cache_hits * 1.0 / std::max(1, cur_cache_hits + cur_cache_misses);
     last_cache_hits = cache_hits;
     last_cache_misses = cache_misses;
+    int wasted_evals = cache_misses - cache_size;  // assumes cache large enough that no evictions
     double ms = ns * 1e-6;
 
-    printf("W%d L%d D%d | cache:[%.2f%% %d %.3f] | %.3fms", win, loss, draw, 100 * cache_hit_rate, cache_size,
-           hash_balance_factor, ms);
+    printf("W%d L%d D%d | cache:[%.2f%% %d %d %.3f] | %.3fms", win, loss, draw, 100 * cache_hit_rate,
+           wasted_evals, cache_size, hash_balance_factor, ms);
     std::cout << std::endl;
   }
 
