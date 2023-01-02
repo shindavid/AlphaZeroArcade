@@ -14,7 +14,7 @@ Action items:
 import random
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
-import xml.etree.ElementTree as ET
+from proto.mcts_pb2 import GameTree, GameSubtree
 
 import numpy as np
 import torch
@@ -263,7 +263,7 @@ class MCTS:
         self.n_players = n_players
         self.root: Optional[Tree] = None
         self.cache: Dict[Any, StateEvaluation] = {}
-        self.debug_tree = None if debug_filename is None else ET.ElementTree(ET.Element('Game'))
+        self.debug_tree = GameTree if not debug_filename else None
         self.player_index: Optional[PlayerIndex] = None
 
     def clear(self):
@@ -272,8 +272,8 @@ class MCTS:
 
     def _terminal_visit_debug(
             self, player: PlayerIndex, depth: int, state: AbstractGameState, game_result: GameResult, tree: Tree,
-            debug_subtree: Optional[ET.Element]):
-        if not self.debug_filename:
+            debug_subtree: Optional[GameSubtree]):
+        if not debug_subtree:
             return
         tree_dict = {
             'player': player,
@@ -286,14 +286,13 @@ class MCTS:
         if tree.action_index is not None:
             tree_dict['action'] = tree.action_index
         tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
-        elem = debug_subtree.makeelement('Visit', tree_dict)
-        debug_subtree.insert(0, elem)
+        debug_subtree.visits.add(**tree_dict)
 
     def _internal_visit_debug(
             self, player: PlayerIndex, depth: int, board: str, evaluation: StateEvaluation, leaf: bool,
-            value_avg: Tensor, tree: Tree, debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor,
+            value_avg: Tensor, tree: Tree, debug_subtree: Optional[GameSubtree], P: Tensor, noise: Tensor, V: Tensor,
             N: Tensor, PUCT: Tensor, E: Tensor):
-        if not self.debug_filename:
+        if not debug_subtree:
             return
 
         tree_dict = {
@@ -307,8 +306,7 @@ class MCTS:
         if tree.action_index is not None:
             tree_dict['action'] = tree.action_index
         tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
-        elem = debug_subtree.makeelement('Visit', tree_dict)
-        debug_subtree.insert(0, elem)
+        debug_subtree.visits.add(tree_dict)
         for ac, rp, p, no, v, n, puct, e in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT, E):
             attribs = {
                 'action': ac,
@@ -321,7 +319,7 @@ class MCTS:
                 'PUCT': puct,
             }
             attribs = {key: stringify(value) for key, value in attribs.items()}
-            ET.SubElement(elem, 'Child', attribs)
+            debug_subtree.visits[-1].children.add(**attribs)
 
     def receive_state_change(self, p: PlayerIndex, state: AbstractGameState,
                              action_index: ActionIndex, result: GameResult):
@@ -337,9 +335,10 @@ class MCTS:
                     self.root = child
 
         if result is not None and self.debug_tree:
-            ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
-            ET.indent(self.debug_tree)
-            self.debug_tree.write(self.debug_filename, encoding='utf-8', xml_declaration=True)
+            self.debug_tree.moves.add(board = state.compact_repr())
+            # Write the new address book back to disk.
+            with open(sys.argv[1], "wb") as f:
+                f.write(self.debug_tree.SerializeToString())
             self.debug_filename = None
             self.debug_tree = None
 
@@ -349,11 +348,11 @@ class MCTS:
         if self.player_index is None:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
-                self.debug_tree.getroot().set('player', str(self.player_index))
-
+                self.debug_tree.player = self.player_index
         move_tree = None
         if self.debug_tree is not None:
-            move_tree = ET.SubElement(self.debug_tree.getroot(), 'Move', board=state.compact_repr())
+            move_tree = self.debug_tree.moves
+            move_tree.add(board=state.compact_repr())
 
         if not params.can_reuse_subtree() or self.root is None:
             self.root = Tree(self.n_players)
@@ -364,9 +363,13 @@ class MCTS:
 
         i = 0
         while self.root.effective_count() <= params.treeSizeLimit and not self.root.eliminated:
-            iter_tree = None if move_tree is None else ET.SubElement(move_tree, 'Iter', i=str(i))
+            # Make sure the number of iterations does not go over int32
+            debug_subtree = None 
+            if move_tree is not None:
+                move_tree.iterations.add(i=i)
+                debug_subtree = move_tree.iterations[-1]
             i += 1
-            self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=iter_tree)
+            self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=debug_subtree)
             if not tensorizor.supports_undo():
                 tensorizor = orig_tensorizor.clone()
                 state = orig_state.clone()
@@ -395,7 +398,7 @@ class MCTS:
         return evaluation
 
     def visit(self, tree: Tree, tensorizor: AbstractGameTensorizor, state: AbstractGameState, params: MCTSParams,
-              depth: int, result: GameResult, debug_subtree: Optional[ET.Element]):
+              depth: int, result: GameResult, debug_subtree: Optional[GameSubtree]):
         evaluation = self.evaluate(tree, tensorizor, state, result)
         game_result = evaluation.game_result
         current_player = evaluation.current_player

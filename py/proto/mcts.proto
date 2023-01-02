@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package MCTS;
+
+message Child {
+    string action = 1;
+    string rP = 2;
+    string P = 3;
+    string dir = 4;
+    string V = 5;
+    string N = 6;
+    string E = 7;
+    string PUCT = 8;
+}
+
+message Visit{
+    repeated Child children = 1;
+    string player = 2;
+    string depth = 3;
+    string board = 4;
+    string eval = 5;
+    string value_avg = 6;
+    string leaf = 7;
+}
+
+message GameSubtree{
+    repeated Visit visits = 1;
+    int32 i = 2;
+}
+
+message Move{
+    repeated GameSubtree subtrees = 1;
+    string board = 2;
+}
+
+message GameTree{
+    repeated Move moves = 1;
+    string player = 2;
+}
