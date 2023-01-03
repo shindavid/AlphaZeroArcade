@@ -64,7 +64,7 @@ public:
   using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ActionMask = util::BitSet<kNumGlobalActions>;
+  using ActionMask = typename GameStateTypes::ActionMask;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
   using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
 

@@ -1,10 +1,11 @@
 #include <connect4/C4GameState.hpp>
 
-#include <util/AnsiCodes.hpp>
-#include <util/PrintUtil.hpp>
-
 #include <bit>
 #include <iostream>
+
+#include <util/AnsiCodes.hpp>
+#include <util/BitSet.hpp>
+#include <util/PrintUtil.hpp>
 
 inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& state) const {
   return state.hash();
@@ -186,7 +187,7 @@ inline void GameState::xdump_mcts_output(
   util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
 
   int i = 0;
-  for (common::action_index_t action : valid_actions.set_bits()) {
+  for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
     util::xprintf("%3d %8.3f %8d %8.3f\n", action + 1, net_policy(i), mcts_counts(action), mcts_policy(i));
     i++;
   }

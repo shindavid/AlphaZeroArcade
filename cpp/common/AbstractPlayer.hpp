@@ -14,7 +14,7 @@ class AbstractPlayer {
 public:
   using GameStateTypes = common::GameStateTypes_<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ActionMask = util::BitSet<GameState::kNumGlobalActions>;
+  using ActionMask = typename GameStateTypes::ActionMask;
   using player_array_t = std::array<AbstractPlayer*, GameState::kNumPlayers>;
 
   AbstractPlayer(const std::string &name) : name_(name) {}

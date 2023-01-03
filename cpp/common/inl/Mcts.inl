@@ -113,12 +113,8 @@ inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::da
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts_<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(const ActionMask& valid_actions) {
-  // TODO: use std::bitset instead of util::BitSet, and then replace below with A = ~B;
-  for (action_index_t action : valid_actions.unset_bits()) {
-    fully_analyzed_actions_[action] = 1;
-  }
-}
+inline Mcts_<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(const ActionMask& valid_actions)
+: fully_analyzed_actions_(~valid_actions) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::stats_t::stats_t() {
@@ -325,7 +321,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::_expand_children() {
   Node* node = static_cast<Node*>(raw_memory);
 
   children_data_.first_child_ = node;
-  for (action_index_t action : _valid_action_mask().set_bits()) {
+  for (action_index_t action : bitset_util::on_indices(_valid_action_mask())) {
     new(node++) Node(this, action);
   }
 }
@@ -552,7 +548,7 @@ void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
     child = tree->_get_child(0);
     lock->unlock();
   } else {
-    action_index_t action = tree->_fully_analyzed_action_mask().choose_random_unset_bit();
+    action_index_t action = bitset_util::choose_random_off_index(tree->_fully_analyzed_action_mask());
     lock->unlock();
     child = tree->_find_child(action);
   }

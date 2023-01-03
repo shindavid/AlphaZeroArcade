@@ -1,5 +1,6 @@
 #include <connect4/C4PerfectPlayer.hpp>
 
+#include <util/BitSet.hpp>
 #include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/StringUtil.hpp>
@@ -88,7 +89,7 @@ inline void PerfectPlayer::receive_state_change(
 
 inline common::action_index_t PerfectPlayer::get_action(const GameState&, const ActionMask&) {
   ActionMask best_moves = oracle_.get_best_moves(move_history_, strong_mode_).moves;
-  return best_moves.choose_random_set_bit();
+  return bitset_util::choose_random_on_index(best_moves);
 }
 
 }  // namespace c4

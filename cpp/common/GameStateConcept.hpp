@@ -7,7 +7,6 @@
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/MctsResults.hpp>
-#include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 
 namespace common {
@@ -52,9 +51,9 @@ concept GameStateConcept = requires(S state) {
   { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes_<S>::GameOutcome>;
 
   /*
-   * Get the valid actions, as a util::BitSet.
+   * Get the valid actions, as a std::bitset
    */
-  { state.get_valid_actions() } -> is_bit_set_c;
+  { state.get_valid_actions() } -> util::BitSetConcept;
 
   /*
    * A compact string representation, used for debugging purposes in conjunction with javascript visualizer.

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bitset>
 #include <tuple>
 #include <utility>
 
@@ -51,13 +52,13 @@ struct GameStateTypes_ {
   using GlobalPolicyCountDistr = Eigen::Array<int, kNumGlobalActions, 1>;
   using GlobalPolicyProbDistr = Eigen::Array<float, kNumGlobalActions, 1>;
 
-  using ActionMask = util::BitSet<kNumGlobalActions>;
+  using ActionMask = std::bitset<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 
   static void global_to_local(const PolicyArray1D& policy, const ActionMask& mask, LocalPolicyProbDistr& out) {
     out.resize(mask.count());
     int i = 0;
-    for (action_index_t action : mask.set_bits()) {
+    for (action_index_t action : bitset_util::on_indices(mask)) {
       out[i++] = policy(action);
     }
   }

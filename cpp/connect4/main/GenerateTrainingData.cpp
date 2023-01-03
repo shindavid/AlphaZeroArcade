@@ -14,6 +14,7 @@
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <third_party/ProgressBar.hpp>
+#include <util/BitSet.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
@@ -80,13 +81,16 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
       value(cp) = cur_player_value;
       value(1 - cp) = 1 - cur_player_value;
-      best_moves.to_array(policy.data());
+      for (size_t k = 0; k < best_moves.size(); ++k) {
+        policy.data()[k] = best_moves[k];
+      }
 
       tensorizor.tensorize(input, state);
       ++row;
 
       ActionMask moves = state.get_valid_actions();
-      int move = moves.choose_random_set_bit();
+
+      int move = bitset_util::choose_random_on_index(moves);
       auto outcome = state.apply_move(move);
       tensorizor.receive_state_change(state, move);
       if (common::is_terminal_outcome(outcome)) {

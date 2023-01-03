@@ -1,5 +1,6 @@
 #include <common/NNetPlayer.hpp>
 
+#include <util/BitSet.hpp>
 #include <util/Exception.hpp>
 #include <util/PrintUtil.hpp>
 #include <util/Random.hpp>
@@ -69,8 +70,8 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
   }
   action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
   if (!valid_actions[action]) {
-    // This happens rarely, due to MCTS elimination mechanics (I think?)
-    return valid_actions.choose_random_set_bit();
+    // This happens rarely, due to MCTS elimination mechanics
+    return bitset_util::choose_random_on_index(valid_actions);
   }
   return action;
 }

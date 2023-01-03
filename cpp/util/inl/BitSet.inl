@@ -2,23 +2,63 @@
 
 #include <util/Random.hpp>
 
-#include <random>
+namespace bitset_util {
 
-namespace util {
+namespace detail {
+
+enum IterType {
+  kSet,
+  kUnset
+};
+
+template <size_t N, IterType type>
+struct Wrapper {
+  using bitset_t = std::bitset<N>;
+
+  struct Iterator {
+  public:
+    Iterator(const bitset_t* bitset, int index) : bitset_(bitset), index_(index) { skip_to_next(); }
+    bool operator==(Iterator other) const { return index_ == other.index_; }
+    bool operator!=(Iterator other) const { return index_ != other.index_; }
+    int operator*() const { return index_;}
+    Iterator& operator++() { index_++; skip_to_next(); return *this; }
+    Iterator operator++(int) { Iterator tmp = *this; ++(*this); return tmp; }
+  private:
+    static constexpr bool use(bool b) { return (type==kUnset) ^ b; }
+    void skip_to_next() { while (index_ < N && !use((*bitset_)[index_])) index_++; }
+    const bitset_t* bitset_;
+    size_t index_;
+  };
+
+  Wrapper(const bitset_t* bitset) : bitset_(bitset) {}
+
+  Iterator begin() const { return Iterator(bitset_, 0); }
+  Iterator end() const { return Iterator(bitset_, N); }
+
+  const bitset_t* bitset_;
+};
+
+}  // namespace detail
+
+template<size_t N> auto on_indices(const std::bitset<N>& bitset) {
+  return detail::Wrapper<N, detail::kSet>(&bitset);
+}
+
+template<size_t N> auto off_indices(const std::bitset<N>& bitset) {
+  return detail::Wrapper<N, detail::kUnset>(&bitset);
+}
 
 /*
  * Adapted from: https://stackoverflow.com/a/37460774/543913
  *
  * TODO: optimize by using custom implementation powered by c++20's <bits> module.
  */
-template<int N>
-int BitSet<N>::choose_random_set_bit() const {
-  // Adapted from: https://stackoverflow.com/a/37460774/543913
-  int upper = this->count();
+template<size_t N> int choose_random_on_index(const std::bitset<N>& bitset) {
+  int upper = bitset.count();
   assert(upper > 0);
-  int c = 1 + Random::uniform_sample(0, upper);
+  int c = 1 + util::Random::uniform_sample(0, upper);
   int p = 0;
-  for (; c; ++p) c -= (*this)[p];
+  for (; c; ++p) c -= bitset[p];
   return p - 1;
 }
 
@@ -27,23 +67,13 @@ int BitSet<N>::choose_random_set_bit() const {
  *
  * TODO: optimize by using custom implementation powered by c++20's <bits> module.
  */
-template<int N>
-int BitSet<N>::choose_random_unset_bit() const {
-  // Adapted from: https://stackoverflow.com/a/37460774/543913
-  int upper = N - this->count();
+template<size_t N> int choose_random_off_index(const std::bitset<N>& bitset) {
+  int upper = N - bitset.count();
   assert(upper > 0);
-  int c = 1 + Random::uniform_sample(0, upper);
+  int c = 1 + util::Random::uniform_sample(0, upper);
   int p = 0;
-  for (; c; ++p) c -= not (*this)[p];
+  for (; c; ++p) c -= not bitset[p];
   return p - 1;
 }
 
-template<int N>
-template<typename T>
-void BitSet<N>::to_array(T* arr) const {
-  for (int i = 0; i < N; ++i) {
-    arr[i] = (*this)[i];
-  }
-}
-
-}  // namespace util
+}  // namespace bitset_util
