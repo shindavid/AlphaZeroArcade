@@ -17,8 +17,10 @@ struct Args {
   int num_mcts_iters;
   int num_games;
   bool verbose;
+  bool perfect;
 };
 
+using Player = common::AbstractPlayer<c4::GameState>;
 using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
 using Mcts = common::Mcts_<c4::GameState, c4::Tensorizor>;
 
@@ -61,6 +63,7 @@ int main(int ac, char* av[]) {
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100), "num mcts iterations to do per move")
       ("num-games,g", po::value<int>(&args.num_games)->default_value(100), "num games to simulate")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
+      ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect")
       ;
 
   po::variables_map vm;
@@ -75,12 +78,12 @@ int main(int ac, char* av[]) {
   using player_t = common::AbstractPlayer<c4::GameState>;
   using player_array_t = std::array<player_t*, c4::kNumPlayers>;
 
-  C4NNetPlayer* mcts_player = create_nnet_player(args);
-  c4::PerfectPlayer* perfect_player = create_perfect_player(args);
+  C4NNetPlayer* p1 = create_nnet_player(args);
+  Player* p2 = args.perfect ? (Player*) create_perfect_player(args) : (Player*) create_nnet_player(args);
 
   player_array_t players;
-  players[c4::kRed] = mcts_player;
-  players[c4::kYellow] = perfect_player;
+  players[c4::kRed] = p1;
+  players[c4::kYellow] = p2;
 
   int win = 0;
   int loss = 0;
@@ -118,7 +121,7 @@ int main(int ac, char* av[]) {
     int cache_misses;
     int cache_size;
     float hash_balance_factor;
-    mcts_player->get_cache_stats(cache_hits, cache_misses, cache_size, hash_balance_factor);
+    p1->get_cache_stats(cache_hits, cache_misses, cache_size, hash_balance_factor);
     int cur_cache_hits = cache_hits - last_cache_hits;
     int cur_cache_misses = cache_misses - last_cache_misses;
     float cache_hit_rate = cur_cache_hits * 1.0 / std::max(1, cur_cache_hits + cur_cache_misses);
@@ -136,7 +139,7 @@ int main(int ac, char* av[]) {
   printf("Max runtime: %.3fs\n", 1e-9 * max_ns);
   printf("Min runtime: %.3fs\n", 1e-9 * min_ns);
 
-  delete mcts_player;
-  delete perfect_player;
+  delete p1;
+  delete p2;
   return 0;
 }
