@@ -82,6 +82,7 @@ public:
   auto unset_bits() const { return Wrapper<kUnset>(this); }
 
   int choose_random_set_bit() const;
+  int choose_random_unset_bit() const;
   template<typename T> void to_array(T* arr) const;
 };
 

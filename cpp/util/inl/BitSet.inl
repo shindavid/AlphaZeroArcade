@@ -14,9 +14,27 @@ namespace util {
 template<int N>
 int BitSet<N>::choose_random_set_bit() const {
   // Adapted from: https://stackoverflow.com/a/37460774/543913
-  int c = 1 + Random::uniform_sample(0, int(this->count()));
+  int upper = this->count();
+  assert(upper > 0);
+  int c = 1 + Random::uniform_sample(0, upper);
   int p = 0;
   for (; c; ++p) c -= (*this)[p];
+  return p - 1;
+}
+
+/*
+ * Adapted from: https://stackoverflow.com/a/37460774/543913
+ *
+ * TODO: optimize by using custom implementation powered by c++20's <bits> module.
+ */
+template<int N>
+int BitSet<N>::choose_random_unset_bit() const {
+  // Adapted from: https://stackoverflow.com/a/37460774/543913
+  int upper = N - this->count();
+  assert(upper > 0);
+  int c = 1 + Random::uniform_sample(0, upper);
+  int p = 0;
+  for (; c; ++p) c -= not (*this)[p];
   return p - 1;
 }
 
