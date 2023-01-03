@@ -87,8 +87,8 @@ public:
     int batch_size_limit = kDefaultBatchSize;
     bool run_offline = false;
     int offline_tree_size_limit = 4096;
-    int64_t nn_eval_timeout_ns = util::ms_to_ns(5);;
-    size_t cache_size = 4096;
+    int64_t nn_eval_timeout_ns = util::us_to_ns(250);;
+    size_t cache_size = 1048576;
 
     float root_softmax_temperature = 1.03;
     float cPUCT = 1.1;
@@ -155,11 +155,11 @@ private:
    */
   class Node {
   public:
-//    enum evaluation_state_t : int8_t {
-//      kUnset,
-//      kPendingSet,
-//      kSet,
-//    };
+    enum evaluation_state_t : int8_t {
+      kUnset,
+      kPending,
+      kSet,
+    };
 
     Node(Node* parent, action_index_t action);
     Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
@@ -188,6 +188,7 @@ private:
      */
     void _adopt_children();
 
+    std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
     std::mutex& lazily_initialized_data_mutex() { return lazily_initialized_data_mutex_; }
     std::mutex& children_data_mutex() { return children_data_mutex_; }
     std::mutex& evaluation_data_mutex() { return evaluation_data_mutex_; }
@@ -200,6 +201,7 @@ private:
     void undo_virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
     ValueArray1D make_virtual_loss() const;
+    void mark_as_fully_analyzed();
 
     void _lazy_init();
     void _expand_children();
@@ -230,10 +232,11 @@ private:
     bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 0; }  // won, lost, OR drawn positions
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
+    const ActionMask& _fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions_; }
     NNEvaluation_sptr _evaluation() const { return evaluation_data_.ptr_.load(); }
     void _set_evaluation(NNEvaluation_sptr eval) { evaluation_data_.ptr_.store(eval); }
-//    evaluation_state_t _evaluation_state() const { return evaluation_data_.state_; }
-//    void _set_evaluation_state(evaluation_state_t state) { evaluation_data_.state_ = state; }
+    evaluation_state_t _evaluation_state() const { return evaluation_data_.state_; }
+    void _set_evaluation_state(evaluation_state_t state) { evaluation_data_.state_ = state; }
 
   private:
     float _get_max_V_floor_among_children(player_index_t p) const;
@@ -284,14 +287,21 @@ private:
       bool initialized_ = false;
     };
 
+    /*
+     * TODO: merge into evaluation_data_t, rename combined struct?
+     */
     struct children_data_t {
       Node* first_child_ = nullptr;
       int num_children_ = 0;
     };
 
     struct evaluation_data_t {
+      evaluation_data_t() = default;
+      evaluation_data_t(const ActionMask& valid_actions);
+
       NNEvaluation_asptr ptr_;
-//      evaluation_state_t state_ = kUnset;
+      evaluation_state_t state_ = kUnset;
+      ActionMask fully_analyzed_actions_;  // means that every leaf descendent is a terminal game state
     };
 
     struct stats_t {
@@ -304,8 +314,9 @@ private:
       bool eliminated_ = false;
     };
 
+    std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex lazily_initialized_data_mutex_;
-    mutable std::mutex children_data_mutex_;
+    mutable std::mutex children_data_mutex_;  // TODO: not needed anymore?
     mutable std::mutex evaluation_data_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
@@ -347,7 +358,11 @@ private:
       kPUCT = 15,
       kWaitingForStatsMutex = 16,
       kBackpropEvaluation = 17,
-      kNumRegions = 18
+      kMarkFullyAnalyzed = 18,
+      kEvaluateAndExpand = 19,
+      kEvaluateAndExpandUnset = 20,
+      kEvaluateAndExpandPending = 21,
+      kNumRegions = 22
     };
 
     using profiler_t = util::Profiler<int(kNumRegions), kEnableVerboseProfiling>;
@@ -379,6 +394,9 @@ private:
 #endif  // PROFILE_MCTS
 
   private:
+    /*
+     * TODO: both bool members can be collapsed into one, I think.
+     */
     struct evaluate_and_expand_data_t {
       NNEvaluation_sptr evaluation;
       bool was_leaf;
@@ -388,7 +406,11 @@ private:
     void lazily_init(Node* tree);
     void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
     void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
-    evaluate_and_expand_data_t evaluate_and_expand(Node* tree);
+    void mark_as_fully_analyzed(Node* tree);
+    evaluate_and_expand_data_t evaluate_and_expand(Node* tree, bool speculative);
+    void evaluate_and_expand_unset(
+        Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_data_t* data, bool speculative);
+    void evaluate_and_expand_pending(Node* tree, std::unique_lock<std::mutex>* lock);
     bool expand_children(Node* tree);  // returns false iff already has children
 
     /*
@@ -464,6 +486,21 @@ private:
    */
   class NNEvaluationService {
   public:
+    struct Request {
+      SearchThread* thread;
+      const Tensorizor* tensorizor;
+      const GameState* state;
+      const ActionMask* valid_action_mask;
+      symmetry_index_t sym_index;
+      float inv_temp;
+      bool single_threaded;
+    };
+
+    struct Response {
+      NNEvaluation_sptr ptr;
+      bool used_cache;
+    };
+
     /*
      * Constructs an evaluation thread and returns it.
      *
@@ -495,9 +532,7 @@ private:
      *
      * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
      */
-    NNEvaluation_sptr evaluate(
-        SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
-        symmetry_index_t sym_index, float inv_temp, bool single_threaded);
+    Response evaluate(const Request&);
 
     void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 

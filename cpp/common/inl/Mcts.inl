@@ -113,6 +113,14 @@ inline Mcts_<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::da
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts_<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(const ActionMask& valid_actions) {
+  // TODO: use std::bitset instead of util::BitSet, and then replace below with A = ~B;
+  for (action_index_t action : valid_actions.unset_bits()) {
+    fully_analyzed_actions_[action] = 1;
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::stats_t::stats_t() {
   value_avg_.setZero();
   effective_value_avg_.setZero();
@@ -127,7 +135,8 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(
     const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_noise)
 : stable_data_(nullptr, -1, disable_noise)
-, lazily_initialized_data_(tensorizor, state, outcome) {}
+, lazily_initialized_data_(tensorizor, state, outcome)
+, evaluation_data_(_valid_action_mask()) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
@@ -255,7 +264,7 @@ inline void Mcts_<GameState, Tensorizor>::Node::perform_eliminations(const Value
 
     {
       player_index_t cp = _current_player();
-      std::lock_guard<std::mutex> guard2(children_data_mutex_);
+      std::lock_guard<std::mutex> guard2(children_data_mutex_);  // TODO: not needed?
       for (player_index_t p = 0; p < kNumPlayers; ++p) {
         if (p == cp) {
           stats_.V_floor_[p] = _get_max_V_floor_among_children(p);
@@ -288,8 +297,25 @@ Mcts_<GameState, Tensorizor>::Node::make_virtual_loss() const {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::Node::mark_as_fully_analyzed() {
+  Node* my_parent = parent();
+  if (!my_parent) return;
+
+  std::unique_lock<std::mutex> lock(my_parent->evaluation_data_mutex());
+  my_parent->evaluation_data_.fully_analyzed_actions_[action()] = true;
+  bool full = my_parent->evaluation_data_.fully_analyzed_actions_.all();
+  lock.unlock();
+  if (!full) return;
+
+  my_parent->mark_as_fully_analyzed();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::Node::_lazy_init() {
   new(&lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
+
+  std::unique_lock<std::mutex> lock(evaluation_data_mutex());  // TODO: remove me? Don't think this is needed
+  new(&evaluation_data_) evaluation_data_t(_valid_action_mask());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -386,29 +412,24 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::visit(Node* tree, int de
   if (is_terminal_outcome(outcome)) {
     backprop_outcome(tree, outcome);
     perform_eliminations(tree, outcome);
+    mark_as_fully_analyzed(tree);
     return;
   }
 
   if (!mcts_->search_active()) return;  // short-circuit
 
-  evaluate_and_expand_data_t data = evaluate_and_expand(tree);
+  evaluate_and_expand_data_t data = evaluate_and_expand(tree, false);
   NNEvaluation* evaluation = data.evaluation.get();
-  if (!evaluation) return;
+  assert(evaluation);
+  assert(evaluation == tree->_evaluation().get());
 
   Node* best_child = get_best_child(tree, evaluation);
-  bool undo_virtual_loss = data.performed_virtual_backprop;
   if (data.was_leaf) {
     record_for_profiling(kBackpropEvaluation);
-    if (undo_virtual_loss) {
-      tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
-    } else {
-      tree->backprop(evaluation->value_prob_distr());
-    }
+    assert(data.performed_virtual_backprop);
+    tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
-    if (undo_virtual_loss) {
-      // unlikely race condition, but possible
-      tree->undo_virtual_backprop();
-    }
+    assert(!data.performed_virtual_backprop);
     visit(best_child, depth + 1);
   }
 }
@@ -438,29 +459,111 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::perform_eliminations(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts_<GameState, Tensorizor>::SearchThread::mark_as_fully_analyzed(Node* tree) {
+  record_for_profiling(kMarkFullyAnalyzed);
+  tree->mark_as_fully_analyzed();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_data_t
-Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree) {
+Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool speculative) {
+  record_for_profiling(kEvaluateAndExpand);
+
+  std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
   evaluate_and_expand_data_t data{tree->_evaluation(), false, false};
+  typename Node::evaluation_state_t state = tree->_evaluation_state();
 
-  /*
-   * Note: race-conditions can cause redundant setting of a given tree's evaluation. This is ok - it just leads to
-   * redundant evaluation by the eval thread. It is preferable to inserting a mutex here.
-   */
-  if (!data.evaluation) {
-    symmetry_index_t sym_index = tree->_sym_index();
-    float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
+  switch (state) {
+    case Node::kUnset:
+    {
+      evaluate_and_expand_unset(tree, &lock, &data, speculative);
+      tree->cv_evaluate_and_expand().notify_all();
+      break;
+    }
+    case Node::kPending:
+    {
+      evaluate_and_expand_pending(tree, &lock);
+      assert(!lock.owns_lock());
+      if (!speculative) {
+        lock.lock();
+        if (tree->_evaluation_state() != Node::kSet) {
+          tree->cv_evaluate_and_expand().wait(lock);
+          assert(tree->_evaluation_state() == Node::kSet);
+        }
+        data.evaluation = tree->_evaluation();
+        assert(data.evaluation.get());
+      }
+      break;
+    }
+    default: break;
+  }
+  return data;
+}
 
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
+    Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_data_t* data, bool speculative)
+{
+  record_for_profiling(kEvaluateAndExpandUnset);
+
+  data->was_leaf = expand_children(tree);
+  assert(data->evaluation.get() == nullptr);
+  assert(data->was_leaf);
+  tree->_set_evaluation_state(Node::kPending);
+  lock->unlock();
+
+  symmetry_index_t sym_index = tree->_sym_index();
+  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
+
+  if (!speculative) {
     record_for_profiling(kVirtualBackprop);
     tree->virtual_backprop();
-    data.performed_virtual_backprop = true;
-    data.evaluation = mcts_->nn_eval_service()->evaluate(
-        this, tree->_tensorizor(), tree->_state(), tree->_valid_action_mask(), sym_index, inv_temp,
-        mcts_->num_search_threads() == 1);
-    tree->_set_evaluation(data.evaluation);
+    data->performed_virtual_backprop = true;
   }
 
-  data.was_leaf = expand_children(tree);
-  return data;
+  typename NNEvaluationService::Request request{
+    this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index, inv_temp,
+    mcts_->num_search_threads() == 1
+  };
+  auto response = mcts_->nn_eval_service()->evaluate(request);
+  data->evaluation = response.ptr;
+
+  if (speculative && response.used_cache) {
+    // without this, when we hit cache, we fail to saturate nn service batch
+    lock->lock();
+    evaluate_and_expand_pending(tree, lock);
+  }
+
+  lock->lock();
+  tree->_set_evaluation(data->evaluation);
+  tree->_set_evaluation_state(Node::kSet);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
+    Node* tree, std::unique_lock<std::mutex>* lock)
+{
+  // Another search thread is working on this. Might as well speculatively eval another position while we wait
+  record_for_profiling(kEvaluateAndExpandPending);
+
+  assert(tree->_has_children());
+  Node* child;
+  if (tree->_fully_analyzed_action_mask().all()) {
+    child = tree->_get_child(0);
+    lock->unlock();
+  } else {
+    action_index_t action = tree->_fully_analyzed_action_mask().choose_random_unset_bit();
+    lock->unlock();
+    child = tree->_find_child(action);
+  }
+  lazily_init(child);
+  const auto& outcome = child->_outcome();
+  if (is_terminal_outcome(outcome)) {
+    perform_eliminations(child, outcome);  // why not?
+    mark_as_fully_analyzed(child);
+  } else {
+    evaluate_and_expand(child, true);
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -624,11 +727,16 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService()
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts_<GameState, Tensorizor>::NNEvaluation_sptr
-Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
-    SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
-    symmetry_index_t sym_index, float inv_temp, bool single_threaded)
-{
+typename Mcts_<GameState, Tensorizor>::NNEvaluationService::Response
+Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& request) {
+  SearchThread* thread = request.thread;
+  const Tensorizor& tensorizor = *request.tensorizor;
+  const GameState& state = *request.state;
+  const ActionMask& valid_action_mask = *request.valid_action_mask;
+  symmetry_index_t sym_index = request.sym_index;
+  float inv_temp = request.inv_temp;
+  bool single_threaded = request.single_threaded;
+
   thread->record_for_profiling(SearchThread::kCheckingCache);
   cache_key_t key{state, inv_temp, sym_index};
 
@@ -637,7 +745,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
     auto cached = cache_.get(key);
     if (cached.has_value()) {
       cache_hits_++;
-      return cached.value();
+      return Response{cached.value(), true};
     }
   }
   cache_misses_++;
@@ -703,7 +811,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(
 
   // NOTE: might be able to notify_one(), if we add another notify_one() after the batch_reserve_index_++
   cv_evaluate_.notify_all();
-  return eval_ptr;
+  return Response{eval_ptr, false};
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -867,7 +975,9 @@ inline void Mcts_<GameState, Tensorizor>::receive_state_change(
     return;
   }
 
-  new_root->_lazy_init();
+  if (!new_root->_lazily_initialized()) {
+    new_root->_lazy_init();
+  }
   Node* new_root_copy = new Node(*new_root, true);
   root_->_release(new_root);
   delete root_;
