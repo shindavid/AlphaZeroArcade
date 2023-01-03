@@ -407,24 +407,20 @@ private:
 #endif  // PROFILE_MCTS
 
   private:
-    /*
-     * TODO: both bool members can be collapsed into one, I think.
-     */
-    struct evaluate_and_expand_data_t {
+    struct evaluate_and_expand_result_t {
       NNEvaluation_sptr evaluation;
-      bool was_leaf;
-      bool performed_virtual_backprop;
+      bool performed_expansion;
     };
 
     void lazily_init(Node* tree);
     void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
     void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
     void mark_as_fully_analyzed(Node* tree);
-    evaluate_and_expand_data_t evaluate_and_expand(Node* tree, bool speculative);
+    evaluate_and_expand_result_t evaluate_and_expand(Node* tree, bool speculative);
     void evaluate_and_expand_unset(
-        Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_data_t* data, bool speculative);
+        Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative);
     void evaluate_and_expand_pending(Node* tree, std::unique_lock<std::mutex>* lock);
-    bool expand_children(Node* tree);  // returns false iff already has children
+    void expand_children(Node* tree);
 
     /*
      * Used in visit().

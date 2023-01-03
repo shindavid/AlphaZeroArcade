@@ -434,18 +434,16 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::visit(Node* tree, int de
 
   if (!mcts_->search_active()) return;  // short-circuit
 
-  evaluate_and_expand_data_t data = evaluate_and_expand(tree, false);
+  evaluate_and_expand_result_t data = evaluate_and_expand(tree, false);
   NNEvaluation* evaluation = data.evaluation.get();
   assert(evaluation);
   assert(evaluation == tree->_evaluation().get());
 
   Node* best_child = get_best_child(tree, evaluation);
-  if (data.was_leaf) {
+  if (data.performed_expansion) {
     record_for_profiling(kBackpropEvaluation);
-    assert(data.performed_virtual_backprop);
     tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
-    assert(!data.performed_virtual_backprop);
     visit(best_child, depth + 1);
   }
 }
@@ -481,12 +479,12 @@ inline void Mcts_<GameState, Tensorizor>::SearchThread::mark_as_fully_analyzed(N
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_data_t
+typename Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_result_t
 Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool speculative) {
   record_for_profiling(kEvaluateAndExpand);
 
   std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
-  evaluate_and_expand_data_t data{tree->_evaluation(), false, false};
+  evaluate_and_expand_result_t data{tree->_evaluation(), false};
   typename Node::evaluation_state_t state = tree->_evaluation_state();
 
   switch (state) {
@@ -518,13 +516,14 @@ Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
-    Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_data_t* data, bool speculative)
+    Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative)
 {
   record_for_profiling(kEvaluateAndExpandUnset);
 
-  data->was_leaf = expand_children(tree);
+  assert(!tree->_has_children());
+  expand_children(tree);
+  data->performed_expansion = true;
   assert(data->evaluation.get() == nullptr);
-  assert(data->was_leaf);
   tree->_set_evaluation_state(Node::kPending);
   lock->unlock();
 
@@ -534,7 +533,6 @@ void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   if (!speculative) {
     record_for_profiling(kVirtualBackprop);
     tree->virtual_backprop();
-    data->performed_virtual_backprop = true;
   }
 
   typename NNEvaluationService::Request request{
@@ -583,13 +581,12 @@ void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-bool Mcts_<GameState, Tensorizor>::SearchThread::expand_children(Node* tree) {
-  if (tree->_has_children()) return false;
+void Mcts_<GameState, Tensorizor>::SearchThread::expand_children(Node* tree) {
+  if (tree->_has_children()) return;
 
   // TODO: use object pool
   record_for_profiling(kConstructingChildren);
   tree->_expand_children();
-  return true;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
