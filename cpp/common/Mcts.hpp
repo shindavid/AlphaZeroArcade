@@ -140,15 +140,9 @@ private:
    * Of these, only stats_ are continuously changing. The others are written only once. They are non-const in the
    * sense that they are lazily written, after-object-construction.
    *
-   * During MCTS, multiple search threads will try to read and write these values. The MCTS literature is filled with
-   * approaches on how to minimize thread contention, including various "lockfree" approaches that tolerate various
-   * race conditions.
-   *
-   * See for example this 2009 paper: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
-   *
-   * For now, I am achieving thread-safety by having n mutexes per-Node, one for each of the above n categories.
-   * Once we have appropriate tooling to profile performance and detect bottlenecks, we can improve this
-   * implementation.
+   * During MCTS, multiple search threads will try to read and write these values. Thread-safety is achieved in a
+   * high-performance manner through a carefully orchestrated combination of mutexes, condition-variables, and
+   * lockfree mechanisms.
    *
    * NAMING NOTE: Methods with a leading underscore are NOT thread-safe. Such methods are expected to be called in
    * a context that guarantees the appropriate level of thread-safety.
@@ -190,7 +184,6 @@ private:
 
     std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
     std::mutex& lazily_initialized_data_mutex() { return lazily_initialized_data_mutex_; }
-    std::mutex& children_data_mutex() { return children_data_mutex_; }
     std::mutex& evaluation_data_mutex() { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() { return stats_mutex_; }
 
@@ -219,9 +212,9 @@ private:
     const ActionMask& _valid_action_mask() const { return lazily_initialized_data_.union_.data_.valid_action_mask_; }
     bool _lazily_initialized() const { return lazily_initialized_data_.initialized_; }
 
-    bool _has_children() const { return children_data_.num_children_; }
-    int _num_children() const { return children_data_.num_children_; }
-    Node* _get_child(int c) const { return children_data_.first_child_ + c; }
+    bool _has_children() const { return children_data_.num_children_unsafe(); }
+    int _num_children() const { return children_data_.num_children_unsafe(); }
+    Node* _get_child(int c) const { return children_data_.first_child_unsafe() + c; }
     Node* _find_child(action_index_t action) const;
 
     const auto& _value_avg() const { return stats_.value_avg_; }
@@ -239,8 +232,8 @@ private:
     void _set_evaluation_state(evaluation_state_t state) { evaluation_data_.state_ = state; }
 
   private:
-    float _get_max_V_floor_among_children(player_index_t p) const;
-    float _get_min_V_floor_among_children(player_index_t p) const;
+    float _get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
+    float _get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
 
     struct stable_data_t {
       stable_data_t(Node* parent, action_index_t action, bool disable_noise);
@@ -288,11 +281,33 @@ private:
     };
 
     /*
-     * TODO: merge into evaluation_data_t, rename combined struct?
+     * Writers must FIRST write num_children_, and THEN first_child_.
+     *
+     * Readers should ignore num_children_ if first_child_ is null.
+     *
+     * Following this discipline allows us to use children_data_t in a lockfree manner.
+     *
+     * We use the volatile keyword here to ensure that read/write order is not changed by the compiler.
+     *
+     * See: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
      */
     struct children_data_t {
-      Node* first_child_ = nullptr;
-      int num_children_ = 0;
+      void write(Node* first_child, int num_children) {
+        num_children_ = num_children;
+        first_child_ = first_child;
+      }
+
+      void read(Node** first_child, int* num_children) const {
+        *first_child = const_cast<Node*>(first_child_);
+        *num_children = (*first_child) ? num_children_ : 0;
+      }
+
+      Node* first_child_unsafe() const { return const_cast<Node*>(first_child_); }  // read() is safer, be careful
+      int num_children_unsafe() const { return num_children_; }  // read() is safer, be careful
+
+    private:
+      volatile Node* first_child_ = nullptr;
+      volatile int num_children_ = 0;
     };
 
     struct evaluation_data_t {
@@ -316,7 +331,6 @@ private:
 
     std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex lazily_initialized_data_mutex_;
-    mutable std::mutex children_data_mutex_;  // TODO: not needed anymore?
     mutable std::mutex evaluation_data_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
@@ -353,16 +367,15 @@ private:
       kIncrementingCommitCount = 10,
       kWaitingForReservationProcessing = 11,
       kVirtualBackprop = 12,
-      kWaitingForChildrenDataMutex = 13,
-      kConstructingChildren = 14,
-      kPUCT = 15,
-      kWaitingForStatsMutex = 16,
-      kBackpropEvaluation = 17,
-      kMarkFullyAnalyzed = 18,
-      kEvaluateAndExpand = 19,
-      kEvaluateAndExpandUnset = 20,
-      kEvaluateAndExpandPending = 21,
-      kNumRegions = 22
+      kConstructingChildren = 13,
+      kPUCT = 14,
+      kWaitingForStatsMutex = 15,
+      kBackpropEvaluation = 16,
+      kMarkFullyAnalyzed = 17,
+      kEvaluateAndExpand = 18,
+      kEvaluateAndExpandUnset = 19,
+      kEvaluateAndExpandPending = 20,
+      kNumRegions = 21
     };
 
     using profiler_t = util::Profiler<int(kNumRegions), kEnableVerboseProfiling>;

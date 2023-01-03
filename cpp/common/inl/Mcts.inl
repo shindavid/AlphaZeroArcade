@@ -149,26 +149,34 @@ inline void Mcts_<GameState, Tensorizor>::Node::debug_dump() const {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::_release(Node* protected_child) {
-  for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = children_data_.first_child_ + i;
+  Node* first_child;
+  int num_children;
+  children_data_.read(&first_child, &num_children);
+
+  for (int i = 0; i < num_children; ++i) {
+    Node* child = first_child + i;
     if (child != protected_child) child->_release();
   }
 
-  if (!children_data_.first_child_) return;
+  if (!first_child) return;
 
   // https://stackoverflow.com/a/4756306/543913
-  for (int i = children_data_.num_children_ - 1; i >= 0; --i) {
-    Node* child = children_data_.first_child_ + i;
+  for (int i = num_children - 1; i >= 0; --i) {
+    Node* child = first_child + i;
     child->~Node();
   }
-  void* raw_memory = static_cast<void*>(children_data_.first_child_);
+  void* raw_memory = static_cast<void*>(first_child);
   operator delete[](raw_memory);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::_adopt_children() {
-  for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = children_data_.first_child_ + i;
+  Node* first_child;
+  int num_children;
+  children_data_.read(&first_child, &num_children);
+
+  for (int i = 0; i < num_children; ++i) {
+    Node* child = first_child + i;
     child->stable_data_.parent_ = this;
   }
 }
@@ -183,21 +191,23 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
     eliminated = stats_.eliminated_;
   }
 
-  std::lock_guard<std::mutex> guard(children_data_mutex_);
+  Node* first_child;
+  int num_children;
+  children_data_.read(&first_child, &num_children);
 
   player_index_t cp = _current_player();
   GlobalPolicyCountDistr counts;
   counts.setZero();
   if (eliminated) {
-    float max_V_floor = _get_max_V_floor_among_children(cp);
-    for (int i = 0; i < children_data_.num_children_; ++i) {
-      Node* child = children_data_.first_child_ + i;
+    float max_V_floor = _get_max_V_floor_among_children(cp, first_child, num_children);
+    for (int i = 0; i < num_children; ++i) {
+      Node* child = first_child + i;
       counts(child->action()) = (child->_V_floor(cp) == max_V_floor);
     }
     return counts;
   }
-  for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = children_data_.first_child_ + i;
+  for (int i = 0; i < num_children; ++i) {
+    Node* child = first_child + i;
     counts(child->action()) = child->_effective_count();
   }
   return counts;
@@ -258,15 +268,16 @@ inline void Mcts_<GameState, Tensorizor>::Node::perform_eliminations(const Value
     // TODO: tighten mutex grabs
     std::lock_guard<std::mutex> guard(stats_mutex_);
 
-    {
-      player_index_t cp = _current_player();
-      std::lock_guard<std::mutex> guard2(children_data_mutex_);  // TODO: not needed?
-      for (player_index_t p = 0; p < kNumPlayers; ++p) {
-        if (p == cp) {
-          stats_.V_floor_[p] = _get_max_V_floor_among_children(p);
-        } else {
-          stats_.V_floor_[p] = _get_min_V_floor_among_children(p);
-        }
+    Node* first_child;
+    int num_children;
+    children_data_.read(&first_child, &num_children);
+
+    player_index_t cp = _current_player();
+    for (player_index_t p = 0; p < kNumPlayers; ++p) {
+      if (p == cp) {
+        stats_.V_floor_[p] = _get_max_V_floor_among_children(p, first_child, num_children);
+      } else {
+        stats_.V_floor_[p] = _get_min_V_floor_among_children(p, first_child, num_children);
       }
     }
 
@@ -316,32 +327,39 @@ void Mcts_<GameState, Tensorizor>::Node::_lazy_init() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::_expand_children() {
-  children_data_.num_children_ = _valid_action_mask().count();
-  void* raw_memory = operator new[](children_data_.num_children_ * sizeof(Node));
+  int num_children = _valid_action_mask().count();
+  void* raw_memory = operator new[](num_children * sizeof(Node));
   Node* node = static_cast<Node*>(raw_memory);
 
-  children_data_.first_child_ = node;
+  Node* first_child = node;
   for (action_index_t action : bitset_util::on_indices(_valid_action_mask())) {
     new(node++) Node(this, action);
   }
+  children_data_.write(first_child, num_children);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::Node*
 Mcts_<GameState, Tensorizor>::Node::_find_child(action_index_t action) const {
   // TODO: technically we can do a binary search here, as children should be in sorted order by action
-  for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node *child = children_data_.first_child_ + i;
+  Node* first_child;
+  int num_children;
+  children_data_.read(&first_child, &num_children);
+
+  for (int i = 0; i < num_children; ++i) {
+    Node *child = first_child + i;
     if (child->stable_data_.action_ == action) return child;
   }
   return nullptr;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts_<GameState, Tensorizor>::Node::_get_max_V_floor_among_children(player_index_t p) const {
+inline float Mcts_<GameState, Tensorizor>::Node::_get_max_V_floor_among_children(
+    player_index_t p, Node* first_child, int num_children) const
+{
   float max_V_floor = 0;
-  for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = children_data_.first_child_ + i;
+  for (int i = 0; i < num_children; ++i) {
+    Node* child = first_child + i;
     std::lock_guard<std::mutex> guard(child->stats_mutex_);
     max_V_floor = std::max(max_V_floor, child->_V_floor(p));
   }
@@ -349,10 +367,12 @@ inline float Mcts_<GameState, Tensorizor>::Node::_get_max_V_floor_among_children
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts_<GameState, Tensorizor>::Node::_get_min_V_floor_among_children(player_index_t p) const {
+inline float Mcts_<GameState, Tensorizor>::Node::_get_min_V_floor_among_children(
+    player_index_t p, Node* first_child, int num_children) const
+{
   float min_V_floor = 1;
-  for (int i = 0; i < children_data_.num_children_; ++i) {
-    Node* child = children_data_.first_child_ + i;
+  for (int i = 0; i < num_children; ++i) {
+    Node* child = first_child + i;
     std::lock_guard<std::mutex> guard(child->stats_mutex_);
     min_V_floor = std::min(min_V_floor, child->_V_floor(p));
   }
@@ -564,9 +584,6 @@ void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 bool Mcts_<GameState, Tensorizor>::SearchThread::expand_children(Node* tree) {
-  record_for_profiling(kWaitingForChildrenDataMutex);
-  std::lock_guard<std::mutex> guard(tree->children_data_mutex());
-
   if (tree->_has_children()) return false;
 
   // TODO: use object pool
