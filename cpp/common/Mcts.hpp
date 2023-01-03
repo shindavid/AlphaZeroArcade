@@ -618,6 +618,9 @@ private:
 #endif  // PROFILE_MCTS
 
     static instance_map_t instance_map_;
+    static int next_instance_id_;
+
+    const int instance_id_;  // for naming debug/profiling output files
 
     std::thread* thread_ = nullptr;
     std::mutex cache_mutex_;
@@ -656,10 +659,13 @@ public:
    */
   static constexpr int kDefaultMaxTreeSize =  4096;
 
+  static int next_instance_id_;  // for naming debug/profiling output files
+
   Mcts_(const Params& params);
   Mcts_() : Mcts_(global_params_) {}
   ~Mcts_();
 
+  int instance_id() const { return instance_id_; }
   const Params& params() const { return params_; }
   int num_search_threads() const { return params_.num_search_threads; }
   bool search_active() const { return search_active_; }
@@ -690,6 +696,7 @@ private:
   Eigen::Rand::P8_mt19937_64 rng_;
 
   const Params params_;
+  const int instance_id_;
   search_thread_vec_t search_threads_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 

@@ -20,6 +20,12 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts_<GameState, Tensorizor>::Params Mcts_<GameState, Tensorizor>::global_params_;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+int Mcts_<GameState, Tensorizor>::next_instance_id_ = 0;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+int Mcts_<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::add_options(boost::program_options::options_description& desc) {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -369,8 +375,8 @@ inline Mcts_<GameState, Tensorizor>::SearchThread::SearchThread(Mcts_* mcts, int
 : mcts_(mcts)
 , params_(mcts->params())
 , thread_id_(thread_id) {
-  auto profiling_filename = mcts->profiling_dir() / util::create_string("search%d.txt", thread_id);
-  init_profiling(profiling_filename.c_str(), util::create_string("s-%-2d", thread_id).c_str());
+  auto profiling_filename = mcts->profiling_dir() / util::create_string("search%d-%d.txt", mcts->instance_id(), thread_id);
+  init_profiling(profiling_filename.c_str(), util::create_string("s-%d-%-2d", mcts->instance_id(), thread_id).c_str());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -698,7 +704,8 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
     const boost::filesystem::path& net_filename, int batch_size, std::chrono::nanoseconds timeout_duration,
     size_t cache_size, const boost::filesystem::path& profiling_dir)
-: net_(net_filename)
+: instance_id_(next_instance_id_++)
+, net_(net_filename)
 , policy_batch_(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
 , value_batch_(batch_size, kNumPlayers, util::to_std_array<int>(batch_size, kNumPlayers))
 , input_batch_(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::Shape>))
@@ -711,8 +718,9 @@ inline Mcts_<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
-  auto profiling_filename = profiling_dir / "eval.txt";
-  init_profiling(profiling_filename.c_str(), "eval");
+  std::string name = util::create_string("eval-%d", instance_id_);
+  auto profiling_filename = profiling_dir / util::create_string("%s.txt", name.c_str());
+  init_profiling(profiling_filename.c_str(), name.c_str());
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -891,7 +899,9 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::dump_profiling_stats() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
-: params_(params) {
+: params_(params)
+, instance_id_(next_instance_id_++)
+{
   namespace bf = boost::filesystem;
 
   if (kEnableProfiling) {
