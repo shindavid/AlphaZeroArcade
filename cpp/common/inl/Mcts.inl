@@ -185,11 +185,9 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline typename Mcts_<GameState, Tensorizor>::GlobalPolicyCountDistr
 Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 {
-  bool eliminated;
-  {
-    std::lock_guard<std::mutex> guard(stats_mutex_);
-    eliminated = stats_.eliminated_;
-  }
+  std::unique_lock<std::mutex> lock(stats_mutex_);
+  bool eliminated = stats_.eliminated_;
+  lock.unlock();
 
   Node* first_child;
   int num_children;
@@ -216,12 +214,11 @@ Mcts_<GameState, Tensorizor>::Node::get_effective_counts() const
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& outcome)
 {
-  {
-    std::lock_guard<std::mutex> guard(stats_mutex_);
-    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + outcome) / (stats_.count_ + 1);
-    stats_.count_++;
-    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-  }
+  std::unique_lock<std::mutex> lock(stats_mutex_);
+  stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + outcome) / (stats_.count_ + 1);
+  stats_.count_++;
+  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  lock.unlock();
 
   if (parent()) parent()->backprop(outcome);
 }
@@ -230,63 +227,51 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
     const ValueProbDistr& value)
 {
-  {
-    std::lock_guard<std::mutex> guard(stats_mutex_);
-    stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
-    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-  }
+  std::unique_lock<std::mutex> lock(stats_mutex_);
+  stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
+  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  lock.unlock();
 
   if (parent()) parent()->backprop_with_virtual_undo(value);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::virtual_backprop() {
-  {
-    std::lock_guard<std::mutex> guard(stats_mutex_);
-    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + make_virtual_loss()) / (stats_.count_ + 1);
-    stats_.count_++;
-    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-  }
+  std::unique_lock<std::mutex> lock(stats_mutex_);
+  stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + make_virtual_loss()) / (stats_.count_ + 1);
+  stats_.count_++;
+  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  lock.unlock();
+
   if (parent()) parent()->virtual_backprop();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts_<GameState, Tensorizor>::Node::undo_virtual_backprop() {
-  {
-    std::lock_guard<std::mutex> guard(stats_mutex_);
-    stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ - make_virtual_loss()) / std::max(1, stats_.count_ - 1);
-    stats_.count_--;
-    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-  }
-  if (parent()) parent()->undo_virtual_backprop();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::Node::perform_eliminations(const ValueProbDistr& outcome) {
-  bool recurse = false;
-  {
-    // TODO: tighten mutex grabs
-    std::lock_guard<std::mutex> guard(stats_mutex_);
+  Node* first_child;
+  int num_children;
+  children_data_.read(&first_child, &num_children);
 
-    Node* first_child;
-    int num_children;
-    children_data_.read(&first_child, &num_children);
-
-    player_index_t cp = _current_player();
-    for (player_index_t p = 0; p < kNumPlayers; ++p) {
-      if (p == cp) {
-        stats_.V_floor_[p] = _get_max_V_floor_among_children(p, first_child, num_children);
-      } else {
-        stats_.V_floor_[p] = _get_min_V_floor_among_children(p, first_child, num_children);
-      }
-    }
-
-    stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-    if (_can_be_eliminated()) {
-      stats_.eliminated_ = true;
-      recurse = parent();
+  ValueArray1D V_floor;
+  player_index_t cp = _current_player();
+  for (player_index_t p = 0; p < kNumPlayers; ++p) {
+    if (p == cp) {
+      V_floor[p] = _get_max_V_floor_among_children(p, first_child, num_children);
+    } else {
+      V_floor[p] = _get_min_V_floor_among_children(p, first_child, num_children);
     }
   }
+
+  bool recurse = false;
+
+  std::unique_lock<std::mutex> lock(stats_mutex_);
+  stats_.V_floor_ = V_floor;
+  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  if (_can_be_eliminated()) {
+    stats_.eliminated_ = true;
+    recurse = parent();
+  }
+  lock.unlock();
 
   if (recurse) {
     parent()->perform_eliminations(outcome);
@@ -321,7 +306,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::Node::_lazy_init() {
   new(&lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
 
-  std::unique_lock<std::mutex> lock(evaluation_data_mutex());  // TODO: remove me? Don't think this is needed
+  std::unique_lock<std::mutex> lock(evaluation_data_mutex());
   new(&evaluation_data_) evaluation_data_t(_valid_action_mask());
 }
 
@@ -613,7 +598,7 @@ Mcts_<GameState, Tensorizor>::SearchThread::get_best_child(
 
   for (int c = 0; c < tree->_num_children(); ++c) {
     Node* child = tree->_get_child(c);
-    record_for_profiling(kWaitingForStatsMutex);
+    record_for_profiling(kAcquiringStatsMutex);
     std::lock_guard<std::mutex> guard(child->stats_mutex());
     record_for_profiling(kPUCT);
 
@@ -750,31 +735,29 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reque
   thread->record_for_profiling(SearchThread::kCheckingCache);
   cache_key_t key{state, inv_temp, sym_index};
 
-  {
-    std::lock_guard<std::mutex> guard(cache_mutex_);
-    auto cached = cache_.get(key);
-    if (cached.has_value()) {
-      cache_hits_++;
-      return Response{cached.value(), true};
-    }
+  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
+  auto cached = cache_.get(key);
+  if (cached.has_value()) {
+    cache_hits_++;
+    return Response{cached.value(), true};
   }
+  cache_lock.unlock();
   cache_misses_++;
 
-  int my_index;
-  {
-    thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
-    std::unique_lock<std::mutex> lock(batch_mutex_);
-    thread->record_for_profiling(SearchThread::kWaitingUntilBatchReservable);
-    cv_evaluate_.wait(lock, [&]{ return batch_reservable(); });
-    thread->record_for_profiling(SearchThread::kMisc);
+  thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
+  std::unique_lock<std::mutex> batch_lock(batch_mutex_);
 
-    my_index = batch_reserve_index_;
-    assert(my_index < batch_size_limit_);
-    batch_reserve_index_++;
-    if (my_index == 0) {
-      deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
-    }
+  thread->record_for_profiling(SearchThread::kWaitingUntilBatchReservable);
+  cv_evaluate_.wait(batch_lock, [&]{ return batch_reservable(); });
+
+  thread->record_for_profiling(SearchThread::kMisc);
+  int my_index = batch_reserve_index_;
+  assert(my_index < batch_size_limit_);
+  batch_reserve_index_++;
+  if (my_index == 0) {
+    deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
   }
+  batch_lock.unlock();
   cv_service_loop_.notify_one();
 
   /*
@@ -799,25 +782,22 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reque
   evaluation_data_batch_[my_index].transform = transform;
   evaluation_data_batch_[my_index].inv_temp = inv_temp;
 
-  {
-    thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
-    std::unique_lock<std::mutex> lock(batch_mutex_);
-    batch_commit_count_++;
-  }
+  thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
+  std::unique_lock<std::mutex> lock(batch_mutex_);
+  batch_commit_count_++;
+  lock.unlock();
   cv_service_loop_.notify_one();
 
-  NNEvaluation_sptr eval_ptr;
-  {
-    thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
-    std::unique_lock<std::mutex> lock(batch_mutex_);
-    if (single_threaded) batch_evaluate();
-    thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
-    cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
+  thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
+  lock.lock();
+  if (single_threaded) batch_evaluate();
+  thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
+  cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
 
-    eval_ptr = evaluation_data_batch_[my_index].eval_ptr.load();
-    assert(batch_unread_count_ > 0);
-    batch_unread_count_--;
-  }
+  NNEvaluation_sptr eval_ptr = evaluation_data_batch_[my_index].eval_ptr.load();
+  assert(batch_unread_count_ > 0);
+  batch_unread_count_--;
+  lock.unlock();
 
   // NOTE: might be able to notify_one(), if we add another notify_one() after the batch_reserve_index_++
   cv_evaluate_.notify_all();
@@ -856,14 +836,13 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   }
 
   record_for_profiling(kAcquiringCacheMutex);
-  {
-    std::lock_guard<std::mutex> guard(cache_mutex_);
-    record_for_profiling(kFinishingUp);
-    for (int i = 0; i < batch_reserve_index_; ++i) {
-      const evaluation_data_t &edata = evaluation_data_batch_[i];
-      cache_.insert(edata.cache_key, edata.eval_ptr);
-    }
+  std::unique_lock<std::mutex> lock(cache_mutex_);
+  record_for_profiling(kFinishingUp);
+  for (int i = 0; i < batch_reserve_index_; ++i) {
+    const evaluation_data_t &edata = evaluation_data_batch_[i];
+    cache_.insert(edata.cache_key, edata.eval_ptr);
   }
+  lock.unlock();
 
   batch_unread_count_ = batch_commit_count_;
   batch_reserve_index_ = 0;

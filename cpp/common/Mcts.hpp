@@ -191,7 +191,6 @@ private:
     void backprop(const ValueProbDistr& value);
     void backprop_with_virtual_undo(const ValueProbDistr& value);
     void virtual_backprop();
-    void undo_virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
     ValueArray1D make_virtual_loss() const;
     void mark_as_fully_analyzed();
@@ -369,7 +368,7 @@ private:
       kVirtualBackprop = 12,
       kConstructingChildren = 13,
       kPUCT = 14,
-      kWaitingForStatsMutex = 15,
+      kAcquiringStatsMutex = 15,
       kBackpropEvaluation = 16,
       kMarkFullyAnalyzed = 17,
       kEvaluateAndExpand = 18,
