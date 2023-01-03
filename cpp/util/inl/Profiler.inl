@@ -35,11 +35,18 @@ void Profiler<NumRegions, Verbose>::dump(FILE* file, int count, const char* name
   if (++count_ < count) return;
   fprintf(file, "%s dump n=%d\n", name, count_);
   double inv_count = 1.0 / count_;
+  int64_t ns_total = 0;
+  for (int r = 0; r < kNumRegions; ++r) {
+    int64_t ns = durations_[r].count();
+    ns_total += ns;
+  }
+  double inv_ns_total = ns_total ? 1.0 / ns_total : 1;
   for (int r = 0; r < kNumRegions; ++r) {
     int64_t ns = durations_[r].count();
     if (!ns) continue;
     double avg_ns = ns * inv_count;
-    fprintf(file, "%2d %.f\n", r, avg_ns);
+    double pct = 100.0 * ns * inv_ns_total;
+    fprintf(file, "%2d %9.f %7.2f%%\n", r, avg_ns, pct);
   }
   clear();
 }
