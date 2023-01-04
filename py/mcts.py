@@ -263,7 +263,7 @@ class MCTS:
         self.n_players = n_players
         self.root: Optional[Tree] = None
         self.cache: Dict[Any, StateEvaluation] = {}
-        self.debug_tree = GameTree() if not debug_filename else None
+        self.debug_tree = GameTree() if debug_filename else None
         self.player_index: Optional[PlayerIndex] = None
 
     def clear(self):
@@ -337,7 +337,7 @@ class MCTS:
         if result is not None and self.debug_tree:
             self.debug_tree.moves.add(board = state.compact_repr())
             # Write the new address book back to disk.
-            with open(sys.argv[1], "wb") as f:
+            with open(self.debug_filename, "wb") as f:
                 f.write(self.debug_tree.SerializeToString())
             self.debug_filename = None
             self.debug_tree = None
@@ -348,9 +348,9 @@ class MCTS:
         if self.player_index is None:
             self.player_index = state.get_current_player()
             if self.debug_tree is not None:
-                self.debug_tree.player = self.player_index
+                self.debug_tree.player = str(self.player_index)
         move_tree = None
-        if self.debug_tree is not None:
+        if self.debug_tree:
             move_tree = self.debug_tree.moves
             move_tree.add(board=state.compact_repr())
 
@@ -364,10 +364,10 @@ class MCTS:
         i = 0
         while self.root.effective_count() <= params.treeSizeLimit and not self.root.eliminated:
             # Make sure the number of iterations does not go over int32
-            debug_subtree = None 
+            debug_subtree = None
             if move_tree is not None:
-                move_tree.subtrees.add(i=i)
-                debug_subtree = move_tree.subtrees[-1]
+                move_tree[-1].subtrees.add(i=i)
+                debug_subtree = move_tree[-1].subtrees[-1]
             i += 1
             self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=debug_subtree)
             if not tensorizor.supports_undo():

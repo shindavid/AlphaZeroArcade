@@ -21,6 +21,8 @@ message Visit{
     string eval = 5;
     string value_avg = 6;
     string leaf = 7;
+    string action = 8;
+    string terminal = 9;
 }
 
 message GameSubtree{
