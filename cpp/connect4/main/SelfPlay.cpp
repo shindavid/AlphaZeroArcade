@@ -86,6 +86,8 @@ public:
     return win_loss_draw_;
   }
 
+  win_loss_draw_array_t win_loss_draw() const { return win_loss_draw_; }
+
 private:
   std::mutex mutex_;
   int num_games_started_ = 0;
@@ -187,7 +189,13 @@ public:
 
     float avg_batch_size = threads_[0]->avg_batch_size();
 
+    auto win_loss_draw = shared_data_.win_loss_draw();
+    int win = win_loss_draw[0];
+    int loss = win_loss_draw[1];
+    int draw = win_loss_draw[2];
+
     printf("\nSelf-play complete!\n");
+    printf("W%d L%d D%d\n", win, loss, draw);
     printf("Parallelism factor:  %6d\n", parallelism_factor);
     printf("Num games:           %6d\n", args_.num_games);
     printf("MCTS iters:          %6d\n", args_.num_mcts_iters);
