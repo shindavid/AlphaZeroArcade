@@ -263,7 +263,7 @@ class MCTS:
         self.n_players = n_players
         self.root: Optional[Tree] = None
         self.cache: Dict[Any, StateEvaluation] = {}
-        self.debug_tree = GameTree if not debug_filename else None
+        self.debug_tree = GameTree() if not debug_filename else None
         self.player_index: Optional[PlayerIndex] = None
 
     def clear(self):
