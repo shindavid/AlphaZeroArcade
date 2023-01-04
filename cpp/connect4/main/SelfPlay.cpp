@@ -235,8 +235,8 @@ int main(int ac, char* av[]) {
   desc.add_options()
       ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
-      ("num-games,g", po::value<int>(&args.num_games)->default_value(100), "num games to simulate")
-      ("parallelism-factor,P", po::value<int>(&args.parallelism_factor)->default_value(120), "num games to play in parallel")
+      ("num-games,g", po::value<int>(&args.num_games)->default_value(1000), "num games to simulate")
+      ("parallelism-factor,P", po::value<int>(&args.parallelism_factor)->default_value(100), "num games to play in parallel")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
       ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect")
       ;
