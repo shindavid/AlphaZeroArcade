@@ -684,6 +684,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::create(const Mcts_* mcts) {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::connect() {
+  std::lock_guard<std::mutex> guard(connection_mutex_);
   num_connections_++;
   if (thread_) return;
   thread_ = new std::thread([&] { this->loop(); });
@@ -765,6 +766,7 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reque
   if (my_index == 0) {
     deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
   }
+  assert(batch_commit_count_ < batch_reserve_index_);
   batch_lock.unlock();
   cv_service_loop_.notify_one();
 
@@ -776,7 +778,6 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reque
    *
    * The significance of not yet being committed is that the service thread won't yet proceed with nnet eval.
    */
-  assert(batch_commit_count_ < batch_reserve_index_);
   thread->record_for_profiling(SearchThread::kTensorizing);
 
   auto& input = input_batch_.template eigenSlab<typename TensorizorTypes::Shape>(my_index);

@@ -624,6 +624,7 @@ private:
 
     std::thread* thread_ = nullptr;
     std::mutex cache_mutex_;
+    std::mutex connection_mutex_;
     std::mutex batch_mutex_;
     std::condition_variable cv_service_loop_;
     std::condition_variable cv_evaluate_;
