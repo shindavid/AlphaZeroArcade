@@ -1,6 +1,16 @@
+/*
+ * TODO: replace all hard-coded c4 classes/functions here with macro values. Then, have the build.py process accept
+ * a python file that specifies the game name, along with other relevant metadata (like filesystem paths to the relevant
+ * c++ code). The build.py process can then import that file, and pass the macro values to cmake, ultimately causing
+ * this file to get compiled to a game-specific binary.
+ */
+#include <array>
 #include <chrono>
 #include <iostream>
+#include <mutex>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include <boost/program_options.hpp>
 
@@ -27,6 +37,7 @@ using Mcts = common::Mcts_<c4::GameState, c4::Tensorizor>;
 using player_array_t = std::array<Player*, c4::kNumPlayers>;
 using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 using duration_t = std::chrono::nanoseconds;
+using win_loss_draw_array_t = std::array<int, 3>;
 
 C4NNetPlayer* create_nnet_player(const Args& args) {
   C4NNetPlayer::Params params;
@@ -50,74 +61,147 @@ c4::PerfectPlayer* create_perfect_player(const Args& args) {
   return new c4::PerfectPlayer(params);
 }
 
-class SelfPlay {
+class SharedSelfPlayData {
 public:
-  SelfPlay(C4NNetPlayer* p1, Player* p2)
-  : p1_(p1)
-  , p2_(p2)
-  {
-    players_[c4::kRed] = p1;
-    players_[c4::kYellow] = p2;
+  bool request_game(int num_games) {
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (num_games_started_ >= num_games) return false;
+    num_games_started_++;
+    return true;
   }
 
-  void run(int num_games, int parallelism_factor) {
-    for (int i = 0; i < num_games; ++i) {
-      common::GameRunner<c4::GameState> runner(players_);
-      time_point_t t1 = std::chrono::steady_clock::now();
-      auto outcome = runner.run();
-      time_point_t t2 = std::chrono::steady_clock::now();
-      if (outcome[c4::kRed] == 1) {
-        win_++;
-      } else if (outcome[c4::kYellow] == 1) {
-        loss_++;
-      } else {
-        draw_++;
-      }
-
-      duration_t duration = t2 - t1;
-      int64_t ns = duration.count();
-      total_ns_ += ns;
-      min_ns_ = std::min(min_ns_, ns);
-      max_ns_ = std::max(max_ns_, ns);
-
-      int cache_hits;
-      int cache_misses;
-      int cache_size;
-      float hash_balance_factor;
-      p1_->get_cache_stats(cache_hits, cache_misses, cache_size, hash_balance_factor);
-      int cur_cache_hits = cache_hits - last_cache_hits_;
-      int cur_cache_misses = cache_misses - last_cache_misses_;
-      float cache_hit_rate = cur_cache_hits * 1.0 / std::max(1, cur_cache_hits + cur_cache_misses);
-      last_cache_hits_ = cache_hits;
-      last_cache_misses_ = cache_misses;
-      int wasted_evals = cache_misses - cache_size;  // assumes cache large enough that no evictions
-      double ms = ns * 1e-6;
-
-      printf("W%d L%d D%d | cache:[%.2f%% %d %d %.3f] | %.3fms", win_, loss_, draw_, 100 * cache_hit_rate,
-             wasted_evals, cache_size, hash_balance_factor, ms);
-      std::cout << std::endl;
+  template<typename T> auto update(const T& outcome, int64_t ns) {
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (outcome[c4::kRed] == 1) {
+      win_loss_draw_[0]++;
+    } else if (outcome[c4::kYellow] == 1) {
+      win_loss_draw_[1]++;
+    } else {
+      win_loss_draw_[2]++;
     }
 
-    printf("Avg runtime: %.3fs\n", 1e-9 * total_ns_ / num_games);
-    printf("Max runtime: %.3fs\n", 1e-9 * max_ns_);
-    printf("Min runtime: %.3fs\n", 1e-9 * min_ns_);
+    total_ns_ += ns;
+    min_ns_ = std::min(min_ns_, ns);
+    max_ns_ = std::max(max_ns_, ns);
+    return win_loss_draw_;
   }
 
 private:
+  std::mutex mutex_;
+  int num_games_started_ = 0;
+
+  win_loss_draw_array_t win_loss_draw_ = {};
+  int64_t total_ns_ = 0;
+  int64_t min_ns_ = std::numeric_limits<int64_t>::max();
+  int64_t max_ns_ = 0;
+};
+
+class SelfPlayThread {
+public:
+  SelfPlayThread(const Args& args, SharedSelfPlayData& shared_data)
+  : args_(args)
+  , shared_data_(shared_data)
+  {
+    p1_ = create_nnet_player(args_);
+    p2_ = args_.perfect ? (Player*) create_perfect_player(args_) : (Player*) create_nnet_player(args_);
+
+    players_[c4::kRed] = p1_;
+    players_[c4::kYellow] = p2_;
+  }
+
+  ~SelfPlayThread() {
+    if (thread_) delete thread_;
+    delete p1_;
+    delete p2_;
+  }
+  void join() { if (thread_ && thread_->joinable()) thread_->join(); }
+  void launch() { thread_ = new std::thread([&] { run(); }); }
+
+private:
+  void run() {
+    while (true) {
+      if (!shared_data_.request_game(args_.num_games)) return;
+      play_game();
+    }
+  }
+
+  void play_game() {
+    common::GameRunner<c4::GameState> runner(players_);
+    time_point_t t1 = std::chrono::steady_clock::now();
+    auto outcome = runner.run();
+    time_point_t t2 = std::chrono::steady_clock::now();
+    duration_t duration = t2 - t1;
+    int64_t ns = duration.count();
+    auto cumulative_win_loss_draw = shared_data_.update(outcome, ns);
+
+    int cache_hits;
+    int cache_misses;
+    int cache_size;
+    float hash_balance_factor;
+    p1_->get_cache_stats(cache_hits, cache_misses, cache_size, hash_balance_factor);
+    float cache_hit_rate = cache_hits * 1.0 / std::max(1, cache_hits + cache_misses);
+    double ms = ns * 1e-6;
+
+    int win = cumulative_win_loss_draw[0];
+    int loss = cumulative_win_loss_draw[1];
+    int draw = cumulative_win_loss_draw[2];
+
+    printf("W%d L%d D%d | cache:[%.2f%% %d %.f] | %.3fms\n", win, loss, draw, 100 * cache_hit_rate,
+           cache_size, hash_balance_factor, ms);
+    std::flush(std::cout);
+  }
+
+  const Args& args_;
+  SharedSelfPlayData& shared_data_;
   C4NNetPlayer* p1_;
   Player* p2_;
   player_array_t players_;
 
-  int win_ = 0;
-  int loss_ = 0;
-  int draw_ = 0;
+  std::thread* thread_ = nullptr;
+};
 
-  int64_t total_ns_ = 0;
-  int64_t min_ns_ = std::numeric_limits<int64_t>::max();
-  int64_t max_ns_ = 0;
+class SelfPlay {
+public:
+  SelfPlay(const Args& args) : args_(args) {}
 
-  int last_cache_hits_ = 0;
-  int last_cache_misses_ = 0;
+  void run() {
+    int parallelism_factor = args_.parallelism_factor;
+    for (int p = 0; p < parallelism_factor; ++p) {
+      threads_.push_back(new SelfPlayThread(args_, shared_data_));
+    }
+
+    time_point_t t1 = std::chrono::steady_clock::now();
+
+    for (auto thread : threads_) {
+      thread->launch();
+    }
+
+    for (auto thread : threads_) {
+      thread->join();
+    }
+
+    time_point_t t2 = std::chrono::steady_clock::now();
+    duration_t duration = t2 - t1;
+    int64_t ns = duration.count();
+
+    printf("\nSelf-play complete!\n");
+    printf("Parallelism factor:  %6d\n", parallelism_factor);
+    printf("Num games:           %6d\n", args_.num_games);
+    printf("MCTS iters:          %6d\n", args_.num_mcts_iters);
+    printf("MCTS batch size:     %6d\n", Mcts::global_params_.batch_size_limit);
+    printf("MCTS search threads: %6d\n", Mcts::global_params_.num_search_threads);
+    printf("Total runtime:  %10.3fs\n", ns*1e-9);
+    printf("Avg runtime:    %10.3fs\n", ns*1e-9 / args_.num_games);
+
+    for (auto thread: threads_) {
+      delete thread;
+    }
+  }
+
+private:
+  const Args& args_;
+  std::vector<SelfPlayThread*> threads_;
+  SharedSelfPlayData shared_data_;
 };
 
 int main(int ac, char* av[]) {
@@ -150,13 +234,8 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  C4NNetPlayer* p1 = create_nnet_player(args);
-  Player* p2 = args.perfect ? (Player*) create_perfect_player(args) : (Player*) create_nnet_player(args);
+  SelfPlay self_play(args);
+  self_play.run();
 
-  SelfPlay self_play(p1, p2);
-  self_play.run(args.num_games, args.parallelism_factor);
-
-  delete p1;
-  delete p2;
   return 0;
 }
