@@ -95,6 +95,7 @@ public:
     float dirichlet_mult = 0.25;
     float dirichlet_alpha = 0.03;
     bool allow_eliminations = true;
+    bool speculative_evals = false;
 #ifdef PROFILE_MCTS
     std::string profiling_dir;
 #endif  // PROFILE_MCTS
@@ -553,6 +554,7 @@ private:
     void batch_evaluate();
     void loop();
 
+    bool active() const { return num_connections_; }
     bool all_batch_reservations_committed() const { return batch_reserve_index_ == batch_commit_count_; }
     bool batch_reservations_full() const { return batch_reserve_index_ == batch_size_limit_; }
     bool batch_reservations_empty() const { return batch_reserve_index_ == 0; }

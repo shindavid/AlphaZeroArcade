@@ -60,6 +60,8 @@ void Mcts_<GameState, Tensorizor>::add_options(boost::program_options::options_d
       ("mcts-dirichlet-alpha", po2::float_value("%.2f", &params.dirichlet_alpha), "dirichlet alpha")
       ("mcts-allow-eliminations", po::bool_switch(&params.allow_eliminations)->default_value(
           params.allow_eliminations), "allow eliminations")
+      ("mcts-speculative-evals", po::bool_switch(&params.speculative_evals)->default_value(
+          params.speculative_evals), "speculative evals")
 #ifdef PROFILE_MCTS
       ("mcts-profiling-dir", po::value<std::string>(&params.profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
@@ -487,6 +489,7 @@ Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool
     }
     case Node::kPending:
     {
+      assert(params_.speculative_evals);
       evaluate_and_expand_pending(tree, &lock);
       assert(!lock.owns_lock());
       if (!speculative) {
@@ -515,31 +518,35 @@ void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   expand_children(tree);
   data->performed_expansion = true;
   assert(data->evaluation.get() == nullptr);
-  tree->_set_evaluation_state(Node::kPending);
-  lock->unlock();
 
-  symmetry_index_t sym_index = tree->_sym_index();
-  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
+  if (params_.speculative_evals) {
+    tree->_set_evaluation_state(Node::kPending);
+    lock->unlock();
+  }
 
   if (!speculative) {
     record_for_profiling(kVirtualBackprop);
     tree->virtual_backprop();
   }
 
+  symmetry_index_t sym_index = tree->_sym_index();
+  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
   typename NNEvaluationService::Request request{
-    this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index, inv_temp,
-    mcts_->num_search_threads() == 1
+      this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index, inv_temp,
+      mcts_->num_search_threads() == 1
   };
   auto response = mcts_->nn_eval_service()->evaluate(request);
   data->evaluation = response.ptr;
 
-  if (speculative && response.used_cache) {
-    // without this, when we hit cache, we fail to saturate nn service batch
-    lock->lock();
-    evaluate_and_expand_pending(tree, lock);
-  }
+  if (params_.speculative_evals) {
+    if (speculative && response.used_cache) {
+      // without this, when we hit cache, we fail to saturate nn service batch
+      lock->lock();
+      evaluate_and_expand_pending(tree, lock);
+    }
 
-  lock->lock();
+    lock->lock();
+  }
   tree->_set_evaluation(data->evaluation);
   tree->_set_evaluation_state(Node::kSet);
 }
@@ -862,7 +869,7 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::loop() {
-  while (num_connections_) {
+  while (active()) {
     record_for_profiling(kAcquiringBatchMutex);
     std::unique_lock<std::mutex> lock(batch_mutex_);
 
