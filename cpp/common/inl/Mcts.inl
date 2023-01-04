@@ -699,11 +699,13 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::connect() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::disconnect() {
+  std::lock_guard<std::mutex> guard(connection_mutex_);
   if (thread_) {
     num_connections_--;
     if (num_connections_ > 0) return;
     if (thread_->joinable()) thread_->detach();
     delete thread_;
+    thread_ = nullptr;
   }
   close_profiling_file();
 }
