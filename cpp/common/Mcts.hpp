@@ -493,7 +493,6 @@ private:
       const ActionMask* valid_action_mask;
       symmetry_index_t sym_index;
       float inv_temp;
-      bool single_threaded;
     };
 
     struct Response {

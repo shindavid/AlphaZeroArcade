@@ -533,8 +533,7 @@ void Mcts_<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   symmetry_index_t sym_index = tree->_sym_index();
   float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
   typename NNEvaluationService::Request request{
-      this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index, inv_temp,
-      mcts_->num_search_threads() == 1
+      this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index, inv_temp
   };
   auto response = mcts_->nn_eval_service()->evaluate(request);
   data->evaluation = response.ptr;
@@ -749,7 +748,6 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reque
   const ActionMask& valid_action_mask = *request.valid_action_mask;
   symmetry_index_t sym_index = request.sym_index;
   float inv_temp = request.inv_temp;
-  bool single_threaded = request.single_threaded;
 
   thread->record_for_profiling(SearchThread::kCheckingCache);
   cache_key_t key{state, inv_temp, sym_index};
@@ -809,7 +807,6 @@ Mcts_<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reque
 
   thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
   lock.lock();
-  if (single_threaded) batch_evaluate();
   thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
   cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
 
@@ -932,9 +929,6 @@ inline Mcts_<GameState, Tensorizor>::Mcts_(const Params& params)
   if (params.run_offline && num_search_threads() == 1) {
     throw util::Exception("run_offline does not work with only 1 search thread");
   }
-  if (kEnableProfiling && num_search_threads() == 1) {
-    throw util::Exception("Profiling mode assumes >1 search thread");
-  }
   for (int i = 0; i < num_search_threads(); ++i) {
     search_threads_.push_back(new SearchThread(this, i));
   }
@@ -952,10 +946,6 @@ inline Mcts_<GameState, Tensorizor>::~Mcts_() {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::start() {
   clear();
-
-  if (num_search_threads() == 1) {  // do everything in main-thread
-    return;
-  }
 
   if (!connected_) {
     nn_eval_service_->connect();
@@ -1046,12 +1036,6 @@ inline void Mcts_<GameState, Tensorizor>::start_search_threads(int tree_size_lim
   search_active_ = true;
   num_active_search_threads_ = num_search_threads();
 
-  if (num_search_threads() == 1) {
-    // do everything in main thread
-    run_search(search_threads_[0], tree_size_limit);
-    return;
-  }
-
   for (auto* thread : search_threads_) {
     thread->launch(tree_size_limit);
   }
@@ -1060,7 +1044,6 @@ inline void Mcts_<GameState, Tensorizor>::start_search_threads(int tree_size_lim
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::wait_for_search_threads() {
   assert(search_active_);
-  if (num_search_threads() == 1) return;
 
   for (auto* thread : search_threads_) {
     thread->join();
@@ -1070,7 +1053,6 @@ inline void Mcts_<GameState, Tensorizor>::wait_for_search_threads() {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::stop_search_threads() {
   search_active_ = false;
-  if (num_search_threads() == 1) return;
 
   std::unique_lock<std::mutex> lock(search_mutex_);
   cv_search_.wait(lock, [&]{ return num_active_search_threads_ == 0; });
