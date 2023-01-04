@@ -862,6 +862,9 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   }
   lock.unlock();
 
+  evaluated_positions_ += batch_reserve_index_;
+  batches_evaluated_++;
+
   batch_unread_count_ = batch_commit_count_;
   batch_reserve_index_ = 0;
   batch_commit_count_ = 0;

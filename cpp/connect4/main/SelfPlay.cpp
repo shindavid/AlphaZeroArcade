@@ -116,6 +116,7 @@ public:
   }
   void join() { if (thread_ && thread_->joinable()) thread_->join(); }
   void launch() { thread_ = new std::thread([&] { run(); }); }
+  float avg_batch_size() const { return p1_->avg_batch_size(); }
 
 private:
   void run() {
@@ -184,12 +185,15 @@ public:
     duration_t duration = t2 - t1;
     int64_t ns = duration.count();
 
+    float avg_batch_size = threads_[0]->avg_batch_size();
+
     printf("\nSelf-play complete!\n");
     printf("Parallelism factor:  %6d\n", parallelism_factor);
     printf("Num games:           %6d\n", args_.num_games);
     printf("MCTS iters:          %6d\n", args_.num_mcts_iters);
-    printf("MCTS batch size:     %6d\n", Mcts::global_params_.batch_size_limit);
     printf("MCTS search threads: %6d\n", Mcts::global_params_.num_search_threads);
+    printf("MCTS max batch size: %6d\n", Mcts::global_params_.batch_size_limit);
+    printf("MCTS avg batch size: %6.2f\n", avg_batch_size);
     printf("Total runtime:  %10.3fs\n", ns*1e-9);
     printf("Avg runtime:    %10.3fs\n", ns*1e-9 / args_.num_games);
 

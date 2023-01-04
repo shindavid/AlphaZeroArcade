@@ -545,6 +545,10 @@ private:
 
     void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
+    int64_t evaluated_positions() const { return evaluated_positions_; }
+    int64_t batches_evaluated() const { return batches_evaluated_; }
+    float avg_batch_size() const { return evaluated_positions() * 1.0 / std::max(int64_t(1), batches_evaluated()); }
+
   private:
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
                         std::chrono::nanoseconds timeout_duration, size_t cache_size,
@@ -653,6 +657,8 @@ private:
 
     int cache_hits_ = 0;
     int cache_misses_ = 0;
+    int64_t evaluated_positions_ = 0;
+    int64_t batches_evaluated_ = 0;
   };
 
 public:
@@ -685,6 +691,7 @@ public:
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
+  float avg_batch_size() const { return nn_eval_service_->avg_batch_size(); }
 
 #ifdef PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return boost::filesystem::path(params_.profiling_dir); }
