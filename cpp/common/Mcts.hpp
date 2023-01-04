@@ -708,6 +708,7 @@ private:
   std::condition_variable cv_search_;
   int num_active_search_threads_ = 0;
   bool search_active_ = false;
+  bool connected_ = false;
 };
 
 }  // namespace common

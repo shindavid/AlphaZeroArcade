@@ -10,11 +10,18 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params)
+inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params, Mcts* mcts)
   : base_t("CPU")
   , params_(params)
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 {
+  if (mcts) {
+    mcts_ = mcts;
+    owns_mcts_ = false;
+  } else {
+    mcts_ = new Mcts();
+    owns_mcts_ = true;
+  }
   sim_params_.tree_size_limit = params.num_mcts_iters;
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
@@ -26,6 +33,7 @@ inline NNetPlayer<GameState_, Tensorizor_>::~NNetPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
+  if (owns_mcts_) delete mcts_;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -34,7 +42,9 @@ inline void NNetPlayer<GameState_, Tensorizor_>::start_game(
 {
   my_index_ = seat_assignment;
   tensorizor_.clear();
-  mcts_.start();
+  if (owns_mcts_) {
+    mcts_->start();
+  }
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -42,7 +52,9 @@ inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
   tensorizor_.receive_state_change(state, action);
-  mcts_.receive_state_change(player, state, action, outcome);
+  if (owns_mcts_) {
+    mcts_->receive_state_change(player, state, action, outcome);
+  }
   if (my_index_ == player && params_.verbose) {
     verbose_dump();
   }
@@ -52,7 +64,7 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  auto results = mcts_.sim(tensorizor_, state, sim_params_);
+  auto results = mcts_->sim(tensorizor_, state, sim_params_);
   GlobalPolicyProbDistr policy = results->counts.template cast<float>();
   if (inv_temperature_) {
     policy = policy.pow(inv_temperature_);
@@ -80,7 +92,7 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void NNetPlayer<GameState_, Tensorizor_>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
-  mcts_.get_cache_stats(hits, misses, size, hash_balance_factor);
+  mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

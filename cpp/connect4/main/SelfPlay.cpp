@@ -39,12 +39,12 @@ using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 using duration_t = std::chrono::nanoseconds;
 using win_loss_draw_array_t = std::array<int, 3>;
 
-C4NNetPlayer* create_nnet_player(const Args& args) {
+C4NNetPlayer* create_nnet_player(const Args& args, Mcts* mcts=nullptr) {
   C4NNetPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
   params.temperature = 0;
   params.verbose = args.verbose;
-  auto player = new C4NNetPlayer(params);
+  auto player = new C4NNetPlayer(params, mcts);
   player->set_name(util::create_string("MCTS-m%d", args.num_mcts_iters));
   return player;
 }
@@ -105,7 +105,11 @@ public:
   , shared_data_(shared_data)
   {
     p1_ = create_nnet_player(args_);
-    p2_ = args_.perfect ? (Player*) create_perfect_player(args_) : (Player*) create_nnet_player(args_);
+    if (args_.perfect) {
+      p2_ = create_perfect_player(args_);
+    } else {
+      p2_ = create_nnet_player(args_, p1_->get_mcts());  // shared mcts tree
+    }
 
     players_[c4::kRed] = p1_;
     players_[c4::kYellow] = p2_;

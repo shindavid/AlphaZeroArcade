@@ -957,7 +957,10 @@ inline void Mcts_<GameState, Tensorizor>::start() {
     return;
   }
 
-  nn_eval_service_->connect();
+  if (!connected_) {
+    nn_eval_service_->connect();
+    connected_ = true;
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
