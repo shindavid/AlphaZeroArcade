@@ -1012,6 +1012,10 @@ inline const typename Mcts_<GameState, Tensorizor>::MctsResults* Mcts_<GameState
   stop_search_threads();
 
   if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
+    if (root_) {
+      root_->_release();
+      delete root_;
+    }
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
     root_ = new Node(tensorizor, game_state, outcome, params.disable_noise);  // TODO: use memory pool
   }
