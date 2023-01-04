@@ -41,15 +41,6 @@ private:
   class SearchThread;
 
 public:
-  /*
-   * "Positions in the queue are evaluated by the neural network using a mini-batch size of 8"
-   *
-   * From page 26 of AlphaGoZero paper
-   *
-   * "https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
-   */
-  static constexpr int kDefaultBatchSize = 8;
-
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
   static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
 
@@ -83,11 +74,11 @@ public:
    */
   struct Params {
     std::string nnet_filename;
-    int num_search_threads = kDefaultBatchSize;
-    int batch_size_limit = kDefaultBatchSize;
+    int num_search_threads = 8;
+    int batch_size_limit = 144;
     bool run_offline = false;
     int offline_tree_size_limit = 4096;
-    int64_t nn_eval_timeout_ns = util::us_to_ns(250);;
+    int64_t nn_eval_timeout_ns = util::us_to_ns(250);
     size_t cache_size = 1048576;
 
     float root_softmax_temperature = 1.03;
