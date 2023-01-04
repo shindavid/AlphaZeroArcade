@@ -58,11 +58,12 @@ void Mcts_<GameState, Tensorizor>::add_options(boost::program_options::options_d
       ("mcts-cpuct", po2::float_value("%.2f", &params.cPUCT), "cPUCT value")
       ("mcts-dirichlet-mult", po2::float_value("%.2f", &params.dirichlet_mult), "dirichlet mult")
       ("mcts-dirichlet-alpha", po2::float_value("%.2f", &params.dirichlet_alpha), "dirichlet alpha")
-      ("mcts-allow-eliminations", po::bool_switch(&params.allow_eliminations)->default_value(
-          params.allow_eliminations), "allow eliminations")
+      ("mcts-disable-eliminations", po::bool_switch(&params.disable_eliminations)->default_value(
+          params.disable_eliminations), "disable eliminations")
       ("mcts-speculative-evals", po::bool_switch(&params.speculative_evals)->default_value(
           params.speculative_evals), "speculative evals")
 #ifdef PROFILE_MCTS
+
       ("mcts-profiling-dir", po::value<std::string>(&params.profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
 #endif  // PROFILE_MCTS
@@ -460,7 +461,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts_<GameState, Tensorizor>::SearchThread::perform_eliminations(
     Node* tree, const ValueProbDistr& outcome)
 {
-  if (!params_.allow_eliminations) return;
+  if (params_.disable_eliminations) return;
   record_for_profiling(kPerformEliminations);
   tree->perform_eliminations(outcome);
 }
