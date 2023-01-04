@@ -306,7 +306,7 @@ class MCTS:
         if tree.action_index is not None:
             tree_dict['action'] = tree.action_index
         tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
-        debug_subtree.visits.add(tree_dict)
+        debug_subtree.visits.add(**tree_dict)
         for ac, rp, p, no, v, n, puct, e in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT, E):
             attribs = {
                 'action': ac,
@@ -366,8 +366,8 @@ class MCTS:
             # Make sure the number of iterations does not go over int32
             debug_subtree = None 
             if move_tree is not None:
-                move_tree.iterations.add(i=i)
-                debug_subtree = move_tree.iterations[-1]
+                move_tree.subtrees.add(i=i)
+                debug_subtree = move_tree.subtrees[-1]
             i += 1
             self.visit(self.root, tensorizor, state, params, 1, None, debug_subtree=debug_subtree)
             if not tensorizor.supports_undo():
