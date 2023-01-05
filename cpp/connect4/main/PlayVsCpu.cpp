@@ -23,7 +23,7 @@ struct Args {
   bool verbose;
 };
 
-using Mcts = common::Mcts_<c4::GameState, c4::Tensorizor>;
+using Mcts = common::Mcts<c4::GameState, c4::Tensorizor>;
 
 common::player_index_t parse_color(const std::string& str) {
   if (str == "R") return c4::kRed;

@@ -27,7 +27,7 @@ using Tensorizor = c4::Tensorizor;
 
 using ParallelGameRunner = common::ParallelGameRunner<GameState>;
 using NNetPlayer = common::NNetPlayer<GameState, Tensorizor>;
-using Mcts = common::Mcts_<GameState, Tensorizor>;
+using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 

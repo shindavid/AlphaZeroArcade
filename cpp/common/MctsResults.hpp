@@ -5,8 +5,8 @@
 namespace common {
 
 template<typename GameState>
-struct MctsResults_ {
-  using GameStateTypes = GameStateTypes_<GameState>;
+struct MctsResults {
+  using GameStateTypes = common::GameStateTypes<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;

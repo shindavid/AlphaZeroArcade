@@ -23,7 +23,7 @@ class ParallelGameRunner {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
 
-  using GameStateTypes = GameStateTypes_<GameState>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
   using GameRunner = common::GameRunner<GameState>;

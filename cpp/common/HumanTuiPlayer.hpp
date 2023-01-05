@@ -14,7 +14,7 @@ class HumanTuiPlayer : public AbstractPlayer<GameState_> {
 public:
   using base_t = AbstractPlayer<GameState_>;
   using GameState = GameState_;
-  using GameStateTypes = GameStateTypes_<GameState>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;

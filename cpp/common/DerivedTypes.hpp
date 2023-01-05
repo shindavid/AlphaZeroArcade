@@ -30,7 +30,7 @@ template<int NumPlayers> bool is_terminal_outcome(const GameOutcome_<NumPlayers>
 template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome_<NumPlayers> o; o.setZero(); return o; }
 
 template<typename GameState>
-struct GameStateTypes_ {
+struct GameStateTypes {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
@@ -46,7 +46,6 @@ struct GameStateTypes_ {
   using ValueArray1D = Eigen::Array<float, kNumPlayers, 1>;
 
   using ValueProbDistr = Eigen::Array<float, kNumPlayers, 1>;
-  using LocalPolicyCountDistr = Eigen::Array<int, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Array<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using GlobalPolicyCountDistr = Eigen::Array<int, kNumGlobalActions, 1>;
@@ -65,7 +64,7 @@ struct GameStateTypes_ {
 };
 
 template<typename Tensorizor>
-struct TensorizorTypes_ {
+struct TensorizorTypes {
   using BaseShape = typename Tensorizor::Shape;
   using Shape = eigen_util::to_sizes_t<util::concat_int_sequence_t<util::int_sequence<1>, BaseShape>>;
   using InputTensor = eigentorch::TensorFixedSize<float, Shape>;

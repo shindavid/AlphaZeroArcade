@@ -13,7 +13,7 @@ namespace c4 {
 
 class PerfectOracle {
 public:
-  using GameStateTypes = common::GameStateTypes_<c4::GameState>;
+  using GameStateTypes = common::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
 
   class MoveHistory {

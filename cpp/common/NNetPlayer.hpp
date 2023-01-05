@@ -31,11 +31,11 @@ public:
     bool verbose = false;
   };
 
-  using GameStateTypes = GameStateTypes_<GameState>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
 
-  using Mcts = Mcts_<GameState, Tensorizor>;
+  using Mcts = common::Mcts<GameState, Tensorizor>;
   using MctsSimParams = typename Mcts::SimParams;
-  using MctsResults = MctsResults_<GameState>;
+  using MctsResults = common::MctsResults<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;

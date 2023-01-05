@@ -18,7 +18,7 @@ namespace c4 {
 class Tensorizor {
 public:
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
-  using InputTensor = common::TensorizorTypes_<Tensorizor>::InputTensor::EigenType;
+  using InputTensor = common::TensorizorTypes<Tensorizor>::InputTensor::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, 2>;

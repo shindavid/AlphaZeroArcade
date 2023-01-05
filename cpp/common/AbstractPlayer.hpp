@@ -12,7 +12,7 @@ namespace common {
 template<GameStateConcept GameState>
 class AbstractPlayer {
 public:
-  using GameStateTypes = common::GameStateTypes_<GameState>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
   using player_array_t = std::array<AbstractPlayer*, GameState::kNumPlayers>;

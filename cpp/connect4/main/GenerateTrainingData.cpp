@@ -41,8 +41,8 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
 
   size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
 
-  using TensorizorTypes = common::TensorizorTypes_<c4::Tensorizor>;
-  using GameStateTypes = common::GameStateTypes_<c4::GameState>;
+  using TensorizorTypes = common::TensorizorTypes<c4::Tensorizor>;
+  using GameStateTypes = common::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
 
   using FullEigenTorchInput = TensorizorTypes::DynamicInputTensor;

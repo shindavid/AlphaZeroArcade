@@ -31,12 +31,12 @@
 namespace common {
 
 /*
- * TODO: move the various inner-classes of Mcts_ into separate files as standalone-classes.
+ * TODO: move the various inner-classes of Mcts into separate files as standalone-classes.
  *
  * TODO: use CRTP for slightly more elegant inheritance mechanics.
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-class Mcts_ {
+class Mcts {
 private:
   class SearchThread;
 
@@ -48,10 +48,10 @@ public:
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using TensorizorTypes = TensorizorTypes_<Tensorizor>;
-  using GameStateTypes = GameStateTypes_<GameState>;
+  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
 
-  using MctsResults = MctsResults_<GameState>;
+  using MctsResults = common::MctsResults<GameState>;
   using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
   using GameOutcome = typename GameStateTypes::GameOutcome;
@@ -333,7 +333,7 @@ private:
 
   class SearchThread {
   public:
-    SearchThread(Mcts_* mcts, int thread_id);
+    SearchThread(Mcts* mcts, int thread_id);
     ~SearchThread();
 
     int thread_id() const { return thread_id_; }
@@ -424,7 +424,7 @@ private:
      */
     Node* get_best_child(Node* tree, NNEvaluation* evaluation);
 
-    Mcts_* const mcts_;
+    Mcts* const mcts_;
     const Params& params_;
     std::thread* thread_ = nullptr;
     const int thread_id_;
@@ -507,7 +507,7 @@ private:
      * thread does not match the thread parameters (batch_size, nn_eval_timeout_ns, cache_size), then raises an
      * exception.
      */
-    static NNEvaluationService* create(const Mcts_* mcts);
+    static NNEvaluationService* create(const Mcts* mcts);
 
     /*
      * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -662,9 +662,9 @@ public:
 
   static int next_instance_id_;  // for naming debug/profiling output files
 
-  Mcts_(const Params& params);
-  Mcts_() : Mcts_(global_params_) {}
-  ~Mcts_();
+  Mcts(const Params& params);
+  Mcts() : Mcts(global_params_) {}
+  ~Mcts();
 
   int instance_id() const { return instance_id_; }
   const Params& params() const { return params_; }
