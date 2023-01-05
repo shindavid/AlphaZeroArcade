@@ -831,6 +831,20 @@ void Mcts_<GameState, Tensorizor>::NNEvaluationService::get_cache_stats(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+float Mcts_<GameState, Tensorizor>::NNEvaluationService::global_avg_batch_size() {
+  int64_t num = 0;
+  int64_t den = 0;
+
+  for (auto it : instance_map_) {
+    NNEvaluationService* service = it.second;
+    num += service->evaluated_positions();
+    den += service->batches_evaluated();
+  }
+
+  return num * 1.0 / std::max(int64_t(1), den);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts_<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   assert(batch_reserve_index_ > 0);
   assert(batch_reserve_index_ == batch_commit_count_);

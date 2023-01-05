@@ -1,9 +1,3 @@
-/*
- * TODO: replace all hard-coded c4 classes/functions here with macro values. Then, have the build.py process accept
- * a python file that specifies the game name, along with other relevant metadata (like filesystem paths to the relevant
- * c++ code). The build.py process can then import that file, and pass the macro values to cmake, ultimately causing
- * this file to get compiled to a game-specific binary.
- */
 #include <array>
 #include <iostream>
 #include <string>
@@ -14,10 +8,13 @@
 #include <common/NNetPlayer.hpp>
 #include <common/ParallelGameRunner.hpp>
 #include <connect4/C4GameState.hpp>
+#include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
+#include <util/Config.hpp>
 #include <util/StringUtil.hpp>
 
 struct Args {
+  std::string c4_solver_dir_str;
   int num_mcts_iters;
   bool verbose;
 };
@@ -41,23 +38,38 @@ NNetPlayer* create_nnet_player(const Args& args, Mcts* mcts=nullptr) {
   return player;
 }
 
+c4::PerfectPlayer* create_perfect_player(const Args& args) {
+  if (args.c4_solver_dir_str.empty()) {
+    throw util::Exception("Must either pass -c or add an entry for \"c4.solver_dir\" to %s",
+                          util::Config::instance()->config_path().c_str());
+  }
+
+  boost::filesystem::path c4_solver_dir(args.c4_solver_dir_str);
+  c4::PerfectPlayer::Params params;
+  params.c4_solver_dir = c4_solver_dir;
+  return new c4::PerfectPlayer(params);
+}
+
 player_array_t create_players(const Args& args) {
-  NNetPlayer* p1 = create_nnet_player(args);
-  NNetPlayer* p2 = create_nnet_player(args, p1->get_mcts());
-  return player_array_t{p1, p2};;
+  return player_array_t{create_nnet_player(args), create_perfect_player(args)};
 }
 
 int main(int ac, char* av[]) {
   Args args;
 
+  std::string default_c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
+
   namespace po = boost::program_options;
-  po::options_description desc("Mcts vs mcts");
+  po::options_description desc("Pit Mcts as red against perfect as yellow");
   desc.add_options()("help,h", "help");
 
   Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
 
+  ParallelGameRunner::add_options(desc, true);
+
   desc.add_options()
+      ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
       ;
