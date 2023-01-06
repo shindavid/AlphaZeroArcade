@@ -41,6 +41,7 @@ struct GameStateTypes {
   template <int NumRows> using ValueArray = eigentorch::Array<float, NumRows, kNumPlayers, Eigen::RowMajor>;
 
   using PolicySlab = PolicyArray<1>;
+  using ValueSlab = ValueArray<1>;
 
   using PolicyArray1D = Eigen::Array<float, kNumGlobalActions, 1>;
   using ValueArray1D = Eigen::Array<float, kNumPlayers, 1>;
@@ -66,8 +67,12 @@ struct GameStateTypes {
 template<typename Tensorizor>
 struct TensorizorTypes {
   using BaseShape = typename Tensorizor::Shape;
-  using Shape = eigen_util::to_sizes_t<util::concat_int_sequence_t<util::int_sequence<1>, BaseShape>>;
-  using InputTensor = eigentorch::TensorFixedSize<float, Shape>;
+
+  template <int NumRows> using Shape = eigen_util::to_sizes_t<
+      util::concat_int_sequence_t<util::int_sequence<1>, BaseShape>>;
+  template <int NumRows> using InputTensor = eigentorch::TensorFixedSize<float, Shape<NumRows>>;
+
+  using InputSlab = InputTensor<1>;
   using DynamicInputTensor = eigentorch::Tensor<float, BaseShape::size() + 1>;
 };
 

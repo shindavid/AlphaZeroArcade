@@ -16,7 +16,8 @@ namespace common {
  * A Tensorizor is responsible for converting a GameState into a Tensor.
  */
 template <class Tensorizor, class GameState>
-concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state, typename Tensorizor::InputTensor input) {
+concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state, typename Tensorizor::InputEigenSlab input)
+{
   /*
    * The shape of the tensor representation of a game state.
    */
@@ -33,7 +34,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state, typ
   { tensorizor.receive_state_change(state, action_index_t()) };
 
   /*
-   * Takes an InputTensor reference and writes to it.
+   * Takes an InputSlab reference and writes to it.
    */
   { tensorizor.tensorize(input, GameState{}) };
 

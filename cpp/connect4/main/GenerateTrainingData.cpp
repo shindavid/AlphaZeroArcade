@@ -75,7 +75,7 @@ void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::
       common::player_index_t cp = state.get_current_player();
       float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
 
-      auto& input = full_input.eigenSlab<TensorizorTypes::Shape>(row);
+      auto& input = full_input.eigenSlab<TensorizorTypes::Shape<1>>(row);
       auto& value = full_value.eigenSlab(row);
       auto& policy = full_policy.eigenSlab(row);
 

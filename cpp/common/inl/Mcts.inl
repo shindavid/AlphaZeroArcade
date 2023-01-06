@@ -788,7 +788,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
    */
   thread->record_for_profiling(SearchThread::kTensorizing);
 
-  auto& input = input_batch_.template eigenSlab<typename TensorizorTypes::Shape>(my_index);
+  auto& input = input_batch_.template eigenSlab<typename TensorizorTypes::Shape<1>>(my_index);
   tensorizor.tensorize(input, state);
   auto transform = tensorizor.get_symmetry(sym_index);
   transform->transform_input(input);

@@ -5,7 +5,7 @@
 
 namespace c4 {
 
-inline void Tensorizor::ReflectionTransform::transform_input(InputEigenTensor& tensor) {
+inline void Tensorizor::ReflectionTransform::transform_input(InputEigenSlab& tensor) {
   tensor = eigen_util::reverse(tensor, 2).eval();  // axis 2 corresponds to columns
 }
 

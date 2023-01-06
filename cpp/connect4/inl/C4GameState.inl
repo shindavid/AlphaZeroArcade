@@ -105,7 +105,7 @@ inline std::string GameState::compact_repr() const {
 }
 
 
-template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {
+template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(InputSlab& tensor) const {
   mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
   for (int col = 0; col < kNumColumns; ++col) {
     for (int row = 0; row < kNumRows; ++row) {

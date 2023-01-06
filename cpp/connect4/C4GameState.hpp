@@ -55,7 +55,7 @@ public:
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
 
-  template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
+  template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;
   void xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
