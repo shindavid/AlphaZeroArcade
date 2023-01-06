@@ -923,6 +923,54 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::dump_profiling_stats() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+typename Mcts<GameState, Tensorizor>::NodeReleaseService Mcts<GameState, Tensorizor>::NodeReleaseService::instance_;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::NodeReleaseService::NodeReleaseService()
+: thread_([&] { loop();})
+{
+  struct sched_param param;
+  param.sched_priority = 0;
+  pthread_setschedparam(thread_.native_handle(), SCHED_IDLE, &param);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::NodeReleaseService::~NodeReleaseService() {
+//  printf("NodeReleaseService release_count=%d max_queue_size=%d\n", release_count_, max_queue_size_);
+  destructing_ = true;
+  cv_.notify_one();
+  if (thread_.joinable()) thread_.join();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NodeReleaseService::loop() {
+  while (!destructing_) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    work_queue_t& queue = work_queue_[queue_index_];
+    cv_.wait(lock, [&]{ return !queue.empty() || destructing_;});
+    if (destructing_) return;
+    queue_index_ = 1 - queue_index_;
+    lock.unlock();
+    for (auto& unit : queue) {
+      unit.node->_release(unit.arg);
+      delete unit.node;
+    }
+    queue.clear();
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NodeReleaseService::_release(Node* node, Node* arg) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  work_queue_t& queue = work_queue_[queue_index_];
+  queue.emplace_back(node, arg);
+  max_queue_size_ = std::max(max_queue_size_, int(queue.size()));
+  lock.unlock();
+  cv_.notify_one();
+  release_count_++;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 : params_(params)
 , instance_id_(next_instance_id_++)
@@ -973,8 +1021,7 @@ inline void Mcts<GameState, Tensorizor>::clear() {
   if (!root_) return;
 
   assert(root_->parent()==nullptr);
-  root_->_release();
-  delete root_;
+  NodeReleaseService::release(root_);
   root_ = nullptr;
 }
 
@@ -989,8 +1036,7 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
 
   Node* new_root = root_->_find_child(action);
   if (!new_root) {
-    root_->_release();
-    delete root_;
+    NodeReleaseService::release(root_);
     root_ = nullptr;
     return;
   }
@@ -999,8 +1045,7 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
     new_root->_lazy_init();
   }
   Node* new_root_copy = new Node(*new_root, true);
-  root_->_release(new_root);
-  delete root_;
+  NodeReleaseService::release(root_, new_root);
   root_ = new_root_copy;
   root_->_adopt_children();
 
@@ -1017,8 +1062,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
   if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
     if (root_) {
-      root_->_release();
-      delete root_;
+      NodeReleaseService::release(root_);
     }
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
     root_ = new Node(tensorizor, game_state, outcome, params.disable_noise);  // TODO: use memory pool

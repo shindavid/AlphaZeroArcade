@@ -653,6 +653,38 @@ private:
     int64_t batches_evaluated_ = 0;
   };
 
+  class NodeReleaseService {
+  public:
+    struct work_unit_t {
+      work_unit_t(Node* n, Node* a) : node(n), arg(a) {}
+
+      Node* node;
+      Node* arg;
+    };
+
+    static void release(Node* node, Node* arg=nullptr) { instance_._release(node, arg); }
+
+  private:
+    NodeReleaseService();
+    ~NodeReleaseService();
+
+    void loop();
+    void _release(Node* node, Node* arg);
+
+    static NodeReleaseService instance_;
+
+    using work_queue_t = std::vector<work_unit_t>;
+
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    std::thread thread_;
+    work_queue_t work_queue_[2];
+    int queue_index_ = 0;
+    int release_count_ = 0;
+    int max_queue_size_ = 0;
+    bool destructing_ = false;
+  };
+
 public:
   /*
    * In multi-threaded mode, the search threads can continue running outside of the main sim() method. For example,
