@@ -339,6 +339,8 @@ class MCTS:
             # Write the new address book back to disk.
             with open(self.debug_filename, "wb") as f:
                 f.write(self.debug_tree.SerializeToString())
+            with open(self.debug_filename + '.txt', "w") as f:
+                f.write(str(self.debug_tree))
             self.debug_filename = None
             self.debug_tree = None
 
