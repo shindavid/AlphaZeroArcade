@@ -65,7 +65,6 @@ int main(int ac, char* av[]) {
 
   Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
-
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()

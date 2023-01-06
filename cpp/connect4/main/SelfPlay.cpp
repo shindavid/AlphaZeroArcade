@@ -56,6 +56,7 @@ int main(int ac, char* av[]) {
 
   Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
+  ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
