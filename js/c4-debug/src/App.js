@@ -5,14 +5,14 @@ import Body from "./components/Body";
 
 class Child {
   constructor(elem) {
-    this.action = 1 + parseInt(elem.getAttribute('action'));
-    this.rP = parseFloat(elem.getAttribute('rP'));
-    this.P = parseFloat(elem.getAttribute('P'));
-    this.dir = parseFloat(elem.getAttribute('dir'));
-    this.V = parseFloat(elem.getAttribute('V'));
-    this.N = parseFloat(elem.getAttribute('N'));
-    this.PUCT = parseFloat(elem.getAttribute('PUCT'));
-    this.E = parseFloat(elem.getAttribute('E'));
+    this.action = 1 + parseInt(elem.action);
+    this.rP = parseFloat(elem.rP);
+    this.P = parseFloat(elem.P);
+    this.dir = parseFloat(elem.dir);
+    this.V = parseFloat(elem.V);
+    this.N = parseFloat(elem.N);
+    this.PUCT = parseFloat(elem.PUCT);
+    this.E = parseFloat(elem.E);
   }
 }
 
@@ -21,14 +21,14 @@ class Visit {
   constructor(elem, parent) {
     this.board_visit_num = null;
     this.parent = parent;
-    this.player = parseInt(elem.getAttribute('player'));
-    this.depth = parseInt(elem.getAttribute('depth'));
-    this.board = elem.getAttribute('board');
-    this.leaf = parseInt(elem.getAttribute('leaf'));
-    this.eval = elem.getAttribute('eval').split(',').map(parseFloat);
-    this.terminal = parseInt(elem.getAttribute('terminal'));
-    this.action = elem.getAttribute('action');
-    this.value_avg = elem.getAttribute('value_avg').split(',').map(parseFloat);
+    this.player = parseInt(elem.player);
+    this.depth = parseInt(elem.depth);
+    this.board = elem.board;
+    this.leaf = parseInt(elem.leaf);
+    this.eval = elem.eval.split(',').map(parseFloat);
+    this.terminal = parseInt(elem.terminal);
+    this.action = elem.action;
+    this.value_avg = elem.value_avg.split(',').map(parseFloat);
 
     this.children = Array.from(elem.children).map(c => new Child(c));
     this.rP_sum = this.children.map((x) => x.rP).reduce((a, b) => a+b, 0);
@@ -44,7 +44,7 @@ class Visit {
 class Iter {
   constructor(elem, parent) {
     this.parent = parent;
-    this.index = parseInt(elem.getAttribute('i'));
+    this.index = parseInt(elem.i);
     this.visits = Array.from(elem.children).map(v => new Visit(v, this));
   }
 }
@@ -52,7 +52,7 @@ class Iter {
 
 class Move {
   constructor(elem) {
-    this.board = elem.getAttribute('board');
+    this.board = elem.board;
     this.iters = Array.from(elem.children).map(i => new Iter(i, this));
 
     this.board_to_visits = {};
@@ -88,18 +88,17 @@ class App extends Component {
   }
 
   handleUpload(event) {
+    const Schema = require('./proto/mcts_pb')
     const file = event.target.files[0];
     let reader = new FileReader();
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
 
     reader.onload = () => {
-      const text = reader.result;
-      let parser = new DOMParser();
-      const tree = parser.parseFromString(text, "text/xml");
-      const game = tree.getElementsByTagName('Game')[0];
-      const moves = Array.from(game.children);
+      const bytes = reader.result;
+      const game = Schema.GameTree.deserializeBinary(bytes)
+      const moves = game.moves
       const history = moves.map(m => new Move(m));
-      const player_index = parseInt(game.getAttribute('player'));
+      const player_index = parseInt(game.player);
       this.setState({
         player_index: player_index,
         history: history,
@@ -109,32 +108,6 @@ class App extends Component {
         bot_index: 0,
       })
     }
-    // The below code sends the file to a backend server. This would make more sense for a web interface to play
-    // against the CPU.
-    //
-    // this.setState({debug_file: file});
-    //
-    // //const tree = parser.parseFromString(xml_str);
-    //
-    // const data = new FormData();
-    // data.append('debug_file', file);
-    // data.append('header', {
-    //   'Access-Control-Allow-Origin': '*',
-    // });
-    //
-    // // Add code here to upload file to server
-    // // ...
-    // const url = "http://localhost:8000/c4debug/";
-    // axios.post(url, data, {
-    //   headers: {
-    //     'Content-Type': 'multipart/form-data',
-    //   }
-    // })
-    //   .then(res => { // then print response status
-    //     //this.setState({'tag': res.data})
-    //     console.log('DATA: ' + res.data)
-    //   })
-    //   .catch(error => console.log('ERROR: ' + error.message));
   }
 
   render() {
