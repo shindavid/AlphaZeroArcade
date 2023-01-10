@@ -16,7 +16,7 @@ namespace common {
  * A Tensorizor is responsible for converting a GameState into a Tensor.
  */
 template <class Tensorizor, class GameState>
-concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state, typename Tensorizor::InputEigenSlab input)
+concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor::InputEigenSlab input)
 {
   /*
    * The shape of the tensor representation of a game state.
@@ -31,14 +31,14 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, GameState state, typ
   /*
    * Receive broadcast of a game state change.
    */
-  { tensorizor.receive_state_change(state, action_index_t()) };
+  { tensorizor.receive_state_change(GameState{}, action_index_t{}) };
 
   /*
    * Takes an InputSlab reference and writes to it.
    */
   { tensorizor.tensorize(input, GameState{}) };
 
-  { tensorizor.get_random_symmetry_index(state) } -> std::same_as<symmetry_index_t>;
+  { tensorizor.get_random_symmetry_index(GameState{}) } -> std::same_as<symmetry_index_t>;
 
   { tensorizor.get_symmetry(symmetry_index_t{}) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
 };
