@@ -106,7 +106,7 @@ public:
   TrainingDataWriter(const boost::filesystem::path& output_path);
   ~TrainingDataWriter();
 
-  GameData* get_data() { return new GameData(); }
+  GameData* allocate_data() { return new GameData(); }
 
   /*
    * Takes ownership of pointer.

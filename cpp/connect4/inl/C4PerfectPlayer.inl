@@ -3,9 +3,29 @@
 #include <util/BitSet.hpp>
 #include <util/Config.hpp>
 #include <util/Exception.hpp>
+#include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>
 
 namespace c4 {
+
+inline void PerfectPlayParams::add_options(boost::program_options::options_description& desc, bool add_abbreviations) {
+  namespace po = boost::program_options;
+  std::string default_c4_solver_dir = util::Config::instance()->get("c4.solver_dir", "");
+
+  PerfectPlayParams& params = global_params_;
+  auto c4_solver_dir_value = po::value<std::string>(&params.c4_solver_dir);
+  if (!default_c4_solver_dir.empty()) {
+    c4_solver_dir_value = c4_solver_dir_value->default_value(default_c4_solver_dir);
+  }
+
+  desc.add_options()
+      (add_abbreviations ? "c4-solver-dir,c" : "c4-solver-dir", c4_solver_dir_value,
+          "base dir containing c4solver bin and 7x6 book")
+      (add_abbreviations ? "weak-mode,w" : "weak-mode",
+          po::bool_switch(&params.weak_mode)->default_value(params.weak_mode),
+          "exhibit no preference among winning moves as perfect player (otherwise favors shorter paths to win)")
+      ;
+}
 
 inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}
 
@@ -24,7 +44,14 @@ inline void PerfectOracle::MoveHistory::write(boost::process::opstream& in) {
   in.flush();
 }
 
-inline PerfectOracle::PerfectOracle(const boost::filesystem::path &c4_solver_dir) {
+inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params)
+: weak_mode_(params.weak_mode)
+{
+  if (params.c4_solver_dir.empty()) {
+    throw util::Exception("c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
+                          util::Config::kFilename);
+  }
+  boost::filesystem::path c4_solver_dir(params.c4_solver_dir);
   if (!boost::filesystem::is_directory(c4_solver_dir)) {
     throw util::Exception("Directory does not exist: %s", c4_solver_dir.c_str());
   }
@@ -45,7 +72,8 @@ inline PerfectOracle::~PerfectOracle() {
   delete proc_;
 }
 
-inline PerfectOracle::QueryResult PerfectOracle::get_best_moves(MoveHistory &history, bool strong) {
+inline PerfectOracle::QueryResult PerfectOracle::get_best_moves(MoveHistory &history) {
+  bool strong = !weak_mode_;
   history.write(in_);
 
   std::string s;
@@ -68,16 +96,13 @@ inline PerfectOracle::QueryResult PerfectOracle::get_best_moves(MoveHistory &his
   return result;
 }
 
-inline boost::filesystem::path PerfectOracle::get_default_c4_solver_dir() {
-  return util::Config::instance()->get("c4.solver_dir");
-}
-
-inline PerfectPlayer::PerfectPlayer(const Params& params)
+inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)
   : base_t("Perfect")
-  , oracle_(params.c4_solver_dir)
-  , strong_mode_(params.strong_mode) {}
+  , oracle_(params) {}
 
-inline void PerfectPlayer::start_game(const player_array_t& players, common::player_index_t seat_assignment) {
+inline void PerfectPlayer::start_game(
+    const player_array_t& players, common::player_index_t seat_assignment)
+{
   move_history_.reset();
 }
 
@@ -88,7 +113,7 @@ inline void PerfectPlayer::receive_state_change(
 }
 
 inline common::action_index_t PerfectPlayer::get_action(const GameState&, const ActionMask&) {
-  ActionMask best_moves = oracle_.get_best_moves(move_history_, strong_mode_).moves;
+  ActionMask best_moves = oracle_.get_best_moves(move_history_).moves;
   return bitset_util::choose_random_on_index(best_moves);
 }
 

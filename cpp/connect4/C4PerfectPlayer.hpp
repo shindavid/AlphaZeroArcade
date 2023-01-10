@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
+#include <boost/program_options.hpp>
 
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
@@ -10,6 +11,14 @@
 #include <connect4/C4GameState.hpp>
 
 namespace c4 {
+
+struct PerfectPlayParams {
+  std::string c4_solver_dir;
+  bool weak_mode = false;
+
+  static PerfectPlayParams global_params_;
+  static void add_options(boost::program_options::options_description& desc, bool add_abbreviations=false);
+};
 
 class PerfectOracle {
 public:
@@ -35,12 +44,15 @@ public:
     int score;
   };
 
-  PerfectOracle(const boost::filesystem::path& c4_solver_dir);
+  PerfectOracle(const PerfectPlayParams& params);
+  PerfectOracle() : PerfectOracle(PerfectPlayParams::global_params_) {}
   ~PerfectOracle();
-  QueryResult get_best_moves(MoveHistory& history, bool strong=true);
-  static boost::filesystem::path get_default_c4_solver_dir();
+
+  QueryResult get_best_moves(MoveHistory& history);
 
 private:
+  const bool weak_mode_;
+
   boost::process::ipstream out_;
   boost::process::opstream in_;
   boost::process::child* proc_ = nullptr;
@@ -50,15 +62,8 @@ class PerfectPlayer : public Player {
 public:
   using base_t = Player;
 
-  struct Params {
-    Params(const boost::filesystem::path& c, bool s=true) : c4_solver_dir(c), strong_mode(s) {}
-    Params() : c4_solver_dir(PerfectOracle::get_default_c4_solver_dir()) {}
-
-    boost::filesystem::path c4_solver_dir;
-    bool strong_mode = true;
-  };
-
-  PerfectPlayer(const Params&);
+  PerfectPlayer(const PerfectPlayParams&);
+  PerfectPlayer() : PerfectPlayer(PerfectPlayParams::global_params_) {}
 
   void start_game(const player_array_t& players, common::player_index_t seat_assignment) override;
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
@@ -67,7 +72,6 @@ public:
 private:
   PerfectOracle oracle_;
   PerfectOracle::MoveHistory move_history_;
-  const bool strong_mode_;
 };
 
 }  // namespace c4

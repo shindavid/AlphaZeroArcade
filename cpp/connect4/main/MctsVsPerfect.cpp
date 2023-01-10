@@ -14,7 +14,6 @@
 #include <util/StringUtil.hpp>
 
 struct Args {
-  std::string c4_solver_dir_str;
   int num_mcts_iters;
   bool verbose;
 };
@@ -39,15 +38,7 @@ NNetPlayer* create_nnet_player(const Args& args, Mcts* mcts=nullptr) {
 }
 
 c4::PerfectPlayer* create_perfect_player(const Args& args) {
-  if (args.c4_solver_dir_str.empty()) {
-    throw util::Exception("Must either pass -c or add an entry for \"c4.solver_dir\" to %s",
-                          util::Config::instance()->config_path().c_str());
-  }
-
-  boost::filesystem::path c4_solver_dir(args.c4_solver_dir_str);
-  c4::PerfectPlayer::Params params;
-  params.c4_solver_dir = c4_solver_dir;
-  return new c4::PerfectPlayer(params);
+  return new c4::PerfectPlayer();
 }
 
 player_array_t create_players(const Args& args) {
@@ -65,10 +56,10 @@ int main(int ac, char* av[]) {
 
   Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
+  c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
-      ("c4-solver-dir,d", po::value<std::string>(&args.c4_solver_dir_str)->default_value(default_c4_solver_dir_str), "base dir containing c4solver bin and 7x6 book")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
       ;

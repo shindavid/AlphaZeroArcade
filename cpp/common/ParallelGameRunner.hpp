@@ -82,11 +82,11 @@ private:
     ~GameThread();
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
-    void launch(int num_games) { thread_ = new std::thread([&] { run(num_games); }); }
+    void launch(const Params& params) { thread_ = new std::thread([&] { run(params); }); }
 
   private:
-    void run(int num_games);
-    void play_game();
+    void run(const Params& params);
+    void play_game(bool print_result);
 
     SharedData& shared_data_;
     player_array_t players_;

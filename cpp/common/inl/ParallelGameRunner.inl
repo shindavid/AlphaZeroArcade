@@ -69,15 +69,15 @@ ParallelGameRunner<GameState>::GameThread::~GameThread() {
 }
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::GameThread::run(int num_games) {
+void ParallelGameRunner<GameState>::GameThread::run(const Params& params) {
   while (true) {
-    if (!shared_data_.request_game(num_games)) return;
-    play_game();
+    if (!shared_data_.request_game(params.num_games)) return;
+    play_game(!params.display_progress_bar);
   }
 }
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::GameThread::play_game() {
+void ParallelGameRunner<GameState>::GameThread::play_game(bool print_result) {
   GameRunner runner(players_);
   time_point_t t1 = std::chrono::steady_clock::now();
   auto outcome = runner.run();
@@ -85,6 +85,8 @@ void ParallelGameRunner<GameState>::GameThread::play_game() {
   duration_t duration = t2 - t1;
   int64_t ns = duration.count();
   shared_data_.update(outcome, ns);
+
+  if (!print_result) return;
 
   results_array_t results = shared_data_.get_results();
 
@@ -107,7 +109,7 @@ void ParallelGameRunner<GameState>::run() {
   time_point_t t1 = std::chrono::steady_clock::now();
 
   for (auto thread : threads_) {
-    thread->launch(params_.num_games);
+    thread->launch(params_);
   }
 
   for (auto thread : threads_) {
