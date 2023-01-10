@@ -77,7 +77,6 @@ public:
     } else {
       tensorizor_.receive_state_change(state, action);
       move_history_.append(action);
-      write(state);
     }
   }
 
