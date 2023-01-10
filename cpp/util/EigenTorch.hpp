@@ -56,10 +56,14 @@ public:
   using Sizes = Sizes_;
   static constexpr int Options = Options_;
   using EigenType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
+  template<typename Sizes> using EigenSlabType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
   using TorchType = torch::Tensor;
 
   TensorFixedSize();
   template<typename IntT, size_t N> TensorFixedSize(const std::array<IntT, N>& torch_shape);
+
+  template<typename Sizes> const EigenSlabType<Sizes>& eigenSlab(int row) const;
+  template<typename Sizes> EigenSlabType<Sizes>& eigenSlab(int row);
 
   EigenType& asEigen() { return eigen_tensor_; }
   const EigenType& asEigen() const { return eigen_tensor_; }

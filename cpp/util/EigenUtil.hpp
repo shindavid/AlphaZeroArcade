@@ -124,6 +124,12 @@ template<typename T, typename S> struct extract_sizes<fixed_tensor_t<T, S>> {
 };
 template<typename T> using extract_sizes_t = typename extract_sizes<T>::type;
 
+template<typename T> struct total_size {};
+template<ptrdiff_t... Indices> struct total_size<Eigen::Sizes<Indices...>> {
+  static constexpr ptrdiff_t size = Eigen::internal::arg_prod(Indices...);
+};
+template<typename T> constexpr ptrdiff_t total_size_v = total_size<T>::size;
+
 /*
  * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */

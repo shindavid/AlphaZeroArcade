@@ -64,6 +64,24 @@ template<typename IntT, size_t N>
 TensorFixedSize<Scalar_, Sizes_, Options_>::TensorFixedSize(const std::array<IntT, N>& torch_shape)
 : torch_tensor_(detail::eigen2torch(eigen_tensor_, util::array_cast<int64_t>(torch_shape))) {}
 
+template <typename Scalar_, typename Sizes_, int Options_>
+template<typename Sizes>
+const typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSlabType<Sizes>&
+TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlab(int row) const {
+  Scalar* data = eigen_tensor_.data();
+  data += Sizes::total_size * row;
+  return *reinterpret_cast<EigenSlabType<Sizes>*>(data);
+}
+
+template <typename Scalar_, typename Sizes_, int Options_>
+template<typename Sizes>
+typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSlabType<Sizes>&
+TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlab(int row) {
+  Scalar* data = eigen_tensor_.data();
+  data += Sizes::total_size * row;
+  return *reinterpret_cast<EigenSlabType<Sizes>*>(data);
+}
+
 template <typename Scalar_, int Rank_, int Options_>
 template<typename IntT, size_t N>
 Tensor<Scalar_, Rank_, Options_>::Tensor(const std::array<IntT, N>& eigen_shape)
