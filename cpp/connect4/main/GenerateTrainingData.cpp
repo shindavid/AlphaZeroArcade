@@ -137,7 +137,7 @@ int main(int ac, char* av[]) {
 
   c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
   ParallelGameRunner::global_params_.num_games = 10000;
-  ParallelGameRunner::global_params_.parallelism_factor = 16;
+  ParallelGameRunner::global_params_.parallelism_factor = 24;
   ParallelGameRunner::global_params_.display_progress_bar = true;
   ParallelGameRunner::add_options(desc, true);
 
