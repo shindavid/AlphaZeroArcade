@@ -37,9 +37,9 @@ using ActionMask = GameStateTypes::ActionMask;
 
 using RandomPlayer = common::RandomPlayer<GameState>;
 
-class OracleEvaluator {
+class OracleSupervisor {
 public:
-  OracleEvaluator(TrainingDataWriter* writer)
+  OracleSupervisor(TrainingDataWriter* writer)
   : writer_(writer) {}
 
   void start_game() {
@@ -88,20 +88,20 @@ private:
 };
 
 template<class BasePlayer>
-class OracleEvaluatedPlayer : public BasePlayer {
+class OracleSupervisedPlayer : public BasePlayer {
 public:
-  OracleEvaluatedPlayer(OracleEvaluator* evaluator, bool primary)
-  : evaluator_(evaluator)
+  OracleSupervisedPlayer(OracleSupervisor* supervisor, bool primary)
+  : supervisor_(supervisor)
   , primary_(primary) {}
 
-  ~OracleEvaluatedPlayer() {
-    if (primary_) delete evaluator_;
+  ~OracleSupervisedPlayer() {
+    if (primary_) delete supervisor_;
   }
 
   void start_game(const player_array_t& players, player_index_t seat_assignment) override {
     BasePlayer::start_game(players, seat_assignment);
     if (!primary_) return;
-    evaluator_->start_game();
+    supervisor_->start_game();
   }
 
   void receive_state_change(
@@ -110,24 +110,24 @@ public:
   {
     BasePlayer::receive_state_change(p, state, action, outcome);
     if (!primary_) return;
-    evaluator_->receive_move(state, action, outcome);
+    supervisor_->receive_move(state, action, outcome);
   }
 
   action_index_t get_action(const GameState& state, const ActionMask& mask) override {
-    evaluator_->write(state);
+    supervisor_->write(state);
     return BasePlayer::get_action(state, mask);
   }
 
 private:
-  OracleEvaluator* evaluator_;
+  OracleSupervisor* supervisor_;
   bool primary_;
 };
 
 player_array_t create_players(TrainingDataWriter* writer) {
-  OracleEvaluator* evaluator = new OracleEvaluator(writer);
-  using player_t = OracleEvaluatedPlayer<RandomPlayer>;
-  Player* p1 = new player_t(evaluator, true);
-  Player* p2 = new player_t(evaluator, false);
+  OracleSupervisor* supervisor = new OracleSupervisor(writer);
+  using player_t = OracleSupervisedPlayer<RandomPlayer>;
+  Player* p1 = new player_t(supervisor, true);
+  Player* p2 = new player_t(supervisor, false);
   return player_array_t{p1, p2};;
 }
 
@@ -135,7 +135,7 @@ int main(int ac, char* av[]) {
   Args args;
 
   namespace po = boost::program_options;
-  po::options_description desc("Generate training data from perfect solver");
+  po::options_description desc("Generate training data labeled by oracle");
   desc.add_options()("help,h", "help");
 
   c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
