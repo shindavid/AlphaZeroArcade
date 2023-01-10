@@ -1,21 +1,18 @@
 #include <iostream>
-#include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
-#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
 #include <common/AbstractPlayer.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/ParallelGameRunner.hpp>
+#include <common/RandomPlayer.hpp>
 #include <common/TrainingDataWriter.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
-#include <third_party/ProgressBar.hpp>
 #include <util/BitSet.hpp>
 
 namespace bf = boost::filesystem;
@@ -38,9 +35,11 @@ using GameStateTypes = common::GameStateTypes<GameState>;
 using GameOutcome = GameStateTypes::GameOutcome;
 using ActionMask = GameStateTypes::ActionMask;
 
-class OracleAssistant {
+using RandomPlayer = common::RandomPlayer<GameState>;
+
+class OracleEvaluator {
 public:
-  OracleAssistant(TrainingDataWriter* writer)
+  OracleEvaluator(TrainingDataWriter* writer)
   : writer_(writer) {}
 
   void start_game() {
@@ -88,43 +87,47 @@ private:
   c4::PerfectOracle::MoveHistory move_history_;
 };
 
-class RandomPlayerWithOracle : public Player {
+template<class BasePlayer>
+class OracleEvaluatedPlayer : public BasePlayer {
 public:
-  RandomPlayerWithOracle(OracleAssistant* assistant, bool primary)
-  : Player("random")
-  , assistant_(assistant)
+  OracleEvaluatedPlayer(OracleEvaluator* evaluator, bool primary)
+  : evaluator_(evaluator)
   , primary_(primary) {}
 
-  ~RandomPlayerWithOracle() {
-    if (primary_) delete assistant_;
+  ~OracleEvaluatedPlayer() {
+    if (primary_) delete evaluator_;
   }
 
   void start_game(const player_array_t& players, player_index_t seat_assignment) override {
+    BasePlayer::start_game(players, seat_assignment);
     if (!primary_) return;
-    assistant_->start_game();
+    evaluator_->start_game();
   }
 
   void receive_state_change(
-      player_index_t, const GameState& state, action_index_t action, const GameOutcome& outcome) override
+      player_index_t p, const GameState& state, action_index_t action,
+      const GameOutcome& outcome) override
   {
+    BasePlayer::receive_state_change(p, state, action, outcome);
     if (!primary_) return;
-    assistant_->receive_move(state, action, outcome);
+    evaluator_->receive_move(state, action, outcome);
   }
 
   action_index_t get_action(const GameState& state, const ActionMask& mask) override {
-    assistant_->write(state);
-    return bitset_util::choose_random_on_index(mask);
+    evaluator_->write(state);
+    return BasePlayer::get_action(state, mask);
   }
 
 private:
-  OracleAssistant* assistant_;
+  OracleEvaluator* evaluator_;
   bool primary_;
 };
 
 player_array_t create_players(TrainingDataWriter* writer) {
-  OracleAssistant* assistant = new OracleAssistant(writer);
-  RandomPlayerWithOracle* p1 = new RandomPlayerWithOracle(assistant, true);
-  RandomPlayerWithOracle* p2 = new RandomPlayerWithOracle(assistant, false);
+  OracleEvaluator* evaluator = new OracleEvaluator(writer);
+  using player_t = OracleEvaluatedPlayer<RandomPlayer>;
+  Player* p1 = new player_t(evaluator, true);
+  Player* p2 = new player_t(evaluator, false);
   return player_array_t{p1, p2};;
 }
 
