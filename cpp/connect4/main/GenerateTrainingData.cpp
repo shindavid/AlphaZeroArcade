@@ -1,25 +1,38 @@
 #include <iostream>
-#include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-#include <torch/torch.h>
 
 #include <common/DerivedTypes.hpp>
+#include <common/ParallelGameRunner.hpp>
+#include <common/TrainingDataWriter.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <third_party/ProgressBar.hpp>
 #include <util/BitSet.hpp>
-#include <util/EigenTorch.hpp>
-#include <util/StringUtil.hpp>
-#include <util/TorchUtil.hpp>
 
 namespace bf = boost::filesystem;
+
+struct Args {
+  int num_threads;
+  int num_training_games;
+  std::string c4_solver_dir_str;
+  std::string games_dir_str;
+};
+
+using GameState = c4::GameState;
+using Tensorizor = c4::Tensorizor;
+using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
+using ParallelGameRunner = common::ParallelGameRunner<GameState>;
+
+using GameStateTypes = common::GameStateTypes<GameState>;
+using ActionMask = GameStateTypes::ActionMask;
 
 /*
  * This interfaces with the connect4 perfect solver binary by creating a child-process that we interact with via
@@ -33,91 +46,82 @@ namespace bf = boost::filesystem;
  * it is only a temporary fill-in until we get the self-play loop rolling. So, practically speaking, this is not worth
  * improving.
  */
-void run(int thread_id, int num_games, const bf::path& c4_solver_dir, const bf::path& games_dir)
-{
-  c4::PerfectOracle oracle(c4_solver_dir);
-  std::string output_filename = util::create_string("%d.pt", thread_id);
-  bf::path output_path = games_dir / output_filename;
+class DataGenerator {
+public:
+  DataGenerator(const Args& args)
+  : args_(args)
+  , bar_(args.num_training_games)
+  , writer_(args.games_dir_str) {}
 
-  size_t max_rows = num_games * c4::kNumColumns * c4::kNumRows;
-
-  using TensorizorTypes = common::TensorizorTypes<c4::Tensorizor>;
-  using GameStateTypes = common::GameStateTypes<c4::GameState>;
-  using ActionMask = GameStateTypes::ActionMask;
-
-  using FullEigenTorchInput = TensorizorTypes::DynamicInputTensor;
-  using FullEigenTorchValue = GameStateTypes::ValueArray<Eigen::Dynamic>;
-  using FullEigenTorchPolicy = GameStateTypes::PolicyArray<Eigen::Dynamic>;
-
-  auto full_input_shape = util::to_std_array<int>(max_rows, util::std_array_v<int, c4::Tensorizor::Shape>);
-  auto full_value_shape = util::to_std_array<int>(max_rows, c4::kNumPlayers);
-  auto full_policy_shape = util::to_std_array<int>(max_rows, c4::kNumColumns);
-
-  FullEigenTorchInput full_input(full_input_shape);
-  FullEigenTorchValue full_value(max_rows, c4::kNumPlayers, full_value_shape);
-  FullEigenTorchPolicy full_policy(max_rows, c4::kNumColumns, full_policy_shape);
-
-  bool use_progress_bar = thread_id == 0;
-  int row = 0;
-  progressbar* bar = use_progress_bar ? new progressbar(num_games) : nullptr;
-  for (int i = 0; i < num_games; ++i) {
-    if (use_progress_bar) bar->update();
-
-    c4::GameState state;
-    c4::Tensorizor tensorizor;
-    c4::PerfectOracle::MoveHistory move_history;
-
-    while (true) {
-      auto query_result = oracle.get_best_moves(move_history);
-      ActionMask best_moves = query_result.moves;
-      int best_score = query_result.score;
-
-      common::player_index_t cp = state.get_current_player();
-      float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
-
-      auto& input = full_input.eigenSlab<TensorizorTypes::Shape<1>>(row);
-      auto& value = full_value.eigenSlab(row);
-      auto& policy = full_policy.eigenSlab(row);
-
-      value(cp) = cur_player_value;
-      value(1 - cp) = 1 - cur_player_value;
-      for (size_t k = 0; k < best_moves.size(); ++k) {
-        policy.data()[k] = best_moves[k];
-      }
-
-      tensorizor.tensorize(input, state);
-      ++row;
-
-      ActionMask moves = state.get_valid_actions();
-
-      int move = bitset_util::choose_random_on_index(moves);
-      auto outcome = state.apply_move(move);
-      tensorizor.receive_state_change(state, move);
-      if (common::is_terminal_outcome(outcome)) {
-        break;
-      }
-
-      move_history.append(move);
+  void launch() {
+    std::vector<std::thread> threads;
+    for (int i = 0; i < args_.num_threads; ++i) {
+      int start = (i * args_.num_training_games / args_.num_threads);
+      int end = ((i + 1) * args_.num_training_games / args_.num_threads);
+      int num_games = end - start;
+      threads.emplace_back([&] { run(num_games); });
     }
 
-    auto slice = torch::indexing::Slice(torch::indexing::None, row);
-    using tensor_map_t = std::map<std::string, torch::Tensor>;
-    tensor_map_t tensor_map;
-    tensor_map["input"] = full_input.asTorch().index({slice});
-    tensor_map["value"] = full_value.asTorch().index({slice});
-    tensor_map["policy"] = full_policy.asTorch().index({slice});
-    torch_util::save(tensor_map, output_path.string());
+    for (auto& thread : threads) {
+      thread.join();
+    }
   }
-  if (use_progress_bar) {
-    delete bar;
-  }
-}
 
-struct Args {
-  int num_threads;
-  int num_training_games;
-  std::string c4_solver_dir_str;
-  std::string games_dir_str;
+private:
+  void run(int num_games) {
+    c4::PerfectOracle oracle(args_.c4_solver_dir_str);
+
+    for (int i = 0; i < num_games; ++i) {
+      std::unique_lock lock(mutex_);
+      bar_.update();
+      lock.unlock();
+      auto game_data = writer_.get_data();
+
+      GameState state;
+      Tensorizor tensorizor;
+      c4::PerfectOracle::MoveHistory move_history;
+
+      while (true) {
+        auto query_result = oracle.get_best_moves(move_history);
+        ActionMask best_moves = query_result.moves;
+        int best_score = query_result.score;
+
+        common::player_index_t cp = state.get_current_player();
+        float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
+
+        auto slab = game_data->get_next_slab();
+        auto& input = slab.input;
+        auto& value = slab.value;
+        auto& policy = slab.policy;
+
+        value(cp) = cur_player_value;
+        value(1 - cp) = 1 - cur_player_value;
+        for (size_t k = 0; k < best_moves.size(); ++k) {
+          policy.data()[k] = best_moves[k];
+        }
+
+        tensorizor.tensorize(input, state);
+
+        ActionMask moves = state.get_valid_actions();
+
+        int move = bitset_util::choose_random_on_index(moves);
+        auto outcome = state.apply_move(move);
+        tensorizor.receive_state_change(state, move);
+        if (common::is_terminal_outcome(outcome)) {
+          break;
+        }
+
+        move_history.append(move);
+      }
+
+      writer_.process(game_data);
+    }
+  }
+
+  Args args_;
+  std::mutex mutex_;
+  progressbar bar_;
+  TrainingDataWriter writer_;
 };
 
 int main(int ac, char* av[]) {
@@ -143,31 +147,16 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
+  ParallelGameRunner::global_params_.display_progress_bar = true;
+
   bf::path c4_solver_dir(args.c4_solver_dir_str);
   if (args.c4_solver_dir_str.empty()) {
     c4_solver_dir = c4::PerfectOracle::get_default_c4_solver_dir();
   }
   c4::PerfectOracle oracle(c4_solver_dir);  // create a single oracle on main thread to get clearer exceptions
 
-  bf::path games_dir(args.games_dir_str);
-  if (bf::is_directory(games_dir)) {
-    bf::remove_all(games_dir);
-  }
-  bf::create_directories(games_dir);
-
-  if (args.num_threads == 1) {  // specialize for easier to parse core-dumps
-    run(0, args.num_training_games, c4_solver_dir, games_dir);
-  } else {
-    std::vector<std::thread> threads;
-    for (int i=0; i<args.num_threads; ++i) {
-      int start = (i * args.num_training_games / args.num_threads);
-      int end = ((i + 1) * args.num_training_games / args.num_threads);
-      int num_games = end - start;
-      threads.emplace_back(run, i, num_games, c4_solver_dir, games_dir);
-    }
-
-    for (auto& th : threads) th.join();
-  }
-  printf("\nWrote data to: %s\n", games_dir.c_str());
+  DataGenerator generator(args);
+  generator.launch();
+  printf("\nWrote data to: %s\n", args.games_dir_str.c_str());
   return 0;
 }

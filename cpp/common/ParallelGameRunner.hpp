@@ -15,6 +15,7 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameRunner.hpp>
 #include <common/GameStateConcept.hpp>
+#include <third_party/ProgressBar.hpp>
 
 namespace common {
 
@@ -39,13 +40,14 @@ public:
   struct Params {
     int num_games = 1000;  // if <=0, run indefinitely
     int parallelism_factor = 100;  // number of games to run simultaneously
+    bool display_progress_bar = false;
   };
 
   static Params global_params_;
   static void add_options(boost::program_options::options_description& desc, bool add_shortcuts=false);
 
-  ParallelGameRunner(const Params& params) : params_(params) {}
-  ParallelGameRunner() : params_(global_params_) {}
+  ParallelGameRunner(const Params& params) : params_(params), shared_data_(params_) {}
+  ParallelGameRunner() : ParallelGameRunner(global_params_) {}
 
   void register_players(const player_array_generator_t& gen) { player_array_generator_ = gen; }
   void run();
@@ -56,12 +58,16 @@ protected:
 private:
   class SharedData {
   public:
+    SharedData(const Params& params);
+    ~SharedData() { if (bar_) delete bar_; }
+
     bool request_game(int num_games);  // returns false iff hit num_games limit
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
 
   private:
     mutable std::mutex mutex_;
+    progressbar* bar_ = nullptr;
     int num_games_started_ = 0;
 
     results_array_t results_array_;

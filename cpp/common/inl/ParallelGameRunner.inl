@@ -24,10 +24,18 @@ void ParallelGameRunner<GameState>::add_options(boost::program_options::options_
 }
 
 template<GameStateConcept GameState>
+ParallelGameRunner<GameState>::SharedData::SharedData(const Params& params) {
+  if (params.display_progress_bar) {
+    bar_ = new progressbar(params.num_games);
+  }
+}
+
+template<GameStateConcept GameState>
 bool ParallelGameRunner<GameState>::SharedData::request_game(int num_games) {
   std::lock_guard<std::mutex> guard(mutex_);
   if (num_games >= 0 && num_games_started_ >= num_games) return false;
   num_games_started_++;
+  if (bar_) bar_->update();
   return true;
 }
 
