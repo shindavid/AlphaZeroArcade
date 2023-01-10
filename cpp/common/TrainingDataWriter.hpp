@@ -15,7 +15,7 @@
 namespace common {
 
 /*
- * A single TrainingDataWriter is intended to be shared by multiple NNetPlayer's playing in parallel.
+ * A single TrainingDataWriter is intended to be shared by multiple MctsPlayer's playing in parallel.
  */
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter {

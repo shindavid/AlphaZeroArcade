@@ -5,7 +5,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/GameRunner.hpp>
 #include <common/HumanTuiPlayer.hpp>
-#include <common/NNetPlayer.hpp>
+#include <common/MctsPlayer.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
@@ -72,12 +72,12 @@ int main(int ac, char* av[]) {
   if (args.perfect) {
     cpu = new c4::PerfectPlayer();
   } else {
-    using C4NNetPlayer = common::NNetPlayer<c4::GameState, c4::Tensorizor>;
-    C4NNetPlayer::Params cpu_params;
+    using C4MctsPlayer = common::MctsPlayer<c4::GameState, c4::Tensorizor>;
+    C4MctsPlayer::Params cpu_params;
     cpu_params.num_mcts_iters = args.num_mcts_iters;
     cpu_params.temperature = args.temperature;
     cpu_params.verbose = args.verbose;
-    cpu = new C4NNetPlayer(cpu_params);
+    cpu = new C4MctsPlayer(cpu_params);
   }
 
   common::player_index_t my_color = parse_color(args.my_starting_color);

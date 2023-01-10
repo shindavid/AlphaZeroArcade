@@ -1,4 +1,4 @@
-#include <common/NNetPlayer.hpp>
+#include <common/MctsPlayer.hpp>
 
 #include <util/BitSet.hpp>
 #include <util/Exception.hpp>
@@ -10,7 +10,7 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params, Mcts* mcts)
+inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mcts* mcts)
   : base_t("CPU")
   , params_(params)
   , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
@@ -29,7 +29,7 @@ inline NNetPlayer<GameState_, Tensorizor_>::NNetPlayer(const Params& params, Mct
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline NNetPlayer<GameState_, Tensorizor_>::~NNetPlayer() {
+inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
@@ -37,7 +37,7 @@ inline NNetPlayer<GameState_, Tensorizor_>::~NNetPlayer() {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline void NNetPlayer<GameState_, Tensorizor_>::start_game(
+inline void MctsPlayer<GameState_, Tensorizor_>::start_game(
     const player_array_t& players, player_index_t seat_assignment)
 {
   my_index_ = seat_assignment;
@@ -48,7 +48,7 @@ inline void NNetPlayer<GameState_, Tensorizor_>::start_game(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
+inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
   tensorizor_.receive_state_change(state, action);
@@ -61,7 +61,7 @@ inline void NNetPlayer<GameState_, Tensorizor_>::receive_state_change(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
+inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto results = mcts_->sim(tensorizor_, state, sim_params_);
@@ -89,14 +89,14 @@ inline action_index_t NNetPlayer<GameState_, Tensorizor_>::get_action(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline void NNetPlayer<GameState_, Tensorizor_>::get_cache_stats(
+inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
   mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline void NNetPlayer<GameState_, Tensorizor_>::verbose_dump() const {
+inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& mcts_value = verbose_info_->mcts_value;

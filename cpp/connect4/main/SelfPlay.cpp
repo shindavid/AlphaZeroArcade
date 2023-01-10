@@ -11,7 +11,7 @@
 #include <boost/program_options.hpp>
 
 #include <common/GameRunner.hpp>
-#include <common/NNetPlayer.hpp>
+#include <common/MctsPlayer.hpp>
 #include <common/ParallelGameRunner.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
@@ -26,24 +26,24 @@ using GameState = c4::GameState;
 using Tensorizor = c4::Tensorizor;
 
 using ParallelGameRunner = common::ParallelGameRunner<GameState>;
-using NNetPlayer = common::NNetPlayer<GameState, Tensorizor>;
+using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
 using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 
-NNetPlayer* create_nnet_player(const Args& args, Mcts* mcts=nullptr) {
-  NNetPlayer::Params params;
+MctsPlayer* create_mcts_player(const Args& args, Mcts* mcts=nullptr) {
+  MctsPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
   params.temperature = 0;
   params.verbose = args.verbose;
-  auto player = new NNetPlayer(params, mcts);
+  auto player = new MctsPlayer(params, mcts);
   player->set_name(util::create_string("MCTS-m%d", args.num_mcts_iters));
   return player;
 }
 
 player_array_t create_players(const Args& args) {
-  NNetPlayer* p1 = create_nnet_player(args);
-  NNetPlayer* p2 = create_nnet_player(args, p1->get_mcts());
+  MctsPlayer* p1 = create_mcts_player(args);
+  MctsPlayer* p2 = create_mcts_player(args, p1->get_mcts());
   return player_array_t{p1, p2};;
 }
 

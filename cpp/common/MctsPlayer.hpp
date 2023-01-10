@@ -18,7 +18,7 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-class NNetPlayer : public AbstractPlayer<GameState_> {
+class MctsPlayer : public AbstractPlayer<GameState_> {
 public:
   using base_t = AbstractPlayer<GameState_>;
   using GameState = GameState_;
@@ -44,8 +44,8 @@ public:
   using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
   using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
 
-  NNetPlayer(const Params&, Mcts* mcts=nullptr);
-  ~NNetPlayer();
+  MctsPlayer(const Params&, Mcts* mcts=nullptr);
+  ~MctsPlayer();
 
   Mcts* get_mcts() { return mcts_; }
   void start_game(const player_array_t& players, player_index_t seat_assignment) override;
@@ -78,4 +78,4 @@ private:
 
 }  // namespace common
 
-#include <common/inl/NNetPlayer.inl>
+#include <common/inl/MctsPlayer.inl>
