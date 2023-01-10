@@ -92,9 +92,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::process(const GameData* data) {
-//  printf("%s() %d\n", __func__, __LINE__);
   std::unique_lock<std::mutex> lock(mutex_);
-//  printf("%s() %d\n", __func__, __LINE__);
   game_queue_[queue_index_].push_back(data);
   lock.unlock();
   cv_.notify_one();
@@ -111,7 +109,6 @@ void TrainingDataWriter<GameState_, Tensorizor_>::close() {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::flush() {
-//  printf("%s(%d) %d\n", __func__, rows_, __LINE__);
   if (rows_ == 0) return;
 
   std::string output_filename = util::create_string("%d.pt", file_number_);
@@ -133,13 +130,11 @@ void TrainingDataWriter<GameState_, Tensorizor_>::flush() {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   while (!closed_) {
-//    printf("%s() %d\n", __func__, __LINE__);
     std::unique_lock<std::mutex> lock(mutex_);
     game_queue_t& queue = game_queue_[queue_index_];
     cv_.wait(lock, [&]{ return !queue.empty() || closed_;});
     queue_index_ = 1 - queue_index_;
     lock.unlock();
-//    printf("%s() %d\n", __func__, __LINE__);
     for (const GameData* data : queue) {
       for (const DataChunk& chunk : data->chunks()) {
         write(chunk);
@@ -153,7 +148,6 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::write(const DataChunk& chunk) {
   int rows_to_write = std::min(chunk.rows(), kRowsPerFile - rows_);
-//  printf("%s(%d) %d\n", __func__, rows_to_write, __LINE__);
   partial_write(chunk, 0, rows_to_write);
   partial_write(chunk, rows_to_write, chunk.rows());
 }
@@ -173,7 +167,6 @@ void TrainingDataWriter<GameState_, Tensorizor_>::partial_write(const DataChunk&
   value_.asTorch().index_put_({write_slice}, chunk.value().asTorch().index({read_slice}));
 
   rows_ = new_rows;
-//  printf("%s(%d, %d) %d %d %d\n", __func__, start, end, rows_, kRowsPerFile, __LINE__);
   if (rows_ == kRowsPerFile) {
     flush();
   }
