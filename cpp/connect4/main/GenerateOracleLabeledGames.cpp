@@ -13,7 +13,6 @@
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
-#include <util/BitSet.hpp>
 
 namespace bf = boost::filesystem;
 
