@@ -37,6 +37,11 @@ int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }
 template<typename TimePoint> int64_t ns_since_epoch(const TimePoint&);
 
 /*
+ * Between machine reboots, no two calls to this function from the same machine should return equal values.
+ */
+int64_t get_unique_id();
+
+/*
  * This identity function is intended to be used to declare required members in concepts.
  *
  * Example usage:
