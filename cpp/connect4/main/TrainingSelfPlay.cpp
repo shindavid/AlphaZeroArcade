@@ -78,8 +78,8 @@ int main(int ac, char* av[]) {
   runner.run();
 
   MctsPlayer::training_params.dump();
-  printf("MCTS search threads: %6d\n", Mcts::global_params_.num_search_threads);
-  printf("MCTS max batch size: %6d\n", Mcts::global_params_.batch_size_limit);
+  printf("MCTS search threads: %6d\n", Mcts::global_params.num_search_threads);
+  printf("MCTS max batch size: %6d\n", Mcts::global_params.batch_size_limit);
   printf("MCTS avg batch size: %6.2f\n", Mcts::global_avg_batch_size());
 
   return 0;

@@ -44,11 +44,11 @@ public:
     bool display_progress_bar = false;
   };
 
-  static Params global_params_;
+  static Params global_params;
   static void add_options(boost::program_options::options_description& desc, bool add_shortcuts=false);
 
   ParallelGameRunner(const Params& params) : params_(params), shared_data_(params_) {}
-  ParallelGameRunner() : ParallelGameRunner(global_params_) {}
+  ParallelGameRunner() : ParallelGameRunner(global_params) {}
 
   void register_players(const player_array_generator_t& gen) { player_array_generator_ = gen; }
   void run();

@@ -7,13 +7,13 @@
 namespace common {
 
 template<GameStateConcept GameState>
-typename ParallelGameRunner<GameState>::Params ParallelGameRunner<GameState>::global_params_;
+typename ParallelGameRunner<GameState>::Params ParallelGameRunner<GameState>::global_params;
 
 template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::add_options(boost::program_options::options_description& desc, bool add_shortcuts) {
   namespace po = boost::program_options;
 
-  Params& params = global_params_;
+  Params& params = global_params;
   desc.add_options()
       (add_shortcuts ? "num-games,G" : "num-games", po::value<int>(&params.num_games)->default_value(params.num_games),
        "num games (<=0 means run indefinitely)")

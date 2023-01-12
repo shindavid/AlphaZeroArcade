@@ -92,7 +92,7 @@ public:
 #endif  // PROFILE_MCTS
   };
 
-  static Params global_params_;
+  static Params global_params;
   static void add_options(boost::program_options::options_description& desc);
 
   /*
@@ -695,7 +695,7 @@ public:
   static int next_instance_id_;  // for naming debug/profiling output files
 
   Mcts(const Params& params);
-  Mcts() : Mcts(global_params_) {}
+  Mcts() : Mcts(global_params) {}
   ~Mcts();
 
   int instance_id() const { return instance_id_; }

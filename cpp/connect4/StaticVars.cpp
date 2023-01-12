@@ -3,7 +3,7 @@
 
 namespace c4 {
 
-PerfectPlayParams PerfectPlayParams::global_params_;
+PerfectPlayParams PerfectPlayParams::global_params;
 Tensorizor::IdentityTransform Tensorizor::identity_transform_;
 Tensorizor::ReflectionTransform Tensorizor::reflection_transform_;
 

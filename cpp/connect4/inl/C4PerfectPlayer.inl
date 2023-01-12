@@ -12,7 +12,7 @@ inline void PerfectPlayParams::add_options(boost::program_options::options_descr
   namespace po = boost::program_options;
   std::string default_c4_solver_dir = util::Config::instance()->get("c4.solver_dir", "");
 
-  PerfectPlayParams& params = global_params_;
+  PerfectPlayParams& params = global_params;
   auto c4_solver_dir_value = po::value<std::string>(&params.c4_solver_dir);
   if (!default_c4_solver_dir.empty()) {
     c4_solver_dir_value = c4_solver_dir_value->default_value(default_c4_solver_dir);

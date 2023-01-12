@@ -36,7 +36,7 @@ MctsPlayer* create_player(const Args& args, Mcts* mcts=nullptr) {
   if (args.nnet_filename2.empty() || !mcts) {
     player = new MctsPlayer(MctsPlayer::competitive_params, mcts);
   } else {
-    Mcts::Params mcts_params = Mcts::global_params_;
+    Mcts::Params mcts_params = Mcts::global_params;
     mcts_params.nnet_filename = args.nnet_filename2;
     player = new MctsPlayer(MctsPlayer::competitive_params, mcts_params);
   }
@@ -77,15 +77,15 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  ParallelGameRunner::global_params_.randomize_player_order = true;
+  ParallelGameRunner::global_params.randomize_player_order = true;
 
   ParallelGameRunner runner;
   runner.register_players([&]() { return create_players(args); });
   runner.run();
 
   MctsPlayer::competitive_params.dump();
-  printf("MCTS search threads: %6d\n", Mcts::global_params_.num_search_threads);
-  printf("MCTS max batch size: %6d\n", Mcts::global_params_.batch_size_limit);
+  printf("MCTS search threads: %6d\n", Mcts::global_params.num_search_threads);
+  printf("MCTS max batch size: %6d\n", Mcts::global_params.batch_size_limit);
   printf("MCTS avg batch size: %6.2f\n", Mcts::global_avg_batch_size());
 
   return 0;

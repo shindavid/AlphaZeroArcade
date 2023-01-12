@@ -17,7 +17,7 @@
 namespace common {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts<GameState, Tensorizor>::Params Mcts<GameState, Tensorizor>::global_params_;
+typename Mcts<GameState, Tensorizor>::Params Mcts<GameState, Tensorizor>::global_params;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::next_instance_id_ = 0;
@@ -38,7 +38,7 @@ void Mcts<GameState, Tensorizor>::add_options(boost::program_options::options_de
   std::string default_profiling_dir = util::Config::instance()->get(
       "mcts_profiling_dir", default_profiling_dir_path.string());
 
-  Params& params = global_params_;
+  Params& params = global_params;
   desc.add_options()
       ("mcts-nnet-filename", po::value<std::string>(&params.nnet_filename)->default_value(default_nnet_filename),
           "nnet filename")
