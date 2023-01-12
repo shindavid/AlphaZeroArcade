@@ -11,21 +11,24 @@ namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mcts* mcts)
-  : base_t("CPU")
-  , params_(params)
-  , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
+: base_t("CPU")
+, params_(params)
+, mcts_(mcts ? mcts : new Mcts())
+, inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
+, owns_mcts_(mcts==nullptr)
 {
-  if (mcts) {
-    mcts_ = mcts;
-    owns_mcts_ = false;
-  } else {
-    mcts_ = new Mcts();
-    owns_mcts_ = true;
-  }
   sim_params_.tree_size_limit = params.num_mcts_iters;
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<typename... Ts>
+MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
+: MctsPlayer(params, new Mcts(std::forward<Ts>(mcts_params_args)...))
+{
+  owns_mcts_ = true;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

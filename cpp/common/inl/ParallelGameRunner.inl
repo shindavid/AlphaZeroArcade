@@ -73,15 +73,17 @@ template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::GameThread::run(const Params& params) {
   while (true) {
     if (!shared_data_.request_game(params.num_games)) return;
-    play_game(!params.display_progress_bar);
+    play_game(params);
   }
 }
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::GameThread::play_game(bool print_result) {
+void ParallelGameRunner<GameState>::GameThread::play_game(const Params& params) {
+  bool print_result = !params.display_progress_bar;
   GameRunner runner(players_);
   time_point_t t1 = std::chrono::steady_clock::now();
-  auto outcome = runner.run();
+  auto order = params.randomize_player_order ? GameRunner::kRandomPlayerSeats : GameRunner::kFixedPlayerSeats;
+  auto outcome = runner.run(order);
   time_point_t t2 = std::chrono::steady_clock::now();
   duration_t duration = t2 - t1;
   int64_t ns = duration.count();

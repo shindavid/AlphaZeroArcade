@@ -44,7 +44,8 @@ public:
   using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
   using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
 
-  MctsPlayer(const Params&, Mcts* mcts=nullptr);
+  MctsPlayer(const Params&, Mcts* mcts);
+  template <typename... Ts> MctsPlayer(const Params&, Ts&&... mcts_params_args);
   ~MctsPlayer();
 
   Mcts* get_mcts() { return mcts_; }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iterator>
 #include <random>
 
 /*
@@ -14,6 +15,8 @@ public:
    * Uniformly randomly picks a value in the half-open range [lower, upper).
    */
   template<typename T, typename U> static auto uniform_sample(T lower, U upper);
+
+  template<std::random_access_iterator T> static void shuffle(T begin, T end);
 
   /*
    * Given an array A of n values, produces a random integer on the interval [0, n), where integer i is chosen

@@ -90,8 +90,9 @@ int main(int ac, char* av[]) {
   players[my_color] = human;
   players[cpu_color] = cpu;
 
-  common::GameRunner<c4::GameState> runner(players);
-  auto outcome = runner.run();
+  using GameRunner = common::GameRunner<c4::GameState>;
+  GameRunner runner(players);
+  auto outcome = runner.run(GameRunner::kFixedPlayerSeats);
 
   if (outcome[my_color] == 1) {
     std::cout << "Congratulations, you win!" << std::endl;

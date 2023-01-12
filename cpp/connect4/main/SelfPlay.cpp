@@ -21,8 +21,10 @@
 
 struct Args {
   std::string games_dir_str;
+  std::string nnet_filename2;
   int num_mcts_iters;
   bool verbose;
+  bool export_data;
 };
 
 using GameState = c4::GameState;
@@ -36,7 +38,10 @@ using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 
-DataExportingMctsPlayer* create_player(const Args& args, TrainingDataWriter* writer, Mcts* mcts=nullptr) {
+DataExportingMctsPlayer* create_exporting_player(const Args& args, TrainingDataWriter* writer, Mcts* mcts=nullptr) {
+  if (!args.nnet_filename2.empty()) {
+    throw util::Exception("Cannot set --export/-x together with --mcts-nnet-filename2");
+  }
   MctsPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
   params.temperature = 0.5;
@@ -47,9 +52,33 @@ DataExportingMctsPlayer* create_player(const Args& args, TrainingDataWriter* wri
   return player;
 }
 
-player_array_t create_players(const Args& args, TrainingDataWriter* writer) {
-  DataExportingMctsPlayer* p1 = create_player(args, writer);
-  DataExportingMctsPlayer* p2 = create_player(args, writer, p1->get_mcts());
+MctsPlayer* create_player(const Args& args, Mcts* mcts=nullptr) {
+  MctsPlayer::Params params;
+  params.num_mcts_iters = args.num_mcts_iters;
+  params.temperature = 0.0;
+  params.verbose = args.verbose;
+
+  MctsPlayer* player;
+  if (args.nnet_filename2.empty() || !mcts) {
+    player = new MctsPlayer(params, mcts);
+  } else {
+    Mcts::Params mcts_params = Mcts::global_params_;
+    mcts_params.nnet_filename = args.nnet_filename2;
+    player = new MctsPlayer(params, mcts_params);
+  }
+  player->set_name(util::create_string("MCTS-%d", mcts ? 2 : 1));
+  return player;
+}
+
+player_array_t create_exporting_players(const Args& args, TrainingDataWriter* writer) {
+  DataExportingMctsPlayer* p1 = create_exporting_player(args, writer);
+  DataExportingMctsPlayer* p2 = create_exporting_player(args, writer, p1->get_mcts());
+  return player_array_t{p1, p2};;
+}
+
+player_array_t create_players(const Args& args) {
+  MctsPlayer* p1 = create_player(args);
+  MctsPlayer* p2 = create_player(args, p1->get_mcts());
   return player_array_t{p1, p2};;
 }
 
@@ -61,13 +90,17 @@ int main(int ac, char* av[]) {
   desc.add_options()("help,h", "help");
 
   Mcts::add_options(desc);
-  ParallelGameRunner::global_params_.display_progress_bar = true;
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
-      ("games-dir,G", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"), "where to write games")
+      ("games-dir,G", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"),
+       "where to write games (only if --export/-x option is set)")
+      ("mcts-nnet-filename2", po::value<std::string>(&args.nnet_filename2)->default_value(""),
+       "set this to use a different nnet for the second player")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
+      ("export,x", po::bool_switch(&args.export_data)->default_value(false),
+          "export game data for subsequent nn training")
       ;
 
   po::variables_map vm;
@@ -79,10 +112,16 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  TrainingDataWriter writer(args.games_dir_str);
+  ParallelGameRunner::global_params_.display_progress_bar = args.export_data;
+  ParallelGameRunner::global_params_.randomize_player_order = true;
 
   ParallelGameRunner runner;
-  runner.register_players([&]() { return create_players(args, &writer); });
+  if (args.export_data) {
+    TrainingDataWriter writer(args.games_dir_str);
+    runner.register_players([&]() { return create_exporting_players(args, &writer); });
+  } else {
+    runner.register_players([&]() { return create_players(args); });
+  }
   runner.run();
 
   printf("MCTS iters:          %6d\n", args.num_mcts_iters);

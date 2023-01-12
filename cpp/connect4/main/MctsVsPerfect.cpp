@@ -56,7 +56,10 @@ int main(int ac, char* av[]) {
 
   Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
-  c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
+
+  c4::PerfectPlayParams::add_options(desc, true);
+
+  ParallelGameRunner::global_params_.randomize_player_order = false;
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()

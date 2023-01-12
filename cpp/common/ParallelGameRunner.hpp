@@ -40,6 +40,7 @@ public:
   struct Params {
     int num_games = 1000;  // if <=0, run indefinitely
     int parallelism_factor = 100;  // number of games to run simultaneously
+    bool randomize_player_order = true;
     bool display_progress_bar = false;
   };
 
@@ -86,7 +87,7 @@ private:
 
   private:
     void run(const Params& params);
-    void play_game(bool print_result);
+    void play_game(const Params& params);
 
     SharedData& shared_data_;
     player_array_t players_;

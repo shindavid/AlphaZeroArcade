@@ -12,13 +12,18 @@ namespace common {
 template<GameStateConcept GameState>
 class GameRunner {
 public:
+  enum PlayerOrder {
+    kFixedPlayerSeats,
+    kRandomPlayerSeats
+  };
+
   using GameOutcome = typename GameStateTypes<GameState>::GameOutcome;
   using Player = AbstractPlayer<GameState>;
   using player_array_t = std::array<Player*, GameState::kNumPlayers>;
 
   template<typename T> GameRunner(T&& players) : players_(players) {}
 
-  GameOutcome run();
+  GameOutcome run(PlayerOrder);
 
 private:
   player_array_t players_;

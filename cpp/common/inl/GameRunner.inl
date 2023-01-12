@@ -2,11 +2,15 @@
 
 #include <common/DerivedTypes.hpp>
 #include <util/Exception.hpp>
+#include <util/Random.hpp>
 
 namespace common {
 
 template<GameStateConcept GameState>
-typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run() {
+typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run(PlayerOrder order) {
+  if (order == kRandomPlayerSeats) {
+    util::Random::shuffle(players_.begin(), players_.end());
+  }
   for (size_t p = 0; p < players_.size(); ++p) {
     players_[p]->start_game(players_, p);
   }
