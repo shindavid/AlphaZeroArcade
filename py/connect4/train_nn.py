@@ -26,8 +26,8 @@ def get_args():
     parser.add_argument("-g", "--games-dir", default=Repo.c4_games(), help='c4 games dir (default: %(default)s)')
     parser.add_argument("-m", "--model-file", default=Repo.c4_model(),
                         help='model output location (default: %(default)s)')
-    parser.add_argument("-M", "--multi-label-policy", action='store_true',
-                        help='Multi-label policy labels (should be used for oracle-labeled games)')
+    parser.add_argument("-p", "--policy-loss-criterion", default='MultiLabelSoftMarginLoss',
+                        help='Policy loss criterion. Examples: MultiLabelSoftMarginLoss, CrossEntropyLoss (default: %(default)s)')
     parser.add_argument("-w", "--weak-mode", action='store_true', help='Weak mode (default: strong)')
     parser.add_argument("-e", "--num-epochs", type=int, default=8, help='Num epochs (default: %(default)s)')
     parser.add_argument("-b", "--batch-size", type=int, default=64, help='Batch size (default: %(default)s)')
@@ -137,11 +137,7 @@ def main():
     net = C4Net(c4_data_loader.input_shape, n_res_blocks=args.num_residual_blocks)
     net.cuda()
 
-    if args.multi_label_policy:
-        policy_criterion = nn.MultiLabelSoftMarginLoss()
-    else:
-        policy_criterion = nn.CrossEntropyLoss()
-
+    policy_criterion = getattr(nn, args.policy_loss_criterion)()
     value_criterion = nn.CrossEntropyLoss()
 
     """
