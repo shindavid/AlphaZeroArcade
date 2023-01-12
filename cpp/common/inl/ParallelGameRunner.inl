@@ -154,7 +154,7 @@ std::string ParallelGameRunner<GameState>::get_results_str(const results_map_t& 
     else if (f == 0) loss += count;
     else draw += count;
   }
-  return util::create_string("W%d L%d D%d [%.3g]", win, loss, draw, score);
+  return util::create_string("W%d L%d D%d [%.16g]", win, loss, draw, score);
 }
 
 }  // namespace common
