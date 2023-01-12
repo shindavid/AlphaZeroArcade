@@ -77,6 +77,10 @@ player_array_t create_exporting_players(const Args& args, TrainingDataWriter* wr
 }
 
 player_array_t create_players(const Args& args) {
+  if (Mcts::global_params_.dirichlet_mult) {
+    std::cout << "INFO: resetting --mcts-dirichlet-mult to 0" << std::endl;
+    Mcts::global_params_.dirichlet_mult = 0;
+  }
   MctsPlayer* p1 = create_player(args);
   MctsPlayer* p2 = create_player(args, p1->get_mcts());
   return player_array_t{p1, p2};;
