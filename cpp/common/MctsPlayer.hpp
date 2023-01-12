@@ -29,13 +29,26 @@ public:
     kFull
   };
 
-  struct Params {
-    int num_mcts_iters_fast = 100;
-    int num_mcts_iters_full = 600;
-    float full_pct = 0.25;
-    float temperature = 0;
-    bool verbose = false;
+  enum DefaultParamsType {
+    kCompetitive,
+    kTraining
   };
+
+  struct Params {
+    Params(DefaultParamsType);
+    void dump() const;
+
+    int num_fast_iters;
+    int num_full_iters;
+    float full_pct;
+    float temperature;
+    bool verbose = false;
+
+    void add_options(boost::program_options::options_description& desc, bool add_abbreviations=false);
+  };
+
+  static Params competitive_params;
+  static Params training_params;
 
   using GameStateTypes = common::GameStateTypes<GameState>;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <boost/program_options.hpp>
 
 #include <util/StringUtil.hpp>
@@ -24,6 +26,14 @@ auto float_value(const char* fmt, float* dest, float default_value) {
 }
 
 auto float_value(const char* fmt, float* dest) { return float_value(fmt, dest, *dest); }
+
+/*
+ * abbrev_str(true, "abc", "a") == "abc,a"
+ * abbrev_str(false, "abc", "a") == "abc"
+ */
+std::string abbrev_str(bool abbreviate, const char* full_name, const char* abbreviation) {
+  return abbreviate ? util::create_string("%s,%s", full_name, abbreviation) : full_name;
+}
 
 }  // namespace program_options
 

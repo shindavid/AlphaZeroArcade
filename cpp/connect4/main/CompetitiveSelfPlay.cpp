@@ -20,7 +20,6 @@
 struct Args {
   std::string games_dir_str;
   std::string nnet_filename2;
-  int num_mcts_iters;
 };
 
 using GameState = c4::GameState;
@@ -33,18 +32,13 @@ using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 
 MctsPlayer* create_player(const Args& args, Mcts* mcts=nullptr) {
-  MctsPlayer::Params params;
-  params.num_mcts_iters_full = args.num_mcts_iters;
-  params.full_pct = 1.0;
-  params.temperature = 0.0;
-
   MctsPlayer* player;
   if (args.nnet_filename2.empty() || !mcts) {
-    player = new MctsPlayer(params, mcts);
+    player = new MctsPlayer(MctsPlayer::competitive_params, mcts);
   } else {
     Mcts::Params mcts_params = Mcts::global_params_;
     mcts_params.nnet_filename = args.nnet_filename2;
-    player = new MctsPlayer(params, mcts_params);
+    player = new MctsPlayer(MctsPlayer::competitive_params, mcts_params);
   }
   player->set_name(util::create_string("MCTS-%d", mcts ? 2 : 1));
   return player;
@@ -63,8 +57,8 @@ int main(int ac, char* av[]) {
   po::options_description desc("Mcts vs mcts");
   desc.add_options()("help,h", "help");
 
-  Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
+  MctsPlayer::competitive_params.add_options(desc, true);
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
@@ -72,7 +66,6 @@ int main(int ac, char* av[]) {
        "where to write games (only if --export/-x option is set)")
       ("mcts-nnet-filename2", po::value<std::string>(&args.nnet_filename2)->default_value(""),
        "set this to use a different nnet for the second player")
-      ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
       ;
 
   po::variables_map vm;
@@ -90,7 +83,7 @@ int main(int ac, char* av[]) {
   runner.register_players([&]() { return create_players(args); });
   runner.run();
 
-  printf("MCTS iters:          %6d\n", args.num_mcts_iters);
+  MctsPlayer::competitive_params.dump();
   printf("MCTS search threads: %6d\n", Mcts::global_params_.num_search_threads);
   printf("MCTS max batch size: %6d\n", Mcts::global_params_.batch_size_limit);
   printf("MCTS avg batch size: %6.2f\n", Mcts::global_avg_batch_size());

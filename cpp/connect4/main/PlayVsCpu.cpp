@@ -16,13 +16,14 @@
 
 struct Args {
   std::string my_starting_color;
-  int num_mcts_iters;
-  float temperature;
   bool perfect;
   bool verbose;
 };
 
-using Mcts = common::Mcts<c4::GameState, c4::Tensorizor>;
+using GameState = c4::GameState;
+using Tensorizor = c4::Tensorizor;
+using Mcts = common::Mcts<GameState, Tensorizor>;
+using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
 
 common::player_index_t parse_color(const std::string& str) {
   if (str == "R") return c4::kRed;
@@ -37,23 +38,17 @@ int main(int ac, char* av[]) {
 
   std::string default_c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
 
-  po::options_description desc("Play vs CPU as a human");
+  po::options_description desc("Play vs MCTS as a human");
   desc.add_options()("help,h", "help");
 
-  Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
-
+  MctsPlayer::competitive_params.add_options(desc, true);
   c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
 
   desc.add_options()
-      ("my-starting-color,C", po::value<std::string>(&args.my_starting_color),
+      ("my-starting-color,s", po::value<std::string>(&args.my_starting_color),
           "human's starting color (R or Y). Default: random")
       ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect player")
-      ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100),
-          "num mcts iterations to do per move")
-      ("temperature,t", po::value<float>(&args.temperature)->default_value(0.0),
-          "temperature. Must be >=0. Higher=more random play")
-      ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose mode")
       ;
 
   po::variables_map vm;
@@ -72,13 +67,8 @@ int main(int ac, char* av[]) {
   if (args.perfect) {
     cpu = new c4::PerfectPlayer();
   } else {
-    using C4MctsPlayer = common::MctsPlayer<c4::GameState, c4::Tensorizor>;
-    C4MctsPlayer::Params cpu_params;
-    cpu_params.num_mcts_iters_full = args.num_mcts_iters;
-    cpu_params.full_pct = 1.0;
-    cpu_params.temperature = args.temperature;
-    cpu_params.verbose = args.verbose;
-    cpu = new C4MctsPlayer(cpu_params);
+    MctsPlayer::Params cpu_params = MctsPlayer::competitive_params;
+    cpu = new MctsPlayer(cpu_params);
   }
 
   common::player_index_t my_color = parse_color(args.my_starting_color);

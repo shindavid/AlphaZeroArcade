@@ -15,7 +15,7 @@ void ParallelGameRunner<GameState>::add_options(boost::program_options::options_
 
   Params& params = global_params_;
   desc.add_options()
-      (add_shortcuts ? "num-games,g" : "num-games", po::value<int>(&params.num_games)->default_value(params.num_games),
+      (add_shortcuts ? "num-games,G" : "num-games", po::value<int>(&params.num_games)->default_value(params.num_games),
        "num games (<=0 means run indefinitely)")
       (add_shortcuts ? "parallelism-factor,p" : "parallelism-factor",
           po::value<int>(&params.parallelism_factor)->default_value(params.parallelism_factor),
