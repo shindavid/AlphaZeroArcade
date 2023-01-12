@@ -17,8 +17,11 @@ namespace c4 {
 
 class Tensorizor {
 public:
+  static constexpr int kMaxNumSymmetries = 2;
   using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
-  using InputEigenSlab = common::TensorizorTypes<Tensorizor>::InputSlab::EigenType;
+  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
+  using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
+  using InputEigenSlab = TensorizorTypes::InputSlab::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, 2>;
@@ -33,7 +36,7 @@ public:
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
   void tensorize(InputEigenSlab& tensor, const GameState& state) const { state.tensorize(tensor); }
 
-  common::symmetry_index_t get_random_symmetry_index(const GameState&) const;
+  SymmetryIndexSet get_symmetry_indices(const GameState&) const;
   SymmetryTransform* get_symmetry(common::symmetry_index_t index) const;
 
 private:

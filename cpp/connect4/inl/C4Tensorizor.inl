@@ -18,8 +18,10 @@ inline Tensorizor::transform_array_t Tensorizor::transforms() {
   return arr;
 }
 
-inline common::symmetry_index_t Tensorizor::get_random_symmetry_index(const GameState&) const {
-  return util::Random::uniform_sample(0, transforms().size());
+inline Tensorizor::SymmetryIndexSet Tensorizor::get_symmetry_indices(const GameState&) const {
+  SymmetryIndexSet set;
+  set.set();
+  return set;
 }
 
 inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(common::symmetry_index_t index) const {

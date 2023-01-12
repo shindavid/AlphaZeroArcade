@@ -46,7 +46,7 @@ int main(int ac, char* av[]) {
   c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
 
   desc.add_options()
-      ("my-starting-color,c", po::value<std::string>(&args.my_starting_color),
+      ("my-starting-color,C", po::value<std::string>(&args.my_starting_color),
           "human's starting color (R or Y). Default: random")
       ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect player")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(100),

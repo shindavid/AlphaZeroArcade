@@ -111,9 +111,9 @@ public:
   /*
    * Takes ownership of pointer.
    */
-  void process(const GameData* data);
+  void close(const GameData* data);
 
-  void close();
+  void shut_down();
 
 protected:
   using game_queue_t = std::vector<const GameData*>;

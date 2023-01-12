@@ -54,7 +54,7 @@ public:
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   float avg_batch_size() const { return mcts_->avg_batch_size(); }
 
-private:
+protected:
   struct VerboseInfo {
     ValueProbDistr mcts_value;
     LocalPolicyProbDistr mcts_policy;
@@ -69,6 +69,7 @@ private:
   Tensorizor tensorizor_;
 
   Mcts* mcts_;
+  const MctsResults* mcts_results_;  // only accessible from within get_action() method!
   MctsSimParams sim_params_;
   const float inv_temperature_;
   player_index_t my_index_ = -1;

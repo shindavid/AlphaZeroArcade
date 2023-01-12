@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bitset>
 #include <concepts>
 #include <cstdint>
 #include <type_traits>
@@ -24,6 +25,11 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
   { typename Tensorizor::Shape{} } -> util::IntSequenceConcept;
 
   /*
+   * The maximum number of symmetries.
+   */
+  { util::decay_copy(Tensorizor::kMaxNumSymmetries) } -> std::same_as<int>;
+
+  /*
    * Used to clear state between games. (Is this necessary?)
    */
   { tensorizor.clear() };
@@ -38,7 +44,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
    */
   { tensorizor.tensorize(input, GameState{}) };
 
-  { tensorizor.get_random_symmetry_index(GameState{}) } -> std::same_as<symmetry_index_t>;
+  { tensorizor.get_symmetry_indices(GameState{}) } -> std::same_as<std::bitset<Tensorizor::kMaxNumSymmetries>>;
 
   { tensorizor.get_symmetry(symmetry_index_t{}) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
 };

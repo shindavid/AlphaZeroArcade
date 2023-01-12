@@ -64,20 +64,20 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  auto results = mcts_->sim(tensorizor_, state, sim_params_);
-  GlobalPolicyProbDistr policy = results->counts.template cast<float>();
+  mcts_results_ = mcts_->sim(tensorizor_, state, sim_params_);
+  GlobalPolicyProbDistr policy = mcts_results_->counts.template cast<float>();
   if (inv_temperature_) {
     policy = policy.pow(inv_temperature_);
   } else {
     policy = (policy == policy.maxCoeff()).template cast<float>();
   }
 
-  ValueProbDistr value = results->win_rates;
+  ValueProbDistr value = mcts_results_->win_rates;
   if (verbose_info_) {
     policy /= policy.sum();
     verbose_info_->mcts_value = value;
     GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->mcts_policy);
-    verbose_info_->mcts_results = *results;
+    verbose_info_->mcts_results = *mcts_results_;
     verbose_info_->initialized = true;
   }
   action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());

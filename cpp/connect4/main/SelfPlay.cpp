@@ -10,14 +10,17 @@
 
 #include <boost/program_options.hpp>
 
+#include <common/DataExportingMctsPlayer.hpp>
 #include <common/GameRunner.hpp>
 #include <common/MctsPlayer.hpp>
 #include <common/ParallelGameRunner.hpp>
+#include <common/TrainingDataWriter.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <util/StringUtil.hpp>
 
 struct Args {
+  std::string games_dir_str;
   int num_mcts_iters;
   bool verbose;
 };
@@ -25,25 +28,28 @@ struct Args {
 using GameState = c4::GameState;
 using Tensorizor = c4::Tensorizor;
 
+using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
 using ParallelGameRunner = common::ParallelGameRunner<GameState>;
 using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
+using DataExportingMctsPlayer = common::DataExportingMctsPlayer<GameState, Tensorizor>;
 using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 
-MctsPlayer* create_mcts_player(const Args& args, Mcts* mcts=nullptr) {
+DataExportingMctsPlayer* create_player(const Args& args, TrainingDataWriter* writer, Mcts* mcts=nullptr) {
   MctsPlayer::Params params;
   params.num_mcts_iters = args.num_mcts_iters;
-  params.temperature = 0;
+  params.temperature = 0.5;
   params.verbose = args.verbose;
-  auto player = new MctsPlayer(params, mcts);
-  player->set_name(util::create_string("MCTS-m%d", args.num_mcts_iters));
+
+  auto player = new DataExportingMctsPlayer(writer, params, mcts);
+  player->set_name(util::create_string("MCTS-%d", mcts ? 2 : 1));
   return player;
 }
 
-player_array_t create_players(const Args& args) {
-  MctsPlayer* p1 = create_mcts_player(args);
-  MctsPlayer* p2 = create_mcts_player(args, p1->get_mcts());
+player_array_t create_players(const Args& args, TrainingDataWriter* writer) {
+  DataExportingMctsPlayer* p1 = create_player(args, writer);
+  DataExportingMctsPlayer* p2 = create_player(args, writer, p1->get_mcts());
   return player_array_t{p1, p2};;
 }
 
@@ -54,11 +60,12 @@ int main(int ac, char* av[]) {
   po::options_description desc("Mcts vs mcts");
   desc.add_options()("help,h", "help");
 
-  Mcts::global_params_.dirichlet_mult = 0;
   Mcts::add_options(desc);
+  ParallelGameRunner::global_params_.display_progress_bar = true;
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
+      ("games-dir,G", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"), "where to write games")
       ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
       ("verbose,v", po::bool_switch(&args.verbose)->default_value(false), "verbose")
       ;
@@ -72,8 +79,10 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
+  TrainingDataWriter writer(args.games_dir_str);
+
   ParallelGameRunner runner;
-  runner.register_players([&]() { return create_players(args); });
+  runner.register_players([&]() { return create_players(args, &writer); });
   runner.run();
 
   printf("MCTS iters:          %6d\n", args.num_mcts_iters);

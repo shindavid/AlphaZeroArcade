@@ -41,20 +41,20 @@ public:
   OracleSupervisor(TrainingDataWriter* writer)
   : writer_(writer) {}
 
-  void start_game() {
-    game_data_ = writer_->allocate_data();
+  TrainingDataWriter::GameData* start_game() {
     tensorizor_.clear();
     move_history_.reset();
+    return writer_->allocate_data();
   }
 
-  void write(const GameState& state) {
+  void write(TrainingDataWriter::GameData* game_data, const GameState& state) {
     auto query_result = oracle_.get_best_moves(move_history_);
     const ActionMask& best_moves = query_result.moves;
     int best_score = query_result.score;
 
     float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
 
-    auto slab = game_data_->get_next_slab();
+    auto slab = game_data->get_next_slab();
     auto& input = slab.input;
     auto& value = slab.value;
     auto& policy = slab.policy;
@@ -69,19 +69,18 @@ public:
     tensorizor_.tensorize(input, state);
   }
 
-  void receive_move(const GameState& state, action_index_t action, const GameOutcome& outcome) {
-    if (common::is_terminal_outcome(outcome)) {
-      writer_->process(game_data_);
-    } else {
-      tensorizor_.receive_state_change(state, action);
-      move_history_.append(action);
-    }
+  void close(TrainingDataWriter::GameData* game_data) {
+    writer_->close(game_data);
+  }
+
+  void receive_move(const GameState& state, action_index_t action) {
+    tensorizor_.receive_state_change(state, action);
+    move_history_.append(action);
   }
 
 private:
   c4::PerfectOracle oracle_;
   TrainingDataWriter* writer_;
-  TrainingDataWriter::GameData* game_data_;
   Tensorizor tensorizor_;
   c4::PerfectOracle::MoveHistory move_history_;
 };
@@ -89,18 +88,20 @@ private:
 template<class BasePlayer>
 class OracleSupervisedPlayer : public BasePlayer {
 public:
-  OracleSupervisedPlayer(OracleSupervisor* supervisor, bool primary)
-  : supervisor_(supervisor)
-  , primary_(primary) {}
+  OracleSupervisedPlayer(TrainingDataWriter* writer, OracleSupervisor* supervisor=nullptr)
+  : supervisor_(supervisor ? supervisor : new OracleSupervisor(writer))
+  , owns_supervisor_(supervisor==nullptr) {}
 
   ~OracleSupervisedPlayer() {
-    if (primary_) delete supervisor_;
+    if (owns_supervisor_) delete supervisor_;
   }
+
+  OracleSupervisor* supervisor() const { return supervisor_; }
 
   void start_game(const player_array_t& players, player_index_t seat_assignment) override {
     BasePlayer::start_game(players, seat_assignment);
-    if (!primary_) return;
-    supervisor_->start_game();
+    game_data_ = supervisor_->start_game();
+    seat_assignment_ = seat_assignment;
   }
 
   void receive_state_change(
@@ -108,25 +109,29 @@ public:
       const GameOutcome& outcome) override
   {
     BasePlayer::receive_state_change(p, state, action, outcome);
-    if (!primary_) return;
-    supervisor_->receive_move(state, action, outcome);
+    if (common::is_terminal_outcome(outcome)) {
+      supervisor_->close(game_data_);
+    } else if (p == seat_assignment_) {
+      supervisor_->receive_move(state, action);
+    }
   }
 
   action_index_t get_action(const GameState& state, const ActionMask& mask) override {
-    supervisor_->write(state);
+    supervisor_->write(game_data_, state);
     return BasePlayer::get_action(state, mask);
   }
 
 private:
   OracleSupervisor* supervisor_;
-  bool primary_;
+  TrainingDataWriter::GameData* game_data_;
+  player_index_t seat_assignment_;
+  bool owns_supervisor_;
 };
 
 player_array_t create_players(TrainingDataWriter* writer) {
-  OracleSupervisor* supervisor = new OracleSupervisor(writer);
   using player_t = OracleSupervisedPlayer<RandomPlayer>;
-  Player* p1 = new player_t(supervisor, true);
-  Player* p2 = new player_t(supervisor, false);
+  player_t* p1 = new player_t(writer);
+  player_t* p2 = new player_t(writer, p1->supervisor());
   return player_array_t{p1, p2};;
 }
 

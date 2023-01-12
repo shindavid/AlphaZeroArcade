@@ -69,7 +69,10 @@ struct GameStateTypes {
 
 template<typename Tensorizor>
 struct TensorizorTypes {
+  static constexpr int kMaxNumSymmetries = Tensorizor::kMaxNumSymmetries;
   using BaseShape = typename Tensorizor::Shape;
+
+  using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 
   template <int NumRows> using Shape = eigen_util::to_sizes_t<
       util::concat_int_sequence_t<util::int_sequence<NumRows>, BaseShape>>;

@@ -63,8 +63,8 @@ TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const ValueEigenSlab& value) {
-  for (DataChunk* chunk : chunks_) {
-    chunk->record_for_all(value);
+  for (DataChunk& chunk : chunks_) {
+    chunk.record_for_all(value);
   }
 }
 
@@ -87,11 +87,11 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const boost::fil
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
-  close();
+  shut_down();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::process(const GameData* data) {
+void TrainingDataWriter<GameState_, Tensorizor_>::close(const GameData* data) {
   std::unique_lock<std::mutex> lock(mutex_);
   game_queue_[queue_index_].push_back(data);
   lock.unlock();
@@ -99,7 +99,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::process(const GameData* data) 
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::close() {
+void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
   closed_ = true;
   cv_.notify_one();
   if (thread_->joinable()) thread_->join();
