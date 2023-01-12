@@ -11,6 +11,13 @@ inline auto Random::uniform_sample(T lower, U upper) {
   return dist(instance()->prng_);
 }
 
+template<typename FloatType>
+FloatType Random::uniform_real(FloatType left, FloatType right) {
+  std::uniform_real_distribution<FloatType> dist(left, right);
+  return dist(instance()->prng_);
+}
+
+
 template<std::random_access_iterator T>
 void Random::shuffle(T begin, T end) {
   return std::shuffle(begin, end, instance()->prng_);

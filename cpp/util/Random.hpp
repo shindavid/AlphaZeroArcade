@@ -16,6 +16,11 @@ public:
    */
   template<typename T, typename U> static auto uniform_sample(T lower, U upper);
 
+  /*
+   * Produces a random real value in the range [left, right)
+   */
+  template<typename FloatType> static FloatType uniform_real(FloatType left, FloatType right);
+
   template<std::random_access_iterator T> static void shuffle(T begin, T end);
 
   /*
