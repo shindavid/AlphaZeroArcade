@@ -35,6 +35,8 @@ public:
   action_index_t get_action(const GameState&, const ActionMask&) override;
 
 protected:
+  void record_position(const GameState& state);
+
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameData* game_data_ = nullptr;
   player_index_t seat_assignment_;

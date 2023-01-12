@@ -14,10 +14,11 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
 : base_t("CPU")
 , params_(params)
 , mcts_(mcts ? mcts : new Mcts())
+, fast_sim_params_{params.num_mcts_iters_fast, true}
+, full_sim_params_{params.num_mcts_iters_full, false}
 , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 , owns_mcts_(mcts==nullptr)
 {
-  sim_params_.tree_size_limit = params.num_mcts_iters;
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
@@ -67,7 +68,9 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  mcts_results_ = mcts_->sim(tensorizor_, state, sim_params_);
+  sim_type_ = get_random_sim_type();
+  const MctsSimParams& sim_params = (sim_type_ == kFast) ? fast_sim_params_ : full_sim_params_;
+  mcts_results_ = mcts_->sim(tensorizor_, state, sim_params);
   GlobalPolicyProbDistr policy = mcts_results_->counts.template cast<float>();
   if (inv_temperature_) {
     policy = policy.pow(inv_temperature_);
@@ -96,6 +99,13 @@ inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
   mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+MctsPlayer<GameState_, Tensorizor_>::SimType
+MctsPlayer<GameState_, Tensorizor_>::get_random_sim_type() const {
+  float r = util::Random::uniform_real<float>(0.0f, 1.0f);
+  return r < params_.full_pct ? kFull : kFast;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

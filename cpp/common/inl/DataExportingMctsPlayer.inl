@@ -39,7 +39,14 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& mask)
 {
   action_index_t action = base_t::get_action(state, mask);
+  if (this->sim_type_ == base_t::kFull) {
+    record_position(state);
+  }
+  return action;
+}
 
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(const GameState& state) {
   auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
   for (symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
     auto slab = game_data_->get_next_slab();
@@ -56,9 +63,6 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     transform->transform_input(input);
     transform->transform_policy(policy);
   }
-
-  return action;
 }
-
 
 }  // namespace common

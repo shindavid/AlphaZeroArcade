@@ -34,7 +34,8 @@ using player_array_t = Player::player_array_t;
 
 MctsPlayer* create_player(const Args& args, Mcts* mcts=nullptr) {
   MctsPlayer::Params params;
-  params.num_mcts_iters = args.num_mcts_iters;
+  params.num_mcts_iters_full = args.num_mcts_iters;
+  params.full_pct = 1.0;
   params.temperature = 0.0;
 
   MctsPlayer* player;

@@ -24,9 +24,15 @@ public:
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
 
+  enum SimType {
+    kFast,
+    kFull
+  };
+
   struct Params {
-    boost::filesystem::path debug_filename;
-    int num_mcts_iters = 100;
+    int num_mcts_iters_fast = 100;
+    int num_mcts_iters_full = 600;
+    float full_pct = 0.25;
     float temperature = 0;
     bool verbose = false;
   };
@@ -64,18 +70,23 @@ protected:
     bool initialized = false;
   };
 
+  SimType get_random_sim_type() const;
   void verbose_dump() const;
 
   const Params params_;
   Tensorizor tensorizor_;
 
   Mcts* mcts_;
-  const MctsResults* mcts_results_;  // only accessible from within get_action() method!
-  MctsSimParams sim_params_;
+  const MctsSimParams fast_sim_params_;
+  const MctsSimParams full_sim_params_;
   const float inv_temperature_;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;
+
+  // below are pseudo-return values of get_action(), to be used by derived class
+  const MctsResults* mcts_results_;
+  SimType sim_type_;
 };
 
 }  // namespace common

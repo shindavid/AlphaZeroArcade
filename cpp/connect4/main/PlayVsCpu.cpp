@@ -74,7 +74,8 @@ int main(int ac, char* av[]) {
   } else {
     using C4MctsPlayer = common::MctsPlayer<c4::GameState, c4::Tensorizor>;
     C4MctsPlayer::Params cpu_params;
-    cpu_params.num_mcts_iters = args.num_mcts_iters;
+    cpu_params.num_mcts_iters_full = args.num_mcts_iters;
+    cpu_params.full_pct = 1.0;
     cpu_params.temperature = args.temperature;
     cpu_params.verbose = args.verbose;
     cpu = new C4MctsPlayer(cpu_params);

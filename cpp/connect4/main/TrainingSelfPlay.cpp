@@ -21,7 +21,9 @@
 
 struct Args {
   std::string games_dir_str;
-  int num_mcts_iters;
+  int num_mcts_iters_fast;
+  int num_mcts_iters_full;
+  float full_pct;
 };
 
 using GameState = c4::GameState;
@@ -37,7 +39,9 @@ using player_array_t = Player::player_array_t;
 
 DataExportingMctsPlayer* create_player(const Args& args, TrainingDataWriter* writer, Mcts* mcts=nullptr) {
   MctsPlayer::Params params;
-  params.num_mcts_iters = args.num_mcts_iters;
+  params.num_mcts_iters_fast = args.num_mcts_iters_fast;
+  params.num_mcts_iters_full = args.num_mcts_iters_full;
+  params.full_pct = args.full_pct;
   params.temperature = 0.5;
 
   auto player = new DataExportingMctsPlayer(writer, params, mcts);
@@ -55,6 +59,7 @@ int main(int ac, char* av[]) {
   Args args;
 
   namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
   po::options_description desc("Mcts vs mcts");
   desc.add_options()("help,h", "help");
 
@@ -63,8 +68,13 @@ int main(int ac, char* av[]) {
 
   desc.add_options()
       ("games-dir,G", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"),
-       "where to write games (only if --export/-x option is set)")
-      ("num-mcts-iters,m", po::value<int>(&args.num_mcts_iters)->default_value(400), "num mcts iterations to do per move")
+       "where to write games")
+      ("num-mcts-iters-fast,i", po::value<int>(&args.num_mcts_iters_fast)->default_value(100),
+       "num mcts iterations to do per fast move")
+      ("num-mcts-iters-full,I", po::value<int>(&args.num_mcts_iters_full)->default_value(600),
+       "num mcts iterations to do per full move")
+      ("full-pct,f", po2::float_value("%.2f", &args.full_pct)->default_value(0.25),
+       "pct of moves that should be full ")
       ;
 
   po::variables_map vm;
@@ -81,7 +91,9 @@ int main(int ac, char* av[]) {
   runner.register_players([&]() { return create_players(args, &writer); });
   runner.run();
 
-  printf("MCTS iters:          %6d\n", args.num_mcts_iters);
+  printf("MCTS fast-iters:     %6d\n", args.num_mcts_iters_fast);
+  printf("MCTS full-iters:     %6d\n", args.num_mcts_iters_full);
+  printf("MCTS full-pct:       %6.2f\n", args.full_pct);
   printf("MCTS search threads: %6d\n", Mcts::global_params_.num_search_threads);
   printf("MCTS max batch size: %6d\n", Mcts::global_params_.batch_size_limit);
   printf("MCTS avg batch size: %6.2f\n", Mcts::global_avg_batch_size());
