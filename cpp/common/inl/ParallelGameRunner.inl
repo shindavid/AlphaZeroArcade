@@ -26,7 +26,8 @@ void ParallelGameRunner<GameState>::add_options(boost::program_options::options_
 template<GameStateConcept GameState>
 ParallelGameRunner<GameState>::SharedData::SharedData(const Params& params) {
   if (params.display_progress_bar) {
-    bar_ = new progressbar(params.num_games);
+    bar_ = new progressbar(params.num_games + 1);  // + 1 for first update
+    bar_->show_bar();  // so that progress-bar displays immediately
   }
 }
 
@@ -35,7 +36,6 @@ bool ParallelGameRunner<GameState>::SharedData::request_game(int num_games) {
   std::lock_guard<std::mutex> guard(mutex_);
   if (num_games >= 0 && num_games_started_ >= num_games) return false;
   num_games_started_++;
-  if (bar_) bar_->update();
   return true;
 }
 
@@ -49,6 +49,7 @@ void ParallelGameRunner<GameState>::SharedData::update(const GameOutcome& outcom
   total_ns_ += ns;
   min_ns_ = std::min(min_ns_, ns);
   max_ns_ = std::max(max_ns_, ns);
+  if (bar_) bar_->update();
 }
 
 template<GameStateConcept GameState>
