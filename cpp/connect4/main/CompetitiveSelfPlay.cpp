@@ -62,7 +62,7 @@ int main(int ac, char* av[]) {
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
-      ("games-dir,G", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"),
+      ("games-dir,g", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"),
        "where to write games (only if --export/-x option is set)")
       ("mcts-nnet-filename2", po::value<std::string>(&args.nnet_filename2)->default_value(""),
        "set this to use a different nnet for the second player")

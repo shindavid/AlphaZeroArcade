@@ -149,7 +149,7 @@ int main(int ac, char* av[]) {
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
-      ("games-dir,G", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"), "where to write games")
+      ("games-dir,g", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"), "where to write games")
       ;
 
   po::variables_map vm;
