@@ -17,10 +17,11 @@ TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::DataChunk()
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::EigenSlab
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_slab() {
+  int rows = rows_++;
   return EigenSlab{
-    input_.template eigenSlab<typename TensorizorTypes::Shape<1>>(rows_),
-    policy_.eigenSlab(rows_),
-    value_.eigenSlab(rows_++)
+    input_.template eigenSlab<typename TensorizorTypes::Shape<1>>(rows),
+    policy_.eigenSlab(rows),
+    value_.eigenSlab(rows)
     };
 }
 
