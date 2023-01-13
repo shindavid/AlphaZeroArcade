@@ -12,18 +12,21 @@ from profiling import ProfilerRegistry, Profiler
 from connect4.game_logic import C4GameState
 from connect4.nnet_player import NNetPlayer, NNetPlayerParams
 from connect4.perfect_player import PerfectPlayer, PerfectPlayerParams
+from util.repo_util import Repo
 
 
 class Args:
     use_perfect = False
     num_games = 2
     num_mcts_iters = 400
+    model_file = None
 
     @staticmethod
     def load(args):
         Args.use_perfect = args.use_perfect
         Args.num_games = args.num_games
         Args.num_mcts_iters = args.num_mcts_iters
+        Args.model_file = args.model_file
 
 
 def load_args():
@@ -33,6 +36,7 @@ def load_args():
                         help='num games (default: %(default)s)')
     parser.add_argument("-i", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
                         help='num num iterations (default: %(default)s)')
+    parser.add_argument('-m', '--model-file', default=Repo.c4_model(), help='c4 model (default: %(default)s)')
 
     args = parser.parse_args()
     Args.load(args)
@@ -44,8 +48,9 @@ def main():
     use_perfect = Args.use_perfect
     num_games = Args.num_games
     num_mcts_iters = Args.num_mcts_iters
+    model_file = Args.model_file
 
-    params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
+    params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters, model_file=model_file)
     cpu1 = NNetPlayer(params1)
     cpu1.set_name('MCTS1-' + str(params1.num_mcts_iters))
 
@@ -53,7 +58,7 @@ def main():
         cpu2 = PerfectPlayer(PerfectPlayerParams())
         cpu2.set_name('Perfect')
     else:
-        params2 = NNetPlayerParams(num_mcts_iters=num_mcts_iters)
+        params2 = NNetPlayerParams(num_mcts_iters=num_mcts_iters, model_file=model_file)
         cpu2 = NNetPlayer(params2)
         cpu2.set_name('MCTS2-' + str(params2.num_mcts_iters))
 
@@ -72,7 +77,7 @@ def main():
         1: 'R wins',
     }
 
-    r = range(1, 2 * num_games, 2) if use_perfect else range(num_games)
+    r = range(0, 2 * num_games, 2) if use_perfect else range(num_games)
     runtimes = []
     for n in r:
         players = [None, None]
