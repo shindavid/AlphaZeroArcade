@@ -129,10 +129,10 @@ void ParallelGameRunner<GameState>::run() {
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     printf("P%d %s\n", p, get_results_str(results[p]).c_str());
   }
-  printf("Parallelism factor:  %6d\n", parallelism_factor);
-  printf("Num games:           %6d\n", params_.num_games);
-  printf("Total runtime:  %10.3fs\n", ns*1e-9);
-  printf("Avg runtime:    %10.3fs\n", ns*1e-9 / params_.num_games);
+  PARAM_DUMP("Parallelism factor", "%d", parallelism_factor);
+  PARAM_DUMP("Num games", "%d", params_.num_games);
+  PARAM_DUMP("Total runtime", "%.3fs", ns*1e-9);
+  PARAM_DUMP("Avg runtime", "%.3fs", ns*1e-9 / params_.num_games);
 
   for (auto thread: threads_) {
     delete thread;

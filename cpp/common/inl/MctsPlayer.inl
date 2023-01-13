@@ -5,6 +5,7 @@
 #include <util/PrintUtil.hpp>
 #include <util/Random.hpp>
 #include <util/RepoUtil.hpp>
+#include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
 namespace common {
@@ -38,14 +39,14 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
   if (full_pct == 0) {
-    printf("MctsPlayer num iters: %d\n", num_fast_iters);
+    PARAM_DUMP("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
-    printf("MctsPlayer num fast iters: %d\n", num_fast_iters);
-    printf("MctsPlayer num full iters: %d\n", num_full_iters);
-    printf("MctsPlayer num fast iters: %.8g\n", full_pct);
+    PARAM_DUMP("MctsPlayer num fast iters", "%d", num_fast_iters);
+    PARAM_DUMP("MctsPlayer num full iters", "%d", num_full_iters);
+    PARAM_DUMP("MctsPlayer num fast iters", "%.8g", full_pct);
   }
   if (temperature > 0) {
-    printf("MctsPlayer temperature: %.8g\n", temperature);
+    PARAM_DUMP("MctsPlayer temperature", "%.8g", temperature);
   }
 }
 
