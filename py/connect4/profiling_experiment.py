@@ -20,6 +20,7 @@ class Args:
     num_games = 2
     num_mcts_iters = 400
     model_file = None
+    debug_file = None
 
     @staticmethod
     def load(args):
@@ -27,6 +28,7 @@ class Args:
         Args.num_games = args.num_games
         Args.num_mcts_iters = args.num_mcts_iters
         Args.model_file = args.model_file
+        Args.debug_file = args.debug_file
 
 
 def load_args():
@@ -37,6 +39,7 @@ def load_args():
     parser.add_argument("-i", "--num-mcts-iters", default=Args.num_mcts_iters, type=int,
                         help='num num iterations (default: %(default)s)')
     parser.add_argument('-m', '--model-file', default=Repo.c4_model(), help='c4 model (default: %(default)s)')
+    parser.add_argument('-d', '--debug-file', help='debug file (for first player)')
 
     args = parser.parse_args()
     Args.load(args)
@@ -49,8 +52,9 @@ def main():
     num_games = Args.num_games
     num_mcts_iters = Args.num_mcts_iters
     model_file = Args.model_file
+    debug_file = Args.debug_file
 
-    params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters, model_file=model_file)
+    params1 = NNetPlayerParams(num_mcts_iters=num_mcts_iters, model_file=model_file, debug_filename=debug_file)
     cpu1 = NNetPlayer(params1)
     cpu1.set_name('MCTS1-' + str(params1.num_mcts_iters))
 
