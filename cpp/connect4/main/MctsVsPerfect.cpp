@@ -58,6 +58,8 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
+  ParallelGameRunner::global_params.display_progress_bar = true;
+
   ParallelGameRunner runner;
   runner.register_players([&]() { return create_players(); });
   runner.run();
