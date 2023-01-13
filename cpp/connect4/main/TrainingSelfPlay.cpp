@@ -56,6 +56,11 @@ int main(int ac, char* av[]) {
 
   Mcts::add_options(desc);
   MctsPlayer::training_params.add_options(desc, true);
+
+  ParallelGameRunner::global_params.num_games = 10000;
+  ParallelGameRunner::global_params.randomize_player_order = false;
+  ParallelGameRunner::global_params.display_progress_bar = true;
+
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
