@@ -21,3 +21,7 @@ output
 
 # egg files
 **/blokus.egg-info
+
+# jupyter notebooks
+.ipynb_checkpoints/
+Untitled*.ipynb
