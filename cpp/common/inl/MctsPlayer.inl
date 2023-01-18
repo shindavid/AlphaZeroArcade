@@ -113,7 +113,7 @@ inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::start_game(
-    const player_array_t& players, player_index_t seat_assignment)
+    game_id_t, const player_array_t& players, player_index_t seat_assignment)
 {
   my_index_ = seat_assignment;
   tensorizor_.clear();

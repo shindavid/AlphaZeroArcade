@@ -1,6 +1,7 @@
 #include <common/GameRunner.hpp>
 
 #include <common/DerivedTypes.hpp>
+#include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
 
@@ -8,11 +9,12 @@ namespace common {
 
 template<GameStateConcept GameState>
 typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run(PlayerOrder order) {
+  game_id_t game_id = util::get_unique_id();
   if (order == kRandomPlayerSeats) {
     util::Random::shuffle(players_.begin(), players_.end());
   }
   for (size_t p = 0; p < players_.size(); ++p) {
-    players_[p]->start_game(players_, p);
+    players_[p]->start_game(game_id, players_, p);
   }
 
   GameState state;

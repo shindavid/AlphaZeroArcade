@@ -22,7 +22,7 @@ public:
   void set_name(const std::string &name) { name_ = name; }
   std::string get_name() const { return name_; }
 
-  virtual void start_game(const player_array_t &players, player_index_t seat_assignment) {}
+  virtual void start_game(game_id_t, const player_array_t &players, player_index_t seat_assignment) {}
   virtual void receive_state_change(player_index_t, const GameState &, action_index_t, const GameOutcome &) {}
   virtual action_index_t get_action(const GameState &, const ActionMask &) = 0;
 

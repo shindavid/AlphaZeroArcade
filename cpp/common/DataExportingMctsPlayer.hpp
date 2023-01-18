@@ -27,7 +27,7 @@ public:
 
   DataExportingMctsPlayer(TrainingDataWriter* writer, const Params& params, Mcts* mcts=nullptr);
 
-  void start_game(const player_array_t& players, player_index_t seat_assignment) override;
+  void start_game(game_id_t, const player_array_t& players, player_index_t seat_assignment) override;
   void receive_state_change(
       player_index_t p, const GameState& state, action_index_t action,
       const GameOutcome& outcome) override;
@@ -38,7 +38,7 @@ protected:
   void record_position(const GameState& state);
 
   TrainingDataWriter* writer_;
-  TrainingDataWriter::GameData* game_data_ = nullptr;
+  TrainingDataWriter::GameData_sptr game_data_;
   player_index_t seat_assignment_;
 };
 

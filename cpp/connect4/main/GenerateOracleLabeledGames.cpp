@@ -41,13 +41,13 @@ public:
   OracleSupervisor(TrainingDataWriter* writer)
   : writer_(writer) {}
 
-  TrainingDataWriter::GameData* start_game() {
+  TrainingDataWriter::GameData_sptr start_game(common::game_id_t game_id) {
     tensorizor_.clear();
     move_history_.reset();
-    return writer_->allocate_data();
+    return writer_->get_data(game_id);
   }
 
-  void write(TrainingDataWriter::GameData* game_data, const GameState& state) {
+  void write(TrainingDataWriter::GameData_sptr game_data, const GameState& state) {
     auto query_result = oracle_.get_best_moves(move_history_);
     const ActionMask& best_moves = query_result.moves;
     int best_score = query_result.score;
@@ -69,7 +69,7 @@ public:
     tensorizor_.tensorize(input, state);
   }
 
-  void close(TrainingDataWriter::GameData* game_data) {
+  void close(TrainingDataWriter::GameData_sptr game_data) {
     writer_->close(game_data);
   }
 
@@ -98,9 +98,9 @@ public:
 
   OracleSupervisor* supervisor() const { return supervisor_; }
 
-  void start_game(const player_array_t& players, player_index_t seat_assignment) override {
-    BasePlayer::start_game(players, seat_assignment);
-    game_data_ = supervisor_->start_game();
+  void start_game(common::game_id_t game_id, const player_array_t& players, player_index_t seat_assignment) override {
+    BasePlayer::start_game(game_id, players, seat_assignment);
+    game_data_ = supervisor_->start_game(game_id);
     seat_assignment_ = seat_assignment;
   }
 
@@ -123,7 +123,7 @@ public:
 
 private:
   OracleSupervisor* supervisor_;
-  TrainingDataWriter::GameData* game_data_;
+  TrainingDataWriter::GameData_sptr game_data_;
   player_index_t seat_assignment_;
   bool owns_supervisor_;
 };

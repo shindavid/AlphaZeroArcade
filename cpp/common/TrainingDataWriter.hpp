@@ -46,11 +46,7 @@ public:
    * With 1MB chunks, each chunk can fit about 40 positions. Seems pretty reasonable.
    */
   static constexpr size_t kBytesPerChunk = 1024 * 1024;  // 1MB
-  static constexpr size_t kBytesPerFile = 16 * kBytesPerChunk;  // 16MB
-
   static constexpr int kRowsPerChunk = 1 + kBytesPerChunk / kBytesPerRow;
-  static constexpr int kRowsPerFile = 1 + kBytesPerFile / kBytesPerRow;
-
   static_assert(kRowsPerChunk > 20, "Unreasonably small chunks");
 
   using InputChunk = typename TensorizorTypes::template InputTensor<kRowsPerChunk>;
@@ -92,36 +88,52 @@ public:
 
   using data_chunk_list_t = std::list<DataChunk>;
 
+  /*
+   * Note: we assume that all GameData read/write operations are from thread-safe contexts. That is, if two self-play
+   * Player's hold onto the same GameData, they should read/write to it in separate threads.
+   *
+   * We can relax this assumption easily by adding some mutexing to this class. With the current overall architecture,
+   * that is not necessary.
+   */
   class GameData {
   public:
     EigenSlab get_next_slab();
     void record_for_all(const ValueEigenSlab& value);
+
+  protected:
+    // friend classes only intended to use these protected members
+    GameData(game_id_t id) : id_(id) {}
     const data_chunk_list_t& chunks() const { return chunks_; }
+    game_id_t id() const { return id_; }
+    bool closed() const { return closed_; }
+    void close() { closed_ = true; }
+
+    friend class TrainingDataWriter;
 
   private:
+    // friend classes not intended to use these private members
     DataChunk* get_next_chunk();
     data_chunk_list_t chunks_;
+    const game_id_t id_;
+    bool closed_ = false;
   };
+  using GameData_sptr = std::shared_ptr<GameData>;
+  using game_data_map_t = std::map<game_id_t, GameData_sptr>;
 
   TrainingDataWriter(const boost::filesystem::path& output_path);
   ~TrainingDataWriter();
 
-  GameData* allocate_data() { return new GameData(); }
+  GameData_sptr get_data(game_id_t id);
 
-  /*
-   * Takes ownership of pointer.
-   */
-  void close(const GameData* data);
+  void close(GameData_sptr data);
 
   void shut_down();
 
 protected:
-  using game_queue_t = std::vector<const GameData*>;
+  using game_queue_t = std::vector<GameData_sptr>;
 
-  void flush();
   void loop();
-  void write(const DataChunk& chunk);
-  void partial_write(const DataChunk& chunk, int start, int end);
+  void write_to_file(const GameData* data);
 
   static auto input_shape(int rows);
   static auto policy_shape(int rows);
@@ -129,18 +141,13 @@ protected:
 
   const boost::filesystem::path output_path_;
   std::thread* thread_;
+  game_data_map_t game_data_map_;
   game_queue_t game_queue_[2];
   int queue_index_ = 0;
   bool closed_ = false;
 
-  InputBlob input_;
-  PolicyBlob policy_;
-  ValueBlob value_;
-
   std::condition_variable cv_;
   std::mutex mutex_;
-  int file_number_ = 0;
-  int rows_ = 0;
 };
 
 }  // namespace common

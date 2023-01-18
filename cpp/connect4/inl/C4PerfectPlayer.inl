@@ -101,7 +101,7 @@ inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)
   , oracle_(params) {}
 
 inline void PerfectPlayer::start_game(
-    const player_array_t& players, common::player_index_t seat_assignment)
+    common::game_id_t game_id, const player_array_t& players, common::player_index_t seat_assignment)
 {
   move_history_.reset();
 }

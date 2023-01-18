@@ -18,7 +18,7 @@ public:
 
   RandomPlayer() : base_t("Random") {}
 
-  void start_game(const player_array_t& players, player_index_t seat_assignment) override {}
+  void start_game(game_id_t, const player_array_t& players, player_index_t seat_assignment) override {}
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override {}
   action_index_t get_action(const GameState&, const ActionMask& mask) override {
     return bitset_util::choose_random_on_index(mask);

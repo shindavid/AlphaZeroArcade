@@ -14,10 +14,10 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game(
-    const player_array_t& players, player_index_t seat_assignment)
+    game_id_t game_id, const player_array_t& players, player_index_t seat_assignment)
 {
-  base_t::start_game(players, seat_assignment);
-  game_data_ = writer_->allocate_data();
+  base_t::start_game(game_id, players, seat_assignment);
+  game_data_ = writer_->get_data(game_id);
   seat_assignment_ = seat_assignment;
 }
 

@@ -72,9 +72,6 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const boost::filesystem::path& output_path)
 : output_path_(output_path)
-, input_(input_shape(kRowsPerFile))
-, policy_(kRowsPerFile, PolicySlab::Cols, policy_shape(kRowsPerFile))
-, value_(kRowsPerFile, ValueSlab::Cols, value_shape(kRowsPerFile))
 {
   namespace bf = boost::filesystem;
 
@@ -92,9 +89,26 @@ TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::close(const GameData* data) {
+typename TrainingDataWriter<GameState_, Tensorizor_>::GameData_sptr
+TrainingDataWriter<GameState_, Tensorizor_>::get_data(game_id_t id) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = game_data_map_.find(id);
+  if (it == game_data_map_.end()) {
+    GameData_sptr ptr(new GameData(id));
+    game_data_map_[id] = ptr;
+    return ptr;
+  }
+  return it->second;
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::close(GameData_sptr data) {
+  if (data->closed()) return;
+  data->close();
+
   std::unique_lock<std::mutex> lock(mutex_);
   game_queue_[queue_index_].push_back(data);
+  game_data_map_.erase(data->id());
   lock.unlock();
   cv_.notify_one();
 }
@@ -105,27 +119,6 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
   cv_.notify_one();
   if (thread_->joinable()) thread_->join();
   delete thread_;
-  flush();
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::flush() {
-  if (rows_ == 0) return;
-
-  std::string output_filename = util::create_string("%d.pt", file_number_);
-  boost::filesystem::path output_path = output_path_ / output_filename;
-
-  auto slice = torch::indexing::Slice(torch::indexing::None, rows_);
-  using tensor_map_t = std::map<std::string, torch::Tensor>;
-
-  tensor_map_t tensor_map;
-  tensor_map["input"] = input_.asTorch().index({slice});
-  tensor_map["policy"] = policy_.asTorch().index({slice});
-  tensor_map["value"] = value_.asTorch().index({slice});
-  torch_util::save(tensor_map, output_path.string());
-
-  file_number_++;
-  rows_ = 0;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -136,41 +129,46 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     cv_.wait(lock, [&]{ return !queue.empty() || closed_;});
     queue_index_ = 1 - queue_index_;
     lock.unlock();
-    for (const GameData* data : queue) {
-      for (const DataChunk& chunk : data->chunks()) {
-        write(chunk);
-      }
-      delete data;
+    for (GameData_sptr& data : queue) {
+      write_to_file(data.get());
     }
     queue.clear();
   }
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::write(const DataChunk& chunk) {
-  int rows_to_write = std::min(chunk.rows(), kRowsPerFile - rows_);
-  partial_write(chunk, 0, rows_to_write);
-  partial_write(chunk, rows_to_write, chunk.rows());
-}
+void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* data) {
+  int rows = 0;
+  for (const DataChunk& chunk : data->chunks()) {
+    rows += chunk.rows();
+  }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::partial_write(const DataChunk& chunk, int start, int end) {
-  int num_rows_to_write = end - start;
-  if (num_rows_to_write <= 0) return;
+  InputBlob input(input_shape(rows));
+  PolicyBlob policy(rows, PolicySlab::Cols, policy_shape(rows));
+  ValueBlob value(rows, ValueSlab::Cols, value_shape(rows));
 
   using namespace torch::indexing;
-  auto write_slice = Slice(rows_, rows_ + num_rows_to_write);
-  auto read_slice = Slice(start, end);
+  for (const DataChunk& chunk : data->chunks()) {
+    auto write_slice = Slice(0, rows);
+    auto read_slice = Slice(0, chunk.rows());
 
-  int new_rows = rows_ + num_rows_to_write;
-  input_.asTorch().index_put_({write_slice}, chunk.input().asTorch().index({read_slice}));
-  policy_.asTorch().index_put_({write_slice}, chunk.policy().asTorch().index({read_slice}));
-  value_.asTorch().index_put_({write_slice}, chunk.value().asTorch().index({read_slice}));
-
-  rows_ = new_rows;
-  if (rows_ == kRowsPerFile) {
-    flush();
+    input.asTorch().index_put_({write_slice}, chunk.input().asTorch().index({read_slice}));
+    policy.asTorch().index_put_({write_slice}, chunk.policy().asTorch().index({read_slice}));
+    value.asTorch().index_put_({write_slice}, chunk.value().asTorch().index({read_slice}));
   }
+
+  int64_t ns_since_epoch = util::ns_since_epoch(std::chrono::steady_clock::now());
+  std::string output_filename = util::create_string("%ld-%d.pt", ns_since_epoch, rows);
+  boost::filesystem::path output_path = output_path_ / output_filename;
+
+  auto slice = torch::indexing::Slice(torch::indexing::None, rows);
+  using tensor_map_t = std::map<std::string, torch::Tensor>;
+
+  tensor_map_t tensor_map;
+  tensor_map["input"] = input.asTorch().index({slice});
+  tensor_map["policy"] = policy.asTorch().index({slice});
+  tensor_map["value"] = value.asTorch().index({slice});
+  torch_util::save(tensor_map, output_path.string());
 }
 
 }  // namespace common
