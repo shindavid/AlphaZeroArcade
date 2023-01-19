@@ -5,6 +5,7 @@
  * this file to get compiled to a game-specific binary.
  */
 #include <array>
+#include <csignal>
 #include <iostream>
 #include <string>
 
@@ -58,6 +59,7 @@ int main(int ac, char* av[]) {
 
   Mcts::add_options(desc);
   MctsPlayer::competitive_params.add_options(desc, true);
+  ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()

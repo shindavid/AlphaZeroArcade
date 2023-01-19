@@ -47,10 +47,16 @@ public:
   static Params global_params;
   static void add_options(boost::program_options::options_description& desc, bool add_shortcuts=false);
 
+  using runner_vec_t = std::vector<ParallelGameRunner*>;
+  static runner_vec_t active_runners;
+  static void register_signal(int signum);
+  static void signal_handler(int signum);
+
   ParallelGameRunner(const Params& params) : params_(params), shared_data_(params_) {}
   ParallelGameRunner() : ParallelGameRunner(global_params) {}
 
   void register_players(const player_array_generator_t& gen) { player_array_generator_ = gen; }
+  void terminate() { shared_data_.terminate(); }
   void run();
 
 protected:
@@ -65,6 +71,9 @@ private:
     bool request_game(int num_games);  // returns false iff hit num_games limit
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
+    void terminate() { terminated_ = true; }
+    bool terminated() const { return terminated_; }
+    int num_games_started() const { return num_games_started_; }
 
   private:
     mutable std::mutex mutex_;
@@ -75,6 +84,7 @@ private:
     int64_t total_ns_ = 0;
     int64_t min_ns_ = std::numeric_limits<int64_t>::max();
     int64_t max_ns_ = 0;
+    bool terminated_ = false;
   };
 
   class GameThread {

@@ -1,5 +1,6 @@
 #include <common/ParallelGameRunner.hpp>
 
+#include <csignal>
 #include <iostream>
 
 #include <util/StringUtil.hpp>
@@ -8,6 +9,9 @@ namespace common {
 
 template<GameStateConcept GameState>
 typename ParallelGameRunner<GameState>::Params ParallelGameRunner<GameState>::global_params;
+
+template<GameStateConcept GameState>
+typename ParallelGameRunner<GameState>::runner_vec_t ParallelGameRunner<GameState>::active_runners;
 
 template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::add_options(boost::program_options::options_description& desc, bool add_shortcuts) {
@@ -25,7 +29,7 @@ void ParallelGameRunner<GameState>::add_options(boost::program_options::options_
 
 template<GameStateConcept GameState>
 ParallelGameRunner<GameState>::SharedData::SharedData(const Params& params) {
-  if (params.display_progress_bar) {
+  if (params.display_progress_bar && params.num_games > 0) {
     bar_ = new progressbar(params.num_games + 1);  // + 1 for first update
     bar_->show_bar();  // so that progress-bar displays immediately
   }
@@ -34,7 +38,7 @@ ParallelGameRunner<GameState>::SharedData::SharedData(const Params& params) {
 template<GameStateConcept GameState>
 bool ParallelGameRunner<GameState>::SharedData::request_game(int num_games) {
   std::lock_guard<std::mutex> guard(mutex_);
-  if (num_games >= 0 && num_games_started_ >= num_games) return false;
+  if (num_games > 0 && num_games_started_ >= num_games) return false;
   num_games_started_++;
   return true;
 }
@@ -71,7 +75,7 @@ ParallelGameRunner<GameState>::GameThread::~GameThread() {
 
 template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::GameThread::run(const Params& params) {
-  while (true) {
+  while (!shared_data_.terminated()) {
     if (!shared_data_.request_game(params.num_games)) return;
     play_game(params);
   }
@@ -103,7 +107,22 @@ void ParallelGameRunner<GameState>::GameThread::play_game(const Params& params) 
 }
 
 template<GameStateConcept GameState>
+void ParallelGameRunner<GameState>::register_signal(int signum) {
+  signal(signum, signal_handler);
+}
+
+template<GameStateConcept GameState>
+void ParallelGameRunner<GameState>::signal_handler(int signum) {
+  std::cout << "Caught signal! Gracefully terminating running games..." << std::endl;
+  for (ParallelGameRunner* runner : active_runners) {
+    runner->terminate();
+  }
+}
+
+template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::run() {
+  active_runners.push_back(this);
+
   int parallelism_factor = params_.parallelism_factor;
   for (int p = 0; p < parallelism_factor; ++p) {
     threads_.push_back(new GameThread(player_array_generator_, shared_data_));
@@ -119,6 +138,7 @@ void ParallelGameRunner<GameState>::run() {
     thread->join();
   }
 
+  int num_games = shared_data_.num_games_started();
   time_point_t t2 = std::chrono::steady_clock::now();
   duration_t duration = t2 - t1;
   int64_t ns = duration.count();
@@ -130,9 +150,9 @@ void ParallelGameRunner<GameState>::run() {
     printf("P%d %s\n", p, get_results_str(results[p]).c_str());
   }
   PARAM_DUMP("Parallelism factor", "%d", parallelism_factor);
-  PARAM_DUMP("Num games", "%d", params_.num_games);
+  PARAM_DUMP("Num games", "%d", num_games);
   PARAM_DUMP("Total runtime", "%.3fs", ns*1e-9);
-  PARAM_DUMP("Avg runtime", "%.3fs", ns*1e-9 / params_.num_games);
+  PARAM_DUMP("Avg runtime", "%.3fs", ns*1e-9 / num_games);
 
   for (auto thread: threads_) {
     delete thread;

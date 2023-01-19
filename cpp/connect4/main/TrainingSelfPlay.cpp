@@ -5,6 +5,7 @@
  * this file to get compiled to a game-specific binary.
  */
 #include <array>
+#include <csignal>
 #include <iostream>
 #include <string>
 
@@ -60,7 +61,7 @@ int main(int ac, char* av[]) {
   ParallelGameRunner::global_params.num_games = 10000;
   ParallelGameRunner::global_params.randomize_player_order = false;
   ParallelGameRunner::global_params.display_progress_bar = true;
-
+  ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::add_options(desc, true);
 
   desc.add_options()
