@@ -1,16 +1,16 @@
 #pragma once
 
+#include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/MctsPlayer.hpp>
 #include <common/TensorizorConcept.hpp>
 #include <common/TrainingDataWriter.hpp>
 
 namespace common {
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_, typename Player_>
+class DataExportingPlayer : public Player_ {
 public:
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
@@ -20,12 +20,11 @@ public:
   using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
 
-  using base_t = MctsPlayer<GameState, Tensorizor>;
-  using Params = base_t::Params;
-  using Mcts = base_t::Mcts;
-  using player_array_t = base_t::player_array_t;
+  using base_t = Player_;
+  using player_array_t = AbstractPlayer<GameState>::player_array_t;
 
-  DataExportingMctsPlayer(TrainingDataWriter* writer, const Params& params, Mcts* mcts=nullptr);
+  template<typename... BaseArgTs>
+  DataExportingPlayer(TrainingDataWriter* writer, BaseArgTs&&...);
 
   void start_game(game_id_t, const player_array_t& players, player_index_t seat_assignment) override;
   void receive_state_change(
@@ -39,9 +38,8 @@ protected:
 
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameData_sptr game_data_;
-  player_index_t seat_assignment_;
 };
 
 }  // namespace common
 
-#include <common/inl/DataExportingMctsPlayer.inl>
+#include <common/inl/DataExportingPlayer.inl>
