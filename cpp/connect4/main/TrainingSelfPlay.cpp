@@ -10,7 +10,7 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/DataExportingPlayer.hpp>
+#include <common/DataExportingMctsPlayer.hpp>
 #include <common/GameRunner.hpp>
 #include <common/MctsPlayer.hpp>
 #include <common/ParallelGameRunner.hpp>
@@ -29,7 +29,7 @@ using Tensorizor = c4::Tensorizor;
 using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
 using ParallelGameRunner = common::ParallelGameRunner<GameState>;
 using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
-using DataExportingMctsPlayer = common::DataExportingPlayer<GameState, Tensorizor, MctsPlayer>;
+using DataExportingMctsPlayer = common::DataExportingMctsPlayer<GameState, Tensorizor>;
 using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
