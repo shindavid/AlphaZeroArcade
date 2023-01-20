@@ -17,16 +17,13 @@
 namespace common {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts<GameState, Tensorizor>::Params Mcts<GameState, Tensorizor>::global_params;
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::add_options(boost::program_options::options_description& desc) {
+boost::program_options::options_description Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -38,36 +35,42 @@ void Mcts<GameState, Tensorizor>::add_options(boost::program_options::options_de
   std::string default_profiling_dir = util::Config::instance()->get(
       "mcts_profiling_dir", default_profiling_dir_path.string());
 
-  Params& params = global_params;
+  po::options_description desc("Mcts options");
   desc.add_options()
-      ("mcts-nnet-filename", po::value<std::string>(&params.nnet_filename)->default_value(default_nnet_filename),
+      ("nnet-filename", po::value<std::string>(&nnet_filename)->default_value(default_nnet_filename),
           "nnet filename")
-      ("mcts-num-search-threads", po::value<int>(&params.num_search_threads)->default_value(params.num_search_threads),
+      ("num-search-threads", po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
-      ("mcts-batch-size-limit", po::value<int>(&params.batch_size_limit)->default_value(params.batch_size_limit),
+      ("batch-size-limit", po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
           "batch size limit")
-      ("mcts-run-offline", po::bool_switch(&params.run_offline)->default_value(false),
-          "run search while opponent is thinking")
-      ("mcts-offline-tree-size-limit", po::value<int>(&params.offline_tree_size_limit)->default_value(
-          params.offline_tree_size_limit), "max tree size to grow to offline (only respected in --run-offline mode)")
-      ("mcts-nn-eval-timeout-ns", po::value<int64_t>(&params.nn_eval_timeout_ns)->default_value(
-          params.nn_eval_timeout_ns), "nn eval thread timeout in ns")
-      ("mcts-cache-size", po::value<size_t>(&params.cache_size)->default_value(params.cache_size),
+      ("run-offline", po2::store_bool(&run_offline, true),
+          po2::make_store_bool_help_str("run search while opponent is thinking", run_offline).c_str())
+      ("no-run-offline", po2::store_bool(&run_offline, false),
+          po2::make_store_bool_help_str("run search while opponent is thinking", !run_offline).c_str())
+      ("offline-tree-size-limit", po::value<int>(&offline_tree_size_limit)->default_value(
+          offline_tree_size_limit), "max tree size to grow to offline (only respected in --run-offline mode)")
+      ("nn-eval-timeout-ns", po::value<int64_t>(&nn_eval_timeout_ns)->default_value(
+          nn_eval_timeout_ns), "nn eval thread timeout in ns")
+      ("cache-size", po::value<size_t>(&cache_size)->default_value(cache_size),
           "nn eval thread cache size")
-      ("mcts-root-softmax-temp", po2::float_value("%.2f", &params.root_softmax_temperature), "root softmax temperature")
-      ("mcts-cpuct", po2::float_value("%.2f", &params.cPUCT), "cPUCT value")
-      ("mcts-dirichlet-mult", po2::float_value("%.2f", &params.dirichlet_mult), "dirichlet mult")
-      ("mcts-dirichlet-alpha", po2::float_value("%.2f", &params.dirichlet_alpha), "dirichlet alpha")
-      ("mcts-disable-eliminations", po::bool_switch(&params.disable_eliminations)->default_value(
-          params.disable_eliminations), "disable eliminations")
-      ("mcts-speculative-evals", po::bool_switch(&params.speculative_evals)->default_value(
-          params.speculative_evals), "speculative evals")
+      ("root-softmax-temp", po2::float_value("%.2f", &root_softmax_temperature), "root softmax temperature")
+      ("cpuct", po2::float_value("%.2f", &cPUCT), "cPUCT value")
+      ("dirichlet-mult", po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
+      ("dirichlet-alpha", po2::float_value("%.2f", &dirichlet_alpha), "dirichlet alpha")
+      ("disable-eliminations", po2::store_bool(&disable_eliminations, true),
+          po2::make_store_bool_help_str("disable eliminations", disable_eliminations).c_str())
+      ("no-disable-eliminations", po2::store_bool(&disable_eliminations, false),
+          po2::make_store_bool_help_str("enable eliminations", !disable_eliminations).c_str())
+      ("speculative-evals", po2::store_bool(&speculative_evals, true),
+          po2::make_store_bool_help_str("enable speculative evals", speculative_evals).c_str())
+      ("no-speculative-evals", po2::store_bool(&speculative_evals, false),
+          po2::make_store_bool_help_str("disable speculative evals", !speculative_evals).c_str())
 #ifdef PROFILE_MCTS
-
-      ("mcts-profiling-dir", po::value<std::string>(&params.profiling_dir)->default_value(default_profiling_dir),
+      ("profiling-dir", po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
 #endif  // PROFILE_MCTS
       ;
+  return desc;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

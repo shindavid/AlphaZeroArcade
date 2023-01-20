@@ -25,7 +25,7 @@ public:
     std::string games_dir = "c4_games";
     bool clear_dir = true;  // before writing, clear the directory if it exists
 
-    void add_options(boost::program_options::options_description& desc, bool add_shortcuts=false);
+    boost::program_options::options_description make_options_description(bool add_shortcuts=false);
   };
 
   using GameState = GameState_;

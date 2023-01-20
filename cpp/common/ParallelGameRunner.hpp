@@ -42,10 +42,9 @@ public:
     int parallelism_factor = 100;  // number of games to run simultaneously
     bool randomize_player_order = true;
     bool display_progress_bar = false;
-  };
 
-  static Params global_params;
-  static void add_options(boost::program_options::options_description& desc, bool add_shortcuts=false);
+    boost::program_options::options_description make_options_description(bool add_shortcuts=false);
+  };
 
   using runner_vec_t = std::vector<ParallelGameRunner*>;
   static runner_vec_t active_runners;
@@ -53,7 +52,6 @@ public:
   static void signal_handler(int signum);
 
   ParallelGameRunner(const Params& params) : params_(params), shared_data_(params_) {}
-  ParallelGameRunner() : ParallelGameRunner(global_params) {}
 
   void register_players(const player_array_generator_t& gen) { player_array_generator_ = gen; }
   void terminate() { shared_data_.terminate(); }

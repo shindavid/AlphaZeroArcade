@@ -3,28 +3,33 @@
 #include <csignal>
 #include <iostream>
 
+#include <util/BoostUtil.hpp>
 #include <util/StringUtil.hpp>
 
 namespace common {
 
 template<GameStateConcept GameState>
-typename ParallelGameRunner<GameState>::Params ParallelGameRunner<GameState>::global_params;
-
-template<GameStateConcept GameState>
 typename ParallelGameRunner<GameState>::runner_vec_t ParallelGameRunner<GameState>::active_runners;
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::add_options(boost::program_options::options_description& desc, bool add_shortcuts) {
+boost::program_options::options_description ParallelGameRunner<GameState>::Params::make_options_description(
+    bool add_shortcuts)
+{
   namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
 
-  Params& params = global_params;
+  po::options_description desc("ParallelGameRunner options");
   desc.add_options()
-      (add_shortcuts ? "num-games,G" : "num-games", po::value<int>(&params.num_games)->default_value(params.num_games),
+      (po2::abbrev_str(add_shortcuts, "num-games", "G").c_str(),
+          po::value<int>(&num_games)->default_value(num_games),
        "num games (<=0 means run indefinitely)")
-      (add_shortcuts ? "parallelism-factor,p" : "parallelism-factor",
-          po::value<int>(&params.parallelism_factor)->default_value(params.parallelism_factor),
+
+      (po2::abbrev_str(add_shortcuts, "parallelism-factor", "p").c_str(),
+          po::value<int>(&parallelism_factor)->default_value(parallelism_factor),
           "num games to play simultaneously")
       ;
+
+  return desc;
 }
 
 template<GameStateConcept GameState>

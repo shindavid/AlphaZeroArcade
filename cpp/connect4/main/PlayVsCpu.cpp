@@ -14,10 +14,23 @@
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
 
+namespace po = boost::program_options;
+
 struct Args {
   std::string my_starting_color;
   bool perfect;
   bool verbose;
+
+  auto make_options_description() {
+    po::options_description desc("PlayVsCpu options");
+
+    desc.add_options()
+        ("my-starting-color,s", po::value<std::string>(&my_starting_color),
+         "human's starting color (R or Y). Default: random")
+        ("perfect,p", po::bool_switch(&perfect)->default_value(false), "play against perfect player")
+        ;
+    return desc;
+  }
 };
 
 using GameState = c4::GameState;
@@ -32,24 +45,26 @@ common::player_index_t parse_color(const std::string& str) {
   throw util::Exception("Invalid --my-starting-color/-s value: \"%s\"", str.c_str());
 }
 
-int main(int ac, char* av[]) {
-  namespace po = boost::program_options;
-  Args args;
+auto make_options_description() {
+}
 
+int main(int ac, char* av[]) {
   std::string default_c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
 
   po::options_description desc("Play vs MCTS as a human");
   desc.add_options()("help,h", "help");
 
-  Mcts::add_options(desc);
-  MctsPlayer::competitive_params.add_options(desc, true);
-  c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
+  Mcts::Params mcts_params;
+  desc.add(mcts_params.make_options_description());
 
-  desc.add_options()
-      ("my-starting-color,s", po::value<std::string>(&args.my_starting_color),
-          "human's starting color (R or Y). Default: random")
-      ("perfect,p", po::bool_switch(&args.perfect)->default_value(false), "play against perfect player")
-      ;
+  MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
+  desc.add(mcts_player_params.make_options_description(true));
+
+  c4::PerfectPlayParams perfect_play_params;
+  desc.add(perfect_play_params.make_options_description(true));
+
+  Args args;
+  desc.add(args.make_options_description());
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
@@ -65,10 +80,9 @@ int main(int ac, char* av[]) {
 
   c4::Player* cpu;
   if (args.perfect) {
-    cpu = new c4::PerfectPlayer();
+    cpu = new c4::PerfectPlayer(perfect_play_params);
   } else {
-    MctsPlayer::Params cpu_params = MctsPlayer::competitive_params;
-    cpu = new MctsPlayer(cpu_params);
+    cpu = new MctsPlayer(mcts_player_params, mcts_params);
   }
 
   common::player_index_t my_color = parse_color(args.my_starting_color);

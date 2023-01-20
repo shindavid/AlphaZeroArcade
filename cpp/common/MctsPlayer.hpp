@@ -37,22 +37,19 @@ public:
   struct Params {
     Params(DefaultParamsType);
     void dump() const;
+    boost::program_options::options_description make_options_description(bool add_shortcuts=false);
 
     int num_fast_iters;
     int num_full_iters;
     float full_pct;
     float temperature;
     bool verbose = false;
-
-    void add_options(boost::program_options::options_description& desc, bool add_abbreviations=false);
   };
-
-  static Params competitive_params;
-  static Params training_params;
 
   using GameStateTypes = common::GameStateTypes<GameState>;
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
+  using MctsParams = typename Mcts::Params;
   using MctsSimParams = typename Mcts::SimParams;
   using MctsResults = common::MctsResults<GameState>;
 

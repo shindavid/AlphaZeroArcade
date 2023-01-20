@@ -16,8 +16,7 @@ struct PerfectPlayParams {
   std::string c4_solver_dir;
   bool weak_mode = false;
 
-  static PerfectPlayParams global_params;
-  static void add_options(boost::program_options::options_description& desc, bool add_abbreviations=false);
+  boost::program_options::options_description make_options_description(bool add_shortcuts=false);
 };
 
 class PerfectOracle {
@@ -45,7 +44,6 @@ public:
   };
 
   PerfectOracle(const PerfectPlayParams& params);
-  PerfectOracle() : PerfectOracle(PerfectPlayParams::global_params) {}
   ~PerfectOracle();
 
   QueryResult get_best_moves(MoveHistory& history);
@@ -63,7 +61,6 @@ public:
   using base_t = Player;
 
   PerfectPlayer(const PerfectPlayParams&);
-  PerfectPlayer() : PerfectPlayer(PerfectPlayParams::global_params) {}
 
   void start_game(common::game_id_t, const player_array_t& players, common::player_index_t seat_assignment) override;
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;

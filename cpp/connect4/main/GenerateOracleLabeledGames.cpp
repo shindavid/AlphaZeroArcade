@@ -34,8 +34,9 @@ using RandomPlayer = common::RandomPlayer<GameState>;
 
 class OracleSupervisor {
 public:
-  OracleSupervisor(TrainingDataWriter* writer)
-  : writer_(writer) {}
+  OracleSupervisor(TrainingDataWriter* writer, const c4::PerfectPlayParams& perfect_play_params)
+  : oracle_(perfect_play_params)
+  , writer_(writer) {}
 
   TrainingDataWriter::GameData_sptr start_game(common::game_id_t game_id) {
     tensorizor_.clear();
@@ -84,9 +85,13 @@ private:
 template<class BasePlayer>
 class OracleSupervisedPlayer : public BasePlayer {
 public:
-  OracleSupervisedPlayer(TrainingDataWriter* writer, OracleSupervisor* supervisor=nullptr)
-  : supervisor_(supervisor ? supervisor : new OracleSupervisor(writer))
-  , owns_supervisor_(supervisor==nullptr) {}
+  OracleSupervisedPlayer(TrainingDataWriter* writer, const c4::PerfectPlayParams& perfect_play_params)
+  : supervisor_(new OracleSupervisor(writer, perfect_play_params))
+  , owns_supervisor_(true) {}
+
+  OracleSupervisedPlayer(OracleSupervisor* supervisor)
+  : supervisor_(supervisor)
+  , owns_supervisor_(false) {}
 
   ~OracleSupervisedPlayer() {
     if (owns_supervisor_) delete supervisor_;
@@ -124,11 +129,19 @@ private:
   bool owns_supervisor_;
 };
 
-player_array_t create_players(TrainingDataWriter* writer) {
+player_array_t create_players(TrainingDataWriter* writer, const c4::PerfectPlayParams& perfect_play_params) {
   using player_t = OracleSupervisedPlayer<RandomPlayer>;
-  player_t* p1 = new player_t(writer);
-  player_t* p2 = new player_t(writer, p1->supervisor());
+  player_t* p1 = new player_t(writer, perfect_play_params);
+  player_t* p2 = new player_t(p1->supervisor());
   return player_array_t{p1, p2};;
+}
+
+ParallelGameRunner::Params get_default_parallel_game_runner_params() {
+  ParallelGameRunner::Params parallel_game_runner_params;
+  parallel_game_runner_params.num_games = 10000;
+  parallel_game_runner_params.parallelism_factor = 24;
+  parallel_game_runner_params.display_progress_bar = true;
+  return parallel_game_runner_params;
 }
 
 int main(int ac, char* av[]) {
@@ -136,14 +149,15 @@ int main(int ac, char* av[]) {
   po::options_description desc("Generate training data labeled by oracle");
   desc.add_options()("help,h", "help");
 
-  c4::PerfectPlayParams::PerfectPlayParams::add_options(desc, true);
-  ParallelGameRunner::global_params.num_games = 10000;
-  ParallelGameRunner::global_params.parallelism_factor = 24;
-  ParallelGameRunner::global_params.display_progress_bar = true;
-  ParallelGameRunner::add_options(desc, true);
+  c4::PerfectPlayParams perfect_play_params;
+  desc.add(perfect_play_params.make_options_description(true));
+
+  ParallelGameRunner::register_signal(SIGTERM);
+  ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
+  desc.add(parallel_game_runner_params.make_options_description(true));
 
   TrainingDataWriter::Params training_data_writer_params;
-  training_data_writer_params.add_options(desc, true);
+  desc.add(training_data_writer_params.make_options_description(true));
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
@@ -155,9 +169,8 @@ int main(int ac, char* av[]) {
   }
 
   TrainingDataWriter writer(training_data_writer_params);
-
-  ParallelGameRunner runner;
-  runner.register_players([&]() { return create_players(&writer); });
+  ParallelGameRunner runner(parallel_game_runner_params);
+  runner.register_players([&]() { return create_players(&writer, perfect_play_params); });
   runner.run();
 
   printf("\nWrote data to: %s\n", training_data_writer_params.games_dir.c_str());

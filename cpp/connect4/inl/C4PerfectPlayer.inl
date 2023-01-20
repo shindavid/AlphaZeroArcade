@@ -1,6 +1,7 @@
 #include <connect4/C4PerfectPlayer.hpp>
 
 #include <util/BitSet.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
@@ -8,23 +9,26 @@
 
 namespace c4 {
 
-inline void PerfectPlayParams::add_options(boost::program_options::options_description& desc, bool add_abbreviations) {
+inline boost::program_options::options_description PerfectPlayParams::make_options_description(bool add_shortcuts) {
   namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
+
   std::string default_c4_solver_dir = util::Config::instance()->get("c4.solver_dir", "");
 
-  PerfectPlayParams& params = global_params;
-  auto c4_solver_dir_value = po::value<std::string>(&params.c4_solver_dir);
+  auto c4_solver_dir_value = po::value<std::string>(&c4_solver_dir);
   if (!default_c4_solver_dir.empty()) {
     c4_solver_dir_value = c4_solver_dir_value->default_value(default_c4_solver_dir);
   }
 
+  po::options_description desc("C4PerfectPlayer options");
   desc.add_options()
-      (add_abbreviations ? "c4-solver-dir,c" : "c4-solver-dir", c4_solver_dir_value,
+      (po2::abbrev_str(add_shortcuts, "c4-solver-dir", "c").c_str(), c4_solver_dir_value,
           "base dir containing c4solver bin and 7x6 book")
-      (add_abbreviations ? "weak-mode,w" : "weak-mode",
-          po::bool_switch(&params.weak_mode)->default_value(params.weak_mode),
+      (po2::abbrev_str(add_shortcuts, "weak-mode", "w").c_str(),
+          po::bool_switch(&weak_mode)->default_value(weak_mode),
           "exhibit no preference among winning moves as perfect player (otherwise favors shorter paths to win)")
       ;
+  return desc;
 }
 
 inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}

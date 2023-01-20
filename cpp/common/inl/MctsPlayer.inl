@@ -11,14 +11,6 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::Params
-MctsPlayer<GameState_, Tensorizor_>::MctsPlayer::competitive_params(kCompetitive);
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::Params
-MctsPlayer<GameState_, Tensorizor_>::MctsPlayer::training_params(kTraining);
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
 {
   if (type == kCompetitive) {
@@ -51,40 +43,44 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void MctsPlayer<GameState_, Tensorizor_>::Params::add_options(
-    boost::program_options::options_description& desc, bool abbrev)
+boost::program_options::options_description MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description(
+    bool add_shortcuts)
 {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
+  po::options_description desc("MctsPlayer options");
+
   desc.add_options()
-      (po2::abbrev_str(abbrev, "mcts-player-num-fast-iters", "i").c_str(),
+      (po2::abbrev_str(add_shortcuts, "num-fast-iters", "i").c_str(),
           po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
           "num mcts iterations to do per fast move")
 
-      (po2::abbrev_str(abbrev, "mcts-player-num-full-iters", "I").c_str(),
+      (po2::abbrev_str(add_shortcuts, "num-full-iters", "I").c_str(),
           po::value<int>(&num_full_iters)->default_value(num_full_iters),
           "num mcts iterations to do per full move")
 
-      (po2::abbrev_str(abbrev, "mcts-player-full-pct", "f").c_str(),
+      (po2::abbrev_str(add_shortcuts, "full-pct", "f").c_str(),
           po2::float_value("%.2f", &full_pct, full_pct),
           "pct of moves that should be full")
 
-      (po2::abbrev_str(abbrev, "mcts-player-temperature", "t").c_str(),
+      (po2::abbrev_str(add_shortcuts, "temperature", "t").c_str(),
           po2::float_value("%.2f", &temperature, temperature),
           "temperature for move selection")
 
-      (po2::abbrev_str(abbrev, "mcts-player-verbose", "v").c_str(),
+      (po2::abbrev_str(add_shortcuts, "verbose", "v").c_str(),
           po::bool_switch(&verbose)->default_value(verbose),
           "mcts player verbose mode")
       ;
+
+  return desc;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mcts* mcts)
 : base_t("MCTS")
 , params_(params)
-, mcts_(mcts ? mcts : new Mcts())
+, mcts_(mcts)
 , fast_sim_params_{params.num_fast_iters, true}
 , full_sim_params_{params.num_full_iters, false}
 , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)

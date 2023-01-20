@@ -37,7 +37,7 @@ inline std::string abbrev_str(bool abbreviate, const char* full_name, const char
 
 /*
  * bool value = false;
- * options.add_options()
+ * options.make_options_description()
  *     ("on", store_bool(&value, true))
  *     ("off", store_bool(&value, false))
  *     ;
@@ -53,12 +53,9 @@ inline auto store_bool(bool* flag, bool store_as) {
  *
  * This helper function is a convenience that sticks "... (default: true)" or "... (default: false)" at the end of
  * help string.
- *
- * It also sticks on a warning about using --x and --no-x together.
  */
 inline std::string make_store_bool_help_str(const char* help, bool default_value) {
-  return util::create_string("%s (default: %s). Do not use --x and --no-x together",
-                             help, default_value ? "true" : "false");
+  return util::create_string("%s (default: %s)", help, default_value ? "true" : "false");
 }
 
 }  // namespace program_options

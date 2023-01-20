@@ -25,7 +25,8 @@ public:
   using Mcts = base_t::Mcts;
   using player_array_t = base_t::player_array_t;
 
-  DataExportingMctsPlayer(TrainingDataWriter* writer, const Params& params, Mcts* mcts=nullptr);
+  template<typename... BaseArgs>
+  DataExportingMctsPlayer(TrainingDataWriter* writer, BaseArgs&&...);
 
   void start_game(game_id_t, const player_array_t& players, player_index_t seat_assignment) override;
   void receive_state_change(

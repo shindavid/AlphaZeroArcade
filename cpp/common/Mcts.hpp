@@ -73,6 +73,8 @@ public:
    * By contrast, SimParams pertains to each individual sim() call.
    */
   struct Params {
+    boost::program_options::options_description make_options_description();
+
     std::string nnet_filename;
     int num_search_threads = 8;
     int batch_size_limit = 144;
@@ -91,9 +93,6 @@ public:
     std::string profiling_dir;
 #endif  // PROFILE_MCTS
   };
-
-  static Params global_params;
-  static void add_options(boost::program_options::options_description& desc);
 
   /*
    * SimParams pertain to a single call to sim(). Even given a single Mcts instance, different sim() calls can have
@@ -695,7 +694,6 @@ public:
   static int next_instance_id_;  // for naming debug/profiling output files
 
   Mcts(const Params& params);
-  Mcts() : Mcts(global_params) {}
   ~Mcts();
 
   int instance_id() const { return instance_id_; }

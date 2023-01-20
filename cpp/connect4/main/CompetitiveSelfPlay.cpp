@@ -18,8 +18,21 @@
 #include <connect4/C4Tensorizor.hpp>
 #include <util/StringUtil.hpp>
 
+namespace po = boost::program_options;
+
 struct Args {
   std::string nnet_filename2;
+
+  auto make_options_description() {
+    po::options_description desc("CompetitiveSelfPlay options");
+
+    desc.add_options()
+        ("mcts-nnet-filename2", po::value<std::string>(&nnet_filename2)->default_value(""),
+         "set this to use a different nnet for the second player")
+        ;
+
+    return desc;
+  }
 };
 
 using GameState = c4::GameState;
@@ -31,41 +44,51 @@ using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 
-MctsPlayer* create_player(const Args& args, Mcts* mcts=nullptr) {
-  MctsPlayer* player;
-  if (args.nnet_filename2.empty() || !mcts) {
-    player = new MctsPlayer(MctsPlayer::competitive_params, mcts);
-  } else {
-    Mcts::Params mcts_params = Mcts::global_params;
-    mcts_params.nnet_filename = args.nnet_filename2;
-    player = new MctsPlayer(MctsPlayer::competitive_params, mcts_params);
-  }
-  player->set_name(util::create_string("MCTS-%d", mcts ? 2 : 1));
+template<typename... Ts>
+MctsPlayer* create_player(int index, Ts&&... ts) {
+  MctsPlayer* player = new MctsPlayer(std::forward<Ts>(ts)...);
+  player->set_name(util::create_string("MCTS-%d", index));
   return player;
 }
 
-player_array_t create_players(const Args& args) {
-  MctsPlayer* p1 = create_player(args);
-  MctsPlayer* p2 = create_player(args, p1->get_mcts());
+player_array_t create_players(
+    const Args& args, const MctsPlayer::Params& mcts_player_params, const Mcts::Params& mcts_params)
+{
+  MctsPlayer* p1 = create_player(1, mcts_player_params, mcts_params);
+  MctsPlayer* p2;
+  if (!args.nnet_filename2.empty()) {
+    Mcts::Params mcts_params2(mcts_params);
+    mcts_params2.nnet_filename = args.nnet_filename2;
+    p2 = create_player(2, mcts_player_params, mcts_params2);
+  } else {
+    p2 = create_player(2, mcts_player_params, p1->get_mcts());
+  }
   return player_array_t{p1, p2};;
 }
 
-int main(int ac, char* av[]) {
-  Args args;
+ParallelGameRunner::Params get_default_parallel_game_runner_params() {
+  ParallelGameRunner::Params parallel_game_runner_params;
+  parallel_game_runner_params.randomize_player_order = false;
+  parallel_game_runner_params.display_progress_bar = true;
+  return parallel_game_runner_params;
+}
 
-  namespace po = boost::program_options;
+int main(int ac, char* av[]) {
   po::options_description desc("Mcts vs mcts");
   desc.add_options()("help,h", "help");
 
-  Mcts::add_options(desc);
-  MctsPlayer::competitive_params.add_options(desc, true);
-  ParallelGameRunner::register_signal(SIGTERM);
-  ParallelGameRunner::add_options(desc, true);
+  Mcts::Params mcts_params;
+  desc.add(mcts_params.make_options_description());
 
-  desc.add_options()
-      ("mcts-nnet-filename2", po::value<std::string>(&args.nnet_filename2)->default_value(""),
-       "set this to use a different nnet for the second player")
-      ;
+  MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
+  desc.add(mcts_player_params.make_options_description(true));
+
+  ParallelGameRunner::register_signal(SIGTERM);
+  ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
+  desc.add(parallel_game_runner_params.make_options_description(true));
+
+  Args args;
+  desc.add(args.make_options_description());
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
@@ -76,16 +99,13 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  ParallelGameRunner::global_params.randomize_player_order = false;
-  ParallelGameRunner::global_params.display_progress_bar = true;
-
-  ParallelGameRunner runner;
-  runner.register_players([&]() { return create_players(args); });
+  ParallelGameRunner runner(parallel_game_runner_params);
+  runner.register_players([&]() { return create_players(args, mcts_player_params, mcts_params); });
   runner.run();
 
-  MctsPlayer::competitive_params.dump();
-  PARAM_DUMP("MCTS search threads", "%d", Mcts::global_params.num_search_threads);
-  PARAM_DUMP("MCTS max batch size", "%d", Mcts::global_params.batch_size_limit);
+  mcts_player_params.dump();
+  PARAM_DUMP("MCTS search threads", "%d", mcts_params.num_search_threads);
+  PARAM_DUMP("MCTS max batch size", "%d", mcts_params.batch_size_limit);
   PARAM_DUMP("MCTS avg batch size", "%.2f", Mcts::global_avg_batch_size());
 
   return 0;
