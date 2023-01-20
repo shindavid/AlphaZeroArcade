@@ -6,6 +6,29 @@
 
 namespace util {
 
+namespace detail {
+
+/*
+ * Adapted from https://stackoverflow.com/a/48896410/543913
+ */
+template <typename Str>
+constexpr uint64_t str_hash(const Str& toHash) {
+  uint64_t result = 0xcbf29ce484222325; // FNV offset basis
+
+  for (char c : toHash) {
+    result ^= c;
+    result *= 1099511628211; // FNV prime
+  }
+
+  return result;
+}
+
+}  // namespace detail
+
+inline constexpr uint64_t str_hash(const char* c) {
+  return detail::str_hash(std::string_view(c));
+}
+
 inline std::vector<std::string> split(const std::string &s) {
   namespace ba = boost::algorithm;
 

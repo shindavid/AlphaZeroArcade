@@ -60,6 +60,16 @@ int64_t get_unique_id();
 */
 template <class T> std::decay_t<T> decay_copy(T&&);
 
+template<size_t N>
+struct StringLiteral {
+  constexpr StringLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
+  template<size_t M>
+  constexpr bool operator==(const StringLiteral<M>& other) const { return !strcmp(value, other.value); }
+  char value[N];
+};
+
+template<StringLiteral...> struct StringLiteralSequence {};
+
 /*
  * The following are equivalent:
  *
@@ -70,14 +80,62 @@ template <class T> std::decay_t<T> decay_copy(T&&);
  * using T = std::integer_sequence<int, 1, 2, 3>;
  */
 template<int... Ints> using int_sequence = std::integer_sequence<int, Ints...>;
+template<int64_t... Ints> using int64_sequence = std::integer_sequence<int64_t, Ints...>;
+template<uint64_t... Ints> using uint64_sequence = std::integer_sequence<uint64_t, Ints...>;
 
 /*
- * IntSequenceConcept<T> is for concept requirements.
+ * IntSequenceConcept/Int64SequenceConcept/UInt64SequenceConcept is for concept requirements.
  */
 template<typename T> struct is_int_sequence { static const bool value = false; };
 template<int... Ints> struct is_int_sequence<int_sequence<Ints...>> { static constexpr bool value = true; };
 template<typename T> inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
 template<typename T> concept IntSequenceConcept = is_int_sequence_v<T>;
+
+template<typename T> struct is_int64_sequence { static const bool value = false; };
+template<int64_t... Ints> struct is_int64_sequence<int64_sequence<Ints...>> { static constexpr bool value = true; };
+template<typename T> inline constexpr bool is_int64_sequence_v = is_int64_sequence<T>::value;
+template<typename T> concept Int64SequenceConcept = is_int64_sequence_v<T>;
+
+template<typename T> struct is_uint64_sequence { static const bool value = false; };
+template<uint64_t... Ints> struct is_uint64_sequence<uint64_sequence<Ints...>> { static constexpr bool value = true; };
+template<typename T> inline constexpr bool is_uint64_sequence_v = is_uint64_sequence<T>::value;
+template<typename T> concept UInt64SequenceConcept = is_uint64_sequence_v<T>;
+
+/*
+ * true: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 1>
+ * true: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 5>
+ * false: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 2>
+ *
+ * Similarly we have int64_sequence_contains_v and uint64_sequence_contains_v.
+ */
+template<typename T, int K> struct int_sequence_contains { static constexpr bool value = false; };
+template<int I, int... Is, int K>
+struct int_sequence_contains<int_sequence<I, Is...>, K> {
+  static constexpr bool value = (I==K) || int_sequence_contains<int_sequence<Is...>, K>::value;
+};
+template<typename T, int K> static constexpr bool int_sequence_contains_v = int_sequence_contains<T, K>::value;
+
+template<typename T, int64_t K> struct int64_sequence_contains { static constexpr bool value = false; };
+template<int64_t I, int64_t... Is, int64_t K>
+struct int64_sequence_contains<int64_sequence<I, Is...>, K> {
+  static constexpr bool value = (I==K) || int64_sequence_contains<int64_sequence<Is...>, K>::value;
+};
+template<typename T, int64_t K> static constexpr bool int64_sequence_contains_v = int64_sequence_contains<T, K>::value;
+
+template<typename T, uint64_t K> struct uint64_sequence_contains { static constexpr bool value = false; };
+template<uint64_t I, uint64_t... Is, uint64_t K>
+struct uint64_sequence_contains<uint64_sequence<I, Is...>, K> {
+  static constexpr bool value = (I==K) || uint64_sequence_contains<uint64_sequence<Is...>, K>::value;
+};
+template<typename T, uint64_t K> static constexpr bool uint64_sequence_contains_v = uint64_sequence_contains<T, K>::value;
+
+template<typename T, StringLiteral S> struct string_literal_sequence_contains { static constexpr bool value = false; };
+template<StringLiteral I, StringLiteral... Is, StringLiteral S>
+struct string_literal_sequence_contains<StringLiteralSequence<I, Is...>, S> {
+  static constexpr bool value = (I==S) || string_literal_sequence_contains<StringLiteralSequence<Is...>, S>::value;
+};
+template<typename T, StringLiteral S> static constexpr bool string_literal_sequence_contains_v = \
+string_literal_sequence_contains<T, S>::value;
 
 /*
  * BitSetConcept<T> is for concept requirements.
@@ -99,12 +157,44 @@ template <typename T> concept BitSetConcept = is_bit_set_v<T>;
  * using U = util::int_sequence<1, 2, 3>;
  */
 template<typename T, typename U> struct concat_int_sequence {};
-template<int... Ints1, int... Ints2>
-struct concat_int_sequence<std::integer_sequence<int, Ints1...>, std::integer_sequence<int, Ints2...>> {
-  using type = std::integer_sequence<int, Ints1..., Ints2...>;
+template<typename IntT1, typename IntT2, IntT1... Ints1, IntT2... Ints2>
+struct concat_int_sequence<std::integer_sequence<IntT1, Ints1...>, std::integer_sequence<IntT2, Ints2...>> {
+  using IntT = decltype(std::declval<IntT1>() + std::declval<IntT2>());
+  using type = std::integer_sequence<IntT, (IntT)Ints1..., (IntT)Ints2...>;
 };
 template<typename T, typename U>
 using concat_int_sequence_t = typename concat_int_sequence<T, U>::type;
+
+template<typename T, typename U> struct concat_string_literal_sequence {};
+template<StringLiteral... S1, StringLiteral... S2>
+struct concat_string_literal_sequence<StringLiteralSequence<S1...>, StringLiteralSequence<S2...>> {
+  using type = StringLiteralSequence<S1..., S2...>;
+};
+template<typename T, typename U>
+using concat_string_literal_sequence_t = typename concat_string_literal_sequence<T, U>::type;
+
+template<typename T, typename U> struct no_overlap {
+  static constexpr bool value = true;
+};
+template<typename T>
+struct no_overlap<T, StringLiteralSequence<>> {
+  static constexpr bool value = true;
+};
+template<typename T, StringLiteral S, StringLiteral... Ss>
+struct no_overlap<T, StringLiteralSequence<S, Ss...>> {
+  static constexpr bool value =
+      !string_literal_sequence_contains_v<T, S> && no_overlap<T, StringLiteralSequence<Ss...>>::value;
+};
+template<typename T>
+struct no_overlap<T, int_sequence<>> {
+  static constexpr bool value = true;
+};
+template<typename T, int I, int... Is>
+struct no_overlap<T, int_sequence<I, Is...>> {
+  static constexpr bool value =
+      !int_sequence_contains_v<T, I> && no_overlap<T, int_sequence<Is...>>::value;
+};
+template<typename T, typename U> constexpr bool no_overlap_v = no_overlap<T, U>::value;
 
 /*
  * The following are equivalent:

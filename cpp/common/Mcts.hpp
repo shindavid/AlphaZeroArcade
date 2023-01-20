@@ -23,6 +23,7 @@
 #include <common/TensorizorConcept.hpp>
 #include <util/AtomicSharedPtr.hpp>
 #include <util/BitSet.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/LRUCache.hpp>
@@ -73,7 +74,8 @@ public:
    * By contrast, SimParams pertains to each individual sim() call.
    */
   struct Params {
-    boost::program_options::options_description make_options_description();
+    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
+    auto make_options_description();
 
     std::string nnet_filename;
     int num_search_threads = 8;

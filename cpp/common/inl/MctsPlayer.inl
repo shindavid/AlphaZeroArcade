@@ -1,6 +1,7 @@
 #include <common/MctsPlayer.hpp>
 
 #include <util/BitSet.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/PrintUtil.hpp>
 #include <util/Random.hpp>
@@ -43,37 +44,26 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-boost::program_options::options_description MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description(
-    bool add_shortcuts)
+template<boost_util::program_options::OptionStyle Style>
+auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
 {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po::options_description desc("MctsPlayer options");
+  po2::options_description<Style> desc("MctsPlayer options");
 
-  desc.add_options()
-      (po2::abbrev_str(add_shortcuts, "num-fast-iters", "i").c_str(),
-          po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
+  return desc
+      .template add_option<"num-fast-iters", 'i'>(po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
           "num mcts iterations to do per fast move")
-
-      (po2::abbrev_str(add_shortcuts, "num-full-iters", "I").c_str(),
-          po::value<int>(&num_full_iters)->default_value(num_full_iters),
+      .template add_option<"num-full-iters", 'I'>(po::value<int>(&num_full_iters)->default_value(num_full_iters),
           "num mcts iterations to do per full move")
-
-      (po2::abbrev_str(add_shortcuts, "full-pct", "f").c_str(),
-          po2::float_value("%.2f", &full_pct, full_pct),
+      .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
           "pct of moves that should be full")
-
-      (po2::abbrev_str(add_shortcuts, "temperature", "t").c_str(),
-          po2::float_value("%.2f", &temperature, temperature),
+      .template add_option<"temperature", 't'>(po2::float_value("%.2f", &temperature, temperature),
           "temperature for move selection")
-
-      (po2::abbrev_str(add_shortcuts, "verbose", "v").c_str(),
-          po::bool_switch(&verbose)->default_value(verbose),
+      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
           "mcts player verbose mode")
       ;
-
-  return desc;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

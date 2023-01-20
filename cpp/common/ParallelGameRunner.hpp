@@ -16,6 +16,7 @@
 #include <common/GameRunner.hpp>
 #include <common/GameStateConcept.hpp>
 #include <third_party/ProgressBar.hpp>
+#include <util/BoostUtil.hpp>
 
 namespace common {
 
@@ -38,12 +39,13 @@ public:
   using duration_t = std::chrono::nanoseconds;
 
   struct Params {
+    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
+    auto make_options_description();
+
     int num_games = 1000;  // if <=0, run indefinitely
     int parallelism = 100;  // number of games to run simultaneously
     bool randomize_player_order = true;
     bool display_progress_bar = false;
-
-    boost::program_options::options_description make_options_description(bool add_shortcuts=false);
   };
 
   using runner_vec_t = std::vector<ParallelGameRunner*>;

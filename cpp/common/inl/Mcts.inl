@@ -23,7 +23,8 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-boost::program_options::options_description Mcts<GameState, Tensorizor>::Params::make_options_description() {
+template<boost_util::program_options::OptionStyle Style>
+auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -35,42 +36,49 @@ boost::program_options::options_description Mcts<GameState, Tensorizor>::Params:
   std::string default_profiling_dir = util::Config::instance()->get(
       "mcts_profiling_dir", default_profiling_dir_path.string());
 
-  po::options_description desc("Mcts options");
-  desc.add_options()
-      ("nnet-filename", po::value<std::string>(&nnet_filename)->default_value(default_nnet_filename),
-          "nnet filename")
-      ("num-search-threads", po::value<int>(&num_search_threads)->default_value(num_search_threads),
+  po2::options_description<Style> desc("Mcts options");
+
+  return desc
+      .template add_option<"nnet-filename">
+          (po::value<std::string>(&nnet_filename)->default_value(default_nnet_filename), "nnet filename")
+      .template add_option<"num-search-threads">(
+          po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
-      ("batch-size-limit", po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
+      .template add_option<"batch-size-limit">(
+          po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
           "batch size limit")
-      ("run-offline", po2::store_bool(&run_offline, true),
+      .template add_option<"run-offline">(
+          po2::store_bool(&run_offline, true),
           po2::make_store_bool_help_str("run search while opponent is thinking", run_offline).c_str())
-      ("no-run-offline", po2::store_bool(&run_offline, false),
+      .template add_option<"no-run-offline">(
+          po2::store_bool(&run_offline, false),
           po2::make_store_bool_help_str("do NOT run search while opponent is thinking", !run_offline).c_str())
-      ("offline-tree-size-limit", po::value<int>(&offline_tree_size_limit)->default_value(
+      .template add_option<"offline-tree-size-limit">(
+          po::value<int>(&offline_tree_size_limit)->default_value(
           offline_tree_size_limit), "max tree size to grow to offline (only respected in --run-offline mode)")
-      ("nn-eval-timeout-ns", po::value<int64_t>(&nn_eval_timeout_ns)->default_value(
+      .template add_option<"nn-eval-timeout-ns">(
+          po::value<int64_t>(&nn_eval_timeout_ns)->default_value(
           nn_eval_timeout_ns), "nn eval thread timeout in ns")
-      ("cache-size", po::value<size_t>(&cache_size)->default_value(cache_size),
+      .template add_option<"cache-size">(
+          po::value<size_t>(&cache_size)->default_value(cache_size),
           "nn eval thread cache size")
-      ("root-softmax-temp", po2::float_value("%.2f", &root_softmax_temperature), "root softmax temperature")
-      ("cpuct", po2::float_value("%.2f", &cPUCT), "cPUCT value")
-      ("dirichlet-mult", po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
-      ("dirichlet-alpha", po2::float_value("%.2f", &dirichlet_alpha), "dirichlet alpha")
-      ("disable-eliminations", po2::store_bool(&disable_eliminations, true),
+      .template add_option<"root-softmax-temp">(po2::float_value("%.2f", &root_softmax_temperature), "root softmax temperature")
+      .template add_option<"cpuct">(po2::float_value("%.2f", &cPUCT), "cPUCT value")
+      .template add_option<"dirichlet-mult">(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
+      .template add_option<"dirichlet-alpha">(po2::float_value("%.2f", &dirichlet_alpha), "dirichlet alpha")
+      .template add_option<"disable-eliminations">(po2::store_bool(&disable_eliminations, true),
           po2::make_store_bool_help_str("disable eliminations", disable_eliminations).c_str())
-      ("no-disable-eliminations", po2::store_bool(&disable_eliminations, false),
+      .template add_option<"no-disable-eliminations">(po2::store_bool(&disable_eliminations, false),
           po2::make_store_bool_help_str("enable eliminations", !disable_eliminations).c_str())
-      ("speculative-evals", po2::store_bool(&speculative_evals, true),
+      .template add_option<"speculative-evals">(po2::store_bool(&speculative_evals, true),
           po2::make_store_bool_help_str("enable speculation", speculative_evals).c_str())
-      ("no-speculative-evals", po2::store_bool(&speculative_evals, false),
+      .template add_option<"no-speculative-evals">(po2::store_bool(&speculative_evals, false),
           po2::make_store_bool_help_str("disable speculation", !speculative_evals).c_str())
 #ifdef PROFILE_MCTS
-      ("profiling-dir", po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
+      .template add_option<"profiling-dir">(po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
 #endif  // PROFILE_MCTS
       ;
-  return desc;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

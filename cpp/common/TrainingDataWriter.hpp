@@ -12,6 +12,8 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/TensorizorConcept.hpp>
+#include <util/BoostUtil.hpp>
+
 
 namespace common {
 
@@ -22,10 +24,11 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter {
 public:
   struct Params {
+    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
+    auto make_options_description();
+
     std::string games_dir = "c4_games";
     bool clear_dir = true;  // before writing, clear the directory if it exists
-
-    boost::program_options::options_description make_options_description(bool add_shortcuts=false);
   };
 
   using GameState = GameState_;

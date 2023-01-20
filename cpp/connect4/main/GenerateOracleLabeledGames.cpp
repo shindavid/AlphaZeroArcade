@@ -146,18 +146,19 @@ ParallelGameRunner::Params get_default_parallel_game_runner_params() {
 
 int main(int ac, char* av[]) {
   namespace po = boost::program_options;
-  po::options_description desc("Generate training data labeled by oracle");
-  desc.add_options()("help,h", "help");
+  namespace po2 = boost_util::program_options;
+  po2::options_description raw_desc("General options");
+  raw_desc.add_option<"help", 'h'>("help");
 
   c4::PerfectPlayParams perfect_play_params;
-  desc.add(perfect_play_params.make_options_description(true));
-
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
-  desc.add(parallel_game_runner_params.make_options_description(true));
-
   TrainingDataWriter::Params training_data_writer_params;
-  desc.add(training_data_writer_params.make_options_description(true));
+
+  auto desc = raw_desc
+      .add(perfect_play_params.make_options_description())
+      .add(parallel_game_runner_params.make_options_description())
+      .add(training_data_writer_params.make_options_description());
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);

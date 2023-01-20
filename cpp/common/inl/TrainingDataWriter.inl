@@ -10,23 +10,20 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-boost::program_options::options_description
-    TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_description(bool add_shortcuts)
-{
+template<boost_util::program_options::OptionStyle Style>
+auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po::options_description desc("TrainingDataWriter options");
-  desc.add_options()
-      ("clear-dir", po2::store_bool(&clear_dir, true),
+  po2::options_description<Style> desc("TrainingDataWriter options");
+  return desc
+      .template add_option<"clear-dir">(po2::store_bool(&clear_dir, true),
           po2::make_store_bool_help_str("rm {games-dir}/* before running", clear_dir).c_str())
-      ("no-clear-dir", po2::store_bool(&clear_dir, false),
+      .template add_option<"no-clear-dir">(po2::store_bool(&clear_dir, false),
           po2::make_store_bool_help_str("do NOT rm {games-dir}/* before running", !clear_dir).c_str())
-      (add_shortcuts ? "games-dir,g" : "games-dir",
+      .template add_option<"games-dir", 'g'>(
           po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games")
       ;
-
-  return desc;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

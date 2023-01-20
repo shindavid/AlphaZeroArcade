@@ -15,21 +15,23 @@
 #include <util/Random.hpp>
 
 namespace po = boost::program_options;
+namespace po2 = boost_util::program_options;
 
 struct Args {
   std::string my_starting_color;
   bool perfect;
   bool verbose;
 
+  template<po2::OptionStyle Style=po2::kUseAbbreviations>
   auto make_options_description() {
-    po::options_description desc("PlayVsCpu options");
+    po2::options_description<Style> desc("PlayVsCpu options");
 
-    desc.add_options()
-        ("my-starting-color,s", po::value<std::string>(&my_starting_color),
-         "human's starting color (R or Y). Default: random")
-        ("perfect,p", po::bool_switch(&perfect)->default_value(false), "play against perfect player")
+    return desc
+        .template add_option<"my-starting-color", 's'>(po::value<std::string>(&my_starting_color),
+            "human's starting color (R or Y). Default: random")
+        .template add_option<"perfect", 'p'>(po::bool_switch(&perfect)->default_value(false),
+                             "play against perfect player")
         ;
-    return desc;
   }
 };
 
@@ -45,26 +47,20 @@ common::player_index_t parse_color(const std::string& str) {
   throw util::Exception("Invalid --my-starting-color/-s value: \"%s\"", str.c_str());
 }
 
-auto make_options_description() {
-}
-
 int main(int ac, char* av[]) {
-  std::string default_c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
-
-  po::options_description desc("Play vs MCTS as a human");
-  desc.add_options()("help,h", "help");
+  po2::options_description raw_desc("General options");
+  raw_desc.add_option<"help", 'h'>("help");
 
   Mcts::Params mcts_params;
-  desc.add(mcts_params.make_options_description());
-
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
-  desc.add(mcts_player_params.make_options_description(true));
-
   c4::PerfectPlayParams perfect_play_params;
-  desc.add(perfect_play_params.make_options_description(true));
-
   Args args;
-  desc.add(args.make_options_description());
+
+  auto desc = raw_desc
+      .add(mcts_params.make_options_description())
+      .add(mcts_player_params.make_options_description())
+      .add(perfect_play_params.make_options_description())
+      .add(args.make_options_description());
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);

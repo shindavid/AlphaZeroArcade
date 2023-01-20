@@ -16,22 +16,23 @@
 #include <common/ParallelGameRunner.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/StringUtil.hpp>
 
 namespace po = boost::program_options;
+namespace po2 = boost_util::program_options;
 
 struct Args {
   std::string nnet_filename2;
 
+  template<po2::OptionStyle Style=po2::kUseAbbreviations>
   auto make_options_description() {
-    po::options_description desc("CompetitiveSelfPlay options");
+    po2::options_description<Style> desc("CompetitiveSelfPlay options");
 
-    desc.add_options()
-        ("mcts-nnet-filename2", po::value<std::string>(&nnet_filename2)->default_value(""),
-         "set this to use a different nnet for the second player")
+    return desc
+        .template add_option<"mcts-nnet-filename2">(po::value<std::string>(&nnet_filename2)->default_value(""),
+            "set this to use a different nnet for the second player")
         ;
-
-    return desc;
   }
 };
 
@@ -74,21 +75,20 @@ ParallelGameRunner::Params get_default_parallel_game_runner_params() {
 }
 
 int main(int ac, char* av[]) {
-  po::options_description desc("Mcts vs mcts");
-  desc.add_options()("help,h", "help");
+  po2::options_description raw_desc("General options");
+  raw_desc.add_option<"help", 'h'>("help");
 
   Mcts::Params mcts_params;
-  desc.add(mcts_params.make_options_description());
-
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
-  desc.add(mcts_player_params.make_options_description(true));
-
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
-  desc.add(parallel_game_runner_params.make_options_description(true));
-
   Args args;
-  desc.add(args.make_options_description());
+
+  auto desc = raw_desc
+      .add(mcts_params.make_options_description())
+      .add(mcts_player_params.make_options_description())
+      .add(parallel_game_runner_params.make_options_description())
+      .add(args.make_options_description());
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);

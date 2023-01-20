@@ -9,7 +9,8 @@
 
 namespace c4 {
 
-inline boost::program_options::options_description PerfectPlayParams::make_options_description(bool add_shortcuts) {
+template<boost_util::program_options::OptionStyle Style>
+auto PerfectPlayParams::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -20,15 +21,12 @@ inline boost::program_options::options_description PerfectPlayParams::make_optio
     c4_solver_dir_value = c4_solver_dir_value->default_value(default_c4_solver_dir);
   }
 
-  po::options_description desc("C4PerfectPlayer options");
-  desc.add_options()
-      (po2::abbrev_str(add_shortcuts, "c4-solver-dir", "c").c_str(), c4_solver_dir_value,
-          "base dir containing c4solver bin+book")
-      (po2::abbrev_str(add_shortcuts, "weak-mode", "w").c_str(),
-          po::bool_switch(&weak_mode)->default_value(weak_mode),
+  po2::options_description<Style> desc("C4PerfectPlayer options");
+  return desc
+      .template add_option<"c4-solver-dir", 'c'>(c4_solver_dir_value, "base dir containing c4solver bin+book")
+      .template add_option<"weak-mode", 'w'>(po::bool_switch(&weak_mode)->default_value(weak_mode),
           "exhibit no preference among winning moves as perfect player")
       ;
-  return desc;
 }
 
 inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}

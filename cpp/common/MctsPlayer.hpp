@@ -12,6 +12,7 @@
 #include <common/Mcts.hpp>
 #include <common/MctsResults.hpp>
 #include <common/TensorizorConcept.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 
@@ -37,7 +38,9 @@ public:
   struct Params {
     Params(DefaultParamsType);
     void dump() const;
-    boost::program_options::options_description make_options_description(bool add_shortcuts=false);
+
+    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
+    auto make_options_description();
 
     int num_fast_iters;
     int num_full_iters;

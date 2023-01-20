@@ -14,6 +14,8 @@
 
 namespace util {
 
+constexpr uint64_t str_hash(const char* c);
+
 /*
  * split(s) behaves just like s.split() in python.
  *
