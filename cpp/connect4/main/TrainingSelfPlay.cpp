@@ -20,10 +20,6 @@
 #include <connect4/C4Tensorizor.hpp>
 #include <util/StringUtil.hpp>
 
-struct Args {
-  std::string games_dir_str;
-};
-
 using GameState = c4::GameState;
 using Tensorizor = c4::Tensorizor;
 
@@ -48,8 +44,6 @@ player_array_t create_players(TrainingDataWriter* writer) {
 }
 
 int main(int ac, char* av[]) {
-  Args args;
-
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
   po::options_description desc("Mcts vs mcts");
@@ -64,10 +58,8 @@ int main(int ac, char* av[]) {
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::add_options(desc, true);
 
-  desc.add_options()
-      ("games-dir,g", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"),
-       "where to write games")
-      ;
+  TrainingDataWriter::Params training_data_writer_params;
+  training_data_writer_params.add_options(desc, true);
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
@@ -79,7 +71,7 @@ int main(int ac, char* av[]) {
   }
 
   ParallelGameRunner runner;
-  TrainingDataWriter writer(args.games_dir_str);
+  TrainingDataWriter writer(training_data_writer_params);
   runner.register_players([&]() { return create_players(&writer); });
   runner.run();
 

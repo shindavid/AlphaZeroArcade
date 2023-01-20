@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
@@ -20,6 +21,13 @@ namespace common {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter {
 public:
+  struct Params {
+    std::string games_dir = "c4_games";
+    bool clear_dir = true;  // before writing, clear the directory if it exists
+
+    void add_options(boost::program_options::options_description& desc, bool add_shortcuts=false);
+  };
+
   using GameState = GameState_;
   using GameStateTypes = typename common::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
@@ -120,7 +128,7 @@ public:
   using GameData_sptr = std::shared_ptr<GameData>;
   using game_data_map_t = std::map<game_id_t, GameData_sptr>;
 
-  TrainingDataWriter(const boost::filesystem::path& output_path);
+  TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
   GameData_sptr get_data(game_id_t id);

@@ -16,10 +16,6 @@
 
 namespace bf = boost::filesystem;
 
-struct Args {
-  std::string games_dir_str;
-};
-
 using player_index_t = common::player_index_t;
 using action_index_t = common::action_index_t;
 
@@ -136,8 +132,6 @@ player_array_t create_players(TrainingDataWriter* writer) {
 }
 
 int main(int ac, char* av[]) {
-  Args args;
-
   namespace po = boost::program_options;
   po::options_description desc("Generate training data labeled by oracle");
   desc.add_options()("help,h", "help");
@@ -148,9 +142,8 @@ int main(int ac, char* av[]) {
   ParallelGameRunner::global_params.display_progress_bar = true;
   ParallelGameRunner::add_options(desc, true);
 
-  desc.add_options()
-      ("games-dir,g", po::value<std::string>(&args.games_dir_str)->default_value("c4_games"), "where to write games")
-      ;
+  TrainingDataWriter::Params training_data_writer_params;
+  training_data_writer_params.add_options(desc, true);
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
@@ -161,12 +154,12 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  TrainingDataWriter writer(args.games_dir_str);
+  TrainingDataWriter writer(training_data_writer_params);
 
   ParallelGameRunner runner;
   runner.register_players([&]() { return create_players(&writer); });
   runner.run();
 
-  printf("\nWrote data to: %s\n", args.games_dir_str.c_str());
+  printf("\nWrote data to: %s\n", training_data_writer_params.games_dir.c_str());
   return 0;
 }

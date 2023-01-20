@@ -3,10 +3,28 @@
 #include <map>
 #include <string>
 
+#include <util/BoostUtil.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
 namespace common {
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::Params::add_options(
+    boost::program_options::options_description& desc, bool add_shortcuts)
+{
+  namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
+
+  desc.add_options()
+      ("clear-dir", po2::store_bool(&clear_dir, true),
+          po2::make_store_bool_help_str("rm {games-dir}/* before running", clear_dir).c_str())
+      ("no-clear-dir", po2::store_bool(&clear_dir, false),
+          po2::make_store_bool_help_str("do NOT rm {games-dir}/* before running", !clear_dir).c_str())
+      (add_shortcuts ? "games-dir,g" : "games-dir",
+          po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games")
+      ;
+}
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::DataChunk()
@@ -70,15 +88,15 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const boost::filesystem::path& output_path)
-: output_path_(output_path)
+TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
+: output_path_(params.games_dir)
 {
   namespace bf = boost::filesystem;
 
-  if (bf::is_directory(output_path)) {
-    bf::remove_all(output_path);
+  if (params.clear_dir && bf::is_directory(output_path_)) {
+    bf::remove_all(output_path_);
   }
-  bf::create_directories(output_path);
+  bf::create_directories(output_path_);
 
   thread_ = new std::thread([&] { loop(); });
 }

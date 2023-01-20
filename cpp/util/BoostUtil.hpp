@@ -35,6 +35,32 @@ inline std::string abbrev_str(bool abbreviate, const char* full_name, const char
   return abbreviate ? util::create_string("%s,%s", full_name, abbreviation) : full_name;
 }
 
+/*
+ * bool value = false;
+ * options.add_options()
+ *     ("on", store_bool(&value, true))
+ *     ("off", store_bool(&value, false))
+ *     ;
+ *
+ * https://stackoverflow.com/a/33172979/543913
+ */
+inline auto store_bool(bool* flag, bool store_as) {
+  return boost::program_options::value(flag)->implicit_value(store_as)->zero_tokens()->default_value(*flag ^ !store_as);
+}
+
+/*
+ * The above store_bool() mechanism is not compatible with ->default_value() for whatever reason.
+ *
+ * This helper function is a convenience that sticks "... (default: true)" or "... (default: false)" at the end of
+ * help string.
+ *
+ * It also sticks on a warning about using --x and --no-x together.
+ */
+inline std::string make_store_bool_help_str(const char* help, bool default_value) {
+  return util::create_string("%s (default: %s). Do not use --x and --no-x together",
+                             help, default_value ? "true" : "false");
+}
+
 }  // namespace program_options
 
 }  // namespace boost_util
