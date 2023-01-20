@@ -24,8 +24,8 @@ boost::program_options::options_description ParallelGameRunner<GameState>::Param
           po::value<int>(&num_games)->default_value(num_games),
        "num games (<=0 means run indefinitely)")
 
-      (po2::abbrev_str(add_shortcuts, "parallelism-factor", "p").c_str(),
-          po::value<int>(&parallelism_factor)->default_value(parallelism_factor),
+      (po2::abbrev_str(add_shortcuts, "parallelism", "p").c_str(),
+          po::value<int>(&parallelism)->default_value(parallelism),
           "num games to play simultaneously")
       ;
 
@@ -128,8 +128,8 @@ template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::run() {
   active_runners.push_back(this);
 
-  int parallelism_factor = params_.parallelism_factor;
-  for (int p = 0; p < parallelism_factor; ++p) {
+  int parallelism = params_.parallelism;
+  for (int p = 0; p < parallelism; ++p) {
     threads_.push_back(new GameThread(player_array_generator_, shared_data_));
   }
 
@@ -154,7 +154,7 @@ void ParallelGameRunner<GameState>::run() {
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     printf("P%d %s\n", p, get_results_str(results[p]).c_str());
   }
-  PARAM_DUMP("Parallelism factor", "%d", parallelism_factor);
+  PARAM_DUMP("Parallelism factor", "%d", parallelism);
   PARAM_DUMP("Num games", "%d", num_games);
   PARAM_DUMP("Total runtime", "%.3fs", ns*1e-9);
   PARAM_DUMP("Avg runtime", "%.3fs", ns*1e-9 / num_games);

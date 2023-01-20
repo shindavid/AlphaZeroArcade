@@ -39,7 +39,7 @@ public:
 
   struct Params {
     int num_games = 1000;  // if <=0, run indefinitely
-    int parallelism_factor = 100;  // number of games to run simultaneously
+    int parallelism = 100;  // number of games to run simultaneously
     bool randomize_player_order = true;
     bool display_progress_bar = false;
 

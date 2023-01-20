@@ -23,10 +23,10 @@ inline boost::program_options::options_description PerfectPlayParams::make_optio
   po::options_description desc("C4PerfectPlayer options");
   desc.add_options()
       (po2::abbrev_str(add_shortcuts, "c4-solver-dir", "c").c_str(), c4_solver_dir_value,
-          "base dir containing c4solver bin and 7x6 book")
+          "base dir containing c4solver bin+book")
       (po2::abbrev_str(add_shortcuts, "weak-mode", "w").c_str(),
           po::bool_switch(&weak_mode)->default_value(weak_mode),
-          "exhibit no preference among winning moves as perfect player (otherwise favors shorter paths to win)")
+          "exhibit no preference among winning moves as perfect player")
       ;
   return desc;
 }

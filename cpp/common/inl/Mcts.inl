@@ -46,7 +46,7 @@ boost::program_options::options_description Mcts<GameState, Tensorizor>::Params:
       ("run-offline", po2::store_bool(&run_offline, true),
           po2::make_store_bool_help_str("run search while opponent is thinking", run_offline).c_str())
       ("no-run-offline", po2::store_bool(&run_offline, false),
-          po2::make_store_bool_help_str("run search while opponent is thinking", !run_offline).c_str())
+          po2::make_store_bool_help_str("do NOT run search while opponent is thinking", !run_offline).c_str())
       ("offline-tree-size-limit", po::value<int>(&offline_tree_size_limit)->default_value(
           offline_tree_size_limit), "max tree size to grow to offline (only respected in --run-offline mode)")
       ("nn-eval-timeout-ns", po::value<int64_t>(&nn_eval_timeout_ns)->default_value(
@@ -62,9 +62,9 @@ boost::program_options::options_description Mcts<GameState, Tensorizor>::Params:
       ("no-disable-eliminations", po2::store_bool(&disable_eliminations, false),
           po2::make_store_bool_help_str("enable eliminations", !disable_eliminations).c_str())
       ("speculative-evals", po2::store_bool(&speculative_evals, true),
-          po2::make_store_bool_help_str("enable speculative evals", speculative_evals).c_str())
+          po2::make_store_bool_help_str("enable speculation", speculative_evals).c_str())
       ("no-speculative-evals", po2::store_bool(&speculative_evals, false),
-          po2::make_store_bool_help_str("disable speculative evals", !speculative_evals).c_str())
+          po2::make_store_bool_help_str("disable speculation", !speculative_evals).c_str())
 #ifdef PROFILE_MCTS
       ("profiling-dir", po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")

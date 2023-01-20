@@ -139,7 +139,7 @@ player_array_t create_players(TrainingDataWriter* writer, const c4::PerfectPlayP
 ParallelGameRunner::Params get_default_parallel_game_runner_params() {
   ParallelGameRunner::Params parallel_game_runner_params;
   parallel_game_runner_params.num_games = 10000;
-  parallel_game_runner_params.parallelism_factor = 24;
+  parallel_game_runner_params.parallelism = 24;
   parallel_game_runner_params.display_progress_bar = true;
   return parallel_game_runner_params;
 }
