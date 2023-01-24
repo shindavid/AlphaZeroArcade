@@ -48,15 +48,13 @@ common::player_index_t parse_color(const std::string& str) {
 }
 
 int main(int ac, char* av[]) {
-  po2::options_description raw_desc("General options");
-  raw_desc.add_option<"help", 'h'>("help");
-
   Mcts::Params mcts_params;
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
   c4::PerfectPlayParams perfect_play_params;
   Args args;
 
-  auto desc = raw_desc
+  po2::options_description raw_desc("General options");
+  auto desc = raw_desc.add_option<"help", 'h'>("help")
       .add(mcts_params.make_options_description())
       .add(mcts_player_params.make_options_description())
       .add(perfect_play_params.make_options_description())
