@@ -2,7 +2,6 @@
 import argparse
 import os
 import random
-import subprocess
 
 import h5py
 from mpi4py import MPI
@@ -13,6 +12,7 @@ from config import Config
 from connect4 import game_logic
 from connect4.tensorizor import C4Tensorizor
 from connect4.game_logic import NUM_ROWS, NUM_COLUMNS
+from util import subprocess_util
 from util.torch_util import Shape
 from util.repo_util import Repo
 
@@ -67,8 +67,7 @@ def launch(args):
     assert os.path.isfile(c4_solver_bin)
     assert os.path.isfile(c4_solver_book)
     c4_cmd = f"{c4_solver_bin} -b {c4_solver_book} -a"
-    proc = subprocess.Popen(c4_cmd, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                            stderr=subprocess.PIPE, encoding='utf-8')
+    proc = subprocess_util.Popen(c4_cmd)
 
     output_filename = os.path.join(args.games_dir, f'{RANK}.h5')
     n = args.num_training_games
