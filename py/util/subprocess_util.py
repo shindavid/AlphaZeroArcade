@@ -1,14 +1,18 @@
 import subprocess
-from typing import Union, List
+from typing import Union, List, Dict, Any
 
 
-def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+def defaultize_kwargs(cmd: Union[str, List[str]], **kwargs) -> Dict[str, Any]:
     """
-    This is a convenience wrapper around subprocess.Popen, with different defaults:
+    Takes kwargs and adds the following mappings if the corresponding keys are not present:
 
     * shell: either True/False depending on whether cmd is a str or not
-    * stdout/stdin/stderr: subprocess.PIPE
+    * stderr: subprocess.PIPE
+    * stdin: subprocess.PIPE
+    * stdout: subprocess.PIPE
     * encoding: 'utf-8'
+
+    Returns the corresponding dict.
     """
     kwargs = dict(**kwargs)
     kwargs['shell'] = kwargs.get('shell', isinstance(cmd, str))
@@ -16,5 +20,18 @@ def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
     kwargs['stdin'] = kwargs.get('stdin', subprocess.PIPE)
     kwargs['stderr'] = kwargs.get('stderr', subprocess.PIPE)
     kwargs['encoding'] = kwargs.get('encoding', 'utf-8')
+    return kwargs
 
-    return subprocess.Popen(cmd, **kwargs)
+
+def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
+    """
+    Convenience wrapper around subprocess.Popen(), using the defaults of defaultize_kwargs().
+    """
+    return subprocess.Popen(cmd, **defaultize_kwargs(cmd, **kwargs))
+
+
+def run(cmd: Union[str, List[str]], **kwargs) -> subprocess.CompletedProcess:
+    """
+    Convenience wrapper around subprocess.run(), using the defaults of defaultize_kwargs().
+    """
+    return subprocess.run(cmd, **defaultize_kwargs(cmd, **kwargs))
