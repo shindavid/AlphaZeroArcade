@@ -15,10 +15,13 @@ repository.
 
 The Config class defined here provides an API to access those key-value pairs.
 """
+import argparse
 import os
 
+from util.repo_util import Repo
 
-DEFAULT_FILENAME = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'config.txt')
+
+DEFAULT_FILENAME = os.path.join(Repo.root(), 'config.txt')
 
 
 def decomment(line: str) -> str:
@@ -42,7 +45,7 @@ class Config:
 
         with open(filename, 'r') as f:
             for orig_line in f:
-                line = decomment(orig_line)
+                line = decomment(orig_line).strip()
                 if not line:
                     continue
                 eq = line.find('=')
@@ -54,6 +57,27 @@ class Config:
 
     def get(self, key: str, default_value=None):
         return self._dict.get(key, default_value)
+
+    def add_parser_argument(self, key: str, parser: argparse.ArgumentParser, *args, **kwargs):
+        """
+        Invokes parser.add_argument(*args, **kwargs), after first...
+
+        - Adding default=self.get(key) to kwargs
+        - Appending to kwargs['help'] info about the default value and where it came from
+        """
+        filename = os.path.relpath(self.filename, Repo.root())
+        kwargs = dict(**kwargs)
+        assert 'default' not in kwargs
+        assert 'help' in kwargs
+        help = kwargs['help']
+        value = self._dict.get(key, None)
+        if value is not None:
+            kwargs['default'] = value
+            kwargs['help'] = f'{help} (default: {value} [{filename}:{key}])'
+        else:
+            kwargs['help'] = f'{help} [{filename}:{key}]'
+
+        parser.add_argument(*args, **kwargs)
 
     @staticmethod
     def instance() -> 'Config':
