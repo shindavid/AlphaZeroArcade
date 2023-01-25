@@ -35,8 +35,11 @@ def load_args():
                             help='remote repo path for model training')
     cfg.add_parser_argument('remote.c4.base_dir', parser, '-D', '--remote-c4-base-dir',
                             help='--c4-base-dir on remote host')
+    shared.add_optimization_args(parser)
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    Args.load(args)
+    shared.OptimizationArgs.load(args)
 
 
 def main():
