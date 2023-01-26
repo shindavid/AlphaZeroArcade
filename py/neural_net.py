@@ -78,7 +78,7 @@ class NeuralNet(nn.Module):
         forward_shape = tuple([1] + list(self.input_shape))
         example_input = torch.zeros(forward_shape)
         mod = torch.jit.trace(clone, example_input)
-        mod.save_model(filename)
+        mod.save(filename)
         if verbose:
             print(f'Model saved to {filename}')
 
