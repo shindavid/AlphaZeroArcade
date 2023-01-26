@@ -135,7 +135,7 @@ class AlphaZeroManager:
         raise Exception('TODO: implement me')
 
     def load_generation(self):
-        model_files = list(natsorted(os.listdir(self.models_dir)))
+        model_files = list(natsorted([f for f in os.listdir(self.models_dir) if not f.startswith('.')]))
         if not model_files:
             self.init_gen0()
             self.generation = 0
