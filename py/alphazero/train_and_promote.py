@@ -238,7 +238,14 @@ def main():
     latest_model_filename = manager.get_model_filename(manager.generation)
     candidate_filename = manager.get_current_candidate_model_filename()
     checkpoint_filename = manager.get_current_checkpoint_filename()
-    net = C4Net.load_checkpoint(checkpoint_filename)
+    if os.path.isfile(checkpoint_filename):
+        net = C4Net.load_checkpoint(checkpoint_filename)
+    else:
+        # TODO: remove this hard-coded shape
+        input_shape = (2, 7, 6)
+        net = C4Net(input_shape)
+    net.cuda()
+    net.train()
 
     value_loss_lambda = ModelingArgs.value_loss_lambda
     learning_rate = ModelingArgs.learning_rate
