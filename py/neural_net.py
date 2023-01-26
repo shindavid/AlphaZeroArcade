@@ -7,6 +7,7 @@ from typing import Dict
 
 import torch
 from torch import nn as nn
+from torch.jit import ScriptFunction
 
 from util.torch_util import Shape
 
@@ -26,7 +27,7 @@ class NeuralNet(nn.Module):
         self.input_shape = input_shape
 
     @classmethod
-    def load(cls, filename: str, verbose: bool = False) -> torch.jit.ScriptModule:
+    def load(cls, filename: str, verbose: bool = False, eval_mode: bool = True) -> torch.jit.ScriptModule:
         """
         Loads a model previously saved to disk via save(). This uses torch.jit.load(), which returns a
         torch.jit.ScriptModule, which looks/feels/sounds like nn.Module, but is not exactly the same thing.
@@ -41,8 +42,11 @@ class NeuralNet(nn.Module):
             net = torch.jit.load(filename)
             if ENABLE_CUDA:
                 net.to('cuda')
-            torch.set_grad_enabled(False)
-            net.eval()
+            if eval_mode:
+                torch.set_grad_enabled(False)
+                net.eval()
+            else:
+                net.train()
             NeuralNet._filename_to_net[filename] = net
             if verbose:
                 print(f'Model successfully loaded!')
