@@ -2,7 +2,8 @@
 
 import argparse
 
-from alphazero import shared
+from alphazero.manager import AlphaZeroManager
+from alphazero.optimization_args import add_optimization_args, OptimizationArgs
 from config import Config
 
 
@@ -35,16 +36,16 @@ def load_args():
                             help='remote repo path for model training')
     cfg.add_parser_argument('remote.c4.base_dir', parser, '-D', '--remote-c4-base-dir',
                             help='--c4-base-dir on remote host')
-    shared.add_optimization_args(parser)
+    add_optimization_args(parser)
 
     args = parser.parse_args()
     Args.load(args)
-    shared.OptimizationArgs.load(args)
+    OptimizationArgs.load(args)
 
 
 def main():
     load_args()
-    manager = shared.AlphaZeroManager(Args.c4_base_dir)
+    manager = AlphaZeroManager(Args.c4_base_dir)
     manager.main_loop(Args.remote_host, Args.remote_repo_path, Args.remote_c4_base_dir)
 
 

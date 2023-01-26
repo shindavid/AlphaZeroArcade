@@ -5,7 +5,8 @@ import os
 import random
 from typing import Dict, List
 
-from alphazero import shared
+from alphazero.manager import AlphaZeroManager
+from alphazero.optimization_args import add_optimization_args, OptimizationArgs
 from config import Config
 
 
@@ -22,11 +23,11 @@ def load_args():
     parser = argparse.ArgumentParser()
     cfg = Config.instance()
     cfg.add_parser_argument('c4.base_dir', parser, '-d', '--c4-base-dir', help='base-dir for game/model files')
-    shared.add_optimization_args(parser)
+    add_optimization_args(parser)
 
     args = parser.parse_args()
     Args.load(args)
-    shared.OptimizationArgs.load(args)
+    OptimizationArgs.load(args)
 
 
 Generation = int
@@ -60,9 +61,9 @@ def compute_n_window(N_total: int) -> int:
 
     https://arxiv.org/pdf/1902.10565.pdf
     """
-    c = shared.OptimizationArgs.window_c
-    alpha = shared.OptimizationArgs.window_alpha
-    beta = shared.OptimizationArgs.window_beta
+    c = OptimizationArgs.window_c
+    alpha = OptimizationArgs.window_alpha
+    beta = OptimizationArgs.window_beta
     return min(N_total, int(c * (1 + beta * ((N_total / c) ** alpha - 1) / alpha)))
 
 
@@ -95,7 +96,7 @@ class SelfPlayMetadata:
 
 
 class C4DataLoader:
-    def __init__(self, manager: shared.AlphaZeroManager):
+    def __init__(self, manager: AlphaZeroManager):
         self.manager = manager
         self.self_play_metadata = SelfPlayMetadata(manager.self_play_dir)
         n_total = self.self_play_metadata.n_total_positions
@@ -107,7 +108,7 @@ class C4DataLoader:
 
 def main():
     load_args()
-    manager = shared.AlphaZeroManager(Args.c4_base_dir)
+    manager = AlphaZeroManager(Args.c4_base_dir)
     loader = C4DataLoader(manager)
 
 
