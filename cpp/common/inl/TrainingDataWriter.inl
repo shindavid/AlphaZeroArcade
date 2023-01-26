@@ -177,7 +177,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   }
 
   int64_t ns_since_epoch = util::ns_since_epoch(std::chrono::steady_clock::now());
-  std::string output_filename = util::create_string("%ld-%d.pt", ns_since_epoch, rows);
+  std::string output_filename = util::create_string("%ld-%d.ptd", ns_since_epoch, rows);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
   boost::filesystem::path output_path = output_path_ / output_filename;
   boost::filesystem::path tmp_output_path = output_path_ / tmp_output_filename;

@@ -28,7 +28,7 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  boost::filesystem::path default_nnet_filename_path = util::Repo::root() / "c4_model.pt";
+  boost::filesystem::path default_nnet_filename_path = util::Repo::root() / "c4_model.ptj";
   std::string default_nnet_filename = util::Config::instance()->get(
       "nnet_filename", default_nnet_filename_path.string());
 

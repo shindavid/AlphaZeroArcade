@@ -16,11 +16,11 @@ STEPS
 
 * Train a model:
   * ./train_nn.py
-  * Reads data from c4_games/ by default, writes to c4_model.pt by default
+  * Reads data from c4_games/ by default, writes to c4_model.ptj by default
 
 * Play against the CPU, creating a debug file:
   * ./play_vs_cpu.py -d debug.xml
-  * Loads c4_model.pt by default
+  * Loads c4_model.ptj by default
 
 * Visualize the debug file:
   * cd $REPO_ROOT/js; npm start

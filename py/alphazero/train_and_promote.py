@@ -48,7 +48,7 @@ def load_args():
 class SelfPlayGameMetadata:
     def __init__(self, filename: str):
         self.filename = filename
-        info = os.path.split(filename)[1].split('.')[0].split('-')  # 1685860410604914-10.pt
+        info = os.path.split(filename)[1].split('.')[0].split('-')  # 1685860410604914-10.ptd
         self.timestamp = int(info[0])
         self.num_positions = int(info[1])
 
@@ -236,7 +236,7 @@ def main():
     manager.load_generation()
 
     latest_model_filename = manager.get_model_filename(manager.generation)
-    candidate_filename = manager.get_current_candidate_filename()
+    candidate_filename = manager.get_current_candidate_model_filename()
     checkpoint_filename = manager.get_current_checkpoint_filename()
     net = C4Net.load_checkpoint(checkpoint_filename)
 

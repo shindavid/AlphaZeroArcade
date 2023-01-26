@@ -1,25 +1,32 @@
 """
-NOTE: to clearly differentiate checkpoint files vs jit-compiled files, we will use file-extension *.pt for checkpoint
-files and *.ptc for jit-compiled files (ptc = "PyTorch Compiled").
+NOTE: to clearly differentiate the different types of files, I have invented the following extensions:
+
+- .ptd: pytorch-data files
+- .ptc: pytorch-checkpoint files
+- .ptj: pytorch-jit-compiled model files
 
 BASE_DIR/
          current/
-             checkpoint.pt
-             candidate.ptc
+             checkpoint.ptc
+             candidate.ptj
          self-play/
              gen0/
+                 {timestamp}-{num_positions}.ptd
+                 ...
              gen1/
+                 ...
              gen2/
+                 ...
              ...
          models/
+             gen0.ptj
+             gen1.ptj
+             gen2.ptj
+             ...
+         checkpoints/
              gen0.ptc
              gen1.ptc
              gen2.ptc
-             ...
-         checkpoints/
-             gen0.pt
-             gen1.pt
-             gen2.pt
              ...
 
 TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
@@ -59,17 +66,20 @@ class AlphaZeroManager:
     def init_gen0(self):
         raise Exception('TODO: implement me')
 
+    def get_games_dir(self, gen: Generation) -> str:
+        return os.path.join(self.self_play_dir, f'gen{gen}')
+
     def get_model_filename(self, gen: Generation) -> str:
-        return os.path.join(self.models_dir, f'gen{gen}.ptc')
+        return os.path.join(self.models_dir, f'gen{gen}.ptj')
 
     def get_checkpoint_filename(self, gen: Generation) -> str:
-        return os.path.join(self.checkpoints_dir, f'gen{gen}.pt')
+        return os.path.join(self.checkpoints_dir, f'gen{gen}.ptc')
 
-    def get_current_candidate_filename(self) -> str:
-        return os.path.join(self.c4_base_dir, 'current', 'candidate.ptc')
+    def get_current_candidate_model_filename(self) -> str:
+        return os.path.join(self.c4_base_dir, 'current', 'candidate.ptj')
 
     def get_current_checkpoint_filename(self) -> str:
-        return os.path.join(self.c4_base_dir, 'current', 'checkpoint.pt')
+        return os.path.join(self.c4_base_dir, 'current', 'checkpoint.ptc')
 
     def load_generation(self):
         model_files = list(natsorted([f for f in os.listdir(self.models_dir) if not f.startswith('.')]))
@@ -78,7 +88,7 @@ class AlphaZeroManager:
             self.generation = 0
             return
         last_file = model_files[-1]
-        assert last_file.startswith('gen') and last_file.endswith('.ptc')
+        assert last_file.startswith('gen') and last_file.endswith('.ptj')
         self.generation = int(last_file[3:].split('.')[0])
 
     def remotely_train_model(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
@@ -93,8 +103,8 @@ class AlphaZeroManager:
         self.run_index += 1
         self.load_generation()
         timed_print(f'Running iteration {self.run_index}, generation {self.generation}')
-        games_dir = os.path.join(self.self_play_dir, f'gen{self.generation}')
-        model = os.path.join(self.models_dir, f'gen{self.generation}.ptc')
+        games_dir = self.get_games_dir(self.generation)
+        model = self.get_model_filename(self.generation)
         self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
         self_play_cmd = f'{self_play_bin} -G 0 -g {games_dir} --mcts-nnet-filename {model}'
         timed_print(f'Running: {self_play_cmd}')
