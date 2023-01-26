@@ -11,6 +11,8 @@ BASE_DIR/
                 gen1.pt
                 gen2.pt
                 ...
+
+TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
 """
 
 import os
@@ -20,6 +22,9 @@ from natsort import natsorted
 from alphazero.optimization_args import OptimizationArgs
 from util import subprocess_util
 from util.repo_util import Repo
+
+
+Generation = int
 
 
 class AlphaZeroManager:
@@ -36,6 +41,12 @@ class AlphaZeroManager:
 
     def init_gen0(self):
         raise Exception('TODO: implement me')
+
+    def get_model_filename(self, gen: Generation) -> str:
+        return os.path.join(self.models_dir, f'gen{gen}.pt')
+
+    def get_candidate_filename(self) -> str:
+        return os.path.join(self.c4_base_dir, 'candidate.pt')
 
     def load_generation(self):
         model_files = list(natsorted([f for f in os.listdir(self.models_dir) if not f.startswith('.')]))

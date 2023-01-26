@@ -49,32 +49,54 @@ class OptimizationArgParams:
     TODO: weight EMA
     TODO: learning rate annealing
     """
-    minibatch_size = Param('-m', '--minibatch-size', 256, 'minibatch size')
-    snapshot_steps = Param('-s', '--snapshot-steps', 1024, 'steps per snapshot')
-    window_alpha = Param('-A', '--window-alpha', 0.75, 'alpha for n_window formula')
-    window_beta = Param('-B', '--window-beta', 0.4, 'beta for n_window formula')
-    window_c = Param('-c', '--window-c', 250000, 'c for n_window formula')
-    momentum = Param('-M', '--momentum', 0.9, 'momentum')
-    weight_decay = Param('-w', '--weight-decay', 6e-5, 'weight decay')
-    learning_rate = Param('-l', '--learning-rate', 6e-5, 'learning rate')
+    modeling_params  = {
+        'minibatch_size': Param('-m', '--minibatch-size', 256, 'minibatch size'),
+        'snapshot_steps': Param('-s', '--snapshot-steps', 1024, 'steps per snapshot'),
+        'window_alpha': Param('-A', '--window-alpha', 0.75, 'alpha for n_window formula'),
+        'window_beta': Param('-B', '--window-beta', 0.4, 'beta for n_window formula'),
+        'window_c': Param('-c', '--window-c', 250000, 'c for n_window formula'),
+        'momentum': Param('-M', '--momentum', 0.9, 'momentum'),
+        'weight_decay': Param('-w', '--weight-decay', 6e-5, 'weight decay'),
+        'learning_rate': Param('-l', '--learning-rate', 6e-5, 'learning rate'),
+        'value_loss_lambda': Param('-V', '--value-loss-lambda', 1.5, 'value loss lambda'),
+    }
+
+    gating_params = {
+        'temperature': Param('-t', '--temperature', 0.2, 'mcts player temperature'),
+        'mcts_iters': Param('-i', '--mcts-iters', 300, 'num mcts player iters'),
+        'num_games': Param('-g', '--num-games', 200, 'num games to play'),
+        'promotion_win_rate': Param('-W', '--promotion-win-rate', 0.5, 'required win rate for promotion')
+    }
 
 
 class OptimizationArgs:
     attrs = [attr for attr in dir(OptimizationArgParams) if isinstance(getattr(OptimizationArgParams, attr), Param)]
 
-    minibatch_size: int
-    snapshot_steps: int
-    window_alpha: float
-    window_beta: float
-    window_c: int
-    momentum: float
-    weight_decay: float
-    learning_rate: float
+    class Modeling:
+        minibatch_size: int
+        snapshot_steps: int
+        window_alpha: float
+        window_beta: float
+        window_c: int
+        momentum: float
+        weight_decay: float
+        learning_rate: float
+        value_loss_lambda: float
+
+    class Gating:
+        temperature: float
+        mcts_iters: int
+        num_games: int
+        promotion_win_rate: float
 
     @staticmethod
     def load(args):
-        for attr in OptimizationArgs.attrs:
-            setattr(OptimizationArgs, attr, getattr(args, attr))
+        for attr in OptimizationArgParams.modeling_params.keys():
+            assert hasattr(OptimizationArgs.Modeling, attr)
+            setattr(OptimizationArgs.Modeling, attr, getattr(args, attr))
+        for attr in OptimizationArgParams.gating_params.keys():
+            assert hasattr(OptimizationArgs.Gating, attr)
+            setattr(OptimizationArgs.Gating, attr, getattr(args, attr))
 
     @staticmethod
     def get_str() -> str:
@@ -89,10 +111,17 @@ class OptimizationArgs:
         return ' '.join(tokens)
 
 
-def add_optimization_args(parser: argparse.ArgumentParser):
-    group = parser.add_argument_group('alphazero optimization options')
+ModelingArgs = OptimizationArgs.Modeling
+GatingArgs = OptimizationArgs.Gating
 
-    for attr in OptimizationArgs.attrs:
-        param: Param = getattr(OptimizationArgParams, attr)
+
+def add_optimization_args(parser: argparse.ArgumentParser):
+    group = parser.add_argument_group('alphazero modeling options')
+    for attr, param in OptimizationArgParams.modeling_params.items():
+        group.add_argument(param.short_name, param.long_name, type=param.value_type, default=param.value,
+                           help=f'{param.help} (default: %(default)s)')
+
+    group = parser.add_argument_group('alphazero gating options')
+    for attr, param in OptimizationArgParams.gating_params.items():
         group.add_argument(param.short_name, param.long_name, type=param.value_type, default=param.value,
                            help=f'{param.help} (default: %(default)s)')
