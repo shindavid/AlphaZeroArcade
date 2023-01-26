@@ -1,5 +1,6 @@
 #include <common/TrainingDataWriter.hpp>
 
+#include <filesystem>
 #include <map>
 #include <string>
 
@@ -177,7 +178,9 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   int64_t ns_since_epoch = util::ns_since_epoch(std::chrono::steady_clock::now());
   std::string output_filename = util::create_string("%ld-%d.pt", ns_since_epoch, rows);
+  std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
   boost::filesystem::path output_path = output_path_ / output_filename;
+  boost::filesystem::path tmp_output_path = output_path_ / tmp_output_filename;
 
   auto slice = torch::indexing::Slice(torch::indexing::None, rows);
   using tensor_map_t = std::map<std::string, torch::Tensor>;
@@ -186,7 +189,10 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   tensor_map["input"] = input.asTorch().index({slice});
   tensor_map["policy"] = policy.asTorch().index({slice});
   tensor_map["value"] = value.asTorch().index({slice});
-  torch_util::save(tensor_map, output_path.string());
+
+  // write-then-mv to avoid race-conditions with partially-written files
+  torch_util::save(tensor_map, tmp_output_path.string());
+  std::filesystem::rename(tmp_output_filename.c_str(), output_filename.c_str());
 }
 
 }  // namespace common
