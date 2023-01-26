@@ -192,7 +192,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   // write-then-mv to avoid race-conditions with partially-written files
   torch_util::save(tensor_map, tmp_output_path.string());
-  std::filesystem::rename(tmp_output_filename.c_str(), output_filename.c_str());
+  std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
 }
 
 }  // namespace common
