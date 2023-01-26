@@ -131,6 +131,8 @@ class ValueHead(nn.Module):
 class C4Net(NeuralNet):
     def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
         super(C4Net, self).__init__(input_shape)
+        self.n_conv_filters = n_conv_filters
+        self.n_res_blocks = n_res_blocks
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(n_conv_filters)
@@ -141,6 +143,25 @@ class C4Net(NeuralNet):
         for block in self.res_blocks:
             x = block(x)
         return self.policy_head(x), self.value_head(x)
+
+    @classmethod
+    def load_checkpoint(cls, filename: str) -> 'C4Net':
+        checkpoint = torch.load(filename)
+        model_state_dict = checkpoint['model_state_dict']
+        input_shape = checkpoint['input_shape']
+        n_conv_filters = checkpoint['n_conv_filters']
+        n_res_blocks = checkpoint['n_res_blocks']
+        model = C4Net(input_shape, n_conv_filters, n_res_blocks)
+        model.load_state_dict(model_state_dict)
+        return model
+
+    def save_checkpoint(self, filename: str):
+        torch.save({
+            'model_state_dict': self.state_dict(),
+            'input_shape': self.input_shape,
+            'n_conv_filters': self.n_conv_filters,
+            'n_res_blocks': self.n_res_blocks,
+        }, filename)
 
 
 class HistoryBuffer:

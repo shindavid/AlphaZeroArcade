@@ -1,6 +1,7 @@
 """
 Wrapper around torch's nn.Module that facilitates caching and save/load mechanics.
 """
+import abc
 import copy
 import os
 from typing import Dict
@@ -27,7 +28,7 @@ class NeuralNet(nn.Module):
         self.input_shape = input_shape
 
     @classmethod
-    def load(cls, filename: str, verbose: bool = False, eval_mode: bool = True) -> torch.jit.ScriptModule:
+    def load_model(cls, filename: str, verbose: bool = False, eval_mode: bool = True) -> torch.jit.ScriptModule:
         """
         Loads a model previously saved to disk via save(). This uses torch.jit.load(), which returns a
         torch.jit.ScriptModule, which looks/feels/sounds like nn.Module, but is not exactly the same thing.
@@ -52,7 +53,7 @@ class NeuralNet(nn.Module):
                 print(f'Model successfully loaded!')
         return net
 
-    def save(self, filename: str, verbose: bool = False):
+    def save_model(self, filename: str, verbose: bool = False):
         """
         Saves this network to disk, from which it can be loaded either by c++ or by python. Uses the
         torch.jit.trace() function to accomplish this.
@@ -77,6 +78,15 @@ class NeuralNet(nn.Module):
         forward_shape = tuple([1] + list(self.input_shape))
         example_input = torch.zeros(forward_shape)
         mod = torch.jit.trace(clone, example_input)
-        mod.save(filename)
+        mod.save_model(filename)
         if verbose:
             print(f'Model saved to {filename}')
+
+    @classmethod
+    @abc.abstractmethod
+    def load_checkpoint(cls, filename: str) -> 'NeuralNet':
+        pass
+
+    @abc.abstractmethod
+    def save_checkpoint(self, filename: str):
+        pass

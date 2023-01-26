@@ -15,7 +15,9 @@ from torch import optim
 from alphazero.manager import AlphaZeroManager, Generation
 from alphazero.optimization_args import add_optimization_args, OptimizationArgs, ModelingArgs, GatingArgs
 from config import Config
+from connect4.tensorizor import C4Net
 from neural_net import NeuralNet
+from util import subprocess_util
 from util.py_util import timed_print
 from util.repo_util import Repo
 
@@ -196,16 +198,36 @@ class TrainingStats:
         print(f'Value loss:      %5.3f' % avg_value_loss)
 
 
-def gating_test():
+def gating_test(candidate_filename, latest_filename):
     self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
     args = [
         self_play_bin,
         '-G', GatingArgs.num_games,
         '-i', GatingArgs.mcts_iters,
         '-t', GatingArgs.temperature,
-        '--net-filename',  # TODO
+        '--nnet-filename', latest_filename,
+        '--nnet-filename2', candidate_filename,
     ]
-    raise Exception('TODO')
+    cmd = ' '.join(map(str, args))
+    timed_print(f'Running: {cmd}')
+    proc = subprocess_util.Popen(cmd)
+    stdout, stderr = proc.communicate()
+    if proc.returncode:
+        print(stderr)
+        raise Exception()
+
+    lines = [line for line in stdout.splitlines() if line.startswith('P1 ')]
+    assert len(lines) == 1, stdout
+    candidate_results_line = lines[0]  # P1 W136 L30 D34 [153]
+    win_rate_token = candidate_results_line.split()[-1]
+    assert win_rate_token.startswith('[') and win_rate_token.endswith(']'), candidate_results_line
+    win_rate = float(win_rate_token[1:-1]) / GatingArgs.num_games
+    promote = win_rate > GatingArgs.promotion_win_rate
+    timed_print('Run complete.')
+    print(f'Candidate win-rate: %.5f' % win_rate)
+    print(f'Promotion win-rate: %.5f' % GatingArgs.promotion_win_rate)
+    print(f'Promote: %s' % promote)
+    return promote
 
 
 def main():
@@ -213,9 +235,10 @@ def main():
     manager = AlphaZeroManager(Args.c4_base_dir)
     manager.load_generation()
 
-    model_filename = manager.get_model_filename(manager.generation)
-    candidate_filename = manager.get_candidate_filename()
-    net = NeuralNet.load(model_filename, eval_mode=False)
+    latest_model_filename = manager.get_model_filename(manager.generation)
+    candidate_filename = manager.get_current_candidate_filename()
+    checkpoint_filename = manager.get_current_checkpoint_filename()
+    net = C4Net.load_checkpoint(checkpoint_filename)
 
     value_loss_lambda = ModelingArgs.value_loss_lambda
     learning_rate = ModelingArgs.learning_rate
@@ -256,8 +279,9 @@ def main():
         timed_print(f'Epoch {epoch} complete')
         stats.dump()
 
-        net.save(candidate_filename)
-        if gating_test():
+        net.save_checkpoint(checkpoint_filename)
+        net.save_model(candidate_filename)
+        if gating_test(candidate_filename, latest_model_filename):
             break
 
 
