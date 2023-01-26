@@ -30,7 +30,7 @@ struct Args {
     po2::options_description<Style> desc("CompetitiveSelfPlay options");
 
     return desc
-        .template add_option<"mcts-nnet-filename2">(po::value<std::string>(&nnet_filename2)->default_value(""),
+        .template add_option<"nnet-filename2">(po::value<std::string>(&nnet_filename2)->default_value(""),
             "set this to use a different nnet for the second player")
         ;
   }
