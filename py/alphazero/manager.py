@@ -89,8 +89,11 @@ class AlphaZeroManager:
         cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd}"'
         timed_print(f'Running: {cmd}')
         proc = subprocess_util.Popen(cmd)
-        proc.communicate()
-        assert proc.returncode == 0
+        stdout, stderr = proc.communicate()
+        if proc.returncode:
+            print(stdout)
+            print(stderr)
+            raise Exception()
         self.generation += 1
 
         candidate = self.get_current_candidate_model_filename()
