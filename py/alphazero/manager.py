@@ -7,6 +7,7 @@ NOTE: to clearly differentiate the different types of files, I have invented the
 
 BASE_DIR/
          current/
+             remote.pid
              checkpoint.ptc
              candidate.ptj
          self-play/
@@ -31,9 +32,9 @@ TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at pres
 
 import os
 import shutil
+import signal
 import subprocess
-import sys
-from typing import Optional
+from typing import Optional, List
 
 from natsort import natsorted
 
@@ -47,7 +48,20 @@ Generation = int
 
 
 class AlphaZeroManager:
+    managers: List['AlphaZeroManager'] = []
+    signal_registered = False
+
+    @staticmethod
+    def signal_handler(sig, frame):
+        for manager in AlphaZeroManager.managers:
+            manager.remotely_kill_pid()
+
     def __init__(self, c4_base_dir: str):
+        AlphaZeroManager.managers.append(self)
+        if not AlphaZeroManager.signal_registered:
+            AlphaZeroManager.signal_registered = True
+            signal.signal(signal.SIGINT, AlphaZeroManager.signal_handler)
+
         self.c4_base_dir: str = c4_base_dir
 
         self.models_dir = os.path.join(self.c4_base_dir, 'models')
@@ -59,6 +73,7 @@ class AlphaZeroManager:
         os.makedirs(self.current_dir, exist_ok=True)
 
         self.run_index = 0
+        self.remote_host = None
 
     def init_gen0(self):
         raise Exception('TODO: implement me')
@@ -103,7 +118,31 @@ class AlphaZeroManager:
             return None
         return os.path.join(self.models_dir, model_files[-1])
 
+    def get_pid_filename(self) -> str:
+        return os.path.join(self.c4_base_dir, 'current', 'remote.pid')
+
+    def write_pid_file(self):
+        pid = os.getpid()
+        pid_filename = self.get_pid_filename()
+        with open(pid_filename, 'w') as f:
+            f.write(str(pid))
+        timed_print(f'Wrote pid {pid} to {pid_filename}')
+
+    def remotely_kill_pid(self):
+        pid_filename = self.get_pid_filename()
+        if not os.path.isfile(pid_filename):
+            return
+        with open(pid_filename, 'r') as f:
+            pid = int(f.readline().strip())
+
+        kill_cmd = f'ssh {self.remote_host} "kill {pid}"'
+        timed_print(f'Remotely killing: {kill_cmd}')
+        os.system(kill_cmd)
+
     def remotely_train_model(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
+        self.remote_host = remote_host
+        pid_filename = self.get_pid_filename()
+        os.system(f'rm -f {pid_filename}')
         train_cmd = f'./py/alphazero/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
         cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd}"'
         timed_print(f'Running: {cmd}')
@@ -128,10 +167,10 @@ class AlphaZeroManager:
         timed_print(f'Running iteration {self.run_index}, game-gen:{game_gen} model-gen:{model_gen}')
         self_play_proc = None
         if model_gen >= 0:
-            games_dir = self.get_games_dir(game_gen + 1)
+            games_dir = self.get_games_dir(model_gen + 1)
             model = self.get_model_filename(model_gen)
             self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
-            self_play_cmd = f'{self_play_bin} -G 0 -g {games_dir} --mcts-nnet-filename {model}'
+            self_play_cmd = f'{self_play_bin} -G 0 -g {games_dir} --nnet-filename {model}'
             timed_print(f'Running: {self_play_cmd}')
             self_play_proc = subprocess_util.Popen(self_play_cmd)
 

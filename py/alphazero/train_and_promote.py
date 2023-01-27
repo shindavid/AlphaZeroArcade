@@ -260,6 +260,7 @@ def gating_test(candidate_filename, latest_filename):
 def main():
     load_args()
     manager = AlphaZeroManager(Args.c4_base_dir)
+    manager.write_pid_file()
     latest_model_filename = manager.get_latest_model_filename()
 
     candidate_filename = manager.get_current_candidate_model_filename()
