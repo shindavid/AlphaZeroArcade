@@ -32,7 +32,7 @@ def load_args():
 
     cfg.add_parser_argument('c4.base_dir', parser, '-d', '--c4-base-dir', help='base-dir for game/model files')
     cfg.add_parser_argument('remote.host', parser, '-H', '--remote-host', help='remote host for model training')
-    cfg.add_parser_argument('remote.repo.path', parser, '-P', '--remote-path',
+    cfg.add_parser_argument('remote.repo.path', parser, '-P', '--remote-repo-path',
                             help='remote repo path for model training')
     cfg.add_parser_argument('remote.c4.base_dir', parser, '-D', '--remote-c4-base-dir',
                             help='--c4-base-dir on remote host')

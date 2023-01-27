@@ -85,11 +85,12 @@ class AlphaZeroManager:
         self.generation = int(last_dir[3:])
 
     def remotely_train_model(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
-        train_cmd = f'./py/connect4/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
+        train_cmd = f'./py/alphazero/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
         cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd}"'
         timed_print(f'Running: {cmd}')
-        result = subprocess_util.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
-        assert result.returncode == 0
+        proc = subprocess_util.Popen(cmd)
+        proc.communicate()
+        assert proc.returncode == 0
         self.generation += 1
 
         candidate = self.get_current_candidate_model_filename()
