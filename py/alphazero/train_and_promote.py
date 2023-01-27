@@ -6,6 +6,8 @@ TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at pres
 import argparse
 import os
 import random
+import shutil
+import tempfile
 from typing import Dict, List
 
 import torch
@@ -269,7 +271,11 @@ def main():
     checkpoint_filename = manager.get_current_checkpoint_filename()
     if os.path.isfile(checkpoint_filename):
         timed_print(f'Loading checkpoint: {checkpoint_filename}')
-        net = C4Net.load_checkpoint(checkpoint_filename)
+        # cp the checkpoint to somewhere local first
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
+            shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
+            net = C4Net.load_checkpoint(tmp_checkpoint_filename)
     else:
         # TODO: remove this hard-coded shape
         input_shape = (2, 7, 6)
