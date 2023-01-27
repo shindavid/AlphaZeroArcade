@@ -23,16 +23,14 @@ BASE_DIR/
              gen1.ptj
              gen2.ptj
              ...
-         checkpoints/
-             gen0.ptc
-             gen1.ptc
-             gen2.ptc
-             ...
 
 TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
 """
 
 import os
+import shutil
+import subprocess
+import sys
 
 from natsort import natsorted
 
@@ -53,12 +51,10 @@ class AlphaZeroManager:
         self.models_dir = os.path.join(self.c4_base_dir, 'models')
         self.self_play_dir = os.path.join(self.c4_base_dir, 'self-play')
         self.current_dir = os.path.join(self.c4_base_dir, 'current')
-        self.checkpoints_dir = os.path.join(self.c4_base_dir, 'checkpoints')
 
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.self_play_dir, exist_ok=True)
         os.makedirs(self.current_dir, exist_ok=True)
-        os.makedirs(self.checkpoints_dir, exist_ok=True)
 
         self.run_index = 0
         self.generation: int = 0
@@ -72,9 +68,6 @@ class AlphaZeroManager:
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen{gen}.ptj')
 
-    def get_checkpoint_filename(self, gen: Generation) -> str:
-        return os.path.join(self.checkpoints_dir, f'gen{gen}.ptc')
-
     def get_current_candidate_model_filename(self) -> str:
         return os.path.join(self.c4_base_dir, 'current', 'candidate.ptj')
 
@@ -82,37 +75,45 @@ class AlphaZeroManager:
         return os.path.join(self.c4_base_dir, 'current', 'checkpoint.ptc')
 
     def load_generation(self):
-        model_files = list(natsorted([f for f in os.listdir(self.models_dir) if not f.startswith('.')]))
-        if not model_files:
+        self_play_dirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
+        if not self_play_dirs:
             self.init_gen0()
             self.generation = 0
             return
-        last_file = model_files[-1]
-        assert last_file.startswith('gen') and last_file.endswith('.ptj')
-        self.generation = int(last_file[3:].split('.')[0])
+        last_dir = self_play_dirs[-1]
+        assert last_dir.startswith('gen'), last_dir
+        self.generation = int(last_dir[3:])
 
     def remotely_train_model(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         train_cmd = f'./py/connect4/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
         cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd}"'
         timed_print(f'Running: {cmd}')
-        result = subprocess_util.run(cmd)
+        result = subprocess_util.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
         assert result.returncode == 0
         self.generation += 1
+
+        candidate = self.get_current_candidate_model_filename()
+        promoted = self.get_model_filename(self.generation)
+        shutil.move(candidate, promoted)
+        timed_print(f'Promoted {candidate} to {promoted}')
 
     def run(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         self.run_index += 1
         self.load_generation()
         timed_print(f'Running iteration {self.run_index}, generation {self.generation}')
-        games_dir = self.get_games_dir(self.generation)
-        model = self.get_model_filename(self.generation)
-        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
-        self_play_cmd = f'{self_play_bin} -G 0 -g {games_dir} --mcts-nnet-filename {model}'
-        timed_print(f'Running: {self_play_cmd}')
-        self.self_play_proc = subprocess_util.Popen(self_play_cmd)
+        gen0 = self.generation == 0
+        if not gen0:
+            games_dir = self.get_games_dir(self.generation)
+            model = self.get_model_filename(self.generation)
+            self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
+            self_play_cmd = f'{self_play_bin} -G 0 -g {games_dir} --mcts-nnet-filename {model}'
+            timed_print(f'Running: {self_play_cmd}')
+            self.self_play_proc = subprocess_util.Popen(self_play_cmd)
         self.remotely_train_model(remote_host, remote_repo_path, remote_c4_base_dir)
         timed_print(f'Killing self play proc...')
-        self.self_play_proc.kill()
-        timed_print(f'Self play proc killed!')
+        if not gen0:
+            self.self_play_proc.kill()
+            timed_print(f'Self play proc killed!')
 
     def main_loop(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         while True:

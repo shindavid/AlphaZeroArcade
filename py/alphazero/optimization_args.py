@@ -17,7 +17,7 @@ class Param:
 
 class OptimizationArgParams:
     """
-    AlphaGoZero optimization used:
+    AlphaGoZero used:
 
     - 64 GPU workers
     - 19 CPU parameter servers
@@ -92,10 +92,8 @@ class OptimizationArgs:
     @staticmethod
     def load(args):
         for attr in OptimizationArgParams.modeling_params.keys():
-            assert hasattr(OptimizationArgs.Modeling, attr)
             setattr(OptimizationArgs.Modeling, attr, getattr(args, attr))
         for attr in OptimizationArgParams.gating_params.keys():
-            assert hasattr(OptimizationArgs.Gating, attr)
             setattr(OptimizationArgs.Gating, attr, getattr(args, attr))
 
     @staticmethod

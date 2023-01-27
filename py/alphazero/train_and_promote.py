@@ -35,9 +35,6 @@ def load_args():
     parser = argparse.ArgumentParser()
     cfg = Config.instance()
     cfg.add_parser_argument('c4.base_dir', parser, '-d', '--c4-base-dir', help='base-dir for game/model files')
-    parser.add_argument('-T', '--temperature', type=float, default=0.2, help='mcts player temperature')
-    parser.add_argument('-i', '--mcts-iters', type=int, default=300, help='num mcts player iters')
-    parser.add_argument('-g', '--num-games', type=int, default=200, help='num games')
     add_optimization_args(parser)
 
     args = parser.parse_args()
@@ -145,7 +142,7 @@ class DataLoader:
         policy_data = torch.concat(policy_data)
         value_data = torch.concat(value_data)
 
-        return (input_data, policy_data, value_data)
+        return (input_data, value_data, policy_data)
 
     def _add_to_minibatch(self, minibatch: List[SelfPlayGameMetadata]):
         if self._index == len(self.window):
@@ -198,11 +195,44 @@ class TrainingStats:
         print(f'Value loss:      %5.3f' % avg_value_loss)
 
 
+def extract_win_score(stdout: str, player_index: int):
+    # P1 W69 L9 D22 [80]
+    player_str = f'P{player_index}'
+    lines = [line for line in stdout.splitlines() if line.startswith(player_str)]
+    assert len(lines) == 1, stdout
+    perf_line = lines[0]
+    win_score_token = perf_line.split()[-1]
+    assert win_score_token.startswith('[') and win_score_token.endswith(']'), perf_line
+    return float(win_score_token[1:-1])
+
+
+def test_vs_perfect(candidate_filename):
+    mcts_vs_perfect_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_mcts_vs_perfect')
+    n_games = GatingArgs.num_games
+    args = [
+        mcts_vs_perfect_bin,
+        '-G', n_games,
+        '-i', GatingArgs.mcts_iters,
+        '--nnet-filename', candidate_filename,
+    ]
+    cmd = ' '.join(map(str, args))
+    timed_print(f'Running: {cmd}')
+    proc = subprocess_util.Popen(cmd)
+    stdout, stderr = proc.communicate()
+    if proc.returncode:
+        print(stderr)
+        raise Exception()
+
+    win_rate = extract_win_score(stdout, 0) / n_games
+    print('Perf against perfect: %.5f' % win_rate)
+
+
 def gating_test(candidate_filename, latest_filename):
     self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
+    n_games = GatingArgs.num_games
     args = [
         self_play_bin,
-        '-G', GatingArgs.num_games,
+        '-G', n_games,
         '-i', GatingArgs.mcts_iters,
         '-t', GatingArgs.temperature,
         '--nnet-filename', latest_filename,
@@ -216,12 +246,7 @@ def gating_test(candidate_filename, latest_filename):
         print(stderr)
         raise Exception()
 
-    lines = [line for line in stdout.splitlines() if line.startswith('P1 ')]
-    assert len(lines) == 1, stdout
-    candidate_results_line = lines[0]  # P1 W136 L30 D34 [153]
-    win_rate_token = candidate_results_line.split()[-1]
-    assert win_rate_token.startswith('[') and win_rate_token.endswith(']'), candidate_results_line
-    win_rate = float(win_rate_token[1:-1]) / GatingArgs.num_games
+    win_rate = extract_win_score(stdout, 1) / n_games
     promote = win_rate > GatingArgs.promotion_win_rate
     timed_print('Run complete.')
     print(f'Candidate win-rate: %.5f' % win_rate)
@@ -235,10 +260,15 @@ def main():
     manager = AlphaZeroManager(Args.c4_base_dir)
     manager.load_generation()
 
-    latest_model_filename = manager.get_model_filename(manager.generation)
+    if manager.generation == 0:
+        latest_model_filename = None
+    else:
+        latest_model_filename = manager.get_model_filename(manager.generation)
+
     candidate_filename = manager.get_current_candidate_model_filename()
     checkpoint_filename = manager.get_current_checkpoint_filename()
     if os.path.isfile(checkpoint_filename):
+        timed_print(f'Loading checkpoint: {checkpoint_filename}')
         net = C4Net.load_checkpoint(checkpoint_filename)
     else:
         # TODO: remove this hard-coded shape
@@ -288,7 +318,8 @@ def main():
 
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
-        if gating_test(candidate_filename, latest_model_filename):
+        if latest_model_filename is None or gating_test(candidate_filename, latest_model_filename):
+            test_vs_perfect(candidate_filename)
             break
 
 
