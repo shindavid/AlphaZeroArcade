@@ -260,12 +260,7 @@ def gating_test(candidate_filename, latest_filename):
 def main():
     load_args()
     manager = AlphaZeroManager(Args.c4_base_dir)
-    manager.load_generation()
-
-    if manager.generation == 0:
-        latest_model_filename = None
-    else:
-        latest_model_filename = manager.get_model_filename(manager.generation)
+    latest_model_filename = manager.get_latest_model_filename()
 
     candidate_filename = manager.get_current_candidate_model_filename()
     checkpoint_filename = manager.get_current_checkpoint_filename()
