@@ -51,7 +51,7 @@ class OptimizationArgParams:
     """
     modeling_params  = {
         'minibatch_size': Param('-m', '--minibatch-size', 256, 'minibatch size'),
-        'snapshot_steps': Param('-s', '--snapshot-steps', 1024, 'steps per snapshot'),
+        'snapshot_steps': Param('-s', '--snapshot-steps', 256, 'steps per snapshot'),
         'window_alpha': Param('-A', '--window-alpha', 0.75, 'alpha for n_window formula'),
         'window_beta': Param('-B', '--window-beta', 0.4, 'beta for n_window formula'),
         'window_c': Param('-c', '--window-c', 250000, 'c for n_window formula'),
