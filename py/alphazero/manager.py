@@ -10,6 +10,7 @@ BASE_DIR/
              remote.pid
              checkpoint.ptc
              candidate.ptj
+             train_and_promote.log
          self-play/
              gen0/
                  {timestamp}-{num_positions}.ptd
@@ -143,14 +144,13 @@ class AlphaZeroManager:
         self.remote_host = remote_host
         pid_filename = self.get_pid_filename()
         os.system(f'rm -f {pid_filename}')
+        remote_log_filename = os.path.join(remote_c4_base_dir, 'current', 'train_and_promote.log')
         train_cmd = f'./py/alphazero/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
-        cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd}"'
+        cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd} |& tee {remote_log_filename}"'
         timed_print(f'Running: {cmd}')
-        proc = subprocess_util.Popen(cmd)
-        stdout, stderr = proc.communicate()
+        proc = subprocess_util.Popen(cmd, stdout=None, stderr=None)
+        proc.communicate()
         if proc.returncode:
-            print(stdout)
-            print(stderr)
             raise Exception()
 
         gen = self.get_latest_model_generation()
@@ -170,14 +170,20 @@ class AlphaZeroManager:
             games_dir = self.get_games_dir(model_gen + 1)
             model = self.get_model_filename(model_gen)
             self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
-            self_play_cmd = f'{self_play_bin} -G 0 -g {games_dir} --nnet-filename {model}'
-            timed_print(f'Running: {self_play_cmd}')
-            self_play_proc = subprocess_util.Popen(self_play_cmd)
+            self_play_cmd = [
+                self_play_bin,
+                '-G', '0',
+                '-g', games_dir,
+                '--nnet-filename', model
+            ]
+            self_play_proc = subprocess_util.Popen(self_play_cmd, shell=False)
+            timed_print(f'Running [{self_play_proc.pid}]: {" ".join(self_play_cmd)}')
 
         self.remotely_train_model(remote_host, remote_repo_path, remote_c4_base_dir)
         if self_play_proc is not None:
-            timed_print(f'Killing self play proc...')
+            timed_print(f'Killing self play proc {self_play_proc.pid}...')
             self_play_proc.kill()
+            self_play_proc.wait(300)
             timed_print(f'Self play proc killed!')
 
     def main_loop(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):

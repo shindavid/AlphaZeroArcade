@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 -u
 
 """
 TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
