@@ -321,7 +321,8 @@ def main():
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
         if latest_model_filename is None or gating_test(candidate_filename, latest_model_filename):
-            test_vs_perfect(candidate_filename)
+            # leave out test against perfect for now, more efficient to do this later in a non-blocking path
+            # test_vs_perfect(candidate_filename)
             break
 
 
