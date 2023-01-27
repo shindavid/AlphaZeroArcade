@@ -62,7 +62,7 @@ class GenerationMetadata:
             game_metadata = SelfPlayGameMetadata(full_filename)
             self.game_metadata_list.append(game_metadata)
 
-        self.game_metadata_list.sort(key=lambda g: -g.timestamp)  # sort reverse chronological order
+        self.game_metadata_list.sort(key=lambda g: -g.timestamp)  # newest to oldest
         self.num_positions = sum(g.num_positions for g in self.game_metadata_list)
 
 
@@ -94,7 +94,7 @@ class SelfPlayMetadata:
     def get_window(self, n_window: int) -> List[SelfPlayGameMetadata]:
         window = []
         cumulative_n_positions = 0
-        for generation in reversed(self.metadata.keys()):
+        for generation in reversed(sorted(self.metadata.keys())):  # newest to oldest
             gen_metadata = self.metadata[generation]
             n = len(gen_metadata.game_metadata_list)
             i = 0
