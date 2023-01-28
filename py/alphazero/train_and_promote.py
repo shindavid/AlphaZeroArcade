@@ -291,9 +291,9 @@ def main():
     epoch = 0
     while True:
         print('******************************')
+        epoch += 1
         timed_print(f'Epoch: {epoch}')
         loader = DataLoader(manager)
-        epoch += 1
         timed_print(f'Sampling from the {loader.n_window} most recent positions among {loader.n_total} total positions')
 
         stats = TrainingStats()
