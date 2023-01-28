@@ -54,16 +54,37 @@ class SelfPlayGameMetadata:
 
 class GenerationMetadata:
     def __init__(self, full_gen_dir: str):
-        self.game_metadata_list = []
-        for filename in os.listdir(full_gen_dir):
+        self._loaded = False
+        self.full_gen_dir = full_gen_dir
+        self._game_metadata_list = []
+        self.num_positions = 0
+
+        gen_subdir = os.path.split(full_gen_dir)  # gen3 or gen3-1234
+        tokens = gen_subdir.split('-')
+        if len(tokens) == 1:
+            self.load()
+        else:
+            self.num_positions = int(tokens[1])
+
+    @property
+    def game_metadata_list(self):
+        self.load()
+        return self._game_metadata_list
+
+    def load(self):
+        if self._loaded:
+            return
+
+        self._loaded = True
+        for filename in os.listdir(self.full_gen_dir):
             if filename.startswith('.'):
                 continue
-            full_filename = os.path.join(full_gen_dir, filename)
+            full_filename = os.path.join(self.full_gen_dir, filename)
             game_metadata = SelfPlayGameMetadata(full_filename)
-            self.game_metadata_list.append(game_metadata)
+            self._game_metadata_list.append(game_metadata)
 
-        self.game_metadata_list.sort(key=lambda g: -g.timestamp)  # newest to oldest
-        self.num_positions = sum(g.num_positions for g in self.game_metadata_list)
+        self._game_metadata_list.sort(key=lambda g: -g.timestamp)  # newest to oldest
+        self.num_positions = sum(g.num_positions for g in self._game_metadata_list)
 
 
 def compute_n_window(N_total: int) -> int:
@@ -298,6 +319,7 @@ def main():
 
         stats = TrainingStats()
 
+        # TODO: more efficient data loading via torch DataLoader
         for i, data in enumerate(loader):
             inputs, value_labels, policy_labels = data
             inputs = inputs.to('cuda')

@@ -12,10 +12,10 @@ BASE_DIR/
              candidate.ptj
              train_and_promote.log
          self-play/
-             gen0/
+             gen0-{total_positions}/
                  {timestamp}-{num_positions}.ptd
                  ...
-             gen1/
+             gen1-{total_positions}/
                  ...
              gen2/
                  ...
@@ -96,7 +96,7 @@ class AlphaZeroManager:
         self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen')]
         if not self_play_subdirs:
             return -1
-        return int(self_play_subdirs[-1][3:])
+        return int(self_play_subdirs[-1][3:].split('-')[0])
 
     def get_latest_games_dir(self) -> Optional[str]:
         self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
@@ -166,6 +166,7 @@ class AlphaZeroManager:
         model_gen = self.get_latest_model_generation()
         timed_print(f'Running iteration {self.run_index}, game-gen:{game_gen} model-gen:{model_gen}')
         self_play_proc = None
+        games_dir = None
         if model_gen >= 0:
             games_dir = self.get_games_dir(model_gen + 1)
             model = self.get_model_filename(model_gen)
@@ -185,6 +186,14 @@ class AlphaZeroManager:
             self_play_proc.kill()
             self_play_proc.wait(300)
             timed_print(f'Self play proc killed!')
+            n_games = 0
+            for filename in os.listdir(games_dir):
+                n = int(filename.split('-')[1].split('.')[0])
+                n_games += n
+
+            src = games_dir
+            tgt = f'{games_dir}-{n_games}'
+            os.system(f'mv {src} {tgt}')
 
     def main_loop(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         while True:
