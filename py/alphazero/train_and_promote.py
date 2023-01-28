@@ -59,7 +59,7 @@ class GenerationMetadata:
         self._game_metadata_list = []
         self.num_positions = 0
 
-        gen_subdir = os.path.split(full_gen_dir)  # gen3 or gen3-1234
+        gen_subdir = os.path.split(full_gen_dir)[1]  # gen3 or gen3-1234
         tokens = gen_subdir.split('-')
         if len(tokens) == 1:
             self.load()
