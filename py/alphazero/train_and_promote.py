@@ -106,7 +106,7 @@ class SelfPlayMetadata:
         self.n_total_positions = 0
         for gen_dir in os.listdir(self_play_dir):
             assert gen_dir.startswith('gen'), gen_dir
-            generation = int(gen_dir[3:])
+            generation = int(gen_dir[3:].split('-')[0])
             full_gen_dir = os.path.join(self_play_dir, gen_dir)
             metadata = GenerationMetadata(full_gen_dir)
             self.metadata[generation] = metadata
