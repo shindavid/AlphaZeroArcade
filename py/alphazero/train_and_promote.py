@@ -290,10 +290,10 @@ def main():
 
     epoch = 0
     while True:
-        loader = DataLoader(manager)
-        epoch += 1
         print('******************************')
         timed_print(f'Epoch: {epoch}')
+        loader = DataLoader(manager)
+        epoch += 1
         timed_print(f'Sampling from the {loader.n_window} most recent positions among {loader.n_total} total positions')
 
         stats = TrainingStats()
@@ -320,6 +320,7 @@ def main():
 
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
+        timed_print(f'Checkpoint saved')
         if latest_model_filename is None or gating_test(candidate_filename, latest_model_filename):
             # leave out test against perfect for now, more efficient to do this later in a non-blocking path
             # test_vs_perfect(candidate_filename)
