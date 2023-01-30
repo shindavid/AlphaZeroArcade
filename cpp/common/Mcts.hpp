@@ -57,6 +57,7 @@ public:
   using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
+  using LocalPolicyLogitDistr = typename GameStateTypes::LocalPolicyLogitDistr;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
   using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
 
@@ -111,13 +112,13 @@ public:
 private:
   class NNEvaluation {
   public:
-    NNEvaluation(const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions, float inv_temp);
+    NNEvaluation(const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions);
     const ValueProbDistr& value_prob_distr() const { return value_prob_distr_; }
-    const LocalPolicyProbDistr& local_policy_prob_distr() const { return local_policy_prob_distr_; }
+    const LocalPolicyProbDistr& local_policy_logit_distr() const { return local_policy_logit_distr_; }
 
   protected:
     ValueProbDistr value_prob_distr_;
-    LocalPolicyProbDistr local_policy_prob_distr_;
+    LocalPolicyLogitDistr local_policy_logit_distr_;
   };
   using NNEvaluation_sptr = std::shared_ptr<NNEvaluation>;
   using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
@@ -218,6 +219,10 @@ private:
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
     const ActionMask& _fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions_; }
+    const LocalPolicyProbDistr& _local_policy_prob_distr() const { return evaluation_data_.local_policy_prob_distr_; }
+    void _set_local_policy_prob_distr(const LocalPolicyProbDistr& distr) {
+      evaluation_data_.local_policy_prob_distr_ = distr;
+    }
     NNEvaluation_sptr _evaluation() const { return evaluation_data_.ptr_.load(); }
     void _set_evaluation(NNEvaluation_sptr eval) { evaluation_data_.ptr_.store(eval); }
     evaluation_state_t _evaluation_state() const { return evaluation_data_.state_; }
@@ -307,6 +312,7 @@ private:
       evaluation_data_t(const ActionMask& valid_actions);
 
       NNEvaluation_asptr ptr_;
+      LocalPolicyProbDistr local_policy_prob_distr_;
       evaluation_state_t state_ = kUnset;
       ActionMask fully_analyzed_actions_;  // means that every leaf descendent is a terminal game state
     };
@@ -493,7 +499,6 @@ private:
       const GameState* state;
       const ActionMask* valid_action_mask;
       symmetry_index_t sym_index;
-      float inv_temp;
     };
 
     struct Response {
@@ -567,7 +572,6 @@ private:
       cache_key_t cache_key;
       ActionMask valid_actions;
       SymmetryTransform* transform;
-      float inv_temp;
     };
 
     enum region_t {

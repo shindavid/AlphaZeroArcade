@@ -50,6 +50,7 @@ struct GameStateTypes {
   using ValueArray1D = Eigen::Array<float, kNumPlayers, 1>;
 
   using ValueProbDistr = Eigen::Array<float, kNumPlayers, 1>;
+  using LocalPolicyLogitDistr = Eigen::Array<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Array<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using GlobalPolicyCountDistr = Eigen::Array<int, kNumGlobalActions, 1>;
@@ -87,11 +88,10 @@ struct TensorizorTypes {
 template<typename GameState>
 struct StateEvaluationKey {
   GameState state;
-  float inv_temp;
   symmetry_index_t sym_index;
 
   bool operator==(const StateEvaluationKey& other) const {
-    return state == other.state && inv_temp == other.inv_temp && sym_index == other.sym_index;
+    return state == other.state && sym_index == other.sym_index;
   }
 };
 
@@ -100,6 +100,6 @@ struct StateEvaluationKey {
 template <typename GameState>
 struct std::hash<common::StateEvaluationKey<GameState>> {
   std::size_t operator()(const common::StateEvaluationKey<GameState> ssi) const {
-    return util::tuple_hash(std::make_tuple(ssi.state, ssi.inv_temp, ssi.sym_index));
+    return util::tuple_hash(std::make_tuple(ssi.state, ssi.sym_index));
   }
 };

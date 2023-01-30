@@ -87,11 +87,10 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::instance_map_;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
-    const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions, float inv_temp)
+    const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions)
 {
-  GameStateTypes::global_to_local(policy, valid_actions, local_policy_prob_distr_);
+  GameStateTypes::global_to_local(policy, valid_actions, local_policy_logit_distr_);
   value_prob_distr_ = eigen_util::softmax(value);
-  local_policy_prob_distr_ = eigen_util::softmax(local_policy_prob_distr_ * inv_temp);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -542,9 +541,8 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   }
 
   symmetry_index_t sym_index = tree->_sym_index();
-  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
   typename NNEvaluationService::Request request{
-      this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index, inv_temp
+      this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index
   };
   auto response = mcts_->nn_eval_service()->evaluate(request);
   data->evaluation = response.ptr;
@@ -558,6 +556,8 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
     lock->lock();
   }
+  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
+  tree->_set_local_policy_prob_distr(eigen_util::softmax(data->evaluation->local_policy_logit_distr() * inv_temp));
   tree->_set_evaluation(data->evaluation);
   tree->_set_evaluation_state(Node::kSet);
 }
@@ -607,7 +607,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 
   using PVec = LocalPolicyProbDistr;
 
-  PVec P = evaluation->local_policy_prob_distr();
+  PVec P = tree->_local_policy_prob_distr();
   if (tree->is_root() && !tree->disable_noise() && params_.dirichlet_mult) {
     mcts_->add_dirichlet_noise(P);
   }
@@ -758,10 +758,9 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
   const GameState& state = *request.state;
   const ActionMask& valid_action_mask = *request.valid_action_mask;
   symmetry_index_t sym_index = request.sym_index;
-  float inv_temp = request.inv_temp;
 
   thread->record_for_profiling(SearchThread::kCheckingCache);
-  cache_key_t key{state, inv_temp, sym_index};
+  cache_key_t key{state, sym_index};
 
   std::unique_lock<std::mutex> cache_lock(cache_mutex_);
   auto cached = cache_.get(key);
@@ -808,7 +807,6 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
   evaluation_data_batch_[my_index].cache_key = key;
   evaluation_data_batch_[my_index].valid_actions = valid_action_mask;
   evaluation_data_batch_[my_index].transform = transform;
-  evaluation_data_batch_[my_index].inv_temp = inv_temp;
 
   thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
   std::unique_lock<std::mutex> lock(batch_mutex_);
@@ -873,7 +871,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
 
     edata.transform->transform_policy(policy);
     edata.eval_ptr.store(std::make_shared<NNEvaluation>(
-        eigen_util::to_array1d(value), eigen_util::to_array1d(policy), edata.valid_actions, edata.inv_temp));
+        eigen_util::to_array1d(value), eigen_util::to_array1d(policy), edata.valid_actions));
   }
 
   record_for_profiling(kAcquiringCacheMutex);
@@ -1085,7 +1083,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->_valid_action_mask();
   results_.counts = root_->get_effective_counts();
-  results_.policy_prior = evaluation->local_policy_prob_distr();
+  results_.policy_prior = root_->_local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
