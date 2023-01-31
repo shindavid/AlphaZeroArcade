@@ -25,6 +25,11 @@ BASE_DIR/
              gen1.ptj
              gen2.ptj
              ...
+         checkpoints/
+             gen0.ptc
+             gen1.ptc
+             gen2.ptc
+             ...
 
 models/gen{k}.ptj is trained off of self-play/gen{k}/
 
@@ -66,10 +71,12 @@ class AlphaZeroManager:
         self.c4_base_dir: str = c4_base_dir
 
         self.models_dir = os.path.join(self.c4_base_dir, 'models')
+        self.checkpoints_dir = os.path.join(self.c4_base_dir, 'checkpoints')
         self.self_play_dir = os.path.join(self.c4_base_dir, 'self-play')
         self.current_dir = os.path.join(self.c4_base_dir, 'current')
 
         os.makedirs(self.models_dir, exist_ok=True)
+        os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_dir, exist_ok=True)
         os.makedirs(self.current_dir, exist_ok=True)
 
@@ -84,6 +91,9 @@ class AlphaZeroManager:
 
     def get_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.models_dir, f'gen{gen}.ptj')
+
+    def get_checkpoint_filename(self, gen: Generation) -> str:
+        return os.path.join(self.checkpoints_dir, f'gen{gen}.ptc')
 
     def get_current_candidate_model_filename(self) -> str:
         return os.path.join(self.c4_base_dir, 'current', 'candidate.ptj')
@@ -155,10 +165,14 @@ class AlphaZeroManager:
 
         gen = self.get_latest_model_generation()
 
-        candidate = self.get_current_candidate_model_filename()
-        promoted = self.get_model_filename(gen + 1)
-        shutil.move(candidate, promoted)
-        timed_print(f'Promoted {candidate} to {promoted}')
+        current_checkpoint = self.get_current_checkpoint_filename()
+        current_candidate = self.get_current_candidate_model_filename()
+        model_filename = self.get_model_filename(gen + 1)
+        checkpoint_filename = self.get_checkpoint_filename(gen + 1)
+        shutil.move(current_candidate, model_filename)
+        timed_print(f'Promoted {current_candidate} to {model_filename}')
+        shutil.move(current_checkpoint, checkpoint_filename)
+        timed_print(f'Promoted {current_checkpoint} to {checkpoint_filename}')
 
     def run(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         self.run_index += 1
