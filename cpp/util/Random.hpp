@@ -21,6 +21,11 @@ public:
    */
   template<typename FloatType> static FloatType uniform_real(FloatType left, FloatType right);
 
+  /*
+   * Produces a random real value using the exponential distribution with mean 1/lambda
+   */
+  template<typename RealType> static RealType exponential(RealType lambda);
+
   template<std::random_access_iterator T> static void shuffle(T begin, T end);
 
   /*

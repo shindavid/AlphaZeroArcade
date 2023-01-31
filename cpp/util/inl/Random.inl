@@ -17,6 +17,11 @@ FloatType Random::uniform_real(FloatType left, FloatType right) {
   return dist(instance()->prng_);
 }
 
+template<typename RealType>
+RealType Random::exponential(RealType lambda) {
+  std::exponential_distribution<RealType> dist(1.0 / lambda);
+  return dist(instance()->prng_);
+}
 
 template<std::random_access_iterator T>
 void Random::shuffle(T begin, T end) {

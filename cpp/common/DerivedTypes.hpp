@@ -66,6 +66,13 @@ struct GameStateTypes {
       out[i++] = policy(action);
     }
   }
+
+  static void local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyArray1D& out) {
+    int i = 0;
+    for (action_index_t action : bitset_util::on_indices(mask)) {
+      out[action] = policy(i++);
+    }
+  }
 };
 
 template<typename Tensorizor>

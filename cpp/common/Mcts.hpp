@@ -105,6 +105,8 @@ public:
    * By contrast, Params pertains to a single Mcts instance.
    */
   struct SimParams {
+    static SimParams make_offline_params(int limit) { return SimParams{limit, true}; }
+
     int tree_size_limit = 100;
     bool disable_noise = false;
   };
@@ -347,7 +349,7 @@ private:
 
     void join();
     void kill();
-    void launch(int tree_size_limit);
+    void launch(const SimParams* sim_params);
     bool needs_more_visits(Node* root, int tree_size_limit);
     void visit(Node* tree, int depth);
 
@@ -433,6 +435,7 @@ private:
 
     Mcts* const mcts_;
     const Params& params_;
+    const SimParams* sim_params_ = nullptr;
     std::thread* thread_ = nullptr;
     const int thread_id_;
   };
@@ -714,7 +717,7 @@ public:
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params);
   void add_dirichlet_noise(LocalPolicyProbDistr& P);
 
-  void start_search_threads(int tree_size_limit);
+  void start_search_threads(const SimParams* sim_params);
   void wait_for_search_threads();
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
@@ -735,6 +738,7 @@ private:
   Eigen::Rand::P8_mt19937_64 rng_;
 
   const Params params_;
+  const SimParams offline_sim_params_;
   const int instance_id_;
   search_thread_vec_t search_threads_;
   NNEvaluationService* nn_eval_service_ = nullptr;

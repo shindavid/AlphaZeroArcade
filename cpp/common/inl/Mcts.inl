@@ -414,9 +414,10 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::kill() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::SearchThread::launch(int tree_size_limit) {
+inline void Mcts<GameState, Tensorizor>::SearchThread::launch(const SimParams* sim_params) {
   kill();
-  thread_ = new std::thread([&] { mcts_->run_search(this, tree_size_limit); });
+  sim_params_ = sim_params;
+  thread_ = new std::thread([&] { mcts_->run_search(this, sim_params->tree_size_limit); });
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -556,7 +557,8 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
     lock->lock();
   }
-  float inv_temp = tree->is_root() ? (1.0 / params_.root_softmax_temperature) : 1.0;
+  bool apply_root_temp = tree->is_root() && !sim_params_->disable_noise;
+  float inv_temp = apply_root_temp ? (1.0 / params_.root_softmax_temperature) : 1.0;
   tree->_set_local_policy_prob_distr(eigen_util::softmax(data->evaluation->local_policy_logit_distr() * inv_temp));
   tree->_set_evaluation(data->evaluation);
   tree->_set_evaluation_state(Node::kSet);
@@ -982,6 +984,7 @@ void Mcts<GameState, Tensorizor>::NodeReleaseService::_release(Node* node, Node*
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 : params_(params)
+, offline_sim_params_(SimParams::make_offline_params(params.offline_tree_size_limit))
 , instance_id_(next_instance_id_++)
 {
   namespace bf = boost::filesystem;
@@ -1059,7 +1062,7 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
   root_->_adopt_children();
 
   if (params_.run_offline) {
-    start_search_threads(params_.offline_tree_size_limit);
+    start_search_threads(&offline_sim_params_);
   }
 }
 
@@ -1077,7 +1080,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
     root_ = new Node(tensorizor, game_state, outcome, params.disable_noise);  // TODO: use memory pool
   }
 
-  start_search_threads(params.tree_size_limit);
+  start_search_threads(&params);
   wait_for_search_threads();
 
   NNEvaluation_sptr evaluation = root_->_evaluation();
@@ -1098,13 +1101,13 @@ inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDist
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::start_search_threads(int tree_size_limit) {
+inline void Mcts<GameState, Tensorizor>::start_search_threads(const SimParams* sim_params) {
   assert(!search_active_);
   search_active_ = true;
   num_active_search_threads_ = num_search_threads();
 
   for (auto* thread : search_threads_) {
-    thread->launch(tree_size_limit);
+    thread->launch(sim_params);
   }
 }
 

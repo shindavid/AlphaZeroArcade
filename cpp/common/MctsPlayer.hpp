@@ -27,7 +27,9 @@ public:
 
   enum SimType {
     kFast,
-    kFull
+    kFull,
+    kRawPolicy,
+    kNumSimTypes
   };
 
   enum DefaultParamsType {
@@ -46,6 +48,7 @@ public:
     int num_full_iters;
     float full_pct;
     float temperature;
+    int num_raw_policy_starting_moves = 0;
     bool verbose = false;
   };
 
@@ -90,12 +93,12 @@ protected:
   Tensorizor tensorizor_;
 
   Mcts* mcts_;
-  const MctsSimParams fast_sim_params_;
-  const MctsSimParams full_sim_params_;
+  const MctsSimParams sim_params_[kNumSimTypes];
   const float inv_temperature_;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;
+  int move_count_ = 0;
 
   // below are pseudo-return values of get_action(), to be used by derived class
   const MctsResults* mcts_results_;

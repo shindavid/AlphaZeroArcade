@@ -71,8 +71,11 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
 : base_t("MCTS")
 , params_(params)
 , mcts_(mcts)
-, fast_sim_params_{params.num_fast_iters, true}
-, full_sim_params_{params.num_full_iters, false}
+, sim_params_{
+        {params.num_fast_iters, true},  // kFast
+        {params.num_full_iters},  // kFull
+        {1, true}  // kRawPolicy
+  }
 , inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
 , owns_mcts_(mcts==nullptr)
 {
@@ -102,6 +105,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game(
     game_id_t, const player_array_t& players, player_index_t seat_assignment)
 {
   my_index_ = seat_assignment;
+  move_count_ = 0;
   tensorizor_.clear();
   if (owns_mcts_) {
     mcts_->start();
@@ -112,6 +116,7 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
+  move_count_++;
   tensorizor_.receive_state_change(state, action);
   if (owns_mcts_) {
     mcts_->receive_state_change(player, state, action, outcome);
@@ -125,9 +130,16 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  sim_type_ = get_random_sim_type();
-  const MctsSimParams& sim_params = (sim_type_ == kFast) ? fast_sim_params_ : full_sim_params_;
+  bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
+  sim_type_ = use_raw_policy ? kRawPolicy : get_random_sim_type();
+  const MctsSimParams& sim_params = sim_params_[sim_type_];
+
   mcts_results_ = mcts_->sim(tensorizor_, state, sim_params);
+  if (use_raw_policy) {
+    GlobalPolicyProbDistr raw_policy;
+    GameStateTypes::local_to_global(mcts_results_->policy_prior, valid_actions, raw_policy);
+    return util::Random::weighted_sample(raw_policy.begin(), raw_policy.end());
+  }
   GlobalPolicyProbDistr policy = mcts_results_->counts.template cast<float>();
   if (inv_temperature_) {
     policy = policy.pow(inv_temperature_);
