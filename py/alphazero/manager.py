@@ -83,27 +83,6 @@ class AlphaZeroManager:
         self.run_index = 0
         self.remote_host = None
 
-    def init_gen0(self):
-        games_dir = self.get_games_dir(0)
-        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_generate_oracle_labeled_games')
-        self_play_cmd = [
-            self_play_bin,
-            '-g', games_dir,
-        ]
-        timed_print(f'Running: {" ".join(self_play_cmd)}')
-        subprocess_util.run(self_play_cmd)
-        games_dir = self.rename_games_dir(games_dir)
-
-        train_nn_script = os.path.join(Repo.root(), 'py/connect4/train_nn.py')
-        model_filename = self.get_model_filename(0)
-        train_nn_cmd = [
-            train_nn_script,
-            '-m', model_filename,
-            '-g', games_dir,
-        ]
-        timed_print(f'Running: {" ".join(train_nn_cmd)}')
-        subprocess_util.run(train_nn_cmd)
-
     def get_games_dir(self, gen: Generation) -> str:
         return os.path.join(self.self_play_dir, f'gen{gen}')
 
@@ -123,8 +102,7 @@ class AlphaZeroManager:
         self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
         self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen')]
         if not self_play_subdirs:
-            self.init_gen0()
-            return 0
+            return -1
         return int(self_play_subdirs[-1][3:].split('-')[0])
 
     def get_latest_games_dir(self) -> Optional[str]:
@@ -195,20 +173,27 @@ class AlphaZeroManager:
         game_gen = self.get_latest_games_generation()
         model_gen = self.get_latest_model_generation()
         timed_print(f'Running iteration {self.run_index}, game-gen:{game_gen} model-gen:{model_gen}')
-        self_play_proc = None
-        games_dir = None
-        if model_gen >= 0:
-            games_dir = self.get_games_dir(model_gen + 1)
-            model = self.get_model_filename(model_gen)
-            self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
-            self_play_cmd = [
-                self_play_bin,
-                '-G', '0',
-                '-g', games_dir,
-                '--nnet-filename', model
-            ]
-            self_play_proc = subprocess_util.Popen(self_play_cmd, shell=False)
-            timed_print(f'Running [{self_play_proc.pid}]: {" ".join(self_play_cmd)}')
+        games_dir = self.get_games_dir(model_gen + 1)
+        model = self.get_model_filename(model_gen)
+        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
+        self_play_cmd = [
+            self_play_bin,
+            '-g', games_dir,
+            '--nnet-filename', model
+        ]
+        if model_gen < 0:
+            self_play_cmd.extend([
+                '-G', 1000,
+                '--uniform-model',
+            ])
+        else:
+            self_play_cmd.extend(['-G', 0])
+
+        self_play_cmd = list(map(str, self_play_cmd))
+        self_play_proc = subprocess_util.Popen(self_play_cmd, shell=False)
+        timed_print(f'Running [{self_play_proc.pid}]: {" ".join(self_play_cmd)}')
+        if model_gen < 0:
+            subprocess_util.wait_for(self_play_proc)
 
         self.remotely_train_model(remote_host, remote_repo_path, remote_c4_base_dir)
         if self_play_proc is not None:
