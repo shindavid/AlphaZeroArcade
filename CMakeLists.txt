@@ -20,6 +20,7 @@ include_directories("cpp")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
+include_directories(${MY_TINYEXPR_DIR})
 
 add_executable(c4_competitive_self_play cpp/connect4/main/CompetitiveSelfPlay.cpp)
 add_executable(c4_dshin_scratch cpp/connect4/main/DshinScratch.cpp)

@@ -119,6 +119,17 @@ def get_eigenrand_dir():
     return eigenrand_dir
 
 
+def get_tinyexpr_dir():
+    cfg = Config.instance().filename
+
+    tinyexpr_dir = Config.instance().get('tinyexpr_dir')
+    tinyexpr_link = 'https://github.com/codeplea/tinyexpr.git'
+    assert tinyexpr_dir, (f'Please git clone {tinyexpr_link} to TINYEXPR_PATH and add an '
+                          f'entry "tinyexpr_dir=TINYEXPR_PATH" to {cfg}.')
+    assert os.path.isdir(tinyexpr_dir)
+    return tinyexpr_dir
+
+
 def get_conda_prefix():
     conda_prefix = os.environ.get('CONDA_PREFIX', None)
     assert conda_prefix, 'It appears you do not have a conda environment activated. Please activate!'
@@ -161,6 +172,7 @@ def main():
 
     torch_dir = get_torch_dir()
     eigenrand_dir = get_eigenrand_dir()
+    tinyexpr_dir = get_tinyexpr_dir()
     conda_prefix = get_conda_prefix()
     check_for_eigen_dir(conda_prefix)
     check_for_boost_dir(conda_prefix)
@@ -181,6 +193,7 @@ def main():
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
+        f'-DMY_TINYEXPR_DIR={tinyexpr_dir}',
         f'-DCMAKE_PREFIX_PATH={conda_prefix}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
