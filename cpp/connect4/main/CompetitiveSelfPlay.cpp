@@ -25,9 +25,8 @@ namespace po2 = boost_util::program_options;
 struct Args {
   std::string nnet_filename2;
 
-  template<po2::OptionStyle Style=po2::kUseAbbreviations>
   auto make_options_description() {
-    po2::options_description<Style> desc("CompetitiveSelfPlay options");
+    po2::options_description desc("CompetitiveSelfPlay options");
 
     return desc
         .template add_option<"nnet-filename2">(po::value<std::string>(&nnet_filename2)->default_value(""),
@@ -82,7 +81,7 @@ int main(int ac, char* av[]) {
   Args args;
 
   po2::options_description raw_desc("General options");
-  auto desc = raw_desc.add_option<"help", 'h'>("help")
+  auto desc = raw_desc.template add_option<"help", 'h'>("help")
       .add(mcts_params.make_options_description())
       .add(mcts_player_params.make_options_description())
       .add(parallel_game_runner_params.make_options_description())

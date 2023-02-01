@@ -59,11 +59,6 @@ inline std::string make_store_bool_help_str(const char* help, bool default_value
   return util::create_string("%s (default: %s)", help, default_value ? "true" : "false");
 }
 
-enum OptionStyle {
-  kUseAbbreviations,
-  kIgnoreAbbreviations
-};
-
 /*
  * This class is a thin wrapper around boost::program_options::options_description. It aims to provide a similar
  * interface, with the added benefit that option-naming clashes are detected at compile-time, rather than at
@@ -89,13 +84,11 @@ enum OptionStyle {
  *     ;
  */
 template<
-    OptionStyle Style_=kUseAbbreviations,
     typename StringLiteralSequence_ = util::StringLiteralSequence<>,
     util::IntSequenceConcept CharSeq_=std::integer_sequence<int>>
 class options_description : public boost::program_options::options_description
 {
 public:
-  static constexpr OptionStyle Style = Style_;
   using StringLiteralSequence = StringLiteralSequence_;
   using CharSeq = CharSeq_;
 
@@ -107,14 +100,14 @@ public:
   template<util::StringLiteral StrLit, char Char=' ', typename... Ts>
   auto add_option(Ts&&... ts) {
     static_assert(!util::string_literal_sequence_contains_v<StringLiteralSequence, StrLit>, "Options name clash!");
-    constexpr bool UsingAbbrev = (Style == kUseAbbreviations && Char != ' ');
+    constexpr bool UsingAbbrev = Char != ' ';
     static_assert(!UsingAbbrev || !util::int_sequence_contains_v<CharSeq, int(Char)>, "Options abbreviation clash!");
 
     using StringLiteralSequence2 = util::concat_string_literal_sequence_t<
         StringLiteralSequence, util::StringLiteralSequence<StrLit>>;
     using CharSeq2 = std::conditional_t<
         UsingAbbrev, util::concat_int_sequence_t<CharSeq, util::int_sequence<int(Char)>>, CharSeq>;
-    using OutT = options_description<Style, StringLiteralSequence2, CharSeq2>;
+    using OutT = options_description<StringLiteralSequence2, CharSeq2>;
 
     OutT out(*this);
     std::string full_name(StrLit.value);
@@ -127,18 +120,16 @@ public:
   }
 
   template<
-      OptionStyle Style2,
       typename StringLiteralSequence2,
       util::IntSequenceConcept CharSeq2>
-  auto add(const options_description<Style2, StringLiteralSequence2, CharSeq2>& desc) {
+  auto add(const options_description<StringLiteralSequence2, CharSeq2>& desc) {
+    static_assert(util::no_overlap_v<StringLiteralSequence, StringLiteralSequence2>, "Options name clash!");
+    static_assert(util::no_overlap_v<CharSeq, CharSeq2>, "Options abbreviation clash!");
+
     using StringLiteralSequence3 = util::concat_string_literal_sequence_t<
         StringLiteralSequence, StringLiteralSequence2>;
-    using CharSeq2b = std::conditional_t<Style2==kUseAbbreviations, CharSeq2, util::int_sequence<>>;
-    using CharSeq3 = util::concat_int_sequence_t<CharSeq, CharSeq2b>;
-
-    static_assert(util::no_overlap_v<StringLiteralSequence, StringLiteralSequence2>, "Options name clash!");
-    static_assert(util::no_overlap_v<CharSeq, CharSeq2b>, "Options abbreviation clash!");
-    using OutT = options_description<kUseAbbreviations, StringLiteralSequence3, CharSeq3>;
+    using CharSeq3 = util::concat_int_sequence_t<CharSeq, CharSeq2>;
+    using OutT = options_description<StringLiteralSequence3, CharSeq3>;
 
     OutT out(*this);
     out.add_wrapper(desc);
@@ -150,8 +141,7 @@ private:
     base_t::add(desc);
   }
 
-  template<OptionStyle, typename, util::IntSequenceConcept>
-    friend class boost_util::program_options::options_description;
+  template<typename, util::IntSequenceConcept> friend class boost_util::program_options::options_description;
 };
 
 }  // namespace program_options

@@ -43,13 +43,12 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-template<boost_util::program_options::OptionStyle Style>
 auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
 {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po2::options_description<Style> desc("MctsPlayer options");
+  po2::options_description desc("MctsPlayer options");
 
   return desc
       .template add_option<"num-fast-iters", 'i'>(po::value<int>(&num_fast_iters)->default_value(num_fast_iters),

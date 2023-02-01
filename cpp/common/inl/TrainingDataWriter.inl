@@ -11,12 +11,11 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-template<boost_util::program_options::OptionStyle Style>
 auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po2::options_description<Style> desc("TrainingDataWriter options");
+  po2::options_description desc("TrainingDataWriter options");
   return desc
       .template add_option<"clear-dir">(po2::store_bool(&clear_dir, true),
           po2::make_store_bool_help_str("rm {games-dir}/* before running", clear_dir).c_str())

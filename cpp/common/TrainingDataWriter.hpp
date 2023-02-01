@@ -24,7 +24,6 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter {
 public:
   struct Params {
-    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
     auto make_options_description();
 
     std::string games_dir = "c4_games";

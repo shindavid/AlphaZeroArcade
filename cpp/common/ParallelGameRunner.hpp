@@ -39,7 +39,6 @@ public:
   using duration_t = std::chrono::nanoseconds;
 
   struct Params {
-    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
     auto make_options_description();
 
     int num_games = 1000;  // if <=0, run indefinitely

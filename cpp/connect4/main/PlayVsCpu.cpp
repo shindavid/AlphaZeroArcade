@@ -22,15 +22,14 @@ struct Args {
   bool perfect;
   bool verbose;
 
-  template<po2::OptionStyle Style=po2::kUseAbbreviations>
   auto make_options_description() {
-    po2::options_description<Style> desc("PlayVsCpu options");
+    po2::options_description desc("PlayVsCpu options");
 
     return desc
         .template add_option<"my-starting-color", 's'>(po::value<std::string>(&my_starting_color),
             "human's starting color (R or Y). Default: random")
         .template add_option<"perfect", 'p'>(po::bool_switch(&perfect)->default_value(false),
-                             "play against perfect player")
+            "play against perfect player")
         ;
   }
 };
@@ -54,7 +53,7 @@ int main(int ac, char* av[]) {
   Args args;
 
   po2::options_description raw_desc("General options");
-  auto desc = raw_desc.add_option<"help", 'h'>("help")
+  auto desc = raw_desc.template add_option<"help", 'h'>("help")
       .add(mcts_params.make_options_description())
       .add(mcts_player_params.make_options_description())
       .add(perfect_play_params.make_options_description())

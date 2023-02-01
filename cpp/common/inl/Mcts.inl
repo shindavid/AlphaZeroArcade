@@ -23,7 +23,6 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-template<boost_util::program_options::OptionStyle Style>
 auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -36,7 +35,7 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   std::string default_profiling_dir = util::Config::instance()->get(
       "mcts_profiling_dir", default_profiling_dir_path.string());
 
-  po2::options_description<Style> desc("Mcts options");
+  po2::options_description desc("Mcts options");
 
   return desc
       .template add_option<"nnet-filename">

@@ -17,7 +17,6 @@ struct PerfectPlayParams {
   std::string c4_solver_dir;
   bool weak_mode = false;
 
-  template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
   auto make_options_description();
 };
 

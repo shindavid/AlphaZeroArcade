@@ -12,17 +12,16 @@ template<GameStateConcept GameState>
 typename ParallelGameRunner<GameState>::runner_vec_t ParallelGameRunner<GameState>::active_runners;
 
 template<GameStateConcept GameState>
-template<boost_util::program_options::OptionStyle Style>
 auto ParallelGameRunner<GameState>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  po2::options_description<Style> desc("ParallelGameRunner options");
+  po2::options_description desc("ParallelGameRunner options");
   return desc
       .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
-                  "num games (<=0 means run indefinitely)")
+          "num games (<=0 means run indefinitely)")
       .template add_option<"parallelism", 'p'>(po::value<int>(&parallelism)->default_value(parallelism),
-                  "num games to play simultaneously")
+          "num games to play simultaneously")
       ;
 }
 

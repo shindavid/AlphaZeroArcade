@@ -42,7 +42,7 @@ struct Args {
   auto make_options_description() {
     po2::options_description desc("TrainingSelfPlay options");
 
-    return desc.add_option<"random-start-distr-mean", 'r'>(
+    return desc.template add_option<"random-start-distr-mean", 'r'>(
         po2::float_value("%.2f", &random_start_distr_mean),
         "mean of exponential distribution to select r, the number of starting moves played randomly proportionally "
         "to the raw policy distribution of the net")
@@ -91,7 +91,7 @@ int main(int ac, char* av[]) {
   Args args;
 
   po2::options_description raw_desc("General options");
-  auto desc = raw_desc.add_option<"help", 'h'>("help")
+  auto desc = raw_desc.template add_option<"help", 'h'>("help")
       .add(mcts_params.make_options_description())
       .add(mcts_player_params.make_options_description())
       .add(parallel_game_runner_params.make_options_description())

@@ -9,8 +9,7 @@
 
 namespace c4 {
 
-template<boost_util::program_options::OptionStyle Style>
-auto PerfectPlayParams::make_options_description() {
+inline auto PerfectPlayParams::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -21,7 +20,7 @@ auto PerfectPlayParams::make_options_description() {
     c4_solver_dir_value = c4_solver_dir_value->default_value(default_c4_solver_dir);
   }
 
-  po2::options_description<Style> desc("C4PerfectPlayer options");
+  po2::options_description desc("C4PerfectPlayer options");
   return desc
       .template add_option<"c4-solver-dir", 'c'>(c4_solver_dir_value, "base dir containing c4solver bin+book")
       .template add_option<"weak-mode", 'w'>(po::bool_switch(&weak_mode)->default_value(weak_mode),

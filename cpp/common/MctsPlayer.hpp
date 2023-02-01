@@ -42,7 +42,6 @@ public:
     Params(DefaultParamsType);
     void dump() const;
 
-    template<boost_util::program_options::OptionStyle=boost_util::program_options::kUseAbbreviations>
     auto make_options_description();
 
     int num_fast_iters;
