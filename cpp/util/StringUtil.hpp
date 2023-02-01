@@ -17,6 +17,11 @@ namespace util {
 constexpr uint64_t str_hash(const char* c);
 
 /*
+ * Raises util::Exception if parse fails.
+ */
+float atof_safe(const std::string& s);
+
+/*
  * split(s) behaves just like s.split() in python.
  *
  * TODO: support split(s, t), to behave like s.split(t).

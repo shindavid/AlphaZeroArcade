@@ -4,6 +4,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <util/Exception.hpp>
+
 namespace util {
 
 namespace detail {
@@ -27,6 +29,15 @@ constexpr uint64_t str_hash(const Str& toHash) {
 
 inline constexpr uint64_t str_hash(const char* c) {
   return detail::str_hash(std::string_view(c));
+}
+
+inline float atof_safe(const std::string& s) {
+  size_t read = 0;
+  float f = std::stof(s, &read);
+  if (read != s.size() || s.empty()) {
+    throw util::Exception("atof failure %s(\"%s\")", __func__, s.c_str());
+  }
+  return f;
 }
 
 inline std::vector<std::string> split(const std::string &s) {
