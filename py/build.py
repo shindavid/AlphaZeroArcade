@@ -140,6 +140,7 @@ def check_for_boost_dir(conda_prefix):
 
 
 def main():
+    cwd = os.getcwd()
     args = get_args()
 
     if args.clear_core_dumps:
@@ -208,7 +209,8 @@ def main():
     for b in bins:
         bin_loc = os.path.join(repo_root, target_dir, 'bin', f'{b}{bin_postfix}')
         if os.path.isfile(bin_loc):
-            print(f'Binary location: {bin_loc}')
+            relative_bin_loc = os.path.relpath(bin_loc, cwd)
+            print(f'Binary location: {relative_bin_loc}')
 
 
 if __name__ == '__main__':
