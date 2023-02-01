@@ -78,6 +78,7 @@ public:
     auto make_options_description();
 
     std::string nnet_filename;
+    bool uniform_model = false;
     int num_search_threads = 8;
     int batch_size_limit = 144;
     bool run_offline = false;

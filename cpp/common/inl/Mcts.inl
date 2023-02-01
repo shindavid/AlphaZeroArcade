@@ -40,6 +40,9 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   return desc
       .template add_option<"nnet-filename">
           (po::value<std::string>(&nnet_filename)->default_value(default_nnet_filename), "nnet filename")
+      .template add_option<"uniform-model">(
+          po2::store_bool(&uniform_model, true),
+          po2::make_store_bool_help_str("uniform model (--nnet-filename is ignored)", uniform_model).c_str())
       .template add_option<"num-search-threads">(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
@@ -540,15 +543,27 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     tree->virtual_backprop();
   }
 
-  symmetry_index_t sym_index = tree->_sym_index();
-  typename NNEvaluationService::Request request{
-      this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index
-  };
-  auto response = mcts_->nn_eval_service()->evaluate(request);
-  data->evaluation = response.ptr;
+  bool used_cache = false;
+  if (!mcts_->nn_eval_service()) {
+    // no-model mode
+    ValueArray1D uniform_value;
+    PolicyArray1D uniform_policy;
+    uniform_value.setConstant(1.0 / kNumPlayers);
+    uniform_policy.setConstant(0);
+    data->evaluation = std::make_shared<NNEvaluation>(
+        uniform_value, uniform_policy, tree->_valid_action_mask());
+  } else {
+    symmetry_index_t sym_index = tree->_sym_index();
+    typename NNEvaluationService::Request request{
+        this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index
+    };
+    auto response = mcts_->nn_eval_service()->evaluate(request);
+    used_cache = response.used_cache;
+    data->evaluation = response.ptr;
+  }
 
   if (params_.speculative_evals) {
-    if (speculative && response.used_cache) {
+    if (speculative && used_cache) {
       // without this, when we hit cache, we fail to saturate nn service batch
       lock->lock();
       evaluate_and_expand_pending(tree, lock);
@@ -995,7 +1010,9 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
     init_profiling_dir(profiling_dir().string());
   }
 
-  nn_eval_service_ = NNEvaluationService::create(this);
+  if (!params.uniform_model) {
+    nn_eval_service_ = NNEvaluationService::create(this);
+  }
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
   }
@@ -1010,7 +1027,9 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::~Mcts() {
   clear();
-  nn_eval_service_->disconnect();
+  if (nn_eval_service_) {
+    nn_eval_service_->disconnect();
+  }
   for (auto* thread : search_threads_) {
     delete thread;
   }
@@ -1021,7 +1040,9 @@ inline void Mcts<GameState, Tensorizor>::start() {
   clear();
 
   if (!connected_) {
-    nn_eval_service_->connect();
+    if (nn_eval_service_) {
+      nn_eval_service_->connect();
+    }
     connected_ = true;
   }
 }
