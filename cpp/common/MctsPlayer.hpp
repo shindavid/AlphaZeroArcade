@@ -15,6 +15,7 @@
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
+#include <util/Math.hpp>
 
 namespace common {
 
@@ -47,7 +48,7 @@ public:
     int num_fast_iters;
     int num_full_iters;
     float full_pct;
-    float temperature;
+    std::string move_temperature_str;
     int num_raw_policy_starting_moves = 0;
     bool verbose = false;
   };
@@ -94,7 +95,7 @@ protected:
 
   Mcts* mcts_;
   const MctsSimParams sim_params_[kNumSimTypes];
-  const float inv_temperature_;
+  math::ExponentialDecay move_temperature_;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;

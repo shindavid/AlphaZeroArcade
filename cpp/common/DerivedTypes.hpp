@@ -12,6 +12,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/Math.hpp>
 
 namespace common {
 
@@ -72,6 +73,20 @@ struct GameStateTypes {
     for (action_index_t action : bitset_util::on_indices(mask)) {
       out[action] = policy(i++);
     }
+  }
+
+  /*
+   * Provides variable bindings, so that we can specify certain config variables as expressions of game parameters.
+   * See util/Math.hpp
+   *
+   * Bindings:
+   *
+   * "b" -> kMaxNumLocalActions (max _b_ranching factor)
+   */
+  static math::var_bindings_map_t get_var_bindings() {
+    math::var_bindings_map_t bindings;
+    bindings["b"] = kMaxNumLocalActions;
+    return bindings;
   }
 };
 

@@ -3,6 +3,7 @@
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
+#include <util/Math.hpp>
 #include <util/PrintUtil.hpp>
 #include <util/Random.hpp>
 #include <util/RepoUtil.hpp>
@@ -17,12 +18,12 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
   if (type == kCompetitive) {
     num_fast_iters = 1600;
     full_pct = 0.0;
-    temperature = 0;
+    move_temperature_str = "0";
   } else if (type == kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
-    temperature = 0.5;
+    move_temperature_str = "0.8->0.2:sqrt(b)";
   } else {
     throw util::Exception("Unknown type: %d", (int)type);
   }
@@ -37,9 +38,7 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
     PARAM_DUMP("MctsPlayer num fast iters", "%d", num_fast_iters);
     PARAM_DUMP("MctsPlayer num full iters", "%d", num_full_iters);
     PARAM_DUMP("MctsPlayer num fast iters", "%.8g", full_pct);
-  }
-  if (temperature > 0) {
-    PARAM_DUMP("MctsPlayer temperature", "%.8g", temperature);
+    PARAM_DUMP("MctsPlayer move temperature", "%s", move_temperature_str.c_str());
   }
 }
 
@@ -59,7 +58,7 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
           "num mcts iterations to do per full move")
       .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
           "pct of moves that should be full")
-      .template add_option<"temperature", 't'>(po2::float_value("%.2f", &temperature, temperature),
+      .template add_option<"move-temp", 't'>(po::value<std::string>(&move_temperature_str)->default_value(move_temperature_str),
           "temperature for move selection")
       .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
           "mcts player verbose mode")
@@ -76,7 +75,7 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
         {params.num_full_iters},  // kFull
         {1, true}  // kRawPolicy
   }
-, inv_temperature_(params.temperature ? (1.0 / params.temperature) : 0)
+, move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str, GameStateTypes::get_var_bindings()))
 , owns_mcts_(mcts==nullptr)
 {
   if (params.verbose) {
@@ -106,6 +105,8 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game(
 {
   my_index_ = seat_assignment;
   move_count_ = 0;
+
+  move_temperature_.reset();
   tensorizor_.clear();
   if (owns_mcts_) {
     mcts_->start();
@@ -117,6 +118,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
   move_count_++;
+  move_temperature_.step();
   tensorizor_.receive_state_change(state, action);
   if (owns_mcts_) {
     mcts_->receive_state_change(player, state, action, outcome);
@@ -141,8 +143,9 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     return util::Random::weighted_sample(raw_policy.begin(), raw_policy.end());
   }
   GlobalPolicyProbDistr policy = mcts_results_->counts.template cast<float>();
-  if (inv_temperature_) {
-    policy = policy.pow(inv_temperature_);
+  float temp = move_temperature_.value();
+  if (temp != 0) {
+    policy = policy.pow(1.0 / temp);
   } else {
     policy = (policy == policy.maxCoeff()).template cast<float>();
   }
