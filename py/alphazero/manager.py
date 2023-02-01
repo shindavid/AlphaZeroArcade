@@ -83,8 +83,16 @@ class AlphaZeroManager:
         self.run_index = 0
         self.remote_host = None
 
-    def init_gen0(self):
-        raise Exception('TODO: implement me')
+    def init_gen0_games(self):
+        games_dir = self.get_games_dir(0)
+        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_generate_oracle_labeled_games')
+        self_play_cmd = [
+            self_play_bin,
+            '-g', games_dir,
+        ]
+        timed_print(f'Running: {" ".join(self_play_cmd)}')
+        subprocess_util.run(self_play_cmd)
+        self.rename_games_dir(games_dir)
 
     def get_games_dir(self, gen: Generation) -> str:
         return os.path.join(self.self_play_dir, f'gen{gen}')
@@ -105,7 +113,8 @@ class AlphaZeroManager:
         self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
         self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen')]
         if not self_play_subdirs:
-            return -1
+            self.init_gen0_games()
+            return 0
         return int(self_play_subdirs[-1][3:].split('-')[0])
 
     def get_latest_games_dir(self) -> Optional[str]:
@@ -200,14 +209,17 @@ class AlphaZeroManager:
             self_play_proc.kill()
             self_play_proc.wait(300)
             timed_print(f'Self play proc killed!')
-            n_games = 0
-            for filename in os.listdir(games_dir):
-                n = int(filename.split('-')[1].split('.')[0])
-                n_games += n
+            self.rename_games_dir(games_dir)
 
-            src = games_dir
-            tgt = f'{games_dir}-{n_games}'
-            os.system(f'mv {src} {tgt}')
+    def rename_games_dir(self, games_dir: str):
+        n_games = 0
+        for filename in os.listdir(games_dir):
+            n = int(filename.split('-')[1].split('.')[0])
+            n_games += n
+
+        src = games_dir
+        tgt = f'{games_dir}-{n_games}'
+        os.system(f'mv {src} {tgt}')
 
     def main_loop(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         while True:
