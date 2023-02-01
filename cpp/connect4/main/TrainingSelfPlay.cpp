@@ -75,7 +75,7 @@ ParallelGameRunner::Params get_default_parallel_game_runner_params() {
   ParallelGameRunner::Params parallel_game_runner_params;
   parallel_game_runner_params.num_games = 10000;
   parallel_game_runner_params.randomize_player_order = false;
-  parallel_game_runner_params.display_progress_bar = false;
+  parallel_game_runner_params.display_progress_bar = true;
   return parallel_game_runner_params;
 }
 
