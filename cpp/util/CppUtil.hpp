@@ -64,7 +64,15 @@ template<size_t N>
 struct StringLiteral {
   constexpr StringLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
   template<size_t M>
-  constexpr bool operator==(const StringLiteral<M>& other) const { return !strcmp(value, other.value); }
+  constexpr bool operator==(const StringLiteral<M>& other) const {
+    // Caveman-style implementation of strcmp(). Doing this because c++ standard does not require strcmp() to be
+    // constexpr. Clang in particular does not mark strcmp() as constexpr, and clang powers CLion.
+    if (N != M) return false;
+    for (size_t i = 0; i < N; ++i) {
+      if (value[i] != other.value[i]) return false;
+    }
+    return true;
+  }
   char value[N];
 };
 
