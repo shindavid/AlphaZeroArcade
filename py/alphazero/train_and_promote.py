@@ -240,11 +240,7 @@ def test_vs_perfect(candidate_filename):
     ]
     cmd = ' '.join(map(str, args))
     timed_print(f'Running: {cmd}')
-    proc = subprocess_util.Popen(cmd)
-    stdout, stderr = proc.communicate()
-    if proc.returncode:
-        print(stderr)
-        raise Exception()
+    subprocess_util.run(cmd)
 
     win_rate = extract_win_score(stdout, 0) / n_games
     print('Perf against perfect: %.5f' % win_rate)

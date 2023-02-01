@@ -177,10 +177,7 @@ class AlphaZeroManager:
         train_cmd = f'python3 -u py/alphazero/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
         cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd} |& tee {remote_log_filename}"'
         timed_print(f'Running: {cmd}')
-        proc = subprocess_util.Popen(cmd, stdout=None, stderr=None)
-        proc.communicate()
-        if proc.returncode:
-            raise Exception()
+        subprocess_util.run(cmd, stdout=None, stderr=None)
 
         gen = self.get_latest_model_generation()
 

@@ -30,8 +30,22 @@ def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
     return subprocess.Popen(cmd, **defaultize_kwargs(cmd, **kwargs))
 
 
-def run(cmd: Union[str, List[str]], **kwargs) -> subprocess.CompletedProcess:
+def wait_for(proc: subprocess.Popen):
+    """
+    Waits until proc is complete, validates returncode, and return.
+    """
+    stdout, stderr = proc.communicate()
+    if proc.returncode != 0:
+        print(stdout)
+        print(stderr)
+        raise subprocess.CalledProcessError(proc.returncode, proc.args)
+
+
+def run(cmd: Union[str, List[str]], validate_rc=True, **kwargs) -> subprocess.CompletedProcess:
     """
     Convenience wrapper around subprocess.run(), using the defaults of defaultize_kwargs().
     """
-    return subprocess.run(cmd, **defaultize_kwargs(cmd, **kwargs))
+    proc = subprocess.run(cmd, **defaultize_kwargs(cmd, **kwargs))
+    if validate_rc and proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, proc.args)
+    return proc
