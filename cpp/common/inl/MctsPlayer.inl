@@ -23,7 +23,7 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
-    move_temperature_str = "0.8->0.2:sqrt(b)";
+    move_temperature_str = "0.8->0.2:2*sqrt(b)";
   } else {
     throw util::Exception("Unknown type: %d", (int)type);
   }
