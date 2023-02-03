@@ -73,6 +73,13 @@ struct GameStateTypes {
     for (action_index_t action : bitset_util::on_indices(mask)) {
       out[action] = policy(i++);
     }
+    if (out.sum()) {
+      out /= out.sum();
+    } else {
+      for (action_index_t action : bitset_util::on_indices(mask)) {
+        out[action] = 1.0f / mask.count();
+      }
+    }
   }
 
   /*
