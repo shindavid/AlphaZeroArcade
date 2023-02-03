@@ -17,8 +17,9 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
 {
   if (type == kCompetitive) {
     num_fast_iters = 1600;
+    num_full_iters = 0;
     full_pct = 0.0;
-    move_temperature_str = "0";
+    move_temperature_str = "0.5->0.2:2*sqrt(b)";
   } else if (type == kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
@@ -138,6 +139,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
   mcts_results_ = mcts_->sim(tensorizor_, state, sim_params);
   if (use_raw_policy) {
     GlobalPolicyProbDistr raw_policy;
+    raw_policy.setConstant(0);
     GameStateTypes::local_to_global(mcts_results_->policy_prior, valid_actions, raw_policy);
     return util::Random::weighted_sample(raw_policy.begin(), raw_policy.end());
   }
