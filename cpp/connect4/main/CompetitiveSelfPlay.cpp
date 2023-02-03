@@ -16,6 +16,7 @@
 #include <common/ParallelGameRunner.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
+#include <connect4/C4PerfectPlayer.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/StringUtil.hpp>
 
@@ -24,6 +25,7 @@ namespace po2 = boost_util::program_options;
 
 struct Args {
   std::string nnet_filename2;
+  bool grade_moves = false;
 
   auto make_options_description() {
     po2::options_description desc("CompetitiveSelfPlay options");
@@ -31,6 +33,8 @@ struct Args {
     return desc
         .template add_option<"nnet-filename2">(po::value<std::string>(&nnet_filename2)->default_value(""),
             "set this to use a different nnet for the second player")
+        .template add_option<"grade-moves">(po::bool_switch(&grade_moves),
+            "use perfect oracle to report % of moves that were correct")
         ;
   }
 };
@@ -75,6 +79,7 @@ ParallelGameRunner::Params get_default_parallel_game_runner_params() {
 
 int main(int ac, char* av[]) {
   Mcts::Params mcts_params;
+  c4::PerfectPlayParams perfect_play_params;
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
@@ -82,6 +87,7 @@ int main(int ac, char* av[]) {
 
   po2::options_description raw_desc("General options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help")
+      .add(perfect_play_params.make_options_description())
       .add(mcts_params.make_options_description())
       .add(mcts_player_params.make_options_description())
       .add(parallel_game_runner_params.make_options_description())
@@ -98,7 +104,14 @@ int main(int ac, char* av[]) {
 
   ParallelGameRunner runner(parallel_game_runner_params);
   runner.register_players([&]() { return create_players(args, mcts_player_params, mcts_params); });
-  runner.run();
+  if (args.grade_moves) {
+    c4::PerfectGrader grader(perfect_play_params);
+    runner.register_listener([&]() { return grader.make_listener(); });
+    runner.run();
+    grader.dump();
+  } else {
+    runner.run();
+  }
 
   mcts_player_params.dump();
   PARAM_DUMP("MCTS search threads", "%d", mcts_params.num_search_threads);

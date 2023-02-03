@@ -45,9 +45,9 @@ public:
   }
 
   void write(TrainingDataWriter::GameData_sptr game_data, const GameState& state) {
-    auto query_result = oracle_.get_best_moves(move_history_);
-    const ActionMask& best_moves = query_result.moves;
+    auto query_result = oracle_.query(move_history_);
     int best_score = query_result.score;
+    const ActionMask& moves = best_score > 0 ? query_result.good_moves : query_result.best_moves;
 
     float cur_player_value = best_score > 0 ? +1 : (best_score < 0 ? 0 : 0.5f);
 
@@ -59,8 +59,8 @@ public:
     player_index_t cp = state.get_current_player();
     value(cp) = cur_player_value;
     value(1 - cp) = 1 - cur_player_value;
-    for (size_t k = 0; k < best_moves.size(); ++k) {
-      policy.data()[k] = best_moves[k];
+    for (size_t k = 0; k < moves.size(); ++k) {
+      policy.data()[k] = moves[k];
     }
 
     tensorizor_.tensorize(input, state);

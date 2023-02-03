@@ -29,9 +29,13 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
   using GameRunner = common::GameRunner<GameState>;
+  using GameRunnerListener = typename GameRunner::Listener;
+  using game_runner_listener_vec_t = std::vector<GameRunnerListener*>;
 
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_array_generator_t = std::function<player_array_t()>;
+  using game_runner_listener_generator_t = std::function<GameRunnerListener*()>;
+  using game_runner_listener_generator_vec_t = std::vector<game_runner_listener_generator_t>;
   using results_map_t = std::map<float, int>;
   using results_array_t = std::array<results_map_t, kNumPlayers>;
 
@@ -57,6 +61,7 @@ public:
   void register_players(const player_array_generator_t& gen) { player_array_generator_ = gen; }
   void terminate() { shared_data_.terminate(); }
   void run();
+  void register_listener(const game_runner_listener_generator_t& gen) { listener_generators_.push_back(gen); }
 
 protected:
   static std::string get_results_str(const results_map_t& map);
@@ -92,11 +97,11 @@ private:
     ~GameThread();
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
-    void launch(const Params& params) { thread_ = new std::thread([&] { run(params); }); }
+    void launch(const Params&, const game_runner_listener_generator_vec_t&);
 
   private:
-    void run(const Params& params);
-    void play_game(const Params& params);
+    void run(const Params&, const game_runner_listener_generator_vec_t&);
+    void play_game(const Params&, const game_runner_listener_generator_vec_t&);
 
     SharedData& shared_data_;
     player_array_t players_;
@@ -105,6 +110,7 @@ private:
 
   Params params_;
   player_array_generator_t player_array_generator_;
+  game_runner_listener_generator_vec_t listener_generators_;
   std::vector<GameThread*> threads_;
   SharedData shared_data_;
 };

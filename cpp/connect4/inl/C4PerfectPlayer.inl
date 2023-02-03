@@ -23,9 +23,9 @@ inline auto PerfectPlayParams::make_options_description() {
   po2::options_description desc("C4PerfectPlayer options");
   return desc
       .template add_option<"c4-solver-dir", 'c'>(c4_solver_dir_value, "base dir containing c4solver bin+book")
-      .template add_option<"weak-mode", 'w'>(po::bool_switch(&weak_mode)->default_value(weak_mode),
+      .template add_option<"leisurely-mode", 'l'>(po::bool_switch(&leisurely_mode)->default_value(leisurely_mode),
           "exhibit no preference among winning moves as perfect player")
-      ;
+  ;
 }
 
 inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}
@@ -39,15 +39,17 @@ inline void PerfectOracle::MoveHistory::append(common::action_index_t move) {
   *(char_pointer_++) = char(int('1') + move);  // connect4 program uses 1-indexing
 }
 
+inline std::string PerfectOracle::MoveHistory::to_string() const {
+  return std::string(chars_, char_pointer_ - chars_);
+}
+
 inline void PerfectOracle::MoveHistory::write(boost::process::opstream& in) {
   *char_pointer_ = '\n';
   in.write(chars_, char_pointer_ - chars_ + 1);
   in.flush();
 }
 
-inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params)
-: weak_mode_(params.weak_mode)
-{
+inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params) {
   if (params.c4_solver_dir.empty()) {
     throw util::Exception("c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
                           util::Config::kFilename);
@@ -73,12 +75,14 @@ inline PerfectOracle::~PerfectOracle() {
   delete proc_;
 }
 
-inline PerfectOracle::QueryResult PerfectOracle::get_best_moves(MoveHistory &history) {
-  bool strong = !weak_mode_;
-  history.write(in_);
-
+inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
   std::string s;
-  std::getline(out_, s);
+
+  {
+    std::lock_guard lock(mutex_);
+    history.write(in_);
+    std::getline(out_, s);
+  }
   auto tokens = util::split(s);
   int move_scores[kNumColumns];
   for (int j = 0; j < kNumColumns; ++j) {
@@ -87,19 +91,32 @@ inline PerfectOracle::QueryResult PerfectOracle::get_best_moves(MoveHistory &his
   }
   int best_score = *std::max_element(move_scores, move_scores + kNumColumns);
 
+  ActionMask good_moves;
   ActionMask best_moves;
-  int score_bound = (strong || best_score <= 0) ? best_score : 1;
-  for (int j = 0; j < c4::kNumColumns; ++j) {
-    best_moves[j] = move_scores[j] >= score_bound;
+
+  int good_bound;
+  int best_bound = best_score;
+  if (best_score > 0) {
+    good_bound = 1;
+  } else if (best_score == 0) {
+    good_bound = 0;
+  } else {
+    good_bound = -999;  // -1000 indicates illegal move
   }
 
-  QueryResult result{best_moves, best_score};
+  for (int j = 0; j < c4::kNumColumns; ++j) {
+    best_moves[j] = move_scores[j] >= best_bound;
+    good_moves[j] = move_scores[j] >= good_bound;
+  }
+
+  QueryResult result{best_moves, good_moves, best_score};
   return result;
 }
 
 inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)
   : base_t("Perfect")
-  , oracle_(params) {}
+  , oracle_(params)
+  , leisurely_mode_(params.leisurely_mode) {}
 
 inline void PerfectPlayer::start_game(
     common::game_id_t game_id, const player_array_t& players, common::player_index_t seat_assignment)
@@ -114,8 +131,64 @@ inline void PerfectPlayer::receive_state_change(
 }
 
 inline common::action_index_t PerfectPlayer::get_action(const GameState&, const ActionMask&) {
-  ActionMask best_moves = oracle_.get_best_moves(move_history_).moves;
-  return bitset_util::choose_random_on_index(best_moves);
+  auto result = oracle_.query(move_history_);
+  if (leisurely_mode_ && result.score > 0) {
+    return bitset_util::choose_random_on_index(result.good_moves);
+  } else {
+    return bitset_util::choose_random_on_index(result.best_moves);
+  }
+}
+
+inline void PerfectGrader::stats_t::update(bool correct) {
+  correct_count += correct;
+  total_count++;
+}
+
+inline PerfectGrader::stats_t& PerfectGrader::stats_t::operator+=(const stats_t& rhs) {
+  correct_count += rhs.correct_count;
+  total_count += rhs.total_count;
+  return *this;
+}
+
+inline void PerfectGrader::Listener::on_game_start(common::game_id_t) {
+  move_history_.reset();
+  move_number_ = 0;
+}
+
+inline void PerfectGrader::Listener::on_game_end() {
+  move_number_t total_moves = move_number_;
+  for (auto it : tmp_stats_map_) {
+    int player = std::get<0>(it.first);
+    int move = std::get<1>(it.first);
+
+    for (common::player_index_t p : {player, -1}) {
+      for (move_number_t m : {move, 0, move - total_moves - 1}) {
+        grader_.stats_map()[std::make_tuple(p, m)] += it.second;
+      }
+    }
+  }
+  tmp_stats_map_.clear();
+}
+
+inline void PerfectGrader::Listener::on_move(common::player_index_t player, common::action_index_t action) {
+  ++move_number_;
+  PerfectOracle::QueryResult result = grader_.oracle().query(move_history_);
+
+  if (result.score >= 0) {
+    bool correct = result.good_moves[action];
+    tmp_stats_map_[std::make_tuple(player, move_number_)].update(correct);
+  }
+
+  move_history_.append(action);
+}
+
+inline void PerfectGrader::dump() const {
+  for (auto it : stats_map_) {
+    auto player = std::get<0>(it.first);
+    auto move = std::get<1>(it.first);
+    printf("PerfectGrader player=%d move=%d correct=%d total=%d\n",
+           player, move, it.second.correct_count, it.second.total_count);
+  }
 }
 
 }  // namespace c4

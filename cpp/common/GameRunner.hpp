@@ -12,6 +12,14 @@ namespace common {
 template<GameStateConcept GameState>
 class GameRunner {
 public:
+  class Listener {
+  public:
+    virtual ~Listener() = default;
+    virtual void on_game_start(game_id_t game_id) {}
+    virtual void on_game_end() {}
+    virtual void on_move(player_index_t player, action_index_t action) {}
+  };
+
   enum PlayerOrder {
     kFixedPlayerSeats,
     kRandomPlayerSeats
@@ -25,7 +33,11 @@ public:
 
   GameOutcome run(PlayerOrder);
 
+  void add_listener(Listener* listener) { listeners_.push_back(listener); }
+
 private:
+  using listener_vec_t = std::vector<Listener*>;
+  listener_vec_t listeners_;
   player_array_t players_;
 };
 

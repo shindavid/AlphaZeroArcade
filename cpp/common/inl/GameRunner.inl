@@ -16,6 +16,9 @@ typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run(PlayerOrd
   for (size_t p = 0; p < players_.size(); ++p) {
     players_[p]->start_game(game_id, players_, p);
   }
+  for (auto listener : listeners_) {
+    listener->on_game_start(game_id);
+  }
 
   GameState state;
   while (true) {
@@ -30,7 +33,13 @@ typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run(PlayerOrd
     for (auto player2 : players_) {
       player2->receive_state_change(p, state, action, outcome);
     }
+    for (auto listener : listeners_) {
+      listener->on_move(p, action);
+    }
     if (is_terminal_outcome(outcome)) {
+      for (auto listener : listeners_) {
+        listener->on_game_end();
+      }
       return outcome;
     }
   }
