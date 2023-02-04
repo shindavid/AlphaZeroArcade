@@ -217,7 +217,7 @@ private:
     float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
     float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
     int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
-    bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 0; }  // won, lost, OR drawn positions
+    bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
     const ActionMask& _fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions_; }
