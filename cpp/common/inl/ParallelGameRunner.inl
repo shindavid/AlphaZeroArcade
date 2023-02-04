@@ -22,6 +22,10 @@ auto ParallelGameRunner<GameState>::Params::make_options_description() {
           "num games (<=0 means run indefinitely)")
       .template add_option<"parallelism", 'p'>(po::value<int>(&parallelism)->default_value(parallelism),
           "num games to play simultaneously")
+      .template add_option<"display-progress-bar">(po2::store_bool(&display_progress_bar, true),
+          po2::make_store_bool_help_str("display progress bar", display_progress_bar).c_str())
+      .template add_option<"hide-progress-bar">(po2::store_bool(&display_progress_bar, false),
+          po2::make_store_bool_help_str("hide progress bar", display_progress_bar).c_str())
       ;
 }
 
@@ -91,7 +95,6 @@ template<GameStateConcept GameState>
 void ParallelGameRunner<GameState>::GameThread::play_game(
     const Params& params, const game_runner_listener_generator_vec_t& listener_generators)
 {
-  bool print_result = !params.display_progress_bar;
   GameRunner runner(players_);
 
   std::vector<GameRunnerListener*> listeners;
@@ -109,18 +112,6 @@ void ParallelGameRunner<GameState>::GameThread::play_game(
   duration_t duration = t2 - t1;
   int64_t ns = duration.count();
   shared_data_.update(outcome, ns);
-
-  if (!print_result) return;
-
-  results_array_t results = shared_data_.get_results();
-
-  for (player_index_t p = 0; p < kNumPlayers; ++p) {
-    printf("P%d %s | ", p, get_results_str(results[p]).c_str());
-  }
-
-  double ms = ns * 1e-6;
-  printf("%.3fms\n", ms);
-  std::flush(std::cout);
 }
 
 template<GameStateConcept GameState>
