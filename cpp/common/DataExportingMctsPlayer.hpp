@@ -23,6 +23,8 @@ public:
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;
   using Mcts = base_t::Mcts;
+  using MctsResults = base_t::MctsResults;
+  using MctsSimParams = Mcts::SimParams;
   using player_array_t = base_t::player_array_t;
 
   template<typename... BaseArgs>
@@ -36,7 +38,7 @@ public:
   action_index_t get_action(const GameState&, const ActionMask&) override;
 
 protected:
-  void record_position(const GameState& state);
+  void record_position(const GameState& state, const MctsResults*);
 
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameData_sptr game_data_;

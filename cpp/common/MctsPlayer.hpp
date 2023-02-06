@@ -78,6 +78,10 @@ public:
   float avg_batch_size() const { return mcts_->avg_batch_size(); }
 
 protected:
+  const MctsResults* mcts_sim(const GameState& state, SimType sim_type) const;
+  SimType choose_sim_type() const;
+  action_index_t get_action_helper(SimType, const MctsResults*, const ActionMask& valid_actions) const;
+
   struct VerboseInfo {
     ValueProbDistr mcts_value;
     LocalPolicyProbDistr mcts_policy;
@@ -99,10 +103,6 @@ protected:
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;
   int move_count_ = 0;
-
-  // below are pseudo-return values of get_action(), to be used by derived class
-  const MctsResults* mcts_results_;
-  SimType sim_type_;
 };
 
 }  // namespace common

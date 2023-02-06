@@ -132,18 +132,42 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
-  sim_type_ = use_raw_policy ? kRawPolicy : get_random_sim_type();
-  const MctsSimParams& sim_params = sim_params_[sim_type_];
+  SimType sim_type = choose_sim_type();
+  const MctsResults* mcts_results = mcts_sim(state, sim_type);
+  return get_action_helper(sim_type, mcts_results, valid_actions);
+}
 
-  mcts_results_ = mcts_->sim(tensorizor_, state, sim_params);
-  if (use_raw_policy) {
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
+    int& hits, int& misses, int& size, float& hash_balance_factor) const
+{
+  mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsResults*
+MctsPlayer<GameState_, Tensorizor_>::mcts_sim(const GameState& state, SimType sim_type) const {
+  return mcts_->sim(tensorizor_, state, sim_params_[sim_type]);
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline typename MctsPlayer<GameState_, Tensorizor_>::SimType
+MctsPlayer<GameState_, Tensorizor_>::choose_sim_type() const {
+  bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
+  return use_raw_policy ? kRawPolicy : get_random_sim_type();
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
+    SimType sim_type, const MctsResults* mcts_results, const ActionMask& valid_actions) const
+{
+  if (sim_type == kRawPolicy) {
     GlobalPolicyProbDistr raw_policy;
     raw_policy.setConstant(0);
-    GameStateTypes::local_to_global(mcts_results_->policy_prior, valid_actions, raw_policy);
+    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, raw_policy);
     return util::Random::weighted_sample(raw_policy.begin(), raw_policy.end());
   }
-  GlobalPolicyProbDistr policy = mcts_results_->counts.template cast<float>();
+  GlobalPolicyProbDistr policy = mcts_results->counts.template cast<float>();
   float temp = move_temperature_.value();
   if (temp != 0) {
     policy = policy.pow(1.0 / temp);
@@ -151,12 +175,12 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     policy = (policy == policy.maxCoeff()).template cast<float>();
   }
 
-  ValueProbDistr value = mcts_results_->win_rates;
+  ValueProbDistr value = mcts_results->win_rates;
   if (verbose_info_) {
     policy /= policy.sum();
     verbose_info_->mcts_value = value;
     GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->mcts_policy);
-    verbose_info_->mcts_results = *mcts_results_;
+    verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
   action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
@@ -165,13 +189,6 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     return bitset_util::choose_random_on_index(valid_actions);
   }
   return action;
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
-    int& hits, int& misses, int& size, float& hash_balance_factor) const
-{
-  mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

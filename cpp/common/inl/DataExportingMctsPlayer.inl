@@ -37,17 +37,21 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
-    const GameState& state, const ActionMask& mask)
+    const GameState& state, const ActionMask& valid_actions)
 {
-  action_index_t action = base_t::get_action(state, mask);
-  if (this->sim_type_ == base_t::kFull) {
-    record_position(state);
+  auto sim_type = this->choose_sim_type();
+  const MctsResults* mcts_results = this->mcts_sim(state, sim_type);
+
+  if (sim_type == base_t::kFull) {
+    record_position(state, mcts_results);
   }
-  return action;
+  return base_t::get_action_helper(sim_type, mcts_results, valid_actions);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(const GameState& state) {
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
+    const GameState& state, const MctsResults* mcts_results)
+{
   auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
   for (symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
     auto slab = game_data_->get_next_slab();
@@ -56,7 +60,7 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(const Gam
 
     this->tensorizor_.tensorize(input, state);
 
-    const GlobalPolicyCountDistr& counts = this->mcts_results_->counts;
+    const GlobalPolicyCountDistr& counts = mcts_results->counts;
     const auto& fcounts = counts.reshaped(1, GameState::kNumGlobalActions).template cast<float>();
     policy = fcounts / std::max(1.0f, (float)fcounts.sum());
 
