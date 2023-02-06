@@ -37,29 +37,6 @@ inline std::string abbrev_str(bool abbreviate, const char* full_name, const char
 }
 
 /*
- * bool value = false;
- * options.make_options_description()
- *     ("on", store_bool(&value, true))
- *     ("off", store_bool(&value, false))
- *     ;
- *
- * https://stackoverflow.com/a/33172979/543913
- */
-inline auto store_bool(bool* flag, bool store_as) {
-  return boost::program_options::value(flag)->implicit_value(store_as)->zero_tokens()->default_value(*flag ^ store_as);
-}
-
-/*
- * The above store_bool() mechanism is not compatible with ->default_value() for whatever reason.
- *
- * This helper function is a convenience that sticks "... (default: true)" or "... (default: false)" at the end of
- * help string.
- */
-inline std::string make_store_bool_help_str(const char* help, bool default_value) {
-  return util::create_string("%s (default: %s)", help, default_value ? "true" : "false");
-}
-
-/*
  * This class is a thin wrapper around boost::program_options::options_description. It aims to provide a similar
  * interface, with the added benefit that option-naming clashes are detected at compile-time, rather than at
  * runtime.
@@ -117,6 +94,24 @@ public:
 
     out.add_options()(full_name.c_str(), std::forward<Ts>(ts)...);
     return out;
+  }
+
+  /*
+   * Adds both --foo and --no-foo options.
+   *
+   * See: https://stackoverflow.com/a/33172979/543913
+   */
+  template<util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+  auto add_bool_switches(bool* flag, const char* true_help, const char* false_help) {
+    namespace po = boost::program_options;
+
+    std::string full_true_help = (*flag) ? "no-op" : true_help;
+    std::string full_false_help = (*flag) ? false_help : "no-op";
+
+    return (*this)
+        .template add_option<TrueStrLit>(po::value(flag)->implicit_value(true)->zero_tokens(), full_true_help.c_str())
+        .template add_option<FalseStrLit>(po::value(flag)->implicit_value(false)->zero_tokens(), full_false_help.c_str())
+        ;
   }
 
   template<

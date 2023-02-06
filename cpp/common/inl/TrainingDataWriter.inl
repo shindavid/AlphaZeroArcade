@@ -17,10 +17,8 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
 
   po2::options_description desc("TrainingDataWriter options");
   return desc
-      .template add_option<"clear-dir">(po2::store_bool(&clear_dir, true),
-          po2::make_store_bool_help_str("rm {games-dir}/* before running", clear_dir).c_str())
-      .template add_option<"no-clear-dir">(po2::store_bool(&clear_dir, false),
-          po2::make_store_bool_help_str("do NOT rm {games-dir}/* before running", !clear_dir).c_str())
+      .template add_bool_switches<"clear-dir", "no-clear-dir">(
+          &clear_dir, "rm {games-dir}/* before running", "do NOT rm {games-dir}/* before running")
       .template add_option<"games-dir", 'g'>(
           po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games")
       ;

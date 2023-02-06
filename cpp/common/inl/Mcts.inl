@@ -41,20 +41,15 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"nnet-filename">
           (po::value<std::string>(&nnet_filename)->default_value(default_nnet_filename), "nnet filename")
       .template add_option<"uniform-model">(
-          po2::store_bool(&uniform_model, true),
-          po2::make_store_bool_help_str("uniform model (--nnet-filename is ignored)", uniform_model).c_str())
+          po::bool_switch(&uniform_model), "uniform model (--nnet-filename is ignored)")
       .template add_option<"num-search-threads">(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
       .template add_option<"batch-size-limit">(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
           "batch size limit")
-      .template add_option<"run-offline">(
-          po2::store_bool(&run_offline, true),
-          po2::make_store_bool_help_str("run search while opponent is thinking", run_offline).c_str())
-      .template add_option<"no-run-offline">(
-          po2::store_bool(&run_offline, false),
-          po2::make_store_bool_help_str("do NOT run search while opponent is thinking", !run_offline).c_str())
+      .template add_bool_switches<"run-offline", "no-run-offline">(
+          &run_offline, "run search while opponent is thinking", "do NOT run search while opponent is thinking")
       .template add_option<"offline-tree-size-limit">(
           po::value<int>(&offline_tree_size_limit)->default_value(
           offline_tree_size_limit), "max tree size to grow to offline (only respected in --run-offline mode)")
@@ -68,14 +63,10 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"cpuct">(po2::float_value("%.2f", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult">(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
       .template add_option<"dirichlet-alpha">(po2::float_value("%.2f", &dirichlet_alpha), "dirichlet alpha")
-      .template add_option<"disable-eliminations">(po2::store_bool(&disable_eliminations, true),
-          po2::make_store_bool_help_str("disable eliminations", disable_eliminations).c_str())
-      .template add_option<"no-disable-eliminations">(po2::store_bool(&disable_eliminations, false),
-          po2::make_store_bool_help_str("enable eliminations", !disable_eliminations).c_str())
-      .template add_option<"speculative-evals">(po2::store_bool(&speculative_evals, true),
-          po2::make_store_bool_help_str("enable speculation", speculative_evals).c_str())
-      .template add_option<"no-speculative-evals">(po2::store_bool(&speculative_evals, false),
-          po2::make_store_bool_help_str("disable speculation", !speculative_evals).c_str())
+      .template add_bool_switches<"disable-eliminations", "enable-eliminations">(
+          &disable_eliminations, "disable eliminations", "enable eliminations")
+      .template add_bool_switches<"speculative-evals", "no-speculative-evals">(
+          &speculative_evals, "enable speculation", "disable speculation")
 #ifdef PROFILE_MCTS
       .template add_option<"profiling-dir">(po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
