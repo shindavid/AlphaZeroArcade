@@ -46,7 +46,7 @@ inline std::string abbrev_str(bool abbreviate, const char* full_name, const char
  * https://stackoverflow.com/a/33172979/543913
  */
 inline auto store_bool(bool* flag, bool store_as) {
-  return boost::program_options::value(flag)->implicit_value(store_as)->zero_tokens()->default_value(*flag ^ !store_as);
+  return boost::program_options::value(flag)->implicit_value(store_as)->zero_tokens()->default_value(*flag ^ store_as);
 }
 
 /*
