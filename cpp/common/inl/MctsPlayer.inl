@@ -164,7 +164,6 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
   GlobalPolicyProbDistr policy;
   ValueProbDistr value;
   if (sim_type == kRawPolicy) {
-    policy.setConstant(0);
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
     value = mcts_results->value_prior;
   } else {

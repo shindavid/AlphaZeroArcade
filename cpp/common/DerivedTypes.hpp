@@ -60,27 +60,11 @@ struct GameStateTypes {
   using ActionMask = std::bitset<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 
-  static void global_to_local(const PolicyArray1D& policy, const ActionMask& mask, LocalPolicyProbDistr& out) {
-    out.resize(mask.count());
-    int i = 0;
-    for (action_index_t action : bitset_util::on_indices(mask)) {
-      out[i++] = policy(action);
-    }
-  }
+  static LocalPolicyProbDistr global_to_local(const PolicyArray1D& policy, const ActionMask& mask);
+  static void global_to_local(const PolicyArray1D& policy, const ActionMask& mask, LocalPolicyProbDistr& out);
 
-  static void local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyArray1D& out) {
-    int i = 0;
-    for (action_index_t action : bitset_util::on_indices(mask)) {
-      out[action] = policy(i++);
-    }
-    if (out.sum()) {
-      out /= out.sum();
-    } else {
-      for (action_index_t action : bitset_util::on_indices(mask)) {
-        out[action] = 1.0f / mask.count();
-      }
-    }
-  }
+  static PolicyArray1D local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask);
+  static void local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyArray1D& out);
 
   /*
    * Provides variable bindings, so that we can specify certain config variables as expressions of game parameters.
@@ -90,11 +74,7 @@ struct GameStateTypes {
    *
    * "b" -> kMaxNumLocalActions (max _b_ranching factor)
    */
-  static math::var_bindings_map_t get_var_bindings() {
-    math::var_bindings_map_t bindings;
-    bindings["b"] = kMaxNumLocalActions;
-    return bindings;
-  }
+  static math::var_bindings_map_t get_var_bindings();
 };
 
 template<typename Tensorizor>
@@ -132,3 +112,5 @@ struct std::hash<common::StateEvaluationKey<GameState>> {
     return util::tuple_hash(std::make_tuple(ssi.state, ssi.sym_index));
   }
 };
+
+#include <common/inl/DerivedTypes.inl>
