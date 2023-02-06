@@ -74,35 +74,22 @@ ParallelGameRunner<GameState>::GameThread::~GameThread() {
 }
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::GameThread::launch(
-    const Params& params, const game_runner_listener_generator_vec_t& listener_generators)
-{
-  thread_ = new std::thread([&] { run(params, listener_generators); });
+void ParallelGameRunner<GameState>::GameThread::launch(const Params& params) {
+  thread_ = new std::thread([&] { run(params); });
 }
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::GameThread::run(
-    const Params& params, const game_runner_listener_generator_vec_t& listener_generators) {
+void ParallelGameRunner<GameState>::GameThread::run(const Params& params) {
   while (!shared_data_.terminated()) {
     if (!shared_data_.request_game(params.num_games)) return;
-    play_game(params, listener_generators);
+    play_game(params);
   }
 }
 
 template<GameStateConcept GameState>
-void ParallelGameRunner<GameState>::GameThread::play_game(
-    const Params& params, const game_runner_listener_generator_vec_t& listener_generators)
-{
+void ParallelGameRunner<GameState>::GameThread::play_game(const Params& params) {
   GameRunner runner(players_);
 
-  std::vector<GameRunnerListener*> listeners;
-  for (const auto& listener_generator : listener_generators) {
-    listeners.push_back(listener_generator());
-  }
-
-  for (auto* listener : listeners) {
-    runner.add_listener(listener);
-  }
   time_point_t t1 = std::chrono::steady_clock::now();
   auto order = params.randomize_player_order ? GameRunner::kRandomPlayerSeats : GameRunner::kFixedPlayerSeats;
   auto outcome = runner.run(order);
@@ -137,7 +124,7 @@ void ParallelGameRunner<GameState>::run() {
   time_point_t t1 = std::chrono::steady_clock::now();
 
   for (auto thread : threads_) {
-    thread->launch(params_, listener_generators_);
+    thread->launch(params_);
   }
 
   for (auto thread : threads_) {

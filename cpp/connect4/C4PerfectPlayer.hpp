@@ -100,53 +100,6 @@ private:
   const bool leisurely_mode_;
 };
 
-class PerfectGrader {
-public:
-  struct stats_t {
-    int correct_count = 0;
-    int total_count = 0;
-
-    void update(bool correct);
-    stats_t& operator+=(const stats_t& rhs);
-  };
-
-  /*
-   * move_number_t:
-   *
-   * - k>0 signifies the k'th move of the game
-   * - k<0 signifies the k'th move of the game, counting from the end
-   * - k==0 signifies all moves
-   */
-  using move_number_t = int;
-  using key_t = std::tuple<common::player_index_t, move_number_t>;  // player_index_t of -1 means all players
-  using stats_map_t = std::map<key_t, stats_t>;
-
-  class Listener : public common::GameRunner<c4::GameState>::Listener {
-  public:
-    Listener(PerfectGrader& grader) : grader_(grader) {}
-    void on_game_start(common::game_id_t) override;
-    void on_game_end() override;
-    void on_move(common::player_index_t, common::action_index_t) override;
-
-  private:
-    PerfectGrader& grader_;
-    PerfectOracle::MoveHistory move_history_;
-    move_number_t move_number_ = 0;
-    stats_map_t tmp_stats_map_;  // tracks only for current game
-  };
-
-  PerfectGrader(const PerfectPlayParams& params) : oracle_(params) {}
-
-  Listener* make_listener() { return new Listener(*this); }
-  void dump() const;
-  PerfectOracle& oracle() { return oracle_; }
-  stats_map_t& stats_map() { return stats_map_; }
-
-private:
-  PerfectOracle oracle_;
-  stats_map_t stats_map_;  // tracks over all games
-};
-
 }  // namespace c4
 
 #include <connect4/inl/C4PerfectPlayer.inl>
