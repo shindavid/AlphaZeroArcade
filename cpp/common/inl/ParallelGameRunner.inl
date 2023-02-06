@@ -25,7 +25,7 @@ auto ParallelGameRunner<GameState>::Params::make_options_description() {
       .template add_option<"display-progress-bar">(po2::store_bool(&display_progress_bar, true),
           po2::make_store_bool_help_str("display progress bar", display_progress_bar).c_str())
       .template add_option<"hide-progress-bar">(po2::store_bool(&display_progress_bar, false),
-          po2::make_store_bool_help_str("hide progress bar", display_progress_bar).c_str())
+          po2::make_store_bool_help_str("hide progress bar", !display_progress_bar).c_str())
       ;
 }
 
