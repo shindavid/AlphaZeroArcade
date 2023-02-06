@@ -17,6 +17,7 @@
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/OracleGradedMctsPlayer.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/StringUtil.hpp>
 
@@ -48,24 +49,25 @@ using Mcts = common::Mcts<GameState, Tensorizor>;
 using Player = common::AbstractPlayer<GameState>;
 using player_array_t = Player::player_array_t;
 
-template<typename... Ts>
-MctsPlayer* create_player(int index, Ts&&... ts) {
-  MctsPlayer* player = new MctsPlayer(std::forward<Ts>(ts)...);
+template<typename PlayerT, typename... Ts>
+PlayerT* create_player(int index, Ts&&... ts) {
+  PlayerT* player = new PlayerT(std::forward<Ts>(ts)...);
   player->set_name(util::create_string("MCTS-%d", index));
   return player;
 }
 
+template<typename PlayerT, typename... Ts>
 player_array_t create_players(
-    const Args& args, const MctsPlayer::Params& mcts_player_params, const Mcts::Params& mcts_params)
+    const Args& args, const Mcts::Params& mcts_params, Ts&&... ts)
 {
-  MctsPlayer* p1 = create_player(1, mcts_player_params, mcts_params);
-  MctsPlayer* p2;
+  PlayerT* p1 = create_player<PlayerT>(1, std::forward<Ts>(ts)..., mcts_params);
+  PlayerT* p2;
   if (!args.nnet_filename2.empty()) {
     Mcts::Params mcts_params2(mcts_params);
     mcts_params2.nnet_filename = args.nnet_filename2;
-    p2 = create_player(2, mcts_player_params, mcts_params2);
+    p2 = create_player<PlayerT>(2, std::forward<Ts>(ts)..., mcts_params2);
   } else {
-    p2 = create_player(2, mcts_player_params, p1->get_mcts());
+    p2 = create_player<PlayerT>(2, std::forward<Ts>(ts)..., p1->get_mcts());
   }
   return player_array_t{p1, p2};;
 }
@@ -103,13 +105,16 @@ int main(int ac, char* av[]) {
   }
 
   ParallelGameRunner runner(parallel_game_runner_params);
-  runner.register_players([&]() { return create_players(args, mcts_player_params, mcts_params); });
   if (args.grade_moves) {
-    c4::PerfectGrader grader(perfect_play_params);
-    runner.register_listener([&]() { return grader.make_listener(); });
+    c4::PerfectOracle oracle(perfect_play_params);
+    c4::OracleGrader grader(&oracle);
+    runner.register_players([&]() {
+      return create_players<c4::OracleGradedMctsPlayer>(args, mcts_params, &grader, mcts_player_params);
+    });
     runner.run();
     grader.dump();
   } else {
+    runner.register_players([&]() { return create_players<MctsPlayer>(args, mcts_params, mcts_player_params); });
     runner.run();
   }
 
