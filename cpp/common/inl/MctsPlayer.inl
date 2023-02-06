@@ -161,21 +161,23 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     SimType sim_type, const MctsResults* mcts_results, const ActionMask& valid_actions) const
 {
+  GlobalPolicyProbDistr policy;
+  ValueProbDistr value;
   if (sim_type == kRawPolicy) {
-    GlobalPolicyProbDistr raw_policy;
-    raw_policy.setConstant(0);
-    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, raw_policy);
-    return util::Random::weighted_sample(raw_policy.begin(), raw_policy.end());
-  }
-  GlobalPolicyProbDistr policy = mcts_results->counts.template cast<float>();
-  float temp = move_temperature_.value();
-  if (temp != 0) {
-    policy = policy.pow(1.0 / temp);
+    policy.setConstant(0);
+    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
+    value = mcts_results->value_prior;
   } else {
-    policy = (policy == policy.maxCoeff()).template cast<float>();
+    policy = mcts_results->counts.template cast<float>();
+    float temp = move_temperature_.value();
+    if (temp != 0) {
+      policy = policy.pow(1.0 / temp);
+    } else {
+      policy = (policy == policy.maxCoeff()).template cast<float>();
+    }
+    value = mcts_results->win_rates;
   }
 
-  ValueProbDistr value = mcts_results->win_rates;
   if (verbose_info_) {
     policy /= policy.sum();
     verbose_info_->mcts_value = value;
