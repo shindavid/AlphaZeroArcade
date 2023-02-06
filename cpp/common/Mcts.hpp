@@ -90,7 +90,7 @@ public:
     float cPUCT = 1.1;
     float dirichlet_mult = 0.25;
     float dirichlet_alpha = 0.03;
-    bool disable_eliminations = false;
+    bool disable_eliminations = true;
     bool speculative_evals = false;
 #ifdef PROFILE_MCTS
     std::string profiling_dir;
