@@ -6,195 +6,204 @@ NOTE: to clearly differentiate the different types of files, I have invented the
 - .ptj: pytorch-jit-compiled model files
 
 BASE_DIR/
-         current/
-             remote.pid
-             checkpoint.ptc
-             candidate.ptj
-             train_and_promote.log
-             gating_log.txt
-         self-play/
-             gen0-{total_positions}/
+         kill-file.txt
+         self-play-data/
+             gen-0-{total_games}-{total_positions}/
                  {timestamp}-{num_positions}.ptd
                  ...
-             gen1-{total_positions}/
+             gen-1-{total_games}-{total_positions}/
                  ...
-             gen2/
+             gen-2/
                  ...
              ...
-         models/
-             gen0.ptj
-             gen1.ptj
-             gen2.ptj
+         candidate-models/
+             epoch-0.ptj
+             epoch-1.ptj
+             epoch-2.ptj
              ...
          checkpoints/
-             gen0.ptc
-             gen1.ptc
-             gen2.ptc
+             epoch-0.ptc
+             epoch-1.ptc
+             epoch-2.ptc
+             ...
+        promoted-models/
+             gen-0.ptj ( -> ../candidate-models/epoch-0.ptj )
              ...
         gating_logs/
-             gen1.txt
-             gen2.txt
+             epoch-0.txt
+             epoch-1.txt
              ...
+        stdouts/
+             self-play.txt
+             train.txt
+             promote.txt
 
-models/gen{k}.ptj is trained off of self-play/gen{k}/
 
 TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
 """
 
 import os
+import random
 import shutil
-import signal
-import subprocess
-from typing import Optional, List
+import sys
+import tempfile
+import time
+import traceback
+from typing import Optional, List, Dict
 
+import torch
+import torch.nn as nn
+from torch import optim
 from natsort import natsorted
 
-from alphazero.optimization_args import OptimizationArgs
+from alphazero.optimization_args import ModelingArgs, GatingArgs
+from connect4.tensorizor import C4Net
 from util import subprocess_util
 from util.py_util import timed_print
 from util.repo_util import Repo
-
+from util.torch_util import Shape
 
 Generation = int
+Epoch = int
 
 
 class AlphaZeroManager:
-    managers: List['AlphaZeroManager'] = []
-    signal_registered = False
-
-    @staticmethod
-    def signal_handler(sig, frame):
-        for manager in AlphaZeroManager.managers:
-            manager.remotely_kill_pid()
-
     def __init__(self, c4_base_dir: str):
-        AlphaZeroManager.managers.append(self)
-        if not AlphaZeroManager.signal_registered:
-            AlphaZeroManager.signal_registered = True
-            signal.signal(signal.SIGINT, AlphaZeroManager.signal_handler)
+        self.py_cuda_device: int = 1  # TODO: make this configurable, this is specific to dshin's setup
+        self.py_cuda_device_str: str = f'cuda:{self.py_cuda_device}'
+        self.log_file = None
 
+        self.n_gen0_games = 1000
         self.c4_base_dir: str = c4_base_dir
+        self.silence_promote_skip_msgs = False
+        self.last_tested_candidate_model_epoch = -1
 
-        self.models_dir = os.path.join(self.c4_base_dir, 'models')
+        self.kill_filename = os.path.join(self.c4_base_dir, 'kill-file.txt')
+        self.candidate_models_dir = os.path.join(self.c4_base_dir, 'candidate-models')
         self.checkpoints_dir = os.path.join(self.c4_base_dir, 'checkpoints')
-        self.self_play_dir = os.path.join(self.c4_base_dir, 'self-play')
-        self.gating_log_dir = os.path.join(self.c4_base_dir, 'gating_logs')
-        self.current_dir = os.path.join(self.c4_base_dir, 'current')
+        self.promoted_models_dir = os.path.join(self.c4_base_dir, 'promoted-models')
+        self.self_play_data_dir = os.path.join(self.c4_base_dir, 'self-play-data')
+        self.gating_logs_dir = os.path.join(self.c4_base_dir, 'gating-logs')
+        self.stdouts_dir = os.path.join(self.c4_base_dir, 'stdouts')
 
-        os.makedirs(self.models_dir, exist_ok=True)
+        os.makedirs(self.candidate_models_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
-        os.makedirs(self.self_play_dir, exist_ok=True)
-        os.makedirs(self.gating_log_dir, exist_ok=True)
-        os.makedirs(self.current_dir, exist_ok=True)
+        os.makedirs(self.promoted_models_dir, exist_ok=True)
+        os.makedirs(self.self_play_data_dir, exist_ok=True)
+        os.makedirs(self.gating_logs_dir, exist_ok=True)
+        os.makedirs(self.stdouts_dir, exist_ok=True)
 
-        self.run_index = 0
-        self.remote_host = None
+    def init_logging(self, filename: str):
+        self.log_file = open(filename, 'a')
+        sys.stdout = self
+        sys.stderr = self
 
-    def get_games_dir(self, gen: Generation) -> str:
-        return os.path.join(self.self_play_dir, f'gen{gen}')
+    def write(self, msg):
+        sys.stdout.write(msg)
+        if self.log_file is not None:
+            self.log_file.write(msg)
+        self.flush()
 
-    def get_model_filename(self, gen: Generation) -> str:
-        return os.path.join(self.models_dir, f'gen{gen}.ptj')
+    def flush(self):
+        sys.stdout.flush()
+        if self.log_file is not None:
+            self.log_file.flush()
 
-    def get_checkpoint_filename(self, gen: Generation) -> str:
-        return os.path.join(self.checkpoints_dir, f'gen{gen}.ptc')
+    def kill_file_exists(self):
+        return os.path.exists(self.kill_filename)
 
-    def get_gating_log_filename(self, gen: Generation) -> str:
-        return os.path.join(self.gating_log_dir, f'gen{gen}.txt')
+    def rm_kill_file(self):
+        if os.path.exists(self.kill_filename):
+            os.remove(self.kill_filename)
 
-    def get_current_candidate_model_filename(self) -> str:
-        return os.path.join(self.current_dir, 'candidate.ptj')
+    def touch_kill_file(self):
+        with open(self.kill_filename, 'w') as _:
+            pass
 
-    def get_current_checkpoint_filename(self) -> str:
-        return os.path.join(self.current_dir, 'checkpoint.ptc')
+    def get_candidate_model_filename(self, epoch: Epoch) -> str:
+        return os.path.join(self.candidate_models_dir, f'epoch-{epoch}.ptj')
 
-    def get_current_gating_log_filename(self) -> str:
-        return os.path.join(self.current_dir, 'gating_log.txt')
+    def get_checkpoint_filename(self, epoch: Epoch) -> str:
+        return os.path.join(self.checkpoints_dir, f'epoch-{epoch}.ptc')
 
-    def get_latest_games_generation(self) -> Generation:
-        self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
-        self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen')]
-        if not self_play_subdirs:
-            return -1
-        return int(self_play_subdirs[-1][3:].split('-')[0])
+    def get_promoted_model_filename(self, gen: Generation) -> str:
+        return os.path.join(self.promoted_models_dir, f'gen-{gen}.ptj')
 
-    def get_latest_games_dir(self) -> Optional[str]:
-        self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
-        self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen')]
-        if not self_play_subdirs:
-            return None
-        return os.path.join(self.self_play_dir, self_play_subdirs[-1])
+    def get_self_play_data_subdir(self, gen: Generation) -> str:
+        return os.path.join(self.self_play_data_dir, f'gen-{gen}')
 
-    def get_latest_model_generation(self) -> Generation:
-        model_files = list(natsorted(f for f in os.listdir(self.models_dir)))
-        model_files = [f for f in model_files if f.startswith('gen') and f.endswith('.ptj')]
+    def get_gating_log_filename(self, epoch: Epoch) -> str:
+        return os.path.join(self.gating_logs_dir, f'epoch-{epoch}.txt')
+
+    def get_self_play_stdout(self) -> str:
+        return os.path.join(self.stdouts_dir, 'self-play.txt')
+
+    def get_train_stdout(self) -> str:
+        return os.path.join(self.stdouts_dir, 'train.txt')
+
+    def get_promote_stdout(self) -> str:
+        return os.path.join(self.stdouts_dir, 'promote.txt')
+
+    def get_latest_candidate_model_epoch(self) -> Epoch:
+        model_files = list(natsorted(f for f in os.listdir(self.candidate_models_dir)))
+        model_files = [f for f in model_files if f.startswith('epoch-') and f.endswith('.ptj')]
         if not model_files:
             return -1
-        return int(model_files[-1].split('.')[0][3:])
+        return int(model_files[-1].split('.')[0].split('.')[1])
 
-    def get_latest_model_filename(self) -> Optional[str]:
-        model_files = list(natsorted(f for f in os.listdir(self.models_dir)))
-        model_files = [f for f in model_files if f.startswith('gen') and f.endswith('.ptj')]
+    def get_latest_checkpoint_epoch(self) -> Epoch:
+        checkpoint_files = list(natsorted(f for f in os.listdir(self.checkpoints_dir)))
+        checkpoint_files = [f for f in checkpoint_files if f.startswith('epoch-') and f.endswith('.ptc')]
+        if not checkpoint_files:
+            return -1
+        return int(checkpoint_files[-1].split('.')[0].split('.')[1])
+
+    def get_latest_promoted_model_generation(self) -> Generation:
+        model_files = list(natsorted(f for f in os.listdir(self.promoted_models_dir)))
+        model_files = [f for f in model_files if f.startswith('gen-') and f.endswith('.ptj')]
+        if not model_files:
+            return -1
+        return int(model_files[-1].split('.')[0].split('.')[1])
+
+    def get_latest_self_play_data_generation(self) -> Generation:
+        self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_data_dir)))
+        self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen-')]
+        if not self_play_subdirs:
+            return -1
+        return int(self_play_subdirs[-1].split('-')[1])
+
+    def get_latest_candidate_model_filename(self) -> Optional[str]:
+        model_files = list(natsorted(f for f in os.listdir(self.candidate_models_dir)))
+        model_files = [f for f in model_files if f.startswith('epoch-') and f.endswith('.ptj')]
         if not model_files:
             return None
-        return os.path.join(self.models_dir, model_files[-1])
+        return os.path.join(self.candidate_models_dir, model_files[-1])
 
-    def get_pid_filename(self) -> str:
-        return os.path.join(self.c4_base_dir, 'current', 'remote.pid')
+    def get_latest_promoted_model_filename(self) -> Optional[str]:
+        model_files = list(natsorted(f for f in os.listdir(self.promoted_models_dir)))
+        model_files = [f for f in model_files if f.startswith('gen-') and f.endswith('.ptj')]
+        if not model_files:
+            return None
+        return os.path.join(self.promoted_models_dir, model_files[-1])
 
-    def write_pid_file(self):
-        pid = os.getpid()
-        pid_filename = self.get_pid_filename()
-        with open(pid_filename, 'w') as f:
-            f.write(str(pid))
-        timed_print(f'Wrote pid {pid} to {pid_filename}')
+    def get_latest_self_play_data_subdir(self) -> Optional[str]:
+        self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_data_dir)))
+        self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen-')]
+        if not self_play_subdirs:
+            return None
+        return os.path.join(self.self_play_data_dir, self_play_subdirs[-1])
 
-    def remotely_kill_pid(self):
-        pid_filename = self.get_pid_filename()
-        if not os.path.isfile(pid_filename):
+    def self_play(self):
+        game_gen = self.get_latest_self_play_data_generation()
+        model_gen = self.get_latest_promoted_model_generation()
+        if game_gen >= 0 > model_gen:
+            timed_print('No model to use for self-play.  Waiting for model to be promoted...')
+            time.sleep(5)
             return
-        with open(pid_filename, 'r') as f:
-            pid = int(f.readline().strip())
 
-        kill_cmd = f'ssh {self.remote_host} "kill {pid}"'
-        timed_print(f'Remotely killing: {kill_cmd}')
-        os.system(kill_cmd)
-
-    def remotely_train_model(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
-        self.remote_host = remote_host
-        pid_filename = self.get_pid_filename()
-        os.system(f'rm -f {pid_filename}')
-        remote_log_filename = os.path.join(remote_c4_base_dir, 'current', 'train_and_promote.log')
-        train_cmd = f'python3 -u py/alphazero/train_and_promote.py -d {remote_c4_base_dir} ' + OptimizationArgs.get_str()
-        cmd = f'ssh {remote_host} "cd {remote_repo_path}; {train_cmd} |& tee {remote_log_filename}"'
-        timed_print(f'Running: {cmd}')
-        subprocess_util.run(cmd, stdout=None, stderr=None)
-
-        gen = self.get_latest_model_generation()
-
-        current_checkpoint = self.get_current_checkpoint_filename()
-        current_candidate = self.get_current_candidate_model_filename()
-        current_gating_log = self.get_current_gating_log_filename()
-        model_filename = self.get_model_filename(gen + 1)
-        checkpoint_filename = self.get_checkpoint_filename(gen + 1)
-        gating_log_filename = self.get_gating_log_filename(gen + 1)
-
-        shutil.move(current_candidate, model_filename)
-        timed_print(f'Promoted {current_candidate} to {model_filename}')
-        shutil.move(current_checkpoint, checkpoint_filename)
-        timed_print(f'Promoted {current_checkpoint} to {checkpoint_filename}')
-
-        if os.path.isfile(current_gating_log):
-            shutil.move(current_gating_log, gating_log_filename)
-            timed_print(f'Promoted {current_gating_log} to {gating_log_filename}')
-
-    def run(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
-        self.run_index += 1
-        game_gen = self.get_latest_games_generation()
-        model_gen = self.get_latest_model_generation()
-        timed_print(f'Running iteration {self.run_index}, game-gen:{game_gen} model-gen:{model_gen}')
-        games_dir = self.get_games_dir(model_gen + 1)
-        model = self.get_model_filename(model_gen)
+        timed_print(f'Running self-play game-gen:{game_gen} model-gen:{model_gen}')
+        games_dir = self.get_self_play_data_subdir(model_gen + 1)
+        model = self.get_promoted_model_filename(model_gen)
         self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
         self_play_cmd = [
             self_play_bin,
@@ -203,7 +212,7 @@ class AlphaZeroManager:
         ]
         if model_gen < 0:
             self_play_cmd.extend([
-                '-G', 1000,
+                '-G', self.n_gen0_games,
                 '--uniform-model',
             ])
         else:
@@ -215,25 +224,366 @@ class AlphaZeroManager:
         if model_gen < 0:
             subprocess_util.wait_for(self_play_proc)
 
-        self.remotely_train_model(remote_host, remote_repo_path, remote_c4_base_dir)
-        if self_play_proc is not None:
-            timed_print(f'Killing self play proc {self_play_proc.pid}...')
-            self_play_proc.kill()
-            self_play_proc.wait(300)
-            timed_print(f'Self play proc killed!')
-            self.rename_games_dir(games_dir)
+        timed_print(f'Killing self play proc {self_play_proc.pid}...')
+        self_play_proc.kill()
+        self_play_proc.wait(300)
+        timed_print(f'Self play proc killed!')
+        AlphaZeroManager.rename_games_dir(games_dir)
 
-    def rename_games_dir(self, games_dir: str):
+    def train(self):
+        epoch = self.get_latest_checkpoint_epoch()
+        print('******************************')
+        print(f'Train epoch {epoch}')
+
+        loader = DataLoader(self.self_play_data_dir)
+        if loader.n_total_games < self.n_gen0_games:
+            timed_print(f'Not enough games to train: {loader.n_total_games} < {self.n_gen0_games}')
+            timed_print('Waiting for more games...')
+            time.sleep(5)
+            return
+
+        if epoch >= 0:
+            checkpoint_filename = self.get_checkpoint_filename(epoch)
+            timed_print(f'Loading checkpoint: {checkpoint_filename}')
+            # cp the checkpoint to somewhere local first
+            with tempfile.TemporaryDirectory() as tmp:
+                tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
+                shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
+                net = C4Net.load_checkpoint(tmp_checkpoint_filename)
+        else:
+            input_shape = loader.get_input_shape()
+            timed_print(f'Creating new net with input shape {input_shape}')
+            net = C4Net(input_shape)
+
+        net.cuda(device=self.py_cuda_device)
+        net.train()
+
+        value_loss_lambda = ModelingArgs.value_loss_lambda
+        learning_rate = ModelingArgs.learning_rate
+        momentum = ModelingArgs.momentum
+        weight_decay = ModelingArgs.weight_decay
+        optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+
+        policy_criterion = nn.MultiLabelSoftMarginLoss()
+        value_criterion = nn.CrossEntropyLoss()
+
+        timed_print(f'Sampling from the {loader.n_window} most recent positions among '
+                    f'{loader.n_total_positions} total positions')
+
+        stats = TrainingStats()
+
+        # TODO: more efficient data loading via torch pytorch DataLoader
+        for i, data in enumerate(loader):
+            inputs, value_labels, policy_labels = data
+
+            inputs = inputs.to(self.py_cuda_device_str)
+            value_labels = value_labels.to(self.py_cuda_device_str)
+            policy_labels = policy_labels.to(self.py_cuda_device_str)
+
+            optimizer.zero_grad()
+            policy_outputs, value_outputs = net(inputs)
+            policy_loss = policy_criterion(policy_outputs, policy_labels)
+            value_loss = value_criterion(value_outputs, value_labels)
+            loss = policy_loss + value_loss * value_loss_lambda
+
+            stats.update(policy_labels, policy_outputs, policy_loss, value_labels, value_outputs, value_loss)
+
+            loss.backward()
+            optimizer.step()
+
+        timed_print(f'Epoch {epoch} complete')
+        stats.dump()
+
+        checkpoint_filename = self.get_checkpoint_filename(epoch+1)
+        candidate_filename = self.get_checkpoint_filename(epoch + 1)
+        net.save_checkpoint(checkpoint_filename)
+        net.save_model(candidate_filename)
+        timed_print(f'Checkpoint saved: {checkpoint_filename}')
+        timed_print(f'Candidate saved: {candidate_filename}')
+
+    def promote(self):
+        candidate_model_filename = self.get_latest_candidate_model_filename()
+        candidate_model_epoch = int(os.path.split(candidate_model_filename)[1].split('.')[0].split('-')[1])
+
+        if candidate_model_epoch <= self.last_tested_candidate_model_epoch:
+            if not self.silence_promote_skip_msgs:
+                timed_print(f'Latest candidate was already tested ({candidate_model_epoch})')
+            time.sleep(5)
+            self.silence_promote_skip_msgs = True
+            return
+
+        self.silence_promote_skip_msgs = False
+        self.last_tested_candidate_model_epoch = candidate_model_epoch
+
+        latest_promoted_model_filename = self.get_latest_promoted_model_filename()
+        gating_log_filename = self.get_gating_log_filename(candidate_model_epoch)
+
+        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
+        n_games = GatingArgs.num_games
+        args = [
+            self_play_bin,
+            '-G', n_games,
+            '-i', GatingArgs.mcts_iters,
+            '-t', GatingArgs.temperature,
+            '--nnet-filename', latest_promoted_model_filename,
+            '--nnet-filename2', candidate_model_filename,
+            '--grade-moves',
+        ]
+        cmd = ' '.join(map(str, args))
+        cmd = f'{cmd} > {gating_log_filename}'
+        timed_print(f'Running: {cmd}')
+        subprocess_util.run(cmd)
+
+        with open(gating_log_filename, 'r') as f:
+            stdout = f.read()
+
+        win_rate = extract_win_score(stdout, 1) / n_games
+        promote = win_rate > GatingArgs.promotion_win_rate
+        timed_print('Run complete.')
+        print(f'Candidate win-rate: %.5f' % win_rate)
+        print(f'Promotion win-rate: %.5f' % GatingArgs.promotion_win_rate)
+        print(f'Promote: %s' % promote)
+
+        if promote:
+            src = candidate_model_filename
+            dst = self.get_promoted_model_filename(candidate_model_epoch)
+            os.symlink(src, dst)
+
+    @staticmethod
+    def rename_games_dir(games_dir: str):
+        n_positions = 0
         n_games = 0
         for filename in os.listdir(games_dir):
             n = int(filename.split('-')[1].split('.')[0])
-            n_games += n
+            n_positions += n
+            n_games += 1
 
         src = games_dir
-        tgt = f'{games_dir}-{n_games}'
+        tgt = f'{games_dir}-{n_games}-{n_positions}'
         os.system(f'mv {src} {tgt}')
         return tgt
 
-    def main_loop(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
-        while True:
-            self.run(remote_host, remote_repo_path, remote_c4_base_dir)
+    def self_play_loop(self):
+        try:
+            self.init_logging(self.get_self_play_stdout())
+            while not self.kill_file_exists():
+                self.self_play()
+        except (Exception,):
+            traceback.print_exc()
+            self.touch_kill_file()
+
+    def train_loop(self):
+        try:
+            self.init_logging(self.get_train_stdout())
+            while not self.kill_file_exists():
+                self.train()
+        except (Exception,):
+            traceback.print_exc()
+            self.touch_kill_file()
+
+    def promote_loop(self):
+        try:
+            self.init_logging(self.get_promote_stdout())
+            while not self.kill_file_exists():
+                self.promote()
+        except (Exception,):
+            traceback.print_exc()
+            self.touch_kill_file()
+
+
+class SelfPlayGameMetadata:
+    def __init__(self, filename: str):
+        self.filename = filename
+        info = os.path.split(filename)[1].split('.')[0].split('-')  # 1685860410604914-10.ptd
+        self.timestamp = int(info[0])
+        self.num_positions = int(info[1])
+
+
+class GenerationMetadata:
+    def __init__(self, full_gen_dir: str):
+        self._loaded = False
+        self.full_gen_dir = full_gen_dir
+        self._game_metadata_list = []
+        self.n_positions = 0
+        self.n_games = 0
+
+        gen_subdir = os.path.split(full_gen_dir)[1]  # gen-3 or gen-3-{games}-{positions}
+        tokens = gen_subdir.split('-')
+        n = len(tokens)
+        assert n in (2, 4), full_gen_dir
+        if len(tokens) == 2:
+            self.load()
+        else:
+            self.n_games = int(tokens[2])
+            self.n_positions = int(tokens[3])
+
+    @property
+    def game_metadata_list(self):
+        self.load()
+        return self._game_metadata_list
+
+    def load(self):
+        if self._loaded:
+            return
+
+        self._loaded = True
+        for filename in os.listdir(self.full_gen_dir):
+            if filename.startswith('.'):
+                continue
+            full_filename = os.path.join(self.full_gen_dir, filename)
+            game_metadata = SelfPlayGameMetadata(full_filename)
+            self._game_metadata_list.append(game_metadata)
+
+        self._game_metadata_list.sort(key=lambda g: -g.timestamp)  # newest to oldest
+        self.n_positions = sum(g.n_positions for g in self._game_metadata_list)
+        self.n_games = len(self._game_metadata_list)
+
+
+class SelfPlayMetadata:
+    def __init__(self, self_play_dir: str):
+        self.self_play_dir = self_play_dir
+        self.metadata: Dict[Generation, GenerationMetadata] = {}
+        self.n_total_positions = 0
+        self.n_total_games = 0
+        for gen_dir in os.listdir(self_play_dir):
+            assert gen_dir.startswith('gen-'), gen_dir
+            generation = int(gen_dir.split('-')[1])
+            full_gen_dir = os.path.join(self_play_dir, gen_dir)
+            metadata = GenerationMetadata(full_gen_dir)
+            self.metadata[generation] = metadata
+            self.n_total_positions += metadata.n_positions
+            self.n_total_games += metadata.n_games
+
+    def get_window(self, n_window: int) -> List[SelfPlayGameMetadata]:
+        window = []
+        cumulative_n_positions = 0
+        for generation in reversed(sorted(self.metadata.keys())):  # newest to oldest
+            gen_metadata = self.metadata[generation]
+            n = len(gen_metadata.game_metadata_list)
+            i = 0
+            while cumulative_n_positions < n_window and i < n:
+                game_metadata = gen_metadata.game_metadata_list[i]
+                cumulative_n_positions += game_metadata.n_positions
+                i += 1
+                window.append(game_metadata)
+        return window
+
+
+class DataLoader:
+    def __init__(self, self_play_data_dir: str):
+        self.self_play_metadata = SelfPlayMetadata(self_play_data_dir)
+        self.n_total_games = self.self_play_metadata.n_total_games
+        self.n_total_positions = self.self_play_metadata.n_total_positions
+        self.n_window = compute_n_window(self.n_total_positions)
+        self.window = self.self_play_metadata.get_window(self.n_window)
+
+        self._returned_snapshots = 0
+        self._index = len(self.window)
+
+    def get_input_shape(self) -> Shape:
+        for game_metadata in self.window:
+            data = torch.jit.load(game_metadata.filename).state_dict()
+            return data['input'].shape
+        raise Exception('Could not determine input shape!')
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._returned_snapshots == ModelingArgs.snapshot_steps:
+            raise StopIteration
+
+        self._returned_snapshots += 1
+        minibatch: List[SelfPlayGameMetadata] = []
+        n = 0
+        while n < ModelingArgs.minibatch_size:
+            n += self._add_to_minibatch(minibatch)
+
+        input_data = []
+        policy_data = []
+        value_data = []
+
+        for metadata in minibatch:
+            data = torch.jit.load(metadata.filename).state_dict()
+            input_data.append(data['input'])
+            policy_data.append(data['policy'])
+            value_data.append(data['value'])
+
+        input_data = torch.concat(input_data)
+        policy_data = torch.concat(policy_data)
+        value_data = torch.concat(value_data)
+
+        return input_data, value_data, policy_data
+
+    def _add_to_minibatch(self, minibatch: List[SelfPlayGameMetadata]):
+        if self._index == len(self.window):
+            random.shuffle(self.window)
+            self._index = 0
+
+        game_metadata = self.window[self._index]
+        minibatch.append(game_metadata)
+        self._index += 1
+        return game_metadata.num_positions
+
+
+def compute_n_window(n_total: int) -> int:
+    """
+    From Appendix C of KataGo paper.
+
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    c = ModelingArgs.window_c
+    alpha = ModelingArgs.window_alpha
+    beta = ModelingArgs.window_beta
+    return min(n_total, int(c * (1 + beta * ((n_total / c) ** alpha - 1) / alpha)))
+
+
+def get_num_correct_policy_predictions(policy_outputs, policy_labels):
+    selected_moves = torch.argmax(policy_outputs, dim=1)
+    correct_policy_preds = policy_labels.gather(1, selected_moves.view(-1, 1))
+    return int(sum(correct_policy_preds))
+
+
+def get_num_correct_value_predictions(value_outputs, value_labels):
+    value_output_probs = value_outputs.softmax(dim=1)
+    deltas = abs(value_output_probs - value_labels)
+    return int(sum((deltas < 0.25).all(dim=1)))
+
+
+class TrainingStats:
+    def __init__(self):
+        self.policy_accuracy_num = 0.0
+        self.policy_loss_num = 0.0
+        self.value_accuracy_num = 0.0
+        self.value_loss_num = 0.0
+        self.den = 0
+
+    def update(self, policy_labels, policy_outputs, policy_loss, value_labels, value_outputs, value_loss):
+        n = len(policy_labels)
+        self.policy_loss_num += float(policy_loss.item()) * n
+        self.value_loss_num += float(value_loss.item()) * n
+        self.den += n
+        self.policy_accuracy_num += get_num_correct_policy_predictions(policy_outputs, policy_labels)
+        self.value_accuracy_num += get_num_correct_value_predictions(value_outputs, value_labels)
+
+    def dump(self):
+        policy_accuracy = self.policy_accuracy_num / self.den
+        avg_policy_loss = self.policy_loss_num / self.den
+        value_accuracy = self.value_accuracy_num / self.den
+        avg_value_loss = self.value_loss_num / self.den
+
+        print(f'Policy accuracy: %5.3f' % policy_accuracy)
+        print(f'Policy loss:     %5.3f' % avg_policy_loss)
+        print(f'Value accuracy:  %5.3f' % value_accuracy)
+        print(f'Value loss:      %5.3f' % avg_value_loss)
+
+
+def extract_win_score(stdout: str, player_index: int):
+    # P1 W69 L9 D22 [80]
+    player_str = f'P{player_index}'
+    lines = [line for line in stdout.splitlines() if line.startswith(player_str)]
+    assert len(lines) == 1, stdout
+    perf_line = lines[0]
+    win_score_token = perf_line.split()[-1]
+    assert win_score_token.startswith('[') and win_score_token.endswith(']'), perf_line
+    return float(win_score_token[1:-1])
