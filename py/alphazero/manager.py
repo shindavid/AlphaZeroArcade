@@ -150,21 +150,21 @@ class AlphaZeroManager:
         model_files = [f for f in model_files if f.startswith('epoch-') and f.endswith('.ptj')]
         if not model_files:
             return -1
-        return int(model_files[-1].split('.')[0].split('.')[1])
+        return int(model_files[-1].split('.')[0].split('-')[1])
 
     def get_latest_checkpoint_epoch(self) -> Epoch:
         checkpoint_files = list(natsorted(f for f in os.listdir(self.checkpoints_dir)))
         checkpoint_files = [f for f in checkpoint_files if f.startswith('epoch-') and f.endswith('.ptc')]
         if not checkpoint_files:
             return -1
-        return int(checkpoint_files[-1].split('.')[0].split('.')[1])
+        return int(checkpoint_files[-1].split('.')[0].split('-')[1])
 
     def get_latest_promoted_model_generation(self) -> Generation:
         model_files = list(natsorted(f for f in os.listdir(self.promoted_models_dir)))
         model_files = [f for f in model_files if f.startswith('gen-') and f.endswith('.ptj')]
         if not model_files:
             return -1
-        return int(model_files[-1].split('.')[0].split('.')[1])
+        return int(model_files[-1].split('.')[0].split('-')[1])
 
     def get_latest_self_play_data_generation(self) -> Generation:
         self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_data_dir)))
@@ -397,7 +397,7 @@ class SelfPlayGameMetadata:
         self.filename = filename
         info = os.path.split(filename)[1].split('.')[0].split('-')  # 1685860410604914-10.ptd
         self.timestamp = int(info[0])
-        self.num_positions = int(info[1])
+        self.n_positions = int(info[1])
 
 
 class GenerationMetadata:
@@ -484,7 +484,7 @@ class DataLoader:
     def get_input_shape(self) -> Shape:
         for game_metadata in self.window:
             data = torch.jit.load(game_metadata.filename).state_dict()
-            return data['input'].shape
+            return data['input'].shape[1:]
         raise Exception('Could not determine input shape!')
 
     def __iter__(self):
@@ -524,7 +524,7 @@ class DataLoader:
         game_metadata = self.window[self._index]
         minibatch.append(game_metadata)
         self._index += 1
-        return game_metadata.num_positions
+        return game_metadata.n_positions
 
 
 def compute_n_window(n_total: int) -> int:
