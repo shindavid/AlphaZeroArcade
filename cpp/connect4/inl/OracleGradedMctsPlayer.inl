@@ -7,19 +7,23 @@
 namespace c4 {
 
 inline void OracleGrader::mistake_tracker_t::dump(const std::string descr) const {
-  printf("OracleGrader %s mistake:%.6f baseline:%.6f\n", descr.c_str(), mistake_total / count, baseline_total / count);
+  printf("OracleGrader %s net:%.6f mcts:%.6f baseline:%.6f\n",
+         descr.c_str(), mistake_total_prior / count, mistake_total_posterior / count, baseline_total / count);
 }
 
-inline void OracleGrader::mistake_tracker_t::update(float mistake_rate, float baseline) {
-  mistake_total += mistake_rate;
+inline void OracleGrader::mistake_tracker_t::update(
+    float mistake_rate_prior, float mistake_rate_posterior, float baseline)
+{
+  mistake_total_prior += mistake_rate_prior;
+  mistake_total_posterior += mistake_rate_posterior;
   baseline_total += baseline;
   ++count;
 }
 
-inline void OracleGrader::update(int score, float mistake_rate, float baseline) {
+inline void OracleGrader::update(int score, float mistake_rate_prior, float mistake_rate_posterior, float baseline) {
   std::lock_guard lock(mutex_);
-  mistake_tracker_map_[score].update(mistake_rate, baseline);
-  overall_tracker_.update(mistake_rate, baseline);
+  mistake_tracker_map_[score].update(mistake_rate_prior, mistake_rate_posterior, baseline);
+  overall_tracker_.update(mistake_rate_prior, mistake_rate_posterior, baseline);
 }
 
 inline void OracleGrader::dump() const {
@@ -56,8 +60,12 @@ inline common::action_index_t OracleGradedMctsPlayer::get_action(
   auto result = oracle->query(move_history_);
   int score = result.score;
   if (score >= 0) {  // winning or drawn position
+    assert(sim_type != base_t::kRawPolicy);
     auto policy_prior = GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions);
-    update_mistake_stats(result, policy_prior, valid_actions);
+
+    auto visit_counts = mcts_results->counts.cast<float>();
+    auto visit_distr = visit_counts / visit_counts.sum();
+    update_mistake_stats(result, policy_prior, visit_distr, valid_actions);
   }
 
   return this->get_action_helper(sim_type, mcts_results, valid_actions);
@@ -65,33 +73,40 @@ inline common::action_index_t OracleGradedMctsPlayer::get_action(
 
 inline void OracleGradedMctsPlayer::update_mistake_stats(
     const PerfectOracle::QueryResult& result, const GlobalPolicyProbDistr& net_policy,
-    const ActionMask& valid_actions) const
+    const GlobalPolicyProbDistr& posterior_policy, const ActionMask& valid_actions) const
 {
   int score = result.score;
   auto correct_moves = result.good_moves;
 
-  float mistake_num = 0;
-  float mistake_den = 0;
+  float mistake_prior_num = 0;
+  float mistake_prior_den = 0;
+
+  float mistake_posterior_num = 0;
+  float mistake_posterior_den = 0;
 
   int baseline_num = 0;
   int baseline_den = 0;
 
   for (int i = 0; i < kNumColumns; ++i) {
     if (!valid_actions[i]) continue;
-    float p = net_policy(i);
+    float prior = net_policy(i);
+    float posterior = posterior_policy(i);
 
-    mistake_den += p;
+    mistake_prior_den += prior;
+    mistake_posterior_den += posterior;
     baseline_den++;
     if (!correct_moves[i]) {
-      mistake_num += p;
+      mistake_prior_num += prior;
+      mistake_posterior_num += posterior;
       baseline_num++;
     }
   }
 
-  float mistake_rate = mistake_den ? mistake_num / mistake_den : 0;
+  float mistake_prior_rate = mistake_prior_den ? mistake_prior_num / mistake_prior_den : 0;
+  float mistake_mcts_rate = mistake_posterior_den ? mistake_posterior_num / mistake_posterior_den : 0;
   float baseline = baseline_num * 1.0 / baseline_den;
 
-  grader_->update(score, mistake_rate, baseline);
+  grader_->update(score, mistake_prior_rate, mistake_mcts_rate, baseline);
 }
 
 }  // namespace c4
