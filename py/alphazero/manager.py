@@ -94,18 +94,19 @@ class AlphaZeroManager:
         os.makedirs(self.stdouts_dir, exist_ok=True)
 
     def init_logging(self, filename: str):
+        timed_print(f'AlphaZeroManager init_logging: {filename}')
         self.log_file = open(filename, 'a')
         sys.stdout = self
         sys.stderr = self
 
     def write(self, msg):
-        sys.stdout.write(msg)
+        sys.__stdout__.write(msg)
         if self.log_file is not None:
             self.log_file.write(msg)
         self.flush()
 
     def flush(self):
-        sys.stdout.flush()
+        sys.__stdout__.flush()
         if self.log_file is not None:
             self.log_file.flush()
 
