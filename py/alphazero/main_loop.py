@@ -86,10 +86,9 @@ def main():
         self_play_cmd = ' '.join(map(pipes.quote, sys.argv + ['--self-play-loop']))
         train_cmd = ' '.join(map(pipes.quote, sys.argv + ['--train-loop']))
 
-        remote_argv = [os.path.join(Args.remote_repo_path, sys.argv[0])] + sys.argv[1:]
         remote_promote_cmd = ' '.join(map(
-            pipes.quote, remote_argv + ['--promote-loop', '--c4-base-dir', Args.remote_c4_base_dir]))
-        promote_cmd = 'ssh %s %s' % (Args.remote_host, remote_promote_cmd)
+            pipes.quote, sys.argv + ['--promote-loop', '--c4-base-dir', Args.remote_c4_base_dir]))
+        promote_cmd = 'ssh %s "cd %s %s"' % (Args.remote_host, Args.remote_repo_path, remote_promote_cmd)
 
         timed_print(f'Running: {self_play_cmd}')
         timed_print(f'Running: {train_cmd}')

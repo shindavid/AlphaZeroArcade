@@ -304,6 +304,14 @@ class AlphaZeroManager:
 
     def promote(self):
         candidate_model_filename = self.get_latest_candidate_model_filename()
+
+        if candidate_model_filename is None:
+            if not self.silence_promote_skip_msgs:
+                timed_print(f'No candidate models available. Waiting...')
+            time.sleep(5)
+            self.silence_promote_skip_msgs = True
+            return
+
         candidate_model_epoch = int(os.path.split(candidate_model_filename)[1].split('.')[0].split('-')[1])
 
         if candidate_model_epoch <= self.last_tested_candidate_model_epoch:
