@@ -183,8 +183,10 @@ class AlphaZeroManager:
         timed_print(f'Promoted {current_candidate} to {model_filename}')
         shutil.move(current_checkpoint, checkpoint_filename)
         timed_print(f'Promoted {current_checkpoint} to {checkpoint_filename}')
-        shutil.move(current_gating_log, gating_log_filename)
-        timed_print(f'Promoted {current_gating_log} to {gating_log_filename}')
+
+        if os.path.isfile(current_gating_log):
+            shutil.move(current_gating_log, gating_log_filename)
+            timed_print(f'Promoted {current_gating_log} to {gating_log_filename}')
 
     def run(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         self.run_index += 1
