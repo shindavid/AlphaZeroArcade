@@ -18,7 +18,6 @@ from alphazero.manager import AlphaZeroManager, Generation
 from alphazero.optimization_args import add_optimization_args, OptimizationArgs, ModelingArgs, GatingArgs
 from config import Config
 from connect4.tensorizor import C4Net
-from neural_net import NeuralNet
 from util import subprocess_util
 from util.py_util import timed_print
 from util.repo_util import Repo
@@ -240,7 +239,8 @@ def test_vs_perfect(candidate_filename):
     ]
     cmd = ' '.join(map(str, args))
     timed_print(f'Running: {cmd}')
-    subprocess_util.run(cmd)
+    proc = subprocess_util.Popen(cmd)
+    stdout = proc.communicate()[0]
 
     win_rate = extract_win_score(stdout, 0) / n_games
     print('Perf against perfect: %.5f' % win_rate)
