@@ -303,16 +303,14 @@ class AlphaZeroManager:
         timed_print(f'Candidate saved: {candidate_filename}')
 
     def promote(self):
-        candidate_model_filename = self.get_latest_candidate_model_filename()
+        candidate_model_epoch = self.get_latest_candidate_model_epoch()
 
-        if candidate_model_filename is None:
+        if candidate_model_epoch == -1:
             if not self.silence_promote_skip_msgs:
                 timed_print(f'No candidate models available. Waiting...')
             time.sleep(5)
             self.silence_promote_skip_msgs = True
             return
-
-        candidate_model_epoch = int(os.path.split(candidate_model_filename)[1].split('.')[0].split('-')[1])
 
         if candidate_model_epoch <= self.last_tested_candidate_model_epoch:
             if not self.silence_promote_skip_msgs:
@@ -324,34 +322,40 @@ class AlphaZeroManager:
         self.silence_promote_skip_msgs = False
         self.last_tested_candidate_model_epoch = candidate_model_epoch
 
+        candidate_model_filename = self.get_candidate_model_filename(candidate_model_epoch)
         latest_promoted_model_filename = self.get_latest_promoted_model_filename()
-        gating_log_filename = self.get_gating_log_filename(candidate_model_epoch)
 
-        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
-        n_games = GatingArgs.num_games
-        args = [
-            self_play_bin,
-            '-G', n_games,
-            '-i', GatingArgs.mcts_iters,
-            '-t', GatingArgs.temperature,
-            '--nnet-filename', latest_promoted_model_filename,
-            '--nnet-filename2', candidate_model_filename,
-            '--grade-moves',
-        ]
-        cmd = ' '.join(map(str, args))
-        cmd = f'{cmd} > {gating_log_filename}'
-        timed_print(f'Running: {cmd}')
-        subprocess_util.run(cmd)
+        if latest_promoted_model_filename is None:
+            timed_print(f'First promotion test: auto-pass!')
+            promote = True
+        else:
+            gating_log_filename = self.get_gating_log_filename(candidate_model_epoch)
 
-        with open(gating_log_filename, 'r') as f:
-            stdout = f.read()
+            self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
+            n_games = GatingArgs.num_games
+            args = [
+                self_play_bin,
+                '-G', n_games,
+                '-i', GatingArgs.mcts_iters,
+                '-t', GatingArgs.temperature,
+                '--nnet-filename', latest_promoted_model_filename,
+                '--nnet-filename2', candidate_model_filename,
+                '--grade-moves',
+            ]
+            cmd = ' '.join(map(str, args))
+            cmd = f'{cmd} > {gating_log_filename}'
+            timed_print(f'Running: {cmd}')
+            subprocess_util.run(cmd)
 
-        win_rate = extract_win_score(stdout, 1) / n_games
-        promote = win_rate > GatingArgs.promotion_win_rate
-        timed_print('Run complete.')
-        print(f'Candidate win-rate: %.5f' % win_rate)
-        print(f'Promotion win-rate: %.5f' % GatingArgs.promotion_win_rate)
-        print(f'Promote: %s' % promote)
+            with open(gating_log_filename, 'r') as f:
+                stdout = f.read()
+
+            win_rate = extract_win_score(stdout, 1) / n_games
+            promote = win_rate > GatingArgs.promotion_win_rate
+            timed_print('Run complete.')
+            print(f'Candidate win-rate: %.5f' % win_rate)
+            print(f'Promotion win-rate: %.5f' % GatingArgs.promotion_win_rate)
+            print(f'Promote: %s' % promote)
 
         if promote:
             src = candidate_model_filename
