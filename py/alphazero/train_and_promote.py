@@ -246,7 +246,7 @@ def test_vs_perfect(candidate_filename):
     print('Perf against perfect: %.5f' % win_rate)
 
 
-def gating_test(candidate_filename, latest_filename):
+def gating_test(candidate_filename, latest_filename, gating_log_filename):
     self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
     n_games = GatingArgs.num_games
     args = [
@@ -256,14 +256,15 @@ def gating_test(candidate_filename, latest_filename):
         '-t', GatingArgs.temperature,
         '--nnet-filename', latest_filename,
         '--nnet-filename2', candidate_filename,
+        '--grade-moves',
     ]
     cmd = ' '.join(map(str, args))
+    cmd = f'{cmd} > {gating_log_filename}'
     timed_print(f'Running: {cmd}')
-    proc = subprocess_util.Popen(cmd)
-    stdout, stderr = proc.communicate()
-    if proc.returncode:
-        print(stderr)
-        raise Exception()
+    subprocess_util.run(cmd)
+
+    with open(gating_log_filename, 'r') as f:
+        stdout = f.read()
 
     win_rate = extract_win_score(stdout, 1) / n_games
     promote = win_rate > GatingArgs.promotion_win_rate
@@ -282,6 +283,8 @@ def main():
 
     candidate_filename = manager.get_current_candidate_model_filename()
     checkpoint_filename = manager.get_current_checkpoint_filename()
+    gating_log_filename = manager.get_current_gating_log_filename()
+
     if os.path.isfile(checkpoint_filename):
         timed_print(f'Loading checkpoint: {checkpoint_filename}')
         # cp the checkpoint to somewhere local first
@@ -339,7 +342,7 @@ def main():
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
         timed_print(f'Checkpoint saved')
-        if latest_model_filename is None or gating_test(candidate_filename, latest_model_filename):
+        if latest_model_filename is None or gating_test(candidate_filename, latest_model_filename, gating_log_filename):
             # leave out test against perfect for now, more efficient to do this later in a non-blocking path
             # test_vs_perfect(candidate_filename)
             break

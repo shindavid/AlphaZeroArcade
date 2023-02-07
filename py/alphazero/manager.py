@@ -11,6 +11,7 @@ BASE_DIR/
              checkpoint.ptc
              candidate.ptj
              train_and_promote.log
+             gating_log.txt
          self-play/
              gen0-{total_positions}/
                  {timestamp}-{num_positions}.ptd
@@ -29,6 +30,10 @@ BASE_DIR/
              gen0.ptc
              gen1.ptc
              gen2.ptc
+             ...
+        gating_logs/
+             gen1.txt
+             gen2.txt
              ...
 
 models/gen{k}.ptj is trained off of self-play/gen{k}/
@@ -73,11 +78,13 @@ class AlphaZeroManager:
         self.models_dir = os.path.join(self.c4_base_dir, 'models')
         self.checkpoints_dir = os.path.join(self.c4_base_dir, 'checkpoints')
         self.self_play_dir = os.path.join(self.c4_base_dir, 'self-play')
+        self.gating_log_dir = os.path.join(self.c4_base_dir, 'gating_logs')
         self.current_dir = os.path.join(self.c4_base_dir, 'current')
 
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_dir, exist_ok=True)
+        os.makedirs(self.gating_log_dir, exist_ok=True)
         os.makedirs(self.current_dir, exist_ok=True)
 
         self.run_index = 0
@@ -92,11 +99,17 @@ class AlphaZeroManager:
     def get_checkpoint_filename(self, gen: Generation) -> str:
         return os.path.join(self.checkpoints_dir, f'gen{gen}.ptc')
 
+    def get_gating_log_filename(self, gen: Generation) -> str:
+        return os.path.join(self.gating_log_dir, f'gen{gen}.txt')
+
     def get_current_candidate_model_filename(self) -> str:
-        return os.path.join(self.c4_base_dir, 'current', 'candidate.ptj')
+        return os.path.join(self.current_dir, 'candidate.ptj')
 
     def get_current_checkpoint_filename(self) -> str:
-        return os.path.join(self.c4_base_dir, 'current', 'checkpoint.ptc')
+        return os.path.join(self.current_dir, 'checkpoint.ptc')
+
+    def get_current_gating_log_filename(self) -> str:
+        return os.path.join(self.current_dir, 'gating_log.txt')
 
     def get_latest_games_generation(self) -> Generation:
         self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_dir)))
@@ -161,12 +174,17 @@ class AlphaZeroManager:
 
         current_checkpoint = self.get_current_checkpoint_filename()
         current_candidate = self.get_current_candidate_model_filename()
+        current_gating_log = self.get_current_gating_log_filename()
         model_filename = self.get_model_filename(gen + 1)
         checkpoint_filename = self.get_checkpoint_filename(gen + 1)
+        gating_log_filename = self.get_gating_log_filename(gen + 1)
+
         shutil.move(current_candidate, model_filename)
         timed_print(f'Promoted {current_candidate} to {model_filename}')
         shutil.move(current_checkpoint, checkpoint_filename)
         timed_print(f'Promoted {current_checkpoint} to {checkpoint_filename}')
+        shutil.move(current_gating_log, gating_log_filename)
+        timed_print(f'Promoted {current_gating_log} to {gating_log_filename}')
 
     def run(self, remote_host: str, remote_repo_path: str, remote_c4_base_dir: str):
         self.run_index += 1
