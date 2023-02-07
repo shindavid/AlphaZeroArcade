@@ -234,7 +234,7 @@ class AlphaZeroManager:
     def train(self):
         epoch = self.get_latest_checkpoint_epoch()
         print('******************************')
-        print(f'Train epoch {epoch}')
+        print(f'Train epoch {epoch + 1}')
 
         loader = DataLoader(self.self_play_data_dir)
         if loader.n_total_games < self.n_gen0_games:
@@ -295,8 +295,8 @@ class AlphaZeroManager:
         timed_print(f'Epoch {epoch} complete')
         stats.dump()
 
-        checkpoint_filename = self.get_checkpoint_filename(epoch+1)
-        candidate_filename = self.get_checkpoint_filename(epoch + 1)
+        checkpoint_filename = self.get_checkpoint_filename(epoch + 1)
+        candidate_filename = self.get_candidate_model_filename(epoch + 1)
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')

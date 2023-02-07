@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import pipes
 import signal
 import subprocess
@@ -34,9 +35,6 @@ class Args:
         Args.promote_loop = args.promote_loop
 
         assert Args.c4_base_dir, 'Required option: -d'
-        assert Args.remote_host, 'Required option: -H'
-        assert Args.remote_repo_path, 'Required option: -P'
-        assert Args.remote_c4_base_dir, 'Required option: -D'
 
 
 def load_args():
@@ -71,6 +69,11 @@ def main():
         manager.promote_loop()
     else:
         manager.rm_kill_file()
+
+        assert Args.remote_host, 'Required option: -H'
+        assert Args.remote_repo_path, 'Required option: -P'
+        assert Args.remote_c4_base_dir, 'Required option: -D'
+
         procs: List[subprocess.Popen] = []
 
         def kill_all():
@@ -82,7 +85,10 @@ def main():
 
         self_play_cmd = ' '.join(map(pipes.quote, sys.argv + ['--self-play-loop']))
         train_cmd = ' '.join(map(pipes.quote, sys.argv + ['--train-loop']))
-        remote_promote_cmd = ' '.join(map(pipes.quote, sys.argv + ['--promote-loop', '--c4-base-dir', Args.remote_c4_base_dir]))
+
+        remote_argv = [os.path.join(Args.remote_repo_path, sys.argv[0])] + sys.argv[1:]
+        remote_promote_cmd = ' '.join(map(
+            pipes.quote, remote_argv + ['--promote-loop', '--c4-base-dir', Args.remote_c4_base_dir]))
         promote_cmd = 'ssh %s %s' % (Args.remote_host, remote_promote_cmd)
 
         timed_print(f'Running: {self_play_cmd}')
