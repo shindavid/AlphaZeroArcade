@@ -92,7 +92,7 @@ class AlphaZeroManager:
         self.n_gen0_games = 1000
         self.c4_base_dir: str = c4_base_dir
         self.silence_promote_skip_msgs = False
-        self.last_tested_candidate_model_epoch = -1
+        self.last_tested_candidate_model_gen_epoch = (-1, -1)
 
         self.kill_filename = os.path.join(self.c4_base_dir, 'kill-file.txt')
         self.candidate_models_dir = os.path.join(self.c4_base_dir, 'candidate-models')
@@ -249,33 +249,32 @@ class AlphaZeroManager:
         AlphaZeroManager.rename_games_dir(games_dir)
 
     def train(self):
-        checkpoint_info = self.get_latest_checkpoint_info()
-        loader = DataLoader(self.self_play_data_dir)
-
         print('******************************')
-        if checkpoint_info is None:
-            print(f'Train gen:0 epoch:0')
-        else:
-            print(f'Train gen:{checkpoint_info.generation} epoch:{checkpoint_info.epoch + 1}')
-
+        loader = DataLoader(self.self_play_data_dir)
         if loader.n_total_games < self.n_gen0_games:
             timed_print(f'Not enough games to train: {loader.n_total_games} < {self.n_gen0_games}')
             timed_print('Waiting for more games...')
             time.sleep(5)
             return
 
-        if epoch >= 0:
-            checkpoint_filename = self.get_checkpoint_filename(epoch)
+        checkpoint_info = self.get_latest_checkpoint_info()
+        if checkpoint_info is None:
+            gen, epoch = 1, 1
+            print(f'Train gen:1 epoch:1')
+            input_shape = loader.get_input_shape()
+            timed_print(f'Creating new net with input shape {input_shape}')
+            net = C4Net(input_shape)
+        else:
+            gen, epoch = checkpoint_info.generation, checkpoint_info.epoch
+            print(f'Train gen:{gen} epoch:{epoch + 1}')
+            checkpoint_filename = self.get_checkpoint_filename(gen, epoch)
             timed_print(f'Loading checkpoint: {checkpoint_filename}')
-            # cp the checkpoint to somewhere local first
+
+            # copying the checkpoint to somewhere local first seems to bypass some sort of filesystem issue
             with tempfile.TemporaryDirectory() as tmp:
                 tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
                 net = C4Net.load_checkpoint(tmp_checkpoint_filename)
-        else:
-            input_shape = loader.get_input_shape()
-            timed_print(f'Creating new net with input shape {input_shape}')
-            net = C4Net(input_shape)
 
         net.cuda(device=self.py_cuda_device)
         net.train()
@@ -313,44 +312,46 @@ class AlphaZeroManager:
             loss.backward()
             optimizer.step()
 
-        timed_print(f'Epoch {epoch} complete')
+        timed_print(f'Gen {gen} epoch {epoch} complete')
         stats.dump()
 
-        checkpoint_filename = self.get_checkpoint_filename(epoch + 1)
-        candidate_filename = self.get_candidate_model_filename(epoch + 1)
+        checkpoint_filename = self.get_checkpoint_filename(gen, epoch + 1)
+        candidate_filename = self.get_candidate_model_filename(gen, epoch + 1)
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
         timed_print(f'Candidate saved: {candidate_filename}')
 
     def promote(self):
-        candidate_model_epoch = self.get_latest_candidate_model_epoch()
+        candidate_model_info = self.get_latest_candidate_model_info()
 
-        if candidate_model_epoch == -1:
+        if candidate_model_info is None:
+            # candidate_model_epoch = self.get_latest_candidate_model_epoch()
             if not self.silence_promote_skip_msgs:
                 timed_print(f'No candidate models available. Waiting...')
             time.sleep(5)
             self.silence_promote_skip_msgs = True
             return
 
-        if candidate_model_epoch <= self.last_tested_candidate_model_epoch:
+        gen, epoch = candidate_model_info.generation, candidate_model_info.epoch
+        if (gen, epoch) <= self.last_tested_candidate_model_gen_epoch:
             if not self.silence_promote_skip_msgs:
-                timed_print(f'Latest candidate was already tested ({candidate_model_epoch})')
+                timed_print(f'Latest candidate was already tested ({gen}, {epoch})')
             time.sleep(5)
             self.silence_promote_skip_msgs = True
             return
 
         self.silence_promote_skip_msgs = False
-        self.last_tested_candidate_model_epoch = candidate_model_epoch
+        self.last_tested_candidate_model_gen_epoch = (gen, epoch)
 
-        candidate_model_filename = self.get_candidate_model_filename(candidate_model_epoch)
+        candidate_model_filename = self.get_candidate_model_filename(gen, epoch)
         latest_promoted_model_filename = self.get_latest_promoted_model_filename()
 
         if latest_promoted_model_filename is None:
             timed_print(f'First promotion test: auto-pass!')
             promote = True
         else:
-            gating_log_filename = self.get_gating_log_filename(candidate_model_epoch)
+            gating_log_filename = self.get_gating_log_filename(gen, epoch)
 
             self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
             n_games = GatingArgs.num_games
@@ -380,7 +381,7 @@ class AlphaZeroManager:
 
         if promote:
             src = candidate_model_filename
-            dst = self.get_promoted_model_filename(candidate_model_epoch)
+            dst = self.get_promoted_model_filename(gen)
             shutil.copy(src, dst)
 
     @staticmethod
