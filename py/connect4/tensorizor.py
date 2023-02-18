@@ -13,6 +13,30 @@ from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, 
 from util.torch_util import Shape
 
 
+class GlobalPoolingLayer(nn.Module):
+    """
+    From "Accelerating Self-Play Learning in Go" (KataGo paper):
+
+    The Global Pooling module as described in the paper:
+
+    1. The mean of each channel
+    2. The mean of each channel multiplied by 1/10 ( b - b_avg )
+    3. The maximum of each channel.
+
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    def __init__(self, scale=1/10):
+        super(GlobalPoolingLayer, self).__init__()
+        self.scale = scale
+
+    def forward(self, x):
+        g_mean = torch.mean(x, keepdim=True, dim=(2, 3))
+        g_scaled_mean = self.scale * g_mean
+        # g_max shape: NC1
+        g_max, _ = torch.max(x.view(x.shape[:2] + (-1,)), dim=-1, keepdim=True)
+        return torch.cat([g_mean, g_scaled_mean, g_max[..., None]], dim=1)
+
+
 class ConvBlock(nn.Module):
     """
     From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
