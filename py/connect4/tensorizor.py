@@ -43,11 +43,11 @@ class GlobalPoolingBiasStruct(nn.Module):
 
     The  global pooling bias structure as described in the paper:
 
-    • Input tensors X (shape b × b × cX) and G (shape b × b × cG).
-    • A batch normalization layer and ReLu activation applied to G (output shape b × b × cG).
+    • Input tensors X (shape b x b x cX) and G (shape b x b x cG).
+    • A batch normalization layer and ReLu activation applied to G (output shape b x b x cG).
     • A global pooling layer (output shape 3cG).
     • A fully connected layer to cX outputs (output shape cX).
-    • Channelwise addition with X (output shape b × b × cX).
+    • Channelwise addition with X (output shape b x b x cX).
 
     https://arxiv.org/pdf/1902.10565.pdf
     """
