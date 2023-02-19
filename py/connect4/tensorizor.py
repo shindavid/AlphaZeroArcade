@@ -37,6 +37,41 @@ class GlobalPoolingLayer(nn.Module):
         return torch.cat([g_mean, g_scaled_mean, g_max[..., None]], dim=1)
 
 
+class GlobalPoolingBiasStruct(nn.Module):
+    """
+    From "Accelerating Self-Play Learning in Go" (KataGo paper):
+
+    The  global pooling bias structure as described in the paper:
+
+    • Input tensors X (shape b × b × cX) and G (shape b × b × cG).
+    • A batch normalization layer and ReLu activation applied to G (output shape b × b × cG).
+    • A global pooling layer (output shape 3cG).
+    • A fully connected layer to cX outputs (output shape cX).
+    • Channelwise addition with X (output shape b × b × cX).
+
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    def __init__(self, g_channels):
+        super(GlobalPoolingBiasStruct, self).__init__()
+        self.global_pool = GlobalPoolingLayer()
+        self.bn = nn.BatchNorm2d(g_channels)
+        self.relu = nn.ReLU()
+        self.fc = nn.Linear(3 * g_channels, g_channels)
+
+    def forward(self, p, g):
+        """
+        (My understanding*) For the policy head:
+        X: the board feature map (b x b x cx)
+        P: output of 1x1 convolution
+        G: output of 1x1 convolution
+        (Maybe X here becomes P?)
+        GlobalPoolingBiasStruct pools G to bias the output of P
+        """
+        g = self.global_pool(self.relu(self.bn(g)))
+        return self.fc(g[..., 0, 0])[..., None, None] + p
+
+
+
 class ConvBlock(nn.Module):
     """
     From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
