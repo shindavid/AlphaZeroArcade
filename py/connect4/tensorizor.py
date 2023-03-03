@@ -62,14 +62,14 @@ class GlobalPoolingBiasStruct(nn.Module):
         """
         (My understanding*) For the policy head:
         X: the board feature map (b x b x cx)
-        P: output of 1x1 convolution
-        G: output of 1x1 convolution
+        P: output of 1x1 convolution ?
+        G: output of 1x1 convolution ?
         (Maybe X here becomes P?)
         GlobalPoolingBiasStruct pools G to bias the output of P
         """
         g = self.global_pool(self.relu(self.bn(g)))
-        return self.fc(g[..., 0, 0])[..., None, None] + p
-
+        g = self.fc(g[..., 0, 0])[..., None, None]
+        return p + g
 
 
 class ConvBlock(nn.Module):
@@ -122,6 +122,42 @@ class ResBlock(nn.Module):
         out = self.batch2(self.conv2(out))
         out += identity  # skip connection
         return F.relu(out)
+
+
+class GPResBlock(nn.Module):
+    """
+    From "Accelerating Self-Play Learning in Go" (KataGo paper):
+
+    The residual block with global pooling bias structure as described in the paper
+
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    def __init__(self, n_conv_filters: int):
+        super(GPResBlock, self).__init__()
+        assert n_conv_filters % 2 == 0, 'n_conv_filters has to be even'
+        self.c_mid = n_conv_filters // 2
+        self.gpbs = GlobalPoolingBiasStruct(self.c_mid)
+        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
+        self.batch1 = nn.BatchNorm2d(n_conv_filters)
+        self.conv2 = nn.Conv2d(self.c_mid, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
+        self.batch2 = nn.BatchNorm2d(n_conv_filters)
+
+    def forward(self, x):
+        identity = x
+        # outputs [N, C, H, W]
+        out = F.relu(self.batch1(self.conv1(x)))
+        # use first c_pool layers, to bias the the other part 
+        # outputs [N, Cp, H, W]
+        print(out[:, :self.c_mid].shape)
+        print(self.c_mid)
+        # return torch.zeros(0)
+        out = self.gpbs(out[:, self.c_mid:], out[:, :self.c_mid])
+        # outputs [N, C, H, W]
+        out = self.batch2(self.conv2(out))
+        out += identity  # skip connection
+        return F.relu(out)
+
+
 
 
 class PolicyHead(nn.Module):
