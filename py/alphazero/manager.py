@@ -227,7 +227,7 @@ class AlphaZeroManager:
                 '--nnet-filename', model
             ])
 
-        self_play_cmd = ", ".join(map(str, self_play_cmd))
+        self_play_cmd = " ".join(map(str, self_play_cmd))
         self_play_proc = subprocess_util.Popen(self_play_cmd)
         timed_print(f'Running [{self_play_proc.pid}]: {self_play_cmd}')
         if model_gen < 0:
