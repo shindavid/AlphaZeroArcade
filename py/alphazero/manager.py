@@ -228,7 +228,8 @@ class AlphaZeroManager:
         else:
             self_play_cmd.extend([
                 '-G', 0,
-                '--nnet-filename', model
+                '--nnet-filename', model,
+                '--no-clear-dir',
             ])
 
         self_play_cmd = " ".join(map(str, self_play_cmd))
