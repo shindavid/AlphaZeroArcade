@@ -88,17 +88,34 @@ def main():
 
         remote_promote_cmd = ' '.join(map(
             pipes.quote, sys.argv + ['--promote-loop', '--c4-base-dir', Args.remote_c4_base_dir]))
-        promote_cmd = 'ssh %s "cd %s %s"' % (Args.remote_host, Args.remote_repo_path, remote_promote_cmd)
+        promote_cmd = 'ssh %s "cd %s; %s"' % (Args.remote_host, Args.remote_repo_path, remote_promote_cmd)
 
         timed_print(f'Running: {self_play_cmd}')
         timed_print(f'Running: {train_cmd}')
         timed_print(f'Running: {promote_cmd}')
-        procs.append(subprocess_util.Popen(self_play_cmd))
-        procs.append(subprocess_util.Popen(train_cmd, stdout=None))  # has the most interesting output
-        procs.append(subprocess_util.Popen(promote_cmd))
+
+        self_play_proc = subprocess_util.Popen(self_play_cmd)
+        train_proc = subprocess_util.Popen(train_cmd, stdout=None)  # has the most interesting output
+        promote_proc = subprocess_util.Popen(promote_cmd)
+        procs = [self_play_proc, train_proc, promote_proc]
 
         for proc in procs:
             proc.wait()
+
+        proc_cmd_stdout_list = [
+            (self_play_proc, self_play_cmd, manager.get_self_play_stdout()),
+            (promote_proc, promote_cmd, manager.get_promote_stdout()),
+        ]
+        for (proc, cmd, stdout) in proc_cmd_stdout_list:
+            if proc.returncode == 0:
+                continue
+            print('**************************************')
+            timed_print('Cmd failed: %s' % cmd)
+            print('**************************************')
+            tail_cmd = 'tail -n20 %s' % stdout
+            print(tail_cmd)
+            print('')
+            os.system(tail_cmd)
 
 
 if __name__ == '__main__':

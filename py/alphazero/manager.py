@@ -8,30 +8,32 @@ NOTE: to clearly differentiate the different types of files, I have invented the
 BASE_DIR/
          kill-file.txt
          self-play-data/
-             gen-0-{total_games}-{total_positions}/
+             gen-0/
+                 done.txt  # written after gen is complete
                  {timestamp}-{num_positions}.ptd
                  ...
-             gen-1-{total_games}-{total_positions}/
+             gen-1/
                  ...
              gen-2/
                  ...
              ...
          candidate-models/
-             epoch-0.ptj
-             epoch-1.ptj
-             epoch-2.ptj
+             gen-1-epoch-1.ptj
+             gen-1-epoch-2.ptj
+             gen-2-epoch-1.ptj
              ...
          checkpoints/
-             epoch-0.ptc
-             epoch-1.ptc
-             epoch-2.ptc
+             gen-1-epoch-1.ptc
+             gen-1-epoch-2.ptc
+             gen-2-epoch-1.ptc
              ...
         promoted-models/
-             gen-0.ptj ( -> ../candidate-models/epoch-0.ptj )
+             gen-1.ptj
+             gen-2.ptj
              ...
         gating_logs/
-             epoch-0.txt
-             epoch-1.txt
+             gen-1-epoch-1.txt
+             gen-1-epoch-2.txt
              ...
         stdouts/
              self-play.txt
@@ -67,6 +69,21 @@ Generation = int
 Epoch = int
 
 
+class PathInfo:
+    def __init__(self, path: str):
+        self.path: str = path
+        self.generation: Generation = -1
+        self.epoch: Epoch = -1
+
+        payload = os.path.split(path)[1].split('.')[0]
+        tokens = payload.split('-')
+        for t, token in enumerate(tokens):
+            if token == 'gen':
+                self.generation = int(tokens[t+1])
+            elif token == 'epoch':
+                self.epoch = int(tokens[t+1])
+
+
 class AlphaZeroManager:
     def __init__(self, c4_base_dir: str):
         self.py_cuda_device: int = 1  # TODO: make this configurable, this is specific to dshin's setup
@@ -76,7 +93,8 @@ class AlphaZeroManager:
         self.n_gen0_games = 1000
         self.c4_base_dir: str = c4_base_dir
         self.silence_promote_skip_msgs = False
-        self.last_tested_candidate_model_epoch = -1
+        self.last_tested_candidate_model_gen_epoch = (-1, -1)
+        self.ran_gen0_self_play = False
 
         self.kill_filename = os.path.join(self.c4_base_dir, 'kill-file.txt')
         self.candidate_models_dir = os.path.join(self.c4_base_dir, 'candidate-models')
@@ -94,7 +112,6 @@ class AlphaZeroManager:
         os.makedirs(self.stdouts_dir, exist_ok=True)
 
     def init_logging(self, filename: str):
-        timed_print(f'AlphaZeroManager init_logging: {filename}')
         self.log_file = open(filename, 'a')
         sys.stdout = self
         sys.stderr = self
@@ -121,11 +138,11 @@ class AlphaZeroManager:
         with open(self.kill_filename, 'w') as _:
             pass
 
-    def get_candidate_model_filename(self, epoch: Epoch) -> str:
-        return os.path.join(self.candidate_models_dir, f'epoch-{epoch}.ptj')
+    def get_candidate_model_filename(self, gen: Generation, epoch: Epoch) -> str:
+        return os.path.join(self.candidate_models_dir, f'gen-{gen}-epoch-{epoch}.ptj')
 
-    def get_checkpoint_filename(self, epoch: Epoch) -> str:
-        return os.path.join(self.checkpoints_dir, f'epoch-{epoch}.ptc')
+    def get_checkpoint_filename(self, gen: Generation, epoch: Epoch) -> str:
+        return os.path.join(self.checkpoints_dir, f'gen-{gen}-epoch-{epoch}.ptc')
 
     def get_promoted_model_filename(self, gen: Generation) -> str:
         return os.path.join(self.promoted_models_dir, f'gen-{gen}.ptj')
@@ -133,8 +150,8 @@ class AlphaZeroManager:
     def get_self_play_data_subdir(self, gen: Generation) -> str:
         return os.path.join(self.self_play_data_dir, f'gen-{gen}')
 
-    def get_gating_log_filename(self, epoch: Epoch) -> str:
-        return os.path.join(self.gating_logs_dir, f'epoch-{epoch}.txt')
+    def get_gating_log_filename(self, gen: Generation, epoch: Epoch) -> str:
+        return os.path.join(self.gating_logs_dir, f'gen-{gen}-epoch-{epoch}.txt')
 
     def get_self_play_stdout(self) -> str:
         return os.path.join(self.stdouts_dir, 'self-play.txt')
@@ -145,97 +162,99 @@ class AlphaZeroManager:
     def get_promote_stdout(self) -> str:
         return os.path.join(self.stdouts_dir, 'promote.txt')
 
-    def get_latest_candidate_model_epoch(self) -> Epoch:
-        model_files = list(natsorted(f for f in os.listdir(self.candidate_models_dir)))
-        model_files = [f for f in model_files if f.startswith('epoch-') and f.endswith('.ptj')]
-        if not model_files:
-            return -1
-        return int(model_files[-1].split('.')[0].split('-')[1])
+    @staticmethod
+    def get_ordered_subpaths(path: str) -> List[str]:
+        subpaths = list(natsorted(f for f in os.listdir(path)))
+        return [f for f in subpaths if not f.startswith('.')]
 
-    def get_latest_checkpoint_epoch(self) -> Epoch:
-        checkpoint_files = list(natsorted(f for f in os.listdir(self.checkpoints_dir)))
-        checkpoint_files = [f for f in checkpoint_files if f.startswith('epoch-') and f.endswith('.ptc')]
-        if not checkpoint_files:
-            return -1
-        return int(checkpoint_files[-1].split('.')[0].split('-')[1])
+    @staticmethod
+    def get_latest_full_subpath(path: str) -> Optional[str]:
+        subpaths = AlphaZeroManager.get_ordered_subpaths(path)
+        return os.path.join(path, subpaths[-1]) if subpaths else None
+
+    @staticmethod
+    def get_latest_info(path: str) -> Optional[PathInfo]:
+        subpaths = AlphaZeroManager.get_ordered_subpaths(path)
+        if not subpaths:
+            return None
+        return PathInfo(subpaths[-1])
+
+    def get_latest_candidate_model_info(self) -> Optional[PathInfo]:
+        return AlphaZeroManager.get_latest_info(self.candidate_models_dir)
+
+    def get_latest_checkpoint_info(self) -> Optional[PathInfo]:
+        return AlphaZeroManager.get_latest_info(self.checkpoints_dir)
 
     def get_latest_promoted_model_generation(self) -> Generation:
-        model_files = list(natsorted(f for f in os.listdir(self.promoted_models_dir)))
-        model_files = [f for f in model_files if f.startswith('gen-') and f.endswith('.ptj')]
-        if not model_files:
-            return -1
-        return int(model_files[-1].split('.')[0].split('-')[1])
+        info = AlphaZeroManager.get_latest_info(self.promoted_models_dir)
+        return 0 if info is None else info.generation
 
     def get_latest_self_play_data_generation(self) -> Generation:
-        self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_data_dir)))
-        self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen-')]
-        if not self_play_subdirs:
-            return -1
-        return int(self_play_subdirs[-1].split('-')[1])
+        info = AlphaZeroManager.get_latest_info(self.self_play_data_dir)
+        return 0 if info is None else info.generation
 
     def get_latest_candidate_model_filename(self) -> Optional[str]:
-        model_files = list(natsorted(f for f in os.listdir(self.candidate_models_dir)))
-        model_files = [f for f in model_files if f.startswith('epoch-') and f.endswith('.ptj')]
-        if not model_files:
-            return None
-        return os.path.join(self.candidate_models_dir, model_files[-1])
+        return AlphaZeroManager.get_latest_full_subpath(self.candidate_models_dir)
 
     def get_latest_promoted_model_filename(self) -> Optional[str]:
-        model_files = list(natsorted(f for f in os.listdir(self.promoted_models_dir)))
-        model_files = [f for f in model_files if f.startswith('gen-') and f.endswith('.ptj')]
-        if not model_files:
-            return None
-        return os.path.join(self.promoted_models_dir, model_files[-1])
+        return AlphaZeroManager.get_latest_full_subpath(self.promoted_models_dir)
 
     def get_latest_self_play_data_subdir(self) -> Optional[str]:
-        self_play_subdirs = list(natsorted(f for f in os.listdir(self.self_play_data_dir)))
-        self_play_subdirs = [f for f in self_play_subdirs if f.startswith('gen-')]
-        if not self_play_subdirs:
-            return None
-        return os.path.join(self.self_play_data_dir, self_play_subdirs[-1])
+        return AlphaZeroManager.get_latest_full_subpath(self.self_play_data_dir)
 
     def self_play(self):
         game_gen = self.get_latest_self_play_data_generation()
         model_gen = self.get_latest_promoted_model_generation()
-        if game_gen >= 0 > model_gen:
+        gen0 = model_gen == 0
+        if (game_gen > 0 >= model_gen) or (gen0 and self.ran_gen0_self_play):
             timed_print('No model to use for self-play.  Waiting for model to be promoted...')
             time.sleep(5)
             return
 
+        self.ran_gen0_self_play = True
         timed_print(f'Running self-play game-gen:{game_gen} model-gen:{model_gen}')
-        games_dir = self.get_self_play_data_subdir(model_gen + 1)
+        games_dir = self.get_self_play_data_subdir(model_gen)
         model = self.get_promoted_model_filename(model_gen)
         self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
         self_play_cmd = [
             self_play_bin,
             '-g', games_dir,
-            '--nnet-filename', model
         ]
-        if model_gen < 0:
+        if gen0:
             self_play_cmd.extend([
                 '-G', self.n_gen0_games,
                 '--uniform-model',
             ])
         else:
-            self_play_cmd.extend(['-G', 0])
+            self_play_cmd.extend([
+                '-G', 0,
+                '--nnet-filename', model
+            ])
 
-        self_play_cmd = list(map(str, self_play_cmd))
-        self_play_proc = subprocess_util.Popen(self_play_cmd, shell=False)
-        timed_print(f'Running [{self_play_proc.pid}]: {" ".join(self_play_cmd)}')
-        if model_gen < 0:
+        self_play_cmd = " ".join(map(str, self_play_cmd))
+        self_play_proc = subprocess_util.Popen(self_play_cmd)
+        timed_print(f'Running [{self_play_proc.pid}]: {self_play_cmd}')
+        if gen0:
             subprocess_util.wait_for(self_play_proc)
+        else:
+            timed_print(f'Looping until model promotion ({model_gen})...')
+            while True:
+                cur_model_gen = self.get_latest_promoted_model_generation()
+                if cur_model_gen <= model_gen:
+                    time.sleep(5)
+                    continue
+                break
 
-        timed_print(f'Killing self play proc {self_play_proc.pid}...')
-        self_play_proc.kill()
-        self_play_proc.wait(300)
-        timed_print(f'Self play proc killed!')
-        AlphaZeroManager.rename_games_dir(games_dir)
+            timed_print(f'Detected model promotion ({model_gen} -> {cur_model_gen})!')
+            timed_print(f'Killing self play proc {self_play_proc.pid}...')
+            self_play_proc.kill()
+            self_play_proc.wait(300)
+            timed_print(f'Self play proc killed!')
+
+        AlphaZeroManager.finalize_games_dir(games_dir)
 
     def train(self):
-        epoch = self.get_latest_checkpoint_epoch()
         print('******************************')
-        print(f'Train epoch {epoch + 1}')
-
         loader = DataLoader(self.self_play_data_dir)
         if loader.n_total_games < self.n_gen0_games:
             timed_print(f'Not enough games to train: {loader.n_total_games} < {self.n_gen0_games}')
@@ -243,18 +262,30 @@ class AlphaZeroManager:
             time.sleep(5)
             return
 
-        if epoch >= 0:
-            checkpoint_filename = self.get_checkpoint_filename(epoch)
+        checkpoint_info = self.get_latest_checkpoint_info()
+        if checkpoint_info is None:
+            gen, epoch = 1, 0
+            input_shape = loader.get_input_shape()
+            net = C4Net(input_shape)
+            timed_print(f'Creating new net with input shape {input_shape}')
+            timed_print(f'Train gen:{gen} epoch:{epoch + 1}')
+        else:
+            gen, epoch = checkpoint_info.generation, checkpoint_info.epoch
+            checkpoint_filename = self.get_checkpoint_filename(gen, epoch)
             timed_print(f'Loading checkpoint: {checkpoint_filename}')
-            # cp the checkpoint to somewhere local first
+
+            # copying the checkpoint to somewhere local first seems to bypass some sort of filesystem issue
             with tempfile.TemporaryDirectory() as tmp:
                 tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
                 net = C4Net.load_checkpoint(tmp_checkpoint_filename)
-        else:
-            input_shape = loader.get_input_shape()
-            timed_print(f'Creating new net with input shape {input_shape}')
-            net = C4Net(input_shape)
+
+            latest_promoted_gen = self.get_latest_promoted_model_generation()
+            if latest_promoted_gen >= gen:
+                gen = latest_promoted_gen + 1
+                epoch = 0
+
+            timed_print(f'Train gen:{gen} epoch:{epoch + 1}')
 
         net.cuda(device=self.py_cuda_device)
         net.train()
@@ -273,7 +304,7 @@ class AlphaZeroManager:
 
         stats = TrainingStats()
 
-        # TODO: more efficient data loading via torch pytorch DataLoader
+        # TODO: more efficient data loading via pytorch DataLoader
         for i, data in enumerate(loader):
             inputs, value_labels, policy_labels = data
 
@@ -292,44 +323,46 @@ class AlphaZeroManager:
             loss.backward()
             optimizer.step()
 
-        timed_print(f'Epoch {epoch} complete')
+        timed_print(f'Gen {gen} epoch {epoch} complete')
         stats.dump()
 
-        checkpoint_filename = self.get_checkpoint_filename(epoch + 1)
-        candidate_filename = self.get_candidate_model_filename(epoch + 1)
+        checkpoint_filename = self.get_checkpoint_filename(gen, epoch + 1)
+        candidate_filename = self.get_candidate_model_filename(gen, epoch + 1)
         net.save_checkpoint(checkpoint_filename)
         net.save_model(candidate_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
         timed_print(f'Candidate saved: {candidate_filename}')
 
     def promote(self):
-        candidate_model_epoch = self.get_latest_candidate_model_epoch()
+        candidate_model_info = self.get_latest_candidate_model_info()
 
-        if candidate_model_epoch == -1:
+        if candidate_model_info is None:
+            # candidate_model_epoch = self.get_latest_candidate_model_epoch()
             if not self.silence_promote_skip_msgs:
                 timed_print(f'No candidate models available. Waiting...')
             time.sleep(5)
             self.silence_promote_skip_msgs = True
             return
 
-        if candidate_model_epoch <= self.last_tested_candidate_model_epoch:
+        gen, epoch = candidate_model_info.generation, candidate_model_info.epoch
+        if (gen, epoch) <= self.last_tested_candidate_model_gen_epoch:
             if not self.silence_promote_skip_msgs:
-                timed_print(f'Latest candidate was already tested ({candidate_model_epoch})')
+                timed_print(f'Latest candidate was already tested ({gen}, {epoch})')
             time.sleep(5)
             self.silence_promote_skip_msgs = True
             return
 
         self.silence_promote_skip_msgs = False
-        self.last_tested_candidate_model_epoch = candidate_model_epoch
+        self.last_tested_candidate_model_gen_epoch = (gen, epoch)
 
-        candidate_model_filename = self.get_candidate_model_filename(candidate_model_epoch)
+        candidate_model_filename = self.get_candidate_model_filename(gen, epoch)
         latest_promoted_model_filename = self.get_latest_promoted_model_filename()
 
         if latest_promoted_model_filename is None:
             timed_print(f'First promotion test: auto-pass!')
             promote = True
         else:
-            gating_log_filename = self.get_gating_log_filename(candidate_model_epoch)
+            gating_log_filename = self.get_gating_log_filename(gen, epoch)
 
             self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
             n_games = GatingArgs.num_games
@@ -337,7 +370,8 @@ class AlphaZeroManager:
                 self_play_bin,
                 '-G', n_games,
                 '-i', GatingArgs.mcts_iters,
-                '-t', GatingArgs.temperature,
+                '--batch-size-limit', 64,  # appears best on dshin laptop based on ad-hoc testing
+                '-p', 50,  # appears best on dshin laptop based on ad-hoc testing
                 '--nnet-filename', latest_promoted_model_filename,
                 '--nnet-filename2', candidate_model_filename,
                 '--grade-moves',
@@ -359,11 +393,12 @@ class AlphaZeroManager:
 
         if promote:
             src = candidate_model_filename
-            dst = self.get_promoted_model_filename(candidate_model_epoch)
-            os.symlink(src, dst)
+            dst = self.get_promoted_model_filename(gen)
+            timed_print(f'Promotion: {src} -> {dst}')
+            shutil.copy(src, dst)
 
     @staticmethod
-    def rename_games_dir(games_dir: str):
+    def finalize_games_dir(games_dir: str):
         n_positions = 0
         n_games = 0
         for filename in os.listdir(games_dir):
@@ -371,10 +406,11 @@ class AlphaZeroManager:
             n_positions += n
             n_games += 1
 
-        src = games_dir
-        tgt = f'{games_dir}-{n_games}-{n_positions}'
-        os.system(f'mv {src} {tgt}')
-        return tgt
+        done_file = os.path.join(games_dir, 'done.txt')
+        with open(done_file, 'w') as f:
+            f.write(f'n_games={n_games}\n')
+            f.write(f'n_positions={n_positions}\n')
+            f.write(f'done\n')
 
     def self_play_loop(self):
         try:
@@ -384,6 +420,7 @@ class AlphaZeroManager:
         except (Exception,):
             traceback.print_exc()
             self.touch_kill_file()
+            sys.exit(1)
 
     def train_loop(self):
         try:
@@ -393,6 +430,7 @@ class AlphaZeroManager:
         except (Exception,):
             traceback.print_exc()
             self.touch_kill_file()
+            sys.exit(1)
 
     def promote_loop(self):
         try:
@@ -402,6 +440,7 @@ class AlphaZeroManager:
         except (Exception,):
             traceback.print_exc()
             self.touch_kill_file()
+            sys.exit(1)
 
 
 class SelfPlayGameMetadata:
@@ -417,18 +456,22 @@ class GenerationMetadata:
         self._loaded = False
         self.full_gen_dir = full_gen_dir
         self._game_metadata_list = []
+
+        done_file = os.path.join(full_gen_dir, 'done.txt')
+        if os.path.isfile(done_file):
+            with open(done_file, 'r') as f:
+                lines = list(f.readlines())
+
+            if len(lines) >= 3:
+                assert lines[0].startswith('n_games='), lines
+                assert lines[1].startswith('n_positions='), lines
+                self.n_games = int(lines[0].split('=')[1].strip())
+                self.n_positions = int(lines[1].split('=')[1].strip())
+                return
+
         self.n_positions = 0
         self.n_games = 0
-
-        gen_subdir = os.path.split(full_gen_dir)[1]  # gen-3 or gen-3-{games}-{positions}
-        tokens = gen_subdir.split('-')
-        n = len(tokens)
-        assert n in (2, 4), full_gen_dir
-        if len(tokens) == 2:
-            self.load()
-        else:
-            self.n_games = int(tokens[2])
-            self.n_positions = int(tokens[3])
+        self.load()
 
     @property
     def game_metadata_list(self):
@@ -441,7 +484,7 @@ class GenerationMetadata:
 
         self._loaded = True
         for filename in os.listdir(self.full_gen_dir):
-            if filename.startswith('.'):
+            if filename.startswith('.') or filename == 'done.txt':
                 continue
             full_filename = os.path.join(self.full_gen_dir, filename)
             game_metadata = SelfPlayGameMetadata(full_filename)

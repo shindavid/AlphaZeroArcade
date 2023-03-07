@@ -62,7 +62,6 @@ class OptimizationArgParams:
     }
 
     gating_params = {
-        'temperature': Param('-t', '--temperature', 0.2, 'mcts player temperature'),
         'mcts_iters': Param('-i', '--mcts-iters', 300, 'num mcts player iters'),
         'num_games': Param('-g', '--num-games', 200, 'num games to play'),
         'promotion_win_rate': Param('-W', '--promotion-win-rate', 0.5, 'required win rate for promotion')
@@ -84,7 +83,6 @@ class OptimizationArgs:
         value_loss_lambda: float
 
     class Gating:
-        temperature: float
         mcts_iters: int
         num_games: int
         promotion_win_rate: float
