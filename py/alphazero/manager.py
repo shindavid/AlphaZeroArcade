@@ -364,7 +364,8 @@ class AlphaZeroManager:
                 self_play_bin,
                 '-G', n_games,
                 '-i', GatingArgs.mcts_iters,
-                '-t', GatingArgs.temperature,
+                '--batch-size-limit', 64,  # appears best on dshin laptop based on ad-hoc testing
+                '-p', 50,  # appears best on dshin laptop based on ad-hoc testing
                 '--nnet-filename', latest_promoted_model_filename,
                 '--nnet-filename2', candidate_model_filename,
                 '--grade-moves',
