@@ -232,9 +232,9 @@ class AlphaZeroManager:
                 '--no-clear-dir',
             ])
 
-        self_play_cmd = " ".join(map(str, self_play_cmd))
+        self_play_cmd = list(map(str, self_play_cmd))
         self_play_proc = subprocess_util.Popen(self_play_cmd)
-        timed_print(f'Running [{self_play_proc.pid}]: {self_play_cmd}')
+        timed_print(f'Running [{self_play_proc.pid}]: {" ".join(self_play_cmd)}')
         if gen0:
             subprocess_util.wait_for(self_play_proc)
         else:
