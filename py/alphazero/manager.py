@@ -260,13 +260,12 @@ class AlphaZeroManager:
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             gen, epoch = 1, 0
-            print(f'Train gen:{gen} epoch:{epoch + 1}')
             input_shape = loader.get_input_shape()
-            timed_print(f'Creating new net with input shape {input_shape}')
             net = C4Net(input_shape)
+            timed_print(f'Creating new net with input shape {input_shape}')
+            timed_print(f'Train gen:{gen} epoch:{epoch + 1}')
         else:
             gen, epoch = checkpoint_info.generation, checkpoint_info.epoch
-            print(f'Train gen:{gen} epoch:{epoch + 1}')
             checkpoint_filename = self.get_checkpoint_filename(gen, epoch)
             timed_print(f'Loading checkpoint: {checkpoint_filename}')
 
@@ -276,10 +275,12 @@ class AlphaZeroManager:
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
                 net = C4Net.load_checkpoint(tmp_checkpoint_filename)
 
-            next_gen = self.get_latest_promoted_model_generation()
-            if next_gen > gen:
-                gen = next_gen
+            latest_promoted_gen = self.get_latest_promoted_model_generation()
+            if latest_promoted_gen >= gen:
+                gen = latest_promoted_gen + 1
                 epoch = 0
+
+            timed_print(f'Train gen:{gen} epoch:{epoch + 1}')
 
         net.cuda(device=self.py_cuda_device)
         net.train()
@@ -298,7 +299,7 @@ class AlphaZeroManager:
 
         stats = TrainingStats()
 
-        # TODO: more efficient data loading via torch pytorch DataLoader
+        # TODO: more efficient data loading via pytorch DataLoader
         for i, data in enumerate(loader):
             inputs, value_labels, policy_labels = data
 
@@ -387,7 +388,7 @@ class AlphaZeroManager:
 
         if promote:
             src = candidate_model_filename
-            dst = self.get_promoted_model_filename(gen + 1)
+            dst = self.get_promoted_model_filename(gen)
             timed_print(f'Promotion: {src} -> {dst}')
             shutil.copy(src, dst)
 
