@@ -259,8 +259,8 @@ class AlphaZeroManager:
 
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
-            gen, epoch = 1, 1
-            print(f'Train gen:1 epoch:1')
+            gen, epoch = 1, 0
+            print(f'Train gen:{gen} epoch:{epoch + 1}')
             input_shape = loader.get_input_shape()
             timed_print(f'Creating new net with input shape {input_shape}')
             net = C4Net(input_shape)
@@ -275,6 +275,11 @@ class AlphaZeroManager:
                 tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
                 net = C4Net.load_checkpoint(tmp_checkpoint_filename)
+
+            next_gen = self.get_latest_promoted_model_generation()
+            if next_gen > gen:
+                gen = next_gen
+                epoch = 0
 
         net.cuda(device=self.py_cuda_device)
         net.train()
@@ -381,7 +386,7 @@ class AlphaZeroManager:
 
         if promote:
             src = candidate_model_filename
-            dst = self.get_promoted_model_filename(gen)
+            dst = self.get_promoted_model_filename(gen + 1)
             timed_print(f'Promotion: {src} -> {dst}')
             shutil.copy(src, dst)
 
