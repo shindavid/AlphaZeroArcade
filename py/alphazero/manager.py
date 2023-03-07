@@ -416,6 +416,7 @@ class AlphaZeroManager:
     def self_play_loop(self):
         try:
             self.init_logging(self.get_self_play_stdout())
+            print('')
             while not self.kill_file_exists():
                 self.self_play()
         except (Exception,):
@@ -426,6 +427,7 @@ class AlphaZeroManager:
     def train_loop(self):
         try:
             self.init_logging(self.get_train_stdout())
+            print('')
             while not self.kill_file_exists():
                 self.train()
         except (Exception,):
@@ -436,6 +438,7 @@ class AlphaZeroManager:
     def promote_loop(self):
         try:
             self.init_logging(self.get_promote_stdout())
+            print('')
             while not self.kill_file_exists():
                 self.promote()
         except (Exception,):
