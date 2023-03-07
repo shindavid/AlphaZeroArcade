@@ -93,6 +93,7 @@ class AlphaZeroManager:
         self.c4_base_dir: str = c4_base_dir
         self.silence_promote_skip_msgs = False
         self.last_tested_candidate_model_gen_epoch = (-1, -1)
+        self.ran_gen0_self_play = False
 
         self.kill_filename = os.path.join(self.c4_base_dir, 'kill-file.txt')
         self.candidate_models_dir = os.path.join(self.c4_base_dir, 'candidate-models')
@@ -185,11 +186,11 @@ class AlphaZeroManager:
 
     def get_latest_promoted_model_generation(self) -> Generation:
         info = AlphaZeroManager.get_latest_info(self.promoted_models_dir)
-        return -1 if info is None else info.generation
+        return 0 if info is None else info.generation
 
     def get_latest_self_play_data_generation(self) -> Generation:
         info = AlphaZeroManager.get_latest_info(self.self_play_data_dir)
-        return -1 if info is None else info.generation
+        return 0 if info is None else info.generation
 
     def get_latest_candidate_model_filename(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.candidate_models_dir)
@@ -203,20 +204,22 @@ class AlphaZeroManager:
     def self_play(self):
         game_gen = self.get_latest_self_play_data_generation()
         model_gen = self.get_latest_promoted_model_generation()
-        if game_gen >= 0 > model_gen:
+        gen0 = model_gen == 0
+        if (game_gen > 0 >= model_gen) or (gen0 and self.ran_gen0_self_play):
             timed_print('No model to use for self-play.  Waiting for model to be promoted...')
             time.sleep(5)
             return
 
+        self.ran_gen0_self_play = True
         timed_print(f'Running self-play game-gen:{game_gen} model-gen:{model_gen}')
-        games_dir = self.get_self_play_data_subdir(model_gen + 1)
+        games_dir = self.get_self_play_data_subdir(model_gen)
         model = self.get_promoted_model_filename(model_gen)
         self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
         self_play_cmd = [
             self_play_bin,
             '-g', games_dir,
         ]
-        if model_gen < 0:
+        if gen0:
             self_play_cmd.extend([
                 '-G', self.n_gen0_games,
                 '--uniform-model',
@@ -230,7 +233,7 @@ class AlphaZeroManager:
         self_play_cmd = " ".join(map(str, self_play_cmd))
         self_play_proc = subprocess_util.Popen(self_play_cmd)
         timed_print(f'Running [{self_play_proc.pid}]: {self_play_cmd}')
-        if model_gen < 0:
+        if gen0:
             subprocess_util.wait_for(self_play_proc)
         else:
             timed_print(f'Looping until model promotion ({model_gen})...')
@@ -239,6 +242,7 @@ class AlphaZeroManager:
                 if cur_model_gen <= model_gen:
                     time.sleep(5)
                     continue
+                break
 
             timed_print(f'Detected model promotion ({model_gen} -> {cur_model_gen})!')
             timed_print(f'Killing self play proc {self_play_proc.pid}...')
