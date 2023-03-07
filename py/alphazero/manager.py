@@ -8,10 +8,11 @@ NOTE: to clearly differentiate the different types of files, I have invented the
 BASE_DIR/
          kill-file.txt
          self-play-data/
-             gen-0-{total_games}-{total_positions}/
+             gen-0/
+                 done.txt  # written after gen is complete
                  {timestamp}-{num_positions}.ptd
                  ...
-             gen-1-{total_games}-{total_positions}/
+             gen-1/
                  ...
              gen-2/
                  ...
@@ -250,7 +251,7 @@ class AlphaZeroManager:
             self_play_proc.wait(300)
             timed_print(f'Self play proc killed!')
 
-        AlphaZeroManager.rename_games_dir(games_dir)
+        AlphaZeroManager.finalize_games_dir(games_dir)
 
     def train(self):
         print('******************************')
@@ -397,7 +398,7 @@ class AlphaZeroManager:
             shutil.copy(src, dst)
 
     @staticmethod
-    def rename_games_dir(games_dir: str):
+    def finalize_games_dir(games_dir: str):
         n_positions = 0
         n_games = 0
         for filename in os.listdir(games_dir):
@@ -405,10 +406,11 @@ class AlphaZeroManager:
             n_positions += n
             n_games += 1
 
-        src = games_dir
-        tgt = f'{games_dir}-{n_games}-{n_positions}'
-        os.system(f'mv {src} {tgt}')
-        return tgt
+        done_file = os.path.join(games_dir, 'done.txt')
+        with open(done_file, 'w') as f:
+            f.write(f'n_games={n_games}\n')
+            f.write(f'n_positions={n_positions}\n')
+            f.write(f'done\n')
 
     def self_play_loop(self):
         try:
@@ -454,18 +456,22 @@ class GenerationMetadata:
         self._loaded = False
         self.full_gen_dir = full_gen_dir
         self._game_metadata_list = []
+
+        done_file = os.path.join(full_gen_dir, 'done.txt')
+        if os.path.isfile(done_file):
+            with open(done_file, 'r') as f:
+                lines = list(f.readlines())
+
+            if len(lines) >= 3:
+                assert lines[0].startswith('n_games='), lines
+                assert lines[1].startswith('n_positions='), lines
+                self.n_games = int(lines[0].split('=')[1].strip())
+                self.n_positions = int(lines[1].split('=')[1].strip())
+                return
+
         self.n_positions = 0
         self.n_games = 0
-
-        gen_subdir = os.path.split(full_gen_dir)[1]  # gen-3 or gen-3-{games}-{positions}
-        tokens = gen_subdir.split('-')
-        n = len(tokens)
-        assert n in (2, 4), full_gen_dir
-        if len(tokens) == 2:
-            self.load()
-        else:
-            self.n_games = int(tokens[2])
-            self.n_positions = int(tokens[3])
+        self.load()
 
     @property
     def game_metadata_list(self):
@@ -478,7 +484,7 @@ class GenerationMetadata:
 
         self._loaded = True
         for filename in os.listdir(self.full_gen_dir):
-            if filename.startswith('.'):
+            if filename.startswith('.') or filename == 'done.txt':
                 continue
             full_filename = os.path.join(self.full_gen_dir, filename)
             game_metadata = SelfPlayGameMetadata(full_filename)
