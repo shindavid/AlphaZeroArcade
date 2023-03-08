@@ -643,6 +643,11 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 
   constexpr float eps = 1e-6;  // needed when N == 0
   PVec PUCT = V + params_.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+
+  PVec n_forced = (P * 2.0 * N.sum()).sqrt();
+  auto F = (N < n_forced).template cast<float>();
+  PUCT = PUCT * (1 - F) + F * 1e+6;
+
   PUCT *= 1 - E;
 
 //  // value_avg used for debugging
