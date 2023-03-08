@@ -16,37 +16,40 @@ from util.py_util import timed_print
 
 
 class Args:
-    c4_base_dir: str
+    c4_base_dir_root: str
+    tag: str
     remote_host: str
     remote_repo_path: str
-    remote_c4_base_dir: str
+    remote_c4_base_dir_root: str
     self_play_loop: bool
     train_loop: bool
     promote_loop: bool
 
     @staticmethod
     def load(args):
-        Args.c4_base_dir = args.c4_base_dir
+        Args.c4_base_dir_root = args.c4_base_dir_root
+        Args.tag = args.tag
         Args.remote_host = args.remote_host
         Args.remote_repo_path = args.remote_repo_path
-        Args.remote_c4_base_dir = args.remote_c4_base_dir
+        Args.remote_c4_base_dir_root = args.remote_c4_base_dir_root
         Args.self_play_loop = args.self_play_loop
         Args.train_loop = args.train_loop
         Args.promote_loop = args.promote_loop
 
-        assert Args.c4_base_dir, 'Required option: -d'
+        assert Args.tag, 'Required option: -t'
 
 
 def load_args():
     parser = argparse.ArgumentParser()
     cfg = Config.instance()
 
-    cfg.add_parser_argument('c4.base_dir', parser, '-d', '--c4-base-dir', help='base-dir for game/model files')
+    parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
+    cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root', help='base-dir-root for game/model files')
     cfg.add_parser_argument('remote.host', parser, '-H', '--remote-host', help='remote host for model training')
     cfg.add_parser_argument('remote.repo.path', parser, '-P', '--remote-repo-path',
                             help='remote repo path for model training')
-    cfg.add_parser_argument('remote.c4.base_dir', parser, '-D', '--remote-c4-base-dir',
-                            help='--c4-base-dir on remote host')
+    cfg.add_parser_argument('remote.c4.base_dir_root', parser, '-D', '--remote-c4-base-dir-root',
+                            help='--c4-base-dir-root on remote host')
     parser.add_argument('--self-play-loop', action='store_true', help='run self-play loop')
     parser.add_argument('--train-loop', action='store_true', help='run train loop')
     parser.add_argument('--promote-loop', action='store_true', help='run promote loop')
@@ -59,7 +62,8 @@ def load_args():
 
 def main():
     load_args()
-    manager = AlphaZeroManager(Args.c4_base_dir)
+    c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
+    manager = AlphaZeroManager(c4_base_dir)
 
     if Args.self_play_loop:
         manager.self_play_loop()
@@ -72,7 +76,7 @@ def main():
 
         assert Args.remote_host, 'Required option: -H'
         assert Args.remote_repo_path, 'Required option: -P'
-        assert Args.remote_c4_base_dir, 'Required option: -D'
+        assert Args.remote_c4_base_dir_root, 'Required option: -D'
 
         procs: List[subprocess.Popen] = []
 
@@ -87,7 +91,7 @@ def main():
         train_cmd = ' '.join(map(pipes.quote, sys.argv + ['--train-loop']))
 
         remote_promote_cmd = ' '.join(map(
-            pipes.quote, sys.argv + ['--promote-loop', '--c4-base-dir', Args.remote_c4_base_dir]))
+            pipes.quote, sys.argv + ['--promote-loop', '--c4-base-dir-root', Args.remote_c4_base_dir_root]))
         promote_cmd = 'ssh %s "cd %s; %s"' % (Args.remote_host, Args.remote_repo_path, remote_promote_cmd)
 
         timed_print(f'Running: {self_play_cmd}')
