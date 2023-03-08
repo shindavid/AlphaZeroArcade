@@ -741,7 +741,7 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
 , timeout_duration_(timeout_duration)
 , batch_size_limit_(batch_size)
 {
-  evaluation_data_batch_ = new evaluation_data_t[batch_size];
+  evaluation_data_batch_ = new eval_ptr_data_t[batch_size];
   torch_input_gpu_ = input_batch_.asTorch().clone().to(torch::kCUDA);
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -872,7 +872,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
 
   record_for_profiling(kCopyingToPool);
   for (int i = 0; i < batch_reserve_index_; ++i) {
-    evaluation_data_t &edata = evaluation_data_batch_[i];
+    eval_ptr_data_t &edata = evaluation_data_batch_[i];
     auto &policy = policy_batch_.eigenSlab(i);
     auto &value = value_batch_.eigenSlab(i);
 
@@ -885,7 +885,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   std::unique_lock<std::mutex> lock(cache_mutex_);
   record_for_profiling(kFinishingUp);
   for (int i = 0; i < batch_reserve_index_; ++i) {
-    const evaluation_data_t &edata = evaluation_data_batch_[i];
+    const eval_ptr_data_t &edata = evaluation_data_batch_[i];
     cache_.insert(edata.cache_key, edata.eval_ptr);
   }
   lock.unlock();

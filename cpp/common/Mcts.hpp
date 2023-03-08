@@ -569,7 +569,7 @@ private:
     using cache_key_t = StateEvaluationKey<GameState>;
     using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
 
-    struct evaluation_data_t {
+    struct eval_ptr_data_t {
       NNEvaluation_asptr eval_ptr;
 
       cache_key_t cache_key;
@@ -639,7 +639,7 @@ private:
     FullPolicyArray policy_batch_;
     FullValueArray value_batch_;
     FullInputTensor input_batch_;
-    evaluation_data_t* evaluation_data_batch_;
+    eval_ptr_data_t* evaluation_data_batch_;
 
     common::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;
