@@ -87,6 +87,9 @@ int main(int ac, char* av[]) {
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
   Args args;
 
+  mcts_params.dirichlet_mult = 0;
+  mcts_params.dirichlet_alpha = 0;
+
   po2::options_description raw_desc("General options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help")
       .add(perfect_play_params.make_options_description())
