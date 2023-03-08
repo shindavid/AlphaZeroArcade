@@ -562,9 +562,16 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
     lock->lock();
   }
-  bool apply_root_temp = tree->is_root() && !sim_params_->disable_noise;
-  float inv_temp = apply_root_temp ? (1.0 / params_.root_softmax_temperature) : 1.0;
-  tree->_set_local_policy_prob_distr(eigen_util::softmax(data->evaluation->local_policy_logit_distr() * inv_temp));
+
+  LocalPolicyProbDistr P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
+  if (tree->is_root() && !sim_params_->disable_noise) {
+    if (params_.dirichlet_mult) {
+      mcts_->add_dirichlet_noise(P);
+    }
+    P = P.pow(1.0 / params_.root_softmax_temperature);
+    P /= P.sum();
+  }
+  tree->_set_local_policy_prob_distr(P);
   tree->_set_evaluation(data->evaluation);
   tree->_set_evaluation_state(Node::kSet);
 }
@@ -614,11 +621,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 
   using PVec = LocalPolicyProbDistr;
 
-  PVec P = tree->_local_policy_prob_distr();
-  if (tree->is_root() && !tree->disable_noise() && params_.dirichlet_mult) {
-    mcts_->add_dirichlet_noise(P);
-  }
-
+  const PVec& P = tree->_local_policy_prob_distr();
   const int rows = P.rows();
   assert(rows == int(tree->_valid_action_mask().count()));
 
