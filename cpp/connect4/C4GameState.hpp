@@ -54,6 +54,7 @@ public:
   GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;
+  int get_move_number() const;
 
   template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;
   void xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const;

@@ -104,6 +104,9 @@ inline std::string GameState::compact_repr() const {
   return buffer;
 }
 
+inline int GameState::get_move_number() const {
+  return 1 + std::popcount(full_mask_);
+}
 
 template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(InputSlab& tensor) const {
   mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;

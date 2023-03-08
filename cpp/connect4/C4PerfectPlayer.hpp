@@ -39,6 +39,8 @@ public:
   class MoveHistory {
   public:
     MoveHistory();
+    MoveHistory(const MoveHistory&);
+
     void reset();
     void append(common::action_index_t move);
     std::string to_string() const;
@@ -65,6 +67,9 @@ public:
    * If current player can force a draw against optimal play...
    *  - good_moves and best_moves will be a mask of all moves forcing a draw
    *  - score will be 0
+   *
+   * For *exact* queries, the score, when positive, will correspond to the number of moves left in the
+   * game given perfect play by both sides.
    */
   struct QueryResult {
     ActionMask best_moves;
@@ -76,8 +81,11 @@ public:
   ~PerfectOracle();
 
   QueryResult query(MoveHistory& history);
+  QueryResult exact_query(MoveHistory& history, const GameState& state);
 
 private:
+  QueryResult exact_query_helper(QueryResult& result, MoveHistory& history, GameState& state, int offset);
+
   std::mutex mutex_;
   boost::process::ipstream out_;
   boost::process::opstream in_;

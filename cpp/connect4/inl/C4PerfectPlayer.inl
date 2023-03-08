@@ -30,6 +30,11 @@ inline auto PerfectPlayParams::make_options_description() {
 
 inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}
 
+inline PerfectOracle::MoveHistory::MoveHistory(const MoveHistory& history) {
+  memcpy(chars_, history.chars_, sizeof(chars_));
+  char_pointer_ = chars_ + (history.char_pointer_ - history.chars_);
+}
+
 inline void PerfectOracle::MoveHistory::reset() {
   char_pointer_ = chars_;
   *char_pointer_ = 0;
@@ -111,6 +116,51 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
 
   QueryResult result{best_moves, good_moves, best_score};
   return result;
+}
+
+inline PerfectOracle::QueryResult PerfectOracle::exact_query(MoveHistory &history, const GameState& state) {
+  QueryResult result = query(history);
+  if (result.score <= 0) {
+    return result;
+  }
+
+  GameState state_copy(state);
+  MoveHistory history_copy(history);
+  QueryResult result2 = exact_query_helper(result, history_copy, state_copy, 0);
+  result.score = result2.score;
+  return result;
+}
+
+inline PerfectOracle::QueryResult PerfectOracle::exact_query_helper(
+    QueryResult& result, MoveHistory &history, GameState& state, int offset)
+{
+  common::action_index_t move = -1;
+  for (int m : bitset_util::on_indices(result.best_moves)) {
+    move = m;
+    break;
+  }
+
+  auto outcome = state.apply_move(move);
+  if (common::is_terminal_outcome(outcome)) {
+    assert(outcome.maxCoeff() == 1);
+    result.score = 1 + offset;
+    return result;
+  }
+
+  history.append(move);
+  QueryResult opp_result = query(history);
+  assert(opp_result.score < 0);
+
+  common::action_index_t opp_move = -1;
+  for (int m : bitset_util::on_indices(opp_result.best_moves)) {
+    opp_move = m;
+    break;
+  }
+
+  state.apply_move(opp_move);
+  history.append(opp_move);
+  QueryResult next_result = query(history);
+  return exact_query_helper(next_result, history, state, offset + 2);
 }
 
 inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)
