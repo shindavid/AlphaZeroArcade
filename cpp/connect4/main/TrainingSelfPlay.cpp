@@ -37,7 +37,7 @@ using player_array_t = Player::player_array_t;
 
 
 struct Args {
-  float random_start_distr_mean = 0.04 * GameState::kMaxNumLocalActions;
+  float random_start_distr_mean = .07 * GameState::kTypicalNumMovesPerGame;
 
   auto make_options_description() {
     po2::options_description desc("TrainingSelfPlay options");
