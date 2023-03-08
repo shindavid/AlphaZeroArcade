@@ -43,6 +43,7 @@ inline void OracleGrader::dump() const {
     std::string descr = util::create_string("%d-%d", move_number, score);
     tracker.dump(descr);
   }
+  printf("OracleGrader done\n");
 }
 
 template<typename... BaseArgs>
