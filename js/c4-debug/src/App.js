@@ -8,7 +8,6 @@ class Child {
     this.action = 1 + parseInt(elem.getAttribute('action'));
     this.rP = parseFloat(elem.getAttribute('rP'));
     this.P = parseFloat(elem.getAttribute('P'));
-    this.dir = parseFloat(elem.getAttribute('dir'));
     this.V = parseFloat(elem.getAttribute('V'));
     this.N = parseFloat(elem.getAttribute('N'));
     this.PUCT = parseFloat(elem.getAttribute('PUCT'));
@@ -33,7 +32,6 @@ class Visit {
     this.children = Array.from(elem.children).map(c => new Child(c));
     this.rP_sum = this.children.map((x) => x.rP).reduce((a, b) => a+b, 0);
     this.P_sum = this.children.map((x) => x.P).reduce((a, b) => a+b, 0);
-    this.dir_sum = this.children.map((x) => x.dir).reduce((a, b) => a+b, 0);
     this.V_sum = this.children.map((x) => x.V).reduce((a, b) => a+b, 0);
     this.N_sum = this.children.map((x) => x.N).reduce((a, b) => a+b, 0);
     this.PUCT_sum = this.children.map((x) => x.PUCT).reduce((a, b) => a+b, 0);

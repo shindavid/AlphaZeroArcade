@@ -213,11 +213,17 @@ class Tree:
             return self.policy_prior
 
         policy_output = evaluation.local_policy_logit_distr
+        P = torch.softmax(policy_output, dim=0)
 
         is_root = self.is_root()
-        inv_temp = (1.0 / params.root_softmax_temperature) if is_root else 1.0
+        if is_root:
+            if params.dirichlet_mult:
+                noise = Dirichlet([params.dirichlet_alpha] * len(P)).sample()
+                P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
 
-        P = torch.softmax(policy_output * inv_temp, dim=0)
+            P = P ** (1.0 / params.root_softmax_temperature)
+            P /= P.sum()
+
         self.value_prior = evaluation.value_prob_distr
         self.policy_prior = P
         return P
@@ -291,7 +297,7 @@ class MCTS:
 
     def _internal_visit_debug(
             self, player: PlayerIndex, depth: int, board: str, evaluation: StateEvaluation, leaf: bool,
-            value_avg: Tensor, tree: Tree, debug_subtree: Optional[ET.Element], P: Tensor, noise: Tensor, V: Tensor,
+            value_avg: Tensor, tree: Tree, debug_subtree: Optional[ET.Element], P: Tensor, V: Tensor,
             N: Tensor, PUCT: Tensor, E: Tensor):
         if not self.debug_filename:
             return
@@ -309,12 +315,11 @@ class MCTS:
         tree_dict = {k: stringify(v) for k, v in tree_dict.items()}
         elem = debug_subtree.makeelement('Visit', tree_dict)
         debug_subtree.insert(0, elem)
-        for ac, rp, p, no, v, n, puct, e in zip(tree.valid_action_indices, tree.policy_prior, P, noise, V, N, PUCT, E):
+        for ac, rp, p, v, n, puct, e in zip(tree.valid_action_indices, tree.policy_prior, P, V, N, PUCT, E):
             attribs = {
                 'action': ac,
                 'rP': rp,
                 'P': p,
-                'dir': no,
                 'V': v,
                 'N': n,
                 'E': e,
@@ -412,11 +417,6 @@ class MCTS:
         P = tree.compute_policy_prior(evaluation, params)
         ProfilerRegistry['PUCT'].start()
 
-        noise = torch.zeros(len(P))
-        if tree.is_root() and params.dirichlet_mult:
-            noise = Dirichlet([params.dirichlet_alpha] * len(P)).sample()
-            P = (1.0 - params.dirichlet_mult) * P + params.dirichlet_mult * noise
-
         V = torch.Tensor([c.effective_value_avg[current_player] for c in tree.children])
         N = torch.Tensor([c.effective_count() for c in tree.children])
         eps = 1e-6  # needed when N == 0
@@ -441,7 +441,7 @@ class MCTS:
 
         self._internal_visit_debug(
             player=current_player, depth=depth, board=board, evaluation=evaluation, leaf=leaf, value_avg=value_avg,
-            tree=tree, debug_subtree=debug_subtree, P=P, noise=noise, V=V, N=N, E=E, PUCT=PUCT)
+            tree=tree, debug_subtree=debug_subtree, P=P, V=V, N=N, E=E, PUCT=PUCT)
 
 
 def stringify(value):

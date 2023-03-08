@@ -300,7 +300,6 @@ function PolicyTable(props) {
             </div>
           </td>
           <td className="vert">{displayBar(child.rP, visit.rP_sum)}</td>
-          <td className="vert">{displayBar(child.dir, visit.dir_sum)}</td>
           <td className="vert">{displayBar(child.P, visit.P_sum)}</td>
           <td className="vert">{displayBar(child.V, visit.V_sum)}</td>
           <td className="vert">{displayBar(child.N, visit.N_sum)}</td>
@@ -318,7 +317,6 @@ function PolicyTable(props) {
     <tr>
       <td className="vert">Move</td>
       <td className="vert">NN.P</td>
-      <td className="vert">Diric</td>
       <td className="vert">P</td>
       <td className="vert">V</td>
       <td className="vert">N</td>
