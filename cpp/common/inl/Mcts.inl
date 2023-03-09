@@ -1241,6 +1241,10 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
   auto n_forced = (P * params_.k_forced * N_sum).sqrt();
 
   auto PUCT_max = PUCT.maxCoeff();
+  if ((PUCT_max < (V + 1e-6)).any()) {
+    return;  // avoid division by zero
+  }
+
   auto N_max = N.maxCoeff();
   auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
 
