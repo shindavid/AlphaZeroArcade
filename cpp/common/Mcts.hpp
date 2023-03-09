@@ -442,6 +442,19 @@ private:
     const int thread_id_;
   };
 
+  struct PUCTStats {
+    using PVec = LocalPolicyProbDistr;
+
+    PUCTStats(const Params& params, const Node* tree);
+
+    player_index_t cp;
+    const PVec& P;
+    PVec V;
+    PVec N;
+    PVec E;
+    PVec PUCT;
+  };
+
   using search_thread_vec_t = std::vector<SearchThread*>;
 
   /*
@@ -734,6 +747,7 @@ public:
 #endif  // PROFILE_MCTS
 
 private:
+  void prune_counts();
   static void init_profiling_dir(const std::string& profiling_dir);
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;

@@ -621,30 +621,14 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 {
   record_for_profiling(kPUCT);
 
+  PUCTStats stats(params_, tree);
+
   using PVec = LocalPolicyProbDistr;
 
-  const PVec& P = tree->_local_policy_prob_distr();
-  const int rows = P.rows();
-  assert(rows == int(tree->_valid_action_mask().count()));
-
-  PVec V(rows);
-  PVec N(rows);
-  PVec E(rows);
-  player_index_t cp = tree->_current_player();
-
-  for (int c = 0; c < tree->_num_children(); ++c) {
-    Node* child = tree->_get_child(c);
-    record_for_profiling(kAcquiringStatsMutex);
-    std::lock_guard<std::mutex> guard(child->stats_mutex());
-    record_for_profiling(kPUCT);
-
-    V(c) = child->_effective_value_avg(cp);
-    N(c) = child->_effective_count();
-    E(c) = child->_eliminated();
-  }
-
-  constexpr float eps = 1e-6;  // needed when N == 0
-  PVec PUCT = V + params_.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  const PVec& P = stats.P;
+  const PVec& N = stats.N;
+  const PVec& E = stats.E;
+  PVec& PUCT = stats.PUCT;
 
   if (params_.forced_playouts) {
     PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
@@ -686,6 +670,28 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
   profiler_t* profiler = get_profiler();
   if (!profiler) return;  // compile-time branch
   profiler->dump(get_profiling_file(), 64, get_profiler_name());
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(const Params& params, const Node* tree)
+    : cp(tree->_current_player())
+      , P(tree->_local_policy_prob_distr())
+      , V(P.rows())
+      , N(P.rows())
+      , E(P.rows())
+      , PUCT(P.rows())
+{
+  for (int c = 0; c < tree->_num_children(); ++c) {
+    Node* child = tree->_get_child(c);
+    std::lock_guard<std::mutex> guard(child->stats_mutex());
+
+    V(c) = child->_effective_value_avg(cp);
+    N(c) = child->_effective_count();
+    E(c) = child->_eliminated();
+  }
+
+  constexpr float eps = 1e-6;  // needed when N == 0
+  PUCT = V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1109,6 +1115,9 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->_valid_action_mask();
   results_.counts = root_->get_effective_counts().template cast<float>();
+  if (params_.forced_playouts) {
+    prune_counts();
+  }
   results_.policy_prior = root_->_local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
   results_.value_prior = evaluation->value_prob_distr();
@@ -1178,6 +1187,11 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
   nn_eval_service_->get_cache_stats(hits, misses, size, hash_balance_factor);
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::prune_counts() {
+  // TODO
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
