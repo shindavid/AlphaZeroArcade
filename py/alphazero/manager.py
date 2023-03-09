@@ -345,7 +345,15 @@ class AlphaZeroManager:
             self.silence_promote_skip_msgs = True
             return
 
+        latest_promoted_gen = self.get_latest_promoted_model_generation()
         gen, epoch = candidate_model_info.generation, candidate_model_info.epoch
+        if gen <= latest_promoted_gen:
+            if not self.silence_promote_skip_msgs:
+                timed_print(f'Waiting for candidate on next generation ({gen}, {latest_promoted_gen})')
+            time.sleep(1)
+            self.silence_promote_skip_msgs = True
+            return
+
         if (gen, epoch) <= self.last_tested_candidate_model_gen_epoch:
             if not self.silence_promote_skip_msgs:
                 timed_print(f'Latest candidate was already tested ({gen}, {epoch})')
