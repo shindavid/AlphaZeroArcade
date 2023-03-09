@@ -1129,14 +1129,10 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDistr& P) {
-  std::cout << "add_dirichlet_noise" << std::endl;
-  std::cout << "P: " << P.transpose() << std::endl;
   int rows = P.rows();
   LocalPolicyProbDistr noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(
       rng_, params_.dirichlet_alpha, rows);
-  std::cout << "noise: " << noise.transpose() << std::endl;
   P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
-  std::cout << "P: " << P.transpose() << std::endl << std::endl;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1204,16 +1200,10 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::prune_counts() {
   PUCTStats stats(params_, root_);
 
-  std::cout << "prune_counts()" << std::endl;
-  std::cout << "N: " << results_.counts.transpose() << std::endl;
-  std::cout << "N~: " << (results_.counts / results_.counts.sum()).transpose() << std::endl;
-
   const auto& P = stats.P;
   const auto& N = stats.N;
   const auto& V = stats.V;
   const auto& PUCT = stats.PUCT;
-
-  std::cout << "V: " << V.transpose() << std::endl;
 
   auto N_sum = N.sum();
   auto n_forced = (P * params_.k_forced * N_sum).sqrt();
@@ -1232,9 +1222,6 @@ void Mcts<GameState, Tensorizor>::prune_counts() {
 
     results_.counts(root_->_get_child(c)->action()) = n;
   }
-
-  std::cout << "N: " << results_.counts.transpose() << std::endl;
-  std::cout << "N~: " << (results_.counts / results_.counts.sum()).transpose() << std::endl << std::endl;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
