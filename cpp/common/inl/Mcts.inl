@@ -81,7 +81,9 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_bool_switches<"speculative-evals", "no-speculative-evals">(
           &speculative_evals, "enable speculation", "disable speculation")
       .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
-          &forced_playouts, "enabled forced playouts", "disable forced playouts")
+          &forced_playouts, "enable forced playouts", "disable forced playouts")
+      .template add_bool_switches<"enable-first-play-urgency", "disable-first-play-urgency">(
+          &enable_first_play_urgency, "enable first play urgency", "disable first play urgency")
 #ifdef PROFILE_MCTS
       .template add_option<"profiling-dir">(po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
@@ -634,7 +636,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 {
   record_for_profiling(kPUCT);
 
-  PUCTStats stats(params_, tree);
+  PUCTStats stats(params_, *sim_params_, tree);
 
   using PVec = LocalPolicyProbDistr;
 
@@ -689,14 +691,16 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(const Params& params, const Node* tree)
-    : cp(tree->_current_player())
-      , P(tree->_local_policy_prob_distr())
-      , V(P.rows())
-      , N(P.rows())
-      , E(P.rows())
-      , PUCT(P.rows())
+inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
+    const Params& params, const SimParams& sim_params, const Node* tree)
+: cp(tree->_current_player())
+, P(tree->_local_policy_prob_distr())
+, V(P.rows())
+, N(P.rows())
+, E(P.rows())
+, PUCT(P.rows())
 {
+  std::bitset<kNumGlobalActions> fpu_bits;
   for (int c = 0; c < tree->_num_children(); ++c) {
     Node* child = tree->_get_child(c);
     std::lock_guard<std::mutex> guard(child->stats_mutex());
@@ -704,6 +708,21 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(const Params& params, c
     V(c) = child->_effective_value_avg(cp);
     N(c) = child->_effective_count();
     E(c) = child->_eliminated();
+
+    fpu_bits[c] = (N(c) == 0);
+  }
+
+  if (params.enable_first_play_urgency && fpu_bits.any()) {
+    std::unique_lock<std::mutex> lock(tree->stats_mutex());
+    float PV = tree->_effective_value_avg(cp);
+    lock.unlock();
+
+    bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_noise;
+    float cFPU = disableFPU ? 0.0 : params.cFPU;
+    float v = PV - cFPU * sqrt((P * (N > 0).template cast<float>()).sum());
+    for (int c : bitset_util::on_indices(fpu_bits)) {
+      V(c) = v;
+    }
   }
 
   PUCT = V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
@@ -1132,7 +1151,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   results_.valid_actions = root_->_valid_action_mask();
   results_.counts = root_->get_effective_counts().template cast<float>();
   if (params_.forced_playouts && add_noise) {
-    prune_counts();
+    prune_counts(params);
   }
   results_.policy_prior = root_->_local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
@@ -1210,8 +1229,8 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
  * source code was not very enlightening. The following is my best guess at what the target pruning step does.
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::prune_counts() {
-  PUCTStats stats(params_, root_);
+void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
+  PUCTStats stats(params_, sim_params, root_);
 
   const auto& P = stats.P;
   const auto& N = stats.N;

@@ -95,11 +95,13 @@ public:
 
     float root_softmax_temperature = 1.03;
     float cPUCT = 1.1;
+    float cFPU = 0.2;
     float dirichlet_mult = 0.25;
     float dirichlet_alpha = 0.03;
     bool disable_eliminations = true;
     bool speculative_evals = false;
     bool forced_playouts = true;
+    bool enable_first_play_urgency = true;
     float k_forced = 2.0;
 #ifdef PROFILE_MCTS
     std::string profiling_dir;
@@ -188,9 +190,9 @@ private:
     void _adopt_children();
 
     std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
-    std::mutex& lazily_initialized_data_mutex() { return lazily_initialized_data_mutex_; }
-    std::mutex& evaluation_data_mutex() { return evaluation_data_mutex_; }
-    std::mutex& stats_mutex() { return stats_mutex_; }
+    std::mutex& lazily_initialized_data_mutex() const { return lazily_initialized_data_mutex_; }
+    std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
+    std::mutex& stats_mutex() const { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
     void backprop(const ValueProbDistr& value);
@@ -453,7 +455,7 @@ private:
     static constexpr float eps = 1e-6;  // needed when N == 0
     using PVec = LocalPolicyProbDistr;
 
-    PUCTStats(const Params& params, const Node* tree);
+    PUCTStats(const Params& params, const SimParams& sim_params, const Node* tree);
 
     player_index_t cp;
     const PVec& P;
@@ -755,7 +757,7 @@ public:
 #endif  // PROFILE_MCTS
 
 private:
-  void prune_counts();
+  void prune_counts(const SimParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;
