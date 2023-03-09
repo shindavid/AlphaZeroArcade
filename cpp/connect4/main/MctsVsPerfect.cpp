@@ -43,7 +43,7 @@ int main(int ac, char* av[]) {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  Mcts::Params mcts_params;
+  Mcts::Params mcts_params(Mcts::kCompetitive);
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
   c4::PerfectPlayParams perfect_play_params;
   ParallelGameRunner::register_signal(SIGTERM);

@@ -69,12 +69,19 @@ public:
 
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
+  enum DefaultParamsType {
+    kCompetitive,
+    kTraining
+  };
+
   /*
    * Params pertains to a single Mcts instance.
    *
    * By contrast, SimParams pertains to each individual sim() call.
    */
   struct Params {
+    Params(DefaultParamsType);
+
     auto make_options_description();
 
     std::string nnet_filename;
@@ -92,6 +99,8 @@ public:
     float dirichlet_alpha = 0.03;
     bool disable_eliminations = true;
     bool speculative_evals = false;
+    bool forced_playouts = true;
+    float k_forced = 2.0;
 #ifdef PROFILE_MCTS
     std::string profiling_dir;
 #endif  // PROFILE_MCTS
@@ -440,6 +449,20 @@ private:
     const int thread_id_;
   };
 
+  struct PUCTStats {
+    static constexpr float eps = 1e-6;  // needed when N == 0
+    using PVec = LocalPolicyProbDistr;
+
+    PUCTStats(const Params& params, const Node* tree);
+
+    player_index_t cp;
+    const PVec& P;
+    PVec V;
+    PVec N;
+    PVec E;
+    PVec PUCT;
+  };
+
   using search_thread_vec_t = std::vector<SearchThread*>;
 
   /*
@@ -732,6 +755,7 @@ public:
 #endif  // PROFILE_MCTS
 
 private:
+  void prune_counts();
   static void init_profiling_dir(const std::string& profiling_dir);
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;

@@ -80,7 +80,7 @@ ParallelGameRunner::Params get_default_parallel_game_runner_params() {
 }
 
 int main(int ac, char* av[]) {
-  Mcts::Params mcts_params;
+  Mcts::Params mcts_params(Mcts::kCompetitive);
   c4::PerfectPlayParams perfect_play_params;
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
   ParallelGameRunner::register_signal(SIGTERM);

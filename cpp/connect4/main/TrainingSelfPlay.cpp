@@ -37,7 +37,7 @@ using player_array_t = Player::player_array_t;
 
 
 struct Args {
-  float random_start_distr_mean = 0.04 * GameState::kMaxNumLocalActions;
+  float random_start_distr_mean = .07 * GameState::kTypicalNumMovesPerGame;
 
   auto make_options_description() {
     po2::options_description desc("TrainingSelfPlay options");
@@ -83,7 +83,7 @@ int main(int ac, char* av[]) {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  Mcts::Params mcts_params;
+  Mcts::Params mcts_params(Mcts::kTraining);
   MctsPlayer::Params mcts_player_params(MctsPlayer::kTraining);
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();

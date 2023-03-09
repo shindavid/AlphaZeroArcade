@@ -23,6 +23,19 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::Params::Params(DefaultParamsType type) {
+  if (type == kCompetitive) {
+    dirichlet_mult = 0;
+    dirichlet_alpha = 0;
+    forced_playouts = false;
+  } else if (type == kTraining) {
+    // use declared values
+  } else {
+    throw util::Exception("Unknown type: %d", (int)type);
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -67,6 +80,8 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
           &disable_eliminations, "disable eliminations", "enable eliminations")
       .template add_bool_switches<"speculative-evals", "no-speculative-evals">(
           &speculative_evals, "enable speculation", "disable speculation")
+      .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
+          &forced_playouts, "enabled forced playouts", "disable forced playouts")
 #ifdef PROFILE_MCTS
       .template add_option<"profiling-dir">(po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
@@ -619,30 +634,24 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 {
   record_for_profiling(kPUCT);
 
+  PUCTStats stats(params_, tree);
+
   using PVec = LocalPolicyProbDistr;
 
-  const PVec& P = tree->_local_policy_prob_distr();
-  const int rows = P.rows();
-  assert(rows == int(tree->_valid_action_mask().count()));
+  const PVec& P = stats.P;
+  const PVec& N = stats.N;
+  const PVec& E = stats.E;
+  PVec& PUCT = stats.PUCT;
 
-  PVec V(rows);
-  PVec N(rows);
-  PVec E(rows);
-  player_index_t cp = tree->_current_player();
-
-  for (int c = 0; c < tree->_num_children(); ++c) {
-    Node* child = tree->_get_child(c);
-    record_for_profiling(kAcquiringStatsMutex);
-    std::lock_guard<std::mutex> guard(child->stats_mutex());
-    record_for_profiling(kPUCT);
-
-    V(c) = child->_effective_value_avg(cp);
-    N(c) = child->_effective_count();
-    E(c) = child->_eliminated();
+  bool add_noise = !sim_params_->disable_noise && params_.dirichlet_mult > 0;
+  if (params_.forced_playouts && add_noise) {
+    PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
+    auto F1 = (N < n_forced).template cast<float>();
+    auto F2 = (N > 0).template cast<float>();
+    auto F = F1 * F2;
+    PUCT = PUCT * (1 - F) + F * 1e+6;
   }
 
-  constexpr float eps = 1e-6;  // needed when N == 0
-  PVec PUCT = V + params_.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
   PUCT *= 1 - E;
 
 //  // value_avg used for debugging
@@ -677,6 +686,27 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
   profiler_t* profiler = get_profiler();
   if (!profiler) return;  // compile-time branch
   profiler->dump(get_profiling_file(), 64, get_profiler_name());
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(const Params& params, const Node* tree)
+    : cp(tree->_current_player())
+      , P(tree->_local_policy_prob_distr())
+      , V(P.rows())
+      , N(P.rows())
+      , E(P.rows())
+      , PUCT(P.rows())
+{
+  for (int c = 0; c < tree->_num_children(); ++c) {
+    Node* child = tree->_get_child(c);
+    std::lock_guard<std::mutex> guard(child->stats_mutex());
+
+    V(c) = child->_effective_value_avg(cp);
+    N(c) = child->_effective_count();
+    E(c) = child->_eliminated();
+  }
+
+  PUCT = V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1086,7 +1116,8 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 {
   stop_search_threads();
 
-  if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
+  bool add_noise = !params.disable_noise && params_.dirichlet_mult > 0;
+  if (!root_ || add_noise) {
     if (root_) {
       NodeReleaseService::release(root_);
     }
@@ -1099,7 +1130,10 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
   NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->_valid_action_mask();
-  results_.counts = root_->get_effective_counts();
+  results_.counts = root_->get_effective_counts().template cast<float>();
+  if (params_.forced_playouts && add_noise) {
+    prune_counts();
+  }
   results_.policy_prior = root_->_local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
   results_.value_prior = evaluation->value_prob_distr();
@@ -1169,6 +1203,38 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
   nn_eval_service_->get_cache_stats(hits, misses, size, hash_balance_factor);
+}
+
+/*
+ * The KataGo paper is a little vague in its description of the target pruning step, and examining the KataGo
+ * source code was not very enlightening. The following is my best guess at what the target pruning step does.
+ */
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::prune_counts() {
+  PUCTStats stats(params_, root_);
+
+  const auto& P = stats.P;
+  const auto& N = stats.N;
+  const auto& V = stats.V;
+  const auto& PUCT = stats.PUCT;
+
+  auto N_sum = N.sum();
+  auto n_forced = (P * params_.k_forced * N_sum).sqrt();
+
+  auto PUCT_max = PUCT.maxCoeff();
+  auto N_max = N.maxCoeff();
+  auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
+
+  auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - V) - 1;
+  for (int c = 0; c < root_->_num_children(); ++c) {
+    if (N(c) == N_max) continue;
+    auto n = std::max(N_floor(c), N(c) - n_forced(c));
+    if (n <= 1.0) {
+      n = 0;
+    }
+
+    results_.counts(root_->_get_child(c)->action()) = n;
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
