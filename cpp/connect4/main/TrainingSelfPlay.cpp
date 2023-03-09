@@ -83,7 +83,7 @@ int main(int ac, char* av[]) {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  Mcts::Params mcts_params;
+  Mcts::Params mcts_params(Mcts::kTraining);
   MctsPlayer::Params mcts_player_params(MctsPlayer::kTraining);
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();

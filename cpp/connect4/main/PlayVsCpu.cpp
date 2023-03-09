@@ -47,7 +47,7 @@ common::player_index_t parse_color(const std::string& str) {
 }
 
 int main(int ac, char* av[]) {
-  Mcts::Params mcts_params;
+  Mcts::Params mcts_params(Mcts::kCompetitive);
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
   c4::PerfectPlayParams perfect_play_params;
   Args args;

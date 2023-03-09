@@ -69,12 +69,19 @@ public:
 
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
+  enum DefaultParamsType {
+    kCompetitive,
+    kTraining
+  };
+
   /*
    * Params pertains to a single Mcts instance.
    *
    * By contrast, SimParams pertains to each individual sim() call.
    */
   struct Params {
+    Params(DefaultParamsType);
+
     auto make_options_description();
 
     std::string nnet_filename;

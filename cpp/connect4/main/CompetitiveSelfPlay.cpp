@@ -80,16 +80,12 @@ ParallelGameRunner::Params get_default_parallel_game_runner_params() {
 }
 
 int main(int ac, char* av[]) {
-  Mcts::Params mcts_params;
+  Mcts::Params mcts_params(Mcts::kCompetitive);
   c4::PerfectPlayParams perfect_play_params;
   MctsPlayer::Params mcts_player_params(MctsPlayer::kCompetitive);
   ParallelGameRunner::register_signal(SIGTERM);
   ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
   Args args;
-
-  mcts_params.dirichlet_mult = 0;
-  mcts_params.dirichlet_alpha = 0;
-  mcts_params.forced_playouts = false;
 
   po2::options_description raw_desc("General options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help")

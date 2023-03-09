@@ -23,6 +23,19 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::Params::Params(DefaultParamsType type) {
+  if (type == kCompetitive) {
+    dirichlet_mult = 0;
+    dirichlet_alpha = 0;
+    forced_playouts = false;
+  } else if (type == kTraining) {
+    // use declared values
+  } else {
+    throw util::Exception("Unknown type: %d", (int)type);
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
