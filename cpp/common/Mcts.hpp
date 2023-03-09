@@ -92,6 +92,7 @@ public:
     float dirichlet_alpha = 0.03;
     bool disable_eliminations = true;
     bool speculative_evals = false;
+    bool forced_playouts = true;
 #ifdef PROFILE_MCTS
     std::string profiling_dir;
 #endif  // PROFILE_MCTS

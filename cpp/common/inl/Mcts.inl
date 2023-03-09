@@ -67,6 +67,8 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
           &disable_eliminations, "disable eliminations", "enable eliminations")
       .template add_bool_switches<"speculative-evals", "no-speculative-evals">(
           &speculative_evals, "enable speculation", "disable speculation")
+      .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
+          &forced_playouts, "enabled forced playouts", "disable forced playouts")
 #ifdef PROFILE_MCTS
       .template add_option<"profiling-dir">(po::value<std::string>(&profiling_dir)->default_value(default_profiling_dir),
           "directory in which to dump mcts profiling stats")
@@ -644,9 +646,11 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   constexpr float eps = 1e-6;  // needed when N == 0
   PVec PUCT = V + params_.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 
-  PVec n_forced = (P * 2.0 * N.sum()).sqrt();
-  auto F = (N < n_forced).template cast<float>();
-  PUCT = PUCT * (1 - F) + F * 1e+6;
+  if (params_.forced_playouts) {
+    PVec n_forced = (P * 2.0 * N.sum()).sqrt();
+    auto F = (N < n_forced).template cast<float>();
+    PUCT = PUCT * (1 - F) + F * 1e+6;
+  }
 
   PUCT *= 1 - E;
 
