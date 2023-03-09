@@ -394,7 +394,7 @@ class AlphaZeroManager:
 
         if promote:
             src = candidate_model_filename
-            dst = self.get_promoted_model_filename(gen)
+            dst = self.get_promoted_model_filename(gen + 1)
             timed_print(f'Promotion: {src} -> {dst}')
             shutil.copy(src, dst)
 
