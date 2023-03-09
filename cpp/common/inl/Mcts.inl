@@ -647,7 +647,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   PVec PUCT = V + params_.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 
   if (params_.forced_playouts) {
-    PVec n_forced = (P * 2.0 * N.sum()).sqrt();
+    PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
     auto F = (N < n_forced).template cast<float>();
     PUCT = PUCT * (1 - F) + F * 1e+6;
   }

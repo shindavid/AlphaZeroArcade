@@ -93,6 +93,7 @@ public:
     bool disable_eliminations = true;
     bool speculative_evals = false;
     bool forced_playouts = true;
+    float k_forced = 2.0;
 #ifdef PROFILE_MCTS
     std::string profiling_dir;
 #endif  // PROFILE_MCTS
