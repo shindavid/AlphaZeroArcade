@@ -17,7 +17,7 @@ public:
   using GameStateTypes = common::GameStateTypes<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
+  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
 
   using base_t = MctsPlayer<GameState, Tensorizor>;

@@ -191,7 +191,7 @@ inline void GameState::xdump_mcts_output(
 
   int i = 0;
   for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
-    util::xprintf("%3d %8.3f %8d %8.3f\n", action + 1, net_policy(i), mcts_counts(action), mcts_policy(i));
+    util::xprintf("%3d %8.3f %8.3f %8.3f\n", action + 1, net_policy(i), mcts_counts(action), mcts_policy(i));
     i++;
   }
 }

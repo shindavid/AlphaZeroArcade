@@ -1108,7 +1108,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
   NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->_valid_action_mask();
-  results_.counts = root_->get_effective_counts();
+  results_.counts = root_->get_effective_counts().template cast<float>();
   results_.policy_prior = root_->_local_policy_prob_distr();
   results_.win_rates = root_->_value_avg();
   results_.value_prior = evaluation->value_prob_distr();

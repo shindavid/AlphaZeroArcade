@@ -60,9 +60,8 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
 
     this->tensorizor_.tensorize(input, state);
 
-    const GlobalPolicyCountDistr& counts = mcts_results->counts;
-    const auto& fcounts = counts.reshaped(1, GameState::kNumGlobalActions).template cast<float>();
-    policy = fcounts / std::max(1.0f, (float)fcounts.sum());
+    GlobalPolicyProbDistr counts = mcts_results->counts.reshaped(1, GameState::kNumGlobalActions);
+    policy = counts / std::max(1.0f, (float)counts.sum());
 
     auto transform = this->tensorizor_.get_symmetry(sym_index);
     transform->transform_input(input);

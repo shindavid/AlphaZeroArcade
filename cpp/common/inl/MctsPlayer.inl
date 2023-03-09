@@ -167,7 +167,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
     value = mcts_results->value_prior;
   } else {
-    policy = mcts_results->counts.template cast<float>();
+    policy = mcts_results->counts;
     float temp = move_temperature_.value();
     if (temp != 0) {
       policy = policy.pow(1.0 / temp);
