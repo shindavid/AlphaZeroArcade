@@ -630,9 +630,12 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   const PVec& E = stats.E;
   PVec& PUCT = stats.PUCT;
 
-  if (params_.forced_playouts) {
+  bool add_noise = !sim_params_->disable_noise && params_.dirichlet_mult > 0;
+  if (params_.forced_playouts && add_noise) {
     PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
-    auto F = (N < n_forced).template cast<float>();
+    auto F1 = (N < n_forced).template cast<float>();
+    auto F2 = (N > 0).template cast<float>();
+    auto F = F1 * F2;
     PUCT = PUCT * (1 - F) + F * 1e+6;
   }
 
@@ -690,7 +693,6 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(const Params& params, c
     E(c) = child->_eliminated();
   }
 
-  constexpr float eps = 1e-6;  // needed when N == 0
   PUCT = V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 }
 
@@ -1101,7 +1103,8 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 {
   stop_search_threads();
 
-  if (!root_ || (!params.disable_noise && params_.dirichlet_mult > 0)) {
+  bool add_noise = !params.disable_noise && params_.dirichlet_mult > 0;
+  if (!root_ || add_noise) {
     if (root_) {
       NodeReleaseService::release(root_);
     }
@@ -1115,7 +1118,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->_valid_action_mask();
   results_.counts = root_->get_effective_counts().template cast<float>();
-  if (params_.forced_playouts) {
+  if (params_.forced_playouts && add_noise) {
     prune_counts();
   }
   results_.policy_prior = root_->_local_policy_prob_distr();
@@ -1126,10 +1129,14 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDistr& P) {
+  std::cout << "add_dirichlet_noise" << std::endl;
+  std::cout << "P: " << P.transpose() << std::endl;
   int rows = P.rows();
   LocalPolicyProbDistr noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(
       rng_, params_.dirichlet_alpha, rows);
+  std::cout << "noise: " << noise.transpose() << std::endl;
   P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
+  std::cout << "P: " << P.transpose() << std::endl << std::endl;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1189,9 +1196,45 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
   nn_eval_service_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
+/*
+ * The KataGo paper is a little vague in its description of the target pruning step, and examining the KataGo
+ * source code was not very enlightening. The following is my best guess at what the target pruning step does.
+ */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::prune_counts() {
-  // TODO
+  PUCTStats stats(params_, root_);
+
+  std::cout << "prune_counts()" << std::endl;
+  std::cout << "N: " << results_.counts.transpose() << std::endl;
+  std::cout << "N~: " << (results_.counts / results_.counts.sum()).transpose() << std::endl;
+
+  const auto& P = stats.P;
+  const auto& N = stats.N;
+  const auto& V = stats.V;
+  const auto& PUCT = stats.PUCT;
+
+  std::cout << "V: " << V.transpose() << std::endl;
+
+  auto N_sum = N.sum();
+  auto n_forced = (P * params_.k_forced * N_sum).sqrt();
+
+  auto PUCT_max = PUCT.maxCoeff();
+  auto N_max = N.maxCoeff();
+  auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
+
+  auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - V) - 1;
+  for (int c = 0; c < root_->_num_children(); ++c) {
+    if (N(c) == N_max) continue;
+    auto n = std::max(N_floor(c), N(c) - n_forced(c));
+    if (n <= 1.0) {
+      n = 0;
+    }
+
+    results_.counts(root_->_get_child(c)->action()) = n;
+  }
+
+  std::cout << "N: " << results_.counts.transpose() << std::endl;
+  std::cout << "N~: " << (results_.counts / results_.counts.sum()).transpose() << std::endl << std::endl;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

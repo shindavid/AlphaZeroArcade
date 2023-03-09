@@ -443,6 +443,7 @@ private:
   };
 
   struct PUCTStats {
+    static constexpr float eps = 1e-6;  // needed when N == 0
     using PVec = LocalPolicyProbDistr;
 
     PUCTStats(const Params& params, const Node* tree);
