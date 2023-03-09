@@ -89,6 +89,7 @@ int main(int ac, char* av[]) {
 
   mcts_params.dirichlet_mult = 0;
   mcts_params.dirichlet_alpha = 0;
+  mcts_params.forced_playouts = false;
 
   po2::options_description raw_desc("General options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help")
