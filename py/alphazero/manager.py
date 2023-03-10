@@ -211,7 +211,7 @@ class AlphaZeroManager:
     def get_latest_self_play_data_subdir(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.self_play_data_dir)
 
-    def self_play(self):
+    def self_play_step(self):
         game_gen = self.get_latest_self_play_data_generation()
         model_gen = self.get_latest_promoted_model_generation()
         gen0 = model_gen == 0
@@ -277,7 +277,7 @@ class AlphaZeroManager:
 
         AlphaZeroManager.finalize_games_dir(games_dir)
 
-    def train(self):
+    def train_step(self):
         print('******************************')
         loader = DataLoader(self.self_play_data_dir)
         if loader.n_total_games < self.n_gen0_games:
@@ -361,7 +361,7 @@ class AlphaZeroManager:
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
         timed_print(f'Candidate saved: {candidate_filename}')
 
-    def promote(self):
+    def promote_step(self):
         candidate_model_info = self.get_latest_candidate_model_info()
 
         if candidate_model_info is None:
@@ -446,7 +446,7 @@ class AlphaZeroManager:
             self.init_logging(self.get_self_play_stdout())
             print('')
             while not self.kill_file_exists():
-                self.self_play()
+                self.self_play_step()
         except (Exception,):
             traceback.print_exc()
             self.touch_kill_file()
@@ -457,7 +457,7 @@ class AlphaZeroManager:
             self.init_logging(self.get_train_stdout())
             print('')
             while not self.kill_file_exists():
-                self.train()
+                self.train_step()
         except (Exception,):
             traceback.print_exc()
             self.touch_kill_file()
@@ -468,7 +468,7 @@ class AlphaZeroManager:
             self.init_logging(self.get_promote_stdout())
             print('')
             while not self.kill_file_exists():
-                self.promote()
+                self.promote_step()
         except (Exception,):
             traceback.print_exc()
             self.touch_kill_file()
