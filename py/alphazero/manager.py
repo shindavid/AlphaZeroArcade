@@ -89,10 +89,10 @@ class AlphaZeroManager:
         self.py_cuda_device: int = 1  # TODO: make this configurable, this is specific to dshin's setup
         self.py_cuda_device_str: str = f'cuda:{self.py_cuda_device}'
         self.log_file = None
+        self.last_log_once_msg = None
 
         self.n_gen0_games = 1000
         self.c4_base_dir: str = c4_base_dir
-        self.silence_future_msgs = False
         self.last_tested_candidate_model_gen_epoch = (-1, -1)
         self.ran_gen0_self_play = False
 
@@ -110,6 +110,15 @@ class AlphaZeroManager:
         os.makedirs(self.self_play_data_dir, exist_ok=True)
         os.makedirs(self.gating_logs_dir, exist_ok=True)
         os.makedirs(self.stdouts_dir, exist_ok=True)
+
+    def log_once(self, msg):
+        if self.last_log_once_msg == msg:
+            return
+        self.last_log_once_msg = msg
+        timed_print(msg)
+
+    def clear_log_once(self):
+        self.last_log_once_msg = None
 
     def init_logging(self, filename: str):
         self.log_file = open(filename, 'a')
@@ -207,13 +216,11 @@ class AlphaZeroManager:
         model_gen = self.get_latest_promoted_model_generation()
         gen0 = model_gen == 0
         if (game_gen > 0 >= model_gen) or (gen0 and self.ran_gen0_self_play):
-            if not self.silence_future_msgs:
-                timed_print('No model to use for self-play.  Waiting for model to be promoted...')
-                self.silence_future_msgs = True
+            self.log_once('No model to use for self-play.  Waiting for model to be promoted...')
             time.sleep(1)
             return
 
-        self.silence_future_msgs = False
+        self.clear_log_once()
         self.ran_gen0_self_play = True
         timed_print(f'Running self-play game-gen:{game_gen} model-gen:{model_gen}')
         games_dir = self.get_self_play_data_subdir(model_gen)
@@ -274,14 +281,11 @@ class AlphaZeroManager:
         print('******************************')
         loader = DataLoader(self.self_play_data_dir)
         if loader.n_total_games < self.n_gen0_games:
-            if not self.silence_future_msgs:
-                timed_print(f'Not enough games to train: {loader.n_total_games} < {self.n_gen0_games}')
-                timed_print('Waiting for more games...')
-                self.silence_future_msgs = True
+            self.log_once(f'Waiting for more games: {loader.n_total_games} < {self.n_gen0_games}')
             time.sleep(1)
             return
 
-        self.silence_future_msgs = False
+        self.clear_log_once()
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             gen, epoch = 1, 0
@@ -361,32 +365,23 @@ class AlphaZeroManager:
         candidate_model_info = self.get_latest_candidate_model_info()
 
         if candidate_model_info is None:
-            # candidate_model_epoch = self.get_latest_candidate_model_epoch()
-            if not self.silence_future_msgs:
-                timed_print(f'No candidate models available. Waiting...')
+            self.log_once(f'No candidate models available. Waiting...')
             time.sleep(1)
-            self.silence_future_msgs = True
             return
 
-        self.silence_future_msgs = False
         latest_promoted_gen = self.get_latest_promoted_model_generation()
         gen, epoch = candidate_model_info.generation, candidate_model_info.epoch
         if gen <= latest_promoted_gen:
-            if not self.silence_future_msgs:
-                timed_print(f'Waiting for candidate on next generation ({gen}, {latest_promoted_gen})')
+            self.log_once(f'Waiting for candidate on next generation ({gen}, {latest_promoted_gen})')
             time.sleep(1)
-            self.silence_future_msgs = True
             return
 
-        self.silence_future_msgs = False
         if (gen, epoch) <= self.last_tested_candidate_model_gen_epoch:
-            if not self.silence_future_msgs:
-                timed_print(f'Latest candidate was already tested ({gen}, {epoch})')
+            self.log_once(f'Latest candidate was already tested ({gen}, {epoch})')
             time.sleep(1)
-            self.silence_future_msgs = True
             return
 
-        self.silence_future_msgs = False
+        self.clear_log_once()
         self.last_tested_candidate_model_gen_epoch = (gen, epoch)
 
         candidate_model_filename = self.get_candidate_model_filename(gen, epoch)
