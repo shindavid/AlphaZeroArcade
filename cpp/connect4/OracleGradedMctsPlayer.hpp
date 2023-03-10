@@ -62,7 +62,7 @@ protected:
                             int move_number) const;
 
   OracleGrader* grader_;
-  PerfectOracle::MoveHistory move_history_;
+  MoveHistory move_history_;
 };
 
 }  // namespace c4

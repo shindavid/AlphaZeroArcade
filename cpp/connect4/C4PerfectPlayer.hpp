@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <mutex>
 
 #include <boost/filesystem.hpp>
@@ -13,11 +14,22 @@
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/LRUCache.hpp>
+
+namespace c4 {
+class MoveHistory;
+}  // namespace c4
+
+template<>
+struct std::hash<c4::MoveHistory> {
+  std::size_t operator()(const c4::MoveHistory&) const;
+};
 
 namespace c4 {
 
 struct PerfectPlayParams {
   std::string c4_solver_dir;
+  size_t cache_size = 16384;
 
   /*
    * In leisurely mode, PerfectPlayer has no preference among winning moves.
@@ -31,28 +43,30 @@ struct PerfectPlayParams {
   auto make_options_description();
 };
 
+class MoveHistory {
+public:
+  MoveHistory();
+  MoveHistory(const MoveHistory&);
+
+  bool operator==(const MoveHistory&) const;
+  size_t hash() const;
+  void reset();
+  void append(common::action_index_t move);
+  std::string to_string() const;
+  int length() const { return char_pointer_ - chars_; }
+
+private:
+  void write(boost::process::opstream& in);
+
+  char chars_[kMaxMovesPerGame + 1];
+  char* char_pointer_;
+  friend class PerfectOracle;
+};
+
 class PerfectOracle {
 public:
   using GameStateTypes = common::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
-
-  class MoveHistory {
-  public:
-    MoveHistory();
-    MoveHistory(const MoveHistory&);
-
-    void reset();
-    void append(common::action_index_t move);
-    std::string to_string() const;
-    int length() const { return char_pointer_ - chars_; }
-
-  private:
-    void write(boost::process::opstream& in);
-
-    char chars_[kMaxMovesPerGame + 1];
-    char* char_pointer_;
-    friend class PerfectOracle;
-  };
 
   /*
    * Let P be current player and Q be other player.
@@ -86,7 +100,11 @@ public:
   QueryResult query(MoveHistory& history);
 
 private:
-  std::mutex mutex_;
+  using cache_t = util::LRUCache<MoveHistory, QueryResult>;
+
+  std::mutex cache_mutex_;
+  std::mutex io_mutex_;
+  cache_t cache_;
   boost::process::ipstream out_;
   boost::process::opstream in_;
   boost::process::child* proc_ = nullptr;
@@ -104,7 +122,7 @@ public:
 
 private:
   PerfectOracle oracle_;
-  PerfectOracle::MoveHistory move_history_;
+  MoveHistory move_history_;
   const bool leisurely_mode_;
 };
 

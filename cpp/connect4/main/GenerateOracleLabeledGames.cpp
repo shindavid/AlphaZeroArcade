@@ -79,7 +79,7 @@ private:
   c4::PerfectOracle oracle_;
   TrainingDataWriter* writer_;
   Tensorizor tensorizor_;
-  c4::PerfectOracle::MoveHistory move_history_;
+  c4::MoveHistory move_history_;
 };
 
 template<class BasePlayer>

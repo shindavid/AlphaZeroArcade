@@ -7,6 +7,10 @@
 #include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>
 
+inline std::size_t std::hash<c4::MoveHistory>::operator()(const c4::MoveHistory& history) const {
+  return history.hash();
+}
+
 namespace c4 {
 
 inline auto PerfectPlayParams::make_options_description() {
@@ -23,38 +27,56 @@ inline auto PerfectPlayParams::make_options_description() {
   po2::options_description desc("C4PerfectPlayer options");
   return desc
       .template add_option<"c4-solver-dir", 'c'>(c4_solver_dir_value, "base dir containing c4solver bin+book")
+      .template add_option<"c4-solver-cache-size", 'C'>(
+          po::value<size_t>(&cache_size)->default_value(cache_size), "c4solver cache size")
       .template add_option<"leisurely-mode", 'l'>(po::bool_switch(&leisurely_mode)->default_value(leisurely_mode),
           "exhibit no preference among winning moves as perfect player")
   ;
 }
 
-inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}
+inline MoveHistory::MoveHistory() : char_pointer_(chars_) {}
 
-inline PerfectOracle::MoveHistory::MoveHistory(const MoveHistory& history) {
+inline MoveHistory::MoveHistory(const MoveHistory& history) {
   memcpy(chars_, history.chars_, sizeof(chars_));
   char_pointer_ = chars_ + (history.char_pointer_ - history.chars_);
 }
 
-inline void PerfectOracle::MoveHistory::reset() {
+inline bool MoveHistory::operator==(const MoveHistory& other) const {
+  return length() == other.length() && memcmp(chars_, other.chars_, length()) == 0;
+}
+
+inline size_t MoveHistory::hash() const {
+  // http://www.cse.yorku.ca/~oz/hash.html
+  size_t h = 5381;
+  for (int i = 0; i < length(); ++i) {
+    int c = chars_[i];
+    h = ((h << 5) + h) + c;
+  }
+  return h;
+}
+
+inline void MoveHistory::reset() {
   char_pointer_ = chars_;
   *char_pointer_ = 0;
 }
 
-inline void PerfectOracle::MoveHistory::append(common::action_index_t move) {
+inline void MoveHistory::append(common::action_index_t move) {
   *(char_pointer_++) = char(int('1') + move);  // connect4 program uses 1-indexing
 }
 
-inline std::string PerfectOracle::MoveHistory::to_string() const {
+inline std::string MoveHistory::to_string() const {
   return std::string(chars_, char_pointer_ - chars_);
 }
 
-inline void PerfectOracle::MoveHistory::write(boost::process::opstream& in) {
+inline void MoveHistory::write(boost::process::opstream& in) {
   *char_pointer_ = '\n';
   in.write(chars_, char_pointer_ - chars_ + 1);
   in.flush();
 }
 
-inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params) {
+inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params)
+: cache_(params.cache_size)
+{
   if (params.c4_solver_dir.empty()) {
     throw util::Exception("c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
                           util::Config::kFilename);
@@ -81,10 +103,19 @@ inline PerfectOracle::~PerfectOracle() {
 }
 
 inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
+  {
+    std::unique_lock lock(cache_mutex_);
+    auto cached_result = cache_.get(history);
+    lock.unlock();
+    if (cached_result != boost::none) {
+      return *cached_result;
+    }
+  }
+
   std::string s;
 
   {
-    std::lock_guard lock(mutex_);
+    std::lock_guard lock(io_mutex_);
     history.write(in_);
     std::getline(out_, s);
   }
@@ -130,6 +161,8 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
   }
 
   QueryResult result{best_moves, good_moves, converted_score};
+  std::unique_lock lock(cache_mutex_);
+  cache_.insert(history, result);
   return result;
 }
 
