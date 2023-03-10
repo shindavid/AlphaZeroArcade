@@ -114,53 +114,23 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
     good_moves[j] = move_scores[j] >= good_bound;
   }
 
-  QueryResult result{best_moves, good_moves, best_score};
+  int converted_score = best_score;
+  if (best_score > 0) {
+    converted_score = 22 - history.length() / 2 - best_score;
+    if (converted_score <= 0) {
+      throw util::Exception("Bad score conversion (score=%d, history=%s(%d), converted_score=%d)",
+                            best_score, history.to_string().c_str(), history.length(), converted_score);
+    }
+  } else if (best_score < 0) {
+    converted_score = -22 + (history.length() + 1) / 2 - best_score;
+    if (converted_score >= 0) {
+      throw util::Exception("Bad score conversion (score=%d, history=%s(%d), converted_score=%d)",
+                            best_score, history.to_string().c_str(), history.length(), converted_score);
+    }
+  }
+
+  QueryResult result{best_moves, good_moves, converted_score};
   return result;
-}
-
-inline PerfectOracle::QueryResult PerfectOracle::exact_query(MoveHistory &history, const GameState& state) {
-  QueryResult result = query(history);
-  if (result.score <= 0) {
-    return result;
-  }
-
-  GameState state_copy(state);
-  MoveHistory history_copy(history);
-  QueryResult result2 = exact_query_helper(result, history_copy, state_copy, 0);
-  result.score = result2.score;
-  return result;
-}
-
-inline PerfectOracle::QueryResult PerfectOracle::exact_query_helper(
-    QueryResult& result, MoveHistory &history, GameState& state, int offset)
-{
-  common::action_index_t move = -1;
-  for (int m : bitset_util::on_indices(result.best_moves)) {
-    move = m;
-    break;
-  }
-
-  auto outcome = state.apply_move(move);
-  if (common::is_terminal_outcome(outcome)) {
-    assert(outcome.maxCoeff() == 1);
-    result.score = 1 + offset;
-    return result;
-  }
-
-  history.append(move);
-  QueryResult opp_result = query(history);
-  assert(opp_result.score < 0);
-
-  common::action_index_t opp_move = -1;
-  for (int m : bitset_util::on_indices(opp_result.best_moves)) {
-    opp_move = m;
-    break;
-  }
-
-  state.apply_move(opp_move);
-  history.append(opp_move);
-  QueryResult next_result = query(history);
-  return exact_query_helper(next_result, history, state, offset + 2);
 }
 
 inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)

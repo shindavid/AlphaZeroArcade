@@ -71,7 +71,7 @@ inline common::action_index_t OracleGradedMctsPlayer::get_action(
   const MctsResults* mcts_results = this->mcts_sim(state, sim_type);
   if (sim_type != kRawPolicy) {
     PerfectOracle *oracle = grader_->oracle();
-    auto result = oracle->exact_query(move_history_, state);
+    auto result = oracle->query(move_history_);
     if (result.score >= 0) {  // winning or drawn position
       assert(sim_type != base_t::kRawPolicy);
       auto policy_prior = GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions);

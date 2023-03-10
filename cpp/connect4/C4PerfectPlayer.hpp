@@ -44,6 +44,7 @@ public:
     void reset();
     void append(common::action_index_t move);
     std::string to_string() const;
+    int length() const { return char_pointer_ - chars_; }
 
   private:
     void write(boost::process::opstream& in);
@@ -54,17 +55,19 @@ public:
   };
 
   /*
-   * If current player wins with optimal play...
-   *  - score will be > 0
+   * Let P be current player and Q be other player.
+   *
+   * If P wins with optimal play...
+   *  - score will be N, where N is the number of additional moves P needs.
    *  - good_moves will be a mask of all moves that win against optimal play
    *  - best_moves will be a mask of all moves leading to the fastest win against optimal play
    *
-   * If current player loses against optimal play...
-   *  - score will be < 0
+   * If Q wins with optimal play...
+   *  - score will be -N, where N is the number of additional moves Q needs
    *  - good_moves will be a mask of all valid moves
    *  - best_moves will be a mask of all moves leading to the slowest loss against optimal play
    *
-   * If current player can force a draw against optimal play...
+   * If P can force a draw against optimal play...
    *  - good_moves and best_moves will be a mask of all moves forcing a draw
    *  - score will be 0
    *
@@ -81,11 +84,8 @@ public:
   ~PerfectOracle();
 
   QueryResult query(MoveHistory& history);
-  QueryResult exact_query(MoveHistory& history, const GameState& state);
 
 private:
-  QueryResult exact_query_helper(QueryResult& result, MoveHistory& history, GameState& state, int offset);
-
   std::mutex mutex_;
   boost::process::ipstream out_;
   boost::process::opstream in_;
