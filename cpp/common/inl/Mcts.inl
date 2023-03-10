@@ -1230,6 +1230,8 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
+  if (params_.uniform_model) return;
+
   PUCTStats stats(params_, sim_params, root_);
 
   const auto& P = stats.P;
@@ -1257,6 +1259,16 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
     }
 
     results_.counts(root_->_get_child(c)->action()) = n;
+  }
+
+  if (!results_.counts.isFinite().all()) {
+    std::cout << "P: " << P.transpose() << std::endl;
+    std::cout << "N: " << N.transpose() << std::endl;
+    std::cout << "V: " << V.transpose() << std::endl;
+    std::cout << "PUCT: " << PUCT.transpose() << std::endl;
+    std::cout << "n_forced: " << n_forced.transpose() << std::endl;
+    std::cout << "results_.counts: " << results_.counts.transpose() << std::endl;
+    throw util::Exception("prune_counts: counts not finite");
   }
 }
 
