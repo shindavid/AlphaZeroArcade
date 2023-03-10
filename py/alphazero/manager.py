@@ -245,12 +245,18 @@ class AlphaZeroManager:
                 cur_model_gen = self.get_latest_promoted_model_generation()
                 if cur_model_gen <= model_gen:
                     time.sleep(5)
-                    if self_play_proc.returncode:
-                        timed_print(f'Self play proc {self_play_proc.pid} exited with code {self_play_proc.returncode}!')
+                    rc = self_play_proc.poll()
+                    if rc is None:
+                        continue
+                    if rc:
+                        timed_print(f'Self play proc {self_play_proc.pid} exited with code {rc}!')
                         print('STDOUT:')
-                        print(self_play_proc.stdout)
+                        for line in self_play_proc.stdout:
+                            sys.stdout.write(line)
                         print('STDERR:')
-                        print(self_play_proc.stderr)
+                        for line in self_play_proc.stderr:
+                            sys.stdout.write(line)
+                        sys.stdout.flush()
                         raise Exception()
                     continue
                 break
