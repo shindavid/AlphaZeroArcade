@@ -61,7 +61,7 @@ from natsort import natsorted
 from alphazero.optimization_args import ModelingArgs, GatingArgs
 from connect4.tensorizor import C4Net
 from util import subprocess_util
-from util.py_util import timed_print
+from util.py_util import timed_print, atomic_cp, make_hidden_filename
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -249,9 +249,7 @@ class AlphaZeroManager:
                 if cur_model_gen <= model_gen:
                     time.sleep(5)
                     rc = self_play_proc.poll()
-                    if rc is None:
-                        continue
-                    if rc:
+                    if rc is not None:
                         timed_print(f'Self play proc {self_play_proc.pid} exited with code {rc}!')
                         print('STDOUT:')
                         for line in self_play_proc.stdout:
@@ -350,8 +348,12 @@ class AlphaZeroManager:
 
         checkpoint_filename = self.get_checkpoint_filename(gen, epoch + 1)
         candidate_filename = self.get_candidate_model_filename(gen, epoch + 1)
-        net.save_checkpoint(checkpoint_filename)
-        net.save_model(candidate_filename)
+        tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
+        tmp_candidate_filename = make_hidden_filename(candidate_filename)
+        net.save_checkpoint(tmp_checkpoint_filename)
+        net.save_model(tmp_candidate_filename)
+        os.rename(tmp_checkpoint_filename, checkpoint_filename)
+        os.rename(tmp_candidate_filename, candidate_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
         timed_print(f'Candidate saved: {candidate_filename}')
 
@@ -427,7 +429,7 @@ class AlphaZeroManager:
             src = candidate_model_filename
             dst = self.get_promoted_model_filename(gen)
             timed_print(f'Promotion: {src} -> {dst}')
-            shutil.copy(src, dst)
+            atomic_cp(src, dst)
 
     @staticmethod
     def finalize_games_dir(games_dir: str):
