@@ -230,6 +230,8 @@ class AlphaZeroManager:
                 '-G', 0,
                 '--nnet-filename', model,
                 '--no-clear-dir',
+                '--no-forced-playouts',
+                '--disable-first-play-urgency',
             ])
 
         self_play_cmd = list(map(str, self_play_cmd))
@@ -243,6 +245,13 @@ class AlphaZeroManager:
                 cur_model_gen = self.get_latest_promoted_model_generation()
                 if cur_model_gen <= model_gen:
                     time.sleep(5)
+                    if self_play_proc.returncode:
+                        timed_print(f'Self play proc {self_play_proc.pid} exited with code {self_play_proc.returncode}!')
+                        print('STDOUT:')
+                        print(self_play_proc.stdout)
+                        print('STDERR:')
+                        print(self_play_proc.stderr)
+                        raise Exception()
                     continue
                 break
 
