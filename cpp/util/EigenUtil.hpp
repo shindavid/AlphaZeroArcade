@@ -142,9 +142,6 @@ template<typename Array> auto softmax(const Array& arr);
  */
 template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim);
 
-template<typename Scalar, int Rows, int Options, int MaxRows>
-int argmax(const Eigen::Array<Scalar, Rows, 1, Options, MaxRows, 1>& arr);
-
 }  // namespace eigen_util
 
 #include <util/inl/EigenUtil.inl>

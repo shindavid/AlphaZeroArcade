@@ -53,17 +53,4 @@ template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim) 
   return tensor.reverse(rev);
 }
 
-template<typename Scalar, int Rows, int Options, int MaxRows>
-int argmax(const Eigen::Array<Scalar, Rows, 1, Options, MaxRows, 1>& arr) {
-  int max_idx = 0;
-  Scalar max_val = arr(0);
-  for (int i = 1; i < arr.size(); ++i) {
-    if (arr(i) > max_val) {
-      max_idx = i;
-      max_val = arr(i);
-    }
-  }
-  return max_idx;
-}
-
 }  // namespace eigen_util
