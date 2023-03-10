@@ -92,7 +92,7 @@ class AlphaZeroManager:
 
         self.n_gen0_games = 1000
         self.c4_base_dir: str = c4_base_dir
-        self.silence_promote_skip_msgs = False
+        self.silence_future_msgs = False
         self.last_tested_candidate_model_gen_epoch = (-1, -1)
         self.ran_gen0_self_play = False
 
@@ -207,10 +207,13 @@ class AlphaZeroManager:
         model_gen = self.get_latest_promoted_model_generation()
         gen0 = model_gen == 0
         if (game_gen > 0 >= model_gen) or (gen0 and self.ran_gen0_self_play):
-            timed_print('No model to use for self-play.  Waiting for model to be promoted...')
-            time.sleep(5)
+            if not self.silence_future_msgs:
+                timed_print('No model to use for self-play.  Waiting for model to be promoted...')
+                self.silence_future_msgs = True
+            time.sleep(1)
             return
 
+        self.silence_future_msgs = False
         self.ran_gen0_self_play = True
         timed_print(f'Running self-play game-gen:{game_gen} model-gen:{model_gen}')
         games_dir = self.get_self_play_data_subdir(model_gen)
@@ -273,11 +276,14 @@ class AlphaZeroManager:
         print('******************************')
         loader = DataLoader(self.self_play_data_dir)
         if loader.n_total_games < self.n_gen0_games:
-            timed_print(f'Not enough games to train: {loader.n_total_games} < {self.n_gen0_games}')
-            timed_print('Waiting for more games...')
-            time.sleep(5)
+            if not self.silence_future_msgs:
+                timed_print(f'Not enough games to train: {loader.n_total_games} < {self.n_gen0_games}')
+                timed_print('Waiting for more games...')
+                self.silence_future_msgs = True
+            time.sleep(1)
             return
 
+        self.silence_future_msgs = False
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             gen, epoch = 1, 0
@@ -354,29 +360,31 @@ class AlphaZeroManager:
 
         if candidate_model_info is None:
             # candidate_model_epoch = self.get_latest_candidate_model_epoch()
-            if not self.silence_promote_skip_msgs:
+            if not self.silence_future_msgs:
                 timed_print(f'No candidate models available. Waiting...')
-            time.sleep(5)
-            self.silence_promote_skip_msgs = True
+            time.sleep(1)
+            self.silence_future_msgs = True
             return
 
+        self.silence_future_msgs = False
         latest_promoted_gen = self.get_latest_promoted_model_generation()
         gen, epoch = candidate_model_info.generation, candidate_model_info.epoch
         if gen <= latest_promoted_gen:
-            if not self.silence_promote_skip_msgs:
+            if not self.silence_future_msgs:
                 timed_print(f'Waiting for candidate on next generation ({gen}, {latest_promoted_gen})')
             time.sleep(1)
-            self.silence_promote_skip_msgs = True
+            self.silence_future_msgs = True
             return
 
+        self.silence_future_msgs = False
         if (gen, epoch) <= self.last_tested_candidate_model_gen_epoch:
-            if not self.silence_promote_skip_msgs:
+            if not self.silence_future_msgs:
                 timed_print(f'Latest candidate was already tested ({gen}, {epoch})')
-            time.sleep(5)
-            self.silence_promote_skip_msgs = True
+            time.sleep(1)
+            self.silence_future_msgs = True
             return
 
-        self.silence_promote_skip_msgs = False
+        self.silence_future_msgs = False
         self.last_tested_candidate_model_gen_epoch = (gen, epoch)
 
         candidate_model_filename = self.get_candidate_model_filename(gen, epoch)
