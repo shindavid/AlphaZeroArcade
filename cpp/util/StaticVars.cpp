@@ -1,7 +1,12 @@
+#include <util/AnsiCodes.hpp>
 #include <util/Config.hpp>
 #include <util/PrintUtil.hpp>
 #include <util/Random.hpp>
 #include <util/RepoUtil.hpp>
+
+namespace ansi {
+Codes* Codes::instance_ = nullptr;
+}  // namespace ansi
 
 namespace util {
 namespace detail {

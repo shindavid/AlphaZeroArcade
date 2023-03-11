@@ -137,16 +137,16 @@ inline void GameState::xprintf_dump(common::action_index_t last_action, const pl
   }
   util::xprintf("|1|2|3|4|5|6|7|\n");
   if (player_names) {
-    util::xprintf("%s%s%s: %s\n", ansi::kRed, ansi::kCircle, ansi::kReset, (*player_names)[kRed].c_str());
-    util::xprintf("%s%s%s: %s\n\n", ansi::kYellow, ansi::kCircle, ansi::kReset, (*player_names)[kYellow].c_str());
+    util::xprintf("%s%s%s: %s\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), (*player_names)[kRed].c_str());
+    util::xprintf("%s%s%s: %s\n\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), (*player_names)[kYellow].c_str());
   }
   util::xflush();
 }
 
 inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const {
   common::player_index_t current_player = get_current_player();
-  const char* cur_color = current_player == kRed ? ansi::kRed : ansi::kYellow;
-  const char* opp_color = current_player == kRed ? ansi::kYellow : ansi::kRed;
+  const char* cur_color = current_player == kRed ? ansi::kRed() : ansi::kYellow();
+  const char* opp_color = current_player == kRed ? ansi::kYellow() : ansi::kRed();
 
   for (int col = 0; col < kNumColumns; ++col) {
     int index = _to_bit_index(col, row);
@@ -154,9 +154,9 @@ inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const 
     bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
-    const char* c = occupied ? ansi::kCircle : " ";
+    const char* c = occupied ? ansi::kCircle() : " ";
 
-    util::xprintf("|%s%s%s%s", col == blink_column ? ansi::kBlink : "", color, c, occupied ? ansi::kReset : "");
+    util::xprintf("|%s%s%s%s", col == blink_column ? ansi::kBlink() : "", color, c, occupied ? ansi::kReset() : "");
   }
 
   util::xprintf("|\n");
@@ -184,9 +184,9 @@ inline void GameState::xdump_mcts_output(
 
   assert(net_policy.size() == (int)valid_actions.count());
 
-  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed, ansi::kCircle, ansi::kReset, 100 * net_value(kRed),
+  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kRed),
                 100 * mcts_value(kRed));
-  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow, ansi::kCircle, ansi::kReset, 100 * net_value(kYellow),
+  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kYellow),
                 100 * mcts_value(kYellow));
   util::xprintf("\n");
   util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
