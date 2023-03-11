@@ -126,7 +126,7 @@ template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(Inp
   }
 }
 
-inline void GameState::xprintf_dump(const player_name_array_t& player_names, common::action_index_t last_action) const {
+inline void GameState::xprintf_dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
   column_t blink_column = last_action;
   row_t blink_row = -1;
   if (blink_column >= 0) {
@@ -136,8 +136,10 @@ inline void GameState::xprintf_dump(const player_name_array_t& player_names, com
     xprintf_row_dump(row, row == blink_row ? blink_column : -1);
   }
   util::xprintf("|1|2|3|4|5|6|7|\n");
-  util::xprintf("%s%s%s: %s\n", ansi::kRed, ansi::kCircle, ansi::kReset, player_names[kRed].c_str());
-  util::xprintf("%s%s%s: %s\n\n", ansi::kYellow, ansi::kCircle, ansi::kReset, player_names[kYellow].c_str());
+  if (player_names) {
+    util::xprintf("%s%s%s: %s\n", ansi::kRed, ansi::kCircle, ansi::kReset, (*player_names)[kRed].c_str());
+    util::xprintf("%s%s%s: %s\n\n", ansi::kYellow, ansi::kCircle, ansi::kReset, (*player_names)[kYellow].c_str());
+  }
   util::xflush();
 }
 

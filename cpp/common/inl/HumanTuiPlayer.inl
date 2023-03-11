@@ -72,7 +72,7 @@ inline void HumanTuiPlayer<GameState_>::xprintf_switch(const GameState& state) {
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state) {
   util::clearscreen();
-  state.xprintf_dump(player_names_, last_action_);
+  state.xprintf_dump(last_action_, &player_names_);
 }
 
 }  // namespace common
