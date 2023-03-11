@@ -9,7 +9,7 @@ cd py;
 
 While the above is running...
 
-bokeh serve --show myapp.py --args -t <TAG>
+bokeh serve --show viz_c4_progress.py --args -t <TAG>
 """
 import argparse
 import os
@@ -223,10 +223,7 @@ class ProgressVisualizer:
         for widget in widgets:
             widget.on_change('value', update_data)
 
-        button = Button(label="Reload Data")
-        button.on_event('button_click', reload)
-
-        inputs = column(plot, move_number, moves_to_win, button)
+        inputs = column(plot, move_number, moves_to_win)
         return inputs
 
 
