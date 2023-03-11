@@ -177,8 +177,8 @@ class ProgressVisualizer:
 
         move_number = RangeSlider(title='Move-number', start=1, end=42, step=1, value=(1, 42))
         moves_to_win = RangeSlider(title='Moves-to-win', start=1, end=21, step=1, value=(1, 21))
-        LABELS = ["Winning Positions", "Drawn Positions"]
-        checkbox_group = CheckboxGroup(labels=LABELS, active=[0, 1])
+        LABELS = ["Normalize to baseline", "Winning Positions", "Drawn Positions"]
+        checkbox_group = CheckboxGroup(labels=LABELS, active=[1, 2])
 
         source = self.source
         source.data = dict(self.data)
@@ -196,8 +196,9 @@ class ProgressVisualizer:
         def update_data(attr, old, new):
             mn0, mn1 = move_number.value
             mw0, mw1 = moves_to_win.value
-            include_wins = 0 in checkbox_group.active
-            include_draws = 1 in checkbox_group.active
+            normalize_to_baseline = 0 in checkbox_group.active
+            include_wins = 1 in checkbox_group.active
+            include_draws = 2 in checkbox_group.active
 
             moves_to_win.disabled = not include_wins
             moves_to_win.visible = include_wins
@@ -222,6 +223,13 @@ class ProgressVisualizer:
             n1 = self.net_t1[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
             m0 = self.mcts_t0[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
             m1 = self.mcts_t1[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
+
+            if normalize_to_baseline:
+                n0 /= b
+                n1 /= b
+                m0 /= b
+                m1 /= b
+                b = np.ones_like(b)
 
             source.data = dict(x=x, b=b, n0=n0, n1=n1, m0=m0, m1=m1)
 
