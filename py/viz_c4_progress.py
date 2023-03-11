@@ -16,8 +16,7 @@ import os
 
 import numpy as np
 from bokeh.layouts import column
-from bokeh.models import Button
-from bokeh.models import ColumnDataSource, RangeSlider
+from bokeh.models import ColumnDataSource, RangeSlider, CheckboxGroup
 from bokeh.plotting import figure, curdoc
 from natsort import natsorted
 
@@ -129,7 +128,6 @@ class ProgressVisualizer:
 
                 m = move_num - 1
                 s = score
-                #                 s = (score + 1 ) // 2
 
                 self.den[g, m, s] += d['count']
                 self.baseline[g, m, s] += d['baseline'] * d['count']
@@ -179,6 +177,8 @@ class ProgressVisualizer:
 
         move_number = RangeSlider(title='Move-number', start=1, end=42, step=1, value=(1, 42))
         moves_to_win = RangeSlider(title='Moves-to-win', start=1, end=21, step=1, value=(1, 21))
+        LABELS = ["Winning Positions", "Drawn Positions"]
+        checkbox_group = CheckboxGroup(labels=LABELS, active=[0, 1])
 
         source = self.source
         source.data = dict(self.data)
@@ -193,14 +193,14 @@ class ProgressVisualizer:
         plot.line('x', 'm0', source=source, line_color='red', line_dash='dashed', legend_label='mcts (temp=0)')
         plot.add_layout(plot.legend[0], 'right')
 
-        def reload():
-            self.refresh()
-            source.data = dict(self.data)
-            update_data(None, None, None)
-
         def update_data(attr, old, new):
             mn0, mn1 = move_number.value
             mw0, mw1 = moves_to_win.value
+            include_wins = 0 in checkbox_group.active
+            include_draws = 1 in checkbox_group.active
+
+            moves_to_win.disabled = not include_wins
+            moves_to_win.visible = include_wins
 
             mn0 -= 1
             mw1 += 1
@@ -210,20 +210,27 @@ class ProgressVisualizer:
             mw0 = int(round(mw0))
             mw1 = int(round(mw1))
 
-            den = self.den[:, mn0:mn1, mw0:mw1].sum(axis=(1, 2))
-            b = self.baseline[:, mn0:mn1, mw0:mw1].sum(axis=(1, 2)) / den
-            n0 = self.net_t0[:, mn0:mn1, mw0:mw1].sum(axis=(1, 2)) / den
-            n1 = self.net_t1[:, mn0:mn1, mw0:mw1].sum(axis=(1, 2)) / den
-            m0 = self.mcts_t0[:, mn0:mn1, mw0:mw1].sum(axis=(1, 2)) / den
-            m1 = self.mcts_t1[:, mn0:mn1, mw0:mw1].sum(axis=(1, 2)) / den
+            mw_list = []
+            if include_draws:
+                mw_list.append(0)
+            if include_wins:
+                mw_list.extend(range(mw0, mw1))
+
+            den = self.den[:, mn0:mn1, mw_list].sum(axis=(1, 2))
+            b = self.baseline[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
+            n0 = self.net_t0[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
+            n1 = self.net_t1[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
+            m0 = self.mcts_t0[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
+            m1 = self.mcts_t1[:, mn0:mn1, mw_list].sum(axis=(1, 2)) / den
 
             source.data = dict(x=x, b=b, n0=n0, n1=n1, m0=m0, m1=m1)
 
         widgets = [move_number, moves_to_win]
         for widget in widgets:
             widget.on_change('value', update_data)
+        checkbox_group.on_change('active', update_data)
 
-        inputs = column(plot, move_number, moves_to_win)
+        inputs = column(plot, checkbox_group, move_number, moves_to_win)
         return inputs
 
 
