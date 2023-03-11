@@ -98,6 +98,7 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
 
   ActionMask good_moves;
   ActionMask best_moves;
+  ActionMask drawing_moves;
 
   int good_bound;
   int best_bound = best_score;
@@ -112,6 +113,7 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
   for (int j = 0; j < c4::kNumColumns; ++j) {
     best_moves[j] = move_scores[j] >= best_bound;
     good_moves[j] = move_scores[j] >= good_bound;
+    drawing_moves[j] = move_scores[j] == 0;
   }
 
   int converted_score = best_score;
@@ -129,7 +131,7 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
     }
   }
 
-  QueryResult result{best_moves, good_moves, converted_score};
+  QueryResult result{best_moves, good_moves, drawing_moves, converted_score};
   return result;
 }
 

@@ -96,6 +96,7 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
 
   int score = result.score;
   auto correct_moves = result.good_moves;
+  auto drawing_moves = result.drawing_moves;
 
   float mistake_prior_t0_num = 0;
   float mistake_prior_t0_den = 0;
@@ -112,8 +113,13 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
   int baseline_num = 0;
   int baseline_den = 0;
 
+  char verbose_chars[kNumColumns];
+
   for (int i = 0; i < kNumColumns; ++i) {
-    if (!valid_actions[i]) continue;
+    if (!valid_actions[i]) {
+      verbose_chars[i] = ' ';
+      continue;
+    }
 
     float prior_t0 = net_policy_t0(i);
     float posterior_t0 = posterior_policy_t0(i);
@@ -132,7 +138,16 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
       mistake_prior_t1_num += prior_t1;
       mistake_posterior_t1_num += posterior_t1;
       baseline_num++;
+      verbose_chars[i] = drawing_moves[i] ? '0' : ' ';
+    } else {
+      verbose_chars[i] = drawing_moves[i] ? '0' : '+';
     }
+  }
+
+  if (this->params_.verbose) {
+    printf(" %c %c %c %c %c %c %c\n",
+           verbose_chars[0], verbose_chars[1], verbose_chars[2], verbose_chars[3],
+           verbose_chars[4], verbose_chars[5], verbose_chars[6]);
   }
 
   float mistake_prior_t0_rate = mistake_prior_t0_den ? mistake_prior_t0_num / mistake_prior_t0_den : 0;

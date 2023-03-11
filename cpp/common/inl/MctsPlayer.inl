@@ -1,5 +1,8 @@
 #include <common/MctsPlayer.hpp>
 
+#include <unistd.h>
+
+#include <common/HumanTuiPlayer.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
@@ -105,6 +108,14 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game(
 {
   my_index_ = seat_assignment;
   move_count_ = 0;
+  facing_human_tui_player_ = false;
+
+  for (auto player : players) {
+    if (dynamic_cast<const HumanTuiPlayerBase*>(player)) {
+      facing_human_tui_player_ = true;
+      break;
+    }
+  }
 
   move_temperature_.reset();
   tensorizor_.clear();
@@ -124,6 +135,13 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
     mcts_->receive_state_change(player, state, action, outcome);
   }
   if (my_index_ == player && params_.verbose) {
+    if (!facing_human_tui_player_) {
+      if (!isatty(STDOUT_FILENO)) {
+        std::string s(2*action+1, ' ');
+        printf("%sx\n", s.c_str());
+      }
+      state.xprintf_dump(action);
+    }
     verbose_dump();
   }
 }

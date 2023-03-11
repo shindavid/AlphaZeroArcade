@@ -102,6 +102,7 @@ protected:
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;
+  bool facing_human_tui_player_ = false;
   int move_count_ = 0;
 };
 

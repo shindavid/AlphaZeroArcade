@@ -9,8 +9,10 @@
 
 namespace common {
 
+struct HumanTuiPlayerBase {};
+
 template<GameStateConcept GameState_>
-class HumanTuiPlayer : public AbstractPlayer<GameState_> {
+class HumanTuiPlayer : public AbstractPlayer<GameState_>, public HumanTuiPlayerBase {
 public:
   using base_t = AbstractPlayer<GameState_>;
   using GameState = GameState_;

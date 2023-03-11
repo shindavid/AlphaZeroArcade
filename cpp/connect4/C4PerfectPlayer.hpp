@@ -77,6 +77,7 @@ public:
   struct QueryResult {
     ActionMask best_moves;
     ActionMask good_moves;
+    ActionMask drawing_moves;
     int score;
   };
 
