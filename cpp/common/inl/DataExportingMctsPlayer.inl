@@ -52,21 +52,14 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
     const GameState& state, const MctsResults* mcts_results)
 {
-  auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
-  for (symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
-    auto slab = game_data_->get_next_slab();
-    auto& input = slab.input;
-    auto& policy = slab.policy;
+  auto slab = game_data_->get_next_slab();
+  auto& input = slab.input;
+  auto& policy = slab.policy;
 
-    this->tensorizor_.tensorize(input, state);
+  this->tensorizor_.tensorize(input, state);
 
-    GlobalPolicyProbDistr counts = mcts_results->counts.reshaped(1, GameState::kNumGlobalActions);
-    policy = counts / std::max(1.0f, (float)counts.sum());
-
-    auto transform = this->tensorizor_.get_symmetry(sym_index);
-    transform->transform_input(input);
-    transform->transform_policy(policy);
-  }
+  GlobalPolicyProbDistr counts = mcts_results->counts.reshaped(1, GameState::kNumGlobalActions);
+  policy = counts / std::max(1.0f, (float)counts.sum());
 }
 
 }  // namespace common
