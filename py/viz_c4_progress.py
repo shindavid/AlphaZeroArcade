@@ -185,13 +185,18 @@ class ProgressVisualizer:
         x = self.data['x']
 
         plot = figure(height=600, width=800, title='Mistake Rate', x_range=[x[0], x[-1]], y_range=[0, 1],
-                      x_axis_label='Generation', y_axis_label='Mistake Rate')
+                      y_axis_label='Mistake Rate')  # , tools='wheel_zoom')
         plot.line('x', 'b', source=source, line_color='blue', legend_label='baseline')
         plot.line('x', 'n1', source=source, line_color='green', legend_label='net (temp=1)')
         plot.line('x', 'n0', source=source, line_color='green', line_dash='dashed', legend_label='net (temp=0)')
         plot.line('x', 'm1', source=source, line_color='red', legend_label='mcts (temp=1)')
         plot.line('x', 'm0', source=source, line_color='red', line_dash='dashed', legend_label='mcts (temp=0)')
         plot.add_layout(plot.legend[0], 'right')
+
+        y_max = self.data['den'].max()
+        plot2 = figure(height=200, width=800, x_range=plot.x_range, y_range=[10**0, y_max], y_axis_type='log',
+                       x_axis_label='Generation', y_axis_label='Count')
+        plot2.vbar(x='x', top='den', source=source, bottom=.01, width=0.1)
 
         def update_data(attr, old, new):
             mn0, mn1 = move_number.value
@@ -231,14 +236,16 @@ class ProgressVisualizer:
                 m1 /= b
                 b = np.ones_like(b)
 
-            source.data = dict(x=x, b=b, n0=n0, n1=n1, m0=m0, m1=m1)
+            source.data = dict(x=x, den=den, b=b, n0=n0, n1=n1, m0=m0, m1=m1)
 
         widgets = [move_number, moves_to_win]
         for widget in widgets:
             widget.on_change('value', update_data)
         checkbox_group.on_change('active', update_data)
 
-        inputs = column(plot, checkbox_group, move_number, moves_to_win)
+        plots = column([plot, plot2])
+
+        inputs = column(plots, checkbox_group, move_number, moves_to_win)
         return inputs
 
 
