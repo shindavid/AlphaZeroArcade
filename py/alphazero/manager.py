@@ -347,7 +347,7 @@ class AlphaZeroManager:
             loss.backward()
             optimizer.step()
 
-        timed_print(f'Gen {gen} epoch {epoch} complete')
+        timed_print(f'Gen {gen} epoch {epoch + 1} complete')
         stats.dump()
 
         checkpoint_filename = self.get_checkpoint_filename(gen, epoch + 1)
