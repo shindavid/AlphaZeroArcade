@@ -1170,8 +1170,15 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDistr& P) {
   int rows = P.rows();
+  /*
+   * NOTE: KataGo scales alpha by 361 / rows, but this does not seem sound to me. In the case of Connect4, that
+   * yields an alpha >> 1, which inverts the Dirichlet noise from being concentrated at extremes of the simplex to
+   * being concentrated in the middle.
+   */
+  //double alpha = params_.dirichlet_alpha * 361 / rows;
+  double alpha = params_.dirichlet_alpha;
   LocalPolicyProbDistr noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(
-      rng_, params_.dirichlet_alpha, rows);
+      rng_, alpha, rows);
   P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
 }
 
