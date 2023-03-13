@@ -6,6 +6,7 @@
 #include <common/GameRunner.hpp>
 #include <common/HumanTuiPlayer.hpp>
 #include <common/MctsPlayer.hpp>
+#include <connect4/C4CheatingHumanTuiPlayer.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
@@ -20,7 +21,7 @@ namespace po2 = boost_util::program_options;
 struct Args {
   std::string my_starting_color;
   bool perfect;
-  bool verbose;
+  bool cheat_mode;
 
   auto make_options_description() {
     po2::options_description desc("PlayVsCpu options");
@@ -30,6 +31,8 @@ struct Args {
             "human's starting color (R or Y). Default: random")
         .template add_option<"perfect", 'p'>(po::bool_switch(&perfect)->default_value(false),
             "play against perfect player")
+        .template add_option<"cheat-mode", 'C'>(po::bool_switch(&cheat_mode)->default_value(false),
+            "show winning moves")
         ;
   }
 };
@@ -68,8 +71,14 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  using C4HumanTuiPlayer = common::HumanTuiPlayer<c4::GameState>;
-  c4::Player* human = new C4HumanTuiPlayer();
+  c4::Player* human;
+  if (args.cheat_mode) {
+    mcts_player_params.verbose = true;
+    human = new c4::CheatingHumanTuiPlayer(perfect_play_params);
+  } else {
+    using C4HumanTuiPlayer = common::HumanTuiPlayer<c4::GameState>;
+    human = new C4HumanTuiPlayer();
+  }
 
   c4::Player* cpu;
   if (args.perfect) {

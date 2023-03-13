@@ -79,6 +79,8 @@ public:
     ActionMask good_moves;
     ActionMask drawing_moves;
     int score;
+
+    std::string get_overlay() const;
   };
 
   PerfectOracle(const PerfectPlayParams& params);

@@ -27,9 +27,9 @@ public:
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
-private:
+protected:
   void xprintf_switch(const GameState&);
-  void print_state(const GameState&);
+  virtual void print_state(const GameState&);
 
   std::ostringstream buf_;
   player_name_array_t player_names_;
