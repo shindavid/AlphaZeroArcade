@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 
-#include <common/HumanTuiPlayer.hpp>
+#include <common/HumanTuiPlayerBase.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>

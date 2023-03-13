@@ -6,10 +6,9 @@
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
+#include <common/HumanTuiPlayerBase.hpp>
 
 namespace common {
-
-struct HumanTuiPlayerBase {};
 
 template<GameStateConcept GameState_>
 class HumanTuiPlayer : public AbstractPlayer<GameState_>, public HumanTuiPlayerBase {
