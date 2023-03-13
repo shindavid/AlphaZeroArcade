@@ -725,7 +725,15 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     }
   }
 
-  PUCT = V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  /*
+   * AlphaZero/KataGo defines V to be over a [-1, +1] range, but we use a [0, +1] range.
+   *
+   * We multiply V by 2 to account for this difference.
+   *
+   * This could have been accomplished also by multiplying cPUCT by 0.5, but this way maintains better
+   * consistency with the AlphaZero/KataGo approach.
+   */
+  PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1243,16 +1251,14 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
   auto n_forced = (P * params_.k_forced * N_sum).sqrt();
 
   auto PUCT_max = PUCT.maxCoeff();
-  if ((PUCT_max < (V + 1e-6)).any()) {
-    return;  // avoid division by zero
-  }
 
   auto N_max = N.maxCoeff();
   auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
 
-  auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - V) - 1;
+  auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
   for (int c = 0; c < root_->_num_children(); ++c) {
     if (N(c) == N_max) continue;
+    if (!isfinite(N_floor(c))) continue;
     auto n = std::max(N_floor(c), N(c) - n_forced(c));
     if (n <= 1.0) {
       n = 0;
@@ -1261,14 +1267,14 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
     results_.counts(root_->_get_child(c)->action()) = n;
   }
 
-  if (!results_.counts.isFinite().all()) {
+  if (!results_.counts.isFinite().all() || results_.counts.sum() <= 0) {
     std::cout << "P: " << P.transpose() << std::endl;
     std::cout << "N: " << N.transpose() << std::endl;
     std::cout << "V: " << V.transpose() << std::endl;
     std::cout << "PUCT: " << PUCT.transpose() << std::endl;
     std::cout << "n_forced: " << n_forced.transpose() << std::endl;
     std::cout << "results_.counts: " << results_.counts.transpose() << std::endl;
-    throw util::Exception("prune_counts: counts not finite");
+    throw util::Exception("prune_counts: counts problem");
   }
 }
 
