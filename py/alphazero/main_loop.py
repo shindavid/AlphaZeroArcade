@@ -54,9 +54,9 @@ def load_args():
                             help='remote repo path for model training')
     cfg.add_parser_argument('remote.c4.base_dir_root', parser, '-D', '--remote-c4-base-dir-root',
                             help='--c4-base-dir-root on remote host')
-    parser.add_argument('--self-play-loop', action='store_true', help='run self-play loop')
-    parser.add_argument('--train-loop', action='store_true', help='run train loop')
-    parser.add_argument('--promote-loop', action='store_true', help='run promote loop')
+    parser.add_argument('--self-play-loop', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--train-loop', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--promote-loop', action='store_true', help=argparse.SUPPRESS)
     add_optimization_args(parser)
 
     args = parser.parse_args()
