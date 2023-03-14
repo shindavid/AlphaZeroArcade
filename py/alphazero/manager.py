@@ -43,7 +43,7 @@ BASE_DIR/
 
 TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
 """
-
+import glob
 import os
 import random
 import shutil
@@ -110,6 +110,43 @@ class AlphaZeroManager:
         os.makedirs(self.self_play_data_dir, exist_ok=True)
         os.makedirs(self.gating_logs_dir, exist_ok=True)
         os.makedirs(self.stdouts_dir, exist_ok=True)
+
+    def erase_data_after(self, gen: Generation):
+        """
+        Deletes self-play/ dirs strictly greater than gen, and all models/checkpoints trained off those dirs
+        (i.e., models/checkpoints strictly greater than gen+1).
+        """
+        timed_print(f'Erasing data after gen {gen}')
+        g = gen + 1
+        while True:
+            gen_dir = os.path.join(self.self_play_data_dir, f'gen-{g}')
+            if os.path.exists(gen_dir):
+                shutil.rmtree(gen_dir)
+                g += 1
+            else:
+                break
+
+        g = gen + 2
+        while True:
+            candidate_glob = os.path.join(self.candidate_models_dir, f'gen-{g}-epoch-*.ptj')
+            checkpoint_glob = os.path.join(self.checkpoints_dir, f'gen-{g}-epoch-*.ptc')
+            gating_log_glob = os.path.join(self.gating_logs_dir, f'gen-{g}-epoch-*.txt')
+            found = False
+            for f in natsorted(glob.glob(candidate_glob) + glob.glob(checkpoint_glob) + glob.glob(gating_log_glob)):
+                os.remove(f)
+                found = True
+            if not found:
+                break
+            g += 1
+
+        g = gen + 2
+        while True:
+            promoted_model = os.path.join(self.promoted_models_dir, f'gen-{g}.ptj')
+            if os.path.exists(promoted_model):
+                os.remove(promoted_model)
+                g += 1
+            else:
+                break
 
     def log_once(self, msg):
         if self.last_log_once_msg == msg:

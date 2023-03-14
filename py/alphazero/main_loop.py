@@ -18,6 +18,7 @@ from util.py_util import timed_print
 class Args:
     c4_base_dir_root: str
     tag: str
+    restart_gen: int
     remote_host: str
     remote_repo_path: str
     remote_c4_base_dir_root: str
@@ -29,6 +30,7 @@ class Args:
     def load(args):
         Args.c4_base_dir_root = args.c4_base_dir_root
         Args.tag = args.tag
+        Args.restart_gen = args.restart_gen
         Args.remote_host = args.remote_host
         Args.remote_repo_path = args.remote_repo_path
         Args.remote_c4_base_dir_root = args.remote_c4_base_dir_root
@@ -44,6 +46,7 @@ def load_args():
     cfg = Config.instance()
 
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
+    parser.add_argument('--restart-gen', type=int, help='gen to resume at')
     cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root', help='base-dir-root for game/model files')
     cfg.add_parser_argument('remote.host', parser, '-H', '--remote-host', help='remote host for model training')
     cfg.add_parser_argument('remote.repo.path', parser, '-P', '--remote-repo-path',
@@ -73,6 +76,8 @@ def main():
         manager.promote_loop()
     else:
         manager.rm_kill_file()
+        if Args.restart_gen:
+            manager.erase_data_after(Args.restart_gen)
 
         assert Args.remote_host, 'Required option: -H'
         assert Args.remote_repo_path, 'Required option: -P'
