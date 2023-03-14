@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Use this script to visualize the progress of a C4 alphazero run.
 
@@ -9,10 +11,12 @@ cd py;
 
 While the above is running...
 
-bokeh serve --show viz_c4_progress.py --args -t <TAG>
+./viz_c4_progress.py -t <TAG>
 """
 import argparse
 import os
+import pipes
+import sys
 
 import numpy as np
 from bokeh.layouts import column
@@ -24,11 +28,13 @@ from config import Config
 
 
 class Args:
+    launch: bool
     c4_base_dir_root: str
     tag: str
 
     @staticmethod
     def load(args):
+        Args.launch = bool(args.launch)
         Args.c4_base_dir_root = args.c4_base_dir_root
         Args.tag = args.tag
 
@@ -39,6 +45,7 @@ def load_args():
     parser = argparse.ArgumentParser()
     cfg = Config.instance()
 
+    parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root', help='base-dir-root for game/model files')
 
@@ -47,6 +54,14 @@ def load_args():
 
 
 load_args()
+
+if not Args.launch:
+    script = os.path.abspath(__file__)
+    args = ' '.join(map(pipes.quote, sys.argv[1:] + ['--launch']))
+    cmd = f'bokeh serve --show {script} --args {args}'
+    sys.exit(os.system(cmd))
+
+
 c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
 
 
