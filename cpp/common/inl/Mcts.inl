@@ -581,8 +581,8 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   }
 
   LocalPolicyProbDistr P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree->is_root() && !sim_params_->disable_noise) {
-    if (params_.dirichlet_mult) {
+  if (tree->is_root()) {
+    if (params_.dirichlet_mult && !sim_params_->disable_noise) {
       mcts_->add_dirichlet_noise(P);
     }
     P = P.pow(1.0 / params_.root_softmax_temperature);
