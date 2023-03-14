@@ -121,7 +121,7 @@ class AlphaZeroManager:
         while True:
             gen_dir = os.path.join(self.self_play_data_dir, f'gen-{g}')
             if os.path.exists(gen_dir):
-                shutil.rmtree(gen_dir)
+                shutil.rmtree(gen_dir, ignore_errors=True)
                 g += 1
             else:
                 break
