@@ -6,6 +6,7 @@ import pipes
 import signal
 import subprocess
 import sys
+import time
 from typing import List
 
 from alphazero.manager import AlphaZeroManager
@@ -108,8 +109,17 @@ def main():
         promote_proc = subprocess_util.Popen(promote_cmd)
         procs = [self_play_proc, train_proc, promote_proc]
 
-        for proc in procs:
-            proc.wait()
+        while True:
+            if self_play_proc.poll() is not None:
+                timed_print('self_play_proc exited')
+                break
+            if train_proc.poll() is not None:
+                timed_print('train_proc exited')
+                break
+            if promote_proc.poll() is not None:
+                timed_print('promote_proc exited')
+                break
+            time.sleep(1)
 
         proc_cmd_stdout_list = [
             (self_play_proc, self_play_cmd, manager.get_self_play_stdout()),
@@ -125,6 +135,8 @@ def main():
             print(tail_cmd)
             print('')
             os.system(tail_cmd)
+
+        kill_all()
 
 
 if __name__ == '__main__':
