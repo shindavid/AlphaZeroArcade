@@ -420,7 +420,7 @@ class MCTS:
         V = torch.Tensor([c.effective_value_avg[current_player] for c in tree.children])
         N = torch.Tensor([c.effective_count() for c in tree.children])
         eps = 1e-6  # needed when N == 0
-        PUCT = V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
+        PUCT = 2 * V + c_PUCT * P * (np.sqrt(sum(N) + eps)) / (1 + N)
         value_avg = torch.Tensor([tree.effective_value_avg[p] for p in range(tree.n_players)])
         E = torch.Tensor([c.eliminated for c in tree.children])
         PUCT *= 1 - E
