@@ -21,6 +21,9 @@ from util.repo_util import Repo
 from util.str_util import center_text
 
 
+torch.set_default_dtype(torch.float64)
+
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--games-dir", default=Repo.c4_games(), help='c4 games dir (default: %(default)s)')

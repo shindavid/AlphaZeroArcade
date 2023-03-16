@@ -648,8 +648,8 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   bool add_noise = !sim_params_->disable_noise && params_.dirichlet_mult > 0;
   if (params_.forced_playouts && add_noise) {
     PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
-    auto F1 = (N < n_forced).template cast<float>();
-    auto F2 = (N > 0).template cast<float>();
+    auto F1 = (N < n_forced).template cast<dtype>();
+    auto F2 = (N > 0).template cast<dtype>();
     auto F = F1 * F2;
     PUCT = PUCT * (1 - F) + F * 1e+6;
   }
@@ -714,12 +714,12 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
 
   if (params.enable_first_play_urgency && fpu_bits.any()) {
     std::unique_lock<std::mutex> lock(tree->stats_mutex());
-    float PV = tree->_effective_value_avg(cp);
+    dtype PV = tree->_effective_value_avg(cp);
     lock.unlock();
 
     bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_noise;
-    float cFPU = disableFPU ? 0.0 : params.cFPU;
-    float v = PV - cFPU * sqrt((P * (N > 0).template cast<float>()).sum());
+    dtype cFPU = disableFPU ? 0.0 : params.cFPU;
+    dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
     for (int c : bitset_util::on_indices(fpu_bits)) {
       V(c) = v;
     }
@@ -1157,7 +1157,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
   NNEvaluation_sptr evaluation = root_->_evaluation();
   results_.valid_actions = root_->_valid_action_mask();
-  results_.counts = root_->get_effective_counts().template cast<float>();
+  results_.counts = root_->get_effective_counts().template cast<dtype>();
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }

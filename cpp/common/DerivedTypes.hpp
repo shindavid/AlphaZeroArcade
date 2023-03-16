@@ -13,6 +13,7 @@
 #include <util/EigenTorch.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
+#include <util/TorchUtil.hpp>
 
 namespace common {
 
@@ -26,20 +27,21 @@ namespace common {
  *
  * If the game is not yet over, the outcome will have all zeros.
  */
-template<int NumPlayers> using GameOutcome_ = Eigen::Array<float, NumPlayers, 1>;
+template<int NumPlayers> using GameOutcome_ = Eigen::Array<torch_util::dtype, NumPlayers, 1>;
 template<int NumPlayers> bool is_terminal_outcome(const GameOutcome_<NumPlayers>& outcome) { return outcome.sum() > 0; }
 template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome_<NumPlayers> o; o.setZero(); return o; }
 
 template<typename GameState>
 struct GameStateTypes {
+  using dtype = torch_util::dtype;
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
   using GameOutcome = GameOutcome_<kNumPlayers>;
 
-  template <int NumRows> using PolicyArray = eigentorch::Array<float, NumRows, kNumGlobalActions, Eigen::RowMajor>;
-  template <int NumRows> using ValueArray = eigentorch::Array<float, NumRows, kNumPlayers, Eigen::RowMajor>;
+  template <int NumRows> using PolicyArray = eigentorch::Array<dtype, NumRows, kNumGlobalActions, Eigen::RowMajor>;
+  template <int NumRows> using ValueArray = eigentorch::Array<dtype, NumRows, kNumPlayers, Eigen::RowMajor>;
 
   using PolicySlab = PolicyArray<1>;
   using ValueSlab = ValueArray<1>;
@@ -47,15 +49,15 @@ struct GameStateTypes {
   using PolicyEigenSlab = typename PolicySlab::EigenType;
   using ValueEigenSlab = typename ValueSlab::EigenType;
 
-  using PolicyArray1D = Eigen::Array<float, kNumGlobalActions, 1>;
-  using ValueArray1D = Eigen::Array<float, kNumPlayers, 1>;
+  using PolicyArray1D = Eigen::Array<dtype, kNumGlobalActions, 1>;
+  using ValueArray1D = Eigen::Array<dtype, kNumPlayers, 1>;
 
-  using ValueProbDistr = Eigen::Array<float, kNumPlayers, 1>;
-  using LocalPolicyLogitDistr = Eigen::Array<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
-  using LocalPolicyProbDistr = Eigen::Array<float, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+  using ValueProbDistr = Eigen::Array<dtype, kNumPlayers, 1>;
+  using LocalPolicyLogitDistr = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
+  using LocalPolicyProbDistr = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using GlobalPolicyCountDistr = Eigen::Array<int, kNumGlobalActions, 1>;
-  using GlobalPolicyProbDistr = Eigen::Array<float, kNumGlobalActions, 1>;
+  using GlobalPolicyProbDistr = Eigen::Array<dtype, kNumGlobalActions, 1>;
 
   using ActionMask = std::bitset<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
@@ -79,6 +81,7 @@ struct GameStateTypes {
 
 template<typename Tensorizor>
 struct TensorizorTypes {
+  using dtype = torch_util::dtype;
   static constexpr int kMaxNumSymmetries = Tensorizor::kMaxNumSymmetries;
   using BaseShape = typename Tensorizor::Shape;
 
@@ -86,12 +89,12 @@ struct TensorizorTypes {
 
   template <int NumRows> using Shape = eigen_util::to_sizes_t<
       util::concat_int_sequence_t<util::int_sequence<NumRows>, BaseShape>>;
-  template <int NumRows> using InputTensor = eigentorch::TensorFixedSize<float, Shape<NumRows>>;
+  template <int NumRows> using InputTensor = eigentorch::TensorFixedSize<dtype, Shape<NumRows>>;
 
   using InputSlab = InputTensor<1>;
   using InputEigenSlab = typename InputSlab::EigenType;
 
-  using DynamicInputTensor = eigentorch::Tensor<float, BaseShape::size() + 1>;
+  using DynamicInputTensor = eigentorch::Tensor<dtype, BaseShape::size() + 1>;
 };
 
 template<typename GameState>

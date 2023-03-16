@@ -9,11 +9,16 @@ import sys
 import time
 from typing import List
 
+import torch
+
 from alphazero.manager import AlphaZeroManager
 from alphazero.optimization_args import add_optimization_args, OptimizationArgs
 from config import Config
 from util import subprocess_util
 from util.py_util import timed_print
+
+
+torch.set_default_dtype(torch.float64)
 
 
 class Args:

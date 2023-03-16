@@ -51,6 +51,7 @@ public:
 
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using GameStateTypes = common::GameStateTypes<GameState>;
+  using dtype = typename GameStateTypes::dtype;
 
   using MctsResults = common::MctsResults<GameState>;
   using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
