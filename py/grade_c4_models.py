@@ -4,10 +4,9 @@ import argparse
 import os
 import time
 
-from alphazero.manager import AlphaZeroManager
 from config import Config
 from util import subprocess_util
-from util.py_util import timed_print
+from util.py_util import make_hidden_filename, timed_print
 from util.repo_util import Repo
 
 
@@ -56,7 +55,7 @@ def load_args():
 class ModelGrader:
     def __init__(self):
         self.c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
-        assert os.path.isfile(self.c4_base_dir)
+        assert os.path.isdir(self.c4_base_dir), self.c4_base_dir
         self.grading_logs_dir = os.path.join(self.c4_base_dir, 'grading-logs')
         os.makedirs(self.grading_logs_dir, exist_ok=True)
         self.next_gen = 1
@@ -82,12 +81,17 @@ class ModelGrader:
             '--hide-progress-bar',
             '--grade-moves',
         ]
-        cmd = list(map(str, cmd))
-        cmd = f'{cmd} > {self.get_log_filename(gen)}'
+        cmd = ' '.join(map(str, cmd))
+        log_filename = self.get_log_filename(gen)
+        hidden_log_filename = make_hidden_filename(log_filename)
+        cmd = f'{cmd} > {hidden_log_filename}'
         timed_print(f'Running: {cmd}')
         subprocess_util.run(cmd)
+        timed_print(f'Moving {hidden_log_filename} to {log_filename}')
+        os.rename(hidden_log_filename, log_filename)
 
     def run(self):
+        os.system(f'rm -f {self.grading_logs_dir}/.*.log')  # clean up straggling tmp files
         while True:
             gen = self.next_gen
             model_filename = self.get_model_filename(gen)
