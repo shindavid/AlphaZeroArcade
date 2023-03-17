@@ -67,6 +67,8 @@ torch_util::CatchTensorMallocs CONCAT(__unique_var2_, __LINE__) \
 
 namespace torch_util {
 
+using dtype = double;
+
 /*
  * See documentation for macro CATCH_TENSOR_MALLOCS().
  */

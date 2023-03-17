@@ -13,6 +13,9 @@ from connect4.game_logic import C4GameState, NUM_COLUMNS, NUM_ROWS, NUM_COLORS, 
 from util.torch_util import Shape
 
 
+torch.set_default_dtype(torch.float64)
+
+
 class ConvBlock(nn.Module):
     """
     From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):

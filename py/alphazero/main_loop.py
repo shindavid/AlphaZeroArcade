@@ -3,9 +3,14 @@
 import argparse
 import os
 
+import torch
+
 from alphazero.manager import AlphaZeroManager
 from alphazero.optimization_args import ModelingArgs
 from config import Config
+
+
+torch.set_default_dtype(torch.float64)
 
 
 class Args:

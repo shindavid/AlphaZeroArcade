@@ -190,7 +190,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     if (temp != 0) {
       policy = policy.pow(1.0 / temp);
     } else {
-      policy = (policy == policy.maxCoeff()).template cast<float>();
+      policy = (policy == policy.maxCoeff()).template cast<torch_util::dtype>();
     }
     value = mcts_results->win_rates;
   }
