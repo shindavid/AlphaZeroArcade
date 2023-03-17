@@ -9,7 +9,11 @@ cd py;
 
 ./alphazero/main_loop.py -t <TAG>
 
-While the above is running...
+While the above is running, launch the grading daemon, preferably from a different machine:
+
+./grade_c4_models.py -t <TAG> -d
+
+While the above is running, launch the visualizer:
 
 ./viz_c4_progress.py -t <TAG>
 """
@@ -68,7 +72,7 @@ c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
 class ProgressVisualizer:
     def __init__(self, manager_path: str):
         self.manager_path = manager_path
-        self.gating_logs_dir = os.path.join(manager_path, 'gating-logs')
+        self.gating_logs_dir = os.path.join(manager_path, 'grading-logs')
 
         self.max_gen = 0
         self.den = np.zeros((self.max_gen, 42, 22))
@@ -160,7 +164,7 @@ class ProgressVisualizer:
         self.mcts_t1 *= 0
 
         for filename in natsorted(os.listdir(self.gating_logs_dir)):
-            # gen-1-epoch-2.txt
+            # gen-1.log
             full_filename = os.path.join(self.gating_logs_dir, filename)
             gen = int(filename.split('-')[1])
             assert gen > 1, full_filename
