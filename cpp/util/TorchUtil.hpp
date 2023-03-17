@@ -69,6 +69,17 @@ namespace torch_util {
 
 using dtype = double;
 
+template<class T> struct TorchType {};
+template<> struct TorchType<float> { static constexpr auto value = torch::kFloat32; };
+template<> struct TorchType<double> { static constexpr auto value = torch::kFloat64; };
+
+/*
+ * Wrapper around torch::from_blob(), that properly sets options based on torch_util::dtype.
+ */
+inline auto from_blob(void* data, at::IntArrayRef sizes) {
+  return torch::from_blob(data, sizes, torch::dtype(TorchType<dtype>::value));
+}
+
 /*
  * See documentation for macro CATCH_TENSOR_MALLOCS().
  */

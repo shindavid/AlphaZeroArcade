@@ -1,6 +1,6 @@
-#pragma once
-
 #include <util/EigenTorch.hpp>
+
+#include <util/TorchUtil.hpp>
 
 namespace eigentorch {
 
@@ -11,7 +11,7 @@ torch::Tensor eigen2torch(Eigen::Tensor<Scalar, Rank, Options> &tensor,
                           const std::array<int64_t, N> &torch_shape)
 {
   static_assert(Options & Eigen::RowMajorBit);
-  return torch::from_blob(tensor.data(), torch_shape);
+  return torch_util::from_blob(tensor.data(), torch_shape);
 }
 
 template<typename Scalar, int Rank, int Options>
@@ -30,7 +30,7 @@ torch::Tensor eigen2torch(Eigen::TensorFixedSize<Scalar, Sizes, Options> &tensor
                           const std::array<int64_t, N> &torch_shape)
 {
   static_assert(Options & Eigen::RowMajorBit);
-  return torch::from_blob(tensor.data(), torch_shape);
+  return torch_util::from_blob(tensor.data(), torch_shape);
 }
 
 template<typename Scalar, typename Sizes, int Options>
@@ -44,7 +44,7 @@ torch::Tensor eigen2torch(Eigen::Array<Scalar, Rows, Cols, Options> &matrix,
                           const std::array<int64_t, N> &torch_shape)
 {
   static_assert((Options & Eigen::RowMajorBit) || (Cols == 1) || (Rows == 1));
-  return torch::from_blob(matrix.data(), torch_shape);
+  return torch_util::from_blob(matrix.data(), torch_shape);
 }
 
 template<typename Scalar, int Rows, int Cols, int Options>
