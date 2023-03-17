@@ -125,8 +125,8 @@ class ProgressVisualizer:
             # log appears to be mid-write
             return
 
-        self.resize(gen - 1)
-        g = gen - 2
+        self.resize(gen)
+        g = gen - 1
         with open(log_filename, 'r') as f:
             for line in f:
                 if not line.startswith('OracleGrader '):
@@ -164,14 +164,17 @@ class ProgressVisualizer:
         self.mcts_t1 *= 0
 
         for filename in natsorted(os.listdir(self.gating_logs_dir)):
+            if filename.startswith('.'):
+                # tmp file
+                continue
             # gen-1.log
+            gen = int(filename.split('.')[0].split('-')[1])
             full_filename = os.path.join(self.gating_logs_dir, filename)
-            gen = int(filename.split('-')[1])
-            assert gen > 1, full_filename
+            assert gen > 0, full_filename
             self.parse_gating_log(gen, full_filename)
 
         n = self.den.shape[0]
-        x = np.arange(n)
+        x = np.arange(n) + 1
         den = self.den.sum(axis=(1, 2))
 
         b = self.baseline.sum(axis=(1, 2)) / den
@@ -204,18 +207,13 @@ class ProgressVisualizer:
         x = self.data['x']
 
         plot = figure(height=600, width=800, title='Mistake Rate', x_range=[x[0], x[-1]], y_range=[0, 1],
-                      y_axis_label='Mistake Rate')  # , tools='wheel_zoom')
+                      y_axis_label='Mistake Rate', x_axis_label='Generation')  # , tools='wheel_zoom')
         plot.line('x', 'b', source=source, line_color='blue', legend_label='baseline')
         plot.line('x', 'n1', source=source, line_color='green', legend_label='net (temp=1)')
         plot.line('x', 'n0', source=source, line_color='green', line_dash='dashed', legend_label='net (temp=0)')
         plot.line('x', 'm1', source=source, line_color='red', legend_label='mcts (temp=1)')
         plot.line('x', 'm0', source=source, line_color='red', line_dash='dashed', legend_label='mcts (temp=0)')
         plot.add_layout(plot.legend[0], 'right')
-
-        y_max = self.data['den'].max()
-        plot2 = figure(height=200, width=800, x_range=plot.x_range, y_range=[10**0, y_max], y_axis_type='log',
-                       x_axis_label='Generation', y_axis_label='Count')
-        plot2.vbar(x='x', top='den', source=source, bottom=.01, width=0.1)
 
         def update_data(attr, old, new):
             mn0, mn1 = move_number.value
@@ -262,9 +260,7 @@ class ProgressVisualizer:
             widget.on_change('value', update_data)
         checkbox_group.on_change('active', update_data)
 
-        plots = column([plot, plot2])
-
-        inputs = column(plots, checkbox_group, move_number, moves_to_win)
+        inputs = column(plot, checkbox_group, move_number, moves_to_win)
         return inputs
 
 
