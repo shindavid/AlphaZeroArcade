@@ -41,7 +41,7 @@ def main():
     manager = AlphaZeroManager(c4_base_dir)
     if Args.restart_gen:
         manager.erase_data_after(Args.restart_gen)
-    manager.run()
+    manager.run(async_mode=not ModelingArgs.synchronous_mode)
 
 
 if __name__ == '__main__':
