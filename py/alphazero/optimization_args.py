@@ -51,7 +51,7 @@ class OptimizationArgParams:
     """
     modeling_params  = {
         'minibatch_size': Param('-m', '--minibatch-size', 256, 'minibatch size'),
-        'snapshot_steps': Param('-s', '--snapshot-steps', 256, 'steps per snapshot'),
+        'snapshot_steps': Param('-s', '--snapshot-steps', 1024, 'steps per snapshot'),
         'window_alpha': Param('-A', '--window-alpha', 0.75, 'alpha for n_window formula'),
         'window_beta': Param('-B', '--window-beta', 0.4, 'beta for n_window formula'),
         'window_c': Param('-c', '--window-c', 250000, 'c for n_window formula'),
@@ -59,12 +59,6 @@ class OptimizationArgParams:
         'weight_decay': Param('-w', '--weight-decay', 6e-5, 'weight decay'),
         'learning_rate': Param('-l', '--learning-rate', 6e-5, 'learning rate'),
         'value_loss_lambda': Param('-V', '--value-loss-lambda', 1.5, 'value loss lambda'),
-    }
-
-    gating_params = {
-        'mcts_iters': Param('-i', '--mcts-iters', 300, 'num mcts player iters'),
-        'num_games': Param('-g', '--num-games', 200, 'num games to play'),
-        'promotion_win_rate': Param('-W', '--promotion-win-rate', 0.5, 'required win rate for promotion')
     }
 
 
@@ -82,17 +76,10 @@ class OptimizationArgs:
         learning_rate: float
         value_loss_lambda: float
 
-    class Gating:
-        mcts_iters: int
-        num_games: int
-        promotion_win_rate: float
-
     @staticmethod
     def load(args):
         for attr in OptimizationArgParams.modeling_params.keys():
             setattr(OptimizationArgs.Modeling, attr, getattr(args, attr))
-        for attr in OptimizationArgParams.gating_params.keys():
-            setattr(OptimizationArgs.Gating, attr, getattr(args, attr))
 
     @staticmethod
     def get_str() -> str:
@@ -108,16 +95,10 @@ class OptimizationArgs:
 
 
 ModelingArgs = OptimizationArgs.Modeling
-GatingArgs = OptimizationArgs.Gating
 
 
 def add_optimization_args(parser: argparse.ArgumentParser):
     group = parser.add_argument_group('alphazero modeling options')
     for attr, param in OptimizationArgParams.modeling_params.items():
-        group.add_argument(param.short_name, param.long_name, type=param.value_type, default=param.value,
-                           help=f'{param.help} (default: %(default)s)')
-
-    group = parser.add_argument_group('alphazero gating options')
-    for attr, param in OptimizationArgParams.gating_params.items():
         group.add_argument(param.short_name, param.long_name, type=param.value_type, default=param.value,
                            help=f'{param.help} (default: %(default)s)')
