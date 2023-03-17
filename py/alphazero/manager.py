@@ -91,7 +91,13 @@ class SelfPlayProcData:
 
 class AlphaZeroManager:
     def __init__(self, c4_base_dir: str):
-        self.py_cuda_device: int = 1  # TODO: make this configurable, this is specific to dshin's setup
+        self.py_cuda_device: int = 0
+        if not ModelingArgs.synchronous_mode:
+            """
+            TODO: assert that 2 GPU's are actually available.
+            TODO: make this configurable, this is specific to dshin's setup
+            """
+            self.py_cuda_device = 1
         self.py_cuda_device_str: str = f'cuda:{self.py_cuda_device}'
         self.log_file = None
 
