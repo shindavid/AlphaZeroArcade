@@ -43,11 +43,11 @@ def load_args():
                         help='number of games to play per generation (default: %(default)s))')
     parser.add_argument('-i', '--mcts-iters', type=int, default=300,
                         help='number of MCTS iterations per move (default: %(default)s)')
-    parser.add_argument('--batch-size-limit', type=int, default=64,
+    parser.add_argument('-b', '--batch-size-limit', type=int, default=64,
                         help='batch size limit (default: %(default)s)')
     parser.add_argument('-p', '--parallelism-factor', type=int, default=50,
                         help='parallelism factor (default: %(default)s)')
-    parser.add_argument('-d', '--daemon-mode', action='store_true', help='daemon mode (run forever)')
+    parser.add_argument('-D', '--daemon-mode', action='store_true', help='daemon mode (run forever)')
 
     args = parser.parse_args()
     Args.load(args)

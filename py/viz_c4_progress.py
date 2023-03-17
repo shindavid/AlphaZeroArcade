@@ -11,7 +11,7 @@ cd py;
 
 While the above is running, launch the grading daemon, preferably from a different machine:
 
-./grade_c4_models.py -t <TAG> -d
+./grade_c4_models.py -t <TAG> -D
 
 While the above is running, launch the visualizer:
 
