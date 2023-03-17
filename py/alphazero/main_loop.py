@@ -10,7 +10,7 @@ from alphazero.optimization_args import ModelingArgs
 from config import Config
 
 
-torch.set_default_dtype(torch.float64)
+# torch.set_default_dtype(torch.float64)
 
 
 class Args:

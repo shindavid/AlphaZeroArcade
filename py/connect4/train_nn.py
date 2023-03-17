@@ -21,7 +21,7 @@ from util.repo_util import Repo
 from util.str_util import center_text
 
 
-torch.set_default_dtype(torch.float64)
+# torch.set_default_dtype(torch.float64)
 
 
 def get_args():

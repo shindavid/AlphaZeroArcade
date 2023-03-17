@@ -67,7 +67,7 @@ torch_util::CatchTensorMallocs CONCAT(__unique_var2_, __LINE__) \
 
 namespace torch_util {
 
-using dtype = double;
+using dtype = float;
 
 template<class T> struct TorchType {};
 template<> struct TorchType<float> { static constexpr auto value = torch::kFloat32; };
