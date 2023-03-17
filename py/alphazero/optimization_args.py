@@ -1,21 +1,7 @@
 import argparse
-from dataclasses import dataclass
-from typing import Any
 
 
-@dataclass
-class Param:
-    short_name: str
-    long_name: str
-    value: Any
-    help: str
-
-    @property
-    def value_type(self):
-        return type(self.value)
-
-
-class OptimizationArgParams:
+class ModelingArgs:
     """
     AlphaGoZero used:
 
@@ -49,56 +35,47 @@ class OptimizationArgParams:
     TODO: weight EMA
     TODO: learning rate annealing
     """
-    modeling_params  = {
-        'minibatch_size': Param('-m', '--minibatch-size', 256, 'minibatch size'),
-        'snapshot_steps': Param('-s', '--snapshot-steps', 1024, 'steps per snapshot'),
-        'window_alpha': Param('-A', '--window-alpha', 0.75, 'alpha for n_window formula'),
-        'window_beta': Param('-B', '--window-beta', 0.4, 'beta for n_window formula'),
-        'window_c': Param('-c', '--window-c', 250000, 'c for n_window formula'),
-        'momentum': Param('-M', '--momentum', 0.9, 'momentum'),
-        'weight_decay': Param('-w', '--weight-decay', 6e-5, 'weight decay'),
-        'learning_rate': Param('-l', '--learning-rate', 6e-5, 'learning rate'),
-        'value_loss_lambda': Param('-V', '--value-loss-lambda', 1.5, 'value loss lambda'),
-    }
-
-
-class OptimizationArgs:
-    attrs = [attr for attr in dir(OptimizationArgParams) if isinstance(getattr(OptimizationArgParams, attr), Param)]
-
-    class Modeling:
-        minibatch_size: int
-        snapshot_steps: int
-        window_alpha: float
-        window_beta: float
-        window_c: int
-        momentum: float
-        weight_decay: float
-        learning_rate: float
-        value_loss_lambda: float
+    minibatch_size: int
+    snapshot_steps: int
+    window_alpha: float
+    window_beta: float
+    window_c: int
+    momentum: float
+    weight_decay: float
+    learning_rate: float
+    value_loss_lambda: float
 
     @staticmethod
     def load(args):
-        for attr in OptimizationArgParams.modeling_params.keys():
-            setattr(OptimizationArgs.Modeling, attr, getattr(args, attr))
+        ModelingArgs.minibatch_size = args.minibatch_size
+        ModelingArgs.snapshot_steps = args.snapshot_steps
+        ModelingArgs.window_alpha = args.window_alpha
+        ModelingArgs.window_beta = args.window_beta
+        ModelingArgs.window_c = args.window_c
+        ModelingArgs.momentum = args.momentum
+        ModelingArgs.weight_decay = args.weight_decay
+        ModelingArgs.learning_rate = args.learning_rate
+        ModelingArgs.value_loss_lambda = args.value_loss_lambda
 
     @staticmethod
-    def get_str() -> str:
-        tokens = []
+    def add_args(parser: argparse.ArgumentParser):
+        group = parser.add_argument_group('alphazero modeling options')
 
-        for attr in OptimizationArgs.attrs:
-            param: Param = getattr(OptimizationArgParams, attr)
-            current = getattr(OptimizationArgs, attr)
-            if current != param.value:
-                tokens.extend([param.short_name, str(current)])
-
-        return ' '.join(tokens)
-
-
-ModelingArgs = OptimizationArgs.Modeling
-
-
-def add_optimization_args(parser: argparse.ArgumentParser):
-    group = parser.add_argument_group('alphazero modeling options')
-    for attr, param in OptimizationArgParams.modeling_params.items():
-        group.add_argument(param.short_name, param.long_name, type=param.value_type, default=param.value,
-                           help=f'{param.help} (default: %(default)s)')
+        group.add_argument('-m', '--minibatch-size', type=int, default=256,
+                           help='minibatch size (default: %(default)s)')
+        group.add_argument('-s', '--snapshot-steps', type=int, default=1024,
+                           help='steps per snapshot (default: %(default)s)')
+        group.add_argument('-A', '--window-alpha', type=float, default=0.75,
+                           help='alpha for n_window formula (default: %(default)s)')
+        group.add_argument('-B', '--window-beta', type=float, default=0.4,
+                           help='beta for n_window formula (default: %(default)s)')
+        group.add_argument('-c', '--window-c', type=int, default=250000,
+                           help='c for n_window formula (default: %(default)s)')
+        group.add_argument('-M', '--momentum', type=float, default=0.9,
+                           help='momentum (default: %(default)s)')
+        group.add_argument('-w', '--weight-decay', type=float, default=6e-5,
+                           help='weight decay (default: %(default)s)')
+        group.add_argument('-l', '--learning-rate', type=float, default=6e-5,
+                           help='learning rate (default: %(default)s)')
+        group.add_argument('-V', '--value-loss-lambda', type=float, default=1.5,
+                           help='value loss lambda (default: %(default)s)')

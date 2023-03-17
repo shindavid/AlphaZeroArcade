@@ -4,7 +4,7 @@ import argparse
 import os
 
 from alphazero.manager import AlphaZeroManager
-from alphazero.optimization_args import add_optimization_args, OptimizationArgs
+from alphazero.optimization_args import ModelingArgs
 from config import Config
 
 
@@ -28,11 +28,11 @@ def load_args():
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     parser.add_argument('--restart-gen', type=int, help='gen to resume at')
     cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root', help='base-dir-root for game/model files')
-    add_optimization_args(parser)
+    ModelingArgs.add_args(parser)
 
     args = parser.parse_args()
     Args.load(args)
-    OptimizationArgs.load(args)
+    ModelingArgs.load(args)
 
 
 def main():
