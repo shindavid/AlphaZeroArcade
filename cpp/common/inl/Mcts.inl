@@ -26,7 +26,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 Mcts<GameState, Tensorizor>::Params::Params(DefaultParamsType type) {
   if (type == kCompetitive) {
     dirichlet_mult = 0;
-    dirichlet_alpha = 0;
+    dirichlet_alpha_sum = 0;
     forced_playouts = false;
   } else if (type == kTraining) {
     // use declared values
@@ -75,7 +75,7 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"root-softmax-temp">(po2::float_value("%.2f", &root_softmax_temperature), "root softmax temperature")
       .template add_option<"cpuct">(po2::float_value("%.2f", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult">(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
-      .template add_option<"dirichlet-alpha">(po2::float_value("%.2f", &dirichlet_alpha), "dirichlet alpha")
+      .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
       .template add_bool_switches<"disable-eliminations", "enable-eliminations">(
           &disable_eliminations, "disable eliminations", "enable eliminations")
       .template add_bool_switches<"speculative-evals", "no-speculative-evals">(
@@ -1170,13 +1170,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDistr& P) {
   int rows = P.rows();
-  /*
-   * NOTE: KataGo scales alpha by 361 / rows, but this does not seem sound to me. In the case of Connect4, that
-   * yields an alpha >> 1, which inverts the Dirichlet noise from being concentrated at extremes of the simplex to
-   * being concentrated in the middle.
-   */
-  //double alpha = params_.dirichlet_alpha * 361 / rows;
-  double alpha = params_.dirichlet_alpha;
+  double alpha = params_.dirichlet_alpha_sum / rows;
   LocalPolicyProbDistr noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(
       rng_, alpha, rows);
   P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
