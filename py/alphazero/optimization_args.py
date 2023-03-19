@@ -65,7 +65,7 @@ class ModelingArgs:
 
         group.add_argument('-m', '--minibatch-size', type=int, default=256,
                            help='minibatch size (default: %(default)s)')
-        group.add_argument('-s', '--snapshot-steps', type=int, default=2048,
+        group.add_argument('-s', '--snapshot-steps', type=int, default=1024,
                            help='steps per snapshot (default: %(default)s)')
         group.add_argument('-A', '--window-alpha', type=float, default=0.75,
                            help='alpha for n_window formula (default: %(default)s)')
