@@ -55,21 +55,21 @@ inline void PerfectOracle::MoveHistory::write(boost::process::opstream& in) {
 }
 
 inline std::string PerfectOracle::QueryResult::get_overlay() const {
-  char verbose_chars[kNumColumns];
+  char chars[kNumColumns];
 
   for (int i = 0; i < kNumColumns; ++i) {
     if (score<0 || !good_moves[i]) {
-      verbose_chars[i] = drawing_moves[i] ? '0' : ' ';
+      chars[i] = drawing_moves[i] ? '0' : ' ';
     } else {
-      verbose_chars[i] = drawing_moves[i] ? '0' : '+';
+      chars[i] = drawing_moves[i] ? '0' : '+';
     }
   }
   return util::create_string(" %c %c %c %c %c %c %c",
-         verbose_chars[0], verbose_chars[1], verbose_chars[2], verbose_chars[3],
-         verbose_chars[4], verbose_chars[5], verbose_chars[6]);
+                             chars[0], chars[1], chars[2], chars[3],
+                             chars[4], chars[5], chars[6]);
 }
 
-  inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params) {
+inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params) {
   if (params.c4_solver_dir.empty()) {
     throw util::Exception("c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
                           util::Config::kFilename);
