@@ -35,12 +35,14 @@ class Args:
     launch: bool
     c4_base_dir_root: str
     tag: str
+    port: int
 
     @staticmethod
     def load(args):
         Args.launch = bool(args.launch)
         Args.c4_base_dir_root = args.c4_base_dir_root
         Args.tag = args.tag
+        Args.port = args.port
 
         assert Args.tag, 'Required option: -t'
 
@@ -52,6 +54,7 @@ def load_args():
     parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root', help='base-dir-root for game/model files')
+    parser.add_argument('-p', '--port', type=int, default=5006, help='bokeh port (default: %(default)s)')
 
     args = parser.parse_args()
     Args.load(args)
@@ -62,7 +65,7 @@ load_args()
 if not Args.launch:
     script = os.path.abspath(__file__)
     args = ' '.join(map(pipes.quote, sys.argv[1:] + ['--launch']))
-    cmd = f'bokeh serve --show {script} --args {args}'
+    cmd = f'bokeh serve --port {Args.port} --show {script} --args {args}'
     sys.exit(os.system(cmd))
 
 
