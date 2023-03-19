@@ -357,6 +357,12 @@ class SelfPlayGameMetadata:
         self.n_positions = int(info[1])
 
 
+class SelfPlayPositionMetadata:
+    def __init__(self, game_metadata: SelfPlayGameMetadata, position_index: int):
+        self.game_metadata = game_metadata
+        self.position_index = position_index
+
+
 class GenerationMetadata:
     def __init__(self, full_gen_dir: str):
         self._loaded = False
@@ -416,7 +422,7 @@ class SelfPlayMetadata:
             self.n_total_positions += metadata.n_positions
             self.n_total_games += metadata.n_games
 
-    def get_window(self, n_window: int) -> List[SelfPlayGameMetadata]:
+    def get_window(self, n_window: int) -> List[SelfPlayPositionMetadata]:
         window = []
         cumulative_n_positions = 0
         for generation in reversed(sorted(self.metadata.keys())):  # newest to oldest
@@ -427,7 +433,8 @@ class SelfPlayMetadata:
                 game_metadata = gen_metadata.game_metadata_list[i]
                 cumulative_n_positions += game_metadata.n_positions
                 i += 1
-                window.append(game_metadata)
+                for p in range(game_metadata.n_positions):
+                    window.append(SelfPlayPositionMetadata(game_metadata, p))
         return window
 
 
@@ -443,7 +450,8 @@ class DataLoader:
         self._index = len(self.window)
 
     def get_input_shape(self) -> Shape:
-        for game_metadata in self.window:
+        for position_metadata in self.window:
+            game_metadata = position_metadata.game_metadata
             data = torch.jit.load(game_metadata.filename).state_dict()
             return data['input'].shape[1:]
         raise Exception('Could not determine input shape!')
@@ -456,20 +464,21 @@ class DataLoader:
             raise StopIteration
 
         self._returned_snapshots += 1
-        minibatch: List[SelfPlayGameMetadata] = []
-        n = 0
-        while n < ModelingArgs.minibatch_size:
-            n += self._add_to_minibatch(minibatch)
+        minibatch: List[SelfPlayPositionMetadata] = []
+        for _ in range(ModelingArgs.minibatch_size):
+            self._add_to_minibatch(minibatch)
 
         input_data = []
         policy_data = []
         value_data = []
 
-        for metadata in minibatch:
-            data = torch.jit.load(metadata.filename).state_dict()
-            input_data.append(data['input'])
-            policy_data.append(data['policy'])
-            value_data.append(data['value'])
+        for position_metadata in minibatch:
+            game_metadata = position_metadata.game_metadata
+            p = position_metadata.position_index
+            data = torch.jit.load(game_metadata.filename).state_dict()
+            input_data.append(data['input'][p:p+1])
+            policy_data.append(data['policy'][p:p+1])
+            value_data.append(data['value'][p:p+1])
 
         input_data = torch.concat(input_data)
         policy_data = torch.concat(policy_data)
@@ -477,15 +486,14 @@ class DataLoader:
 
         return input_data, value_data, policy_data
 
-    def _add_to_minibatch(self, minibatch: List[SelfPlayGameMetadata]):
+    def _add_to_minibatch(self, minibatch: List[SelfPlayPositionMetadata]):
         if self._index == len(self.window):
             random.shuffle(self.window)
             self._index = 0
 
-        game_metadata = self.window[self._index]
-        minibatch.append(game_metadata)
+        position_metadata = self.window[self._index]
+        minibatch.append(position_metadata)
         self._index += 1
-        return game_metadata.n_positions
 
 
 def compute_n_window(n_total: int) -> int:
