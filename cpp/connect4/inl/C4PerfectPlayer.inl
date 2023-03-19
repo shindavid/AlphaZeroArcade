@@ -138,7 +138,7 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
       throw util::Exception("Bad score conversion (score=%d, history=%s(%d), converted_score=%d)",
                             best_score, history.to_string().c_str(), history.length(), converted_score);
     }
-  } else if (best_score < 0) {
+  } else if (best_score < 0 && best_score != -1000) {  // -1000 means no more legal moves
     converted_score = -22 + (history.length() + 1) / 2 - best_score;
     if (converted_score >= 0) {
       throw util::Exception("Bad score conversion (score=%d, history=%s(%d), converted_score=%d)",
