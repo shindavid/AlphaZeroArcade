@@ -59,7 +59,14 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   this->tensorizor_.tensorize(input, state);
 
   GlobalPolicyProbDistr counts = mcts_results->counts.reshaped(1, GameState::kNumGlobalActions);
-  policy = counts / std::max(1.0f, (float)counts.sum());
+  float sum = counts.sum();
+  if (sum == 0) {
+    // Happens if eliminations is enabled and MCTS proves that the position is losing.
+    counts.setConstant(1.0);
+    sum = counts.sum();
+  }
+
+  policy = counts / sum;
 }
 
 }  // namespace common

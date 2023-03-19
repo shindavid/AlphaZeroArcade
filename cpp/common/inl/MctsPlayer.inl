@@ -202,11 +202,12 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
-  if (!valid_actions[action]) {
-    // This happens rarely, due to MCTS elimination mechanics
+  if (mcts_results->counts.sum() == 0) {
+    // This happens if eliminations are enabled and if MCTS proves that the position is losing
     return bitset_util::choose_random_on_index(valid_actions);
   }
+  action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
+  assert(valid_actions[action]);
   return action;
 }
 
