@@ -534,7 +534,7 @@ class TrainingStats:
         value_accuracy = self.value_accuracy_num / self.den
         avg_value_loss = self.value_loss_num / self.den
 
-        print(f'Policy accuracy: %5.3f' % policy_accuracy)
-        print(f'Policy loss:     %5.3f' % avg_policy_loss)
-        print(f'Value accuracy:  %5.3f' % value_accuracy)
-        print(f'Value loss:      %5.3f' % avg_value_loss)
+        print(f'Policy accuracy: %8.6f' % policy_accuracy)
+        print(f'Policy loss:     %8.6f' % avg_policy_loss)
+        print(f'Value accuracy:  %8.6f' % value_accuracy)
+        print(f'Value loss:      %8.6f' % avg_value_loss)
