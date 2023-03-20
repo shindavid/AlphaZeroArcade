@@ -167,6 +167,7 @@ private:
     Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
     Node(const Node& node, bool prune_parent=false);
 
+    std::string genealogy_str(const char* delim=":") const;  // slow, for debugging
     void debug_dump() const;
 
     /*
@@ -196,9 +197,9 @@ private:
     std::mutex& stats_mutex() const { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
-    void backprop(const ValueProbDistr& value);
-    void backprop_with_virtual_undo(const ValueProbDistr& value);
-    void virtual_backprop();
+    void backprop(const ValueProbDistr& value, std::mutex* print_mutex, int thread_id);
+    void backprop_with_virtual_undo(const ValueProbDistr& value, std::mutex* print_mutex, int thread_id);
+    void virtual_backprop(std::mutex* print_mutex, int thread_id);
     void perform_eliminations(const ValueProbDistr& outcome);
     ValueArray1D make_virtual_loss() const;
     void mark_as_fully_analyzed();
@@ -224,11 +225,14 @@ private:
     Node* _get_child(int c) const { return children_data_.first_child_unsafe() + c; }
     Node* _find_child(action_index_t action) const;
 
+    const auto& _raw_value_sum() const { return stats_.raw_value_sum_; }
+    const auto& _virtual_value_sum() const { return stats_.virtual_value_sum_; }
     const auto& _value_avg() const { return stats_.value_avg_; }
     bool _eliminated() const { return stats_.eliminated_; }
     float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
     float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
     int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
+    int _virtual_count() const { return stats_.virtual_count_; }
     bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
@@ -335,9 +339,12 @@ private:
       stats_t();
 
       ValueArray1D value_avg_;
+      ValueArray1D raw_value_sum_;
+      ValueArray1D virtual_value_sum_;
       ValueArray1D effective_value_avg_;
       ValueArray1D V_floor_;
       int count_ = 0;
+      int virtual_count_ = 0;
       bool eliminated_ = false;
     };
 
@@ -394,6 +401,7 @@ private:
 
     void record_for_profiling(region_t region);
     void dump_profiling_stats();
+    auto mcts() const { return mcts_; }
 
 #ifdef PROFILE_MCTS
     profiler_t* get_profiler() { return &profiler_; }
@@ -425,7 +433,7 @@ private:
     };
 
     void lazily_init(Node* tree);
-    void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
+    void backprop_outcome(Node* tree, const ValueProbDistr& outcome, std::mutex* print_mutex, int thread_id);
     void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
     void mark_as_fully_analyzed(Node* tree);
     evaluate_and_expand_result_t evaluate_and_expand(Node* tree, bool speculative);
@@ -461,7 +469,10 @@ private:
     player_index_t cp;
     const PVec& P;
     PVec V;
+    PVec RVS;
+    PVec VVS;
     PVec N;
+    PVec VN;
     PVec E;
     PVec PUCT;
   };
@@ -524,6 +535,7 @@ private:
   public:
     struct Request {
       SearchThread* thread;
+      Node* tree;
       const Tensorizor* tensorizor;
       const GameState* state;
       const ActionMask* valid_action_mask;
@@ -549,7 +561,7 @@ private:
      *
      * If the thread_ member is already instantiated, then this is a no-op.
      */
-    void connect();
+    void connect(Mcts*);
 
     void disconnect();
 
@@ -576,14 +588,15 @@ private:
 
     static float global_avg_batch_size();  // averaged over all instances
 
+    std::mutex* print_mutex_;
   private:
-    NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
+    NNEvaluationService(std::mutex* print_mutex, const boost::filesystem::path& net_filename, int batch_size_limit,
                         std::chrono::nanoseconds timeout_duration, size_t cache_size,
                         const boost::filesystem::path& profiling_dir);
     ~NNEvaluationService();
 
-    void batch_evaluate();
-    void loop();
+    void batch_evaluate(Mcts* mcts);
+    void loop(Mcts* mcts);
 
     bool active() const { return num_connections_; }
     bool all_batch_reservations_committed() const { return batch_reserve_index_ == batch_commit_count_; }
@@ -756,6 +769,8 @@ public:
 #else  // PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return {}; }
 #endif  // PROFILE_MCTS
+
+  std::mutex print_mutex_;
 
 private:
   void prune_counts(const SimParams&);
