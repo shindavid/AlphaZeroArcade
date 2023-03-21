@@ -197,9 +197,9 @@ private:
     std::mutex& stats_mutex() const { return stats_mutex_; }
 
     GlobalPolicyCountDistr get_effective_counts() const;
-    void backprop(const ValueProbDistr& value, std::mutex* print_mutex, int thread_id);
-    void backprop_with_virtual_undo(const ValueProbDistr& value, std::mutex* print_mutex, int thread_id);
-    void virtual_backprop(std::mutex* print_mutex, int thread_id);
+    void backprop(const ValueProbDistr& value);
+    void backprop_with_virtual_undo(const ValueProbDistr& value);
+    void virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
     ValueArray1D make_virtual_loss() const;
     void mark_as_fully_analyzed();
@@ -433,7 +433,7 @@ private:
     };
 
     void lazily_init(Node* tree);
-    void backprop_outcome(Node* tree, const ValueProbDistr& outcome, std::mutex* print_mutex, int thread_id);
+    void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
     void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
     void mark_as_fully_analyzed(Node* tree);
     evaluate_and_expand_result_t evaluate_and_expand(Node* tree, bool speculative);
@@ -588,9 +588,8 @@ private:
 
     static float global_avg_batch_size();  // averaged over all instances
 
-    std::mutex* print_mutex_;
   private:
-    NNEvaluationService(std::mutex* print_mutex, const boost::filesystem::path& net_filename, int batch_size_limit,
+    NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
                         std::chrono::nanoseconds timeout_duration, size_t cache_size,
                         const boost::filesystem::path& profiling_dir);
     ~NNEvaluationService();
@@ -769,8 +768,6 @@ public:
 #else  // PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return {}; }
 #endif  // PROFILE_MCTS
-
-  std::mutex print_mutex_;
 
 private:
   void prune_counts(const SimParams&);
