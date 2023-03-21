@@ -977,7 +977,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  waiting for batch lock...\n");
   }
-  std::unique_lock<std::mutex> lock(batch_mutex_);
+  batch_lock.lock();
 
   auto& input = input_batch_.template eigenSlab<typename TensorizorTypes::Shape<1>>(my_index);
   tensorizor.tensorize(input, state);
@@ -991,7 +991,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
 
   thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
   batch_commit_count_++;
-  lock.unlock();
+  batch_lock.unlock();
   {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  notifying service loop...\n");
@@ -1003,18 +1003,18 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  locking batch lock...\n");
   }
-  lock.lock();
+  batch_lock.lock();
   thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
   {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  waiting for evaluate cv...\n");
   }
-  cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
+  cv_evaluate_.wait(batch_lock, [&]{ return batch_reservations_empty(); });
 
   NNEvaluation_sptr eval_ptr = evaluation_data_batch_[my_index].eval_ptr.load();
   assert(batch_unread_count_ > 0);
   batch_unread_count_--;
-  lock.unlock();
+  batch_lock.unlock();
 
   // NOTE: might be able to notify_one(), if we add another notify_one() after the batch_reserve_index_++
   {
