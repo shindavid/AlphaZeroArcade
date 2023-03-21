@@ -1059,15 +1059,15 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate(Mcts* mcts
   assert(batch_reserve_index_ > 0);
   assert(batch_reserve_index_ == batch_commit_count_);
 
-  record_for_profiling(kCopyingCpuToGpu);
-  torch_input_gpu_.copy_(input_batch_.asTorch());
-  record_for_profiling(kEvaluatingNeuralNet);
-  net_.predict(input_vec_, policy_batch_.asTorch(), value_batch_.asTorch());
-
   {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- NNEvaluationService::batch_evaluate() ---------------------->\n");
   }
+
+  record_for_profiling(kCopyingCpuToGpu);
+  torch_input_gpu_.copy_(input_batch_.asTorch());
+  record_for_profiling(kEvaluatingNeuralNet);
+  net_.predict(input_vec_, policy_batch_.asTorch(), value_batch_.asTorch());
 
   record_for_profiling(kCopyingToPool);
   for (int i = 0; i < batch_reserve_index_; ++i) {
