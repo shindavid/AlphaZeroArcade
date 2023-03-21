@@ -1061,7 +1061,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate(Mcts* mcts
 
   {
     util::ThreadSafePrinter printer;
-    printer.printf("<---------------------- NNEvaluationService::batch_evaluate() ---------------------->\n");
+    printer.printf("<---------------------- NNEvaluationService::batch_evaluate(%d) ---------------------->\n", batch_commit_count_);
   }
 
   record_for_profiling(kCopyingCpuToGpu);
@@ -1108,8 +1108,17 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::loop(Mcts* mcts) {
       printer.printf("<---------------------- NNEvaluationService acquiring batch mutex ---------------------->\n");
     }
     std::unique_lock<std::mutex> lock(batch_mutex_);
-
+    {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- NNEvaluationService waiting for zero batch_unread_count_ (%d) ---------------------->\n", batch_unread_count_);
+    }
     record_for_profiling(kWaitingForFirstReservation);
+    cv_evaluate_.wait(lock, [&]{
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- NNEvaluationService still waiting for zero batch_unread_count_ (%d) ---------------------->\n", batch_unread_count_);
+      return batch_unread_count_ == 0;
+    });
+
     {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- NNEvaluationService waiting for first reservation ---------------------->\n");
