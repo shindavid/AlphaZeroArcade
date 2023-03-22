@@ -907,10 +907,6 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts<GameState, Tensorizor>::NNEvaluationService::Response
 Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& request) {
   SearchThread* thread = request.thread;
-  const Tensorizor& tensorizor = *request.tensorizor;
-  const GameState& state = *request.state;
-  const ActionMask& valid_action_mask = *request.valid_action_mask;
-  symmetry_index_t sym_index = request.sym_index;
 
   std::string genealogy = request.tree->genealogy_str("");
   {
@@ -918,30 +914,13 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
     printer.printf("evaluate() %s\n", genealogy.c_str());
   }
 
-  thread->record_for_profiling(SearchThread::kCheckingCache);
-  cache_key_t key{state, sym_index};
-
-  {
-    util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  waiting for cache lock...\n");
-  }
-
-  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
-  auto cached = cache_.get(key);
-  if (cached.has_value()) {
-    {
-      util::ThreadSafePrinter printer(thread->thread_id());
-      printer.printf("  hit cache\n");
-    }
-    cache_hits_++;
-    return Response{cached.value(), true};
-  }
-  cache_misses_++;
-  cache_lock.unlock();
+  cache_key_t cache_key{*request.state, request.sym_index};
+  Response response = check_cache(thread, cache_key);
+  if (response.used_cache) return response;
 
   wait_until_batch_reservable(thread);
   int my_index = allocate_reserve_index(thread);
-  tensorize_and_transform_input(thread, tensorizor, state, valid_action_mask, sym_index, key, my_index);
+  tensorize_and_transform_input(request, cache_key, my_index);
   increment_commit_count(thread);
   NNEvaluation_sptr eval_ptr = get_eval(thread, my_index);
   wait_until_all_read(thread);
@@ -1029,9 +1008,32 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::loop(Mcts* mcts) {
     wait_for_last_reservation();
     wait_for_commits();
     batch_evaluate(mcts);
-    cv_evaluate_.notify_all();
     dump_profiling_stats();
   }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::NNEvaluationService::Response
+Mcts<GameState, Tensorizor>::NNEvaluationService::check_cache(SearchThread* thread, const cache_key_t& cache_key) {
+  thread->record_for_profiling(SearchThread::kCheckingCache);
+
+  {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  waiting for cache lock...\n");
+  }
+
+  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
+  auto cached = cache_.get(cache_key);
+  if (cached.has_value()) {
+    {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  hit cache\n");
+    }
+    cache_hits_++;
+    return Response{cached.value(), true};
+  }
+  cache_misses_++;
+  return Response{nullptr, false};
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1100,9 +1102,14 @@ int Mcts<GameState, Tensorizor>::NNEvaluationService::allocate_reserve_index(Sea
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_input(
-    SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
-    symmetry_index_t sym_index, const cache_key_t& key, int reserve_index)
+    const Request& request, const cache_key_t& cache_key, int reserve_index)
 {
+  SearchThread* thread = request.thread;
+  const Tensorizor& tensorizor = *request.tensorizor;
+  const GameState& state = *request.state;
+  const ActionMask& valid_action_mask = *request.valid_action_mask;
+  symmetry_index_t sym_index = cache_key.sym_index;
+
   thread->record_for_profiling(SearchThread::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
@@ -1112,7 +1119,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   transform->transform_input(input);
 
   batch_data_.eval_ptr_data[reserve_index].eval_ptr.store(nullptr);
-  batch_data_.eval_ptr_data[reserve_index].cache_key = key;
+  batch_data_.eval_ptr_data[reserve_index].cache_key = cache_key;
   batch_data_.eval_ptr_data[reserve_index].valid_actions = valid_action_mask;
   batch_data_.eval_ptr_data[reserve_index].transform = transform;
 }

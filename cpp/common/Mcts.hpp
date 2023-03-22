@@ -601,11 +601,10 @@ private:
     void batch_evaluate(Mcts* mcts);
     void loop(Mcts* mcts);
 
+    Response check_cache(SearchThread* thread, const cache_key_t& cache_key);
     void wait_until_batch_reservable(SearchThread* thread);
     int allocate_reserve_index(SearchThread* thread);
-    void tensorize_and_transform_input(
-        SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
-        symmetry_index_t sym_index, const cache_key_t& key, int reserve_index);
+    void tensorize_and_transform_input(const Request& request, const cache_key_t& cache_key, int reserve_index);
     void increment_commit_count(SearchThread* thread);
     NNEvaluation_sptr get_eval(SearchThread* thread, int reserve_index);
     void wait_until_all_read(SearchThread* thread);
