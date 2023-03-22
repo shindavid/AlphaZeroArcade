@@ -612,9 +612,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
         uniform_value, uniform_policy, tree->_valid_action_mask());
   } else {
     symmetry_index_t sym_index = tree->_sym_index();
-    typename NNEvaluationService::Request request{
-        this, tree, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index
-    };
+    typename NNEvaluationService::Request request{this, tree, sym_index};
     auto response = mcts_->nn_eval_service()->evaluate(request);
     used_cache = response.used_cache;
     data->evaluation = response.ptr;
@@ -915,7 +913,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
     printer.printf("evaluate() %s\n", genealogy.c_str());
   }
 
-  cache_key_t cache_key{*request.state, request.sym_index};
+  cache_key_t cache_key{request.tree->_state(), request.sym_index};
   Response response = check_cache(thread, cache_key);
   if (response.used_cache) return response;
 
@@ -1106,9 +1104,10 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
     const Request& request, const cache_key_t& cache_key, int reserve_index)
 {
   SearchThread* thread = request.thread;
-  const Tensorizor& tensorizor = *request.tensorizor;
-  const GameState& state = *request.state;
-  const ActionMask& valid_action_mask = *request.valid_action_mask;
+  Node* tree = request.tree;
+  const Tensorizor& tensorizor = tree->_tensorizor();
+  const GameState& state = tree->_state();
+  const ActionMask& valid_action_mask = tree->_valid_action_mask();
   symmetry_index_t sym_index = cache_key.sym_index;
 
   thread->record_for_profiling(SearchThread::kTensorizing);

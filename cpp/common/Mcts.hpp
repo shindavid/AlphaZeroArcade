@@ -524,9 +524,6 @@ private:
     struct Request {
       SearchThread* thread;
       Node* tree;
-      const Tensorizor* tensorizor;
-      const GameState* state;
-      const ActionMask* valid_action_mask;
       symmetry_index_t sym_index;
     };
 
