@@ -466,10 +466,9 @@ bool Mcts<GameState, Tensorizor>::SearchThread::needs_more_visits(Node* root, in
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
-  std::string genealogy = tree->genealogy_str("");
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << " " << genealogy;
+    printer << __func__ << " " << tree->genealogy_str("");
     printer.endl();
   }
   lazily_init(tree);
@@ -492,9 +491,12 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
   if (data.performed_expansion) {
     record_for_profiling(kBackpropEvaluation);
 
-    util::ThreadSafePrinter printer(thread_id());
-    printer << "backprop_with_virtual_undo " << genealogy << " " << evaluation->value_prob_distr().transpose();
-    printer.endl();
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread_id());
+      printer << "backprop_with_virtual_undo " << tree->genealogy_str("");
+      printer << " " << evaluation->value_prob_distr().transpose();
+      printer.endl();
+    }
 
     tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
@@ -514,10 +516,11 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::lazily_init(Node* tree) {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tree, const ValueProbDistr& outcome) {
   record_for_profiling(kBackpropOutcome);
-  std::string genealogy = tree->genealogy_str("");
-  util::ThreadSafePrinter printer(thread_id_);
-  printer << __func__ << " " << genealogy << " " << outcome.transpose();
-  printer.endl();
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << tree->genealogy_str("") << " " << outcome.transpose();
+    printer.endl();
+  }
 
   tree->backprop(outcome);
 }
@@ -579,11 +582,10 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative)
 {
   record_for_profiling(kEvaluateAndExpandUnset);
-  std::string genealogy = tree->genealogy_str("");
 
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << genealogy;
+    printer << __func__ << " " << tree->genealogy_str("");
     printer.endl();
   }
 
@@ -599,9 +601,11 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
   if (!speculative) {
     record_for_profiling(kVirtualBackprop);
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << "virtual_backprop " << genealogy;
-    printer.endl();
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread_id_);
+      printer << "virtual_backprop " << tree->genealogy_str("");
+      printer.endl();
+    }
 
     tree->virtual_backprop();
   }
@@ -722,22 +726,36 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   PUCT.maxCoeff(&argmax_index);
   Node* best_child = tree->_get_child(argmax_index);
 
-  std::string genealogy = tree->genealogy_str("");
+  if (kEnableThreadingDebug) {
+    std::string genealogy = tree->genealogy_str("");
 
-  util::ThreadSafePrinter printer(thread_id());
+    util::ThreadSafePrinter printer(thread_id());
 
-  printer << "*************"; printer.endl();
-  printer << "get_best_child() " << genealogy; printer.endl();
-  printer << "P: " << P.transpose(); printer.endl();
-  printer << "N: " << N.transpose(); printer.endl();
-  printer << "V: " << stats.V.transpose(); printer.endl();
-  printer << "RVS: " << stats.RVS.transpose(); printer.endl();
-  printer << "VVS: " << stats.VVS.transpose(); printer.endl();
-  printer << "VN: " << stats.VN.transpose(); printer.endl();
-  printer << "E: " << E.transpose(); printer.endl();
-  printer << "PUCT: " << PUCT.transpose(); printer.endl();
-  printer << "argmax: " << argmax_index; printer.endl();
-  printer << "*************"; printer.endl();
+    printer << "*************";
+    printer.endl();
+    printer << "get_best_child() " << genealogy;
+    printer.endl();
+    printer << "P: " << P.transpose();
+    printer.endl();
+    printer << "N: " << N.transpose();
+    printer.endl();
+    printer << "V: " << stats.V.transpose();
+    printer.endl();
+    printer << "RVS: " << stats.RVS.transpose();
+    printer.endl();
+    printer << "VVS: " << stats.VVS.transpose();
+    printer.endl();
+    printer << "VN: " << stats.VN.transpose();
+    printer.endl();
+    printer << "E: " << E.transpose();
+    printer.endl();
+    printer << "PUCT: " << PUCT.transpose();
+    printer.endl();
+    printer << "argmax: " << argmax_index;
+    printer.endl();
+    printer << "*************";
+    printer.endl();
+  }
   return best_child;
 }
 
@@ -908,8 +926,8 @@ typename Mcts<GameState, Tensorizor>::NNEvaluationService::Response
 Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& request) {
   SearchThread* thread = request.thread;
 
-  std::string genealogy = request.tree->genealogy_str("");
-  {
+  if (kEnableThreadingDebug) {
+    std::string genealogy = request.tree->genealogy_str("");
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("evaluate() %s\n", genealogy.c_str());
   }
@@ -960,7 +978,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate(Mcts* mcts
   assert(batch_metadata_.reserve_index > 0);
   assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
 
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- NNEvaluationService::%s(%s) ---------------------->\n",
                    __func__, batch_metadata_.repr().c_str());
@@ -1017,7 +1035,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::Response
 Mcts<GameState, Tensorizor>::NNEvaluationService::check_cache(SearchThread* thread, const cache_key_t& cache_key) {
   thread->record_for_profiling(SearchThread::kCheckingCache);
 
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  waiting for cache lock...\n");
   }
@@ -1025,7 +1043,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::check_cache(SearchThread* thre
   std::unique_lock<std::mutex> cache_lock(cache_mutex_);
   auto cached = cache_.get(cache_key);
   if (cached.has_value()) {
-    {
+    if (kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread->thread_id());
       printer.printf("  hit cache\n");
     }
@@ -1042,16 +1060,16 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_batch_reservab
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
 
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  %s(%s)...\n",
-                   func, batch_metadata_.repr().c_str());
+    printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(lock, [&]{
     if (batch_metadata_.unread_count == 0 && batch_metadata_.reserve_index < batch_size_limit_) return true;
-    util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  %s(%s) still waiting...\n",
-                   func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
 }
@@ -1062,16 +1080,16 @@ int Mcts<GameState, Tensorizor>::NNEvaluationService::allocate_reserve_index(Sea
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
 
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  %s(%s) waiting...\n",
-                   func, batch_metadata_.repr().c_str());
+    printer.printf("  %s(%s) waiting...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  %s(%s) still waiting...\n",
-                   func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
 
@@ -1083,7 +1101,7 @@ int Mcts<GameState, Tensorizor>::NNEvaluationService::allocate_reserve_index(Sea
   }
   assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
 
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s) allocation complete\n", func, batch_metadata_.repr().c_str());
   }
@@ -1131,7 +1149,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::increment_commit_count(Se
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
 
   batch_metadata_.commit_count++;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", __func__, batch_metadata_.repr().c_str());
   }
@@ -1146,24 +1164,26 @@ Mcts<GameState, Tensorizor>::NNEvaluation_sptr Mcts<GameState, Tensorizor>::NNEv
 
   const char* func = __func__;
   thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.reserve_index == 0) return true;
-    util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
   metadata_lock.unlock();
 
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s() waiting on data lock...\n", func);
   }
   std::unique_lock<std::mutex> data_lock(batch_data_.mutex);
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s() data lock acquired!\n", func);
   }
@@ -1177,31 +1197,33 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_all_read(Searc
    * TODO: fixme. Make all active search threads get to "evaluated" print before continuing!
    */
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s() waiting on metadata lock...\n", func);
   }
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s() metadata lock acquired!\n", func);
   }
   assert(batch_metadata_.unread_count > 0);
   batch_metadata_.unread_count--;
 
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    util::ThreadSafePrinter printer(thread->thread_id());
-    printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
   lock.unlock();
   cv_evaluate_.notify_all();
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  evaluated!\n");
   }
@@ -1214,16 +1236,18 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_batch_ready()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    util::ThreadSafePrinter printer;
-    printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
-                   cls, func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
 }
@@ -1235,16 +1259,18 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_first_reservatio
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.reserve_index > 0) return true;
-    util::ThreadSafePrinter printer;
-    printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
-                   cls, func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
 }
@@ -1256,16 +1282,18 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_last_reservation
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait_until(lock, deadline_, [&]{
     if (batch_metadata_.reserve_index == batch_size_limit_) return true;
-    util::ThreadSafePrinter printer;
-    printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
-                   cls, func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
 }
@@ -1277,16 +1305,18 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_commits()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  {
+  if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.reserve_index == batch_metadata_.commit_count) return true;
-    util::ThreadSafePrinter printer;
-    printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
-                   cls, func, batch_metadata_.repr().c_str());
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
     return false;
   });
 }
@@ -1326,7 +1356,6 @@ Mcts<GameState, Tensorizor>::NodeReleaseService::NodeReleaseService()
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 Mcts<GameState, Tensorizor>::NodeReleaseService::~NodeReleaseService() {
-//  printf("NodeReleaseService release_count=%d max_queue_size=%d\n", release_count_, max_queue_size_);
   destructing_ = true;
   cv_.notify_one();
   if (thread_.joinable()) thread_.join();

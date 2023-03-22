@@ -44,6 +44,7 @@ private:
 public:
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
   static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
+  static constexpr bool kEnableThreadingDebug = IS_MACRO_ASSIGNED_TO_1(MCTS_THREADING_DEBUG);
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
@@ -495,41 +496,34 @@ private:
    *
    * The service has an LRU cache, which helps to avoid the costly GPU operations when possible.
    *
-   * When the number of search threads is 1, we simply do everything in the main thread, mainly for easier debugging.
-   * When we have more than 1 search thread, we encounter sensitive thread-safety considerations. Here is a detailed
-   * description of how this implementation handles them.
+   * Here is a detailed description of how this implementation handles the various thread safety considerations.
    *
-   * There are two mutexes:
+   * There are three mutexes:
    *
    * - cache_mutex_: prevents race-conditions on cache reads/writes - especially important because without locking,
    *                 cache eviction can lead to a key-value pair disappearing after checking for the key
+   * - batch_data_.mutex: prevents race-conditions on reads/writes of batch_data_
+   * - batch_metadata_.mutex: prevents race-conditions on reads/writes of batch_metadata_
    *
-   * - batch_mutex_: prevents race-conditions on batch reads/writes
+   * The batch_data_ member consists of:
    *
-   * There are three separate members that are used to synchronize batch writing, all protected by batch_mutex_:
+   * - input: the batch input tensor
+   * - value/policy: the batch output tensors
+   * - eval_ptr_data: mainly an array of N smart-pointers to a struct that has copied a slice of the value/policy
+   *                  tensors.
    *
-   * - batch_reserve_index_: keeps track of the next batch slot to write to. A search thread does a protected
-   *                         read + increment of this member, and then with the mutex released, starts the work of
-   *                         tensorizing the game state and writing to the appropriate slot.
+   * The batch_metadata_ member consists of three ints:
    *
-   * - batch_commit_count_: Once the search thread has finished tensorizing and writing to its slot, it increments
-   *                        the batch_commit_count_. This allows the service thread to detect when it is safe to
-   *                        evaluate the batch.
+   * - reserve_index: the next slot of batch_data_.input to write to
+   * - commit_count: the number of slots of batch_data_.input that have been written to
+   * - unread_count: the number of entries of batch_data_.eval_ptr_data that have not yet been read by their
+   *                 corresponding search threads
    *
-   * - batch_unread_count_: After the service thread has written the N nnet outputs, the search threads can start
-   *                        reading those outputs. Without care, a race condition could cause eager search threads to
-   *                        overwrite that data before the prior threads fully read that data. This unread count
-   *                        value helps to prevent this race condition.
+   * The loop() and evaluate() methods of NNEvaluationService have been carefully written to ensure that the reads
+   * and writes of these data structures are thread-safe.
    *
-   * Note that batch_reserve_index_ and batch_commit_count_ could have been rolled into one single count. This would
-   * have been simpler, but increased the duration for which batch_mutex_ is held (as the tensorizing would then
-   * need to happen under the mutex). Separation allows tensorization to occur outside any mutex locks.
-   *
-   * Search threads will detect that the batch is fully saturated by checking batch_reserve_index_, and wait until it
-   * is reset by the evaluation thread before proceeding with tensorization.
-   *
-   * The evaluation thread will detect that search threads are mid-writing by comparing batch_commit_count_ to
-   * batch_reserve_index_. Only when they are equal will it proceed to query the GPU and write to the output slots.
+   * Compiling with -DMCTS_THREADING_DEBUG will enable a bunch of prints that allow you to watch the sequence of
+   * operations in the interleaving threads.
    */
   class NNEvaluationService {
   public:
