@@ -1469,7 +1469,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   stop_search_threads();
 
   bool add_noise = !params.disable_noise && params_.dirichlet_mult > 0;
-  if (!root_ || add_noise || true) {
+  if (!root_ || add_noise) {
     if (root_) {
       NodeReleaseService::release(root_);
     }
