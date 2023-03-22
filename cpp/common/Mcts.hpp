@@ -588,12 +588,12 @@ private:
     void loop();
 
     Response check_cache(SearchThread* thread, const cache_key_t& cache_key);
-    void wait_until_batch_reservable(SearchThread* thread);
-    int allocate_reserve_index(SearchThread* thread);
+    void wait_until_batch_reservable(SearchThread* thread, std::unique_lock<std::mutex>& metadata_lock);
+    int allocate_reserve_index(SearchThread* thread, std::unique_lock<std::mutex>& metadata_lock);
     void tensorize_and_transform_input(const Request& request, const cache_key_t& cache_key, int reserve_index);
     void increment_commit_count(SearchThread* thread);
-    NNEvaluation_sptr get_eval(SearchThread* thread, int reserve_index);
-    void wait_until_all_read(SearchThread* thread);
+    NNEvaluation_sptr get_eval(SearchThread* thread, int reserve_index, std::unique_lock<std::mutex>& metadata_lock);
+    void wait_until_all_read(SearchThread* thread, std::unique_lock<std::mutex>& metadata_lock);
 
     void wait_until_batch_ready();
     void wait_for_first_reservation();
@@ -693,8 +693,10 @@ private:
       int reserve_index = 0;
       int commit_count = 0;
       int unread_count = 0;
+      bool accepting_reservations = true;
       std::string repr() const {
-        return util::create_string("res=%d, com=%d, unr=%d", reserve_index, commit_count, unread_count);
+        return util::create_string("res=%d, com=%d, unr=%d, acc=%d",
+                                   reserve_index, commit_count, unread_count, accepting_reservations);
       }
     };
     batch_metadata_t batch_metadata_;
