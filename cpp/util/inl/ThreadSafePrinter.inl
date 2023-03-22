@@ -29,6 +29,7 @@ inline int ThreadSafePrinter::printf(const char* format, ...) {
   va_start(args, format);
   ret += vprintf(format, args);
   va_end(args);
+  std::cout.flush();
   return ret;
 }
 
