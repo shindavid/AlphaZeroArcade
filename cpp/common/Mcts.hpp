@@ -27,6 +27,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenTorch.hpp>
 #include <util/LRUCache.hpp>
+#include <util/Math.hpp>
 #include <util/Profiler.hpp>
 
 namespace common {
@@ -95,7 +96,7 @@ public:
     int64_t nn_eval_timeout_ns = util::us_to_ns(250);
     size_t cache_size = 1048576;
 
-    float root_softmax_temperature = 1.03;
+    std::string root_softmax_temperature_str;
     float cPUCT = 1.1;
     float cFPU = 0.2;
     float dirichlet_mult = 0.25;
@@ -761,6 +762,7 @@ public:
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
   const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params);
   void add_dirichlet_noise(LocalPolicyProbDistr& P);
+  float root_softmax_temperature() const { return root_softmax_temperature_.value(); }
 
   void start_search_threads(const SimParams* sim_params);
   void wait_for_search_threads();
@@ -786,6 +788,7 @@ private:
   const Params params_;
   const SimParams offline_sim_params_;
   const int instance_id_;
+  math::ExponentialDecay root_softmax_temperature_;
   search_thread_vec_t search_threads_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 

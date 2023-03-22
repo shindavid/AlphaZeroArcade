@@ -30,8 +30,9 @@ Mcts<GameState, Tensorizor>::Params::Params(DefaultParamsType type) {
     dirichlet_mult = 0;
     dirichlet_alpha_sum = 0;
     forced_playouts = false;
+    root_softmax_temperature_str = "1";
   } else if (type == kTraining) {
-    // use declared values
+    root_softmax_temperature_str = "1.4->1.1:2*sqrt(b)";
   } else {
     throw util::Exception("Unknown type: %d", (int)type);
   }
@@ -74,7 +75,7 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"cache-size">(
           po::value<size_t>(&cache_size)->default_value(cache_size),
           "nn eval thread cache size")
-      .template add_option<"root-softmax-temp">(po2::float_value("%.2f", &root_softmax_temperature), "root softmax temperature")
+      .template add_option<"root-softmax-temp">(po::value<std::string>(&root_softmax_temperature_str), "root softmax temperature")
       .template add_option<"cpuct">(po2::float_value("%.2f", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult">(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
       .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
@@ -634,7 +635,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
       if (params_.dirichlet_mult) {
         mcts_->add_dirichlet_noise(P);
       }
-      P = P.pow(1.0 / params_.root_softmax_temperature);
+      P = P.pow(1.0 / mcts_->root_softmax_temperature());
       P /= P.sum();
     }
   }
@@ -1378,6 +1379,8 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 : params_(params)
 , offline_sim_params_(SimParams::make_offline_params(params.offline_tree_size_limit))
 , instance_id_(next_instance_id_++)
+, root_softmax_temperature_(math::ExponentialDecay::parse(
+    params.root_softmax_temperature_str, GameStateTypes::get_var_bindings()))
 {
   namespace bf = boost::filesystem;
 
@@ -1416,6 +1419,7 @@ inline Mcts<GameState, Tensorizor>::~Mcts() {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::start() {
   clear();
+  root_softmax_temperature_.reset();
 
   if (!connected_) {
     if (nn_eval_service_) {
@@ -1439,6 +1443,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::receive_state_change(
     player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
 {
+  root_softmax_temperature_.step();
   stop_search_threads();
   if (!root_) return;
 
