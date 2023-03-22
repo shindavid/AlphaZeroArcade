@@ -178,7 +178,8 @@ inline Mcts<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_pare
 , stats_(node.stats_) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline std::string Mcts<GameState, Tensorizor>::Node::genealogy_str(const char* delim) const {
+inline std::string Mcts<GameState, Tensorizor>::Node::genealogy_str() const {
+  const char* delim = kNumGlobalActions < 10 ? "" : ":";
   std::vector<std::string> vec;
   const Node* n = this;
   while (n->parent()) {
@@ -468,7 +469,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
   if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << " " << tree->genealogy_str("");
+    printer << __func__ << " " << tree->genealogy_str();
     printer.endl();
   }
   lazily_init(tree);
@@ -493,7 +494,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
 
     if (kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread_id());
-      printer << "backprop_with_virtual_undo " << tree->genealogy_str("");
+      printer << "backprop_with_virtual_undo " << tree->genealogy_str();
       printer << " " << evaluation->value_prob_distr().transpose();
       printer.endl();
     }
@@ -518,7 +519,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tr
   record_for_profiling(kBackpropOutcome);
   if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << tree->genealogy_str("") << " " << outcome.transpose();
+    printer << __func__ << " " << tree->genealogy_str() << " " << outcome.transpose();
     printer.endl();
   }
 
@@ -585,7 +586,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
   if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << tree->genealogy_str("");
+    printer << __func__ << " " << tree->genealogy_str();
     printer.endl();
   }
 
@@ -603,7 +604,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     record_for_profiling(kVirtualBackprop);
     if (kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread_id_);
-      printer << "virtual_backprop " << tree->genealogy_str("");
+      printer << "virtual_backprop " << tree->genealogy_str();
       printer.endl();
     }
 
@@ -727,7 +728,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   Node* best_child = tree->_get_child(argmax_index);
 
   if (kEnableThreadingDebug) {
-    std::string genealogy = tree->genealogy_str("");
+    std::string genealogy = tree->genealogy_str();
 
     util::ThreadSafePrinter printer(thread_id());
 
@@ -927,7 +928,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
   SearchThread* thread = request.thread;
 
   if (kEnableThreadingDebug) {
-    std::string genealogy = request.tree->genealogy_str("");
+    std::string genealogy = request.tree->genealogy_str();
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("evaluate() %s\n", genealogy.c_str());
   }

@@ -168,7 +168,7 @@ private:
     Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
     Node(const Node& node, bool prune_parent=false);
 
-    std::string genealogy_str(const char* delim=":") const;  // slow, for debugging
+    std::string genealogy_str() const;  // slow, for debugging
     void debug_dump() const;
 
     /*
