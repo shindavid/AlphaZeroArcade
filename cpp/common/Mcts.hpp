@@ -226,8 +226,6 @@ private:
     Node* _get_child(int c) const { return children_data_.first_child_unsafe() + c; }
     Node* _find_child(action_index_t action) const;
 
-    const auto& _raw_value_sum() const { return stats_.raw_value_sum_; }
-    const auto& _virtual_value_sum() const { return stats_.virtual_value_sum_; }
     const auto& _value_avg() const { return stats_.value_avg_; }
     bool _eliminated() const { return stats_.eliminated_; }
     float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
@@ -340,8 +338,6 @@ private:
       stats_t();
 
       ValueArray1D value_avg_;
-      ValueArray1D raw_value_sum_;
-      ValueArray1D virtual_value_sum_;
       ValueArray1D effective_value_avg_;
       ValueArray1D V_floor_;
       int count_ = 0;
@@ -470,8 +466,6 @@ private:
     player_index_t cp;
     const PVec& P;
     PVec V;
-    PVec RVS;
-    PVec VVS;
     PVec N;
     PVec VN;
     PVec E;
@@ -555,7 +549,7 @@ private:
      *
      * If the thread_ member is already instantiated, then this is a no-op.
      */
-    void connect(Mcts*);
+    void connect();
 
     void disconnect();
 
@@ -592,8 +586,8 @@ private:
                         const boost::filesystem::path& profiling_dir);
     ~NNEvaluationService();
 
-    void batch_evaluate(Mcts* mcts);
-    void loop(Mcts* mcts);
+    void batch_evaluate();
+    void loop();
 
     Response check_cache(SearchThread* thread, const cache_key_t& cache_key);
     void wait_until_batch_reservable(SearchThread* thread);

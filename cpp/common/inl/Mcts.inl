@@ -128,8 +128,7 @@ inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::dat
   outcome_ = state_.apply_move(action);
   valid_action_mask_ = state_.get_valid_actions();
   current_player_ = state_.get_current_player();
-//  sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
-  sym_index_ = 0;
+  sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -141,8 +140,7 @@ inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::dat
 {
   valid_action_mask_ = state_.get_valid_actions();
   current_player_ = state_.get_current_player();
-//  sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
-  sym_index_ = 0;
+  sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -152,8 +150,6 @@ inline Mcts<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(c
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
   value_avg_.setZero();
-  raw_value_sum_.setZero();
-  virtual_value_sum_.setZero();
   effective_value_avg_.setZero();
   V_floor_.setZero();
 }
@@ -264,7 +260,6 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& outcome)
 {
   std::unique_lock<std::mutex> lock(stats_mutex_);
-  stats_.raw_value_sum_ += outcome;
   stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + outcome) / (stats_.count_ + 1);
   stats_.count_++;
   stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
@@ -278,8 +273,6 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
     const ValueProbDistr& value)
 {
   std::unique_lock<std::mutex> lock(stats_mutex_);
-  stats_.raw_value_sum_ += value;
-  stats_.virtual_value_sum_ -= make_virtual_loss();
   stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
   stats_.virtual_count_--;
   stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
@@ -292,7 +285,6 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
   std::unique_lock<std::mutex> lock(stats_mutex_);
   auto loss = make_virtual_loss();
-  stats_.virtual_value_sum_ += loss;
   stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + loss) / (stats_.count_ + 1);
   stats_.count_++;
   stats_.virtual_count_++;
@@ -341,8 +333,6 @@ Mcts<GameState, Tensorizor>::Node::make_virtual_loss() const {
   ValueArray1D virtual_loss;
   virtual_loss.setZero();
   virtual_loss[_current_player()] = x;
-//  virtual_loss.setZero();
-//  virtual_loss[_current_player()] = x;
   return virtual_loss;
 }
 
@@ -742,10 +732,6 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
     printer.endl();
     printer << "V: " << stats.V.transpose();
     printer.endl();
-    printer << "RVS: " << stats.RVS.transpose();
-    printer.endl();
-    printer << "VVS: " << stats.VVS.transpose();
-    printer.endl();
     printer << "VN: " << stats.VN.transpose();
     printer.endl();
     printer << "E: " << E.transpose();
@@ -787,8 +773,6 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
 : cp(tree->_current_player())
 , P(tree->_local_policy_prob_distr())
 , V(P.rows())
-, RVS(P.rows())
-, VVS(P.rows())
 , N(P.rows())
 , VN(P.rows())
 , E(P.rows())
@@ -800,8 +784,6 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     std::lock_guard<std::mutex> guard(child->stats_mutex());
 
     V(c) = child->_effective_value_avg(cp);
-    RVS(c) = child->_raw_value_sum()(cp);
-    VVS(c) = child->_virtual_value_sum()(cp);
     N(c) = child->_effective_count();
     VN(c) = child->_virtual_count();
     E(c) = child->_eliminated();
@@ -865,11 +847,11 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::create(const Mcts* mcts) {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::NNEvaluationService::connect(Mcts* mcts) {
+void Mcts<GameState, Tensorizor>::NNEvaluationService::connect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
   num_connections_++;
   if (thread_) return;
-  thread_ = new std::thread([&] { this->loop(mcts); });
+  thread_ = new std::thread([&] { this->loop(); });
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -972,7 +954,7 @@ float Mcts<GameState, Tensorizor>::NNEvaluationService::global_avg_batch_size() 
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate(Mcts* mcts) {
+void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   std::unique_lock batch_metadata_lock(batch_metadata_.mutex);
   std::unique_lock batch_data_lock(batch_data_.mutex);
 
@@ -1020,13 +1002,13 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate(Mcts* mcts
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::NNEvaluationService::loop(Mcts* mcts) {
+void Mcts<GameState, Tensorizor>::NNEvaluationService::loop() {
   while (active()) {
     wait_until_batch_ready();
     wait_for_first_reservation();
     wait_for_last_reservation();
     wait_for_commits();
-    batch_evaluate(mcts);
+    batch_evaluate();
     dump_profiling_stats();
   }
 }
@@ -1436,7 +1418,7 @@ inline void Mcts<GameState, Tensorizor>::start() {
 
   if (!connected_) {
     if (nn_eval_service_) {
-      nn_eval_service_->connect(this);
+      nn_eval_service_->connect();
     }
     connected_ = true;
   }
