@@ -27,7 +27,7 @@ public:
   using MapValue = std::pair<Value, typename KeyList::iterator>;
   using Map = std::unordered_map<Key, MapValue>;
 
-  LRUCache(size_t capacity) : capacity_(capacity) {}
+  LRUCache(size_t capacity) : map_(capacity), capacity_(capacity) {}
 
   size_t size() const { return map_.size(); }
   size_t capacity() const { return capacity_; }
