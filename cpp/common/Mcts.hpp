@@ -121,7 +121,7 @@ public:
     static SimParams make_offline_params(int limit) { return SimParams{limit, true}; }
 
     int tree_size_limit = 100;
-    bool disable_noise = false;
+    bool disable_exploration = false;
   };
 
 private:
@@ -165,7 +165,7 @@ private:
     };
 
     Node(Node* parent, action_index_t action);
-    Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
+    Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_exploration);
     Node(const Node& node, bool prune_parent=false);
 
     std::string genealogy_str() const;  // slow, for debugging
@@ -211,7 +211,7 @@ private:
     action_index_t action() const { return stable_data_.action_; }
     Node* parent() const { return stable_data_.parent_; }
     bool is_root() const { return !stable_data_.parent_; }
-    bool disable_noise() const { return stable_data_.disable_noise_; }
+    bool disable_exploration() const { return stable_data_.disable_exploration_; }
 
     const Tensorizor& _tensorizor() const { return lazily_initialized_data_.union_.data_.tensorizor_; }
     const GameState& _state() const { return lazily_initialized_data_.union_.data_.state_; }
@@ -250,12 +250,12 @@ private:
     float _get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
 
     struct stable_data_t {
-      stable_data_t(Node* parent, action_index_t action, bool disable_noise);
+      stable_data_t(Node* parent, action_index_t action, bool disable_exploration);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
       Node* parent_;
       action_index_t action_;
-      bool disable_noise_;
+      bool disable_exploration_;
     };
 
     struct lazily_initialized_data_t {

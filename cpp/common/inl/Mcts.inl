@@ -107,10 +107,10 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    Node* parent, action_index_t action, bool disable_noise)
+    Node* parent, action_index_t action, bool disable_exploration)
 : parent_(parent)
 , action_(action)
-, disable_noise_(disable_noise) {}
+, disable_exploration_(disable_exploration) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
@@ -160,8 +160,8 @@ inline Mcts<GameState, Tensorizor>::Node::Node(Node* parent, action_index_t acti
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::Node(
-    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_noise)
-: stable_data_(nullptr, -1, disable_noise)
+    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_exploration)
+: stable_data_(nullptr, -1, disable_exploration)
 , lazily_initialized_data_(tensorizor, state, outcome)
 , evaluation_data_(_valid_action_mask()) {}
 
@@ -630,11 +630,13 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
   LocalPolicyProbDistr P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
   if (tree->is_root()) {
-    if (params_.dirichlet_mult && !sim_params_->disable_noise) {
-      mcts_->add_dirichlet_noise(P);
+    if (!sim_params_->disable_exploration) {
+      if (params_.dirichlet_mult) {
+        mcts_->add_dirichlet_noise(P);
+      }
+      P = P.pow(1.0 / params_.root_softmax_temperature);
+      P /= P.sum();
     }
-    P = P.pow(1.0 / params_.root_softmax_temperature);
-    P /= P.sum();
   }
   tree->_set_local_policy_prob_distr(P);
   tree->_set_evaluation(data->evaluation);
@@ -693,7 +695,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   const PVec& E = stats.E;
   PVec& PUCT = stats.PUCT;
 
-  bool add_noise = !sim_params_->disable_noise && params_.dirichlet_mult > 0;
+  bool add_noise = !sim_params_->disable_exploration && params_.dirichlet_mult > 0;
   if (params_.forced_playouts && add_noise) {
     PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
     auto F1 = (N < n_forced).template cast<dtype>();
@@ -794,7 +796,7 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     dtype PV = tree->_effective_value_avg(cp);
     lock.unlock();
 
-    bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_noise;
+    bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
     dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
     for (int c : bitset_util::on_indices(fpu_bits)) {
@@ -1468,13 +1470,13 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 {
   stop_search_threads();
 
-  bool add_noise = !params.disable_noise && params_.dirichlet_mult > 0;
+  bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!root_ || add_noise) {
     if (root_) {
       NodeReleaseService::release(root_);
     }
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
-    root_ = new Node(tensorizor, game_state, outcome, params.disable_noise);  // TODO: use memory pool
+    root_ = new Node(tensorizor, game_state, outcome, params.disable_exploration);  // TODO: use memory pool
   }
 
   start_search_threads(&params);
