@@ -589,6 +589,10 @@ private:
     static float global_avg_batch_size();  // averaged over all instances
 
   private:
+    using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
+    using cache_key_t = StateEvaluationKey<GameState>;
+    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
                         std::chrono::nanoseconds timeout_duration, size_t cache_size,
                         const boost::filesystem::path& profiling_dir);
@@ -597,15 +601,21 @@ private:
     void batch_evaluate(Mcts* mcts);
     void loop(Mcts* mcts);
 
-    bool active() const { return num_connections_; }
-    bool all_batch_reservations_committed() const { return batch_reserve_index_ == batch_commit_count_; }
-    bool batch_reservations_full() const { return batch_reserve_index_ == batch_size_limit_; }
-    bool batch_reservations_empty() const { return batch_reserve_index_ == 0; }
-    bool batch_reservable() const { return batch_unread_count_ == 0 && batch_reserve_index_ < batch_size_limit_; }
+    void wait_until_batch_reservable(SearchThread* thread);
+    int allocate_reserve_index(SearchThread* thread);
+    void tensorize_and_transform_input(
+        SearchThread* thread, const Tensorizor& tensorizor, const GameState& state, const ActionMask& valid_action_mask,
+        symmetry_index_t sym_index, const cache_key_t& key, int reserve_index);
+    void increment_commit_count(SearchThread* thread);
+    NNEvaluation_sptr get_eval(SearchThread* thread, int reserve_index);
+    void wait_until_all_read(SearchThread* thread);
 
-    using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
-    using cache_key_t = StateEvaluationKey<GameState>;
-    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+    void wait_until_batch_ready();
+    void wait_for_first_reservation();
+    void wait_for_last_reservation();
+    void wait_for_commits();
+
+    bool active() const { return num_connections_; }
 
     struct eval_ptr_data_t {
       NNEvaluation_asptr eval_ptr;
@@ -616,7 +626,7 @@ private:
     };
 
     enum region_t {
-      kAcquiringBatchMutex = 0,
+      kWaitingUntilBatchReady = 0,
       kWaitingForFirstReservation = 1,
       kWaitingForLastReservation = 2,
       kWaitingForCommits = 3,
@@ -669,15 +679,21 @@ private:
     std::thread* thread_ = nullptr;
     std::mutex cache_mutex_;
     std::mutex connection_mutex_;
-    std::mutex batch_mutex_;
+
     std::condition_variable cv_service_loop_;
     std::condition_variable cv_evaluate_;
 
     NeuralNet net_;
-    FullPolicyArray policy_batch_;
-    FullValueArray value_batch_;
-    FullInputTensor input_batch_;
-    eval_ptr_data_t* evaluation_data_batch_;
+    struct batch_data_t {
+      batch_data_t(int batch_size);
+
+      std::mutex mutex;
+      FullPolicyArray policy;
+      FullValueArray value;
+      FullInputTensor input;
+      eval_ptr_data_t* eval_ptr_data;
+    };
+    batch_data_t batch_data_;
 
     common::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;
@@ -687,9 +703,16 @@ private:
     const int batch_size_limit_;
 
     time_point_t deadline_;
-    int batch_reserve_index_ = 0;
-    int batch_commit_count_ = 0;
-    int batch_unread_count_ = 0;
+    struct batch_metadata_t {
+      std::mutex mutex;
+      int reserve_index = 0;
+      int commit_count = 0;
+      int unread_count = 0;
+      std::string repr() const {
+        return util::create_string("res=%d, com=%d, unr=%d", reserve_index, commit_count, unread_count);
+      }
+    };
+    batch_metadata_t batch_metadata_;
 
     int num_connections_ = 0;
 
