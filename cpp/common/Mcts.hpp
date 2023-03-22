@@ -44,6 +44,7 @@ private:
 public:
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
   static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
+  static constexpr bool kEnableThreadingDebug = IS_MACRO_ASSIGNED_TO_1(MCTS_THREADING_DEBUG);
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
@@ -167,6 +168,7 @@ private:
     Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_noise);
     Node(const Node& node, bool prune_parent=false);
 
+    std::string genealogy_str() const;  // slow, for debugging
     void debug_dump() const;
 
     /*
@@ -229,6 +231,7 @@ private:
     float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
     float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
     int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
+    int _virtual_count() const { return stats_.virtual_count_; }
     bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
     bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
@@ -338,6 +341,7 @@ private:
       ValueArray1D effective_value_avg_;
       ValueArray1D V_floor_;
       int count_ = 0;
+      int virtual_count_ = 0;
       bool eliminated_ = false;
     };
 
@@ -394,6 +398,7 @@ private:
 
     void record_for_profiling(region_t region);
     void dump_profiling_stats();
+    auto mcts() const { return mcts_; }
 
 #ifdef PROFILE_MCTS
     profiler_t* get_profiler() { return &profiler_; }
@@ -462,6 +467,7 @@ private:
     const PVec& P;
     PVec V;
     PVec N;
+    PVec VN;
     PVec E;
     PVec PUCT;
   };
@@ -484,49 +490,40 @@ private:
    *
    * The service has an LRU cache, which helps to avoid the costly GPU operations when possible.
    *
-   * When the number of search threads is 1, we simply do everything in the main thread, mainly for easier debugging.
-   * When we have more than 1 search thread, we encounter sensitive thread-safety considerations. Here is a detailed
-   * description of how this implementation handles them.
+   * Here is a detailed description of how this implementation handles the various thread safety considerations.
    *
-   * There are two mutexes:
+   * There are three mutexes:
    *
    * - cache_mutex_: prevents race-conditions on cache reads/writes - especially important because without locking,
    *                 cache eviction can lead to a key-value pair disappearing after checking for the key
+   * - batch_data_.mutex: prevents race-conditions on reads/writes of batch_data_
+   * - batch_metadata_.mutex: prevents race-conditions on reads/writes of batch_metadata_
    *
-   * - batch_mutex_: prevents race-conditions on batch reads/writes
+   * The batch_data_ member consists of:
    *
-   * There are three separate members that are used to synchronize batch writing, all protected by batch_mutex_:
+   * - input: the batch input tensor
+   * - value/policy: the batch output tensors
+   * - eval_ptr_data: mainly an array of N smart-pointers to a struct that has copied a slice of the value/policy
+   *                  tensors.
    *
-   * - batch_reserve_index_: keeps track of the next batch slot to write to. A search thread does a protected
-   *                         read + increment of this member, and then with the mutex released, starts the work of
-   *                         tensorizing the game state and writing to the appropriate slot.
+   * The batch_metadata_ member consists of three ints:
    *
-   * - batch_commit_count_: Once the search thread has finished tensorizing and writing to its slot, it increments
-   *                        the batch_commit_count_. This allows the service thread to detect when it is safe to
-   *                        evaluate the batch.
+   * - reserve_index: the next slot of batch_data_.input to write to
+   * - commit_count: the number of slots of batch_data_.input that have been written to
+   * - unread_count: the number of entries of batch_data_.eval_ptr_data that have not yet been read by their
+   *                 corresponding search threads
    *
-   * - batch_unread_count_: After the service thread has written the N nnet outputs, the search threads can start
-   *                        reading those outputs. Without care, a race condition could cause eager search threads to
-   *                        overwrite that data before the prior threads fully read that data. This unread count
-   *                        value helps to prevent this race condition.
+   * The loop() and evaluate() methods of NNEvaluationService have been carefully written to ensure that the reads
+   * and writes of these data structures are thread-safe.
    *
-   * Note that batch_reserve_index_ and batch_commit_count_ could have been rolled into one single count. This would
-   * have been simpler, but increased the duration for which batch_mutex_ is held (as the tensorizing would then
-   * need to happen under the mutex). Separation allows tensorization to occur outside any mutex locks.
-   *
-   * Search threads will detect that the batch is fully saturated by checking batch_reserve_index_, and wait until it
-   * is reset by the evaluation thread before proceeding with tensorization.
-   *
-   * The evaluation thread will detect that search threads are mid-writing by comparing batch_commit_count_ to
-   * batch_reserve_index_. Only when they are equal will it proceed to query the GPU and write to the output slots.
+   * Compiling with -DMCTS_THREADING_DEBUG will enable a bunch of prints that allow you to watch the sequence of
+   * operations in the interleaving threads.
    */
   class NNEvaluationService {
   public:
     struct Request {
       SearchThread* thread;
-      const Tensorizor* tensorizor;
-      const GameState* state;
-      const ActionMask* valid_action_mask;
+      Node* tree;
       symmetry_index_t sym_index;
     };
 
@@ -577,6 +574,10 @@ private:
     static float global_avg_batch_size();  // averaged over all instances
 
   private:
+    using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
+    using cache_key_t = StateEvaluationKey<GameState>;
+    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
                         std::chrono::nanoseconds timeout_duration, size_t cache_size,
                         const boost::filesystem::path& profiling_dir);
@@ -585,15 +586,20 @@ private:
     void batch_evaluate();
     void loop();
 
-    bool active() const { return num_connections_; }
-    bool all_batch_reservations_committed() const { return batch_reserve_index_ == batch_commit_count_; }
-    bool batch_reservations_full() const { return batch_reserve_index_ == batch_size_limit_; }
-    bool batch_reservations_empty() const { return batch_reserve_index_ == 0; }
-    bool batch_reservable() const { return batch_unread_count_ == 0 && batch_reserve_index_ < batch_size_limit_; }
+    Response check_cache(SearchThread* thread, const cache_key_t& cache_key);
+    void wait_until_batch_reservable(SearchThread* thread);
+    int allocate_reserve_index(SearchThread* thread);
+    void tensorize_and_transform_input(const Request& request, const cache_key_t& cache_key, int reserve_index);
+    void increment_commit_count(SearchThread* thread);
+    NNEvaluation_sptr get_eval(SearchThread* thread, int reserve_index);
+    void wait_until_all_read(SearchThread* thread);
 
-    using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
-    using cache_key_t = StateEvaluationKey<GameState>;
-    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+    void wait_until_batch_ready();
+    void wait_for_first_reservation();
+    void wait_for_last_reservation();
+    void wait_for_commits();
+
+    bool active() const { return num_connections_; }
 
     struct eval_ptr_data_t {
       NNEvaluation_asptr eval_ptr;
@@ -604,7 +610,7 @@ private:
     };
 
     enum region_t {
-      kAcquiringBatchMutex = 0,
+      kWaitingUntilBatchReady = 0,
       kWaitingForFirstReservation = 1,
       kWaitingForLastReservation = 2,
       kWaitingForCommits = 3,
@@ -657,15 +663,21 @@ private:
     std::thread* thread_ = nullptr;
     std::mutex cache_mutex_;
     std::mutex connection_mutex_;
-    std::mutex batch_mutex_;
+
     std::condition_variable cv_service_loop_;
     std::condition_variable cv_evaluate_;
 
     NeuralNet net_;
-    FullPolicyArray policy_batch_;
-    FullValueArray value_batch_;
-    FullInputTensor input_batch_;
-    eval_ptr_data_t* evaluation_data_batch_;
+    struct batch_data_t {
+      batch_data_t(int batch_size);
+
+      std::mutex mutex;
+      FullPolicyArray policy;
+      FullValueArray value;
+      FullInputTensor input;
+      eval_ptr_data_t* eval_ptr_data;
+    };
+    batch_data_t batch_data_;
 
     common::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;
@@ -675,9 +687,16 @@ private:
     const int batch_size_limit_;
 
     time_point_t deadline_;
-    int batch_reserve_index_ = 0;
-    int batch_commit_count_ = 0;
-    int batch_unread_count_ = 0;
+    struct batch_metadata_t {
+      std::mutex mutex;
+      int reserve_index = 0;
+      int commit_count = 0;
+      int unread_count = 0;
+      std::string repr() const {
+        return util::create_string("res=%d, com=%d, unr=%d", reserve_index, commit_count, unread_count);
+      }
+    };
+    batch_metadata_t batch_metadata_;
 
     int num_connections_ = 0;
 

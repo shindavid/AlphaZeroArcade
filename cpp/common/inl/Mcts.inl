@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include <boost/algorithm/string/join.hpp>
 #include <EigenRand/EigenRand>
 
 #include <util/BoostUtil.hpp>
@@ -13,6 +14,7 @@
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>
+#include <util/ThreadSafePrinter.hpp>
 
 namespace common {
 
@@ -172,6 +174,20 @@ inline Mcts<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_pare
 , stats_(node.stats_) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline std::string Mcts<GameState, Tensorizor>::Node::genealogy_str() const {
+  const char* delim = kNumGlobalActions < 10 ? "" : ":";
+  std::vector<std::string> vec;
+  const Node* n = this;
+  while (n->parent()) {
+    vec.push_back(std::to_string(n->action()));
+    n = n->parent();
+  }
+
+  std::reverse(vec.begin(), vec.end());
+  return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::debug_dump() const {
   std::cout << "value[" << stats_.count_ << "]: " << stats_.value_avg_.transpose() << std::endl;
 }
@@ -258,6 +274,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
 {
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
+  stats_.virtual_count_--;
   stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   lock.unlock();
 
@@ -267,8 +284,10 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
   std::unique_lock<std::mutex> lock(stats_mutex_);
-  stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + make_virtual_loss()) / (stats_.count_ + 1);
+  auto loss = make_virtual_loss();
+  stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + loss) / (stats_.count_ + 1);
   stats_.count_++;
+  stats_.virtual_count_++;
   stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   lock.unlock();
 
@@ -312,8 +331,8 @@ typename Mcts<GameState, Tensorizor>::ValueArray1D
 Mcts<GameState, Tensorizor>::Node::make_virtual_loss() const {
   constexpr float x = 1.0 / (kNumPlayers - 1);
   ValueArray1D virtual_loss;
-  virtual_loss = x;
-  virtual_loss[_current_player()] = 0;
+  virtual_loss.setZero();
+  virtual_loss[_current_player()] = x;
   return virtual_loss;
 }
 
@@ -438,6 +457,11 @@ bool Mcts<GameState, Tensorizor>::SearchThread::needs_more_visits(Node* root, in
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id());
+    printer << __func__ << " " << tree->genealogy_str();
+    printer.endl();
+  }
   lazily_init(tree);
   const auto& outcome = tree->_outcome();
   if (is_terminal_outcome(outcome)) {
@@ -457,6 +481,14 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
   Node* best_child = get_best_child(tree, evaluation);
   if (data.performed_expansion) {
     record_for_profiling(kBackpropEvaluation);
+
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread_id());
+      printer << "backprop_with_virtual_undo " << tree->genealogy_str();
+      printer << " " << evaluation->value_prob_distr().transpose();
+      printer.endl();
+    }
+
     tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
     visit(best_child, depth + 1);
@@ -475,6 +507,12 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::lazily_init(Node* tree) {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tree, const ValueProbDistr& outcome) {
   record_for_profiling(kBackpropOutcome);
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << tree->genealogy_str() << " " << outcome.transpose();
+    printer.endl();
+  }
+
   tree->backprop(outcome);
 }
 
@@ -536,6 +574,12 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 {
   record_for_profiling(kEvaluateAndExpandUnset);
 
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << tree->genealogy_str();
+    printer.endl();
+  }
+
   assert(!tree->_has_children());
   expand_children(tree);
   data->performed_expansion = true;
@@ -548,6 +592,12 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
   if (!speculative) {
     record_for_profiling(kVirtualBackprop);
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread_id_);
+      printer << "virtual_backprop " << tree->genealogy_str();
+      printer.endl();
+    }
+
     tree->virtual_backprop();
   }
 
@@ -562,9 +612,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
         uniform_value, uniform_policy, tree->_valid_action_mask());
   } else {
     symmetry_index_t sym_index = tree->_sym_index();
-    typename NNEvaluationService::Request request{
-        this, &tree->_tensorizor(), &tree->_state(), &tree->_valid_action_mask(), sym_index
-    };
+    typename NNEvaluationService::Request request{this, tree, sym_index};
     auto response = mcts_->nn_eval_service()->evaluate(request);
     used_cache = response.used_cache;
     data->evaluation = response.ptr;
@@ -666,6 +714,33 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
   Node* best_child = tree->_get_child(argmax_index);
+
+  if (kEnableThreadingDebug) {
+    std::string genealogy = tree->genealogy_str();
+
+    util::ThreadSafePrinter printer(thread_id());
+
+    printer << "*************";
+    printer.endl();
+    printer << "get_best_child() " << genealogy;
+    printer.endl();
+    printer << "P: " << P.transpose();
+    printer.endl();
+    printer << "N: " << N.transpose();
+    printer.endl();
+    printer << "V: " << stats.V.transpose();
+    printer.endl();
+    printer << "VN: " << stats.VN.transpose();
+    printer.endl();
+    printer << "E: " << E.transpose();
+    printer.endl();
+    printer << "PUCT: " << PUCT.transpose();
+    printer.endl();
+    printer << "argmax: " << argmax_index;
+    printer.endl();
+    printer << "*************";
+    printer.endl();
+  }
   return best_child;
 }
 
@@ -697,6 +772,7 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
 , P(tree->_local_policy_prob_distr())
 , V(P.rows())
 , N(P.rows())
+, VN(P.rows())
 , E(P.rows())
 , PUCT(P.rows())
 {
@@ -707,6 +783,7 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
 
     V(c) = child->_effective_value_avg(cp);
     N(c) = child->_effective_count();
+    VN(c) = child->_virtual_count();
     E(c) = child->_eliminated();
 
     fpu_bits[c] = (N(c) == 0);
@@ -794,15 +871,12 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
     size_t cache_size, const boost::filesystem::path& profiling_dir)
 : instance_id_(next_instance_id_++)
 , net_(net_filename)
-, policy_batch_(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
-, value_batch_(batch_size, kNumPlayers, util::to_std_array<int>(batch_size, kNumPlayers))
-, input_batch_(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::Shape>))
+, batch_data_(batch_size)
 , cache_(cache_size)
 , timeout_duration_(timeout_duration)
 , batch_size_limit_(batch_size)
 {
-  evaluation_data_batch_ = new eval_ptr_data_t[batch_size];
-  torch_input_gpu_ = input_batch_.asTorch().clone().to(torch::kCUDA);
+  torch_input_gpu_ = batch_data_.input.asTorch().clone().to(torch::kCUDA);
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
@@ -812,87 +886,44 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_data_t(
+    int batch_size)
+: policy(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
+, value(batch_size, kNumPlayers, util::to_std_array<int>(batch_size, kNumPlayers))
+, input(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::Shape>))
+{
+  input.asEigen().setZero();
+  eval_ptr_data = new eval_ptr_data_t[batch_size];
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService() {
   disconnect();
-  delete[] evaluation_data_batch_;
+  delete[] batch_data_.eval_ptr_data;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts<GameState, Tensorizor>::NNEvaluationService::Response
 Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& request) {
   SearchThread* thread = request.thread;
-  const Tensorizor& tensorizor = *request.tensorizor;
-  const GameState& state = *request.state;
-  const ActionMask& valid_action_mask = *request.valid_action_mask;
-  symmetry_index_t sym_index = request.sym_index;
 
-  thread->record_for_profiling(SearchThread::kCheckingCache);
-  cache_key_t key{state, sym_index};
-
-  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
-  auto cached = cache_.get(key);
-  if (cached.has_value()) {
-    cache_hits_++;
-    return Response{cached.value(), true};
+  if (kEnableThreadingDebug) {
+    std::string genealogy = request.tree->genealogy_str();
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("evaluate() %s\n", genealogy.c_str());
   }
-  cache_lock.unlock();
-  cache_misses_++;
 
-  thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
-  std::unique_lock<std::mutex> batch_lock(batch_mutex_);
+  cache_key_t cache_key{request.tree->_state(), request.sym_index};
+  Response response = check_cache(thread, cache_key);
+  if (response.used_cache) return response;
 
-  thread->record_for_profiling(SearchThread::kWaitingUntilBatchReservable);
-  cv_evaluate_.wait(batch_lock, [&]{ return batch_reservable(); });
+  wait_until_batch_reservable(thread);
+  int my_index = allocate_reserve_index(thread);
+  tensorize_and_transform_input(request, cache_key, my_index);
+  increment_commit_count(thread);
+  NNEvaluation_sptr eval_ptr = get_eval(thread, my_index);
+  wait_until_all_read(thread);
 
-  thread->record_for_profiling(SearchThread::kMisc);
-  int my_index = batch_reserve_index_;
-  assert(my_index < batch_size_limit_);
-  batch_reserve_index_++;
-  if (my_index == 0) {
-    deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
-  }
-  assert(batch_commit_count_ < batch_reserve_index_);
-  batch_lock.unlock();
-  cv_service_loop_.notify_one();
-
-  /*
-   * At this point, the work unit is effectively RESERVED but not COMMITTED.
-   *
-   * The significance of being reserved is that other search threads will be blocked from reserving if the batch is
-   * fully reserved.
-   *
-   * The significance of not yet being committed is that the service thread won't yet proceed with nnet eval.
-   */
-  thread->record_for_profiling(SearchThread::kTensorizing);
-
-  auto& input = input_batch_.template eigenSlab<typename TensorizorTypes::Shape<1>>(my_index);
-  tensorizor.tensorize(input, state);
-  auto transform = tensorizor.get_symmetry(sym_index);
-  transform->transform_input(input);
-
-  evaluation_data_batch_[my_index].eval_ptr.store(nullptr);
-  evaluation_data_batch_[my_index].cache_key = key;
-  evaluation_data_batch_[my_index].valid_actions = valid_action_mask;
-  evaluation_data_batch_[my_index].transform = transform;
-
-  thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
-  std::unique_lock<std::mutex> lock(batch_mutex_);
-  batch_commit_count_++;
-  lock.unlock();
-  cv_service_loop_.notify_one();
-
-  thread->record_for_profiling(SearchThread::kAcquiringBatchMutex);
-  lock.lock();
-  thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
-  cv_evaluate_.wait(lock, [&]{ return batch_reservations_empty(); });
-
-  NNEvaluation_sptr eval_ptr = evaluation_data_batch_[my_index].eval_ptr.load();
-  assert(batch_unread_count_ > 0);
-  batch_unread_count_--;
-  lock.unlock();
-
-  // NOTE: might be able to notify_one(), if we add another notify_one() after the batch_reserve_index_++
-  cv_evaluate_.notify_all();
   return Response{eval_ptr, false};
 }
 
@@ -922,19 +953,28 @@ float Mcts<GameState, Tensorizor>::NNEvaluationService::global_avg_batch_size() 
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
-  assert(batch_reserve_index_ > 0);
-  assert(batch_reserve_index_ == batch_commit_count_);
+  std::unique_lock batch_metadata_lock(batch_metadata_.mutex);
+  std::unique_lock batch_data_lock(batch_data_.mutex);
+
+  assert(batch_metadata_.reserve_index > 0);
+  assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
+
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("<---------------------- NNEvaluationService::%s(%s) ---------------------->\n",
+                   __func__, batch_metadata_.repr().c_str());
+  }
 
   record_for_profiling(kCopyingCpuToGpu);
-  torch_input_gpu_.copy_(input_batch_.asTorch());
+  torch_input_gpu_.copy_(batch_data_.input.asTorch());
   record_for_profiling(kEvaluatingNeuralNet);
-  net_.predict(input_vec_, policy_batch_.asTorch(), value_batch_.asTorch());
+  net_.predict(input_vec_, batch_data_.policy.asTorch(), batch_data_.value.asTorch());
 
   record_for_profiling(kCopyingToPool);
-  for (int i = 0; i < batch_reserve_index_; ++i) {
-    eval_ptr_data_t &edata = evaluation_data_batch_[i];
-    auto &policy = policy_batch_.eigenSlab(i);
-    auto &value = value_batch_.eigenSlab(i);
+  for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
+    eval_ptr_data_t &edata = batch_data_.eval_ptr_data[i];
+    auto &policy = batch_data_.policy.eigenSlab(i);
+    auto &value = batch_data_.value.eigenSlab(i);
 
     edata.transform->transform_policy(policy);
     edata.eval_ptr.store(std::make_shared<NNEvaluation>(
@@ -944,37 +984,323 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   record_for_profiling(kAcquiringCacheMutex);
   std::unique_lock<std::mutex> lock(cache_mutex_);
   record_for_profiling(kFinishingUp);
-  for (int i = 0; i < batch_reserve_index_; ++i) {
-    const eval_ptr_data_t &edata = evaluation_data_batch_[i];
+  for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
+    const eval_ptr_data_t &edata = batch_data_.eval_ptr_data[i];
     cache_.insert(edata.cache_key, edata.eval_ptr);
   }
   lock.unlock();
 
-  evaluated_positions_ += batch_reserve_index_;
+  evaluated_positions_ += batch_metadata_.reserve_index;
   batches_evaluated_++;
 
-  batch_unread_count_ = batch_commit_count_;
-  batch_reserve_index_ = 0;
-  batch_commit_count_ = 0;
+  batch_metadata_.unread_count = batch_metadata_.commit_count;
+  batch_metadata_.reserve_index = 0;
+  batch_metadata_.commit_count = 0;
   cv_evaluate_.notify_all();
-  dump_profiling_stats();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::NNEvaluationService::loop() {
   while (active()) {
-    record_for_profiling(kAcquiringBatchMutex);
-    std::unique_lock<std::mutex> lock(batch_mutex_);
-
-    record_for_profiling(kWaitingForFirstReservation);
-    cv_service_loop_.wait(lock, [&]{ return !batch_reservations_empty(); });
-    record_for_profiling(kWaitingForLastReservation);
-    cv_service_loop_.wait_until(lock, deadline_, [&]{ return batch_reservations_full(); });
-    record_for_profiling(kWaitingForCommits);
-    cv_service_loop_.wait(lock, [&]{ return all_batch_reservations_committed(); });
-
+    wait_until_batch_ready();
+    wait_for_first_reservation();
+    wait_for_last_reservation();
+    wait_for_commits();
     batch_evaluate();
+    dump_profiling_stats();
   }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::NNEvaluationService::Response
+Mcts<GameState, Tensorizor>::NNEvaluationService::check_cache(SearchThread* thread, const cache_key_t& cache_key) {
+  thread->record_for_profiling(SearchThread::kCheckingCache);
+
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  waiting for cache lock...\n");
+  }
+
+  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
+  auto cached = cache_.get(cache_key);
+  if (cached.has_value()) {
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  hit cache\n");
+    }
+    cache_hits_++;
+    return Response{cached.value(), true};
+  }
+  cache_misses_++;
+  return Response{nullptr, false};
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_batch_reservable(SearchThread* thread) {
+  thread->record_for_profiling(SearchThread::kWaitingUntilBatchReservable);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
+  }
+  cv_evaluate_.wait(lock, [&]{
+    if (batch_metadata_.unread_count == 0 && batch_metadata_.reserve_index < batch_size_limit_) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+int Mcts<GameState, Tensorizor>::NNEvaluationService::allocate_reserve_index(SearchThread* thread) {
+  thread->record_for_profiling(SearchThread::kMisc);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s(%s) waiting...\n", func, batch_metadata_.repr().c_str());
+  }
+  cv_evaluate_.wait(lock, [&]{
+    if (batch_metadata_.unread_count == 0) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+
+  int my_index = batch_metadata_.reserve_index;
+  assert(my_index < batch_size_limit_);
+  batch_metadata_.reserve_index++;
+  if (my_index == 0) {
+    deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
+  }
+  assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
+
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s(%s) allocation complete\n", func, batch_metadata_.repr().c_str());
+  }
+  cv_service_loop_.notify_one();
+
+  /*
+   * At this point, the work unit is effectively RESERVED but not COMMITTED.
+   *
+   * The significance of being reserved is that other search threads will be blocked from reserving if the batch is
+   * fully reserved.
+   *
+   * The significance of not yet being committed is that the service thread won't yet proceed with nnet eval.
+   */
+  return my_index;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_input(
+    const Request& request, const cache_key_t& cache_key, int reserve_index)
+{
+  SearchThread* thread = request.thread;
+  Node* tree = request.tree;
+  const Tensorizor& tensorizor = tree->_tensorizor();
+  const GameState& state = tree->_state();
+  const ActionMask& valid_action_mask = tree->_valid_action_mask();
+  symmetry_index_t sym_index = cache_key.sym_index;
+
+  thread->record_for_profiling(SearchThread::kTensorizing);
+  std::unique_lock<std::mutex> lock(batch_data_.mutex);
+
+  auto& input = batch_data_.input.template eigenSlab<typename TensorizorTypes::Shape<1>>(reserve_index);
+  tensorizor.tensorize(input, state);
+  auto transform = tensorizor.get_symmetry(sym_index);
+  transform->transform_input(input);
+
+  batch_data_.eval_ptr_data[reserve_index].eval_ptr.store(nullptr);
+  batch_data_.eval_ptr_data[reserve_index].cache_key = cache_key;
+  batch_data_.eval_ptr_data[reserve_index].valid_actions = valid_action_mask;
+  batch_data_.eval_ptr_data[reserve_index].transform = transform;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::increment_commit_count(SearchThread* thread)
+{
+  thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+
+  batch_metadata_.commit_count++;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s(%s)...\n", __func__, batch_metadata_.repr().c_str());
+  }
+  cv_service_loop_.notify_one();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+Mcts<GameState, Tensorizor>::NNEvaluation_sptr Mcts<GameState, Tensorizor>::NNEvaluationService::get_eval(
+    SearchThread* thread, int reserve_index)
+{
+  std::unique_lock<std::mutex> metadata_lock(batch_metadata_.mutex);
+
+  const char* func = __func__;
+  thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
+  }
+  cv_evaluate_.wait(metadata_lock, [&]{
+    if (batch_metadata_.reserve_index == 0) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+  metadata_lock.unlock();
+
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s() waiting on data lock...\n", func);
+  }
+  std::unique_lock<std::mutex> data_lock(batch_data_.mutex);
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s() data lock acquired!\n", func);
+  }
+  return batch_data_.eval_ptr_data[reserve_index].eval_ptr.load();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_all_read(SearchThread* thread)
+{
+  /*
+   * TODO: fixme. Make all active search threads get to "evaluated" print before continuing!
+   */
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s() waiting on metadata lock...\n", func);
+  }
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s() metadata lock acquired!\n", func);
+  }
+  assert(batch_metadata_.unread_count > 0);
+  batch_metadata_.unread_count--;
+
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
+  }
+  cv_evaluate_.wait(lock, [&]{
+    if (batch_metadata_.unread_count == 0) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer(thread->thread_id());
+      printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+  lock.unlock();
+  cv_evaluate_.notify_all();
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread->thread_id());
+    printer.printf("  evaluated!\n");
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_batch_ready()
+{
+  record_for_profiling(kWaitingUntilBatchReady);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+  const char* cls = "NNEvaluationService";
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
+                   cls, func, batch_metadata_.repr().c_str());
+  }
+  cv_service_loop_.wait(lock, [&]{
+    if (batch_metadata_.unread_count == 0) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_first_reservation()
+{
+  record_for_profiling(kWaitingForFirstReservation);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+  const char* cls = "NNEvaluationService";
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
+                   cls, func, batch_metadata_.repr().c_str());
+  }
+  cv_service_loop_.wait(lock, [&]{
+    if (batch_metadata_.reserve_index > 0) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_last_reservation()
+{
+  record_for_profiling(kWaitingForLastReservation);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+  const char* cls = "NNEvaluationService";
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
+                   cls, func, batch_metadata_.repr().c_str());
+  }
+  cv_service_loop_.wait_until(lock, deadline_, [&]{
+    if (batch_metadata_.reserve_index == batch_size_limit_) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_commits()
+{
+  record_for_profiling(kWaitingForCommits);
+  std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
+  const char* cls = "NNEvaluationService";
+  const char* func = __func__;
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
+                   cls, func, batch_metadata_.repr().c_str());
+  }
+  cv_service_loop_.wait(lock, [&]{
+    if (batch_metadata_.reserve_index == batch_metadata_.commit_count) return true;
+    if (kEnableThreadingDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
+                     cls, func, batch_metadata_.repr().c_str());
+    }
+    return false;
+  });
 }
 
 /*
@@ -1012,7 +1338,6 @@ Mcts<GameState, Tensorizor>::NodeReleaseService::NodeReleaseService()
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 Mcts<GameState, Tensorizor>::NodeReleaseService::~NodeReleaseService() {
-//  printf("NodeReleaseService release_count=%d max_queue_size=%d\n", release_count_, max_queue_size_);
   destructing_ = true;
   cv_.notify_one();
   if (thread_.joinable()) thread_.join();
