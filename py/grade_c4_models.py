@@ -87,8 +87,8 @@ class ModelGrader:
         cmd = f'{cmd} > {hidden_log_filename}'
         timed_print(f'Running: {cmd}')
         subprocess_util.run(cmd)
-        timed_print(f'Moving {hidden_log_filename} to {log_filename}')
         os.rename(hidden_log_filename, log_filename)
+        timed_print(f'Moved {hidden_log_filename} to {log_filename}')
 
     def run(self):
         os.system(f'rm -f {self.grading_logs_dir}/.*.log')  # clean up straggling tmp files
