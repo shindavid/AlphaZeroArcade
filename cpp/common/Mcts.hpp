@@ -784,7 +784,7 @@ public:
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   float avg_batch_size() const { return nn_eval_service_->avg_batch_size(); }
   static float global_avg_batch_size() { return NNEvaluationService::global_avg_batch_size(); }
-  void record_puct_calc(bool virtual_loss_influenced) { nn_eval_service_->record_puct_calc(virtual_loss_influenced); }
+  void record_puct_calc(bool virtual_loss_influenced) { if (nn_eval_service_) nn_eval_service_->record_puct_calc(virtual_loss_influenced); }
 
   static float pct_virtual_loss_influenced_puct_calcs() { return NNEvaluationService::pct_virtual_loss_influenced_puct_calcs(); }
 
