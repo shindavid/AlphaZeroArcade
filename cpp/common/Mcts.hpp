@@ -573,6 +573,14 @@ private:
     int64_t batches_evaluated() const { return batches_evaluated_; }
     float avg_batch_size() const { return evaluated_positions() * 1.0 / std::max(int64_t(1), batches_evaluated()); }
 
+    void record_puct_calc(bool virtual_loss_influenced) {
+      this->total_puct_calcs_++;
+      if (virtual_loss_influenced) {
+        this->virtual_loss_influenced_puct_calcs_++;
+      }
+    }
+
+    static float pct_virtual_loss_influenced_puct_calcs();  // summed over all instances
     static float global_avg_batch_size();  // averaged over all instances
 
   private:
@@ -704,10 +712,12 @@ private:
 
     int num_connections_ = 0;
 
-    int cache_hits_ = 0;
-    int cache_misses_ = 0;
-    int64_t evaluated_positions_ = 0;
-    int64_t batches_evaluated_ = 0;
+    std::atomic<int> cache_hits_ = 0;
+    std::atomic<int> cache_misses_ = 0;
+    std::atomic<int64_t> evaluated_positions_ = 0;
+    std::atomic<int64_t> batches_evaluated_ = 0;
+    std::atomic<int64_t> total_puct_calcs_ = 0;
+    std::atomic<int64_t> virtual_loss_influenced_puct_calcs_ = 0;
   };
 
   class NodeReleaseService {
@@ -774,6 +784,9 @@ public:
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   float avg_batch_size() const { return nn_eval_service_->avg_batch_size(); }
   static float global_avg_batch_size() { return NNEvaluationService::global_avg_batch_size(); }
+  void record_puct_calc(bool virtual_loss_influenced) { nn_eval_service_->record_puct_calc(virtual_loss_influenced); }
+
+  static float pct_virtual_loss_influenced_puct_calcs() { return NNEvaluationService::pct_virtual_loss_influenced_puct_calcs(); }
 
 #ifdef PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return boost::filesystem::path(params_.profiling_dir); }

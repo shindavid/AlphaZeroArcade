@@ -701,6 +701,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 
   const PVec& P = stats.P;
   const PVec& N = stats.N;
+  const PVec& VN = stats.VN;
   const PVec& E = stats.E;
   PVec& PUCT = stats.PUCT;
 
@@ -725,6 +726,8 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
   Node* best_child = tree->_get_child(argmax_index);
+
+  mcts_->record_puct_calc(VN.sum() > 0);
 
   if (kEnableThreadingDebug) {
     std::string genealogy = tree->genealogy_str();
@@ -959,6 +962,20 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::get_cache_stats(
   misses = cache_misses_;
   size = cache_.size();
   hash_balance_factor = cache_.get_hash_balance_factor();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+float Mcts<GameState, Tensorizor>::NNEvaluationService::pct_virtual_loss_influenced_puct_calcs() {
+  int64_t num = 0;
+  int64_t den = 0;
+
+  for (auto it : instance_map_) {
+    NNEvaluationService* service = it.second;
+    num += service->virtual_loss_influenced_puct_calcs_;
+    den += service->total_puct_calcs_;
+  }
+
+  return 100.0 * num / den;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

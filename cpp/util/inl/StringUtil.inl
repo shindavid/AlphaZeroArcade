@@ -72,7 +72,7 @@ void param_dump(const char* descr, const char* param_fmt, T param) {
   if (false) {
     printf(param_fmt, param);
   }
-  constexpr int descr_width = 40;
+  constexpr int descr_width = 50;
   constexpr int param_width = 10;
 
   // "%-50s %10d\n" -> "X-%ds X%d%s\n"

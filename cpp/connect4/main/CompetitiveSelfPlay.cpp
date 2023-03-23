@@ -122,6 +122,7 @@ int main(int ac, char* av[]) {
   PARAM_DUMP("MCTS search threads", "%d", mcts_params.num_search_threads);
   PARAM_DUMP("MCTS max batch size", "%d", mcts_params.batch_size_limit);
   PARAM_DUMP("MCTS avg batch size", "%.2f", Mcts::global_avg_batch_size());
+  PARAM_DUMP("MCTS pct virtual-loss influenced PUCT calcs", "%.2f%%", Mcts::pct_virtual_loss_influenced_puct_calcs());
 
   return 0;
 }
