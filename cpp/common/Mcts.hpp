@@ -90,7 +90,7 @@ public:
     std::string nnet_filename;
     bool uniform_model = false;
     int num_search_threads = 8;
-    int batch_size_limit = 144;
+    int batch_size_limit = 216;
     bool run_offline = false;
     int offline_tree_size_limit = 4096;
     int64_t nn_eval_timeout_ns = util::us_to_ns(250);
