@@ -77,7 +77,6 @@ class ModelGrader:
             '-p', Args.parallelism_factor,
             '--nnet-filename', self.get_model_filename(gen),
             '--no-forced-playouts',
-            '--disable-first-play-urgency',
             '--hide-progress-bar',
             '--grade-moves',
         ]

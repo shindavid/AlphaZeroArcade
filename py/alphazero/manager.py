@@ -256,7 +256,6 @@ class AlphaZeroManager:
             '-g', games_dir,
             '-G', n_games,
             '--no-forced-playouts',
-            # '--disable-first-play-urgency',
         ]
 
         if gen == 0:
