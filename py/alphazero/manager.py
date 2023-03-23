@@ -282,8 +282,8 @@ class AlphaZeroManager:
         net, optimizer = self.get_net_and_optimizer(loader)
 
         value_loss_lambda = ModelingArgs.value_loss_lambda
-        policy_criterion = nn.MultiLabelSoftMarginLoss()
-        value_criterion = nn.CrossEntropyLoss()
+        policy_criterion = nn.CrossEntropyLoss(reduction='sum')
+        value_criterion = nn.CrossEntropyLoss(reduction='sum')
 
         timed_print(f'Sampling from the {loader.n_window} most recent positions among '
                     f'{loader.n_total_positions} total positions')
