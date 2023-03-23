@@ -283,7 +283,7 @@ class AlphaZeroManager:
 
         value_loss_lambda = ModelingArgs.value_loss_lambda
         policy_criterion = nn.MultiLabelSoftMarginLoss()
-        value_criterion = nn.MSELoss()
+        value_criterion = nn.CrossEntropyLoss()
 
         timed_print(f'Sampling from the {loader.n_window} most recent positions among '
                     f'{loader.n_total_positions} total positions')
