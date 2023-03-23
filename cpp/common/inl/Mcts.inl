@@ -129,7 +129,11 @@ inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::dat
   outcome_ = state_.apply_move(action);
   valid_action_mask_ = state_.get_valid_actions();
   current_player_ = state_.get_current_player();
-  sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
+  if (kDeterministic) {
+    sym_index_ = 0;
+  } else {
+    sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -141,7 +145,11 @@ inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::dat
 {
   valid_action_mask_ = state_.get_valid_actions();
   current_player_ = state_.get_current_player();
-  sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
+  if (kDeterministic) {
+    sym_index_ = 0;
+  } else {
+    sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
