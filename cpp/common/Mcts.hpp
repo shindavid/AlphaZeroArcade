@@ -315,13 +315,8 @@ private:
     bool is_root() const { return !stable_data_.parent_; }
     bool disable_exploration() const { return stable_data_.disable_exploration_; }
 
-    const Tensorizor& _tensorizor() const { return lazily_initialized_data_.union_.data_.tensorizor_; }
-    const GameState& _state() const { return lazily_initialized_data_.union_.data_.state_; }
-    const GameOutcome& _outcome() const { return lazily_initialized_data_.union_.data_.outcome_; }
-    symmetry_index_t _sym_index() const { return lazily_initialized_data_.union_.data_.sym_index_; }
-    player_index_t _current_player() const { return lazily_initialized_data_.union_.data_.current_player_; }
-    const ActionMask& _valid_action_mask() const { return lazily_initialized_data_.union_.data_.valid_action_mask_; }
-    bool _lazily_initialized() const { return lazily_initialized_data_.initialized_; }
+    const lazily_initialized_data_t::data_t& lazily_initialized_data() const { return lazily_initialized_data_.union_.data_; }
+    bool lazily_initialized() const { return lazily_initialized_data_.initialized_; }
 
     bool _has_children() const { return children_data_.num_children_unsafe(); }
     int _num_children() const { return children_data_.num_children_unsafe(); }
