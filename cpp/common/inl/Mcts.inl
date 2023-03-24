@@ -75,7 +75,9 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"cache-size">(
           po::value<size_t>(&cache_size)->default_value(cache_size),
           "nn eval thread cache size")
-      .template add_option<"root-softmax-temp">(po::value<std::string>(&root_softmax_temperature_str), "root softmax temperature")
+      .template add_option<"root-softmax-temp">(
+          po::value<std::string>(&root_softmax_temperature_str)->default_value(root_softmax_temperature_str),
+          "root softmax temperature")
       .template add_option<"cpuct">(po2::float_value("%.2f", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult">(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
       .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
