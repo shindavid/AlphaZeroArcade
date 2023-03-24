@@ -254,16 +254,16 @@ private:
     struct stats_t {
       stats_t();
 
-      int effective_count() const { return eliminated_ ? 0 : count_; }
-      bool has_certain_outcome() const { return V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
-      bool can_be_eliminated() const { return V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+      int effective_count() const { return eliminated ? 0 : count; }
+      bool has_certain_outcome() const { return V_floor.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
+      bool can_be_eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
 
-      ValueArray1D value_avg_;
-      ValueArray1D effective_value_avg_;
-      ValueArray1D V_floor_;
-      int count_ = 0;
-      int virtual_count_ = 0;
-      bool eliminated_ = false;
+      ValueArray1D value_avg;
+      ValueArray1D effective_value_avg;
+      ValueArray1D V_floor;
+      int count = 0;
+      int virtual_count = 0;
+      bool eliminated = false;
     };
 
     Node(Node* parent, action_index_t action);
