@@ -254,6 +254,10 @@ private:
     struct stats_t {
       stats_t();
 
+      int effective_count() const { return eliminated_ ? 0 : count_; }
+      bool has_certain_outcome() const { return V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
+      bool can_be_eliminated() const { return V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+
       ValueArray1D value_avg_;
       ValueArray1D effective_value_avg_;
       ValueArray1D V_floor_;
@@ -324,14 +328,7 @@ private:
     Node* _get_child(int c) const { return children_data_.first_child_unsafe() + c; }
     Node* _find_child(action_index_t action) const;
 
-    const auto& _value_avg() const { return stats_.value_avg_; }
-    bool _eliminated() const { return stats_.eliminated_; }
-    float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
-    float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
-    int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
-    int _virtual_count() const { return stats_.virtual_count_; }
-    bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
-    bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+    const stats_t& stats() const { return stats_; }
 
     const ActionMask& _fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions_; }
     const LocalPolicyProbDistr& _local_policy_prob_distr() const { return evaluation_data_.local_policy_prob_distr_; }

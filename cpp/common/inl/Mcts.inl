@@ -256,13 +256,13 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
     float max_V_floor = _get_max_V_floor_among_children(cp, first_child, num_children);
     for (int i = 0; i < num_children; ++i) {
       Node* child = first_child + i;
-      counts(child->action()) = (child->_V_floor(cp) == max_V_floor);
+      counts(child->action()) = (child->stats().V_floor_(cp) == max_V_floor);
     }
     return counts;
   }
   for (int i = 0; i < num_children; ++i) {
     Node* child = first_child + i;
-    counts(child->action()) = child->_effective_count();
+    counts(child->action()) = child->stats().effective_count();
   }
   return counts;
 }
@@ -273,7 +273,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& ou
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + outcome) / (stats_.count_ + 1);
   stats_.count_++;
-  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  stats_.effective_value_avg_ = stats_.has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   lock.unlock();
 
   if (parent()) parent()->backprop(outcome);
@@ -286,7 +286,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg_ += (value - make_virtual_loss()) / stats_.count_;
   stats_.virtual_count_--;
-  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  stats_.effective_value_avg_ = stats_.has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   lock.unlock();
 
   if (parent()) parent()->backprop_with_virtual_undo(value);
@@ -299,7 +299,7 @@ inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
   stats_.value_avg_ = (stats_.value_avg_ * stats_.count_ + loss) / (stats_.count_ + 1);
   stats_.count_++;
   stats_.virtual_count_++;
-  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  stats_.effective_value_avg_ = stats_.has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
   lock.unlock();
 
   if (parent()) parent()->virtual_backprop();
@@ -325,8 +325,8 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueP
 
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.V_floor_ = V_floor;
-  stats_.effective_value_avg_ = _has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
-  if (_can_be_eliminated()) {
+  stats_.effective_value_avg_ = stats_.has_certain_outcome() ? stats_.V_floor_ : stats_.value_avg_;
+  if (stats_.can_be_eliminated()) {
     stats_.eliminated_ = true;
     recurse = parent();
   }
@@ -405,7 +405,8 @@ inline float Mcts<GameState, Tensorizor>::Node::_get_max_V_floor_among_children(
   for (int i = 0; i < num_children; ++i) {
     Node* child = first_child + i;
     std::lock_guard<std::mutex> guard(child->stats_mutex_);
-    max_V_floor = std::max(max_V_floor, child->_V_floor(p));
+    const auto& child_stats = child->stats();
+    max_V_floor = std::max(max_V_floor, child_stats.V_floor_(p));
   }
   return max_V_floor;
 }
@@ -418,7 +419,8 @@ inline float Mcts<GameState, Tensorizor>::Node::_get_min_V_floor_among_children(
   for (int i = 0; i < num_children; ++i) {
     Node* child = first_child + i;
     std::lock_guard<std::mutex> guard(child->stats_mutex_);
-    min_V_floor = std::min(min_V_floor, child->_V_floor(p));
+    const auto& child_stats = child->stats();
+    min_V_floor = std::min(min_V_floor, child_stats.V_floor_(p));
   }
   return min_V_floor;
 }
@@ -463,7 +465,8 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::launch(const SimParams* s
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 bool Mcts<GameState, Tensorizor>::SearchThread::needs_more_visits(Node* root, int tree_size_limit) {
   record_for_profiling(kCheckVisitReady);
-  return mcts_->search_active() && root->_effective_count() <= tree_size_limit && !root->_eliminated();
+  const auto& stats = root->stats();
+  return mcts_->search_active() && stats.effective_count() <= tree_size_limit && !stats.eliminated_;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -796,18 +799,20 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
   for (int c = 0; c < tree->_num_children(); ++c) {
     Node* child = tree->_get_child(c);
     std::lock_guard<std::mutex> guard(child->stats_mutex());
+    const auto& child_stats = child->stats();
 
-    V(c) = child->_effective_value_avg(cp);
-    N(c) = child->_effective_count();
-    VN(c) = child->_virtual_count();
-    E(c) = child->_eliminated();
+    V(c) = child_stats.effective_value_avg_(cp);
+    N(c) = child_stats.effective_count();
+    VN(c) = child_stats.virtual_count_;
+    E(c) = child_stats.eliminated_;
 
     fpu_bits[c] = (N(c) == 0);
   }
 
   if (params.enable_first_play_urgency && fpu_bits.any()) {
     std::unique_lock<std::mutex> lock(tree->stats_mutex());
-    dtype PV = tree->_effective_value_avg(cp);
+    const auto& stats = tree->stats();
+    dtype PV = stats.effective_value_avg_(cp);
     lock.unlock();
 
     bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_exploration;
@@ -1495,7 +1500,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
     prune_counts(params);
   }
   results_.policy_prior = root_->_local_policy_prob_distr();
-  results_.win_rates = root_->_value_avg();
+  results_.win_rates = root_->stats().value_avg_;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
 }
@@ -1543,7 +1548,7 @@ inline void Mcts<GameState, Tensorizor>::run_search(SearchThread* thread, int tr
    * Thread-safety analysis:
    *
    * - changes in root_ are always synchronized via stop_search_threads()
-   * - _effective_count() and _eliminated() read root_->stats_.{eliminated_, count_}
+   * - effective_count and eliminated read root_->stats_.{eliminated_, count_}
    *   - eliminated_ starts false and gets flipped to true at most once.
    *   - count_ is monotonoically increasing
    *   - Race-conditions can lead us to read stale values of these. That is ok - that merely causes us to possibly to
