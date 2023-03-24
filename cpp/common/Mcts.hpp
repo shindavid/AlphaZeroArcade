@@ -166,6 +166,102 @@ private:
       kSet,
     };
 
+    struct stable_data_t {
+      stable_data_t(Node* parent, action_index_t action, bool disable_exploration);
+      stable_data_t(const stable_data_t& data, bool prune_parent);
+
+      Node* parent_;
+      action_index_t action_;
+      bool disable_exploration_;
+    };
+
+    struct lazily_initialized_data_t {
+      struct data_t {
+        data_t(Node* parent, action_index_t action);
+        data_t(const Tensorizor&, const GameState&, const GameOutcome&);
+
+        Tensorizor tensorizor_;
+        GameState state_;
+        GameOutcome outcome_;
+        ActionMask valid_action_mask_;
+        player_index_t current_player_;
+        symmetry_index_t sym_index_;
+      };
+
+      union union_t {
+        union_t() : dummy_(false) {}
+        union_t(const union_t& u) : data_(u.data_) {}
+        union_t(Node* parent, action_index_t action) : data_(parent, action) {}
+        union_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+            : data_(tensorizor, state, outcome) {}
+
+        data_t data_;
+        bool dummy_;
+      };
+
+      lazily_initialized_data_t() = default;
+      lazily_initialized_data_t(Node* parent, action_index_t action)
+          : union_(parent, action)
+            , initialized_(true) {}
+      lazily_initialized_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+          : union_(tensorizor, state, outcome)
+            , initialized_(true) {}
+
+      union_t union_;
+      bool initialized_ = false;
+    };
+
+    /*
+     * Writers must FIRST write num_children_, and THEN first_child_.
+     *
+     * Readers should ignore num_children_ if first_child_ is null.
+     *
+     * Following this discipline allows us to use children_data_t in a lockfree manner.
+     *
+     * We use the volatile keyword here to ensure that read/write order is not changed by the compiler.
+     *
+     * See: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
+     */
+    struct children_data_t {
+      void write(Node* first_child, int num_children) {
+        num_children_ = num_children;
+        first_child_ = first_child;
+      }
+
+      void read(Node** first_child, int* num_children) const {
+        *first_child = const_cast<Node*>(first_child_);
+        *num_children = (*first_child) ? num_children_ : 0;
+      }
+
+      Node* first_child_unsafe() const { return const_cast<Node*>(first_child_); }  // read() is safer, be careful
+      int num_children_unsafe() const { return num_children_; }  // read() is safer, be careful
+
+    private:
+      volatile Node* first_child_ = nullptr;
+      volatile int num_children_ = 0;
+    };
+
+    struct evaluation_data_t {
+      evaluation_data_t() = default;
+      evaluation_data_t(const ActionMask& valid_actions);
+
+      NNEvaluation_asptr ptr_;
+      LocalPolicyProbDistr local_policy_prob_distr_;
+      evaluation_state_t state_ = kUnset;
+      ActionMask fully_analyzed_actions_;  // means that every leaf descendent is a terminal game state
+    };
+
+    struct stats_t {
+      stats_t();
+
+      ValueArray1D value_avg_;
+      ValueArray1D effective_value_avg_;
+      ValueArray1D V_floor_;
+      int count_ = 0;
+      int virtual_count_ = 0;
+      bool eliminated_ = false;
+    };
+
     Node(Node* parent, action_index_t action);
     Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_exploration);
     Node(const Node& node, bool prune_parent=false);
@@ -250,102 +346,6 @@ private:
   private:
     float _get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
     float _get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
-
-    struct stable_data_t {
-      stable_data_t(Node* parent, action_index_t action, bool disable_exploration);
-      stable_data_t(const stable_data_t& data, bool prune_parent);
-
-      Node* parent_;
-      action_index_t action_;
-      bool disable_exploration_;
-    };
-
-    struct lazily_initialized_data_t {
-      struct data_t {
-        data_t(Node* parent, action_index_t action);
-        data_t(const Tensorizor&, const GameState&, const GameOutcome&);
-
-        Tensorizor tensorizor_;
-        GameState state_;
-        GameOutcome outcome_;
-        ActionMask valid_action_mask_;
-        player_index_t current_player_;
-        symmetry_index_t sym_index_;
-      };
-
-      union union_t {
-        union_t() : dummy_(false) {}
-        union_t(const union_t& u) : data_(u.data_) {}
-        union_t(Node* parent, action_index_t action) : data_(parent, action) {}
-        union_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-            : data_(tensorizor, state, outcome) {}
-
-        data_t data_;
-        bool dummy_;
-      };
-
-      lazily_initialized_data_t() = default;
-      lazily_initialized_data_t(Node* parent, action_index_t action)
-        : union_(parent, action)
-        , initialized_(true) {}
-      lazily_initialized_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-        : union_(tensorizor, state, outcome)
-        , initialized_(true) {}
-
-      union_t union_;
-      bool initialized_ = false;
-    };
-
-    /*
-     * Writers must FIRST write num_children_, and THEN first_child_.
-     *
-     * Readers should ignore num_children_ if first_child_ is null.
-     *
-     * Following this discipline allows us to use children_data_t in a lockfree manner.
-     *
-     * We use the volatile keyword here to ensure that read/write order is not changed by the compiler.
-     *
-     * See: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
-     */
-    struct children_data_t {
-      void write(Node* first_child, int num_children) {
-        num_children_ = num_children;
-        first_child_ = first_child;
-      }
-
-      void read(Node** first_child, int* num_children) const {
-        *first_child = const_cast<Node*>(first_child_);
-        *num_children = (*first_child) ? num_children_ : 0;
-      }
-
-      Node* first_child_unsafe() const { return const_cast<Node*>(first_child_); }  // read() is safer, be careful
-      int num_children_unsafe() const { return num_children_; }  // read() is safer, be careful
-
-    private:
-      volatile Node* first_child_ = nullptr;
-      volatile int num_children_ = 0;
-    };
-
-    struct evaluation_data_t {
-      evaluation_data_t() = default;
-      evaluation_data_t(const ActionMask& valid_actions);
-
-      NNEvaluation_asptr ptr_;
-      LocalPolicyProbDistr local_policy_prob_distr_;
-      evaluation_state_t state_ = kUnset;
-      ActionMask fully_analyzed_actions_;  // means that every leaf descendent is a terminal game state
-    };
-
-    struct stats_t {
-      stats_t();
-
-      ValueArray1D value_avg_;
-      ValueArray1D effective_value_avg_;
-      ValueArray1D V_floor_;
-      int count_ = 0;
-      int virtual_count_ = 0;
-      bool eliminated_ = false;
-    };
 
     std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex lazily_initialized_data_mutex_;
