@@ -180,12 +180,12 @@ private:
         data_t(Node* parent, action_index_t action);
         data_t(const Tensorizor&, const GameState&, const GameOutcome&);
 
-        Tensorizor tensorizor_;
-        GameState state_;
-        GameOutcome outcome_;
-        ActionMask valid_action_mask_;
-        player_index_t current_player_;
-        symmetry_index_t sym_index_;
+        Tensorizor tensorizor;
+        GameState state;
+        GameOutcome outcome;
+        ActionMask valid_action_mask;
+        player_index_t current_player;
+        symmetry_index_t sym_index;
       };
 
       union union_t {
@@ -202,13 +202,13 @@ private:
       lazily_initialized_data_t() = default;
       lazily_initialized_data_t(Node* parent, action_index_t action)
           : union_(parent, action)
-            , initialized_(true) {}
+            , initialized(true) {}
       lazily_initialized_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
           : union_(tensorizor, state, outcome)
-            , initialized_(true) {}
+            , initialized(true) {}
 
       union_t union_;
-      bool initialized_ = false;
+      bool initialized = false;
     };
 
     /*
@@ -316,7 +316,7 @@ private:
     bool disable_exploration() const { return stable_data_.disable_exploration_; }
 
     const lazily_initialized_data_t::data_t& lazily_initialized_data() const { return lazily_initialized_data_.union_.data_; }
-    bool lazily_initialized() const { return lazily_initialized_data_.initialized_; }
+    bool lazily_initialized() const { return lazily_initialized_data_.initialized; }
 
     bool _has_children() const { return children_data_.num_children_unsafe(); }
     int _num_children() const { return children_data_.num_children_unsafe(); }

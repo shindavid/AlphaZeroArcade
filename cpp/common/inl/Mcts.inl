@@ -125,32 +125,32 @@ inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const sta
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::data_t(
     Node* parent, action_index_t action)
-: tensorizor_(parent->lazily_initialized_data().tensorizor_)
-, state_(parent->lazily_initialized_data().state_)
+: tensorizor(parent->lazily_initialized_data().tensorizor)
+, state(parent->lazily_initialized_data().state)
 {
-  outcome_ = state_.apply_move(action);
-  valid_action_mask_ = state_.get_valid_actions();
-  current_player_ = state_.get_current_player();
+  outcome = state.apply_move(action);
+  valid_action_mask = state.get_valid_actions();
+  current_player = state.get_current_player();
   if (kDeterministic) {
-    sym_index_ = 0;
+    sym_index = 0;
   } else {
-    sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
+    sym_index = bitset_util::choose_random_on_index(tensorizor.get_symmetry_indices(state));
   }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::data_t(
-    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-: tensorizor_(tensorizor)
-, state_(state)
-, outcome_(outcome)
+    const Tensorizor& t, const GameState& s, const GameOutcome& o)
+: tensorizor(t)
+, state(s)
+, outcome(o)
 {
-  valid_action_mask_ = state_.get_valid_actions();
-  current_player_ = state_.get_current_player();
+  valid_action_mask = state.get_valid_actions();
+  current_player = state.get_current_player();
   if (kDeterministic) {
-    sym_index_ = 0;
+    sym_index = 0;
   } else {
-    sym_index_ = bitset_util::choose_random_on_index(tensorizor_.get_symmetry_indices(state_));
+    sym_index = bitset_util::choose_random_on_index(tensorizor.get_symmetry_indices(state));
   }
 }
 
@@ -174,7 +174,7 @@ inline Mcts<GameState, Tensorizor>::Node::Node(
     const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_exploration)
 : stable_data_(nullptr, -1, disable_exploration)
 , lazily_initialized_data_(tensorizor, state, outcome)
-, evaluation_data_(lazily_initialized_data().valid_action_mask_) {}
+, evaluation_data_(lazily_initialized_data().valid_action_mask) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
@@ -249,7 +249,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
   int num_children;
   children_data_.read(&first_child, &num_children);
 
-  player_index_t cp = lazily_initialized_data().current_player_;
+  player_index_t cp = lazily_initialized_data().current_player;
   GlobalPolicyCountDistr counts;
   counts.setZero();
   if (eliminated) {
@@ -312,7 +312,7 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueP
   children_data_.read(&first_child, &num_children);
 
   ValueArray1D V_floor;
-  player_index_t cp = lazily_initialized_data().current_player_;
+  player_index_t cp = lazily_initialized_data().current_player;
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     if (p == cp) {
       V_floor[p] = _get_max_V_floor_among_children(p, first_child, num_children);
@@ -343,7 +343,7 @@ Mcts<GameState, Tensorizor>::Node::make_virtual_loss() const {
   constexpr float x = 1.0 / (kNumPlayers - 1);
   ValueArray1D virtual_loss;
   virtual_loss.setZero();
-  virtual_loss[lazily_initialized_data().current_player_] = x;
+  virtual_loss[lazily_initialized_data().current_player] = x;
   return virtual_loss;
 }
 
@@ -366,12 +366,12 @@ void Mcts<GameState, Tensorizor>::Node::_lazy_init() {
   new(&lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
 
   std::unique_lock<std::mutex> lock(evaluation_data_mutex());
-  new(&evaluation_data_) evaluation_data_t(lazily_initialized_data().valid_action_mask_);
+  new(&evaluation_data_) evaluation_data_t(lazily_initialized_data().valid_action_mask);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::_expand_children() {
-  const auto& valid_action_mask = lazily_initialized_data().valid_action_mask_;
+  const auto& valid_action_mask = lazily_initialized_data().valid_action_mask;
   int num_children = valid_action_mask.count();
   void* raw_memory = operator new[](num_children * sizeof(Node));
   Node* node = static_cast<Node*>(raw_memory);
@@ -479,7 +479,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
   }
   lazily_init(tree);
   const auto& lazily_initialized_data = tree->lazily_initialized_data();
-  const auto& outcome = lazily_initialized_data.outcome_;
+  const auto& outcome = lazily_initialized_data.outcome;
   if (is_terminal_outcome(outcome)) {
     backprop_outcome(tree, outcome);
     perform_eliminations(tree, outcome);
@@ -626,9 +626,9 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     uniform_value.setConstant(1.0 / kNumPlayers);
     uniform_policy.setConstant(0);
     data->evaluation = std::make_shared<NNEvaluation>(
-        uniform_value, uniform_policy, lazily_initialized_data.valid_action_mask_);
+        uniform_value, uniform_policy, lazily_initialized_data.valid_action_mask);
   } else {
-    symmetry_index_t sym_index = lazily_initialized_data.sym_index_;
+    symmetry_index_t sym_index = lazily_initialized_data.sym_index;
     typename NNEvaluationService::Request request{this, tree, sym_index};
     auto response = mcts_->nn_eval_service()->evaluate(request);
     used_cache = response.used_cache;
@@ -679,7 +679,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
   }
   lazily_init(child);
   const auto& lazily_initialized_data = child->lazily_initialized_data();
-  const auto& outcome = lazily_initialized_data.outcome_;
+  const auto& outcome = lazily_initialized_data.outcome;
   if (is_terminal_outcome(outcome)) {
     perform_eliminations(child, outcome);  // why not?
     mark_as_fully_analyzed(child);
@@ -791,7 +791,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     const Params& params, const SimParams& sim_params, const Node* tree)
-: cp(tree->lazily_initialized_data().current_player_)
+: cp(tree->lazily_initialized_data().current_player)
 , P(tree->_local_policy_prob_distr())
 , V(P.rows())
 , N(P.rows())
@@ -940,7 +940,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
   }
 
   const auto& lazily_initialized_data = tree->lazily_initialized_data();
-  cache_key_t cache_key{lazily_initialized_data.state_, request.sym_index};
+  cache_key_t cache_key{lazily_initialized_data.state, request.sym_index};
   Response response = check_cache(thread, cache_key);
   if (response.used_cache) return response;
 
@@ -1151,9 +1151,9 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   Node* tree = request.tree;
 
   const auto& lazily_initialized_data = tree->lazily_initialized_data();
-  const Tensorizor& tensorizor = lazily_initialized_data.tensorizor_;
-  const GameState& state = lazily_initialized_data.state_;
-  const ActionMask& valid_action_mask = lazily_initialized_data.valid_action_mask_;
+  const Tensorizor& tensorizor = lazily_initialized_data.tensorizor;
+  const GameState& state = lazily_initialized_data.state;
+  const ActionMask& valid_action_mask = lazily_initialized_data.valid_action_mask;
   symmetry_index_t sym_index = cache_key.sym_index;
 
   thread->record_for_profiling(SearchThread::kTensorizing);
@@ -1502,7 +1502,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   wait_for_search_threads();
 
   NNEvaluation_sptr evaluation = root_->_evaluation();
-  results_.valid_actions = root_->lazily_initialized_data().valid_action_mask_;
+  results_.valid_actions = root_->lazily_initialized_data().valid_action_mask;
   results_.counts = root_->get_effective_counts().template cast<dtype>();
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
