@@ -167,12 +167,11 @@ private:
     };
 
     struct stable_data_t {
-      stable_data_t(Node* parent, action_index_t action, bool disable_exploration);
+      stable_data_t(Node* parent, action_index_t action);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
       Node* parent_;
       action_index_t action_;
-      bool disable_exploration_;
     };
 
     struct lazily_initialized_data_t {
@@ -267,7 +266,7 @@ private:
     };
 
     Node(Node* parent, action_index_t action);
-    Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_exploration);
+    Node(const Tensorizor&, const GameState&, const GameOutcome&);
     Node(const Node& node, bool prune_parent=false);
 
     std::string genealogy_str() const;  // slow, for debugging
@@ -313,7 +312,6 @@ private:
     action_index_t action() const { return stable_data_.action_; }
     Node* parent() const { return stable_data_.parent_; }
     bool is_root() const { return !stable_data_.parent_; }
-    bool disable_exploration() const { return stable_data_.disable_exploration_; }
 
     const lazily_initialized_data_t::data_t& lazily_initialized_data() const { return lazily_initialized_data_.union_.data_; }
     bool lazily_initialized() const { return lazily_initialized_data_.initialized; }

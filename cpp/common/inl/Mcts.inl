@@ -110,10 +110,9 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    Node* parent, action_index_t action, bool disable_exploration)
+    Node* parent, action_index_t action)
 : parent_(parent)
-, action_(action)
-, disable_exploration_(disable_exploration) {}
+, action_(action) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
@@ -167,12 +166,12 @@ inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::Node(Node* parent, action_index_t action)
-: stable_data_(parent, action, true) {}
+: stable_data_(parent, action) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::Node(
-    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome, bool disable_exploration)
-: stable_data_(nullptr, -1, disable_exploration)
+    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
+: stable_data_(nullptr, -1)
 , lazily_initialized_data_(tensorizor, state, outcome)
 , evaluation_data_(lazily_initialized_data().valid_action_mask) {}
 
@@ -1495,7 +1494,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
       NodeReleaseService::release(root_);
     }
     auto outcome = make_non_terminal_outcome<kNumPlayers>();
-    root_ = new Node(tensorizor, game_state, outcome, params.disable_exploration);  // TODO: use memory pool
+    root_ = new Node(tensorizor, game_state, outcome);  // TODO: use memory pool
   }
 
   start_search_threads(&params);
