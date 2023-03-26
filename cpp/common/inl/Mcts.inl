@@ -251,7 +251,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
   GlobalPolicyCountDistr counts;
   counts.setZero();
   if (eliminated) {
-    float max_V_floor = _get_max_V_floor_among_children(cp, first_child, num_children);
+    float max_V_floor = get_max_V_floor_among_children(cp, first_child, num_children);
     for (int i = 0; i < num_children; ++i) {
       Node* child = first_child + i;
       counts(child->action()) = (child->stats().V_floor(cp) == max_V_floor);
@@ -313,9 +313,9 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueP
   player_index_t cp = lazily_initialized_data().current_player;
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     if (p == cp) {
-      V_floor[p] = _get_max_V_floor_among_children(p, first_child, num_children);
+      V_floor[p] = get_max_V_floor_among_children(p, first_child, num_children);
     } else {
-      V_floor[p] = _get_min_V_floor_among_children(p, first_child, num_children);
+      V_floor[p] = get_min_V_floor_among_children(p, first_child, num_children);
     }
   }
 
@@ -397,7 +397,7 @@ Mcts<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts<GameState, Tensorizor>::Node::_get_max_V_floor_among_children(
+inline float Mcts<GameState, Tensorizor>::Node::get_max_V_floor_among_children(
     player_index_t p, Node* first_child, int num_children) const
 {
   float max_V_floor = 0;
@@ -411,7 +411,7 @@ inline float Mcts<GameState, Tensorizor>::Node::_get_max_V_floor_among_children(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline float Mcts<GameState, Tensorizor>::Node::_get_min_V_floor_among_children(
+inline float Mcts<GameState, Tensorizor>::Node::get_min_V_floor_among_children(
     player_index_t p, Node* first_child, int num_children) const
 {
   float min_V_floor = 1;
@@ -490,7 +490,6 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
   evaluate_and_expand_result_t data = evaluate_and_expand(tree, false);
   NNEvaluation* evaluation = data.evaluation.get();
   assert(evaluation);
-  assert(evaluation == tree->_evaluation().get());
 
   Node* best_child = get_best_child(tree, evaluation);
   if (data.performed_expansion) {
@@ -551,8 +550,9 @@ Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool 
   record_for_profiling(kEvaluateAndExpand);
 
   std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
-  evaluate_and_expand_result_t data{tree->_evaluation(), false};
-  typename Node::evaluation_state_t state = tree->_evaluation_state();
+  typename Node::evaluation_data_t& evaluation_data = tree->evaluation_data();
+  evaluate_and_expand_result_t data{evaluation_data.ptr.load(), false};
+  auto state = evaluation_data.state;
 
   switch (state) {
     case Node::kUnset:
@@ -568,11 +568,11 @@ Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool 
       assert(!lock.owns_lock());
       if (!speculative) {
         lock.lock();
-        if (tree->_evaluation_state() != Node::kSet) {
+        if (evaluation_data.state != Node::kSet) {
           tree->cv_evaluate_and_expand().wait(lock);
-          assert(tree->_evaluation_state() == Node::kSet);
+          assert(evaluation_data.state == Node::kSet);
         }
-        data.evaluation = tree->_evaluation();
+        data.evaluation = evaluation_data.ptr.load();
         assert(data.evaluation.get());
       }
       break;
@@ -599,8 +599,10 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   data->performed_expansion = true;
   assert(data->evaluation.get() == nullptr);
 
+  auto& evaluation_data = tree->evaluation_data();
+
   if (params_.speculative_evals) {
-    tree->_set_evaluation_state(Node::kPending);
+    evaluation_data.state = Node::kPending;
     lock->unlock();
   }
 
@@ -653,9 +655,9 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
       P /= P.sum();
     }
   }
-  tree->_set_local_policy_prob_distr(P);
-  tree->_set_evaluation(data->evaluation);
-  tree->_set_evaluation_state(Node::kSet);
+  evaluation_data.local_policy_prob_distr = P;
+  evaluation_data.ptr.store(data->evaluation);
+  evaluation_data.state = Node::kSet;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -667,11 +669,12 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
 
   assert(tree->has_children());
   Node* child;
-  if (tree->fully_analyzed_action_mask().all()) {
+  auto& evaluation_data = tree->evaluation_data();
+  if (evaluation_data.fully_analyzed_actions.all()) {
     child = tree->get_child(0);
     lock->unlock();
   } else {
-    action_index_t action = bitset_util::choose_random_off_index(tree->fully_analyzed_action_mask());
+    action_index_t action = bitset_util::choose_random_off_index(evaluation_data.fully_analyzed_actions);
     lock->unlock();
     child = tree->find_child(action);
   }
@@ -790,7 +793,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     const Params& params, const SimParams& sim_params, const Node* tree)
 : cp(tree->lazily_initialized_data().current_player)
-, P(tree->local_policy_prob_distr())
+, P(tree->evaluation_data().local_policy_prob_distr)
 , V(P.rows())
 , N(P.rows())
 , VN(P.rows())
@@ -1376,7 +1379,7 @@ void Mcts<GameState, Tensorizor>::NodeReleaseService::loop() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::NodeReleaseService::_release(Node* node, Node* arg) {
+void Mcts<GameState, Tensorizor>::NodeReleaseService::release_helper(Node* node, Node* arg) {
   std::unique_lock<std::mutex> lock(mutex_);
   work_queue_t& queue = work_queue_[queue_index_];
   queue.emplace_back(node, arg);
@@ -1499,13 +1502,16 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   start_search_threads(&params);
   wait_for_search_threads();
 
-  NNEvaluation_sptr evaluation = root_->_evaluation();
-  results_.valid_actions = root_->lazily_initialized_data().valid_action_mask;
+  const auto& evaluation_data = root_->evaluation_data();
+  const auto& lazily_initialized_data = root_->lazily_initialized_data();
+
+  NNEvaluation_sptr evaluation = evaluation_data.ptr.load();
+  results_.valid_actions = lazily_initialized_data.valid_action_mask;
   results_.counts = root_->get_effective_counts().template cast<dtype>();
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }
-  results_.policy_prior = root_->local_policy_prob_distr();
+  results_.policy_prior = evaluation_data.local_policy_prob_distr;
   results_.win_rates = root_->stats().value_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;

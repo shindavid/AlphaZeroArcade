@@ -241,9 +241,9 @@ private:
       evaluation_data_t() = default;
       evaluation_data_t(const ActionMask& valid_actions);
 
-      NNEvaluation_asptr ptr_;
-      LocalPolicyProbDistr local_policy_prob_distr_;
-      evaluation_state_t state_ = kUnset;
+      NNEvaluation_asptr ptr;
+      LocalPolicyProbDistr local_policy_prob_distr;
+      evaluation_state_t state = kUnset;
       ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
     };
 
@@ -321,19 +321,12 @@ private:
 
     const stats_t& stats() const { return stats_; }
 
-    const ActionMask& fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions; }
-    const LocalPolicyProbDistr& local_policy_prob_distr() const { return evaluation_data_.local_policy_prob_distr_; }
-    void _set_local_policy_prob_distr(const LocalPolicyProbDistr& distr) {
-      evaluation_data_.local_policy_prob_distr_ = distr;
-    }
-    NNEvaluation_sptr _evaluation() const { return evaluation_data_.ptr_.load(); }
-    void _set_evaluation(NNEvaluation_sptr eval) { evaluation_data_.ptr_.store(eval); }
-    evaluation_state_t _evaluation_state() const { return evaluation_data_.state_; }
-    void _set_evaluation_state(evaluation_state_t state) { evaluation_data_.state_ = state; }
+    const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
+    evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
   private:
-    float _get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
-    float _get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
+    float get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
+    float get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
 
     std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex lazily_initialized_data_mutex_;
@@ -717,14 +710,14 @@ private:
       Node* arg;
     };
 
-    static void release(Node* node, Node* arg=nullptr) { instance_._release(node, arg); }
+    static void release(Node* node, Node* arg=nullptr) { instance_.release_helper(node, arg); }
 
   private:
     NodeReleaseService();
     ~NodeReleaseService();
 
     void loop();
-    void _release(Node* node, Node* arg);
+    void release_helper(Node* node, Node* arg);
 
     static NodeReleaseService instance_;
 
