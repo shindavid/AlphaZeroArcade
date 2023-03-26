@@ -109,16 +109,15 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    Node* parent, action_index_t action)
-: parent_(parent)
-, action_(action) {}
+inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(Node* p, action_index_t a)
+: parent(p)
+, action(a) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
 {
   *this = data;
-  if (prune_parent) parent_ = nullptr;
+  if (prune_parent) parent = nullptr;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -155,7 +154,7 @@ inline Mcts<GameState, Tensorizor>::Node::lazily_initialized_data_t::data_t::dat
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(const ActionMask& valid_actions)
-: fully_analyzed_actions_(~valid_actions) {}
+: fully_analyzed_actions(~valid_actions) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
@@ -203,14 +202,14 @@ inline void Mcts<GameState, Tensorizor>::Node::debug_dump() const {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::_release(Node* protected_child) {
+inline void Mcts<GameState, Tensorizor>::Node::release(Node* protected_child) {
   Node* first_child;
   int num_children;
   children_data_.read(&first_child, &num_children);
 
   for (int i = 0; i < num_children; ++i) {
     Node* child = first_child + i;
-    if (child != protected_child) child->_release();
+    if (child != protected_child) child->release();
   }
 
   if (!first_child) return;
@@ -225,14 +224,14 @@ inline void Mcts<GameState, Tensorizor>::Node::_release(Node* protected_child) {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::_adopt_children() {
+inline void Mcts<GameState, Tensorizor>::Node::adopt_children() {
   Node* first_child;
   int num_children;
   children_data_.read(&first_child, &num_children);
 
   for (int i = 0; i < num_children; ++i) {
     Node* child = first_child + i;
-    child->stable_data_.parent_ = this;
+    child->stable_data_.parent = this;
   }
 }
 
@@ -352,8 +351,8 @@ void Mcts<GameState, Tensorizor>::Node::mark_as_fully_analyzed() {
   if (!my_parent) return;
 
   std::unique_lock<std::mutex> lock(my_parent->evaluation_data_mutex());
-  my_parent->evaluation_data_.fully_analyzed_actions_[action()] = true;
-  bool full = my_parent->evaluation_data_.fully_analyzed_actions_.all();
+  my_parent->evaluation_data_.fully_analyzed_actions[action()] = true;
+  bool full = my_parent->evaluation_data_.fully_analyzed_actions.all();
   lock.unlock();
   if (!full) return;
 
@@ -361,7 +360,7 @@ void Mcts<GameState, Tensorizor>::Node::mark_as_fully_analyzed() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::Node::_lazy_init() {
+void Mcts<GameState, Tensorizor>::Node::lazy_init() {
   new(&lazily_initialized_data_) lazily_initialized_data_t(parent(), action());
 
   std::unique_lock<std::mutex> lock(evaluation_data_mutex());
@@ -369,7 +368,7 @@ void Mcts<GameState, Tensorizor>::Node::_lazy_init() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::_expand_children() {
+inline void Mcts<GameState, Tensorizor>::Node::expand_children() {
   const auto& valid_action_mask = lazily_initialized_data().valid_action_mask;
   int num_children = valid_action_mask.count();
   void* raw_memory = operator new[](num_children * sizeof(Node));
@@ -384,7 +383,7 @@ inline void Mcts<GameState, Tensorizor>::Node::_expand_children() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts<GameState, Tensorizor>::Node*
-Mcts<GameState, Tensorizor>::Node::_find_child(action_index_t action) const {
+Mcts<GameState, Tensorizor>::Node::find_child(action_index_t action) const {
   // TODO: technically we can do a binary search here, as children should be in sorted order by action
   Node* first_child;
   int num_children;
@@ -392,7 +391,7 @@ Mcts<GameState, Tensorizor>::Node::_find_child(action_index_t action) const {
 
   for (int i = 0; i < num_children; ++i) {
     Node *child = first_child + i;
-    if (child->stable_data_.action_ == action) return child;
+    if (child->stable_data_.action == action) return child;
   }
   return nullptr;
 }
@@ -516,7 +515,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::lazily_init(Node* tree) {
   std::lock_guard<std::mutex> guard(tree->lazily_initialized_data_mutex());
   if (tree->lazily_initialized()) return;
   record_for_profiling(kLazyInit);
-  tree->_lazy_init();
+  tree->lazy_init();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -595,7 +594,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     printer.endl();
   }
 
-  assert(!tree->_has_children());
+  assert(!tree->has_children());
   expand_children(tree);
   data->performed_expansion = true;
   assert(data->evaluation.get() == nullptr);
@@ -666,15 +665,15 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
   // Another search thread is working on this. Might as well speculatively eval another position while we wait
   record_for_profiling(kEvaluateAndExpandPending);
 
-  assert(tree->_has_children());
+  assert(tree->has_children());
   Node* child;
-  if (tree->_fully_analyzed_action_mask().all()) {
-    child = tree->_get_child(0);
+  if (tree->fully_analyzed_action_mask().all()) {
+    child = tree->get_child(0);
     lock->unlock();
   } else {
-    action_index_t action = bitset_util::choose_random_off_index(tree->_fully_analyzed_action_mask());
+    action_index_t action = bitset_util::choose_random_off_index(tree->fully_analyzed_action_mask());
     lock->unlock();
-    child = tree->_find_child(action);
+    child = tree->find_child(action);
   }
   lazily_init(child);
   const auto& lazily_initialized_data = child->lazily_initialized_data();
@@ -689,11 +688,11 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_pending(
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::SearchThread::expand_children(Node* tree) {
-  if (tree->_has_children()) return;
+  if (tree->has_children()) return;
 
   // TODO: use object pool
   record_for_profiling(kConstructingChildren);
-  tree->_expand_children();
+  tree->expand_children();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -733,7 +732,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child(
 
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
-  Node* best_child = tree->_get_child(argmax_index);
+  Node* best_child = tree->get_child(argmax_index);
 
   mcts_->record_puct_calc(VN.sum() > 0);
 
@@ -791,7 +790,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     const Params& params, const SimParams& sim_params, const Node* tree)
 : cp(tree->lazily_initialized_data().current_player)
-, P(tree->_local_policy_prob_distr())
+, P(tree->local_policy_prob_distr())
 , V(P.rows())
 , N(P.rows())
 , VN(P.rows())
@@ -799,8 +798,8 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
 , PUCT(P.rows())
 {
   std::bitset<kNumGlobalActions> fpu_bits;
-  for (int c = 0; c < tree->_num_children(); ++c) {
-    Node* child = tree->_get_child(c);
+  for (int c = 0; c < tree->num_children(); ++c) {
+    Node* child = tree->get_child(c);
     std::lock_guard<std::mutex> guard(child->stats_mutex());
     const auto& child_stats = child->stats();
 
@@ -1369,7 +1368,7 @@ void Mcts<GameState, Tensorizor>::NodeReleaseService::loop() {
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (auto& unit : queue) {
-      unit.node->_release(unit.arg);
+      unit.node->release(unit.arg);
       delete unit.node;
     }
     queue.clear();
@@ -1462,7 +1461,7 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
 
   assert(root_->parent()==nullptr);
 
-  Node* new_root = root_->_find_child(action);
+  Node* new_root = root_->find_child(action);
   if (!new_root) {
     NodeReleaseService::release(root_);
     root_ = nullptr;
@@ -1470,12 +1469,12 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
   }
 
   if (!new_root->lazily_initialized()) {
-    new_root->_lazy_init();
+    new_root->lazy_init();
   }
   Node* new_root_copy = new Node(*new_root, true);
   NodeReleaseService::release(root_, new_root);
   root_ = new_root_copy;
-  root_->_adopt_children();
+  root_->adopt_children();
 
   if (params_.run_offline) {
     start_search_threads(&offline_sim_params_);
@@ -1506,7 +1505,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }
-  results_.policy_prior = root_->_local_policy_prob_distr();
+  results_.policy_prior = root_->local_policy_prob_distr();
   results_.win_rates = root_->stats().value_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
@@ -1602,7 +1601,7 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
   auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
 
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
-  for (int c = 0; c < root_->_num_children(); ++c) {
+  for (int c = 0; c < root_->num_children(); ++c) {
     if (N(c) == N_max) continue;
     if (!isfinite(N_floor(c))) continue;
     auto n = std::max(N_floor(c), N(c) - n_forced(c));
@@ -1610,7 +1609,7 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
       n = 0;
     }
 
-    results_.counts(root_->_get_child(c)->action()) = n;
+    results_.counts(root_->get_child(c)->action()) = n;
   }
 
   if (!results_.counts.isFinite().all() || results_.counts.sum() <= 0) {

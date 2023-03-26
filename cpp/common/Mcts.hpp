@@ -154,9 +154,6 @@ private:
    * During MCTS, multiple search threads will try to read and write these values. Thread-safety is achieved in a
    * high-performance manner through a carefully orchestrated combination of mutexes, condition-variables, and
    * lockfree mechanisms.
-   *
-   * NAMING NOTE: Methods with a leading underscore are NOT thread-safe. Such methods are expected to be called in
-   * a context that guarantees the appropriate level of thread-safety.
    */
   class Node {
   public:
@@ -167,11 +164,11 @@ private:
     };
 
     struct stable_data_t {
-      stable_data_t(Node* parent, action_index_t action);
+      stable_data_t(Node* p, action_index_t a);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
-      Node* parent_;
-      action_index_t action_;
+      Node* parent;
+      action_index_t action;
     };
 
     struct lazily_initialized_data_t {
@@ -247,7 +244,7 @@ private:
       NNEvaluation_asptr ptr_;
       LocalPolicyProbDistr local_policy_prob_distr_;
       evaluation_state_t state_ = kUnset;
-      ActionMask fully_analyzed_actions_;  // means that every leaf descendent is a terminal game state
+      ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
     };
 
     struct stats_t {
@@ -284,14 +281,14 @@ private:
      * Also, in the future, we might have Monte Carlo *Graph* Search (MCGS) instead of MCTS. In this future, a given
      * Node might have multiple parents, so release() might decrement smart-pointer reference counts instead.
      */
-    void _release(Node* protected_child=nullptr);
+    void release(Node* protected_child= nullptr);
 
     /*
      * Set child->parent = this for all children of this.
      *
      * This is the only reason that stable_data_ is not const.
      */
-    void _adopt_children();
+    void adopt_children();
 
     std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
     std::mutex& lazily_initialized_data_mutex() const { return lazily_initialized_data_mutex_; }
@@ -306,25 +303,26 @@ private:
     ValueArray1D make_virtual_loss() const;
     void mark_as_fully_analyzed();
 
-    void _lazy_init();
-    void _expand_children();
+    void lazy_init();
+    void expand_children();
 
-    action_index_t action() const { return stable_data_.action_; }
-    Node* parent() const { return stable_data_.parent_; }
-    bool is_root() const { return !stable_data_.parent_; }
+    const stable_data_t& stable_data() const { return stable_data_; }
+    action_index_t action() const { return stable_data_.action; }
+    Node* parent() const { return stable_data_.parent; }
+    bool is_root() const { return !stable_data_.parent; }
 
     const lazily_initialized_data_t::data_t& lazily_initialized_data() const { return lazily_initialized_data_.union_.data_; }
     bool lazily_initialized() const { return lazily_initialized_data_.initialized; }
 
-    bool _has_children() const { return children_data_.num_children_unsafe(); }
-    int _num_children() const { return children_data_.num_children_unsafe(); }
-    Node* _get_child(int c) const { return children_data_.first_child_unsafe() + c; }
-    Node* _find_child(action_index_t action) const;
+    bool has_children() const { return children_data_.num_children_unsafe(); }
+    int num_children() const { return children_data_.num_children_unsafe(); }
+    Node* get_child(int c) const { return children_data_.first_child_unsafe() + c; }
+    Node* find_child(action_index_t action) const;
 
     const stats_t& stats() const { return stats_; }
 
-    const ActionMask& _fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions_; }
-    const LocalPolicyProbDistr& _local_policy_prob_distr() const { return evaluation_data_.local_policy_prob_distr_; }
+    const ActionMask& fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions; }
+    const LocalPolicyProbDistr& local_policy_prob_distr() const { return evaluation_data_.local_policy_prob_distr_; }
     void _set_local_policy_prob_distr(const LocalPolicyProbDistr& distr) {
       evaluation_data_.local_policy_prob_distr_ = distr;
     }
