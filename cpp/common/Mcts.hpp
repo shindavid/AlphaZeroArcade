@@ -154,9 +154,6 @@ private:
    * During MCTS, multiple search threads will try to read and write these values. Thread-safety is achieved in a
    * high-performance manner through a carefully orchestrated combination of mutexes, condition-variables, and
    * lockfree mechanisms.
-   *
-   * NAMING NOTE: Methods with a leading underscore are NOT thread-safe. Such methods are expected to be called in
-   * a context that guarantees the appropriate level of thread-safety.
    */
   class Node {
   public:
@@ -166,98 +163,12 @@ private:
       kSet,
     };
 
-    Node(Node* parent, action_index_t action);
-    Node(const Tensorizor&, const GameState&, const GameOutcome&, bool disable_exploration);
-    Node(const Node& node, bool prune_parent=false);
-
-    std::string genealogy_str() const;  // slow, for debugging
-    void debug_dump() const;
-
-    /*
-     * Releases the memory occupied by this and by all descendents, EXCEPT for the descendents of
-     * protected_child (which is guaranteed to be an immediate child of this if non-null). Note that the memory of
-     * protected_child itself IS released; only the *descendents* of protected_child are protected.
-     *
-     * In the current implementation, this works by calling delete and delete[] and by recursing down the tree.
-     *
-     * In future implementations, if we have object pools, this might work by releasing to an object pool.
-     *
-     * Also, in the future, we might have Monte Carlo *Graph* Search (MCGS) instead of MCTS. In this future, a given
-     * Node might have multiple parents, so release() might decrement smart-pointer reference counts instead.
-     */
-    void _release(Node* protected_child=nullptr);
-
-    /*
-     * Set child->parent = this for all children of this.
-     *
-     * This is the only reason that stable_data_ is not const.
-     */
-    void _adopt_children();
-
-    std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
-    std::mutex& lazily_initialized_data_mutex() const { return lazily_initialized_data_mutex_; }
-    std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
-    std::mutex& stats_mutex() const { return stats_mutex_; }
-
-    GlobalPolicyCountDistr get_effective_counts() const;
-    void backprop(const ValueProbDistr& value);
-    void backprop_with_virtual_undo(const ValueProbDistr& value);
-    void virtual_backprop();
-    void perform_eliminations(const ValueProbDistr& outcome);
-    ValueArray1D make_virtual_loss() const;
-    void mark_as_fully_analyzed();
-
-    void _lazy_init();
-    void _expand_children();
-
-    action_index_t action() const { return stable_data_.action_; }
-    Node* parent() const { return stable_data_.parent_; }
-    bool is_root() const { return !stable_data_.parent_; }
-    bool disable_exploration() const { return stable_data_.disable_exploration_; }
-
-    const Tensorizor& _tensorizor() const { return lazily_initialized_data_.union_.data_.tensorizor_; }
-    const GameState& _state() const { return lazily_initialized_data_.union_.data_.state_; }
-    const GameOutcome& _outcome() const { return lazily_initialized_data_.union_.data_.outcome_; }
-    symmetry_index_t _sym_index() const { return lazily_initialized_data_.union_.data_.sym_index_; }
-    player_index_t _current_player() const { return lazily_initialized_data_.union_.data_.current_player_; }
-    const ActionMask& _valid_action_mask() const { return lazily_initialized_data_.union_.data_.valid_action_mask_; }
-    bool _lazily_initialized() const { return lazily_initialized_data_.initialized_; }
-
-    bool _has_children() const { return children_data_.num_children_unsafe(); }
-    int _num_children() const { return children_data_.num_children_unsafe(); }
-    Node* _get_child(int c) const { return children_data_.first_child_unsafe() + c; }
-    Node* _find_child(action_index_t action) const;
-
-    const auto& _value_avg() const { return stats_.value_avg_; }
-    bool _eliminated() const { return stats_.eliminated_; }
-    float _V_floor(player_index_t p) const { return stats_.V_floor_(p); }
-    float _effective_value_avg(player_index_t p) const { return stats_.effective_value_avg_(p); }
-    int _effective_count() const { return stats_.eliminated_ ? 0 : stats_.count_; }
-    int _virtual_count() const { return stats_.virtual_count_; }
-    bool _has_certain_outcome() const { return stats_.V_floor_.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
-    bool _can_be_eliminated() const { return stats_.V_floor_.maxCoeff() == 1; }  // won/lost positions, not drawn ones
-
-    const ActionMask& _fully_analyzed_action_mask() const { return evaluation_data_.fully_analyzed_actions_; }
-    const LocalPolicyProbDistr& _local_policy_prob_distr() const { return evaluation_data_.local_policy_prob_distr_; }
-    void _set_local_policy_prob_distr(const LocalPolicyProbDistr& distr) {
-      evaluation_data_.local_policy_prob_distr_ = distr;
-    }
-    NNEvaluation_sptr _evaluation() const { return evaluation_data_.ptr_.load(); }
-    void _set_evaluation(NNEvaluation_sptr eval) { evaluation_data_.ptr_.store(eval); }
-    evaluation_state_t _evaluation_state() const { return evaluation_data_.state_; }
-    void _set_evaluation_state(evaluation_state_t state) { evaluation_data_.state_ = state; }
-
-  private:
-    float _get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
-    float _get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
-
     struct stable_data_t {
-      stable_data_t(Node* parent, action_index_t action, bool disable_exploration);
+      stable_data_t(Node* p, action_index_t a);
       stable_data_t(const stable_data_t& data, bool prune_parent);
 
-      Node* parent_;
-      action_index_t action_;
-      bool disable_exploration_;
+      Node* parent;
+      action_index_t action;
     };
 
     struct lazily_initialized_data_t {
@@ -265,12 +176,12 @@ private:
         data_t(Node* parent, action_index_t action);
         data_t(const Tensorizor&, const GameState&, const GameOutcome&);
 
-        Tensorizor tensorizor_;
-        GameState state_;
-        GameOutcome outcome_;
-        ActionMask valid_action_mask_;
-        player_index_t current_player_;
-        symmetry_index_t sym_index_;
+        Tensorizor tensorizor;
+        GameState state;
+        GameOutcome outcome;
+        ActionMask valid_action_mask;
+        player_index_t current_player;
+        symmetry_index_t sym_index;
       };
 
       union union_t {
@@ -286,14 +197,14 @@ private:
 
       lazily_initialized_data_t() = default;
       lazily_initialized_data_t(Node* parent, action_index_t action)
-        : union_(parent, action)
-        , initialized_(true) {}
+          : union_(parent, action)
+            , initialized(true) {}
       lazily_initialized_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-        : union_(tensorizor, state, outcome)
-        , initialized_(true) {}
+          : union_(tensorizor, state, outcome)
+            , initialized(true) {}
 
       union_t union_;
-      bool initialized_ = false;
+      bool initialized = false;
     };
 
     /*
@@ -330,22 +241,92 @@ private:
       evaluation_data_t() = default;
       evaluation_data_t(const ActionMask& valid_actions);
 
-      NNEvaluation_asptr ptr_;
-      LocalPolicyProbDistr local_policy_prob_distr_;
-      evaluation_state_t state_ = kUnset;
-      ActionMask fully_analyzed_actions_;  // means that every leaf descendent is a terminal game state
+      NNEvaluation_asptr ptr;
+      LocalPolicyProbDistr local_policy_prob_distr;
+      evaluation_state_t state = kUnset;
+      ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
     };
 
     struct stats_t {
       stats_t();
 
-      ValueArray1D value_avg_;
-      ValueArray1D effective_value_avg_;
-      ValueArray1D V_floor_;
-      int count_ = 0;
-      int virtual_count_ = 0;
-      bool eliminated_ = false;
+      int effective_count() const { return eliminated ? 0 : count; }
+      bool has_certain_outcome() const { return V_floor.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
+      bool can_be_eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+
+      ValueArray1D value_avg;
+      ValueArray1D effective_value_avg;
+      ValueArray1D V_floor;
+      int count = 0;
+      int virtual_count = 0;
+      bool eliminated = false;
     };
+
+    Node(Node* parent, action_index_t action);
+    Node(const Tensorizor&, const GameState&, const GameOutcome&);
+    Node(const Node& node, bool prune_parent=false);
+
+    std::string genealogy_str() const;  // slow, for debugging
+    void debug_dump() const;
+
+    /*
+     * Releases the memory occupied by this and by all descendents, EXCEPT for the descendents of
+     * protected_child (which is guaranteed to be an immediate child of this if non-null). Note that the memory of
+     * protected_child itself IS released; only the *descendents* of protected_child are protected.
+     *
+     * In the current implementation, this works by calling delete and delete[] and by recursing down the tree.
+     *
+     * In future implementations, if we have object pools, this might work by releasing to an object pool.
+     *
+     * Also, in the future, we might have Monte Carlo *Graph* Search (MCGS) instead of MCTS. In this future, a given
+     * Node might have multiple parents, so release() might decrement smart-pointer reference counts instead.
+     */
+    void release(Node* protected_child= nullptr);
+
+    /*
+     * Set child->parent = this for all children of this.
+     *
+     * This is the only reason that stable_data_ is not const.
+     */
+    void adopt_children();
+
+    std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
+    std::mutex& lazily_initialized_data_mutex() const { return lazily_initialized_data_mutex_; }
+    std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
+    std::mutex& stats_mutex() const { return stats_mutex_; }
+
+    GlobalPolicyCountDistr get_effective_counts() const;
+    void backprop(const ValueProbDistr& value);
+    void backprop_with_virtual_undo(const ValueProbDistr& value);
+    void virtual_backprop();
+    void perform_eliminations(const ValueProbDistr& outcome);
+    ValueArray1D make_virtual_loss() const;
+    void mark_as_fully_analyzed();
+
+    void lazy_init();
+    void expand_children();
+
+    const stable_data_t& stable_data() const { return stable_data_; }
+    action_index_t action() const { return stable_data_.action; }
+    Node* parent() const { return stable_data_.parent; }
+    bool is_root() const { return !stable_data_.parent; }
+
+    const lazily_initialized_data_t::data_t& lazily_initialized_data() const { return lazily_initialized_data_.union_.data_; }
+    bool lazily_initialized() const { return lazily_initialized_data_.initialized; }
+
+    bool has_children() const { return children_data_.num_children_unsafe(); }
+    int num_children() const { return children_data_.num_children_unsafe(); }
+    Node* get_child(int c) const { return children_data_.first_child_unsafe() + c; }
+    Node* find_child(action_index_t action) const;
+
+    const stats_t& stats() const { return stats_; }
+
+    const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
+    evaluation_data_t& evaluation_data() { return evaluation_data_; }
+
+  private:
+    float get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
+    float get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
 
     std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex lazily_initialized_data_mutex_;
@@ -729,14 +710,14 @@ private:
       Node* arg;
     };
 
-    static void release(Node* node, Node* arg=nullptr) { instance_._release(node, arg); }
+    static void release(Node* node, Node* arg=nullptr) { instance_.release_helper(node, arg); }
 
   private:
     NodeReleaseService();
     ~NodeReleaseService();
 
     void loop();
-    void _release(Node* node, Node* arg);
+    void release_helper(Node* node, Node* arg);
 
     static NodeReleaseService instance_;
 
