@@ -247,19 +247,24 @@ private:
       ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
     };
 
+    /*
+     * Thread-safety policy: mutex on writes, not on reads. On reads, we simply do a copy of the entire struct, in
+     * order to simplify the reasoning about race-conditions.
+     *
+     * value_avg and count are the two main fields used for MCTS.
+     */
     struct stats_t {
       stats_t();
 
-      int effective_count() const { return eliminated ? 0 : count; }
+      int effective_count() const { return eliminated() ? 0 : count; }
       bool has_certain_outcome() const { return V_floor.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
-      bool can_be_eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+      bool eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
+      auto effective_value_avg(player_index_t p) const { return has_certain_outcome() ? V_floor(p) : value_avg(p); }
 
       ValueArray1D value_avg;
-      ValueArray1D effective_value_avg;
-      ValueArray1D V_floor;
+      ValueArray1D V_floor;  // used for eliminations
       int count = 0;
-      int virtual_count = 0;
-      bool eliminated = false;
+      int virtual_count = 0;  // only used for debugging
     };
 
     Node(Node* parent, action_index_t action);
