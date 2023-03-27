@@ -315,7 +315,7 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueP
 
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.V_floor = V_floor;
-  bool recurse = stats_.eliminated();
+  bool recurse = parent() && stats_.eliminated();
   lock.unlock();
 
   if (recurse) {
