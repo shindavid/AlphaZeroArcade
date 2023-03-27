@@ -251,7 +251,13 @@ private:
      * Thread-safety policy: mutex on writes, not on reads. On reads, we simply do a copy of the entire struct, in
      * order to simplify the reasoning about race-conditions.
      *
-     * value_avg and count are the two main fields used for MCTS.
+     * Note that for the non-primitive members, the writes are not guaranteed to be atomic. A non-mutex-protected-read
+     * may encounter partially-updated arrays when reading such members. Furthermore, there are no guarantees in this
+     * implementation of the order of member-updates when writing, meaning that non-mutex-protected-reads might
+     * encounter states where some of the members have been updated while other have not.
+     *
+     * Despite the above caveats, we can still read without a mutex, since all usages are ok with arbitrarily-partially
+     * written data.
      */
     struct stats_t {
       stats_t();

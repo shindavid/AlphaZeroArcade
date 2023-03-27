@@ -781,9 +781,12 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
 {
   std::bitset<kNumGlobalActions> fpu_bits;
   for (int c = 0; c < tree->num_children(); ++c) {
+    /*
+     * NOTE: we do NOT grab the child stats_mutex here! This means that child_stats can contain
+     * arbitrarily-partially-written data.
+     */
     Node* child = tree->get_child(c);
-    std::lock_guard<std::mutex> guard(child->stats_mutex());
-    const auto& child_stats = child->stats();
+    auto child_stats = child->stats();  // struct copy to simplify reasoning about race conditions
 
     V(c) = child_stats.effective_value_avg(cp);
     N(c) = child_stats.effective_count();
@@ -794,10 +797,11 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
   }
 
   if (params.enable_first_play_urgency && fpu_bits.any()) {
-    std::unique_lock<std::mutex> lock(tree->stats_mutex());
-    const auto& stats = tree->stats();
+    /*
+     * Again, we do NOT grab the stats_mutex here!
+     */
+    const auto& stats = tree->stats();  // no struct copy, not needed here
     dtype PV = stats.effective_value_avg(cp);
-    lock.unlock();
 
     bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
