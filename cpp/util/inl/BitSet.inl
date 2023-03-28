@@ -1,5 +1,8 @@
 #include <util/BitSet.hpp>
 
+#include <cassert>
+
+#include <util/Exception.hpp>
 #include <util/Random.hpp>
 
 namespace bitset_util {
@@ -46,6 +49,23 @@ template<size_t N> auto on_indices(const std::bitset<N>& bitset) {
 
 template<size_t N> auto off_indices(const std::bitset<N>& bitset) {
   return detail::Wrapper<N, detail::kUnset>(&bitset);
+}
+
+template<size_t N> int get_nth_on_index(const std::bitset<N>& bitset, int n) {
+  for (int k : on_indices(bitset)) {
+    if (n == 0) return k;
+    n--;
+  }
+  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d]", bitset.to_string().c_str(), n);
+}
+
+template<size_t N> int count_on_indices_before(const std::bitset<N>& bitset, int i) {
+  int count = 0;
+  for (int k : on_indices(bitset)) {
+    if (k >= i) break;
+    count++;
+  }
+  return count;
 }
 
 /*

@@ -34,6 +34,20 @@ template<size_t N> auto on_indices(const std::bitset<N>&);
 template<size_t N> auto off_indices(const std::bitset<N>&);
 
 /*
+ * Let A be a sorted array of all integers k such that bitset[k] is true.
+ *
+ * Returns A[n].
+ *
+ * Throws an exception if this array access would be out-of-bounds.
+ */
+template<size_t N> int get_nth_on_index(const std::bitset<N>&, int n);
+
+/*
+ * Returns the number of nonnegative integers k<i such that bitset[k] is true.
+ */
+template<size_t N> int count_on_indices_before(const std::bitset<N>&, int i);
+
+/*
  * Picks a uniform random on/off index and returns it.
  *
  * Assumes that at least one on/off index exists. Behavior is undefined if this assumption is violated.
