@@ -153,8 +153,6 @@ private:
    * evaluation_data_: policy/value vectors that come from neural net evaluation
    * stats_: values that get updated throughout MCTS via backpropagation
    *
-   * Of these, only stats_ are continuously changing. The others are effectively write-once.
-   *
    * During MCTS, multiple search threads will try to read and write these values. Thread-safety is achieved in a
    * high-performance manner through a carefully orchestrated combination of mutexes, condition-variables, and
    * lockfree mechanisms.
@@ -194,6 +192,8 @@ private:
      * The array representation can be wasteful if the number of children is small, but it's simple and good enough for
      * now. A less wasteful approach might use a vector or linked-list, but this would require more complicated memory
      * management.
+     *
+     * TODO: add begin()/end() methods to allow for cleaner iteration over child Node* pointers.
      */
     struct children_data_t {
       using array_t = std::array<Node*, kMaxNumLocalActions>;
