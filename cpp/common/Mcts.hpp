@@ -33,7 +33,14 @@
 namespace common {
 
 /*
- * TODO: move the various inner-classes of Mcts into separate files as standalone-classes.
+ * TODO: move the various inner-classes of Mcts into separate files as standalone-classes. Proposed class-renaming:
+ *
+ * common::Mcts<GameState, Tensorizor> -> mcts::Tree<GameState, Tensorizor>
+ * common::Mcts<GameState, Tensorizor>::Params -> mcts::Params<GameState, Tensorizor>
+ * common::Mcts<GameState, Tensorizor>::SearchThread -> mcts::SearchThread<GameState, Tensorizor>
+ * common::Mcts<GameState, Tensorizor>::Node -> mcts::Node<GameState, Tensorizor>
+ *
+ * etc.
  *
  * TODO: use CRTP for slightly more elegant inheritance mechanics.
  */
