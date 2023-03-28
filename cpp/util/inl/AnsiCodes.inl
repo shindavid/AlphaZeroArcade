@@ -1,11 +1,11 @@
 #include <util/AnsiCodes.hpp>
 
-#include <unistd.h>
+#include <util/CppUtil.hpp>
 
 namespace ansi {
 
 inline Codes::Codes() {
-  if (isatty(STDOUT_FILENO)) {  // https://stackoverflow.com/a/5157076/543913
+  if (util::tty_mode()) {
     kCircle_ = "\u25CF";
     kBlink_ = "\033[5m";
     kRed_ = "\033[31m";

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
+#include <bitset>
 #include <cstdint>
 #include <tuple>
 #include <type_traits>
+#include <unistd.h>
 
 #define CONCAT_HELPER(x, y) x ## y
 #define CONCAT(x, y) CONCAT_HELPER(x, y)
@@ -24,6 +27,15 @@
 #define IS_MACRO_ASSIGNED_TO_1(macro) (XSTR(macro)[0] == '1')
 
 namespace util {
+
+/*
+ * Returns true if the output is a terminal, false otherwise.
+ *
+ * This is useful for determining whether to print color codes.
+ *
+ * https://stackoverflow.com/a/5157076/543913
+ */
+inline bool tty_mode() { return isatty(STDOUT_FILENO); }
 
 int64_t constexpr inline s_to_ns(int64_t s) { return s * 1000 * 1000 * 1000; }
 int64_t constexpr inline us_to_ns(int64_t us) { return us * 1000; }

@@ -5,6 +5,7 @@
 #include <common/HumanTuiPlayerBase.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/Math.hpp>
 #include <util/PrintUtil.hpp>
@@ -136,7 +137,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
   }
   if (my_index_ == player && params_.verbose) {
     if (!facing_human_tui_player_) {
-      if (!isatty(STDOUT_FILENO)) {
+      if (!util::tty_mode()) {
         std::string s(2*action+1, ' ');
         printf("%sx\n", s.c_str());
       }
