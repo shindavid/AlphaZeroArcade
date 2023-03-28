@@ -87,7 +87,7 @@ public:
   /*
    * Params pertains to a single Mcts instance.
    *
-   * By contrast, SimParams pertains to each individual sim() call.
+   * By contrast, SearchParams pertains to each individual search() call.
    */
   struct Params {
     Params(DefaultParamsType);
@@ -119,14 +119,14 @@ public:
   };
 
   /*
-   * SimParams pertain to a single call to sim(). Even given a single Mcts instance, different sim() calls can have
-   * different SimParams. For instance, for KataGo, there are "fast" searches and "full" searches, which differ
+   * SearchParams pertain to a single call to search(). Even given a single Mcts instance, different search() calls can
+   * have different SearchParams. For instance, for KataGo, there are "fast" searches and "full" searches, which differ
    * in their tree_size_limit and dirchlet settings.
    *
    * By contrast, Params pertains to a single Mcts instance.
    */
-  struct SimParams {
-    static SimParams make_offline_params(int limit) { return SimParams{limit, true}; }
+  struct SearchParams {
+    static SearchParams make_offline_params(int limit) { return SearchParams{limit, true}; }
 
     int tree_size_limit = 100;
     bool disable_exploration = false;
@@ -323,7 +323,7 @@ private:
 
     void join();
     void kill();
-    void launch(const SimParams* sim_params);
+    void launch(const SearchParams* search_params);
     bool needs_more_visits(Node* root, int tree_size_limit);
     void visit(Node* tree, int depth);
 
@@ -384,7 +384,7 @@ private:
   private:
     struct evaluate_and_expand_result_t {
       NNEvaluation_sptr evaluation;
-      bool performed_expansion;
+      bool backpropagated_virtual_loss;
     };
 
     void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
@@ -408,7 +408,7 @@ private:
 
     Mcts* const mcts_;
     const Params& params_;
-    const SimParams* sim_params_ = nullptr;
+    const SearchParams* search_params_ = nullptr;
     std::thread* thread_ = nullptr;
     const int thread_id_;
   };
@@ -417,7 +417,7 @@ private:
     static constexpr float eps = 1e-6;  // needed when N == 0
     using PVec = LocalPolicyProbDistr;
 
-    PUCTStats(const Params& params, const SimParams& sim_params, const Node* tree);
+    PUCTStats(const Params& params, const SearchParams& search_params, const Node* tree);
 
     player_index_t cp;
     const PVec& P;
@@ -708,7 +708,7 @@ private:
 
 public:
   /*
-   * In multi-threaded mode, the search threads can continue running outside of the main sim() method. For example,
+   * In multi-threaded mode, the search threads can continue running outside of the main search() method. For example,
    * when playing against a human player, we can continue growing the MCTS tree while the human player thinks.
    */
   static constexpr int kDefaultMaxTreeSize =  4096;
@@ -727,11 +727,11 @@ public:
   void start();
   void clear();
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
-  const MctsResults* sim(const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params);
+  const MctsResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
   void add_dirichlet_noise(LocalPolicyProbDistr& P);
   float root_softmax_temperature() const { return root_softmax_temperature_.value(); }
 
-  void start_search_threads(const SimParams* sim_params);
+  void start_search_threads(const SearchParams* search_params);
   void wait_for_search_threads();
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
@@ -749,14 +749,14 @@ public:
 #endif  // PROFILE_MCTS
 
 private:
-  void prune_counts(const SimParams&);
+  void prune_counts(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen_;
   Eigen::Rand::P8_mt19937_64 rng_;
 
   const Params params_;
-  const SimParams offline_sim_params_;
+  const SearchParams offline_search_params_;
   const int instance_id_;
   math::ExponentialDecay root_softmax_temperature_;
   search_thread_vec_t search_threads_;

@@ -26,11 +26,11 @@ public:
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
 
-  enum SimType {
+  enum SearchMode {
     kFast,
     kFull,
     kRawPolicy,
-    kNumSimTypes
+    kNumSearchModes
   };
 
   enum DefaultParamsType {
@@ -56,7 +56,7 @@ public:
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
   using MctsParams = typename Mcts::Params;
-  using MctsSimParams = typename Mcts::SimParams;
+  using MctsSearchParams = typename Mcts::SearchParams;
   using MctsResults = common::MctsResults<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -78,9 +78,9 @@ public:
   float avg_batch_size() const { return mcts_->avg_batch_size(); }
 
 protected:
-  const MctsResults* mcts_sim(const GameState& state, SimType sim_type) const;
-  SimType choose_sim_type() const;
-  action_index_t get_action_helper(SimType, const MctsResults*, const ActionMask& valid_actions) const;
+  const MctsResults* mcts_search(const GameState& state, SearchMode search_mode) const;
+  SearchMode choose_search_mode() const;
+  action_index_t get_action_helper(SearchMode, const MctsResults*, const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     ValueProbDistr mcts_value;
@@ -90,14 +90,14 @@ protected:
     bool initialized = false;
   };
 
-  SimType get_random_sim_type() const;
+  SearchMode get_random_search_mode() const;
   void verbose_dump() const;
 
   const Params params_;
   Tensorizor tensorizor_;
 
   Mcts* mcts_;
-  const MctsSimParams sim_params_[kNumSimTypes];
+  const MctsSearchParams search_params_[kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;

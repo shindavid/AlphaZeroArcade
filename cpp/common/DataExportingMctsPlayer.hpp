@@ -24,7 +24,7 @@ public:
   using Params = base_t::Params;
   using Mcts = base_t::Mcts;
   using MctsResults = base_t::MctsResults;
-  using MctsSimParams = Mcts::SimParams;
+  using MctsSearchParams = Mcts::SearchParams;
   using player_array_t = base_t::player_array_t;
 
   template<typename... BaseArgs>

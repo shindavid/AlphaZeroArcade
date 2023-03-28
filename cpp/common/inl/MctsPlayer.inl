@@ -73,7 +73,7 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
 : base_t("MCTS")
 , params_(params)
 , mcts_(mcts)
-, sim_params_{
+, search_params_{
         {params.num_fast_iters, true},  // kFast
         {params.num_full_iters},  // kFull
         {1, true}  // kRawPolicy
@@ -150,9 +150,9 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  SimType sim_type = choose_sim_type();
-  const MctsResults* mcts_results = mcts_sim(state, sim_type);
-  return get_action_helper(sim_type, mcts_results, valid_actions);
+  SearchMode search_mode = choose_search_mode();
+  const MctsResults* mcts_results = mcts_search(state, search_mode);
+  return get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -164,24 +164,24 @@ inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsResults*
-MctsPlayer<GameState_, Tensorizor_>::mcts_sim(const GameState& state, SimType sim_type) const {
-  return mcts_->sim(tensorizor_, state, sim_params_[sim_type]);
+MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchMode search_mode) const {
+  return mcts_->search(tensorizor_, state, search_params_[search_mode]);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline typename MctsPlayer<GameState_, Tensorizor_>::SimType
-MctsPlayer<GameState_, Tensorizor_>::choose_sim_type() const {
+inline typename MctsPlayer<GameState_, Tensorizor_>::SearchMode
+MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
   bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
-  return use_raw_policy ? kRawPolicy : get_random_sim_type();
+  return use_raw_policy ? kRawPolicy : get_random_search_mode();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
-    SimType sim_type, const MctsResults* mcts_results, const ActionMask& valid_actions) const
+    SearchMode search_mode, const MctsResults* mcts_results, const ActionMask& valid_actions) const
 {
   GlobalPolicyProbDistr policy;
   ValueProbDistr value;
-  if (sim_type == kRawPolicy) {
+  if (search_mode == kRawPolicy) {
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
     value = mcts_results->value_prior;
   } else {
@@ -212,8 +212,8 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::SimType
-MctsPlayer<GameState_, Tensorizor_>::get_random_sim_type() const {
+MctsPlayer<GameState_, Tensorizor_>::SearchMode
+MctsPlayer<GameState_, Tensorizor_>::get_random_search_mode() const {
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? kFull : kFast;
 }

@@ -67,13 +67,13 @@ inline void OracleGradedMctsPlayer::receive_state_change(
 inline common::action_index_t OracleGradedMctsPlayer::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  auto sim_type = this->choose_sim_type();
-  const MctsResults* mcts_results = this->mcts_sim(state, sim_type);
-  if (sim_type != kRawPolicy) {
+  auto search_mode = this->choose_search_mode();
+  const MctsResults* mcts_results = this->mcts_search(state, search_mode);
+  if (search_mode != kRawPolicy) {
     PerfectOracle *oracle = grader_->oracle();
     auto result = oracle->query(move_history_);
     if (result.score >= 0) {  // winning or drawn position
-      assert(sim_type != base_t::kRawPolicy);
+      assert(search_mode != base_t::kRawPolicy);
       auto policy_prior = GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions);
 
       auto visit_counts = mcts_results->counts.cast<torch_util::dtype>();
@@ -81,7 +81,7 @@ inline common::action_index_t OracleGradedMctsPlayer::get_action(
       update_mistake_stats(result, policy_prior, visit_distr, valid_actions, state.get_move_number());
     }
   }
-  return this->get_action_helper(sim_type, mcts_results, valid_actions);
+  return this->get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
 inline void OracleGradedMctsPlayer::update_mistake_stats(

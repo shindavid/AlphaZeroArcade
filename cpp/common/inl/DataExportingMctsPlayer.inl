@@ -39,13 +39,13 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  auto sim_type = this->choose_sim_type();
-  const MctsResults* mcts_results = this->mcts_sim(state, sim_type);
+  auto search_mode = this->choose_search_mode();
+  const MctsResults* mcts_results = this->mcts_search(state, search_mode);
 
-  if (sim_type == base_t::kFull) {
+  if (search_mode == base_t::kFull) {
     record_position(state, mcts_results);
   }
-  return base_t::get_action_helper(sim_type, mcts_results, valid_actions);
+  return base_t::get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

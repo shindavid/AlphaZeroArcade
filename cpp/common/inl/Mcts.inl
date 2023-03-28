@@ -406,10 +406,10 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::kill() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::SearchThread::launch(const SimParams* sim_params) {
+inline void Mcts<GameState, Tensorizor>::SearchThread::launch(const SearchParams* search_params) {
   kill();
-  sim_params_ = sim_params;
-  thread_ = new std::thread([&] { mcts_->run_search(this, sim_params->tree_size_limit); });
+  search_params_ = search_params;
+  thread_ = new std::thread([&] { mcts_->run_search(this, search_params->tree_size_limit); });
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -442,7 +442,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
   NNEvaluation* evaluation = data.evaluation.get();
   assert(evaluation);
 
-  if (data.performed_expansion) {
+  if (data.backpropagated_virtual_loss) {
     record_for_profiling(kBackpropEvaluation);
 
     if (kEnableThreadingDebug) {
@@ -538,7 +538,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   }
 
   assert(!tree->has_children());
-  data->performed_expansion = true;
+  data->backpropagated_virtual_loss = true;
   assert(data->evaluation.get() == nullptr);
 
   auto& evaluation_data = tree->evaluation_data();
@@ -589,7 +589,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
   LocalPolicyProbDistr P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
   if (tree->is_root()) {
-    if (!sim_params_->disable_exploration) {
+    if (!search_params_->disable_exploration) {
       if (params_.dirichlet_mult) {
         mcts_->add_dirichlet_noise(P);
       }
@@ -638,7 +638,7 @@ Mcts<GameState, Tensorizor>::child_index_t
 Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEvaluation* evaluation) {
   record_for_profiling(kPUCT);
 
-  PUCTStats stats(params_, *sim_params_, tree);
+  PUCTStats stats(params_, *search_params_, tree);
 
   using PVec = LocalPolicyProbDistr;
 
@@ -648,7 +648,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
   const PVec& E = stats.E;
   PVec& PUCT = stats.PUCT;
 
-  bool add_noise = !sim_params_->disable_exploration && params_.dirichlet_mult > 0;
+  bool add_noise = !search_params_->disable_exploration && params_.dirichlet_mult > 0;
   if (params_.forced_playouts && add_noise) {
     PVec n_forced = (P * params_.k_forced * N.sum()).sqrt();
     auto F1 = (N < n_forced).template cast<dtype>();
@@ -716,7 +716,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::dump_profiling_stats() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
-    const Params& params, const SimParams& sim_params, const Node* tree)
+    const Params& params, const SearchParams& search_params, const Node* tree)
 : cp(tree->stable_data().current_player)
 , P(tree->evaluation_data().local_policy_prob_distr)
 , V(P.rows())
@@ -757,7 +757,7 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     const auto& stats = tree->stats();  // no struct copy, not needed here
     dtype PV = stats.effective_value_avg(cp);
 
-    bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !sim_params.disable_exploration;
+    bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
     dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
     for (int c : bitset_util::on_indices(fpu_bits)) {
@@ -1328,7 +1328,7 @@ void Mcts<GameState, Tensorizor>::NodeReleaseService::release_helper(Node* node,
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 : params_(params)
-, offline_sim_params_(SimParams::make_offline_params(params.offline_tree_size_limit))
+, offline_search_params_(SearchParams::make_offline_params(params.offline_tree_size_limit))
 , instance_id_(next_instance_id_++)
 , root_softmax_temperature_(math::ExponentialDecay::parse(
     params.root_softmax_temperature_str, GameStateTypes::get_var_bindings()))
@@ -1413,13 +1413,13 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
   root_->adopt_children();
 
   if (params_.run_offline) {
-    start_search_threads(&offline_sim_params_);
+    start_search_threads(&offline_search_params_);
   }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, Tensorizor>::sim(
-    const Tensorizor& tensorizor, const GameState& game_state, const SimParams& params)
+inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, Tensorizor>::search(
+    const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params)
 {
   stop_search_threads();
 
@@ -1460,13 +1460,13 @@ inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDist
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::start_search_threads(const SimParams* sim_params) {
+inline void Mcts<GameState, Tensorizor>::start_search_threads(const SearchParams* search_params) {
   assert(!search_active_);
   search_active_ = true;
   num_active_search_threads_ = num_search_threads();
 
   for (auto* thread : search_threads_) {
-    thread->launch(sim_params);
+    thread->launch(search_params);
   }
 }
 
@@ -1517,10 +1517,10 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
  * source code was not very enlightening. The following is my best guess at what the target pruning step does.
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::prune_counts(const SimParams& sim_params) {
+void Mcts<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
   if (params_.uniform_model) return;
 
-  PUCTStats stats(params_, sim_params, root_);
+  PUCTStats stats(params_, search_params, root_);
 
   const auto& P = stats.P;
   const auto& N = stats.N;
