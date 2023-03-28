@@ -55,6 +55,7 @@ public:
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using GameStateTypes = common::GameStateTypes<GameState>;
   using dtype = typename GameStateTypes::dtype;
+  using child_index_t = int;
 
   using MctsResults = common::MctsResults<GameState>;
   using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
@@ -72,6 +73,11 @@ public:
   using PolicyArray1D = typename GameStateTypes::PolicyArray1D;
 
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
+
+  struct ValueArray1DExtrema {
+    ValueArray1D min;
+    ValueArray1D max;
+  };
 
   enum DefaultParamsType {
     kCompetitive,
@@ -141,15 +147,13 @@ private:
   using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
 
   /*
-   * A Node consists of n=4 main groups of non-const member variables:
+   * A Node consists of n=3 main groups of non-const member variables:
    *
-   * lazily_initialized_data_: state + action -> state', computed lazily since not immediately needed upon child expand
-   * children_data_: the addresses/number of children nodes, needed for tree traversal
+   * children_data_: pointers of children nodes, needed for tree traversal
    * evaluation_data_: policy/value vectors that come from neural net evaluation
    * stats_: values that get updated throughout MCTS via backpropagation
    *
-   * Of these, only stats_ are continuously changing. The others are written only once. They are non-const in the
-   * sense that they are lazily written, after-object-construction.
+   * Of these, only stats_ are continuously changing. The others are effectively write-once.
    *
    * During MCTS, multiple search threads will try to read and write these values. Thread-safety is achieved in a
    * high-performance manner through a carefully orchestrated combination of mutexes, condition-variables, and
@@ -165,80 +169,47 @@ private:
 
     struct stable_data_t {
       stable_data_t(Node* p, action_index_t a);
+      stable_data_t(Node* p, action_index_t a, const Tensorizor&, const GameState&, const GameOutcome&);
       stable_data_t(const stable_data_t& data, bool prune_parent);
+
+      int num_valid_actions() const { return valid_action_mask.count(); }  // consider saving in member variable
 
       Node* parent;
       action_index_t action;
-    };
+      Tensorizor tensorizor;
+      GameState state;
+      GameOutcome outcome;
+      ActionMask valid_action_mask;
+      player_index_t current_player;
+      symmetry_index_t sym_index;
 
-    struct lazily_initialized_data_t {
-      struct data_t {
-        data_t(Node* parent, action_index_t action);
-        data_t(const Tensorizor&, const GameState&, const GameOutcome&);
-
-        Tensorizor tensorizor;
-        GameState state;
-        GameOutcome outcome;
-        ActionMask valid_action_mask;
-        player_index_t current_player;
-        symmetry_index_t sym_index;
-      };
-
-      union union_t {
-        union_t() : dummy_(false) {}
-        union_t(const union_t& u) : data_(u.data_) {}
-        union_t(Node* parent, action_index_t action) : data_(parent, action) {}
-        union_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-            : data_(tensorizor, state, outcome) {}
-
-        data_t data_;
-        bool dummy_;
-      };
-
-      lazily_initialized_data_t() = default;
-      lazily_initialized_data_t(Node* parent, action_index_t action)
-          : union_(parent, action)
-            , initialized(true) {}
-      lazily_initialized_data_t(const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-          : union_(tensorizor, state, outcome)
-            , initialized(true) {}
-
-      union_t union_;
-      bool initialized = false;
+    private:
+      void aux_init();
     };
 
     /*
-     * Writers must FIRST write num_children_, and THEN first_child_.
+     * We represent the children of a node as a std::array of Node*. The i'th element of the array corresponds to the
+     * i'th set-bit of the valid_actions mask. The children are lazily expanded.
      *
-     * Readers should ignore num_children_ if first_child_ is null.
-     *
-     * Following this discipline allows us to use children_data_t in a lockfree manner.
-     *
-     * We use the volatile keyword here to ensure that read/write order is not changed by the compiler.
-     *
-     * See: https://webdocs.cs.ualberta.ca/~mmueller/ps/enzenberger-mueller-acg12.pdf
+     * The array representation can be wasteful if the number of children is small, but it's simple and good enough for
+     * now. A less wasteful approach might use a vector or linked-list, but this would require more complicated memory
+     * management.
      */
     struct children_data_t {
-      void write(Node* first_child, int num_children) {
-        num_children_ = num_children;
-        first_child_ = first_child;
-      }
+      using array_t = std::array<Node*, kMaxNumLocalActions>;
 
-      void read(Node** first_child, int* num_children) const {
-        *first_child = const_cast<Node*>(first_child_);
-        *num_children = (*first_child) ? num_children_ : 0;
-      }
-
-      Node* first_child_unsafe() const { return const_cast<Node*>(first_child_); }  // read() is safer, be careful
-      int num_children_unsafe() const { return num_children_; }  // read() is safer, be careful
+      children_data_t() : array_(), num_children_(0) {}
+      Node* operator[](child_index_t c) const { return array_[c]; }
+      void set(child_index_t c, Node* child) { array_[c] = child; }
+      void clear(child_index_t c) { array_[c] = nullptr; }
+      int num_children() const { return num_children_; }
 
     private:
-      volatile Node* first_child_ = nullptr;
-      volatile int num_children_ = 0;
+      array_t array_;
+      int num_children_;
     };
 
     struct evaluation_data_t {
-      evaluation_data_t() = default;
       evaluation_data_t(const ActionMask& valid_actions);
 
       NNEvaluation_asptr ptr;
@@ -302,7 +273,6 @@ private:
     void adopt_children();
 
     std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
-    std::mutex& lazily_initialized_data_mutex() const { return lazily_initialized_data_mutex_; }
     std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() const { return stats_mutex_; }
 
@@ -314,21 +284,17 @@ private:
     ValueArray1D make_virtual_loss() const;
     void mark_as_fully_analyzed();
 
-    void lazy_init();
-    void expand_children();
-
     const stable_data_t& stable_data() const { return stable_data_; }
     action_index_t action() const { return stable_data_.action; }
     Node* parent() const { return stable_data_.parent; }
     bool is_root() const { return !stable_data_.parent; }
 
-    const lazily_initialized_data_t::data_t& lazily_initialized_data() const { return lazily_initialized_data_.union_.data_; }
-    bool lazily_initialized() const { return lazily_initialized_data_.initialized; }
-
-    bool has_children() const { return children_data_.num_children_unsafe(); }
-    int num_children() const { return children_data_.num_children_unsafe(); }
-    Node* get_child(int c) const { return children_data_.first_child_unsafe() + c; }
-    Node* find_child(action_index_t action) const;
+    bool has_children() const { return children_data_.num_children(); }
+    int num_children() const { return children_data_.num_children(); }
+    Node* get_child(child_index_t c) const { return children_data_[c]; }
+    void clear_child(child_index_t c) { children_data_.clear(c); }
+    Node* init_child(child_index_t c);
+    Node* lookup_child_by_action(action_index_t action) const;
 
     const stats_t& stats() const { return stats_; }
 
@@ -336,15 +302,13 @@ private:
     evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
   private:
-    float get_max_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
-    float get_min_V_floor_among_children(player_index_t p, Node* first_child, int num_children) const;
+    ValueArray1DExtrema get_V_floor_extrema_among_children() const;
 
     std::condition_variable cv_evaluate_and_expand_;
-    mutable std::mutex lazily_initialized_data_mutex_;
     mutable std::mutex evaluation_data_mutex_;
+    mutable std::mutex children_mutex_;
     mutable std::mutex stats_mutex_;
     stable_data_t stable_data_;  // effectively const
-    lazily_initialized_data_t lazily_initialized_data_;
     children_data_t children_data_;
     evaluation_data_t evaluation_data_;
     stats_t stats_;
@@ -423,7 +387,6 @@ private:
       bool performed_expansion;
     };
 
-    void lazily_init(Node* tree);
     void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
     void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
     void mark_as_fully_analyzed(Node* tree);
@@ -431,18 +394,17 @@ private:
     void evaluate_and_expand_unset(
         Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative);
     void evaluate_and_expand_pending(Node* tree, std::unique_lock<std::mutex>* lock);
-    void expand_children(Node* tree);
 
     /*
      * Used in visit().
      *
-     * Applies PUCT criterion to select the best child to visit from the given Node.
+     * Applies PUCT criterion to select the best child-index to visit from the given Node.
      *
      * TODO: as we experiment with things like auxiliary NN output heads, dynamic cPUCT values, etc., this method will
      * evolve. It probably makes sense to have the behavior as part of the Tensorizor, since there is coupling with NN
      * architecture (in the form of output heads).
      */
-    Node* get_best_child(Node* tree, NNEvaluation* evaluation);
+    child_index_t get_best_child_index(Node* tree, NNEvaluation* evaluation);
 
     Mcts* const mcts_;
     const Params& params_;
