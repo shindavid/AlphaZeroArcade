@@ -1,5 +1,6 @@
 # IDE
 .idea
+.vscode
 cmake-build-debug
 
 # python cache
@@ -10,6 +11,7 @@ config.txt
 
 # cmake build dir
 target
+build
 
 # output
 output
