@@ -116,6 +116,7 @@ inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(Node* p, 
 , state(p->stable_data().state)
 , outcome(state.apply_move(action))
 {
+  tensorizor.receive_state_change(state, action);
   aux_init();
 }
 
