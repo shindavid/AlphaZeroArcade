@@ -41,14 +41,14 @@ import torch
 import torch.nn as nn
 from natsort import natsorted
 from torch import optim
-
+from torch.utils.data import DataLoader
 from alphazero.optimization_args import ModelingArgs
 from connect4.tensorizor import C4Net
 from util import subprocess_util
 from util.py_util import timed_print, make_hidden_filename
 from util.repo_util import Repo
 from alphazero.custom_types import Generation
-from alphazero.data.dataset import DataLoader
+from alphazero.data.games_dataset import GamesDataset
 
 class PathInfo:
     def __init__(self, path: str):
@@ -150,7 +150,7 @@ class AlphaZeroManager:
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             gen = 1
-            input_shape = loader.get_input_shape()
+            input_shape = loader.dataset.get_input_shape()
             self._net = C4Net(input_shape)
             timed_print(f'Creating new net with input shape {input_shape}')
         else:
@@ -270,8 +270,14 @@ class AlphaZeroManager:
 
     def train_step(self):
         print('******************************')
-        loader = DataLoader(self.self_play_data_dir)
-        assert loader.n_total_games >= self.n_gen0_games
+        games_dataset = GamesDataset(self.self_play_data_dir)
+        loader = torch.utils.data.DataLoader(
+            games_dataset,
+            batch_size = ModelingArgs.minibatch_size,
+            num_workers=4,
+            pin_memory=True,
+            shuffle=True)
+        assert loader.dataset.n_total_games >= self.n_gen0_games
 
         gen = self.get_latest_model_generation() + 1
         timed_print(f'Train gen:{gen}')
@@ -282,8 +288,8 @@ class AlphaZeroManager:
         policy_criterion = nn.CrossEntropyLoss()
         value_criterion = nn.CrossEntropyLoss()
 
-        timed_print(f'Sampling from the {loader.n_window} most recent positions among '
-                    f'{loader.n_total_positions} total positions')
+        timed_print(f'Sampling from the {loader.dataset.n_window} most recent positions among '
+                    f'{loader.dataset.n_total_positions} total positions')
 
         stats = TrainingStats()
 
@@ -294,7 +300,6 @@ class AlphaZeroManager:
         for data in loader:
             t1 = time.time()
             inputs, value_labels, policy_labels = data
-
             inputs = inputs.to(self.py_cuda_device_str)
             value_labels = value_labels.to(self.py_cuda_device_str)
             policy_labels = policy_labels.to(self.py_cuda_device_str)
