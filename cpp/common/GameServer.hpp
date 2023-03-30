@@ -39,7 +39,7 @@ public:
     player_index_t seat;  // -1 means random seat
     registration_tag_t tag;  // order in which player was registered
   };
-  using registration_vec_t = std::vector<registration_t>;
+  using registration_array_t = std::array<registration_t, kNumPlayers>;
 
   /*
    * A registration_template_t gives birth to a registration_t.
@@ -56,13 +56,7 @@ public:
 
     registration_t instantiate() const { return {gen(), seat, tag}; }
   };
-  using registration_template_vec_t = std::vector<registration_template_t>;
-
-  struct seat_assignment_t {
-    Player* player = nullptr;
-    registration_tag_t tag = -1;
-  };
-  using seat_assignment_array_t = std::array<seat_assignment_t, kNumPlayers>;
+  using registration_template_array_t = std::array<registration_template_t, kNumPlayers>;
 
   struct Params {
     auto make_options_description();
@@ -90,12 +84,13 @@ private:
     auto get_results() const;
     int num_games_started() const { return num_games_started_; }
     registration_tag_t register_player(player_index_t seat, player_generator_t gen);
-    int num_registrations() const { return registration_templates_.size(); }
-    seat_assignment_array_t assign_seats(const registration_vec_t& registrations) const;
-    const registration_template_vec_t& registration_templates() const { return registration_templates_; }
+    int num_registrations() const { return num_registrations_; }
+    registration_array_t generate_player_order(const registration_array_t& registrations) const;
+    const registration_template_array_t& registration_templates() const { return registration_templates_; }
 
   private:
-    registration_template_vec_t registration_templates_;
+    registration_template_array_t registration_templates_;
+    int num_registrations_ = 0;
 
     mutable std::mutex mutex_;
     progressbar* bar_ = nullptr;
@@ -120,7 +115,7 @@ private:
     GameOutcome play_game(const player_array_t&);
 
     SharedData& shared_data_;
-    registration_vec_t registrations_;
+    registration_array_t registrations_;
     std::thread* thread_ = nullptr;
   };
 

@@ -80,36 +80,33 @@ GameServer<GameState>::SharedData::register_player(player_index_t seat, player_g
     throw util::Exception("Invalid seat number %d >= %d", seat, kNumPlayers);
   }
   if (seat >= 0) {
-    for (const auto& reg : registration_templates_) {
-      if (reg.seat == seat) {
+    for (int r = 0; r < num_registrations_; ++r) {
+      if (registration_templates_[r].seat == seat) {
         throw util::Exception("Double-seated player at seat %d", seat);
       }
     }
   }
-  registration_tag_t tag = registration_templates_.size();
-  registration_templates_.push_back(registration_template_t{gen, seat, tag});
+  registration_tag_t tag = num_registrations_;
+  num_registrations_++;
+  registration_templates_[tag] = registration_template_t{gen, seat, tag};
   return tag;
 }
 
 template<GameStateConcept GameState>
-typename GameServer<GameState>::seat_assignment_array_t
-GameServer<GameState>::SharedData::assign_seats(const registration_vec_t& registrations) const {
-  seat_assignment_array_t seat_assignments;
+typename GameServer<GameState>::registration_array_t
+GameServer<GameState>::SharedData::generate_player_order(const registration_array_t &registrations) const {
+  registration_array_t player_order;
 
-  seat_assignment_array_t random_seat_assignments;
+  registration_array_t random_seat_assignments;
   int num_random_assignments = 0;
 
   // first seat players that have dedicated seats
   for (const auto& reg : registrations) {
-    Player* player = reg.player;
-    player_index_t seat = reg.seat;
-    registration_tag_t tag = reg.tag;
-    seat_assignment_t assignment = {player, tag};
-    if (seat < 0) {
-      random_seat_assignments[num_random_assignments++] = assignment;
+    if (reg.seat < 0) {
+      random_seat_assignments[num_random_assignments++] = reg;
       continue;
     }
-    seat_assignments[seat] = assignment;
+    player_order[reg.seat] = reg;
   }
 
   // now randomly seat players at the remaining seats
@@ -117,20 +114,24 @@ GameServer<GameState>::SharedData::assign_seats(const registration_vec_t& regist
     util::Random::shuffle(&random_seat_assignments[0], &random_seat_assignments[num_random_assignments]);
     int r = 0;
     for (int p = 0; p < kNumPlayers; ++p) {
-      if (seat_assignments[p].player) continue;
+      if (player_order[p].player) continue;
       assert(r < num_random_assignments);
-      seat_assignments[p] = random_seat_assignments[r++];
+      player_order[p] = random_seat_assignments[r++];
     }
   }
 
-  return seat_assignments;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    player_order[p].seat = p;
+  }
+
+  return player_order;
 }
 
 template<GameStateConcept GameState>
 GameServer<GameState>::GameThread::GameThread(SharedData& shared_data)
 : shared_data_(shared_data) {
-  for (const auto& reg_template : shared_data_.registration_templates()) {
-    registrations_.push_back(reg_template.instantiate());
+  for (int p = 0; p < kNumPlayers; ++p) {
+    registrations_[p] = shared_data_.registration_templates()[p].instantiate();
   }
 }
 
@@ -150,11 +151,11 @@ template<GameStateConcept GameState>
 void GameServer<GameState>::GameThread::run(const Params& params) {
   while (true) {
     if (!shared_data_.request_game(params.num_games)) return;
-    seat_assignment_array_t seat_assignments = shared_data_.assign_seats(registrations_);
+    registration_array_t player_order = shared_data_.generate_player_order(registrations_);
 
     player_array_t players;
     for (int p = 0; p < kNumPlayers; ++p) {
-      players[p] = seat_assignments[p].player;
+      players[p] = player_order[p].player;
     }
 
     time_point_t t1 = std::chrono::steady_clock::now();
@@ -162,7 +163,7 @@ void GameServer<GameState>::GameThread::run(const Params& params) {
     // reindex outcome according to registration tags
     GameOutcome reindexed_outcome;
     for (int p = 0; p < kNumPlayers; ++p) {
-      reindexed_outcome[seat_assignments[p].tag] = outcome[p];
+      reindexed_outcome[player_order[p].tag] = outcome[p];
     }
     time_point_t t2 = std::chrono::steady_clock::now();
     duration_t duration = t2 - t1;
