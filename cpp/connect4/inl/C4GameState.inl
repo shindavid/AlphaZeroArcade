@@ -5,6 +5,7 @@
 
 #include <util/AnsiCodes.hpp>
 #include <util/BitSet.hpp>
+#include <util/CppUtil.hpp>
 #include <util/PrintUtil.hpp>
 
 inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& state) const {
@@ -127,6 +128,11 @@ template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(Inp
 }
 
 inline void GameState::xprintf_dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
+  if (!util::tty_mode()) {
+    std::string s(2*last_action+1, ' ');
+    printf("%sx\n", s.c_str());
+  }
+
   column_t blink_column = last_action;
   row_t blink_row = -1;
   if (blink_column >= 0) {
@@ -191,10 +197,12 @@ inline void GameState::xdump_mcts_output(
   util::xprintf("\n");
   util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
 
-  int i = 0;
-  for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
-    util::xprintf("%3d %8.3f %8.3f %8.3f\n", action + 1, net_policy(i), mcts_counts(action), mcts_policy(i));
-    i++;
+  for (int i = 0; i < kNumColumns; ++i) {
+    if (valid_actions[i]) {
+      util::xprintf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+    } else {
+      util::xprintf("%3d\n", i + 1);
+    }
   }
 }
 

@@ -26,15 +26,15 @@ public:
   void start_game(game_id_t, const player_array_t& players, common::player_index_t seat_assignment) override;
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
+  void disable_screen_clearing() { screen_clearing_enabled_ = false; }
 
 protected:
-  void xprintf_switch(const GameState&);
   virtual void print_state(const GameState&);
 
-  std::ostringstream buf_;
   player_name_array_t player_names_;
   common::player_index_t my_index_ = -1;
   common::action_index_t last_action_ = -1;
+  bool screen_clearing_enabled_ = true;
 };
 
 }  // namespace common

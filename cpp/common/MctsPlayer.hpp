@@ -58,6 +58,7 @@ public:
   using MctsParams = typename Mcts::Params;
   using MctsSearchParams = typename Mcts::SearchParams;
   using MctsResults = common::MctsResults<GameState>;
+  using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
@@ -76,6 +77,7 @@ public:
   action_index_t get_action(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   float avg_batch_size() const { return mcts_->avg_batch_size(); }
+  void set_facing_human_tui_player(bool b=true) { facing_human_tui_player_ = b; }  // affects printing
 
 protected:
   const MctsResults* mcts_search(const GameState& state, SearchMode search_mode) const;
@@ -101,6 +103,7 @@ protected:
   math::ExponentialDecay move_temperature_;
   player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
+  player_name_array_t player_names_;
   bool owns_mcts_;
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;

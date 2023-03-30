@@ -71,12 +71,12 @@ int main(int ac, char* av[]) {
     return 0;
   }
 
-  c4::Player* human;
+  using C4HumanTuiPlayer = common::HumanTuiPlayer<c4::GameState>;
+  C4HumanTuiPlayer* human;
   if (args.cheat_mode) {
     mcts_player_params.verbose = true;
     human = new c4::CheatingHumanTuiPlayer(perfect_play_params);
   } else {
-    using C4HumanTuiPlayer = common::HumanTuiPlayer<c4::GameState>;
     human = new C4HumanTuiPlayer();
   }
 
@@ -84,7 +84,12 @@ int main(int ac, char* av[]) {
   if (args.perfect) {
     cpu = new c4::PerfectPlayer(perfect_play_params);
   } else {
-    cpu = new MctsPlayer(mcts_player_params, mcts_params);
+    auto mcts_player = new MctsPlayer(mcts_player_params, mcts_params);
+    mcts_player->set_facing_human_tui_player();
+    if (mcts_player_params.verbose) {
+      human->disable_screen_clearing();
+    }
+    cpu = mcts_player;
   }
 
   common::player_index_t my_color = parse_color(args.my_starting_color);

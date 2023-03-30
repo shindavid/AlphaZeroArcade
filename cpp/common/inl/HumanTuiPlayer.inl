@@ -17,7 +17,7 @@ inline void HumanTuiPlayer<GameState_>::start_game(
     player_names_[p] = players[p]->get_name();
   }
   my_index_ = seat_assignment;
-  util::set_xprintf_target(buf_);
+  util::clearscreen();
 }
 
 template<GameStateConcept GameState_>
@@ -25,23 +25,20 @@ inline void HumanTuiPlayer<GameState_>::receive_state_change(
     common::player_index_t, const GameState& state, common::action_index_t action, const GameOutcome& outcome)
 {
   last_action_ = action;
-  if (common::is_terminal_outcome(outcome)) {
-    xprintf_switch(state);
-  }
 }
 
 template<GameStateConcept GameState_>
 inline common::action_index_t HumanTuiPlayer<GameState_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
-  xprintf_switch(state);
-
+  if (screen_clearing_enabled_) {
+    util::clearscreen();
+  }
+  print_state(state);
   bool complain = false;
   int my_action = -1;
   while (true) {
     if (complain) {
-      print_state(state);
-      printf("%s", buf_.str().c_str());
       printf("Invalid input!\n");
     }
     complain = true;
@@ -54,24 +51,11 @@ inline common::action_index_t HumanTuiPlayer<GameState_>::get_action(
     break;
   }
 
-  buf_.clear();
-  util::set_xprintf_target(buf_);
   return my_action;
 }
 
 template<GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::xprintf_switch(const GameState& state) {
-  util::clear_xprintf_target();
-  print_state(state);
-  std::cout << buf_.str();
-  buf_.str("");
-  buf_.clear();
-  std::cout.flush();
-}
-
-template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state) {
-  util::clearscreen();
   state.xprintf_dump(last_action_, &player_names_);
 }
 

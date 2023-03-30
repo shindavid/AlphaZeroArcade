@@ -18,7 +18,6 @@ inline void CheatingHumanTuiPlayer::receive_state_change(
 }
 
 inline void CheatingHumanTuiPlayer::print_state(const GameState& state) {
-  util::clearscreen();
   auto result = oracle_.query(move_history_);
   util::xprintf("%s\n", result.get_overlay().c_str());
   state.xprintf_dump(last_action_, &player_names_);
