@@ -66,18 +66,4 @@ inline std::string create_string(char const *fmt, ...) {
   return std::string(text);
 }
 
-template<typename T>
-void param_dump(const char* descr, const char* param_fmt, T param) {
-  // TODO: fix misalignment when param_fmt has trailing chars (like units)
-  if (false) {
-    printf(param_fmt, param);
-  }
-  constexpr int descr_width = 50;
-  constexpr int param_width = 10;
-
-  // "%-50s %10d\n" -> "X-%ds X%d%s\n"
-  std::string fmt = create_string("%%-%ds %%%d%s\n", descr_width, param_width, param_fmt + 1);
-  printf(fmt.c_str(), create_string("%s:", descr).c_str(), param);
-}
-
 }  // namespace util

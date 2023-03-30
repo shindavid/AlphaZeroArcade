@@ -7,7 +7,6 @@
 #include <array>
 #include <csignal>
 #include <iostream>
-#include <string>
 
 #include <boost/program_options.hpp>
 
@@ -19,6 +18,7 @@
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4Tensorizor.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/ParamDumper.hpp>
 #include <util/StringUtil.hpp>
 
 namespace po = boost::program_options;
@@ -113,9 +113,9 @@ int main(int ac, char* av[]) {
   runner.run();
 
   mcts_player_params.dump();
-  PARAM_DUMP("MCTS search threads", "%d", mcts_params.num_search_threads);
-  PARAM_DUMP("MCTS max batch size", "%d", mcts_params.batch_size_limit);
-  PARAM_DUMP("MCTS avg batch size", "%.2f", Mcts::global_avg_batch_size());
-
+  util::ParamDumper::add("MCTS search threads", "%d", mcts_params.num_search_threads);
+  util::ParamDumper::add("MCTS max batch size", "%d", mcts_params.batch_size_limit);
+  util::ParamDumper::add("MCTS avg batch size", "%.2f", Mcts::global_avg_batch_size());
+  util::ParamDumper::flush();
   return 0;
 }

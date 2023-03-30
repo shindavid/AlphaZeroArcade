@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <util/BoostUtil.hpp>
+#include <util/ParamDumper.hpp>
 #include <util/StringUtil.hpp>
 
 namespace common {
@@ -142,10 +143,10 @@ void ParallelGameRunner<GameState>::run() {
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     printf("P%d %s\n", p, get_results_str(results[p]).c_str());
   }
-  PARAM_DUMP("Parallelism factor", "%d", parallelism);
-  PARAM_DUMP("Num games", "%d", num_games);
-  PARAM_DUMP("Total runtime", "%.3fs", ns*1e-9);
-  PARAM_DUMP("Avg runtime", "%.3fs", ns*1e-9 / num_games);
+  util::ParamDumper::add("Parallelism factor", "%d", parallelism);
+  util::ParamDumper::add("Num games", "%d", num_games);
+  util::ParamDumper::add("Total runtime", "%.3fs", ns*1e-9);
+  util::ParamDumper::add("Avg runtime", "%.3fs", ns*1e-9 / num_games);
 
   for (auto thread: threads_) {
     delete thread;
