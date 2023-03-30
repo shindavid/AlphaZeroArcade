@@ -3,6 +3,8 @@
 #include <bit>
 #include <iostream>
 
+#include <boost/lexical_cast.hpp>
+
 #include <util/AnsiCodes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
@@ -12,6 +14,37 @@ inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& sta
 }
 
 namespace c4 {
+
+inline size_t GameState::serialize_action(char* buffer, size_t buffer_size, common::action_index_t action) {
+  size_t n = snprintf(buffer, buffer_size, "%d", action + 1);
+  if (n >= buffer_size) {
+    throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
+  }
+  return n;
+}
+
+inline void GameState::deserialize_action(const char* buffer, common::action_index_t* action) {
+  auto a = boost::lexical_cast<common::action_index_t>(buffer) - 1;
+  if (a < 0 || a >= kNumColumns) {
+    throw util::Exception("Invalid action %d parsed from \"%s\"", a, buffer);
+  }
+  *action = a;
+}
+
+inline size_t GameState::serialize_state_change(
+    char* buffer, size_t buffer_size, common::player_index_t player,
+    common::action_index_t action, const GameOutcome& outcome) const
+{
+  return serialize_action(buffer, buffer_size, action);
+}
+
+inline void GameState::deserialize_state_change(
+    const char* buffer, common::player_index_t* player, common::action_index_t* action, GameOutcome* outcome)
+{
+  *player = get_current_player();
+  deserialize_action(buffer, action);
+  *outcome = apply_move(*action);
+}
 
 inline common::player_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;

@@ -41,6 +41,71 @@ concept GameStateConcept = requires(S state) {
   { util::decay_copy(S::kMaxNumLocalActions) } -> std::same_as<int>;
 
   /*
+   * The serialize_* and deserialize_* methods are used primarily to communicate states and actions between different
+   * processes (like a game server with a remote game client). The expected declaration of these methods would look like
+   * this:
+   *
+   * static size_t serialize_action(char* buffer, size_t buffer_size, action_index_t action);
+   * static void deserialize_action(const char* buffer, action_index_t* action);
+   *
+   * size_t serialize_state_change(char* buffer, size_t buffer_size, player_index_t player,
+   *     action_index_t action, GameOutcome outcome) const;
+   * void deserialize_state_change(const char* buffer, player_index_t* player,
+   *     action_index_t* action, GameOutcome* outcome);
+   *
+   * The serialize_* methods are expected to write to the given buffer, and return the number of bytes written.
+   *
+   * The deserialize_* methods are expected to act as inverse-functions of their serialize_* counterparts, writing to
+   * the given pointers.
+   *
+   * The serialize_state_change() method is expected to be called on the state *after* the action was performed by
+   * player (resulting in outcome).
+   *
+   * The deserialize_state_change() method is expected to be called on the state *before* the change, and is expected
+   * to perform the change on this, while populating the player/action/outcome pointers with the relevant information
+   * about the state change.
+   *
+   * It is best for the string representations to be as stable as possible, to maximize chances of forward-compatibility
+   * with future versions of the code. For example, for deterministic games like chess/go/Connect4, the string
+   * representing the state change only needs to contain the action taken. The player and outcome can be derived from
+   * the previous state and the action. This is superior to something like the byte-representation of the state, since
+   * that could change between versions of the code, leading to backwards-incompatibility.
+   */
+  { S::serialize_action(std::declval<char*>(), size_t(), action_index_t()) } -> std::same_as<size_t>;
+  { S::deserialize_action(std::declval<char*>(), std::declval<action_index_t*>()) };
+
+  { state.serialize_action_prompt(std::declval<char*>(), size_t(), typename GameStateTypes<S>::ActionMask{}) };
+  { state.deserialize_action_prompt(std::declval<char*>(), std::declval<typename GameStateTypes<S>::ActionMask*>()) };
+
+  { state.serialize_state_change(
+      std::declval<char*>(),
+      size_t(),
+      player_index_t(),
+      action_index_t(),
+      typename GameStateTypes<S>::GameOutcome{})
+  } -> std::same_as<size_t>;
+  { state.deserialize_state_change(
+      std::declval<char *>(),
+      std::declval<player_index_t *>(),
+      std::declval<action_index_t *>(),
+      std::declval<typename GameStateTypes<S>::GameOutcome *>())
+  };
+
+  { state.serialize_state_change(
+      std::declval<char*>(),
+      size_t(),
+      player_index_t(),
+      action_index_t(),
+      typename GameStateTypes<S>::GameOutcome{})
+  } -> std::same_as<size_t>;
+  { state.deserialize_state_change(
+      std::declval<char *>(),
+      std::declval<player_index_t *>(),
+      std::declval<action_index_t *>(),
+      std::declval<typename GameStateTypes<S>::GameOutcome *>())
+  };
+
+  /*
    * Return the current player.
    */
   { state.get_current_player() } -> std::same_as<player_index_t>;
