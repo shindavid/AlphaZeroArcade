@@ -22,6 +22,7 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
+add_executable(c4 cpp/connect4/main/Connect4.cpp)
 add_executable(c4_competitive_self_play cpp/connect4/main/CompetitiveSelfPlay.cpp)
 add_executable(c4_dshin_scratch cpp/connect4/main/DshinScratch.cpp)
 add_executable(c4_generate_oracle_labeled_games cpp/connect4/main/GenerateOracleLabeledGames.cpp)
@@ -30,6 +31,7 @@ add_executable(c4_play_vs_cpu cpp/connect4/main/PlayVsCpu.cpp)
 add_executable(c4_training_self_play cpp/connect4/main/TrainingSelfPlay.cpp)
 
 set(executables
+        c4
         c4_competitive_self_play
         c4_dshin_scratch
         c4_generate_oracle_labeled_games
