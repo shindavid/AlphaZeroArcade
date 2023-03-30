@@ -12,8 +12,17 @@ class PlayerFactory {
 public:
   using player_generator_t = std::function<Player*()>;
 
-  static player_generator_t get_player_generator(int player_index, const char* args);
-  static player_generator_t copy_player_generator(int player_index);
+  /*
+   * Creates a player generator out of args, and binds it to the given index. Attempts to double-register an index
+   * will result in an exception.
+   */
+  static player_generator_t get_player_generator(int index, const char* args);
+
+  /*
+   * Returns a copy of the player generator bound to the given index. If no generator is bound to the given index,
+   * an exception is thrown.
+   */
+  static player_generator_t copy_player_generator(int index);
 
 private:
   static PlayerFactory* instance();
