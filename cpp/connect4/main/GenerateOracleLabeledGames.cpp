@@ -99,10 +99,9 @@ public:
 
   OracleSupervisor* supervisor() const { return supervisor_; }
 
-  void start_game(common::game_id_t game_id, const player_array_t& players, player_index_t seat_assignment) override {
-    BasePlayer::start_game(game_id, players, seat_assignment);
-    game_data_ = supervisor_->start_game(game_id);
-    seat_assignment_ = seat_assignment;
+  void start_game() override {
+    BasePlayer::start_game();
+    game_data_ = supervisor_->start_game(BasePlayer::get_game_id());
   }
 
   void receive_state_change(
@@ -112,7 +111,7 @@ public:
     BasePlayer::receive_state_change(p, state, action, outcome);
     if (common::is_terminal_outcome(outcome)) {
       supervisor_->close(game_data_);
-    } else if (p == seat_assignment_) {
+    } else if (p == BasePlayer::get_my_seat()) {
       supervisor_->receive_move(state, action);
     }
   }
@@ -125,7 +124,6 @@ public:
 private:
   OracleSupervisor* supervisor_;
   TrainingDataWriter::GameData_sptr game_data_;
-  player_index_t seat_assignment_;
   bool owns_supervisor_;
 };
 

@@ -5,10 +5,9 @@ namespace c4 {
 inline CheatingHumanTuiPlayer::CheatingHumanTuiPlayer(const PerfectPlayParams& perfect_play_params)
 : base_t(), oracle_(perfect_play_params) {}
 
-inline void CheatingHumanTuiPlayer::start_game(
-    common::game_id_t game_id, const player_array_t& players, common::player_index_t seat_assignment) {
+inline void CheatingHumanTuiPlayer::start_game() {
   move_history_.reset();
-  base_t::start_game(game_id, players, seat_assignment);
+  base_t::start_game();
 }
 
 inline void CheatingHumanTuiPlayer::receive_state_change(

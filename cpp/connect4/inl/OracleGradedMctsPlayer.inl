@@ -50,11 +50,10 @@ template<typename... BaseArgs>
 OracleGradedMctsPlayer::OracleGradedMctsPlayer(OracleGrader* grader, BaseArgs&&... base_args)
     : base_t(std::forward<BaseArgs>(base_args)...), grader_(grader) {}
 
-inline void OracleGradedMctsPlayer::start_game(
-    common::game_id_t game_id, const player_array_t& players, common::player_index_t seat_assignment)
+inline void OracleGradedMctsPlayer::start_game()
 {
   move_history_.reset();
-  base_t::start_game(game_id, players, seat_assignment);
+  base_t::start_game();
 }
 
 inline void OracleGradedMctsPlayer::receive_state_change(

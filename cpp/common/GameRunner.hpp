@@ -17,9 +17,11 @@ public:
     kRandomPlayerSeats
   };
 
-  using GameOutcome = typename GameStateTypes<GameState>::GameOutcome;
+  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
   using player_array_t = std::array<Player*, GameState::kNumPlayers>;
+  using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
   template<typename T> GameRunner(T&& players) : players_(players) {}
 

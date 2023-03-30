@@ -105,16 +105,9 @@ inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline void MctsPlayer<GameState_, Tensorizor_>::start_game(
-    game_id_t, const player_array_t& players, player_index_t seat_assignment)
+inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 {
-  my_index_ = seat_assignment;
   move_count_ = 0;
-
-  for (int p = 0; p < int(player_names_.size()); ++p) {
-    player_names_[p] = players[p]->get_name();
-  }
-
   move_temperature_.reset();
   tensorizor_.clear();
   if (owns_mcts_) {
@@ -132,7 +125,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
   if (owns_mcts_) {
     mcts_->receive_state_change(player, state, action, outcome);
   }
-  if (my_index_ == player && params_.verbose) {
+  if (base_t::get_my_seat() == player && params_.verbose) {
     if (facing_human_tui_player_) {
       util::clearscreen();
     }

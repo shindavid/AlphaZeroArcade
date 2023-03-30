@@ -13,8 +13,13 @@ typename GameRunner<GameState>::GameOutcome GameRunner<GameState>::run(PlayerOrd
   if (order == kRandomPlayerSeats) {
     util::Random::shuffle(players_.begin(), players_.end());
   }
+  player_name_array_t player_names;
   for (size_t p = 0; p < players_.size(); ++p) {
-    players_[p]->start_game(game_id, players_, p);
+    player_names[p] = players_[p]->get_name();
+  }
+  for (size_t p = 0; p < players_.size(); ++p) {
+    players_[p]->init_game(game_id, player_names, p);
+    players_[p]->start_game();
   }
 
   GameState state;

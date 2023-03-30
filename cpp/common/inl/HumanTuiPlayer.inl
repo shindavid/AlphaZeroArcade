@@ -9,13 +9,7 @@
 namespace common {
 
 template<GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::start_game(
-    game_id_t, const player_array_t& players, common::player_index_t seat_assignment)
-{
-  for (int p = 0; p < int(player_names_.size()); ++p) {
-    player_names_[p] = players[p]->get_name();
-  }
-  my_index_ = seat_assignment;
+inline void HumanTuiPlayer<GameState_>::start_game() {
   util::clearscreen();
 }
 

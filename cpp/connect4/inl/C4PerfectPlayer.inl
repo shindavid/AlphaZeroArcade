@@ -155,9 +155,7 @@ inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)
   , oracle_(params)
   , leisurely_mode_(params.leisurely_mode) {}
 
-inline void PerfectPlayer::start_game(
-    common::game_id_t game_id, const player_array_t& players, common::player_index_t seat_assignment)
-{
+inline void PerfectPlayer::start_game() {
   move_history_.reset();
 }
 
