@@ -6,7 +6,6 @@
 #include <util/AnsiCodes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
-#include <util/PrintUtil.hpp>
 
 inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& state) const {
   return state.hash();
@@ -127,7 +126,7 @@ template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(Inp
   }
 }
 
-inline void GameState::xprintf_dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
   if (!util::tty_mode()) {
     std::string s(2*last_action+1, ' ');
     printf("%sx\n", s.c_str());
@@ -139,17 +138,17 @@ inline void GameState::xprintf_dump(common::action_index_t last_action, const pl
     blink_row = std::countr_one(full_mask_ >> (blink_column * 8)) - 1;
   }
   for (row_t row = kNumRows - 1; row >= 0; --row) {
-    xprintf_row_dump(row, row == blink_row ? blink_column : -1);
+    row_dump(row, row == blink_row ? blink_column : -1);
   }
-  util::xprintf("|1|2|3|4|5|6|7|\n");
+  printf("|1|2|3|4|5|6|7|\n");
   if (player_names) {
-    util::xprintf("%s%s%s: %s\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), (*player_names)[kRed].c_str());
-    util::xprintf("%s%s%s: %s\n\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), (*player_names)[kYellow].c_str());
+    printf("%s%s%s: %s\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), (*player_names)[kRed].c_str());
+    printf("%s%s%s: %s\n\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), (*player_names)[kYellow].c_str());
   }
-  util::xflush();
+  std::cout.flush();
 }
 
-inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const {
+inline void GameState::row_dump(row_t row, column_t blink_column) const {
   common::player_index_t current_player = get_current_player();
   const char* cur_color = current_player == kRed ? ansi::kRed() : ansi::kYellow();
   const char* opp_color = current_player == kRed ? ansi::kYellow() : ansi::kRed();
@@ -162,10 +161,10 @@ inline void GameState::xprintf_row_dump(row_t row, column_t blink_column) const 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle() : " ";
 
-    util::xprintf("|%s%s%s%s", col == blink_column ? ansi::kBlink() : "", color, c, occupied ? ansi::kReset() : "");
+    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink() : "", color, c, occupied ? ansi::kReset() : "");
   }
 
-  util::xprintf("|\n");
+  printf("|\n");
 }
 
 inline bool GameState::operator==(const GameState& other) const {
@@ -180,7 +179,7 @@ inline common::action_index_t GameState::prompt_for_action() {
   return std::stoi(input) - 1;
 }
 
-inline void GameState::xdump_mcts_output(
+inline void GameState::dump_mcts_output(
     const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
 {
   const auto& valid_actions = results.valid_actions;
@@ -190,18 +189,18 @@ inline void GameState::xdump_mcts_output(
 
   assert(net_policy.size() == (int)valid_actions.count());
 
-  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kRed),
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kRed),
                 100 * mcts_value(kRed));
-  util::xprintf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kYellow),
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kYellow),
                 100 * mcts_value(kYellow));
-  util::xprintf("\n");
-  util::xprintf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
+  printf("\n");
+  printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
 
   for (int i = 0; i < kNumColumns; ++i) {
     if (valid_actions[i]) {
-      util::xprintf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
     } else {
-      util::xprintf("%3d\n", i + 1);
+      printf("%3d\n", i + 1);
     }
   }
 }

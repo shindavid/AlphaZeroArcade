@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ostream>
-
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>

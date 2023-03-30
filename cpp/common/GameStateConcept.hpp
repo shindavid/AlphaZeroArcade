@@ -75,7 +75,7 @@ concept GameStateConcept = requires(S state) {
    *
    * TODO: clean up this interface
    */
-  { S::xdump_mcts_output(
+  { S::dump_mcts_output(
       typename GameStateTypes<S>::ValueProbDistr{},
       typename GameStateTypes<S>::LocalPolicyProbDistr{},
       MctsResults<S>{})

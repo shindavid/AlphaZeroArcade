@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include <common/DerivedTypes.hpp>
-#include <util/PrintUtil.hpp>
 #include <util/ScreenUtil.hpp>
 
 namespace common {
@@ -56,7 +55,7 @@ inline common::action_index_t HumanTuiPlayer<GameState_>::get_action(
 
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state) {
-  state.xprintf_dump(last_action_, &player_names_);
+  state.dump(last_action_, &player_names_);
 }
 
 }  // namespace common

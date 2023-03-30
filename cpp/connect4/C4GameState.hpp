@@ -58,16 +58,16 @@ public:
   int get_move_number() const;
 
   template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;
-  void xprintf_dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
   static common::action_index_t prompt_for_action();
-  static void xdump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
+  static void dump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
                                 const MctsResults& results);
 
 private:
-  void xprintf_row_dump(row_t row, column_t blink_column) const;
+  void row_dump(row_t row, column_t blink_column) const;
 
   static constexpr int _to_bit_index(column_t col, row_t row);
   static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column

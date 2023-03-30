@@ -8,7 +8,6 @@
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/Math.hpp>
-#include <util/PrintUtil.hpp>
 #include <util/Random.hpp>
 #include <util/RepoUtil.hpp>
 #include <util/ScreenUtil.hpp>
@@ -138,7 +137,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
     }
     verbose_dump();
     if (!facing_human_tui_player_) {
-      state.xprintf_dump(action, &player_names_);
+      state.dump(action, &player_names_);
     }
   }
 }
@@ -223,10 +222,9 @@ inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   const auto& mcts_policy = verbose_info_->mcts_policy;
   const auto& mcts_results = verbose_info_->mcts_results;
 
-  util::xprintf("CPU pos eval:\n");
-  GameState::xdump_mcts_output(mcts_value, mcts_policy, mcts_results);
-  util::xprintf("\n");
-  util::xflush();
+  printf("CPU pos eval:\n");
+  GameState::dump_mcts_output(mcts_value, mcts_policy, mcts_results);
+  std::cout << std::endl;
 }
 
 }  // namespace common
