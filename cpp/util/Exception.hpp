@@ -9,7 +9,7 @@
 namespace util {
 
 /*
- * TODO: dynamic resizing in case the error text exceeds 1024 chars. See <util/inl/PrintUtil.inl> for similar use case.
+ * TODO: dynamic resizing in case the error text exceeds 1024 chars.
  */
 class Exception : public std::exception {
 public:
