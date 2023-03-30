@@ -55,7 +55,6 @@ public:
   using GameStateTypes = common::GameStateTypes<GameState>;
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
-  using MctsParams = typename Mcts::Params;
   using MctsSearchParams = typename Mcts::SearchParams;
   using MctsResults = common::MctsResults<GameState>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;

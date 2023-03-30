@@ -3,9 +3,10 @@
 #include <array>
 #include <string>
 
+#include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/BasicTypes.hpp>
+#include <util/Exception.hpp>
 
 namespace common {
 
