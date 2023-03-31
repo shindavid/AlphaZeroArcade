@@ -20,7 +20,7 @@ output
 **/debug.xml
 
 # egg files
-**/blokus.egg-info
+**/AlphaZeroArcade.egg-info
 
 # jupyter notebooks
 .ipynb_checkpoints/
