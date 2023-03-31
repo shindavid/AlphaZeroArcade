@@ -276,7 +276,6 @@ class AlphaZeroManager:
         value_loss_lambda = ModelingArgs.value_loss_lambda
         policy_criterion = nn.CrossEntropyLoss()
         value_criterion = nn.CrossEntropyLoss()
-        stats = TrainingStats()
 
         for_loop_time = 0
         t0 = time.time()
@@ -296,6 +295,7 @@ class AlphaZeroManager:
             timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
                         f'{games_dataset.n_total_positions} total positions (minibatches processed: {steps})')
 
+            stats = TrainingStats()
             for data in loader:
                 t1 = time.time()
                 inputs, value_labels, policy_labels = data
@@ -318,6 +318,7 @@ class AlphaZeroManager:
                 for_loop_time += t2 - t1
                 if steps == ModelingArgs.snapshot_steps:
                     break
+            stats.dump()
 
         t3 = time.time()
         total_time = t3 - t0
@@ -326,7 +327,6 @@ class AlphaZeroManager:
         timed_print(f'Gen {gen} training complete ({steps} minibatch updates)')
         timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
         timed_print(f'Training time:     {for_loop_time:10.3f} seconds')
-        stats.dump()
 
         checkpoint_filename = self.get_checkpoint_filename(gen)
         model_filename = self.get_model_filename(gen)
