@@ -280,8 +280,8 @@ class AlphaZeroManager:
 
         for_loop_time = 0
         t0 = time.time()
-        epoch = 0
-        while epoch < ModelingArgs.snapshot_steps:
+        steps = 0
+        while steps < ModelingArgs.snapshot_steps:
             games_dataset = GamesDataset(self.self_play_data_dir)
             loader = torch.utils.data.DataLoader(
                 games_dataset,
@@ -294,7 +294,7 @@ class AlphaZeroManager:
             net, optimizer = self.get_net_and_optimizer(loader)
 
             timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
-                        f'{games_dataset.n_total_positions} total positions (epochs processed: {epoch})')
+                        f'{games_dataset.n_total_positions} total positions (minibatches processed: {steps})')
 
             for data in loader:
                 t1 = time.time()
@@ -313,17 +313,17 @@ class AlphaZeroManager:
 
                 loss.backward()
                 optimizer.step()
-                epoch += 1
+                steps += 1
                 t2 = time.time()
                 for_loop_time += t2 - t1
-                if epoch == ModelingArgs.snapshot_steps:
+                if steps == ModelingArgs.snapshot_steps:
                     break
 
         t3 = time.time()
         total_time = t3 - t0
         data_loading_time = total_time - for_loop_time
 
-        timed_print(f'Gen {gen} training complete ({epoch} epochs)')
+        timed_print(f'Gen {gen} training complete ({steps} minibatch updates)')
         timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
         timed_print(f'Training time:     {for_loop_time:10.3f} seconds')
         stats.dump()
