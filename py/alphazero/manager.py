@@ -270,60 +270,62 @@ class AlphaZeroManager:
 
     def train_step(self):
         print('******************************')
-        games_dataset = GamesDataset(self.self_play_data_dir)
-        loader = torch.utils.data.DataLoader(
-            games_dataset,
-            batch_size = ModelingArgs.minibatch_size,
-            num_workers=4,
-            pin_memory=True,
-            shuffle=True)
-        assert loader.dataset.n_total_games >= self.n_gen0_games
-
         gen = self.get_latest_model_generation() + 1
         timed_print(f'Train gen:{gen}')
-
-        net, optimizer = self.get_net_and_optimizer(loader)
 
         value_loss_lambda = ModelingArgs.value_loss_lambda
         policy_criterion = nn.CrossEntropyLoss()
         value_criterion = nn.CrossEntropyLoss()
-
-        timed_print(f'Sampling from the {loader.dataset.n_window} most recent positions among '
-                    f'{loader.dataset.n_total_positions} total positions')
-
         stats = TrainingStats()
 
-        # TODO: more efficient data loading via pytorch DataLoader
         for_loop_time = 0
         t0 = time.time()
         epoch = 0
-        for data in loader:
-            t1 = time.time()
-            inputs, value_labels, policy_labels = data
-            inputs = inputs.to(self.py_cuda_device_str)
-            value_labels = value_labels.to(self.py_cuda_device_str)
-            policy_labels = policy_labels.to(self.py_cuda_device_str)
+        while epoch < ModelingArgs.snapshot_steps:
+            games_dataset = GamesDataset(self.self_play_data_dir)
+            loader = torch.utils.data.DataLoader(
+                games_dataset,
+                batch_size = ModelingArgs.minibatch_size,
+                num_workers=4,
+                pin_memory=True,
+                shuffle=True)
+            assert games_dataset.n_total_games >= self.n_gen0_games
 
-            optimizer.zero_grad()
-            policy_outputs, value_outputs = net(inputs)
-            policy_loss = policy_criterion(policy_outputs, policy_labels)
-            value_loss = value_criterion(value_outputs, value_labels)
-            loss = policy_loss + value_loss * value_loss_lambda
+            net, optimizer = self.get_net_and_optimizer(loader)
 
-            stats.update(policy_labels, policy_outputs, policy_loss, value_labels, value_outputs, value_loss)
+            timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
+                        f'{games_dataset.n_total_positions} total positions (epochs processed: {epoch})')
 
-            loss.backward()
-            optimizer.step()
-            epoch += 1
-            t2 = time.time()
-            for_loop_time += t2 - t1
+            for data in loader:
+                t1 = time.time()
+                inputs, value_labels, policy_labels = data
+                inputs = inputs.to(self.py_cuda_device_str)
+                value_labels = value_labels.to(self.py_cuda_device_str)
+                policy_labels = policy_labels.to(self.py_cuda_device_str)
+
+                optimizer.zero_grad()
+                policy_outputs, value_outputs = net(inputs)
+                policy_loss = policy_criterion(policy_outputs, policy_labels)
+                value_loss = value_criterion(value_outputs, value_labels)
+                loss = policy_loss + value_loss * value_loss_lambda
+
+                stats.update(policy_labels, policy_outputs, policy_loss, value_labels, value_outputs, value_loss)
+
+                loss.backward()
+                optimizer.step()
+                epoch += 1
+                t2 = time.time()
+                for_loop_time += t2 - t1
+                if epoch == ModelingArgs.snapshot_steps:
+                    break
 
         t3 = time.time()
         total_time = t3 - t0
         data_loading_time = total_time - for_loop_time
 
         timed_print(f'Gen {gen} training complete ({epoch} epochs)')
-        timed_print(f'Data loading time: {data_loading_time:.3f} seconds')
+        timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
+        timed_print(f'Training time:     {for_loop_time:10.3f} seconds')
         stats.dump()
 
         checkpoint_filename = self.get_checkpoint_filename(gen)
