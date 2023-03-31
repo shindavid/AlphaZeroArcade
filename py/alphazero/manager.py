@@ -35,6 +35,7 @@ import shutil
 import signal
 import sys
 import tempfile
+import time
 from typing import Optional, List, Dict
 
 import torch
@@ -290,8 +291,11 @@ class AlphaZeroManager:
         stats = TrainingStats()
 
         # TODO: more efficient data loading via pytorch DataLoader
+        for_loop_time = 0
+        t0 = time.time()
         epoch = 0
         for data in loader:
+            t1 = time.time()
             inputs, value_labels, policy_labels = data
 
             inputs = inputs.to(self.py_cuda_device_str)
@@ -309,8 +313,15 @@ class AlphaZeroManager:
             loss.backward()
             optimizer.step()
             epoch += 1
+            t2 = time.time()
+            for_loop_time += t2 - t1
+
+        t3 = time.time()
+        total_time = t3 - t0
+        data_loading_time = total_time - for_loop_time
 
         timed_print(f'Gen {gen} training complete ({epoch} epochs)')
+        timed_print(f'Data loading time: {data_loading_time:.3f} seconds')
         stats.dump()
 
         checkpoint_filename = self.get_checkpoint_filename(gen)
