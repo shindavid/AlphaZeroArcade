@@ -74,7 +74,7 @@ auto GameServer<GameState>::SharedData::get_results() const {
 }
 
 template<GameStateConcept GameState>
-typename GameServer<GameState>::registration_tag_t
+typename GameServer<GameState>::player_id_t
 GameServer<GameState>::SharedData::register_player(player_index_t seat, player_generator_t gen) {
   if (seat >= kNumPlayers) {
     throw util::Exception("Invalid seat number %d >= %d", seat, kNumPlayers);
@@ -86,10 +86,10 @@ GameServer<GameState>::SharedData::register_player(player_index_t seat, player_g
       }
     }
   }
-  registration_tag_t tag = num_registrations_;
+  player_id_t player_id = num_registrations_;
   num_registrations_++;
-  registration_templates_[tag] = registration_template_t{gen, seat, tag};
-  return tag;
+  registration_templates_[player_id] = registration_template_t{gen, seat, player_id};
+  return player_id;
 }
 
 template<GameStateConcept GameState>
@@ -160,10 +160,10 @@ void GameServer<GameState>::GameThread::run(const Params& params) {
 
     time_point_t t1 = std::chrono::steady_clock::now();
     GameOutcome outcome = play_game(players);
-    // reindex outcome according to registration tags
+    // reindex outcome according to player_id
     GameOutcome reindexed_outcome;
     for (int p = 0; p < kNumPlayers; ++p) {
-      reindexed_outcome[player_order[p].tag] = outcome[p];
+      reindexed_outcome[player_order[p].player_id] = outcome[p];
     }
     time_point_t t2 = std::chrono::steady_clock::now();
     duration_t duration = t2 - t1;

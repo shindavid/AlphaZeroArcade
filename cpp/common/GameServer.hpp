@@ -29,7 +29,7 @@ public:
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using duration_t = std::chrono::nanoseconds;
-  using registration_tag_t = int;
+  using player_id_t = int;
 
   /*
    * A registration_t is instantiated from a registration_template_t. See registration_template_t for more detail.
@@ -37,7 +37,7 @@ public:
   struct registration_t {
     Player* player;
     player_index_t seat;  // -1 means random seat
-    registration_tag_t tag;  // order in which player was registered
+    player_id_t player_id;  // order in which player was registered
   };
   using registration_array_t = std::array<registration_t, kNumPlayers>;
 
@@ -52,9 +52,9 @@ public:
   struct registration_template_t {
     player_generator_t gen;
     player_index_t seat;  // -1 means random seat
-    registration_tag_t tag;  // order in which player was generated
+    player_id_t player_id;  // order in which player was generated
 
-    registration_t instantiate() const { return {gen(), seat, tag}; }
+    registration_t instantiate() const { return {gen(), seat, player_id}; }
   };
   using registration_template_array_t = std::array<registration_template_t, kNumPlayers>;
 
@@ -83,7 +83,7 @@ private:
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
     int num_games_started() const { return num_games_started_; }
-    registration_tag_t register_player(player_index_t seat, player_generator_t gen);
+    player_id_t register_player(player_index_t seat, player_generator_t gen);
     int num_registrations() const { return num_registrations_; }
     registration_array_t generate_player_order(const registration_array_t& registrations) const;
     const registration_template_array_t& registration_templates() const { return registration_templates_; }
@@ -127,12 +127,12 @@ public:
    *
    * Otherwise, the player generated is assigned the specified seat.
    *
-   * The player generator is assigned a registration_tag_t (0, 1, 2, ...), according to the order in which the
+   * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in which the
    * registrations are made. This value is returned by this function. When aggregate game outcome stats are reported,
-   * they are aggregated by registration_tag_t.
+   * they are aggregated by player_id_t.
    */
-  registration_tag_t register_player(player_generator_t gen) { return register_player(-1, gen); }
-  registration_tag_t register_player(player_index_t seat, player_generator_t gen) {
+  player_id_t register_player(player_generator_t gen) { return register_player(-1, gen); }
+  player_id_t register_player(player_index_t seat, player_generator_t gen) {
     return shared_data_.register_player(seat, gen);
   }
 
