@@ -57,15 +57,16 @@ int main(int ac, char* av[]) {
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
   po::notify(vm);
 
+  c4::PlayerFactory player_factory;
   if (vm.count("help")) {
     std::cout << desc << std::endl;
-    PlayerFactory::print_help(args.player_strs);
+    player_factory.print_help(args.player_strs);
     return 0;
   }
 
   GameServer server(game_server_params);
 
-  for (const auto& pgs : PlayerFactory::parse(args.player_strs)) {
+  for (const auto& pgs : player_factory.parse(args.player_strs)) {
     server.register_player(pgs.seat, pgs.generator);
   }
   if (!server.ready_to_start()) {

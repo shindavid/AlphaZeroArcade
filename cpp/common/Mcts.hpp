@@ -100,6 +100,7 @@ public:
     Params(DefaultParamsType);
 
     auto make_options_description();
+    bool operator==(const Params& other) const = default;
 
     std::string nnet_filename;
     bool uniform_model = false;

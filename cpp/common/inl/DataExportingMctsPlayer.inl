@@ -9,9 +9,9 @@ namespace common {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 template<typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
-    TrainingDataWriter* writer, BaseArgs&&... base_args)
+    const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
 : base_t(std::forward<BaseArgs>(base_args)...)
-, writer_(writer) {}
+, writer_(TrainingDataWriter::instantiate(writer_params)) {}
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()

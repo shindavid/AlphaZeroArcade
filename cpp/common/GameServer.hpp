@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <common/AbstractPlayer.hpp>
+#include <common/AbstractPlayerGenerator.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/BasicTypes.hpp>
@@ -22,9 +23,9 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
   using Player = AbstractPlayer<GameState>;
+  using PlayerGenerator = AbstractPlayerGenerator<GameState>;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
-  using player_generator_t = std::function<Player*()>;
   using results_map_t = std::map<float, int>;
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
@@ -50,11 +51,11 @@ public:
    * each spawned GameThread can create its own player.
    */
   struct registration_template_t {
-    player_generator_t gen;
+    PlayerGenerator* gen;
     player_index_t seat;  // -1 means random seat
     player_id_t player_id;  // order in which player was generated
 
-    registration_t instantiate() const { return {gen(), seat, player_id}; }
+    registration_t instantiate(void* play_address) const { return {gen->generate(play_address), seat, player_id}; }
   };
   using registration_template_array_t = std::array<registration_template_t, kNumPlayers>;
 
@@ -83,7 +84,7 @@ private:
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
     int num_games_started() const { return num_games_started_; }
-    player_id_t register_player(player_index_t seat, player_generator_t gen);
+    player_id_t register_player(player_index_t seat, PlayerGenerator* gen);
     int num_registrations() const { return num_registrations_; }
     registration_array_t generate_player_order(const registration_array_t& registrations) const;
     const registration_template_array_t& registration_templates() const { return registration_templates_; }
@@ -131,8 +132,8 @@ public:
    * registrations are made. This value is returned by this function. When aggregate game outcome stats are reported,
    * they are aggregated by player_id_t.
    */
-  player_id_t register_player(player_generator_t gen) { return register_player(-1, gen); }
-  player_id_t register_player(player_index_t seat, player_generator_t gen) {
+  player_id_t register_player(PlayerGenerator* gen) { return register_player(-1, gen); }
+  player_id_t register_player(player_index_t seat, PlayerGenerator* gen) {
     return shared_data_.register_player(seat, gen);
   }
 

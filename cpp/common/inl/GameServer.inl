@@ -75,7 +75,7 @@ auto GameServer<GameState>::SharedData::get_results() const {
 
 template<GameStateConcept GameState>
 typename GameServer<GameState>::player_id_t
-GameServer<GameState>::SharedData::register_player(player_index_t seat, player_generator_t gen) {
+GameServer<GameState>::SharedData::register_player(player_index_t seat, PlayerGenerator* gen) {
   if (seat >= kNumPlayers) {
     throw util::Exception("Invalid seat number %d >= %d", seat, kNumPlayers);
   }
@@ -130,8 +130,9 @@ GameServer<GameState>::SharedData::generate_player_order(const registration_arra
 template<GameStateConcept GameState>
 GameServer<GameState>::GameThread::GameThread(SharedData& shared_data)
 : shared_data_(shared_data) {
+  void* play_address = this;
   for (int p = 0; p < kNumPlayers; ++p) {
-    registrations_[p] = shared_data_.registration_templates()[p].instantiate();
+    registrations_[p] = shared_data_.registration_templates()[p].instantiate(play_address);
   }
 }
 
@@ -256,8 +257,9 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
     Registration registration = packet.to_registration();
     const std::string& name = registration.player_name;
     printf("Registered player: \"%s\" (seat: %d)", name.c_str(), registration.requested_seat);
-    player_generator_t gen = [&]() { return new RemotePlayerProxy<GameState>(name, new_socket_descr); };
-    register_player(registration.requested_seat, gen);
+//    player_generator_t gen = [&]() { return new RemotePlayerProxy<GameState>(name, new_socket_descr); };
+//    register_player(registration.requested_seat, gen);
+    throw util::Exception("Not implemented");
   }
 }
 
