@@ -80,4 +80,8 @@ inline Packet Packet::from_socket(int socket_descriptor, char* buf, int buf_size
   return packet;
 }
 
+inline void Packet::to_socket(int socket_descriptor, PacketHeader::Type type, const char* buf, int buf_size) {
+  throw std::runtime_error("TODO");
+}
+
 }  // namespace common

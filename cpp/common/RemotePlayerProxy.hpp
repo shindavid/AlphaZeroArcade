@@ -25,7 +25,7 @@ public:
 
   RemotePlayerProxy(const std::string& name, int socket_descriptor);
 
-  void start_game(game_id_t, const player_array_t& players, player_index_t seat_assignment) override;
+  void start_game() override;
   void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
 

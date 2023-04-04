@@ -12,10 +12,8 @@ RemotePlayerProxy<GameState>::RemotePlayerProxy(const std::string& name, int soc
       , socket_descriptor_(socket_descriptor) {}
 
 template<GameStateConcept GameState>
-void RemotePlayerProxy<GameState>::start_game(
-    game_id_t game_id, const player_array_t& players, player_index_t seat_assignment)
-{
-  StartGamePayload payload{game_id, players.size(), seat_assignment};
+void RemotePlayerProxy<GameState>::start_game() {
+  StartGamePayload payload{this->get_game_id(), (int)this->get_player_names().size(), this->get_my_seat()};
   Packet::to_socket(socket_descriptor_, PacketHeader::kStartGame, payload);
 }
 
@@ -30,7 +28,7 @@ void RemotePlayerProxy<GameState>::receive_state_change(
 
 template<GameStateConcept GameState>
 action_index_t RemotePlayerProxy<GameState>::get_action(const GameState& state, const ActionMask& valid_actions) {
-  char buf[1024];
+  char buf[1024] = "";
 
   int buf_size = state.serialize_action_prompt(buf, sizeof(buf), valid_actions);
   Packet::to_socket(socket_descriptor_, PacketHeader::kActionPrompt, buf, buf_size);

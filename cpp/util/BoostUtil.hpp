@@ -9,6 +9,21 @@
 
 namespace boost_util {
 
+/*
+ * get_option_value(util::split("--foo=bar --baz ..."), "foo") -> "bar"
+ * get_option_value(util::split("--foo bar --baz ..."), "foo") -> "bar"
+ *
+ * If the option was not specified in args, returns the empty string.
+ */
+std::string get_option_value(const std::vector<std::string>& args, const std::string& option_name);
+
+/*
+ * Like get_option_value(), but also removes the option from args. Assumes that the given option is a named arg,
+ * meaning that it is of the form "--foo=bar" or "--foo bar".
+ */
+std::string pop_option_value(std::vector<std::string>& args, const std::string& option_name);
+
+
 namespace program_options {
 
 /*
@@ -142,3 +157,5 @@ private:
 }  // namespace program_options
 
 }  // namespace boost_util
+
+#include <util/inl/BoostUtil.inl>

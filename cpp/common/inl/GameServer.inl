@@ -257,7 +257,7 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
     const std::string& name = registration.player_name;
     printf("Registered player: \"%s\" (seat: %d)", name.c_str(), registration.requested_seat);
     player_generator_t gen = [&]() { return new RemotePlayerProxy<GameState>(name, new_socket_descr); };
-    register_player(gen, registration.requested_seat);
+    register_player(registration.requested_seat, gen);
   }
 }
 
