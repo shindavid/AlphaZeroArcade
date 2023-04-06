@@ -305,7 +305,10 @@ void GameServer<GameState>::run() {
     throw util::Exception("Cannot start game with %d players (need %d)", num_registered_players(), kNumPlayers);
   }
 
-  int parallelism = std::min(params().parallelism, params().num_games);
+  int parallelism = params().parallelism;
+  if (params().num_games > 0) {
+    parallelism = std::min(params().parallelism, params().num_games);
+  }
   for (int p = 0; p < parallelism; ++p) {
     GameThread* thread = new GameThread(shared_data_);
     threads_.push_back(thread);
