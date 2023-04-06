@@ -5,6 +5,7 @@
 #include <common/RandomPlayerGenerator.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayerGenerator.hpp>
+#include <connect4/C4PerfectPlayerGenerator.hpp>
 #include <connect4/C4Tensorizor.hpp>
 
 namespace c4 {
@@ -22,6 +23,7 @@ private:
       new c4::HumanTuiPlayerGenerator(),
       new common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>(),
       new common::TrainingMctsPlayerGenerator<GameState, Tensorizor>(),
+      new c4::PerfectPlayerGenerator(),
       new common::RandomPlayerGenerator<GameState>()
     };
   }
