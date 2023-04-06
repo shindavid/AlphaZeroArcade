@@ -36,9 +36,9 @@ public:
    * A registration_t is instantiated from a registration_template_t. See registration_template_t for more detail.
    */
   struct registration_t {
-    Player* player;
-    player_index_t seat;  // -1 means random seat
-    player_id_t player_id;  // order in which player was registered
+    Player* player = nullptr;
+    player_index_t seat = -1;  // -1 means random seat
+    player_id_t player_id = -1;  // order in which player was registered
   };
   using registration_array_t = std::array<registration_t, kNumPlayers>;
 
@@ -51,9 +51,9 @@ public:
    * each spawned GameThread can create its own player.
    */
   struct registration_template_t {
-    PlayerGenerator* gen;
-    player_index_t seat;  // -1 means random seat
-    player_id_t player_id;  // order in which player was generated
+    PlayerGenerator* gen = nullptr;
+    player_index_t seat = -1;  // -1 means random seat
+    player_id_t player_id = -1;  // order in which player was generated
 
     registration_t instantiate(void* play_address) const { return {gen->generate(play_address), seat, player_id}; }
   };

@@ -109,6 +109,9 @@ GameServer<GameState>::SharedData::generate_player_order(const registration_arra
       random_seat_assignments[num_random_assignments++] = reg;
       continue;
     }
+    if (player_order[reg.seat].player) {
+      throw util::Exception("Unexpected error: double-seated player at seat %d", reg.seat);
+    }
     player_order[reg.seat] = reg;
   }
 
