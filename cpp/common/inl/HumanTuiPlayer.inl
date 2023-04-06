@@ -9,6 +9,11 @@
 namespace common {
 
 template<GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::start_game() {
+  util::clearscreen();
+}
+
+template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::receive_state_change(
     common::player_index_t p, const GameState& state, common::action_index_t action)
 {

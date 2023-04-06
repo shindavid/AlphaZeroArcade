@@ -114,6 +114,7 @@ private:
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
     void launch();
+    bool has_human_tui_player() const { return has_human_tui_player_; }
 
   private:
     void run();
@@ -122,6 +123,7 @@ private:
     SharedData& shared_data_;
     registration_array_t registrations_;
     std::thread* thread_ = nullptr;
+    bool has_human_tui_player_ = false;
   };
 
 public:

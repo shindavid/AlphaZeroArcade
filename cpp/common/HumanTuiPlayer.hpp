@@ -19,6 +19,7 @@ public:
   using player_array_t = typename base_t::player_array_t;
 
   HumanTuiPlayer() : base_t("Human") {}
+  void start_game() override;
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;

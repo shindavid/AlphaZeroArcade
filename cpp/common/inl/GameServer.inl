@@ -32,9 +32,9 @@ auto GameServer<GameState>::Params::make_options_description() {
       .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
                                              "num games (<=0 means run indefinitely)")
       .template add_option<"parallelism", 'p'>(po::value<int>(&parallelism)->default_value(parallelism),
-                                               "num games to play simultaneously")
+                                               "num games to play simultaneously. Auto-set to 1 if TUI player in game")
       .template add_bool_switches<"display-progress-bar", "hide-progress-bar">(
-          &display_progress_bar, "display progress bar (only in tty-mode without human player)", "hide progress bar")
+          &display_progress_bar, "display progress bar (only in tty-mode without TUI player)", "hide progress bar")
       ;
 }
 
@@ -134,8 +134,24 @@ template<GameStateConcept GameState>
 GameServer<GameState>::GameThread::GameThread(SharedData& shared_data)
 : shared_data_(shared_data) {
   void* play_address = this;
+
+  std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     registrations_[p] = shared_data_.registration_templates()[p].instantiate(play_address);
+    human_tui_indices[p] = registrations_[p].player->is_human_tui_player();
+  }
+
+  has_human_tui_player_ = human_tui_indices.any();
+  for (int p = 0; p < kNumPlayers; ++p) {
+    std::bitset<kNumPlayers> human_tui_indices_copy(human_tui_indices);
+    human_tui_indices_copy[p] = false;
+    if (human_tui_indices_copy.any()) {
+      registrations_[p].player->set_facing_human_tui_player();
+    }
+  }
+
+  if (!has_human_tui_player_) {
+    shared_data_.init_progress_bar();
   }
 }
 
@@ -155,8 +171,17 @@ template<GameStateConcept GameState>
 void GameServer<GameState>::GameThread::run() {
   const Params& params = shared_data_.params();
 
+  bool first_game = true;
   while (true) {
     if (!shared_data_.request_game(params.num_games)) return;
+
+    if (has_human_tui_player_ && !first_game) {
+      std::cout << "Press enter to start next game" << std::endl;
+      std::string input;
+      std::getline(std::cin, input);
+    }
+    first_game = false;
+
     registration_array_t player_order = shared_data_.generate_player_order(registrations_);
 
     player_array_t players;
@@ -182,24 +207,6 @@ template<GameStateConcept GameState>
 typename GameServer<GameState>::GameOutcome
 GameServer<GameState>::GameThread::play_game(player_array_t& players) {
   game_id_t game_id = util::get_unique_id();
-
-  bool human_tui_in_game = false;
-  for (auto player : players) {
-    if (player->is_human_tui_player()) {
-      human_tui_in_game = true;
-      break;
-    }
-  }
-
-  if (human_tui_in_game) {
-    for (auto player : players) {
-      if (!player->is_human_tui_player()) {
-        player->set_facing_human_tui_player();
-      }
-    }
-  } else {
-    shared_data_.init_progress_bar();
-  }
 
   player_name_array_t player_names;
   for (size_t p = 0; p < players.size(); ++p) {
@@ -297,7 +304,9 @@ void GameServer<GameState>::run() {
 
   int parallelism = std::min(params().parallelism, params().num_games);
   for (int p = 0; p < parallelism; ++p) {
-    threads_.push_back(new GameThread(shared_data_));
+    GameThread* thread = new GameThread(shared_data_);
+    threads_.push_back(thread);
+    if (thread->has_human_tui_player()) break;
   }
 
   time_point_t t1 = std::chrono::steady_clock::now();
@@ -321,7 +330,7 @@ void GameServer<GameState>::run() {
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     printf("P%d %s\n", p, get_results_str(results[p]).c_str());
   }
-  util::ParamDumper::add("Parallelism factor", "%d", parallelism);
+  util::ParamDumper::add("Parallelism factor", "%d", (int)threads_.size());
   util::ParamDumper::add("Num games", "%d", num_games);
   util::ParamDumper::add("Total runtime", "%.3fs", ns*1e-9);
   util::ParamDumper::add("Avg runtime", "%.3fs", ns*1e-9 / num_games);
