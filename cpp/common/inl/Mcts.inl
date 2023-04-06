@@ -1393,7 +1393,7 @@ inline void Mcts<GameState, Tensorizor>::clear() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::receive_state_change(
-    player_index_t player, const GameState& state, action_index_t action, const GameOutcome& outcome)
+    player_index_t player, const GameState& state, action_index_t action)
 {
   root_softmax_temperature_.step();
   stop_search_threads();

@@ -734,7 +734,7 @@ public:
 
   void start();
   void clear();
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&);
+  void receive_state_change(player_index_t, const GameState&, action_index_t);
   const MctsResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
   void add_dirichlet_noise(LocalPolicyProbDistr& P);
   float root_softmax_temperature() const { return root_softmax_temperature_.value(); }

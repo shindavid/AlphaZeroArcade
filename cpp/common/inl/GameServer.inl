@@ -175,8 +175,24 @@ void GameServer<GameState>::GameThread::run(const Params& params) {
 
 template<GameStateConcept GameState>
 typename GameServer<GameState>::GameOutcome
-GameServer<GameState>::GameThread::play_game(const player_array_t& players) {
+GameServer<GameState>::GameThread::play_game(player_array_t& players) {
   game_id_t game_id = util::get_unique_id();
+
+  bool human_tui_in_game = false;
+  for (auto player : players) {
+    if (player->is_human_tui_player()) {
+      human_tui_in_game = true;
+      break;
+    }
+  }
+
+  if (human_tui_in_game) {
+    for (auto player : players) {
+      if (!player->is_human_tui_player()) {
+        player->set_facing_human_tui_player();
+      }
+    }
+  }
 
   player_name_array_t player_names;
   for (size_t p = 0; p < players.size(); ++p) {
@@ -198,9 +214,12 @@ GameServer<GameState>::GameThread::play_game(const player_array_t& players) {
     }
     auto outcome = state.apply_move(action);
     for (auto player2 : players) {
-      player2->receive_state_change(p, state, action, outcome);
+      player2->receive_state_change(p, state, action);
     }
     if (is_terminal_outcome(outcome)) {
+      for (auto player2 : players) {
+        player2->end_game(state, outcome);
+      }
       return outcome;
     }
   }
@@ -269,7 +288,7 @@ void GameServer<GameState>::run() {
     throw util::Exception("Cannot start game with %d players (need %d)", num_registered_players(), kNumPlayers);
   }
 
-  int parallelism = params_.parallelism;
+  int parallelism = std::min(params_.parallelism, params_.num_games);
   for (int p = 0; p < parallelism; ++p) {
     threads_.push_back(new GameThread(shared_data_));
   }

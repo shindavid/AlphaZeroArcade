@@ -17,7 +17,6 @@ CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::CompetitiveMctsPlayerGene
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 AbstractPlayer<GameState>* CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::generate(void* play_address) {
-//  return new MctsPlayer(mcts_player_params_, mcts_params_);
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   for (const auto& mpl : base_t::mcts_play_locations_) {
     if (mpl.play_location == play_address && mpl.mcts->params() == mcts_params_) {

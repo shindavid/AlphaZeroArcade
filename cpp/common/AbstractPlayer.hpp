@@ -10,6 +10,25 @@
 
 namespace common {
 
+/*
+ * Base class for all players.
+ *
+ * There are 4 main virtual functions to override:
+ *
+ * - start_game()
+ * - receive_state_change()
+ * - get_action()
+ * - end_gamed()
+ *
+ * start_game() and end_game() are called when a game starts or ends. A single player might play multiple games in
+ * succession, so you should override this method if there is state that you want to clear between games.
+ *
+ * receive_state_change() is called when the game state changes. This is where you should update your internal state.
+ * Note that you get this callback even after you make your own turn as a sort of "echo" of your own action.
+ *
+ * get_action() is called when it is your turn to make a move. This is where you should return the action that you want
+ * to take.
+ */
 template<GameStateConcept GameState>
 class AbstractPlayer {
 public:
@@ -34,8 +53,19 @@ public:
   }
 
   virtual void start_game() {}
-  virtual void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) {}
+  virtual void receive_state_change(player_index_t, const GameState&, action_index_t) {}
   virtual action_index_t get_action(const GameState&, const ActionMask&) = 0;
+  virtual void end_game(const GameState&, const GameOutcome&) {}
+
+  /*
+   * A funny pair of extra virtual functions that most subclasses can ignore.
+   *
+   * Override set_facing_human_tui_player() if you want to do something special when you are playing against a human
+   * TUI player. You might want to do this because you may want to print verbose information differently in this case,
+   * in order to avoid interfering with the user-interface of the human player.
+   */
+  virtual void set_facing_human_tui_player() {}
+  virtual bool is_human_tui_player() const { return false; }
 
 private:
   std::string name_;

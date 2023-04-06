@@ -113,7 +113,7 @@ private:
 
   private:
     void run(const Params&);
-    GameOutcome play_game(const player_array_t&);
+    GameOutcome play_game(player_array_t&);
 
     SharedData& shared_data_;
     registration_array_t registrations_;

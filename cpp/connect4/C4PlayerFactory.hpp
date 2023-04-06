@@ -1,10 +1,10 @@
 #pragma once
 
 #include <common/PlayerFactory.hpp>
-#include <common/HumanTuiPlayerGenerator.hpp>
 #include <common/MctsPlayerGenerator.hpp>
 #include <common/RandomPlayerGenerator.hpp>
 #include <connect4/C4GameState.hpp>
+#include <connect4/C4HumanTuiPlayerGenerator.hpp>
 #include <connect4/C4Tensorizor.hpp>
 
 namespace c4 {
@@ -19,7 +19,7 @@ public:
 private:
   static player_generator_vec_t make_generators() {
     return {
-      new common::HumanTuiPlayerGenerator<GameState>(),
+      new c4::HumanTuiPlayerGenerator(),
       new common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>(),
       new common::TrainingMctsPlayerGenerator<GameState, Tensorizor>(),
       new common::RandomPlayerGenerator<GameState>()

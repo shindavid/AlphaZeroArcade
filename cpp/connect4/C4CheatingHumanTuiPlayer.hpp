@@ -10,11 +10,10 @@ class CheatingHumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
 public:
   using base_t = common::HumanTuiPlayer<GameState>;
 
-  CheatingHumanTuiPlayer(const PerfectPlayParams& perfect_play_params);
-
   void start_game() override;
   void receive_state_change(
-      common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
+      common::player_index_t, const GameState&, common::action_index_t) override;
+  void end_game(const GameState&, const GameOutcome&) override;
 
 private:
   void print_state(const GameState&) override;
