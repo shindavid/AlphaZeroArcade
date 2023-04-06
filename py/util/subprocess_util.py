@@ -26,7 +26,12 @@ def defaultize_kwargs(cmd: Union[str, List[str]], **kwargs) -> Dict[str, Any]:
 def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
     """
     Convenience wrapper around subprocess.Popen(), using the defaults of defaultize_kwargs().
+
+    Also, if cmd is a str, it prepends "exec" in front of it. This is a nice hack to make it so that proc.kill()
+    kills the process. See: https://stackoverflow.com/a/13143013/543913
     """
+    if isinstance(cmd, str):
+        cmd = 'exec ' + cmd
     return subprocess.Popen(cmd, **defaultize_kwargs(cmd, **kwargs))
 
 
@@ -45,7 +50,12 @@ def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code=0):
 def run(cmd: Union[str, List[str]], validate_rc=True, **kwargs) -> subprocess.CompletedProcess:
     """
     Convenience wrapper around subprocess.run(), using the defaults of defaultize_kwargs().
+
+    Also, if cmd is a str, it prepends "exec" in front of it. This is a nice hack to make it so that proc.kill()
+    kills the process. See: https://stackoverflow.com/a/13143013/543913
     """
+    if isinstance(cmd, str):
+        cmd = 'exec ' + cmd
     proc = subprocess.run(cmd, **defaultize_kwargs(cmd, **kwargs))
     if validate_rc and proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, proc.args)
