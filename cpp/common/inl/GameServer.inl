@@ -34,14 +34,17 @@ auto GameServer<GameState>::Params::make_options_description() {
       .template add_option<"parallelism", 'p'>(po::value<int>(&parallelism)->default_value(parallelism),
                                                "num games to play simultaneously")
       .template add_bool_switches<"display-progress-bar", "hide-progress-bar">(
-          &display_progress_bar, "display progress bar (only used in tty mode)", "hide progress bar")
+          &display_progress_bar, "display progress bar (only in tty-mode without human player)", "hide progress bar")
       ;
 }
 
 template<GameStateConcept GameState>
-GameServer<GameState>::SharedData::SharedData(const Params& params) {
-  if (params.display_progress_bar && params.num_games > 0 && util::tty_mode()) {
-    bar_ = new progressbar(params.num_games + 1);  // + 1 for first update
+void GameServer<GameState>::SharedData::init_progress_bar() {
+  std::lock_guard<std::mutex> guard(mutex_);
+  if (bar_) return;
+
+  if (params_.display_progress_bar && params_.num_games > 0 && util::tty_mode()) {
+    bar_ = new progressbar(params_.num_games + 1);  // + 1 for first update
     bar_->update();  // so that progress-bar displays immediately
   }
 }
@@ -144,12 +147,14 @@ GameServer<GameState>::GameThread::~GameThread() {
 }
 
 template<GameStateConcept GameState>
-void GameServer<GameState>::GameThread::launch(const Params& params) {
-  thread_ = new std::thread([&] { run(params); });
+void GameServer<GameState>::GameThread::launch() {
+  thread_ = new std::thread([&] { run(); });
 }
 
 template<GameStateConcept GameState>
-void GameServer<GameState>::GameThread::run(const Params& params) {
+void GameServer<GameState>::GameThread::run() {
+  const Params& params = shared_data_.params();
+
   while (true) {
     if (!shared_data_.request_game(params.num_games)) return;
     registration_array_t player_order = shared_data_.generate_player_order(registrations_);
@@ -192,6 +197,8 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
         player->set_facing_human_tui_player();
       }
     }
+  } else {
+    shared_data_.init_progress_bar();
   }
 
   player_name_array_t player_names;
@@ -228,7 +235,7 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
 }
 
 template<GameStateConcept GameState>
-GameServer<GameState>::GameServer(const Params& params) : params_(params), shared_data_(params) {}
+GameServer<GameState>::GameServer(const Params& params) : shared_data_(params) {}
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::wait_for_remote_player_registrations() {
@@ -288,7 +295,7 @@ void GameServer<GameState>::run() {
     throw util::Exception("Cannot start game with %d players (need %d)", num_registered_players(), kNumPlayers);
   }
 
-  int parallelism = std::min(params_.parallelism, params_.num_games);
+  int parallelism = std::min(params().parallelism, params().num_games);
   for (int p = 0; p < parallelism; ++p) {
     threads_.push_back(new GameThread(shared_data_));
   }
@@ -296,7 +303,7 @@ void GameServer<GameState>::run() {
   time_point_t t1 = std::chrono::steady_clock::now();
 
   for (auto thread : threads_) {
-    thread->launch(params_);
+    thread->launch();
   }
 
   for (auto thread : threads_) {

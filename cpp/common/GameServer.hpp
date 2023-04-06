@@ -77,9 +77,11 @@ private:
    */
   class SharedData {
   public:
-    SharedData(const Params& params);
+    SharedData(const Params& params) : params_(params) {}
     ~SharedData() { if (bar_) delete bar_; }
 
+    const Params& params() const { return params_; }
+    void init_progress_bar();
     bool request_game(int num_games);  // returns false iff hit num_games limit
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
@@ -90,6 +92,8 @@ private:
     const registration_template_array_t& registration_templates() const { return registration_templates_; }
 
   private:
+    const Params params_;
+
     registration_template_array_t registration_templates_;
     int num_registrations_ = 0;
 
@@ -109,10 +113,10 @@ private:
     ~GameThread();
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
-    void launch(const Params&);
+    void launch();
 
   private:
-    void run(const Params&);
+    void run();
     GameOutcome play_game(player_array_t&);
 
     SharedData& shared_data_;
@@ -142,13 +146,13 @@ public:
    */
   void wait_for_remote_player_registrations();
 
-  int port() const { return params_.port; }
+  const Params& params() const { return shared_data_.params(); }
+  int port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
   bool ready_to_start() const { return num_registered_players() == kNumPlayers; }
   void run();
 
 private:
-  const Params params_;
   std::vector<GameThread*> threads_;
   SharedData shared_data_;
 };
