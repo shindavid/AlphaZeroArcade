@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shlex
 import time
 
 from config import Config
@@ -67,20 +68,28 @@ class ModelGrader:
         return os.path.join(self.grading_logs_dir, f'gen-{gen}.log')
 
     def grade(self, gen):
-        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
-        assert os.path.isfile(self_play_bin)
-        cmd = [
-            self_play_bin,
-            '-G', Args.n_games,
+        c4_bin = os.path.join(Repo.root(), 'target/Release/bin/c4')
+        assert os.path.isfile(c4_bin)
+        player_args = [
+            '--type=MCTS-C',
             '-i', Args.mcts_iters,
             '--batch-size-limit', Args.batch_size_limit,
-            '-p', Args.parallelism_factor,
             '--nnet-filename', self.get_model_filename(gen),
             '--no-forced-playouts',
-            '--hide-progress-bar',
             '--grade-moves',
         ]
-        cmd = ' '.join(map(str, cmd))
+        player2_args = [
+            '--type=Perfect',
+            '--seat=1',
+        ]
+        cmd = [
+            c4_bin,
+            '-G', Args.n_games,
+            '-p', Args.parallelism_factor,
+            '--player', ' '.join(map(str, player_args)),
+            '--player', ' '.join(map(str, player2_args)),
+        ]
+        cmd = ' '.join(map(lambda x: shlex.quote(str(x)), cmd))
         log_filename = self.get_log_filename(gen)
         hidden_log_filename = make_hidden_filename(log_filename)
         cmd = f'{cmd} > {hidden_log_filename}'
