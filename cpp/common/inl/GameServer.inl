@@ -77,6 +77,13 @@ auto GameServer<GameState>::SharedData::get_results() const {
 }
 
 template<GameStateConcept GameState>
+void GameServer<GameState>::SharedData::end_session() {
+  for (auto& reg : registration_templates_) {
+    reg.gen->end_session();
+  }
+}
+
+template<GameStateConcept GameState>
 typename GameServer<GameState>::player_id_t
 GameServer<GameState>::SharedData::register_player(player_index_t seat, PlayerGenerator* gen) {
   if (seat >= kNumPlayers) {
@@ -344,6 +351,8 @@ void GameServer<GameState>::run() {
   for (auto thread: threads_) {
     delete thread;
   }
+
+  shared_data_.end_session();
 }
 
 template<GameStateConcept GameState>

@@ -32,10 +32,7 @@ AbstractPlayer<GameState>* CompetitiveMctsPlayerGenerator<GameState, Tensorizor>
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::parse_args(const std::vector<std::string>& args) {
-  namespace po = boost::program_options;
-  po::variables_map vm;
-  po::store(po::command_line_parser(args).options(make_options_description()).run(), vm);
-  po::notify(vm);
+  this->parse_args_helper(make_options_description(), args);
 }
 
 // TrainingMctsPlayerGenerator
@@ -62,10 +59,7 @@ AbstractPlayer<GameState>* TrainingMctsPlayerGenerator<GameState, Tensorizor>::g
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void TrainingMctsPlayerGenerator<GameState, Tensorizor>::parse_args(const std::vector<std::string>& args) {
-  namespace po = boost::program_options;
-  po::variables_map vm;
-  po::store(po::command_line_parser(args).options(make_options_description()).run(), vm);
-  po::notify(vm);
+  this->parse_args_helper(make_options_description(), args);
 }
 
 }  // namespace common

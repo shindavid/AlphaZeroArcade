@@ -85,6 +85,7 @@ private:
     bool request_game(int num_games);  // returns false iff hit num_games limit
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
+    void end_session();
     int num_games_started() const { return num_games_started_; }
     player_id_t register_player(player_index_t seat, PlayerGenerator* gen);
     int num_registrations() const { return num_registrations_; }

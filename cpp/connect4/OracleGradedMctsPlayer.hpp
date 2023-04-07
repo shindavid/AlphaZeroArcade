@@ -53,7 +53,7 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
+      common::player_index_t, const GameState&, common::action_index_t) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 protected:

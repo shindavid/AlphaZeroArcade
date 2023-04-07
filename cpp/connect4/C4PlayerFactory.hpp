@@ -5,6 +5,7 @@
 #include <common/RandomPlayerGenerator.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4HumanTuiPlayerGenerator.hpp>
+#include <connect4/C4MctsPlayerGenerator.hpp>
 #include <connect4/C4PerfectPlayerGenerator.hpp>
 #include <connect4/C4Tensorizor.hpp>
 
@@ -21,8 +22,8 @@ private:
   static player_generator_vec_t make_generators() {
     return {
       new c4::HumanTuiPlayerGenerator(),
-      new common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>(),
-      new common::TrainingMctsPlayerGenerator<GameState, Tensorizor>(),
+      new c4::CompetitiveMctsPlayerGenerator(),
+      new c4::TrainingMctsPlayerGenerator(),
       new c4::PerfectPlayerGenerator(),
       new common::RandomPlayerGenerator<GameState>()
     };

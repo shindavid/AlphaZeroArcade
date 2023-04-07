@@ -42,7 +42,7 @@ public:
   void print_help(std::ostream& s) override { make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args);
 
-private:
+protected:
   auto make_options_description() {
     return mcts_params_.make_options_description().add(mcts_player_params_.make_options_description());
   }
@@ -69,7 +69,7 @@ public:
   void print_help(std::ostream& s) override { make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 
-private:
+protected:
   auto make_options_description() {
     return mcts_params_.make_options_description()
       .add(mcts_player_params_.make_options_description())
