@@ -1,3 +1,11 @@
+/*
+ * In the past, we used this to generate perfectly-labeled training data for testing purposes. Conceivably, this
+ * could still be useful, but it's no longer used now that the AlphaZero complete loop works.
+ *
+ * After some refactoring (the introduction of GameServer to replace GameRunner/ParallelGameRunner), this no longer
+ * compiles. Because it's no longer used, I'm not going to bother fixing it. But I will leave it around in case we want
+ * to revive it for whatever reason.
+ */
 #include <iostream>
 #include <string>
 #include <vector>
