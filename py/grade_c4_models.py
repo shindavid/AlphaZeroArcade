@@ -77,16 +77,11 @@ class ModelGrader:
             '--no-forced-playouts',
             '--grade-moves',
         ]
-        player2_args = [
-            '--type=Perfect',
-            '--seat=1',
-        ]
         cmd = [
             c4_bin,
             '-G', Args.n_games,
             '-p', Args.parallelism_factor,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
-            '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
         cmd = ' '.join(map(str, cmd))
         log_filename = self.get_log_filename(gen)
