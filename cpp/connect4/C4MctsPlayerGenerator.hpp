@@ -37,7 +37,6 @@ public:
 
   ~CompetitiveMctsPlayerGenerator() override;
 
-  common::AbstractPlayer<c4::GameState>* generate(void* play_address) override;
   void print_help(std::ostream& s) override;
   void parse_args(const std::vector<std::string>& args) override;
   void end_session() override;
@@ -46,6 +45,9 @@ protected:
   auto make_options_description() {
     return base_t::make_options_description().add(params_.make_options_description());
   }
+
+  BaseMctsPlayer* generate_from_scratch() override;
+  BaseMctsPlayer* generate_from_mcts(Mcts* mcts) override;
 
   Params params_;
   PerfectOracle* oracle_ = nullptr;

@@ -5,29 +5,43 @@ namespace common {
 // MctsPlayerGeneratorBase
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_play_location_vec_t
-    MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_play_locations_;
+typename MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_map_t
+    MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_cache_;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::generate(void* play_address) {
+  mcts_vec_t& vec = mcts_cache_[play_address];
+  for (Mcts* mcts : vec) {
+    if (mcts->params() == mcts_params_) {
+      return generate_from_mcts(mcts);
+    }
+  }
+
+  auto player = generate_from_scratch();
+  Mcts* mcts = player->get_mcts();
+  vec.push_back(mcts);
+  return player;
+}
 
 // CompetitiveMctsPlayerGenerator
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::CompetitiveMctsPlayerGenerator()
-: mcts_params_(Mcts::kCompetitive)
+: base_t(Mcts::kCompetitive)
 , mcts_player_params_(MctsPlayer::kCompetitive) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-AbstractPlayer<GameState>* CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::generate(void* play_address) {
-  using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
-  for (const auto& mpl : base_t::mcts_play_locations_) {
-    if (mpl.play_location == play_address && mpl.mcts->params() == mcts_params_) {
-      return new MctsPlayer(mcts_player_params_, mpl.mcts);
-    }
-  }
+typename CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::BaseMctsPlayer*
+CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::generate_from_scratch()
+{
+  return new MctsPlayer(mcts_player_params_, this->mcts_params_);
+}
 
-  auto player = new MctsPlayer(mcts_player_params_, mcts_params_);
-  Mcts* mcts = player->get_mcts();
-  base_t::mcts_play_locations_.push_back({mcts, play_address});
-  return player;
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+typename CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::BaseMctsPlayer*
+CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::generate_from_mcts(Mcts* mcts)
+{
+  return new MctsPlayer(mcts_player_params_, mcts);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -39,22 +53,21 @@ void CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::parse_args(const std
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 TrainingMctsPlayerGenerator<GameState, Tensorizor>::TrainingMctsPlayerGenerator()
-: mcts_params_(Mcts::kTraining)
+: base_t(Mcts::kTraining)
 , mcts_player_params_(MctsPlayer::kTraining) {}
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-AbstractPlayer<GameState>* TrainingMctsPlayerGenerator<GameState, Tensorizor>::generate(void* play_address) {
-  using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
-  for (const auto& mpl : base_t::mcts_play_locations_) {
-    if (mpl.play_location == play_address && mpl.mcts->params() == mcts_params_) {
-      return new MctsPlayer(writer_params_, mcts_player_params_, mpl.mcts);
-    }
-  }
+typename TrainingMctsPlayerGenerator<GameState, Tensorizor>::BaseMctsPlayer*
+TrainingMctsPlayerGenerator<GameState, Tensorizor>::generate_from_scratch()
+{
+  return new MctsPlayer(writer_params_, mcts_player_params_, this->mcts_params_);
+}
 
-  auto player = new MctsPlayer(writer_params_, mcts_player_params_, mcts_params_);
-  Mcts* mcts = player->get_mcts();
-  base_t::mcts_play_locations_.push_back({mcts, play_address});
-  return player;
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+typename TrainingMctsPlayerGenerator<GameState, Tensorizor>::BaseMctsPlayer*
+TrainingMctsPlayerGenerator<GameState, Tensorizor>::generate_from_mcts(Mcts* mcts)
+{
+  return new MctsPlayer(writer_params_, mcts_player_params_, mcts);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
