@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import shlex
 import time
 
 from config import Config
@@ -86,10 +85,10 @@ class ModelGrader:
             c4_bin,
             '-G', Args.n_games,
             '-p', Args.parallelism_factor,
-            '--player', ' '.join(map(str, player_args)),
-            '--player', ' '.join(map(str, player2_args)),
+            '--player', '"%s"' % (' '.join(map(str, player_args))),
+            '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
-        cmd = ' '.join(map(lambda x: shlex.quote(str(x)), cmd))
+        cmd = ' '.join(map(str, cmd))
         log_filename = self.get_log_filename(gen)
         hidden_log_filename = make_hidden_filename(log_filename)
         cmd = f'{cmd} > {hidden_log_filename}'

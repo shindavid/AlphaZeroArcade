@@ -30,7 +30,6 @@ BASE_DIR/
 TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
 """
 import os
-import shlex
 import shutil
 import signal
 import sys
@@ -269,10 +268,10 @@ class AlphaZeroManager:
         self_play_cmd = [
             c4_bin,
             '-G', n_games,
-            '--player', ' '.join(player_args),
+            '--player', '"%s"' % (' '.join(map(str, player_args))),
         ]
 
-        self_play_cmd = ' '.join(map(lambda x: shlex.quote(str(x)), self_play_cmd))
+        self_play_cmd = ' '.join(map(str, self_play_cmd))
         return SelfPlayProcData(self_play_cmd, n_games, gen, games_dir)
 
     def train_step(self):
