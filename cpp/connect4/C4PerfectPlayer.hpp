@@ -9,7 +9,6 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
-#include <common/GameRunner.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <util/BoostUtil.hpp>
