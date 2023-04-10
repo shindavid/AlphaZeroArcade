@@ -23,11 +23,11 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
 add_executable(c4 cpp/connect4/main/Connect4.cpp)
-add_executable(c4_dshin_scratch cpp/connect4/main/DshinScratch.cpp)
+add_executable(dshin_scratch cpp/connect4/main/DshinScratch.cpp)
 
 set(executables
         c4
-        c4_dshin_scratch
+        dshin_scratch
         )
 
 add_subdirectory("cpp/util")
