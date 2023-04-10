@@ -150,7 +150,7 @@ public:
   void wait_for_remote_player_registrations();
 
   const Params& params() const { return shared_data_.params(); }
-  int port() const { return params().port; }
+  int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
   bool ready_to_start() const { return num_registered_players() == kNumPlayers; }
   void run();

@@ -86,14 +86,10 @@ void GameServer<GameState>::SharedData::end_session() {
 template<GameStateConcept GameState>
 typename GameServer<GameState>::player_id_t
 GameServer<GameState>::SharedData::register_player(player_index_t seat, PlayerGenerator* gen) {
-  if (seat >= kNumPlayers) {
-    throw util::Exception("Invalid seat number %d >= %d", seat, kNumPlayers);
-  }
+  util::clean_assert(0 <= seat && seat < kNumPlayers, "Invalid seat number %d", seat);
   if (seat >= 0) {
     for (int r = 0; r < num_registrations_; ++r) {
-      if (registration_templates_[r].seat == seat) {
-        throw util::Exception("Double-seated player at seat %d", seat);
-      }
+      util::clean_assert(registration_templates_[r].seat != seat, "Double-seated player at seat %d", seat);
     }
   }
   player_id_t player_id = num_registrations_;
@@ -256,16 +252,15 @@ GameServer<GameState>::GameServer(const Params& params) : shared_data_(params) {
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::wait_for_remote_player_registrations() {
-  if (port() <= 0) {
-    throw util::Exception("Invalid port number %d", port());
-  }
+  int port = get_port();
+  util::clean_assert(port > 0, "Invalid port number %d", port);
 
   // setup socket
   sockaddr_in socket_address_info;
   bzero((char *) &socket_address_info, sizeof(socket_address_info));
   socket_address_info.sin_family = AF_INET;
   socket_address_info.sin_addr.s_addr = htonl(INADDR_ANY);
-  socket_address_info.sin_port = htons(port());
+  socket_address_info.sin_port = htons(port);
 
   // open socket
   int server_socket = socket(AF_INET, SOCK_STREAM, 0);
