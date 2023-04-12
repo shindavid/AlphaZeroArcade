@@ -165,12 +165,12 @@ GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thre
   for (int p = 0; p < kNumPlayers; ++p) {
     registrations_[p] = shared_data_.registration_templates()[p].instantiate(id);
     human_tui_indices[p] = registrations_[p].player->is_human_tui_player();
-    int msg = registrations_[p].player->max_simultaneous_games();
-    if (msg > 0) {
+    int m = registrations_[p].player->max_simultaneous_games();
+    if (m > 0) {
       if (max_simultaneous_games_ == 0) {
-        max_simultaneous_games_ = msg;
+        max_simultaneous_games_ = m;
       } else {
-        max_simultaneous_games_ = std::min(max_simultaneous_games_, msg);
+        max_simultaneous_games_ = std::min(max_simultaneous_games_, m);
       }
     }
   }
