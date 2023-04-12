@@ -43,11 +43,11 @@ public:
   std::string get_name() const { return name_; }
   const player_name_array_t& get_player_names() const { return player_names_; }
   game_id_t get_game_id() const { return game_id_; }
-  player_index_t get_my_seat() const { return my_seat_; }
-  void init_game(game_id_t game_id, const player_name_array_t& player_names, player_index_t seat_assignment);
+  seat_index_t get_my_seat() const { return my_seat_; }
+  void init_game(game_id_t game_id, const player_name_array_t& player_names, seat_index_t seat_assignment);
 
   virtual void start_game() {}
-  virtual void receive_state_change(player_index_t, const GameState&, action_index_t) {}
+  virtual void receive_state_change(seat_index_t, const GameState&, action_index_t) {}
   virtual action_index_t get_action(const GameState&, const ActionMask&) = 0;
   virtual void end_game(const GameState&, const GameOutcome&) {}
 
@@ -73,7 +73,7 @@ private:
   std::string name_;
   player_name_array_t player_names_;
   game_id_t game_id_ = -1;
-  player_index_t my_seat_ = -1;
+  seat_index_t my_seat_ = -1;
 };
 
 }  // namespace common

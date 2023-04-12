@@ -12,7 +12,7 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      common::player_index_t, const GameState&, common::action_index_t) override;
+      common::seat_index_t, const GameState&, common::action_index_t) override;
 
 private:
   void print_state(const GameState&, bool terminal) override;

@@ -38,7 +38,7 @@ public:
    */
   struct registration_t {
     Player* player = nullptr;
-    player_index_t seat = -1;  // -1 means random seat
+    seat_index_t seat = -1;  // -1 means random seat
     player_id_t player_id = -1;  // order in which player was registered
   };
   using registration_array_t = std::array<registration_t, kNumPlayers>;
@@ -53,7 +53,7 @@ public:
    */
   struct registration_template_t {
     PlayerGenerator* gen = nullptr;
-    player_index_t seat = -1;  // -1 means random seat
+    seat_index_t seat = -1;  // -1 means random seat
     player_id_t player_id = -1;  // order in which player was generated
 
     registration_t instantiate(game_thread_id_t id) const { return {gen->generate_with_name(id), seat, player_id}; }
@@ -89,7 +89,7 @@ private:
     void end_session();
     bool ready_to_start() const;
     int num_games_started() const { return num_games_started_; }
-    player_id_t register_player(player_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
+    player_id_t register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
     int num_registrations() const { return registration_templates_.size(); }
     registration_array_t generate_player_order(const registration_array_t& registrations) const;
     registration_template_vec_t& registration_templates() { return registration_templates_; }
@@ -142,7 +142,7 @@ public:
    * they are aggregated by player_id_t.
    */
   player_id_t register_player(PlayerGenerator* gen) { return register_player(-1, gen); }
-  player_id_t register_player(player_index_t seat, PlayerGenerator* gen) {
+  player_id_t register_player(seat_index_t seat, PlayerGenerator* gen) {
     return shared_data_.register_player(seat, gen);
   }
 

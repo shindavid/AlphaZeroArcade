@@ -8,9 +8,9 @@ inline void CheatingHumanTuiPlayer::start_game() {
 }
 
 inline void CheatingHumanTuiPlayer::receive_state_change(
-    common::player_index_t player, const GameState& state, common::action_index_t action) {
+    common::seat_index_t seat, const GameState& state, common::action_index_t action) {
   move_history_.append(action);
-  base_t::receive_state_change(player, state, action);
+  base_t::receive_state_change(seat, state, action);
 }
 
 inline void CheatingHumanTuiPlayer::print_state(const GameState& state, bool terminal) {

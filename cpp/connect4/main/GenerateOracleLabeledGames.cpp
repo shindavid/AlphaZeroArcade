@@ -24,7 +24,7 @@
 
 namespace bf = boost::filesystem;
 
-using player_index_t = common::player_index_t;
+using seat_index_t = common::seat_index_t;
 using action_index_t = common::action_index_t;
 
 using GameState = c4::GameState;
@@ -64,7 +64,7 @@ public:
     auto& value = slab.value;
     auto& policy = slab.policy;
 
-    player_index_t cp = state.get_current_player();
+    seat_index_t cp = state.get_current_player();
     value(cp) = cur_player_value;
     value(1 - cp) = 1 - cur_player_value;
     for (size_t k = 0; k < moves.size(); ++k) {
@@ -113,7 +113,7 @@ public:
   }
 
   void receive_state_change(
-      player_index_t p, const GameState& state, action_index_t action,
+      seat_index_t p, const GameState& state, action_index_t action,
       const GameOutcome& outcome) override
   {
     BasePlayer::receive_state_change(p, state, action, outcome);

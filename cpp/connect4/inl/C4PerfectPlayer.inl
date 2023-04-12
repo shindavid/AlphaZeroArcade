@@ -160,7 +160,7 @@ inline void PerfectPlayer::start_game() {
 }
 
 inline void PerfectPlayer::receive_state_change(
-    common::player_index_t, const GameState&, common::action_index_t action)
+    common::seat_index_t, const GameState&, common::action_index_t action)
 {
   move_history_.append(action);
 }

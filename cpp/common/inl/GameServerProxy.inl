@@ -63,7 +63,7 @@ GameServerProxy<GameState>::SharedData::SharedData(const Params& params)
 }
 
 template <GameStateConcept GameState>
-void GameServerProxy<GameState>::SharedData::register_player(player_index_t seat, PlayerGenerator* gen) {
+void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen) {
   std::string name = gen->get_name();
   util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"%s\" size=%d)",
                      name.c_str(), (int)name.size());
@@ -115,7 +115,7 @@ void GameServerProxy<GameState>::GameThread::handle_start_game(const StartGame& 
   player_id_t player_id = payload.player_id;
   game_id_t game_id = payload.game_id;
   player_name_array_t player_names;
-  player_index_t seat_assignment = payload.seat_assignment;
+  seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
   std::unique_lock lock(mutex_);

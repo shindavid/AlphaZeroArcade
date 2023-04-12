@@ -32,27 +32,27 @@ inline void GameState::deserialize_action(const char* buffer, common::action_ind
 }
 
 inline size_t GameState::serialize_state_change(
-    char* buffer, size_t buffer_size, common::player_index_t player, common::action_index_t action) const
+    char* buffer, size_t buffer_size, common::seat_index_t seat, common::action_index_t action) const
 {
   return serialize_action(buffer, buffer_size, action);
 }
 
 inline void GameState::deserialize_state_change(
-    const char* buffer, common::player_index_t* player, common::action_index_t* action, GameOutcome* outcome)
+    const char* buffer, common::seat_index_t* seat, common::action_index_t* action, GameOutcome* outcome)
 {
-  *player = get_current_player();
+  *seat = get_current_player();
   deserialize_action(buffer, action);
   *outcome = apply_move(*action);
 }
 
-inline common::player_index_t GameState::get_current_player() const {
+inline common::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
 inline common::GameStateTypes<GameState>::GameOutcome GameState::apply_move(common::action_index_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
-  common::player_index_t current_player = get_current_player();
+  common::seat_index_t current_player = get_current_player();
 
   cur_player_mask_ ^= full_mask_;
   full_mask_ |= piece_mask;
@@ -114,7 +114,7 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
 inline std::string GameState::compact_repr() const {
   char buffer[kNumCells + 1];
 
-  common::player_index_t current_player = get_current_player();
+  common::seat_index_t current_player = get_current_player();
   char cur_color = current_player == kRed ? 'R' : 'Y';
   char opp_color = current_player == kRed ? 'Y' : 'R';
 
@@ -181,7 +181,7 @@ inline void GameState::dump(common::action_index_t last_action, const player_nam
 }
 
 inline void GameState::row_dump(row_t row, column_t blink_column) const {
-  common::player_index_t current_player = get_current_player();
+  common::seat_index_t current_player = get_current_player();
   const char* cur_color = current_player == kRed ? ansi::kRed() : ansi::kYellow();
   const char* opp_color = current_player == kRed ? ansi::kYellow() : ansi::kRed();
 

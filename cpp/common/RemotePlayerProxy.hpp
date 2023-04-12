@@ -26,7 +26,7 @@ public:
                     int max_simultaneous_games);
 
   void start_game() override;
-  void receive_state_change(player_index_t, const GameState&, action_index_t) override;
+  void receive_state_change(seat_index_t, const GameState&, action_index_t) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
   int max_simultaneous_games() const override { return max_simultaneous_games_; }

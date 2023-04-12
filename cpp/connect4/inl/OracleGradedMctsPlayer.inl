@@ -57,10 +57,10 @@ inline void OracleGradedMctsPlayer::start_game()
 }
 
 inline void OracleGradedMctsPlayer::receive_state_change(
-    common::player_index_t player, const GameState& state, common::action_index_t action)
+    common::seat_index_t seat, const GameState& state, common::action_index_t action)
 {
   move_history_.append(action);
-  base_t::receive_state_change(player, state, action);
+  base_t::receive_state_change(seat, state, action);
 }
 
 inline common::action_index_t OracleGradedMctsPlayer::get_action(

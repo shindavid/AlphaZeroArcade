@@ -33,7 +33,7 @@ public:
   class SharedData {
   public:
     SharedData(const Params& params);
-    void register_player(player_index_t seat, PlayerGenerator* gen);
+    void register_player(seat_index_t seat, PlayerGenerator* gen);
     int socket_desc() const { return socket_desc_; }
     PlayerGenerator* get_gen(player_id_t p) const { return player_generators_[p]; }
 
@@ -76,7 +76,7 @@ public:
    * they are aggregated by player_id_t.
    */
   void register_player(PlayerGenerator* gen) { register_player(-1, gen); }
-  void register_player(player_index_t seat, PlayerGenerator* gen) { shared_data_.register_player(seat, gen); }
+  void register_player(seat_index_t seat, PlayerGenerator* gen) { shared_data_.register_player(seat, gen); }
 
   void run();
 

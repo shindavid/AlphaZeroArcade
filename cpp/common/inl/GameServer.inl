@@ -60,8 +60,8 @@ bool GameServer<GameState>::SharedData::request_game(int num_games) {
 template<GameStateConcept GameState>
 void GameServer<GameState>::SharedData::update(const GameOutcome& outcome, int64_t ns) {
   std::lock_guard<std::mutex> guard(mutex_);
-  for (player_index_t p = 0; p < kNumPlayers; ++p) {
-    results_array_[p][outcome[p]]++;
+  for (seat_index_t s = 0; s < kNumPlayers; ++s) {
+    results_array_[s][outcome[s]]++;
   }
 
   total_ns_ += ns;
@@ -94,7 +94,7 @@ bool GameServer<GameState>::SharedData::ready_to_start() const {
 
 template<GameStateConcept GameState>
 player_id_t GameServer<GameState>::SharedData::register_player(
-    player_index_t seat, PlayerGenerator* gen, bool implicit_remote) {
+    seat_index_t seat, PlayerGenerator* gen, bool implicit_remote) {
   util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
@@ -245,17 +245,17 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
 
   GameState state;
   while (true) {
-    player_index_t p = state.get_current_player();
-    Player* player = players[p];
+    seat_index_t seat = state.get_current_player();
+    Player* player = players[seat];
     auto valid_actions = state.get_valid_actions();
     action_index_t action = player->get_action(state, valid_actions);
     if (!valid_actions[action]) {
       // TODO: gracefully handle and prompt for retry. Otherwise, a remote player can crash the server.
-      throw util::Exception("Player %d (%s) attempted an illegal action (%d)", p, player->get_name().c_str(), action);
+      throw util::Exception("Player %d (%s) attempted an illegal action (%d)", seat, player->get_name().c_str(), action);
     }
     auto outcome = state.apply_move(action);
     for (auto player2 : players) {
-      player2->receive_state_change(p, state, action);
+      player2->receive_state_change(seat, state, action);
     }
     if (is_terminal_outcome(outcome)) {
       for (auto player2 : players) {
@@ -336,7 +336,7 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
     packet.read_from(new_socket_descr);  // TODO: catch exception and engage in retry-protocol with client
     const Registration& registration = packet.payload();
     const std::string& name = registration.dynamic_size_section.player_name;
-    player_index_t seat = registration.requested_seat;
+    seat_index_t seat = registration.requested_seat;
 
     RemotePlayerProxyGenerator* gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg->gen);
     gen->initialize(name, new_socket_descr, reg->player_id);
@@ -386,8 +386,8 @@ void GameServer<GameState>::run() {
   results_array_t results = shared_data_.get_results();
 
   printf("\nAll games complete!\n");
-  for (player_index_t p = 0; p < kNumPlayers; ++p) {
-    printf("P%d %s\n", p, get_results_str(results[p]).c_str());
+  for (seat_index_t s = 0; s < kNumPlayers; ++s) {
+    printf("P%d %s\n", s, get_results_str(results[s]).c_str());
   }
   util::ParamDumper::add("Parallelism factor", "%d", (int)threads.size());
   util::ParamDumper::add("Num games", "%d", num_games);

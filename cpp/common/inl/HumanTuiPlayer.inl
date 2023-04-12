@@ -19,7 +19,7 @@ inline void HumanTuiPlayer<GameState_>::start_game() {
 
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::receive_state_change(
-    common::player_index_t p, const GameState& state, common::action_index_t action)
+    common::seat_index_t, const GameState&, common::action_index_t action)
 {
   last_action_ = action;
 }

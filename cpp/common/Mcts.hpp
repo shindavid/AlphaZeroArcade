@@ -186,7 +186,7 @@ private:
       GameState state;
       GameOutcome outcome;
       ActionMask valid_action_mask;
-      player_index_t current_player;
+      seat_index_t current_player;
       symmetry_index_t sym_index;
 
     private:
@@ -244,7 +244,7 @@ private:
       int effective_count() const { return eliminated() ? 0 : count; }
       bool has_certain_outcome() const { return V_floor.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
       bool eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
-      auto effective_value_avg(player_index_t p) const { return has_certain_outcome() ? V_floor(p) : value_avg(p); }
+      auto effective_value_avg(seat_index_t s) const { return has_certain_outcome() ? V_floor(s) : value_avg(s); }
 
       ValueArray1D value_avg;
       ValueArray1D V_floor;  // used for eliminations
@@ -427,7 +427,7 @@ private:
 
     PUCTStats(const Params& params, const SearchParams& search_params, const Node* tree);
 
-    player_index_t cp;
+    seat_index_t cp;
     const PVec& P;
     PVec V;
     PVec N;
@@ -734,7 +734,7 @@ public:
 
   void start();
   void clear();
-  void receive_state_change(player_index_t, const GameState&, action_index_t);
+  void receive_state_change(seat_index_t, const GameState&, action_index_t);
   const MctsResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
   void add_dirichlet_noise(LocalPolicyProbDistr& P);
   float root_softmax_temperature() const { return root_softmax_temperature_.value(); }

@@ -71,7 +71,7 @@ public:
 
   Mcts* get_mcts() { return mcts_; }
   void start_game() override;
-  void receive_state_change(player_index_t, const GameState&, action_index_t) override;
+  void receive_state_change(seat_index_t, const GameState&, action_index_t) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   float avg_batch_size() const { return mcts_->avg_batch_size(); }

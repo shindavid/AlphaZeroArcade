@@ -229,7 +229,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
   // thread-safety
   bool eliminated = stats_.eliminated();
 
-  player_index_t cp = stable_data().current_player;
+  seat_index_t cp = stable_data().current_player;
   GlobalPolicyCountDistr counts;
   counts.setZero();
   if (eliminated) {
@@ -291,8 +291,8 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueProbDistr& outcome) {
   ValueArray1DExtrema V_floor_extrema = get_V_floor_extrema_among_children();
   ValueArray1D V_floor;
-  player_index_t cp = stable_data().current_player;
-  for (player_index_t p = 0; p < kNumPlayers; ++p) {
+  seat_index_t cp = stable_data().current_player;
+  for (seat_index_t p = 0; p < kNumPlayers; ++p) {
     if (p == cp) {
       V_floor[p] = V_floor_extrema.max[p];
     } else {
@@ -1393,7 +1393,7 @@ inline void Mcts<GameState, Tensorizor>::clear() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::receive_state_change(
-    player_index_t player, const GameState& state, action_index_t action)
+    seat_index_t seat, const GameState& state, action_index_t action)
 {
   root_softmax_temperature_.step();
   stop_search_threads();

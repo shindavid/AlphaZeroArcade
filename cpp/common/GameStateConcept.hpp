@@ -48,8 +48,8 @@ concept GameStateConcept = requires(S state) {
    * static size_t serialize_action(char* buf, size_t buf_size, action_index_t action);
    * static void deserialize_action(const char* buf, action_index_t* action);
    *
-   * size_t serialize_state_change(char* buf, size_t buf_size, player_index_t player, action_index_t action) const;
-   * void deserialize_state_change(const char* buf, player_index_t* player, action_index_t* action, GameOutcome* outcome);
+   * size_t serialize_state_change(char* buf, size_t buf_size, seat_index_t seat, action_index_t action) const;
+   * void deserialize_state_change(const char* buf, seat_index_t* seat, action_index_t* action, GameOutcome* outcome);
    *
    * The serialize_* methods are expected to write to the given buffer, and return the number of bytes written.
    *
@@ -78,12 +78,12 @@ concept GameStateConcept = requires(S state) {
   { state.serialize_state_change(
       std::declval<char*>(),
       size_t(),
-      player_index_t(),
+      seat_index_t(),
       action_index_t())
   } -> std::same_as<size_t>;
   { state.deserialize_state_change(
       std::declval<char *>(),
-      std::declval<player_index_t *>(),
+      std::declval<seat_index_t *>(),
       std::declval<action_index_t *>(),
       std::declval<typename GameStateTypes<S>::GameOutcome *>())
   };
@@ -91,7 +91,7 @@ concept GameStateConcept = requires(S state) {
   /*
    * Return the current player.
    */
-  { state.get_current_player() } -> std::same_as<player_index_t>;
+  { state.get_current_player() } -> std::same_as<seat_index_t>;
 
   /*
    * Apply a given action to the state, and return a GameOutcome.

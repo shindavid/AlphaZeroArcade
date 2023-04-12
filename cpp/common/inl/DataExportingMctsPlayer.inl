@@ -22,9 +22,9 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    player_index_t p, const GameState& state, action_index_t action)
+    seat_index_t seat, const GameState& state, action_index_t action)
 {
-  base_t::receive_state_change(p, state, action);
+  base_t::receive_state_change(seat, state, action);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

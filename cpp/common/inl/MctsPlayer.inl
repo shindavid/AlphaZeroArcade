@@ -116,15 +116,15 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    player_index_t player, const GameState& state, action_index_t action)
+    seat_index_t seat, const GameState& state, action_index_t action)
 {
   move_count_++;
   move_temperature_.step();
   tensorizor_.receive_state_change(state, action);
   if (owns_mcts_) {
-    mcts_->receive_state_change(player, state, action);
+    mcts_->receive_state_change(seat, state, action);
   }
-  if (base_t::get_my_seat() == player && params_.verbose) {
+  if (base_t::get_my_seat() == seat && params_.verbose) {
     if (facing_human_tui_player_) {
       util::ScreenClearer::clear_once();
     }

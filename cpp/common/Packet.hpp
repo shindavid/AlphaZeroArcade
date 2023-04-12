@@ -59,7 +59,7 @@ struct Registration {
     char player_name[kMaxNameLength + 1];  // +1 for null terminator
   };
 
-  player_index_t requested_seat;  // negative = random seat
+  seat_index_t requested_seat;  // negative = random seat
   dynamic_size_section_t dynamic_size_section;
 };
 
@@ -98,7 +98,7 @@ struct StartGame {
   game_id_t game_id;
   game_thread_id_t game_thread_id;
   player_id_t player_id;
-  player_index_t seat_assignment;
+  seat_index_t seat_assignment;
   dynamic_size_section_t dynamic_size_section;
 };
 
