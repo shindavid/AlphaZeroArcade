@@ -66,10 +66,6 @@ void Packet<PacketPayload>::read_from(int socket_descriptor) {
   if (n <= 0) {
     throw util::Exception("Packet<%d>::read_from() failed (n=%d)", (int)PacketPayload::kType, n);
   }
-  if (n >= buf_size) {
-    throw util::Exception("Packet<%d>::read_from() potential buffer overflow (%d >= %d)",
-                          (int)PacketPayload::kType, n, buf_size);
-  }
   if (PacketPayload::kType != header_.type) {
     throw util::Exception("Packet<%d>::read_from() invalid type (expected:%d, got:%d)",
                           (int)PacketPayload::kType, (int)PacketPayload::kType, (int)header_.type);
