@@ -9,8 +9,8 @@ typename MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_map_t
     MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_cache_;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::generate(void* play_address) {
-  mcts_vec_t& vec = mcts_cache_[play_address];
+AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::generate(game_thread_id_t game_thread_id) {
+  mcts_vec_t& vec = mcts_cache_[game_thread_id];
   for (Mcts* mcts : vec) {
     if (mcts->params() == mcts_params_) {
       return generate_from_mcts(mcts);

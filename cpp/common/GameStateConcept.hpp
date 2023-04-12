@@ -45,13 +45,11 @@ concept GameStateConcept = requires(S state) {
    * processes (like a game server with a remote game client). The expected declaration of these methods would look like
    * this:
    *
-   * static size_t serialize_action(char* buffer, size_t buffer_size, action_index_t action);
-   * static void deserialize_action(const char* buffer, action_index_t* action);
+   * static size_t serialize_action(char* buf, size_t buf_size, action_index_t action);
+   * static void deserialize_action(const char* buf, action_index_t* action);
    *
-   * size_t serialize_state_change(char* buffer, size_t buffer_size, player_index_t player,
-   *     action_index_t action, GameOutcome outcome) const;
-   * void deserialize_state_change(const char* buffer, player_index_t* player,
-   *     action_index_t* action, GameOutcome* outcome);
+   * size_t serialize_state_change(char* buf, size_t buf_size, player_index_t player, action_index_t action) const;
+   * void deserialize_state_change(const char* buf, player_index_t* player, action_index_t* action, GameOutcome* outcome);
    *
    * The serialize_* methods are expected to write to the given buffer, and return the number of bytes written.
    *
@@ -81,22 +79,7 @@ concept GameStateConcept = requires(S state) {
       std::declval<char*>(),
       size_t(),
       player_index_t(),
-      action_index_t(),
-      typename GameStateTypes<S>::GameOutcome{})
-  } -> std::same_as<size_t>;
-  { state.deserialize_state_change(
-      std::declval<char *>(),
-      std::declval<player_index_t *>(),
-      std::declval<action_index_t *>(),
-      std::declval<typename GameStateTypes<S>::GameOutcome *>())
-  };
-
-  { state.serialize_state_change(
-      std::declval<char*>(),
-      size_t(),
-      player_index_t(),
-      action_index_t(),
-      typename GameStateTypes<S>::GameOutcome{})
+      action_index_t())
   } -> std::same_as<size_t>;
   { state.deserialize_state_change(
       std::declval<char *>(),

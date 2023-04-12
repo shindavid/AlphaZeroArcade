@@ -7,9 +7,10 @@
 
 #include <common/AbstractPlayer.hpp>
 #include <common/AbstractPlayerGenerator.hpp>
+#include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/BasicTypes.hpp>
+#include <common/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
 
 namespace common {
@@ -24,13 +25,13 @@ public:
   using ActionMask = typename GameStateTypes::ActionMask;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
+  using RemotePlayerProxyGenerator = common::RemotePlayerProxyGenerator<GameState>;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
   using results_map_t = std::map<float, int>;
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using duration_t = std::chrono::nanoseconds;
-  using player_id_t = int;
 
   /*
    * A registration_t is instantiated from a registration_template_t. See registration_template_t for more detail.
@@ -55,9 +56,9 @@ public:
     player_index_t seat = -1;  // -1 means random seat
     player_id_t player_id = -1;  // order in which player was generated
 
-    registration_t instantiate(void* play_address) const { return {gen->generate(play_address), seat, player_id}; }
+    registration_t instantiate(game_thread_id_t id) const { return {gen->generate_with_name(id), seat, player_id}; }
   };
-  using registration_template_array_t = std::array<registration_template_t, kNumPlayers>;
+  using registration_template_vec_t = std::vector<registration_template_t>;
 
   struct Params {
     auto make_options_description();
@@ -86,17 +87,17 @@ private:
     void update(const GameOutcome& outcome, int64_t ns);
     auto get_results() const;
     void end_session();
+    bool ready_to_start() const;
     int num_games_started() const { return num_games_started_; }
-    player_id_t register_player(player_index_t seat, PlayerGenerator* gen);
-    int num_registrations() const { return num_registrations_; }
+    player_id_t register_player(player_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
+    int num_registrations() const { return registration_templates_.size(); }
     registration_array_t generate_player_order(const registration_array_t& registrations) const;
-    const registration_template_array_t& registration_templates() const { return registration_templates_; }
+    registration_template_vec_t& registration_templates() { return registration_templates_; }
 
   private:
     const Params params_;
 
-    registration_template_array_t registration_templates_;
-    int num_registrations_ = 0;
+    registration_template_vec_t registration_templates_;
 
     mutable std::mutex mutex_;
     progressbar* bar_ = nullptr;
@@ -110,12 +111,12 @@ private:
 
   class GameThread {
   public:
-    GameThread(SharedData& shared_data);
+    GameThread(SharedData& shared_data, game_thread_id_t);
     ~GameThread();
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
     void launch();
-    bool has_human_tui_player() const { return has_human_tui_player_; }
+    int max_simultaneous_games() const { return max_simultaneous_games_; }
 
   private:
     void run();
@@ -124,7 +125,8 @@ private:
     SharedData& shared_data_;
     registration_array_t registrations_;
     std::thread* thread_ = nullptr;
-    bool has_human_tui_player_ = false;
+    game_thread_id_t id_;
+    int max_simultaneous_games_ = 0;  // 0 = unlimited
   };
 
 public:
@@ -152,11 +154,9 @@ public:
   const Params& params() const { return shared_data_.params(); }
   int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
-  bool ready_to_start() const { return num_registered_players() == kNumPlayers; }
   void run();
 
 private:
-  std::vector<GameThread*> threads_;
   SharedData shared_data_;
 };
 

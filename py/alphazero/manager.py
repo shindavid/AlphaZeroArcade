@@ -99,7 +99,7 @@ class AlphaZeroManager:
         self.py_cuda_device_str: str = f'cuda:{self.py_cuda_device}'
         self.log_file = None
 
-        self.n_gen0_games = 1000
+        self.n_gen0_games = 4000
         self.n_sync_games = 1000
         self.c4_base_dir: str = c4_base_dir
 
@@ -252,8 +252,13 @@ class AlphaZeroManager:
 
         player_args = [
             '--type=MCTS-T',
+            '--name=MCTS',
             '--no-forced-playouts',
             '-g', games_dir,
+        ]
+        player2_args = [
+            '--name=MCTS2',
+            '--copy-from=MCTS',
         ]
 
         if gen == 0:
@@ -269,6 +274,7 @@ class AlphaZeroManager:
             c4_bin,
             '-G', n_games,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
+            '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))

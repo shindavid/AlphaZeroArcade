@@ -4,7 +4,7 @@
 
 namespace c4 {
 
-inline common::AbstractPlayer<c4::GameState>* HumanTuiPlayerGenerator::generate(void* play_address) {
+inline common::AbstractPlayer<c4::GameState>* HumanTuiPlayerGenerator::generate(common::game_thread_id_t) {
   if (params_.cheat_mode) {
     return new CheatingHumanTuiPlayer();
   } else {

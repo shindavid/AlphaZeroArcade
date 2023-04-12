@@ -7,6 +7,7 @@
 #include <boost/program_options.hpp>
 
 #include <common/AbstractPlayer.hpp>
+#include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
 
 namespace common {
@@ -17,7 +18,8 @@ namespace common {
  *
  * This class exists because when simulating multiple games in parallel with GameServer, each parallel thread needs to
  * generate its own player. This is because each player has its own state, meaning that multiple threads cannot share
- * the same player. Because of this, GameServer must be passed a player generator, rather than a player.
+ * the same player. Because of this, GameServer must be passed a player generator, rather than a player. If we never did
+ * parallel games, then this class would not exist.
  *
  * Because the class exists, might as well add some extra features! Specifically, the class provides a way to parse
  * arguments passed from the command line. The command line will have one or more instances of --player, looking
@@ -28,9 +30,11 @@ namespace common {
  * Each AbstractPlayerGenerator subclass will specify whether to match against a given --type= string. It will
  * also specify how to parse the other sub-arguments in order to construct a player object.
  */
-template<GameStateConcept GameState>
+template<GameStateConcept GameState_>
 class AbstractPlayerGenerator {
 public:
+  using GameState = GameState_;
+
   virtual ~AbstractPlayerGenerator() = default;
 
   /*
@@ -49,11 +53,11 @@ public:
   /*
    * Generate a new player. The caller is responsible for taking ownership of the pointer.
    *
-   * play_address represents an abstract address where the player will be playing in. Most subclasses can ignore this
-   * parameter. However, certain player types, as an optimization, may wish to share data structures with other players
-   * at the same address. This parameter facilitates such sharing.
+   * game_thread_id designates a logical thread (which might be local or remote) where the player will be playing.
+   * Most subclasses can ignore this parameter. However, certain player types, as an optimization, may wish to share
+   * data structures with other players sharing the same game_thread_id. This parameter facilitates such sharing.
    */
-  virtual AbstractPlayer<GameState>* generate(void* play_address) = 0;
+  virtual AbstractPlayer<GameState>* generate(game_thread_id_t game_thread_id) = 0;
 
   /*
    * Print help for this player generator, describing what parse_args() expects. This should typically dispatch to a
@@ -83,6 +87,14 @@ public:
    */
   virtual void end_session() {}
 
+  const std::string& get_name() const { return name_; }
+  void set_name(const std::string& name) { name_ = name; }
+  AbstractPlayer<GameState>* generate_with_name(game_thread_id_t game_thread_id) {
+    auto player = generate(game_thread_id);
+    player->set_name(name_);
+    return player;
+  }
+
 protected:
   /*
    * Helper function for parse_args() that some subclasses may find useful.
@@ -94,6 +106,22 @@ protected:
     po::store(po::command_line_parser(args).options(desc).run(), vm);
     po::notify(vm);
   }
+
+private:
+  std::string name_;
+};
+
+template<GameStateConcept GameState>
+class PlayerGeneratorCreatorBase {
+public:
+  virtual ~PlayerGeneratorCreatorBase() = default;
+  virtual AbstractPlayerGenerator<GameState>* create() const = 0;
+};
+
+template<typename GeneratorT>
+class PlayerGeneratorCreator : public PlayerGeneratorCreatorBase<typename GeneratorT::GameState> {
+public:
+  GeneratorT* create() const override { return new GeneratorT(); }
 };
 
 }  // namespace common

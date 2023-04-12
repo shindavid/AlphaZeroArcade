@@ -145,7 +145,6 @@ inline auto PerfectPlayer::Params::make_options_description() {
 }
 
 inline PerfectPlayer::PerfectPlayer(const Params& params)
-  : base_t("Perfect")
 {
   if (params.mode == "strong") {
     strong_mode_ = true;

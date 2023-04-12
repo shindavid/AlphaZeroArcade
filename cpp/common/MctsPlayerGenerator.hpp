@@ -23,17 +23,17 @@ public:
   MctsPlayerGeneratorBase(Mcts::DefaultParamsType type) : mcts_params_(type) {}
 
   /*
-   * If this generator already generated a player for the given play_address, dispatches to generate_from_mcts(),
+   * If this generator already generated a player for the given game_thread_id, dispatches to generate_from_mcts(),
    * passing in the Mcts* of that previous player. Otherwise, dispatches to generate_from_scratch().
    */
-  AbstractPlayer<GameState>* generate(void* play_address) override;
+  AbstractPlayer<GameState>* generate(game_thread_id_t game_thread_id) override;
 
 protected:
   virtual BaseMctsPlayer* generate_from_scratch() = 0;
   virtual BaseMctsPlayer* generate_from_mcts(Mcts* mcts) = 0;
 
   using mcts_vec_t = std::vector<Mcts*>;
-  using mcts_map_t = std::map<void*, mcts_vec_t>;
+  using mcts_map_t = std::map<game_thread_id_t, mcts_vec_t>;
 
   static mcts_map_t mcts_cache_;
 

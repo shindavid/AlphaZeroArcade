@@ -58,7 +58,7 @@ public:
   void deserialize_action_prompt(const char* buffer, ActionMask* valid_actions) const {}
 
   size_t serialize_state_change(char* buffer, size_t buffer_size, common::player_index_t player,
-                                common::action_index_t action, const GameOutcome& outcome) const;
+                                common::action_index_t action) const;
   void deserialize_state_change(const char* buffer, common::player_index_t* player,
                                 common::action_index_t* action, GameOutcome* outcome);
 

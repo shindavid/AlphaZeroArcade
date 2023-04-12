@@ -21,16 +21,21 @@ public:
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
-  using player_array_t = std::array<Player*, kNumPlayers>;
 
-  RemotePlayerProxy(const std::string& name, int socket_descriptor);
+  RemotePlayerProxy(int socket_descriptor, player_id_t player_id, game_thread_id_t game_thread_id,
+                    int max_simultaneous_games);
 
   void start_game() override;
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override;
+  void receive_state_change(player_index_t, const GameState&, action_index_t) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
+  void end_game(const GameState&, const GameOutcome&) override;
+  int max_simultaneous_games() const override { return max_simultaneous_games_; }
 
 private:
   const int socket_descriptor_;
+  const player_id_t player_id_;
+  const game_thread_id_t game_thread_id_;
+  const int max_simultaneous_games_;
 };
 
 }  // namespace common

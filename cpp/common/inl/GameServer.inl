@@ -30,9 +30,9 @@ auto GameServer<GameState>::Params::make_options_description() {
       .template add_option<"port">(po::value<int>(&port)->default_value(port),
           "port for external players to connect to (must be set to a nonzero value if using external players)")
       .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
-                                             "num games (<=0 means run indefinitely)")
+          "num games (<=0 means run indefinitely)")
       .template add_option<"parallelism", 'p'>(po::value<int>(&parallelism)->default_value(parallelism),
-                                               "num games to play simultaneously. Auto-set to 1 if TUI player in game")
+          "max num games to play simultaneously. Participating players can request lower values and the server will respect their requests")
       .template add_bool_switches<"display-progress-bar", "hide-progress-bar">(
           &display_progress_bar, "display progress bar (only in tty-mode without TUI player)", "hide progress bar")
       ;
@@ -84,17 +84,38 @@ void GameServer<GameState>::SharedData::end_session() {
 }
 
 template<GameStateConcept GameState>
-typename GameServer<GameState>::player_id_t
-GameServer<GameState>::SharedData::register_player(player_index_t seat, PlayerGenerator* gen) {
-  util::clean_assert(0 <= seat && seat < kNumPlayers, "Invalid seat number %d", seat);
+bool GameServer<GameState>::SharedData::ready_to_start() const {
+  for (const auto& reg : registration_templates_) {
+    auto* remote_gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen);
+    if (remote_gen && !remote_gen->initialized()) return false;
+  }
+  return true;
+}
+
+template<GameStateConcept GameState>
+player_id_t GameServer<GameState>::SharedData::register_player(
+    player_index_t seat, PlayerGenerator* gen, bool implicit_remote) {
+  util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
+  if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
+    if (implicit_remote) {
+      util::clean_assert(params_.port > 0,
+                         "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
+                         "players. In this case, --port must be specified, so that the remote players can connect",
+                         kNumPlayers);
+    } else {
+      util::clean_assert(params_.port > 0, "Cannot use remote players without setting --port");
+    }
+
+    util::clean_assert(seat < 0, "Cannot specify --seat with --type=Remote");
+  }
   if (seat >= 0) {
-    for (int r = 0; r < num_registrations_; ++r) {
-      util::clean_assert(registration_templates_[r].seat != seat, "Double-seated player at seat %d", seat);
+    for (const auto& reg : registration_templates_) {
+      util::clean_assert(reg.seat != seat, "Double-seated player at seat %d", seat);
     }
   }
-  player_id_t player_id = num_registrations_;
-  num_registrations_++;
-  registration_templates_[player_id] = registration_template_t{gen, seat, player_id};
+  player_id_t player_id = registration_templates_.size();
+  util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
+  registration_templates_.emplace_back(gen, seat, player_id);
   return player_id;
 }
 
@@ -137,17 +158,23 @@ GameServer<GameState>::SharedData::generate_player_order(const registration_arra
 }
 
 template<GameStateConcept GameState>
-GameServer<GameState>::GameThread::GameThread(SharedData& shared_data)
-: shared_data_(shared_data) {
-  void* play_address = this;
-
+GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
+: shared_data_(shared_data)
+, id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
-    registrations_[p] = shared_data_.registration_templates()[p].instantiate(play_address);
+    registrations_[p] = shared_data_.registration_templates()[p].instantiate(id);
     human_tui_indices[p] = registrations_[p].player->is_human_tui_player();
+    int msg = registrations_[p].player->max_simultaneous_games();
+    if (msg > 0) {
+      if (max_simultaneous_games_ == 0) {
+        max_simultaneous_games_ = msg;
+      } else {
+        max_simultaneous_games_ = std::min(max_simultaneous_games_, msg);
+      }
+    }
   }
 
-  has_human_tui_player_ = human_tui_indices.any();
   for (int p = 0; p < kNumPlayers; ++p) {
     std::bitset<kNumPlayers> human_tui_indices_copy(human_tui_indices);
     human_tui_indices_copy[p] = false;
@@ -156,7 +183,7 @@ GameServer<GameState>::GameThread::GameThread(SharedData& shared_data)
     }
   }
 
-  if (!has_human_tui_player_) {
+  if (!human_tui_indices.any()) {
     shared_data_.init_progress_bar();
   }
 }
@@ -177,16 +204,8 @@ template<GameStateConcept GameState>
 void GameServer<GameState>::GameThread::run() {
   const Params& params = shared_data_.params();
 
-  bool first_game = true;
   while (true) {
     if (!shared_data_.request_game(params.num_games)) return;
-
-    if (has_human_tui_player_ && !first_game) {
-      std::cout << "Press enter to start next game" << std::endl;
-      std::string input;
-      std::getline(std::cin, input);
-    }
-    first_game = false;
 
     registration_array_t player_order = shared_data_.generate_player_order(registrations_);
 
@@ -197,12 +216,13 @@ void GameServer<GameState>::GameThread::run() {
 
     time_point_t t1 = std::chrono::steady_clock::now();
     GameOutcome outcome = play_game(players);
+    time_point_t t2 = std::chrono::steady_clock::now();
+
     // reindex outcome according to player_id
     GameOutcome reindexed_outcome;
     for (int p = 0; p < kNumPlayers; ++p) {
       reindexed_outcome[player_order[p].player_id] = outcome[p];
     }
-    time_point_t t2 = std::chrono::steady_clock::now();
     duration_t duration = t2 - t1;
     int64_t ns = duration.count();
     shared_data_.update(reindexed_outcome, ns);
@@ -230,6 +250,7 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
     auto valid_actions = state.get_valid_actions();
     action_index_t action = player->get_action(state, valid_actions);
     if (!valid_actions[action]) {
+      // TODO: gracefully handle and prompt for retry. Otherwise, a remote player can crash the server.
       throw util::Exception("Player %d (%s) attempted an illegal action (%d)", p, player->get_name().c_str(), action);
     }
     auto outcome = state.apply_move(action);
@@ -252,6 +273,27 @@ GameServer<GameState>::GameServer(const Params& params) : shared_data_(params) {
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::wait_for_remote_player_registrations() {
+  util::clean_assert(num_registered_players() <= kNumPlayers, "Invalid number of players registered: %d",
+                     num_registered_players());
+
+  // fill in missing slots with remote players
+  int shortage = kNumPlayers - num_registered_players();
+  for (int i = 0; i < shortage; ++i) {
+    RemotePlayerProxyGenerator* gen = new RemotePlayerProxyGenerator();
+    shared_data_.register_player(-1, gen, true);
+  }
+
+  std::vector<registration_template_t*> remote_player_registrations;
+  for (int r = 0; r < shared_data_.num_registrations(); ++r) {
+    registration_template_t& reg = shared_data_.registration_templates()[r];
+    if (dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen)) {
+      util::clean_assert(reg.seat < 0, "Cannot specify --seat= when using --type=Remote");
+      remote_player_registrations.push_back(&reg);
+    }
+  }
+
+  if (remote_player_registrations.empty()) return;
+
   int port = get_port();
   util::clean_assert(port > 0, "Invalid port number %d", port);
 
@@ -263,67 +305,76 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
   socket_address_info.sin_port = htons(port);
 
   // open socket
-  int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (server_socket < 0) {
+  int server_socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+  if (server_socket_desc < 0) {
     throw util::Exception("Error establishing server socket");
   }
 
   // bind socket
-  int bind_status = bind(server_socket, (sockaddr*) &socket_address_info, sizeof(socket_address_info));
+  int bind_status = bind(server_socket_desc, (sockaddr*) &socket_address_info, sizeof(socket_address_info));
   if (bind_status < 0) {
     throw util::Exception("Error binding socket to local address");
   }
 
-  if (listen(server_socket, kNumPlayers)) {
+  if (listen(server_socket_desc, kNumPlayers)) {
     throw util::Exception("listen() failed");
   }
 
   std::cout << "Waiting for remote player registrations..." << std::endl;
-  while (!ready_to_start()) {
+  for (auto reg : remote_player_registrations) {
     // accept connection
     sockaddr_in new_socket_address_info;
     socklen_t new_socket_address_size = sizeof(new_socket_address_info);
-    int new_socket_descr = accept(server_socket, (sockaddr *) &new_socket_address_info, &new_socket_address_size);
+    int new_socket_descr = accept(server_socket_desc, (sockaddr *) &new_socket_address_info, &new_socket_address_size);
     if (new_socket_descr < 0) {
       throw util::Exception("Error accepting request from client!");
     }
 
     std::cout << "Accepted connection from " << inet_ntoa(new_socket_address_info.sin_addr) << std::endl;
 
-    char buf[1024];
-    Packet packet = Packet::from_socket(new_socket_descr, buf, sizeof(buf));
-    Registration registration = packet.to_registration();
-    const std::string& name = registration.player_name;
-    printf("Registered player: \"%s\" (seat: %d)", name.c_str(), registration.requested_seat);
-//    player_generator_t gen = [&]() { return new RemotePlayerProxy<GameState>(name, new_socket_descr); };
-//    register_player(registration.requested_seat, gen);
-    throw util::Exception("Not implemented");
+    Packet<Registration> packet;
+    packet.read_from(new_socket_descr);  // TODO: catch exception and engage in retry-protocol with client
+    const Registration& registration = packet.payload();
+    const std::string& name = registration.dynamic_size_section.player_name;
+    player_index_t seat = registration.requested_seat;
+
+    RemotePlayerProxyGenerator* gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg->gen);
+    gen->initialize(name, new_socket_descr, reg->player_id);
+    reg->seat = seat;
+
+    Packet<RegistrationResponse> response_packet;
+    response_packet.payload().player_id = reg->player_id;
+    response_packet.send_to(new_socket_descr);
+
+    printf("Registered player: \"%s\" (seat: %d)\n", name.c_str(), (int)seat);
+    std::cout.flush();
   }
 }
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::run() {
-  if (!ready_to_start()) {
-    throw util::Exception("Cannot start game with %d players (need %d)", num_registered_players(), kNumPlayers);
-  }
+  wait_for_remote_player_registrations();
+  util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
+
+  std::vector<GameThread*> threads;
 
   int parallelism = params().parallelism;
   if (params().num_games > 0) {
     parallelism = std::min(params().parallelism, params().num_games);
   }
   for (int p = 0; p < parallelism; ++p) {
-    GameThread* thread = new GameThread(shared_data_);
-    threads_.push_back(thread);
-    if (thread->has_human_tui_player()) break;
+    GameThread* thread = new GameThread(shared_data_, (int)threads.size());
+    threads.push_back(thread);
+    if (thread->max_simultaneous_games() == (int)threads.size()) break;
   }
 
   time_point_t t1 = std::chrono::steady_clock::now();
 
-  for (auto thread : threads_) {
+  for (auto thread : threads) {
     thread->launch();
   }
 
-  for (auto thread : threads_) {
+  for (auto thread : threads) {
     thread->join();
   }
 
@@ -338,12 +389,12 @@ void GameServer<GameState>::run() {
   for (player_index_t p = 0; p < kNumPlayers; ++p) {
     printf("P%d %s\n", p, get_results_str(results[p]).c_str());
   }
-  util::ParamDumper::add("Parallelism factor", "%d", (int)threads_.size());
+  util::ParamDumper::add("Parallelism factor", "%d", (int)threads.size());
   util::ParamDumper::add("Num games", "%d", num_games);
   util::ParamDumper::add("Total runtime", "%.3fs", ns*1e-9);
   util::ParamDumper::add("Avg runtime", "%.3fs", ns*1e-9 / num_games);
 
-  for (auto thread: threads_) {
+  for (auto thread: threads) {
     delete thread;
   }
 

@@ -13,10 +13,9 @@ public:
   void start_game() override;
   void receive_state_change(
       common::player_index_t, const GameState&, common::action_index_t) override;
-  void end_game(const GameState&, const GameOutcome&) override;
 
 private:
-  void print_state(const GameState&) override;
+  void print_state(const GameState&, bool terminal) override;
 
   PerfectOracle oracle_;
   PerfectOracle::MoveHistory move_history_;

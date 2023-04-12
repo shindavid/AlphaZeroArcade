@@ -72,8 +72,7 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mcts* mcts)
-: base_t("MCTS")
-, params_(params)
+: params_(params)
 , mcts_(mcts)
 , search_params_{
         {params.num_fast_iters, true},  // kFast

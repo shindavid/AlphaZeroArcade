@@ -14,7 +14,7 @@ class HumanTuiPlayerGenerator : public AbstractPlayerGenerator<GameState> {
 public:
   std::vector<std::string> get_types() const override { return {"TUI"}; }
   std::string get_description() const override { return "Human player"; }
-  AbstractPlayer<GameState>* generate(void* play_address) override { return new HumanTuiPlayer<GameState>(); }
+  AbstractPlayer<GameState>* generate(game_thread_id_t) override { return new HumanTuiPlayer<GameState>(); }
 };
 
 }  // namespace common

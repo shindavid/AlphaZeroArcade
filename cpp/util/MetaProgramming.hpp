@@ -71,7 +71,41 @@ struct IndexOf<TypeList<Head, Tails...>, T> {
   static constexpr std::size_t value = std::is_same_v<Head, T> ? 0 :
                                        (IndexOf_v<TypeList<Tails...>, T> == -1 ? -1 :
                                         IndexOf_v<TypeList<Tails...>, T> + 1);
-
 };
+
+// apply
+
+template <typename TList, template <typename> typename F> struct Apply;
+
+template <template <typename> typename F>
+struct Apply<TypeList<>, F> {
+  using type = TypeList<>;
+};
+
+template <template <typename> typename F, typename Head, typename... Tails>
+struct Apply<TypeList<Head, Tails...>, F> {
+  using type = TypeList<F<Head>, typename Apply<TypeList<Tails...>, F>::type>;
+};
+
+template <typename TList, template <typename> typename F>
+using Apply_t = typename Apply<TList, F>::type;
+
+// maxsizeof
+
+template <typename TList> struct MaxSizeOf;
+
+template <typename T>
+struct MaxSizeOf<TypeList<T>> {
+  static constexpr std::size_t value = sizeof(T);
+};
+
+template <typename Head, typename... Tails>
+struct MaxSizeOf<TypeList<Head, Tails...>> {
+  static constexpr std::size_t value = sizeof(Head) > MaxSizeOf<TypeList<Tails...>>::value ?
+                                       sizeof(Head) : MaxSizeOf<TypeList<Tails...>>::value;
+};
+
+template <typename TList>
+inline constexpr std::size_t MaxSizeOf_v = MaxSizeOf<TList>::value;
 
 }  // namespace mp

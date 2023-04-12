@@ -38,19 +38,13 @@ public:
   using player_array_t = std::array<AbstractPlayer*, GameState::kNumPlayers>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
-  AbstractPlayer(const std::string &name) : name_(name) {}
   virtual ~AbstractPlayer() = default;
   void set_name(const std::string &name) { name_ = name; }
   std::string get_name() const { return name_; }
   const player_name_array_t& get_player_names() const { return player_names_; }
   game_id_t get_game_id() const { return game_id_; }
   player_index_t get_my_seat() const { return my_seat_; }
-
-  void init_game(game_id_t game_id, const player_name_array_t& player_names, player_index_t seat_assignment) {
-    game_id_ = game_id;
-    player_names_ = player_names;
-    my_seat_ = seat_assignment;
-  }
+  void init_game(game_id_t game_id, const player_name_array_t& player_names, player_index_t seat_assignment);
 
   virtual void start_game() {}
   virtual void receive_state_change(player_index_t, const GameState&, action_index_t) {}
@@ -58,14 +52,22 @@ public:
   virtual void end_game(const GameState&, const GameOutcome&) {}
 
   /*
-   * A funny pair of extra virtual functions that most subclasses can ignore.
+   * Some extra virtual functions that most subclasses can ignore.
    *
-   * Override set_facing_human_tui_player() if you want to do something special when you are playing against a human
-   * TUI player. You might want to do this because you may want to print verbose information differently in this case,
-   * in order to avoid interfering with the user-interface of the human player.
+   * GameServer uses max_simultaneous_games() to determine how many games it can run in parallel. The default return
+   * value of 0 indicates that the player can play an unlimited number of games simultaneously. Currently, we only
+   * override this default for human players, which can only play one game at a time due to interface limitations.
+   *
+   * GameServer will invoke set_facing_human_tui_player() if there is a player in the game that is a HumanTuiPlayer.
+   * If you want to do something special when you are playing against a human TUI player, you can override this method.
+   * You might want to do this because you may want to print verbose information differently in this case, in order to
+   * avoid interfering with the user-interface of the human player.
+   *
+   * is_human_tui_player() is used by GameServer to determine whether to call set_facing_human_tui_player().
    */
-  virtual void set_facing_human_tui_player() {}
+  virtual int max_simultaneous_games() const { return 0; }
   virtual bool is_human_tui_player() const { return false; }
+  virtual void set_facing_human_tui_player() {}
 
 private:
   std::string name_;
@@ -75,3 +77,5 @@ private:
 };
 
 }  // namespace common
+
+#include <common/inl/AbstractPlayer.inl>

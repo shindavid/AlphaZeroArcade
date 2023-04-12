@@ -18,15 +18,17 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using player_array_t = typename base_t::player_array_t;
 
-  HumanTuiPlayer() : base_t("Human") {}
+  HumanTuiPlayer() {}
   void start_game() override;
   void receive_state_change(common::player_index_t, const GameState&, common::action_index_t) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
+
+  int max_simultaneous_games() const override { return 1; }
   bool is_human_tui_player() const override { return true; }
 
 protected:
-  virtual void print_state(const GameState&);
+  virtual void print_state(const GameState&, bool terminal);
 
   common::action_index_t last_action_ = -1;
 };

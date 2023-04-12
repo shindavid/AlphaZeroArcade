@@ -32,8 +32,7 @@ inline void GameState::deserialize_action(const char* buffer, common::action_ind
 }
 
 inline size_t GameState::serialize_state_change(
-    char* buffer, size_t buffer_size, common::player_index_t player,
-    common::action_index_t action, const GameOutcome& outcome) const
+    char* buffer, size_t buffer_size, common::player_index_t player, common::action_index_t action) const
 {
   return serialize_action(buffer, buffer_size, action);
 }
