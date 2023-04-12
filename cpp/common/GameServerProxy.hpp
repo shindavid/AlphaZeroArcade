@@ -51,6 +51,7 @@ public:
     void handle_start_game(const StartGame& payload);
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
     void launch();
+    int max_simultaneous_games() const { return max_simultaneous_games_; }
 
   private:
     void run();
@@ -61,6 +62,7 @@ public:
     player_array_t players_ = {};  // index by player_id_t
     game_thread_id_t id_;
     std::thread* thread_ = nullptr;
+    int max_simultaneous_games_ = 0;
   };
   using thread_vec_t = std::vector<GameThread*>;  // index by game_thread_id_t
 

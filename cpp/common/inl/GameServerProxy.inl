@@ -100,7 +100,16 @@ GameServerProxy<GameState>::GameThread::GameThread(SharedData& shared_data, game
   for (int p = 0; p < kNumPlayers; ++p) {
     PlayerGenerator* gen = shared_data_.get_gen(p);
     if (gen) {
-      players_[p] = gen->generate(id);
+      Player* player = gen->generate(id);
+      players_[p] = player;
+      int m = player->max_simultaneous_games();
+      if (m > 0) {
+        if (max_simultaneous_games_ == 0) {
+          max_simultaneous_games_ = m;
+        } else {
+          max_simultaneous_games_ = std::min(max_simultaneous_games_, m);
+        }
+      }
     }
   }
 }
@@ -118,10 +127,10 @@ void GameServerProxy<GameState>::GameThread::handle_start_game(const StartGame& 
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  std::unique_lock lock(mutex_);
-
   Player* player = players_[player_id];
   util::clean_assert(player, "Invalid player_id: %d", (int)payload.player_id);
+
+  std::unique_lock lock(mutex_);
   player->init_game(game_id, player_names, seat_assignment);
 }
 
@@ -172,6 +181,11 @@ void GameServerProxy<GameState>::handle_game_thread_initialization(const General
   thread_vec_.push_back(thread);
   printf("Created new GameThread (%d)\n", payload.game_thread_id);
   std::cout.flush();
+
+  Packet<GameThreadInitializationResponse> send_packet;
+  send_packet.payload().max_simultaneous_games = thread->max_simultaneous_games();
+  send_packet.send_to(shared_data_.socket_desc());
+
   thread->launch();
 }
 
