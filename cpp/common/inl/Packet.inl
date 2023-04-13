@@ -72,7 +72,7 @@ void Packet<PacketPayload>::read_from(int socket_descriptor) {
   }
 }
 
-template<PacketPayloadConcept PacketPayload> const PacketPayload& GeneralPacket::to() const {
+template<PacketPayloadConcept PacketPayload> const PacketPayload& GeneralPacket::payload_as() const {
   if (header_.type != PacketPayload::kType) {
     throw util::Exception("Packet::to() invalid type (expected:%d, got:%d)",
                           (int)PacketPayload::kType, (int)header_.type);

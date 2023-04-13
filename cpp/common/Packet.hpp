@@ -174,7 +174,7 @@ public:
    * Checks that this packet is of the given type, and returns the payload reinterpreted to the given type. If the
    * check fails, throws an exception.
    */
-  template<PacketPayloadConcept PacketPayload> const PacketPayload& to() const;
+  template<PacketPayloadConcept PacketPayload> const PacketPayload& payload_as() const;
 
   void read_from(int socket_descriptor);
 

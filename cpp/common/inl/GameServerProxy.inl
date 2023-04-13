@@ -173,7 +173,7 @@ void GameServerProxy<GameState>::run()
 
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::handle_game_thread_initialization(const GeneralPacket& packet) {
-  const GameThreadInitialization& payload = packet.to<GameThreadInitialization>();
+  const GameThreadInitialization& payload = packet.payload_as<GameThreadInitialization>();
   GameThread* thread = new GameThread(shared_data_, payload.game_thread_id);
   util::clean_assert(payload.game_thread_id == (int)thread_vec_.size(),
                      "GameThreadInitialization packet has unexpected game_thread_id: %d (expected %d)",
@@ -191,7 +191,7 @@ void GameServerProxy<GameState>::handle_game_thread_initialization(const General
 
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::handle_start_game(const GeneralPacket& packet) {
-  const StartGame& payload = packet.to<StartGame>();
+  const StartGame& payload = packet.payload_as<StartGame>();
 
   GameThread* thread = thread_vec_[payload.game_thread_id];
   thread->handle_start_game(payload);
