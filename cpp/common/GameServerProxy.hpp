@@ -22,6 +22,7 @@ public:
   using Player = AbstractPlayer<GameState>;
   using player_name_array_t = typename Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
+  using player_vec_t = std::vector<Player*>;
 
   struct Params {
     auto make_options_description();
@@ -30,17 +31,25 @@ public:
     int remote_port = 0;
   };
 
+  struct player_state_t {
+    GameState* state = nullptr;
+    Player* player = nullptr;
+  };
+  using player_state_array_t = std::array<player_state_t, kNumPlayers>;
+
   class SharedData {
   public:
     SharedData(const Params& params);
     void register_player(seat_index_t seat, PlayerGenerator* gen);
     int socket_desc() const { return socket_desc_; }
     PlayerGenerator* get_gen(player_id_t p) const { return player_generators_[p]; }
+    player_id_t min_player_id() const { return min_player_id_; }
 
   private:
     player_generator_array_t player_generators_ = {};  // indexed by player_id_t
     Params params_;
     int socket_desc_ = -1;
+    player_id_t min_player_id_ = -1;
   };
 
   class GameThread {
@@ -49,6 +58,8 @@ public:
     ~GameThread();
 
     void handle_start_game(const StartGame& payload);
+    void handle_state_change(const StateChange& payload);
+
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
     void launch();
     int max_simultaneous_games() const { return max_simultaneous_games_; }
@@ -59,7 +70,7 @@ public:
     std::condition_variable cv_;
     mutable std::mutex mutex_;
     SharedData& shared_data_;
-    player_array_t players_ = {};  // index by player_id_t
+    player_state_array_t player_states_;
     game_thread_id_t id_;
     std::thread* thread_ = nullptr;
     int max_simultaneous_games_ = 0;
@@ -85,6 +96,7 @@ public:
 private:
   void handle_game_thread_initialization(const GeneralPacket& packet);
   void handle_start_game(const GeneralPacket& packet);
+  void handle_state_change(const GeneralPacket& packet);
 
   SharedData shared_data_;
   thread_vec_t thread_vec_;

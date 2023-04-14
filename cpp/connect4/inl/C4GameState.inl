@@ -38,11 +38,11 @@ inline size_t GameState::serialize_state_change(
 }
 
 inline void GameState::deserialize_state_change(
-    const char* buffer, common::seat_index_t* seat, common::action_index_t* action, GameOutcome* outcome)
+    const char* buffer, common::seat_index_t* seat, common::action_index_t* action)
 {
   *seat = get_current_player();
   deserialize_action(buffer, action);
-  *outcome = apply_move(*action);
+  apply_move(*action);
 }
 
 inline common::seat_index_t GameState::get_current_player() const {

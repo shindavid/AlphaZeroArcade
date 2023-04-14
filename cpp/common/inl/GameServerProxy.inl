@@ -91,6 +91,13 @@ void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat, 
   player_generators_[player_id] = gen;
   printf("Registered player \"%s\" at seat %d (player_id:%d)\n", name.c_str(), seat, (int)player_id);
   std::cout.flush();
+
+  if (min_player_id_ == -1) {
+    min_player_id_ = player_id;
+  } else {
+    util::clean_assert(min_player_id_ < player_id, "Out-of-order player registration (%d >= %d)",
+                       (int)player_id, (int)min_player_id_);
+  }
 }
 
 template<GameStateConcept GameState>
@@ -101,7 +108,8 @@ GameServerProxy<GameState>::GameThread::GameThread(SharedData& shared_data, game
     PlayerGenerator* gen = shared_data_.get_gen(p);
     if (gen) {
       Player* player = gen->generate(id);
-      players_[p] = player;
+      player_states_[p].player = player;
+      player_states_[p].state = new GameState();
       int m = player->max_simultaneous_games();
       if (m > 0) {
         if (max_simultaneous_games_ == 0) {
@@ -127,11 +135,25 @@ void GameServerProxy<GameState>::GameThread::handle_start_game(const StartGame& 
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  Player* player = players_[player_id];
+  Player* player = player_states_[player_id].player;
   util::clean_assert(player, "Invalid player_id: %d", (int)payload.player_id);
 
   std::unique_lock lock(mutex_);
   player->init_game(game_id, player_names, seat_assignment);
+}
+
+template<GameStateConcept GameState>
+void GameServerProxy<GameState>::GameThread::handle_state_change(const StateChange& payload) {
+  player_id_t player_id = payload.player_id;
+  const char* buf = payload.dynamic_size_section.buf;
+
+  Player* player = player_states_[player_id].player;
+  GameState* state = player_states_[player_id].state;
+
+  seat_index_t seat;
+  action_index_t action;
+  state->deserialize_state_change(buf, &seat, &action);
+  player->receive_state_change(seat, *state, action);
 }
 
 template<GameStateConcept GameState>
@@ -165,6 +187,9 @@ void GameServerProxy<GameState>::run()
       case PacketHeader::kStartGame:
         handle_start_game(response_packet);
         break;
+      case PacketHeader::kStateChange:
+        handle_state_change(response_packet);
+        break;
       default:
         throw util::Exception("Unexpected packet type: %d", (int) type);
     }
@@ -195,6 +220,14 @@ void GameServerProxy<GameState>::handle_start_game(const GeneralPacket& packet) 
 
   GameThread* thread = thread_vec_[payload.game_thread_id];
   thread->handle_start_game(payload);
+}
+
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::handle_state_change(const GeneralPacket& packet) {
+  const StateChange& payload = packet.payload_as<StateChange>();
+
+  GameThread* thread = thread_vec_[payload.game_thread_id];
+  thread->handle_state_change(payload);
 }
 
 }  // namespace common

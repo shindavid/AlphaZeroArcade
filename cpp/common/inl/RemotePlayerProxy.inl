@@ -31,9 +31,10 @@ void RemotePlayerProxy<GameState>::receive_state_change(
     seat_index_t seat, const GameState& state, action_index_t action)
 {
   Packet<StateChange> packet;
+  packet.payload().game_thread_id = game_thread_id_;
+  packet.payload().player_id = player_id_;
   auto buf = packet.payload().dynamic_size_section.buf;
-  int buf_size = state.serialize_state_change(buf, sizeof(buf), seat, action);
-  packet.set_dynamic_section_size(buf_size);
+  packet.set_dynamic_section_size(state.serialize_state_change(buf, sizeof(buf), seat, action));
   packet.send_to(socket_descriptor_);
 }
 

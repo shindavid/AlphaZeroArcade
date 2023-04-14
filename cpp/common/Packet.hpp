@@ -108,6 +108,8 @@ struct StateChange {
     char buf[kSerializationLimit];
   };
 
+  game_thread_id_t game_thread_id;
+  player_id_t player_id;
   dynamic_size_section_t dynamic_size_section;
 };
 

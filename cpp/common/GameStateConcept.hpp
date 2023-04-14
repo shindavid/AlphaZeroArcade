@@ -48,8 +48,11 @@ concept GameStateConcept = requires(S state) {
    * static size_t serialize_action(char* buf, size_t buf_size, action_index_t action);
    * static void deserialize_action(const char* buf, action_index_t* action);
    *
+   * size_t serialize_action_prompt(char* buffer, size_t buffer_size, const ActionMask& valid_actions) const { return 0; }
+   * void deserialize_action_prompt(const char* buffer, ActionMask* valid_actions) const {}
+   *
    * size_t serialize_state_change(char* buf, size_t buf_size, seat_index_t seat, action_index_t action) const;
-   * void deserialize_state_change(const char* buf, seat_index_t* seat, action_index_t* action, GameOutcome* outcome);
+   * void deserialize_state_change(const char* buf, seat_index_t* seat, action_index_t* action);
    *
    * The serialize_* methods are expected to write to the given buffer, and return the number of bytes written.
    *
@@ -84,8 +87,7 @@ concept GameStateConcept = requires(S state) {
   { state.deserialize_state_change(
       std::declval<char *>(),
       std::declval<seat_index_t *>(),
-      std::declval<action_index_t *>(),
-      std::declval<typename GameStateTypes<S>::GameOutcome *>())
+      std::declval<action_index_t *>())
   };
 
   /*
