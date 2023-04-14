@@ -34,31 +34,31 @@ public:
   using duration_t = std::chrono::nanoseconds;
 
   /*
-   * A registration_t is instantiated from a registration_template_t. See registration_template_t for more detail.
+   * A player_instantiation_t is instantiated from a registration_t. See registration_t for more detail.
    */
-  struct registration_t {
+  struct player_instantiation_t {
     Player* player = nullptr;
     seat_index_t seat = -1;  // -1 means random seat
     player_id_t player_id = -1;  // order in which player was registered
   };
-  using registration_array_t = std::array<registration_t, kNumPlayers>;
+  using player_instantiation_array_t = std::array<player_instantiation_t, kNumPlayers>;
 
   /*
-   * A registration_template_t gives birth to a registration_t.
+   * A registration_t gives birth to a player_instantiation_t.
    *
-   * The difference is that a registration_template_t has a player-*generating-function*, rather than a player.
+   * The difference is that a registration_t has a player-*generating-function*, rather than a player.
    * This is needed because when multiple GameThread's are launched, each needs to instantiate its own Player.
    * This requires the GameServer API to demand passing in a player-*generator*, as opposed to a player, so that
    * each spawned GameThread can create its own player.
    */
-  struct registration_template_t {
+  struct registration_t {
     PlayerGenerator* gen = nullptr;
     seat_index_t seat = -1;  // -1 means random seat
     player_id_t player_id = -1;  // order in which player was generated
 
-    registration_t instantiate(game_thread_id_t id) const { return {gen->generate_with_name(id), seat, player_id}; }
+    player_instantiation_t instantiate(game_thread_id_t id) const { return {gen->generate_with_name(id), seat, player_id}; }
   };
-  using registration_template_vec_t = std::vector<registration_template_t>;
+  using registration_vec_t = std::vector<registration_t>;
 
   struct Params {
     auto make_options_description();
@@ -90,14 +90,14 @@ private:
     bool ready_to_start() const;
     int num_games_started() const { return num_games_started_; }
     player_id_t register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
-    int num_registrations() const { return registration_templates_.size(); }
-    registration_array_t generate_player_order(const registration_array_t& registrations) const;
-    registration_template_vec_t& registration_templates() { return registration_templates_; }
+    int num_registrations() const { return registrations_.size(); }
+    player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations) const;
+    registration_vec_t& registration_templates() { return registrations_; }
 
   private:
     const Params params_;
 
-    registration_template_vec_t registration_templates_;
+    registration_vec_t registrations_;
 
     mutable std::mutex mutex_;
     progressbar* bar_ = nullptr;
@@ -123,7 +123,7 @@ private:
     GameOutcome play_game(player_array_t&);
 
     SharedData& shared_data_;
-    registration_array_t registrations_;
+    player_instantiation_array_t instantiations_;
     std::thread* thread_ = nullptr;
     game_thread_id_t id_;
     int max_simultaneous_games_ = 0;  // 0 = unlimited

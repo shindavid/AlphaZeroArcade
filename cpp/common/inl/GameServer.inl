@@ -79,14 +79,14 @@ auto GameServer<GameState>::SharedData::get_results() const {
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::SharedData::end_session() {
-  for (auto& reg : registration_templates_) {
+  for (auto& reg : registrations_) {
     reg.gen->end_session();
   }
 }
 
 template<GameStateConcept GameState>
 bool GameServer<GameState>::SharedData::ready_to_start() const {
-  for (const auto& reg : registration_templates_) {
+  for (const auto& reg : registrations_) {
     auto* remote_gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen);
     if (remote_gen && !remote_gen->initialized()) return false;
   }
@@ -110,22 +110,22 @@ player_id_t GameServer<GameState>::SharedData::register_player(
     util::clean_assert(seat < 0, "Cannot specify --seat with --type=Remote");
   }
   if (seat >= 0) {
-    for (const auto& reg : registration_templates_) {
+    for (const auto& reg : registrations_) {
       util::clean_assert(reg.seat != seat, "Double-seated player at seat %d", seat);
     }
   }
-  player_id_t player_id = registration_templates_.size();
+  player_id_t player_id = registrations_.size();
   util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
-  registration_templates_.emplace_back(gen, seat, player_id);
+  registrations_.emplace_back(gen, seat, player_id);
   return player_id;
 }
 
 template<GameStateConcept GameState>
-typename GameServer<GameState>::registration_array_t
-GameServer<GameState>::SharedData::generate_player_order(const registration_array_t &registrations) const {
-  registration_array_t player_order;
+typename GameServer<GameState>::player_instantiation_array_t
+GameServer<GameState>::SharedData::generate_player_order(const player_instantiation_array_t &registrations) const {
+  player_instantiation_array_t player_order;
 
-  registration_array_t random_seat_assignments;
+  player_instantiation_array_t random_seat_assignments;
   int num_random_assignments = 0;
 
   // first seat players that have dedicated seats
@@ -164,9 +164,9 @@ GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thre
 , id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
-    registrations_[p] = shared_data_.registration_templates()[p].instantiate(id);
-    human_tui_indices[p] = registrations_[p].player->is_human_tui_player();
-    int m = registrations_[p].player->max_simultaneous_games();
+    instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
+    human_tui_indices[p] = instantiations_[p].player->is_human_tui_player();
+    int m = instantiations_[p].player->max_simultaneous_games();
     if (m > 0) {
       if (max_simultaneous_games_ == 0) {
         max_simultaneous_games_ = m;
@@ -180,7 +180,7 @@ GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thre
     std::bitset<kNumPlayers> human_tui_indices_copy(human_tui_indices);
     human_tui_indices_copy[p] = false;
     if (human_tui_indices_copy.any()) {
-      registrations_[p].player->set_facing_human_tui_player();
+      instantiations_[p].player->set_facing_human_tui_player();
     }
   }
 
@@ -193,7 +193,7 @@ template<GameStateConcept GameState>
 GameServer<GameState>::GameThread::~GameThread() {
   if (thread_) delete thread_;
 
-  for (const auto& reg : registrations_) delete reg.player;
+  for (const auto& reg : instantiations_) delete reg.player;
 }
 
 template<GameStateConcept GameState>
@@ -208,7 +208,7 @@ void GameServer<GameState>::GameThread::run() {
   while (true) {
     if (!shared_data_.request_game(params.num_games)) return;
 
-    registration_array_t player_order = shared_data_.generate_player_order(registrations_);
+    player_instantiation_array_t player_order = shared_data_.generate_player_order(instantiations_);
 
     player_array_t players;
     for (int p = 0; p < kNumPlayers; ++p) {
@@ -284,9 +284,9 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
     shared_data_.register_player(-1, gen, true);
   }
 
-  std::vector<registration_template_t*> remote_player_registrations;
+  std::vector<registration_t*> remote_player_registrations;
   for (int r = 0; r < shared_data_.num_registrations(); ++r) {
-    registration_template_t& reg = shared_data_.registration_templates()[r];
+    registration_t& reg = shared_data_.registration_templates()[r];
     if (dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen)) {
       util::clean_assert(reg.seat < 0, "Cannot specify --seat= when using --type=Remote");
       remote_player_registrations.push_back(&reg);
