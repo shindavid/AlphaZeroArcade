@@ -5,9 +5,12 @@
 #include <util/RepoUtil.hpp>
 #include <util/ScreenUtil.hpp>
 #include <util/ThreadSafePrinter.hpp>
+#include <util/SocketUtil.hpp>
 
 namespace ansi {
+
 Codes* Codes::instance_ = nullptr;
+
 }  // namespace ansi
 
 namespace util {
@@ -20,3 +23,9 @@ ScreenClearer* ScreenClearer::instance_ = nullptr;
 std::mutex ThreadSafePrinter::mutex_;
 
 }  // namespace util
+
+namespace io {
+
+Socket::map_t Socket::map_;
+
+}  // namespace io
