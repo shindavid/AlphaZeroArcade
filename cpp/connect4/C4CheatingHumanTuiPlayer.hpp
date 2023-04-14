@@ -10,14 +10,12 @@ class CheatingHumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
 public:
   using base_t = common::HumanTuiPlayer<GameState>;
 
-  CheatingHumanTuiPlayer(const PerfectPlayParams& perfect_play_params);
-
   void start_game() override;
   void receive_state_change(
-      common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
+      common::seat_index_t, const GameState&, common::action_index_t) override;
 
 private:
-  void print_state(const GameState&) override;
+  void print_state(const GameState&, bool terminal) override;
 
   PerfectOracle oracle_;
   PerfectOracle::MoveHistory move_history_;

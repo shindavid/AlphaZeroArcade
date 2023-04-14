@@ -19,23 +19,22 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
+  using TrainingDataWriterParams = typename TrainingDataWriter::Params;
 
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;
   using Mcts = base_t::Mcts;
   using MctsResults = base_t::MctsResults;
-  using MctsSearchParams = Mcts::SearchParams;
   using player_array_t = base_t::player_array_t;
 
   template<typename... BaseArgs>
-  DataExportingMctsPlayer(TrainingDataWriter* writer, BaseArgs&&...);
+  DataExportingMctsPlayer(const TrainingDataWriterParams& writer_params, BaseArgs&&...);
 
   void start_game() override;
   void receive_state_change(
-      player_index_t p, const GameState& state, action_index_t action,
-      const GameOutcome& outcome) override;
-
+      seat_index_t seat, const GameState& state, action_index_t action) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
+  void end_game(const GameState&, const GameOutcome&) override;
 
 protected:
   void record_position(const GameState& state, const MctsResults*);

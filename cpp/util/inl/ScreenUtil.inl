@@ -13,14 +13,25 @@ inline void clearscreen() {
   if (system("clear")) {
     throw std::exception();
   }
-  /*
-  if (!cur_term) {
-    int result;
-    setupterm(nullptr, STDOUT_FILENO, &result);
-    if (result <= 0) return;
+}
+
+inline void ScreenClearer::clear_once() {
+  ScreenClearer* s = instance();
+  if (s->ready_) {
+    clearscreen();
+    s->ready_ = false;
   }
-  putp(tigetstr("clear"));
-   */
+}
+
+inline void ScreenClearer::reset() {
+  instance()->ready_ = true;
+}
+
+inline ScreenClearer* ScreenClearer::instance() {
+  if (!instance_) {
+    instance_ = new ScreenClearer();
+  }
+  return instance_;
 }
 
 }  // namespace util

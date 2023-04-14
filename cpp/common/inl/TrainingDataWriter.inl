@@ -11,6 +11,9 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+TrainingDataWriter<GameState_, Tensorizor_>* TrainingDataWriter<GameState_, Tensorizor_>::instance_ = nullptr;
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -86,22 +89,16 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
-: output_path_(params.games_dir)
-{
-  namespace bf = boost::filesystem;
-
-  if (params.clear_dir && bf::is_directory(output_path_)) {
-    bf::remove_all(output_path_);
+TrainingDataWriter<GameState_, Tensorizor_>*
+TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params) {
+  if (!instance_) {
+    instance_ = new TrainingDataWriter(params);
+  } else {
+    if (params != instance_->params_) {
+      throw std::runtime_error("TrainingDataWriter::instance() called with different params");
+    }
   }
-  bf::create_directories(output_path_);
-
-  thread_ = new std::thread([&] { loop(); });
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
-  shut_down();
+  return instance_;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -135,6 +132,25 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
   cv_.notify_one();
   if (thread_->joinable()) thread_->join();
   delete thread_;
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
+: params_(params)
+{
+  namespace bf = boost::filesystem;
+
+  if (params.clear_dir && bf::is_directory(games_dir())) {
+    bf::remove_all(games_dir());
+  }
+  bf::create_directories(games_dir());
+
+  thread_ = new std::thread([&] { loop(); });
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
+  shut_down();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -176,8 +192,8 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   int64_t ns_since_epoch = util::ns_since_epoch(std::chrono::steady_clock::now());
   std::string output_filename = util::create_string("%ld-%d.ptd", ns_since_epoch, rows);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
-  boost::filesystem::path output_path = output_path_ / output_filename;
-  boost::filesystem::path tmp_output_path = output_path_ / tmp_output_filename;
+  boost::filesystem::path output_path = games_dir() / output_filename;
+  boost::filesystem::path tmp_output_path = games_dir() / tmp_output_filename;
 
   auto slice = torch::indexing::Slice(torch::indexing::None, rows);
   using tensor_map_t = std::map<std::string, torch::Tensor>;

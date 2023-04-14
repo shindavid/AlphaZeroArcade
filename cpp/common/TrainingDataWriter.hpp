@@ -25,6 +25,7 @@ class TrainingDataWriter {
 public:
   struct Params {
     auto make_options_description();
+    bool operator==(const Params& other) const = default;
 
     std::string games_dir = "c4_games";
     bool clear_dir = true;  // before writing, clear the directory if it exists
@@ -130,8 +131,12 @@ public:
   using GameData_sptr = std::shared_ptr<GameData>;
   using game_data_map_t = std::map<game_id_t, GameData_sptr>;
 
-  TrainingDataWriter(const Params& params);
-  ~TrainingDataWriter();
+  static TrainingDataWriter* instantiate(const Params& params);
+
+  /*
+   * Assumes that instantiate() was called at least once.
+   */
+  static TrainingDataWriter* instance() { return instance_; }
 
   GameData_sptr get_data(game_id_t id);
 
@@ -142,6 +147,11 @@ public:
 protected:
   using game_queue_t = std::vector<GameData_sptr>;
 
+  boost::filesystem::path games_dir() const { return params_.games_dir; }
+  TrainingDataWriter(const Params& params);
+  ~TrainingDataWriter();
+
+
   void loop();
   void write_to_file(const GameData* data);
 
@@ -149,7 +159,7 @@ protected:
   static auto policy_shape(int rows);
   static auto value_shape(int rows);
 
-  const boost::filesystem::path output_path_;
+  const Params params_;
   std::thread* thread_;
   game_data_map_t game_data_map_;
   game_queue_t game_queue_[2];
@@ -158,6 +168,8 @@ protected:
 
   std::condition_variable cv_;
   std::mutex mutex_;
+
+  static TrainingDataWriter* instance_;
 };
 
 }  // namespace common

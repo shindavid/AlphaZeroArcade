@@ -15,10 +15,6 @@ public:
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
-  RandomPlayer() : base_t("Random") {}
-
-  void start_game() override {}
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override {}
   action_index_t get_action(const GameState&, const ActionMask& mask) override {
     return bitset_util::choose_random_on_index(mask);
   }

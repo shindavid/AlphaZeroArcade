@@ -9,9 +9,9 @@ namespace common {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 template<typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
-    TrainingDataWriter* writer, BaseArgs&&... base_args)
+    const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
 : base_t(std::forward<BaseArgs>(base_args)...)
-, writer_(writer) {}
+, writer_(TrainingDataWriter::instantiate(writer_params)) {}
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
@@ -22,15 +22,9 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    player_index_t p, const GameState& state, action_index_t action,
-    const GameOutcome& outcome)
+    seat_index_t seat, const GameState& state, action_index_t action)
 {
-  base_t::receive_state_change(p, state, action, outcome);
-  if (is_terminal_outcome(outcome)) {
-    game_data_->record_for_all(outcome.reshaped(1, GameState::kNumPlayers));
-    writer_->close(game_data_);
-    game_data_ = nullptr;
-  }
+  base_t::receive_state_change(seat, state, action);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -44,6 +38,15 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     record_position(state, mcts_results);
   }
   return base_t::get_action_helper(search_mode, mcts_results, valid_actions);
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&, const GameOutcome& outcome) {
+  if (is_terminal_outcome(outcome)) {
+    game_data_->record_for_all(outcome.reshaped(1, GameState::kNumPlayers));
+    writer_->close(game_data_);
+    game_data_ = nullptr;
+  }
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

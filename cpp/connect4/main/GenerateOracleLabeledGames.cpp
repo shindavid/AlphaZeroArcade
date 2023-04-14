@@ -1,3 +1,11 @@
+/*
+ * In the past, we used this to generate perfectly-labeled training data for testing purposes. Conceivably, this
+ * could still be useful, but it's no longer used now that the AlphaZero complete loop works.
+ *
+ * After some refactoring (the introduction of GameServer to replace GameRunner/ParallelGameRunner), this no longer
+ * compiles. Because it's no longer used, I'm not going to bother fixing it. But I will leave it around in case we want
+ * to revive it for whatever reason.
+ */
 #include <iostream>
 #include <string>
 #include <vector>
@@ -16,7 +24,7 @@
 
 namespace bf = boost::filesystem;
 
-using player_index_t = common::player_index_t;
+using seat_index_t = common::seat_index_t;
 using action_index_t = common::action_index_t;
 
 using GameState = c4::GameState;
@@ -56,7 +64,7 @@ public:
     auto& value = slab.value;
     auto& policy = slab.policy;
 
-    player_index_t cp = state.get_current_player();
+    seat_index_t cp = state.get_current_player();
     value(cp) = cur_player_value;
     value(1 - cp) = 1 - cur_player_value;
     for (size_t k = 0; k < moves.size(); ++k) {
@@ -105,7 +113,7 @@ public:
   }
 
   void receive_state_change(
-      player_index_t p, const GameState& state, action_index_t action,
+      seat_index_t p, const GameState& state, action_index_t action,
       const GameOutcome& outcome) override
   {
     BasePlayer::receive_state_change(p, state, action, outcome);

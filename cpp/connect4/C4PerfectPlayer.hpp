@@ -9,27 +9,11 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
-#include <common/GameRunner.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace c4 {
-
-struct PerfectPlayParams {
-  std::string c4_solver_dir;
-
-  /*
-   * In leisurely mode, PerfectPlayer has no preference among winning moves.
-   *
-   * Else, it prefers the fastest win.
-   *
-   * In losing positions, PerfectPlayer prefers the slowest loss regardless of leisurely_mode.
-   */
-  bool leisurely_mode = false;
-
-  auto make_options_description();
-};
 
 class PerfectOracle {
 public:
@@ -83,7 +67,7 @@ public:
     std::string get_overlay() const;
   };
 
-  PerfectOracle(const PerfectPlayParams& params);
+  PerfectOracle();
   ~PerfectOracle();
 
   QueryResult query(MoveHistory& history);
@@ -99,16 +83,31 @@ class PerfectPlayer : public Player {
 public:
   using base_t = Player;
 
-  PerfectPlayer(const PerfectPlayParams&);
+  struct Params {
+    /*
+     * "strong" or "weak"
+     *
+     * In strong mode, PerfectPlayer always prefers the fastest win among winning moves.
+     *
+     * In weak mode, PerfectPlayer has no preference among winning moves.
+     *
+     * In losing positions, PerfectPlayer prefers the slowest loss regardless of mode.
+     */
+    std::string mode = "strong";
+
+    auto make_options_description();
+  };
+
+  PerfectPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(common::player_index_t, const GameState&, common::action_index_t, const GameOutcome&) override;
+  void receive_state_change(common::seat_index_t, const GameState&, common::action_index_t) override;
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:
   PerfectOracle oracle_;
   PerfectOracle::MoveHistory move_history_;
-  const bool leisurely_mode_;
+  bool strong_mode_;
 };
 
 }  // namespace c4

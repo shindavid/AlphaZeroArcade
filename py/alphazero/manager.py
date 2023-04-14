@@ -63,13 +63,13 @@ class PathInfo:
 
 
 class SelfPlayProcData:
-    def __init__(self, cmd: List[str], n_games: int, gen: Generation, games_dir: str):
+    def __init__(self, cmd: str, n_games: int, gen: Generation, games_dir: str):
         self.proc_complete = False
         self.proc = subprocess_util.Popen(cmd)
         self.n_games = n_games
         self.gen = gen
         self.games_dir = games_dir
-        timed_print(f'Running gen-{gen} self-play [{self.proc.pid}]: {" ".join(cmd)}')
+        timed_print(f'Running gen-{gen} self-play [{self.proc.pid}]: {cmd}')
 
         if self.n_games:
             self.wait_for_completion()
@@ -99,7 +99,7 @@ class AlphaZeroManager:
         self.py_cuda_device_str: str = f'cuda:{self.py_cuda_device}'
         self.log_file = None
 
-        self.n_gen0_games = 1000
+        self.n_gen0_games = 4000
         self.n_sync_games = 1000
         self.c4_base_dir: str = c4_base_dir
 
@@ -242,30 +242,42 @@ class AlphaZeroManager:
         gen = self.get_latest_model_generation()
 
         games_dir = self.get_self_play_data_subdir(gen)
-        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_training_self_play')
+        c4_bin = os.path.join(Repo.root(), 'target/Release/bin/c4')
         if gen == 0:
             n_games = self.n_gen0_games
         elif not async_mode:
             n_games = self.n_sync_games
         else:
             n_games = 0
-        self_play_cmd = [
-            self_play_bin,
-            '-g', games_dir,
-            '-G', n_games,
+
+        player_args = [
+            '--type=MCTS-T',
+            '--name=MCTS',
             '--no-forced-playouts',
+            '-g', games_dir,
+        ]
+        player2_args = [
+            '--name=MCTS2',
+            '--copy-from=MCTS',
         ]
 
         if gen == 0:
-            self_play_cmd.append('--uniform-model')
+            player_args.append('--uniform-model')
         else:
             model = self.get_model_filename(gen)
-            self_play_cmd.extend([
+            player_args.extend([
                 '--nnet-filename', model,
                 '--no-clear-dir',
             ])
 
-        self_play_cmd = list(map(str, self_play_cmd))
+        self_play_cmd = [
+            c4_bin,
+            '-G', n_games,
+            '--player', '"%s"' % (' '.join(map(str, player_args))),
+            '--player', '"%s"' % (' '.join(map(str, player2_args))),
+        ]
+
+        self_play_cmd = ' '.join(map(str, self_play_cmd))
         return SelfPlayProcData(self_play_cmd, n_games, gen, games_dir)
 
     def train_step(self):

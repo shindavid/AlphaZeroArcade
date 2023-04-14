@@ -51,7 +51,17 @@ public:
   using LocalPolicyProbDistr = GameStateTypes::LocalPolicyProbDistr;
   using GameOutcome = GameStateTypes::GameOutcome;
 
-  common::player_index_t get_current_player() const;
+  static size_t serialize_action(char* buffer, size_t buffer_size, common::action_index_t action);
+  static void deserialize_action(const char* buffer, common::action_index_t* action);
+
+  size_t serialize_action_prompt(char* buffer, size_t buffer_size, const ActionMask& valid_actions) const { return 0; }
+  void deserialize_action_prompt(const char* buffer, ActionMask* valid_actions) const {}
+
+  size_t serialize_state_change(char* buffer, size_t buffer_size, common::seat_index_t seat,
+                                common::action_index_t action) const;
+  void deserialize_state_change(const char* buffer, common::seat_index_t* seat, common::action_index_t* action);
+
+  common::seat_index_t get_current_player() const;
   GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
   std::string compact_repr() const;

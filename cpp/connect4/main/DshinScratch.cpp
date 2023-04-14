@@ -1,7 +1,7 @@
 /*
  * Usage:
  *
- * ./c4_dshin_scratch c4_model.ptj 144 100  # batch-size=144, loop-size=100
+ * ./dshin_scratch c4_model.ptj 144 100  # batch-size=144, loop-size=100
  */
 #include <torch/torch.h>
 

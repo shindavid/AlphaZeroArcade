@@ -55,7 +55,6 @@ public:
   using GameStateTypes = common::GameStateTypes<GameState>;
 
   using Mcts = common::Mcts<GameState, Tensorizor>;
-  using MctsParams = typename Mcts::Params;
   using MctsSearchParams = typename Mcts::SearchParams;
   using MctsResults = common::MctsResults<GameState>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
@@ -72,11 +71,11 @@ public:
 
   Mcts* get_mcts() { return mcts_; }
   void start_game() override;
-  void receive_state_change(player_index_t, const GameState&, action_index_t, const GameOutcome&) override;
+  void receive_state_change(seat_index_t, const GameState&, action_index_t) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   float avg_batch_size() const { return mcts_->avg_batch_size(); }
-  void set_facing_human_tui_player(bool b=true) { facing_human_tui_player_ = b; }  // affects printing
+  void set_facing_human_tui_player() override { facing_human_tui_player_ = true; }  // affects printing
 
 protected:
   const MctsResults* mcts_search(const GameState& state, SearchMode search_mode) const;
@@ -100,9 +99,7 @@ protected:
   Mcts* mcts_;
   const MctsSearchParams search_params_[kNumSearchModes];
   math::ExponentialDecay move_temperature_;
-  player_index_t my_index_ = -1;
   VerboseInfo* verbose_info_ = nullptr;
-  player_name_array_t player_names_;
   bool owns_mcts_;
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;

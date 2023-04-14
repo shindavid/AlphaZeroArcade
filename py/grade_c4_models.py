@@ -67,19 +67,29 @@ class ModelGrader:
         return os.path.join(self.grading_logs_dir, f'gen-{gen}.log')
 
     def grade(self, gen):
-        self_play_bin = os.path.join(Repo.root(), 'target/Release/bin/c4_competitive_self_play')
-        assert os.path.isfile(self_play_bin)
-        cmd = [
-            self_play_bin,
-            '-G', Args.n_games,
+        c4_bin = os.path.join(Repo.root(), 'target/Release/bin/c4')
+        assert os.path.isfile(c4_bin)
+        player_args = [
+            '--type=MCTS-C',
+            '--name=MCTS',
             '-i', Args.mcts_iters,
             '--batch-size-limit', Args.batch_size_limit,
-            '-p', Args.parallelism_factor,
             '--nnet-filename', self.get_model_filename(gen),
             '--no-forced-playouts',
-            '--hide-progress-bar',
             '--grade-moves',
         ]
+        player2_args = [
+            '--name=MCTS2',
+            '--copy-from=MCTS',
+        ]
+
+        cmd = [
+            c4_bin,
+            '-G', Args.n_games,
+            '-p', Args.parallelism_factor,
+            '--player', '"%s"' % (' '.join(map(str, player_args))),
+            '--player', '"%s"' % (' '.join(map(str, player2_args))),
+                        ]
         cmd = ' '.join(map(str, cmd))
         log_filename = self.get_log_filename(gen)
         hidden_log_filename = make_hidden_filename(log_filename)

@@ -9,25 +9,6 @@
 
 namespace c4 {
 
-inline auto PerfectPlayParams::make_options_description() {
-  namespace po = boost::program_options;
-  namespace po2 = boost_util::program_options;
-
-  std::string default_c4_solver_dir = util::Config::instance()->get("c4.solver_dir", "");
-
-  auto c4_solver_dir_value = po::value<std::string>(&c4_solver_dir);
-  if (!default_c4_solver_dir.empty()) {
-    c4_solver_dir_value = c4_solver_dir_value->default_value(default_c4_solver_dir);
-  }
-
-  po2::options_description desc("C4PerfectPlayer options");
-  return desc
-      .template add_option<"c4-solver-dir", 'c'>(c4_solver_dir_value, "base dir containing c4solver bin+book")
-      .template add_option<"leisurely-mode", 'l'>(po::bool_switch(&leisurely_mode)->default_value(leisurely_mode),
-          "exhibit no preference among winning moves as perfect player")
-  ;
-}
-
 inline PerfectOracle::MoveHistory::MoveHistory() : char_pointer_(chars_) {}
 
 inline PerfectOracle::MoveHistory::MoveHistory(const MoveHistory& history) {
@@ -69,12 +50,14 @@ inline std::string PerfectOracle::QueryResult::get_overlay() const {
                              chars[4], chars[5], chars[6]);
 }
 
-inline PerfectOracle::PerfectOracle(const PerfectPlayParams& params) {
-  if (params.c4_solver_dir.empty()) {
+inline PerfectOracle::PerfectOracle() {
+  std::string c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
+
+  if (c4_solver_dir_str.empty()) {
     throw util::Exception("c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
                           util::Config::kFilename);
   }
-  boost::filesystem::path c4_solver_dir(params.c4_solver_dir);
+  boost::filesystem::path c4_solver_dir(c4_solver_dir_str);
   if (!boost::filesystem::is_directory(c4_solver_dir)) {
     throw util::Exception("Directory does not exist: %s", c4_solver_dir.c_str());
   }
@@ -150,24 +133,41 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
   return result;
 }
 
-inline PerfectPlayer::PerfectPlayer(const PerfectPlayParams& params)
-  : base_t("Perfect")
-  , oracle_(params)
-  , leisurely_mode_(params.leisurely_mode) {}
+inline auto PerfectPlayer::Params::make_options_description() {
+  namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
+
+  po2::options_description desc("c4::PerfectPlayer options");
+  return desc
+      .template add_option<"mode", 'm'>
+          (po::value<std::string>(&mode)->default_value(mode), "strong|weak. Strong mode prefers fast wins")
+      ;
+}
+
+inline PerfectPlayer::PerfectPlayer(const Params& params)
+{
+  if (params.mode == "strong") {
+    strong_mode_ = true;
+  } else if (params.mode == "weak") {
+    strong_mode_ = false;
+  } else {
+    throw util::Exception("Invalid mode: %s", params.mode.c_str());
+  }
+}
 
 inline void PerfectPlayer::start_game() {
   move_history_.reset();
 }
 
 inline void PerfectPlayer::receive_state_change(
-    common::player_index_t, const GameState&, common::action_index_t action, const GameOutcome&)
+    common::seat_index_t, const GameState&, common::action_index_t action)
 {
   move_history_.append(action);
 }
 
 inline common::action_index_t PerfectPlayer::get_action(const GameState&, const ActionMask&) {
   auto result = oracle_.query(move_history_);
-  if (leisurely_mode_ && result.score > 0) {
+  if (!strong_mode_ && result.score > 0) {
     return bitset_util::choose_random_on_index(result.good_moves);
   } else {
     return bitset_util::choose_random_on_index(result.best_moves);

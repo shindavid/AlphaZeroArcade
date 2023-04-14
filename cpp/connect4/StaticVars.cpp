@@ -1,4 +1,3 @@
-#include <connect4/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 
 namespace c4 {
