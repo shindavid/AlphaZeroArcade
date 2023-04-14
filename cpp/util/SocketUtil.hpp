@@ -7,6 +7,9 @@
 
 namespace io {
 
+using file_descriptor_t = int;
+using port_t = int;
+
 /*
  * Provides thread-safe access to a socket.
  *
@@ -28,11 +31,15 @@ namespace io {
  */
 class Socket {
 public:
-  using file_descriptor_t = int;
   using map_t = std::map<file_descriptor_t, Socket*>;
 
   static Socket* get_instance(file_descriptor_t fd);
   void write(char const* data, int size);
+  void close();
+
+  static Socket* create_server_socket(port_t port, int max_connections);
+  static Socket* create_client_socket(std::string const& host, port_t port);
+  Socket* accept() const;
 
   class Reader {
   public:

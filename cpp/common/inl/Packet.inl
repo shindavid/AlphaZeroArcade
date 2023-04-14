@@ -54,42 +54,51 @@ void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
 }
 
 template <PacketPayloadConcept PacketPayload>
-void Packet<PacketPayload>::send_to(int socket_descriptor) const {
-  send(socket_descriptor, (const void*) this, size(), 0);
+void Packet<PacketPayload>::send_to(io::Socket* socket) const {
+  socket->write((const char*) this, size());
 }
 
 template <PacketPayloadConcept PacketPayload>
-void Packet<PacketPayload>::read_from(int socket_descriptor) {
+void Packet<PacketPayload>::read_from(io::Socket* socket) {
   char* buf = reinterpret_cast<char*>(this);
-  constexpr int buf_size = sizeof(*this);
-  int n = recv(socket_descriptor, buf, buf_size, 0);
-  if (n <= 0) {
-    throw util::Exception("Packet<%d>::read_from() failed (n=%d)", (int)PacketPayload::kType, n);
-  }
+  constexpr int header_size = sizeof(header_);
+
+  io::Socket::Reader reader(socket);
+  reader.read(buf, header_size);
+
   if (PacketPayload::kType != header_.type) {
     throw util::Exception("Packet<%d>::read_from() invalid type (expected:%d, got:%d)",
                           (int)PacketPayload::kType, (int)PacketPayload::kType, (int)header_.type);
   }
+  if (header_.payload_size > (int)sizeof(payload_)) {
+    throw util::Exception("Packet<%d>::read_from() invalid payload_size (%d>%d)",
+                          (int)PacketPayload::kType, header_.payload_size, (int)sizeof(payload_));
+  }
+
+  reader.read(buf + header_size, header_.payload_size);
 }
 
 template<PacketPayloadConcept PacketPayload> const PacketPayload& GeneralPacket::payload_as() const {
   if (header_.type != PacketPayload::kType) {
-    throw util::Exception("Packet::to() invalid type (expected:%d, got:%d)",
+    throw util::Exception("GeneralPacket::payload_as() invalid type (expected:%d, got:%d)",
                           (int)PacketPayload::kType, (int)header_.type);
   }
   return *reinterpret_cast<const PacketPayload*>(payload_);
 }
 
-inline void GeneralPacket::read_from(int socket_descriptor) {
+inline void GeneralPacket::read_from(io::Socket* socket) {
   char* buf = reinterpret_cast<char*>(this);
-  constexpr int buf_size = sizeof(*this);
-  int n = recv(socket_descriptor, buf, buf_size, 0);
-  if (n <= 0) {
-    throw util::Exception("GeneralPacket::read_from() failed (n=%d)", n);
+  constexpr int header_size = sizeof(header_);
+
+  io::Socket::Reader reader(socket);
+  reader.read(buf, header_size);
+
+  if (header_.payload_size > (int)sizeof(payload_)) {
+    throw util::Exception("GeneralPacket::read_from() invalid payload_size (%d>%d)",
+                          header_.payload_size, (int)sizeof(payload_));
   }
-  if (n >= buf_size) {
-    throw util::Exception("GeneralPacket::read_from() potential buffer overflow (%d >= %d)", n, buf_size);
-  }
+
+  reader.read(buf + header_size, header_.payload_size);
 }
 
 }  // namespace common

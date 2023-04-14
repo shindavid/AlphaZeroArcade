@@ -14,6 +14,7 @@
 
 #include <util/CppUtil.hpp>
 #include <util/MetaProgramming.hpp>
+#include <util/SocketUtil.hpp>
 
 /*
  * Unit of data sent between GameServer and remote players.
@@ -162,8 +163,8 @@ public:
   const PacketPayload& payload() const { return payload_; }
   PacketPayload& payload() { return payload_; }
 
-  void send_to(int socket_descriptor) const;
-  void read_from(int socket_descriptor);
+  void send_to(io::Socket*) const;
+  void read_from(io::Socket*);
 
 private:
   PacketHeader header_;
@@ -183,7 +184,7 @@ public:
    */
   template<PacketPayloadConcept PacketPayload> const PacketPayload& payload_as() const;
 
-  void read_from(int socket_descriptor);
+  void read_from(io::Socket*);
 
 private:
   PacketHeader header_;

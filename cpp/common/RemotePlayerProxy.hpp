@@ -4,6 +4,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
+#include <util/SocketUtil.hpp>
 
 #include <string>
 
@@ -22,7 +23,7 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
 
-  RemotePlayerProxy(int socket_descriptor, player_id_t player_id, game_thread_id_t game_thread_id,
+  RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id,
                     int max_simultaneous_games);
 
   void start_game() override;
@@ -32,7 +33,7 @@ public:
   int max_simultaneous_games() const override { return max_simultaneous_games_; }
 
 private:
-  const int socket_descriptor_;
+  io::Socket* socket_;
   const player_id_t player_id_;
   const game_thread_id_t game_thread_id_;
   const int max_simultaneous_games_;

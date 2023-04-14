@@ -38,27 +38,7 @@ GameServerProxy<GameState>::SharedData::SharedData(const Params& params)
 : params_(params)
 {
   util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
-  // setup a socket and connection tools
-  struct hostent *host = gethostbyname(params_.remote_server.c_str());
-  int port = params_.remote_port;
-
-  sockaddr_in socket_address_info;
-  bzero((char *) &socket_address_info, sizeof(socket_address_info));
-  socket_address_info.sin_family = AF_INET;
-  socket_address_info.sin_addr.s_addr =
-      inet_addr(inet_ntoa(*(struct in_addr *) *host->h_addr_list));
-  socket_address_info.sin_port = htons(port);
-
-  // open socket
-  socket_desc_ = socket(AF_INET, SOCK_STREAM, 0);
-  if (socket_desc_ < 0) {
-    throw util::Exception("Error establishing client socket");
-  }
-
-  int status = connect(socket_desc_, (sockaddr *) &socket_address_info, sizeof(socket_address_info));
-  if (status < 0) {
-    throw util::Exception("Error connecting to socket");
-  }
+  socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
   std::cout << "Connected to the server!" << std::endl;
 }
 
@@ -94,10 +74,10 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     strncpy(name_buf, name.c_str(), name_buf_size);
     name_buf[name_buf_size - 1] = '\0';  // not needed because of clean_assert() above, but makes compiler happy
     send_packet.set_dynamic_section_size(name.size() + 1);  // + 1 for null-delimiter
-    send_packet.send_to(socket_desc_);
+    send_packet.send_to(socket_);
 
     Packet<RegistrationResponse> recv_packet;
-    recv_packet.read_from(socket_desc_);
+    recv_packet.read_from(socket_);
     const RegistrationResponse& response = recv_packet.payload();
     player_id_t player_id = response.player_id;
     util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d", (int)player_id);
@@ -186,7 +166,7 @@ void GameServerProxy<GameState>::run()
   shared_data_.init_socket();
   while (true) {
     GeneralPacket response_packet;
-    response_packet.read_from(shared_data_.socket_desc());
+    response_packet.read_from(shared_data_.socket());
 
     auto type = response_packet.header().type;
     switch (type) {
@@ -218,7 +198,7 @@ void GameServerProxy<GameState>::handle_game_thread_initialization(const General
 
   Packet<GameThreadInitializationResponse> send_packet;
   send_packet.payload().max_simultaneous_games = thread->max_simultaneous_games();
-  send_packet.send_to(shared_data_.socket_desc());
+  send_packet.send_to(shared_data_.socket());
 
   thread->launch();
 }

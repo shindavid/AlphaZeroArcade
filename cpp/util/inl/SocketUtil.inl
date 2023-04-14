@@ -1,6 +1,7 @@
 #include <util/SocketUtil.hpp>
 
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -25,6 +26,59 @@ inline void Socket::write(char const* data, int size) {
   if (n < 0) {
     throw util::Exception("Could not write to socket");
   }
+}
+
+inline void Socket::close() {
+  ::close(fd_);
+}
+
+inline Socket* Socket::create_server_socket(io::port_t port, int max_connections) {
+  auto fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) {
+    throw util::Exception("Could not create socket");
+  }
+
+  sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(port);
+  addr.sin_addr.s_addr = INADDR_ANY;
+  if (bind(fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
+    throw util::Exception("Could not bind socket");
+  }
+
+  if (listen(fd, max_connections) < 0) {
+    throw util::Exception("Could not listen on socket");
+  }
+
+  return get_instance(fd);
+}
+
+inline Socket* Socket::create_client_socket(std::string const& host, port_t port) {
+  auto fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) {
+    throw util::Exception("Could not create socket");
+  }
+
+  struct hostent* entry = gethostbyname(host.c_str());
+
+  sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(port);
+  addr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr *) *entry->h_addr_list));
+  if (connect(fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
+    throw util::Exception("Could not connect to socket");
+  }
+
+  return get_instance(fd);
+}
+
+inline Socket* Socket::accept() const {
+  auto fd = ::accept(fd_, nullptr, nullptr);
+  if (fd < 0) {
+    throw util::Exception("Could not accept connection");
+  }
+
+  return get_instance(fd);
 }
 
 inline Socket::Reader::Reader(Socket* socket) : socket_(socket) {

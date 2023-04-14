@@ -9,6 +9,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Packet.hpp>
+#include <util/SocketUtil.hpp>
 
 namespace common {
 
@@ -48,14 +49,14 @@ public:
     SharedData(const Params& params);
     void register_player(seat_index_t seat, PlayerGenerator* gen);
     void init_socket();
-    int socket_desc() const { return socket_desc_; }
+    io::Socket* socket() const { return socket_; }
     PlayerGenerator* get_gen(player_id_t p) const { return player_generators_[p]; }
 
   private:
     seat_generator_vec_t seat_generators_;  // temp storage
     player_generator_array_t player_generators_ = {};  // indexed by player_id_t
     Params params_;
-    int socket_desc_ = -1;
+    io::Socket* socket_ = nullptr;
   };
 
   class GameThread {

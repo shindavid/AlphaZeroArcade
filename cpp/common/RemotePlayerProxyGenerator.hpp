@@ -7,6 +7,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/RemotePlayerProxy.hpp>
+#include <util/SocketUtil.hpp>
 
 namespace common {
 
@@ -15,9 +16,9 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
  public:
   using base_t = AbstractPlayerGenerator<GameState>;
 
-  void initialize(const std::string& name, int socket_descriptor, player_id_t player_id);
-  bool initialized() const { return socket_descriptor_ != -1; }
-  int get_socket_descriptor() const { return socket_descriptor_; }
+  void initialize(const std::string& name, io::Socket* socket, player_id_t player_id);
+  bool initialized() const { return socket_; }
+  io::Socket* get_socket() const { return socket_; }
 
   std::vector<std::string> get_types() const override { return { "Remote" }; }
   std::string get_description() const override { return "Remote player from another process"; }
@@ -25,7 +26,7 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
   void end_session() override;
 
  private:
-  int socket_descriptor_ = -1;
+  io::Socket* socket_ = nullptr;
   player_id_t player_id_ = -1;
 };
 
