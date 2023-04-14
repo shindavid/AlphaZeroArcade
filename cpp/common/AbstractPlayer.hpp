@@ -18,7 +18,7 @@ namespace common {
  * - start_game()
  * - receive_state_change()
  * - get_action()
- * - end_gamed()
+ * - end_game()
  *
  * start_game() and end_game() are called when a game starts or ends. A single player might play multiple games in
  * succession, so you should override this method if there is state that you want to clear between games.
