@@ -66,37 +66,45 @@ template <GameStateConcept GameState>
 void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen) {
   std::string name = gen->get_name();
   util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"%s\" size=%d)",
-                     name.c_str(), (int)name.size());
+                     name.c_str(), (int) name.size());
 
-  printf("Registering player \"%s\" at seat %d\n", name.c_str(), seat);
-  std::cout.flush();
+  seat_generators_.emplace_back(seat, gen);
+}
 
-  Packet<Registration> send_packet;
-  Registration& registration = send_packet.payload();
-  registration.requested_seat = seat;
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::SharedData::init_socket() {
+  int n = seat_generators_.size();
+  for (int i = 0; i < n; ++i) {
+    seat_generator_t& seat_generator = seat_generators_[i];
+    seat_index_t seat = seat_generator.seat;
+    PlayerGenerator* gen = seat_generator.gen;
 
-  char* name_buf = registration.dynamic_size_section.player_name;
-  size_t name_buf_size = sizeof(registration.dynamic_size_section.player_name);
-  strncpy(name_buf, name.c_str(), name_buf_size);
-  name_buf[name_buf_size - 1] = '\0';  // not needed because of clean_assert() above, but makes compiler happy
-  send_packet.set_dynamic_section_size(name.size() + 1);  // + 1 for null-delimiter
-  send_packet.send_to(socket_desc_);
+    std::string name = gen->get_name();
 
-  Packet<RegistrationResponse> recv_packet;
-  recv_packet.read_from(socket_desc_);
-  const RegistrationResponse& response = recv_packet.payload();
-  player_id_t player_id = response.player_id;
-  util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d", (int)player_id);
+    printf("Registering player \"%s\" at seat %d\n", name.c_str(), seat);
+    std::cout.flush();
 
-  player_generators_[player_id] = gen;
-  printf("Registered player \"%s\" at seat %d (player_id:%d)\n", name.c_str(), seat, (int)player_id);
-  std::cout.flush();
+    Packet<Registration> send_packet;
+    Registration& registration = send_packet.payload();
+    registration.remaining_requests = n - i - 1;
+    registration.requested_seat = seat;
 
-  if (min_player_id_ == -1) {
-    min_player_id_ = player_id;
-  } else {
-    util::clean_assert(min_player_id_ < player_id, "Out-of-order player registration (%d >= %d)",
-                       (int)player_id, (int)min_player_id_);
+    char* name_buf = registration.dynamic_size_section.player_name;
+    size_t name_buf_size = sizeof(registration.dynamic_size_section.player_name);
+    strncpy(name_buf, name.c_str(), name_buf_size);
+    name_buf[name_buf_size - 1] = '\0';  // not needed because of clean_assert() above, but makes compiler happy
+    send_packet.set_dynamic_section_size(name.size() + 1);  // + 1 for null-delimiter
+    send_packet.send_to(socket_desc_);
+
+    Packet<RegistrationResponse> recv_packet;
+    recv_packet.read_from(socket_desc_);
+    const RegistrationResponse& response = recv_packet.payload();
+    player_id_t player_id = response.player_id;
+    util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d", (int)player_id);
+
+    player_generators_[player_id] = gen;
+    printf("Registered player \"%s\" at seat %d (player_id:%d)\n", name.c_str(), seat, (int)player_id);
+    std::cout.flush();
   }
 }
 
@@ -175,6 +183,7 @@ void GameServerProxy<GameState>::GameThread::run()
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::run()
 {
+  shared_data_.init_socket();
   while (true) {
     GeneralPacket response_packet;
     response_packet.read_from(shared_data_.socket_desc());

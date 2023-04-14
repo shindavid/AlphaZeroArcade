@@ -321,7 +321,9 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
   }
 
   std::cout << "Waiting for remote player registrations..." << std::endl;
-  for (auto reg : remote_player_registrations) {
+  int n = remote_player_registrations.size();
+  int r = 0;
+  while (r < n) {
     // accept connection
     sockaddr_in new_socket_address_info;
     socklen_t new_socket_address_size = sizeof(new_socket_address_info);
@@ -332,22 +334,27 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
 
     std::cout << "Accepted connection from " << inet_ntoa(new_socket_address_info.sin_addr) << std::endl;
 
-    Packet<Registration> packet;
-    packet.read_from(new_socket_descr);  // TODO: catch exception and engage in retry-protocol with client
-    const Registration& registration = packet.payload();
-    const std::string& name = registration.dynamic_size_section.player_name;
-    seat_index_t seat = registration.requested_seat;
+    int remaining_requests = 1;
+    do {
+      Packet<Registration> packet;
+      packet.read_from(new_socket_descr);  // TODO: catch exception and engage in retry-protocol with client
+      const Registration &registration = packet.payload();
+      const std::string &name = registration.dynamic_size_section.player_name;
+      remaining_requests = registration.remaining_requests;
+      seat_index_t seat = registration.requested_seat;
 
-    RemotePlayerProxyGenerator* gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg->gen);
-    gen->initialize(name, new_socket_descr, reg->player_id);
-    reg->seat = seat;
+      auto reg = remote_player_registrations[r++];
+      RemotePlayerProxyGenerator *gen = dynamic_cast<RemotePlayerProxyGenerator *>(reg->gen);
+      gen->initialize(name, new_socket_descr, reg->player_id);
+      reg->seat = seat;
 
-    Packet<RegistrationResponse> response_packet;
-    response_packet.payload().player_id = reg->player_id;
-    response_packet.send_to(new_socket_descr);
+      Packet<RegistrationResponse> response_packet;
+      response_packet.payload().player_id = reg->player_id;
+      response_packet.send_to(new_socket_descr);
 
-    printf("Registered player: \"%s\" (seat: %d)\n", name.c_str(), (int)seat);
-    std::cout.flush();
+      printf("Registered player: \"%s\" (seat: %d)\n", name.c_str(), (int) seat);
+      std::cout.flush();
+    } while (remaining_requests);
   }
 }
 

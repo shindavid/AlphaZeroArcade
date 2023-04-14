@@ -24,6 +24,12 @@ public:
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
 
+  struct seat_generator_t {
+    seat_index_t seat;
+    PlayerGenerator* gen;
+  };
+  using seat_generator_vec_t = std::vector<seat_generator_t>;
+
   struct Params {
     auto make_options_description();
 
@@ -41,15 +47,15 @@ public:
   public:
     SharedData(const Params& params);
     void register_player(seat_index_t seat, PlayerGenerator* gen);
+    void init_socket();
     int socket_desc() const { return socket_desc_; }
     PlayerGenerator* get_gen(player_id_t p) const { return player_generators_[p]; }
-    player_id_t min_player_id() const { return min_player_id_; }
 
   private:
+    seat_generator_vec_t seat_generators_;  // temp storage
     player_generator_array_t player_generators_ = {};  // indexed by player_id_t
     Params params_;
     int socket_desc_ = -1;
-    player_id_t min_player_id_ = -1;
   };
 
   class GameThread {

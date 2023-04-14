@@ -59,6 +59,11 @@ struct Registration {
     char player_name[kMaxNameLength + 1];  // +1 for null terminator
   };
 
+  /*
+   * If the remote process is registering multiple players, the server needs to allocate them all to the same socket.
+   * Having this remaining_requests field allows the server to do this allocation properly.
+   */
+  int remaining_requests;
   seat_index_t requested_seat;  // negative = random seat
   dynamic_size_section_t dynamic_size_section;
 };
