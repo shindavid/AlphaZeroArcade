@@ -88,6 +88,7 @@ private:
     auto get_results() const;
     void end_session();
     bool ready_to_start() const;
+    int compute_parallelism_factor() const;
     int num_games_started() const { return num_games_started_; }
     player_id_t register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
     int num_registrations() const { return registrations_.size(); }
@@ -116,7 +117,6 @@ private:
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
     void launch();
-    int max_simultaneous_games() const { return max_simultaneous_games_; }
 
   private:
     void run();
@@ -126,7 +126,6 @@ private:
     player_instantiation_array_t instantiations_;
     std::thread* thread_ = nullptr;
     game_thread_id_t id_;
-    int max_simultaneous_games_ = 0;  // 0 = unlimited
   };
 
 public:

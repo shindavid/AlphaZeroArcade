@@ -9,31 +9,30 @@ namespace common {
 
 template <GameStateConcept GameState>
 void RemotePlayerProxyGenerator<GameState>::initialize(
-    const std::string& name, io::Socket* socket, player_id_t player_id)
+    const std::string& name, io::Socket* socket, int max_simultaneous_games, player_id_t player_id)
 {
   this->set_name(name);
   socket_ = socket;
+  max_simultaneous_games_ = max_simultaneous_games;
   player_id_ = player_id;
 }
 
 template <GameStateConcept GameState>
 AbstractPlayer<GameState>* RemotePlayerProxyGenerator<GameState>::generate(game_thread_id_t game_thread_id) {
   util::clean_assert(initialized(), "RemotePlayerProxyGenerator::generate() called before initialized");
-
-  Packet<GameThreadInitialization> send_packet;
-  send_packet.payload().game_thread_id = game_thread_id;
-  send_packet.send_to(socket_);
-
-  Packet<GameThreadInitializationResponse> recv_packet;
-  recv_packet.read_from(socket_);
-  int max_simultaneous_games = recv_packet.payload().max_simultaneous_games;
-
-  return new RemotePlayerProxy<GameState>(socket_, player_id_, game_thread_id, max_simultaneous_games);
+  return new RemotePlayerProxy<GameState>(socket_, player_id_, game_thread_id);
 }
 
 template <GameStateConcept GameState>
 void RemotePlayerProxyGenerator<GameState>::end_session() {
   socket_->close();
 }
+
+template <GameStateConcept GameState>
+int RemotePlayerProxyGenerator<GameState>::max_simultaneous_games() const {
+  util::clean_assert(max_simultaneous_games_ >= 0, "RemotePlayerProxyGenerator::%s() called before initialized", __func__);
+  return max_simultaneous_games_;
+}
+
 
 }  // namespace common

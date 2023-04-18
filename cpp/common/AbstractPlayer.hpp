@@ -54,10 +54,6 @@ public:
   /*
    * Some extra virtual functions that most subclasses can ignore.
    *
-   * GameServer uses max_simultaneous_games() to determine how many games it can run in parallel. The default return
-   * value of 0 indicates that the player can play an unlimited number of games simultaneously. Currently, we only
-   * override this default for human players, which can only play one game at a time due to interface limitations.
-   *
    * GameServer will invoke set_facing_human_tui_player() if there is a player in the game that is a HumanTuiPlayer.
    * If you want to do something special when you are playing against a human TUI player, you can override this method.
    * You might want to do this because you may want to print verbose information differently in this case, in order to
@@ -65,7 +61,6 @@ public:
    *
    * is_human_tui_player() is used by GameServer to determine whether to call set_facing_human_tui_player().
    */
-  virtual int max_simultaneous_games() const { return 0; }
   virtual bool is_human_tui_player() const { return false; }
   virtual void set_facing_human_tui_player() {}
 

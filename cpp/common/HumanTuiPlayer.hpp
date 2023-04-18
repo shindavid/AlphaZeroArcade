@@ -24,7 +24,6 @@ public:
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
-  int max_simultaneous_games() const override { return 1; }
   bool is_human_tui_player() const override { return true; }
 
 protected:

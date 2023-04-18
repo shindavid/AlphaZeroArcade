@@ -69,7 +69,6 @@ public:
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
     void launch();
-    int max_simultaneous_games() const { return max_simultaneous_games_; }
 
   private:
     void run();
@@ -80,7 +79,6 @@ public:
     player_state_array_t player_states_;
     game_thread_id_t id_;
     std::thread* thread_ = nullptr;
-    int max_simultaneous_games_ = 0;
   };
   using thread_vec_t = std::vector<GameThread*>;  // index by game_thread_id_t
 
@@ -101,9 +99,11 @@ public:
   void run();
 
 private:
-  void handle_game_thread_initialization(const GeneralPacket& packet);
+  void init_game_threads();
   void handle_start_game(const GeneralPacket& packet);
   void handle_state_change(const GeneralPacket& packet);
+  void handle_action_prompt(const GeneralPacket& packet);
+  void handle_end_game(const GeneralPacket& packet);
 
   SharedData shared_data_;
   thread_vec_t thread_vec_;

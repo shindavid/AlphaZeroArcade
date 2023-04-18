@@ -34,7 +34,7 @@ public:
   class PacketDispatcher {
   public:
     static PacketDispatcher* create(io::Socket* socket);
-    static void start_all();
+    static void start_all(int num_game_threads);
 
     void add_player(RemotePlayerProxy* player);
     void start();
@@ -56,14 +56,12 @@ public:
     player_vec_array_t player_vec_array_;
   };
 
-  RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id,
-                    int max_simultaneous_games);
+  RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id);
 
   void start_game() override;
   void receive_state_change(seat_index_t, const GameState&, action_index_t) override;
   action_index_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
-  int max_simultaneous_games() const override { return max_simultaneous_games_; }
 
 private:
   std::condition_variable cv_;
@@ -75,7 +73,6 @@ private:
   io::Socket* socket_;
   const player_id_t player_id_;
   const game_thread_id_t game_thread_id_;
-  const int max_simultaneous_games_;
 };
 
 }  // namespace common

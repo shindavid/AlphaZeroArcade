@@ -87,6 +87,15 @@ public:
    */
   virtual void end_session() {}
 
+  /*
+   * Some extra virtual functions that most subclasses can ignore.
+   *
+   * GameServer uses max_simultaneous_games() to determine how many games it can run in parallel. The default return
+   * value of 0 indicates that the player can play an unlimited number of games simultaneously. Currently, we only
+   * override this default for human players, which can only play one game at a time due to interface limitations.
+   */
+  virtual int max_simultaneous_games() const { return 0; }
+
   const std::string& get_name() const { return name_; }
   void set_name(const std::string& name) { name_ = name; }
   AbstractPlayer<GameState>* generate_with_name(game_thread_id_t game_thread_id) {

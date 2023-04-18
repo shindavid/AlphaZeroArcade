@@ -24,9 +24,19 @@ RemotePlayerProxy<GameState>::PacketDispatcher* RemotePlayerProxy<GameState>::Pa
 }
 
 template<GameStateConcept GameState>
-void RemotePlayerProxy<GameState>::PacketDispatcher::start_all() {
+void RemotePlayerProxy<GameState>::PacketDispatcher::start_all(int num_game_threads) {
   for (auto it : dispatcher_map_) {
-    it.second->start();
+    io::Socket* socket = it.first;
+    PacketDispatcher* dispatcher = it.second;
+
+    Packet<GameThreadInitialization> packet;
+    packet.payload().num_game_threads = num_game_threads;
+    packet.send_to(socket);
+
+    Packet<GameThreadInitializationResponse> response;
+    response.read_from(socket);
+
+    dispatcher->start();
   }
 }
 
@@ -85,11 +95,10 @@ void RemotePlayerProxy<GameState>::PacketDispatcher::handle_action(const General
 
 template<GameStateConcept GameState>
 RemotePlayerProxy<GameState>::RemotePlayerProxy(
-    io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id, int max_simultaneous_games)
+    io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id)
 : socket_(socket)
 , player_id_(player_id)
 , game_thread_id_(game_thread_id)
-, max_simultaneous_games_(max_simultaneous_games)
 {
   auto dispatcher = PacketDispatcher::create(socket);
   dispatcher->add_player(this);

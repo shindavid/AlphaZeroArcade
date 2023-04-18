@@ -16,7 +16,7 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
  public:
   using base_t = AbstractPlayerGenerator<GameState>;
 
-  void initialize(const std::string& name, io::Socket* socket, player_id_t player_id);
+  void initialize(const std::string& name, io::Socket* socket, int max_simultaneous_games, player_id_t player_id);
   bool initialized() const { return socket_; }
   io::Socket* get_socket() const { return socket_; }
 
@@ -24,9 +24,11 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
   std::string get_description() const override { return "Remote player from another process"; }
   AbstractPlayer<GameState>* generate(game_thread_id_t) override;
   void end_session() override;
+  int max_simultaneous_games() const override;
 
  private:
   io::Socket* socket_ = nullptr;
+  int max_simultaneous_games_ = -1;
   player_id_t player_id_ = -1;
 };
 

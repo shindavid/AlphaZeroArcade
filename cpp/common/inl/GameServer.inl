@@ -94,6 +94,20 @@ bool GameServer<GameState>::SharedData::ready_to_start() const {
 }
 
 template<GameStateConcept GameState>
+int GameServer<GameState>::SharedData::compute_parallelism_factor() const {
+  int parallelism = params_.parallelism;
+  if (params_.num_games > 0) {
+    parallelism = std::min(parallelism, params_.num_games);
+  }
+
+  for (const auto& reg : registrations_) {
+    int n = reg.gen->max_simultaneous_games();
+    if (n > 0) parallelism = std::min(parallelism, n);
+  }
+  return parallelism;
+}
+
+template<GameStateConcept GameState>
 player_id_t GameServer<GameState>::SharedData::register_player(
     seat_index_t seat, PlayerGenerator* gen, bool implicit_remote) {
   util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
@@ -166,14 +180,6 @@ GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thre
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
     human_tui_indices[p] = instantiations_[p].player->is_human_tui_player();
-    int m = instantiations_[p].player->max_simultaneous_games();
-    if (m > 0) {
-      if (max_simultaneous_games_ == 0) {
-        max_simultaneous_games_ = m;
-      } else {
-        max_simultaneous_games_ = std::min(max_simultaneous_games_, m);
-      }
-    }
   }
 
   for (int p = 0; p < kNumPlayers; ++p) {
@@ -313,11 +319,12 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
       const Registration &registration = packet.payload();
       const std::string &name = registration.dynamic_size_section.player_name;
       remaining_requests = registration.remaining_requests;
+      int max_simultaneous_games = registration.max_simultaneous_games;
       seat_index_t seat = registration.requested_seat;
 
       auto reg = remote_player_registrations[r++];
       RemotePlayerProxyGenerator *gen = dynamic_cast<RemotePlayerProxyGenerator *>(reg->gen);
-      gen->initialize(name, socket, reg->player_id);
+      gen->initialize(name, socket, max_simultaneous_games, reg->player_id);
       reg->seat = seat;
 
       Packet<RegistrationResponse> response_packet;
@@ -335,19 +342,14 @@ void GameServer<GameState>::run() {
   wait_for_remote_player_registrations();
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
+  int parallelism = shared_data_.compute_parallelism_factor();
   std::vector<GameThread*> threads;
-
-  int parallelism = params().parallelism;
-  if (params().num_games > 0) {
-    parallelism = std::min(params().parallelism, params().num_games);
-  }
   for (int p = 0; p < parallelism; ++p) {
     GameThread* thread = new GameThread(shared_data_, (int)threads.size());
     threads.push_back(thread);
-    if (thread->max_simultaneous_games() == (int)threads.size()) break;
   }
 
-  RemotePlayerProxy<GameState>::PacketDispatcher::start_all();
+  RemotePlayerProxy<GameState>::PacketDispatcher::start_all(parallelism);
   time_point_t t1 = std::chrono::steady_clock::now();
 
   for (auto thread : threads) {

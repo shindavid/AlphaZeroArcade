@@ -66,6 +66,7 @@ struct Registration {
    * Having this remaining_requests field allows the server to do this allocation properly.
    */
   int remaining_requests;
+  int max_simultaneous_games;
   seat_index_t requested_seat;  // negative = random seat
   dynamic_size_section_t dynamic_size_section;
 };
@@ -79,13 +80,11 @@ struct RegistrationResponse {
 struct GameThreadInitialization {
   static constexpr PacketHeader::Type kType = PacketHeader::kGameThreadInitialization;
 
-  game_thread_id_t game_thread_id;
+  int num_game_threads;
 };
 
 struct GameThreadInitializationResponse {
   static constexpr PacketHeader::Type kType = PacketHeader::kGameThreadInitializationResponse;
-
-  int max_simultaneous_games;
 };
 
 struct StartGame {

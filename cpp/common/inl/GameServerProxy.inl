@@ -67,6 +67,7 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     Packet<Registration> send_packet;
     Registration& registration = send_packet.payload();
     registration.remaining_requests = n - i - 1;
+    registration.max_simultaneous_games = gen->max_simultaneous_games();
     registration.requested_seat = seat;
 
     char* name_buf = registration.dynamic_size_section.player_name;
@@ -98,21 +99,17 @@ GameServerProxy<GameState>::GameThread::GameThread(SharedData& shared_data, game
       Player* player = gen->generate(id);
       player_states_[p].player = player;
       player_states_[p].state = new GameState();
-      int m = player->max_simultaneous_games();
-      if (m > 0) {
-        if (max_simultaneous_games_ == 0) {
-          max_simultaneous_games_ = m;
-        } else {
-          max_simultaneous_games_ = std::min(max_simultaneous_games_, m);
-        }
-      }
     }
   }
 }
 
 template<GameStateConcept GameState>
 GameServerProxy<GameState>::GameThread::~GameThread() {
-  if (thread_) delete thread_;
+  delete thread_;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    delete player_states_[p].player;
+    delete player_states_[p].state;
+  }
 }
 
 template<GameStateConcept GameState>
@@ -164,20 +161,25 @@ template <GameStateConcept GameState>
 void GameServerProxy<GameState>::run()
 {
   shared_data_.init_socket();
+  init_game_threads();
+
   while (true) {
     GeneralPacket response_packet;
     response_packet.read_from(shared_data_.socket());
 
     auto type = response_packet.header().type;
     switch (type) {
-      case PacketHeader::kGameThreadInitialization:
-        handle_game_thread_initialization(response_packet);
-        break;
       case PacketHeader::kStartGame:
         handle_start_game(response_packet);
         break;
       case PacketHeader::kStateChange:
         handle_state_change(response_packet);
+        break;
+      case PacketHeader::kActionPrompt:
+        handle_action_prompt(response_packet);
+        break;
+      case PacketHeader::kEndGame:
+        handle_end_game(response_packet);
         break;
       default:
         throw util::Exception("Unexpected packet type: %d", (int) type);
@@ -186,21 +188,20 @@ void GameServerProxy<GameState>::run()
 }
 
 template <GameStateConcept GameState>
-void GameServerProxy<GameState>::handle_game_thread_initialization(const GeneralPacket& packet) {
-  const GameThreadInitialization& payload = packet.payload_as<GameThreadInitialization>();
-  GameThread* thread = new GameThread(shared_data_, payload.game_thread_id);
-  util::clean_assert(payload.game_thread_id == (int)thread_vec_.size(),
-                     "GameThreadInitialization packet has unexpected game_thread_id: %d (expected %d)",
-                      payload.game_thread_id, (int)thread_vec_.size());
-  thread_vec_.push_back(thread);
-  printf("Created new GameThread (%d)\n", payload.game_thread_id);
-  std::cout.flush();
+void GameServerProxy<GameState>::init_game_threads()
+{
+  Packet<GameThreadInitialization> recv_packet;
+  recv_packet.read_from(shared_data_.socket());
+  int num_game_threads = recv_packet.payload().num_game_threads;
+
+  for (int i = 0; i < num_game_threads; ++i) {
+    GameThread* thread = new GameThread(shared_data_, i);
+    thread->launch();
+    thread_vec_.push_back(thread);
+  }
 
   Packet<GameThreadInitializationResponse> send_packet;
-  send_packet.payload().max_simultaneous_games = thread->max_simultaneous_games();
   send_packet.send_to(shared_data_.socket());
-
-  thread->launch();
 }
 
 template <GameStateConcept GameState>
@@ -217,6 +218,16 @@ void GameServerProxy<GameState>::handle_state_change(const GeneralPacket& packet
 
   GameThread* thread = thread_vec_[payload.game_thread_id];
   thread->handle_state_change(payload);
+}
+
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::handle_action_prompt(const GeneralPacket& packet) {
+  throw util::Exception("TODO");
+}
+
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::handle_end_game(const GeneralPacket& packet) {
+  throw util::Exception("TODO");
 }
 
 }  // namespace common
