@@ -29,7 +29,10 @@ inline void Socket::write(char const* data, int size) {
 }
 
 inline void Socket::shutdown() {
-  ::shutdown(fd_, SHUT_RDWR);
+  if (active_) {
+    ::shutdown(fd_, SHUT_RDWR);
+    active_ = false;
+  }
 }
 
 inline Socket* Socket::create_server_socket(io::port_t port, int max_connections) {

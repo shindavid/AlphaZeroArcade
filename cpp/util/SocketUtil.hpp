@@ -67,6 +67,7 @@ private:
   mutable std::mutex write_mutex_;
   mutable std::mutex read_mutex_;
   const file_descriptor_t fd_;
+  bool active_ = true;
 };
 
 }  // namespace io

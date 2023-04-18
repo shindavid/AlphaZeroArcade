@@ -24,6 +24,11 @@ AbstractPlayer<GameState>* RemotePlayerProxyGenerator<GameState>::generate(game_
 }
 
 template <GameStateConcept GameState>
+void RemotePlayerProxyGenerator<GameState>::end_session() {
+  RemotePlayerProxy<GameState>::PacketDispatcher::teardown();
+}
+
+template <GameStateConcept GameState>
 int RemotePlayerProxyGenerator<GameState>::max_simultaneous_games() const {
   util::clean_assert(max_simultaneous_games_ >= 0, "RemotePlayerProxyGenerator::%s() called before initialized", __func__);
   return max_simultaneous_games_;
