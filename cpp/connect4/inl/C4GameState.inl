@@ -46,10 +46,11 @@ inline void GameState::deserialize_state_change(
 }
 
 inline size_t GameState::serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const {
+  size_t n = 0;
   bool r = outcome[kRed] > 0;
   bool y = outcome[kYellow] > 0;
-  int ry = 2 * r + y;
-  size_t n = snprintf(buffer, buffer_size, "%d", ry);
+  n += snprintf(buffer + n, buffer_size - n, r ? "R" : "");
+  n += snprintf(buffer + n, buffer_size - n, y ? "Y" : "");
   if (n >= buffer_size) {
     throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
   }
@@ -57,15 +58,16 @@ inline size_t GameState::serialize_game_end(char* buffer, size_t buffer_size, co
 }
 
 inline void GameState::deserialize_game_end(const char* buffer, GameOutcome* outcome) {
-  int ry = boost::lexical_cast<int>(buffer);
-  if (ry < 1 || ry > 3) {
-    throw util::Exception("Invalid game end %d parsed from \"%s\"", ry, buffer);
+  const char* c = buffer;
+  while (*c != '\0') {
+    switch (*c) {
+      case 'R': (*outcome)(kRed) = 1; break;
+      case 'Y': (*outcome)(kYellow) = 1; break;
+      default: throw util::Exception(R"(Invalid game end "%c" parsed from "%s")", *c, buffer);
+    }
+    ++c;
   }
-  bool r = ry >= 2;
-  bool y = ry % 2 == 1;
 
-  (*outcome)(kRed) = r;
-  (*outcome)(kYellow) = y;
   *outcome /= outcome->sum();
 }
 
