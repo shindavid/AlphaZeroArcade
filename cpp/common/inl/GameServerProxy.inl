@@ -120,7 +120,9 @@ void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
+  new (&state_) GameState();  // placement-new
   player_->init_game(game_id, player_names, seat_assignment);
+  player_->start_game();
 }
 
 template<GameStateConcept GameState>
@@ -143,8 +145,12 @@ void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const Action
 
   std::unique_lock lock(mutex_);
   cv_.wait(lock);
+  if (!active_) return;
+  action_index_t action = action_;
+  lock.unlock();
 
-  send_action_packet();
+  send_action_packet(action);
+  action_ = -1;
 }
 
 template<GameStateConcept GameState>
@@ -158,13 +164,21 @@ void GameServerProxy<GameState>::PlayerThread::handle_end_game(const EndGame& pa
 }
 
 template<GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::send_action_packet() {
+void GameServerProxy<GameState>::PlayerThread::stop() {
+  std::unique_lock lock(mutex_);
+  active_ = false;
+  lock.unlock();
+  cv_.notify_one();
+}
+
+template<GameStateConcept GameState>
+void GameServerProxy<GameState>::PlayerThread::send_action_packet(action_index_t action_index) {
   Packet<Action> packet;
   Action& action = packet.payload();
   char* buf = action.dynamic_size_section.buf;
   action.game_thread_id = game_thread_id_;
   action.player_id = player_id_;
-  packet.set_dynamic_section_size(state_.serialize_action(buf, sizeof(buf), action_));
+  packet.set_dynamic_section_size(state_.serialize_action(buf, sizeof(buf), action_index));
   packet.send_to(shared_data_.socket());
 }
 
@@ -174,6 +188,7 @@ void GameServerProxy<GameState>::PlayerThread::run()
   while (true) {
     std::unique_lock lock(mutex_);
     cv_.wait(lock);
+    if (!active_) break;
 
     action_ = player_->get_action(state_, valid_actions_);
     lock.unlock();
@@ -189,7 +204,9 @@ void GameServerProxy<GameState>::run()
 
   while (true) {
     GeneralPacket response_packet;
-    response_packet.read_from(shared_data_.socket());
+    if (!response_packet.read_from(shared_data_.socket())) {
+      break;
+    }
 
     auto type = response_packet.header().type;
     switch (type) {
@@ -209,6 +226,8 @@ void GameServerProxy<GameState>::run()
         throw util::Exception("Unexpected packet type: %d", (int) type);
     }
   }
+
+  destroy_player_threads();
 }
 
 template <GameStateConcept GameState>
@@ -241,6 +260,19 @@ void GameServerProxy<GameState>::init_player_threads()
 
   Packet<GameThreadInitializationResponse> send_packet;
   send_packet.send_to(shared_data_.socket());
+}
+
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::destroy_player_threads()
+{
+  for (auto& array : thread_vec_) {
+    for (auto& thread : array) {
+      if (thread) {
+        thread->stop();
+        thread->join();
+      }
+    }
+  }
 }
 
 template <GameStateConcept GameState>

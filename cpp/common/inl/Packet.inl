@@ -59,12 +59,14 @@ void Packet<PacketPayload>::send_to(io::Socket* socket) const {
 }
 
 template <PacketPayloadConcept PacketPayload>
-void Packet<PacketPayload>::read_from(io::Socket* socket) {
+bool Packet<PacketPayload>::read_from(io::Socket* socket) {
   char* buf = reinterpret_cast<char*>(this);
   constexpr int header_size = sizeof(header_);
 
   io::Socket::Reader reader(socket);
-  reader.read(buf, header_size);
+  if (!reader.read(buf, header_size)) {
+    return false;
+  }
 
   if (PacketPayload::kType != header_.type) {
     throw util::Exception("Packet<%d>::read_from() invalid type (expected:%d, got:%d)",
@@ -75,7 +77,10 @@ void Packet<PacketPayload>::read_from(io::Socket* socket) {
                           (int)PacketPayload::kType, header_.payload_size, (int)sizeof(payload_));
   }
 
-  reader.read(buf + header_size, header_.payload_size);
+  if (!reader.read(buf + header_size, header_.payload_size)) {
+    return false;
+  }
+  return true;
 }
 
 template<PacketPayloadConcept PacketPayload> const PacketPayload& GeneralPacket::payload_as() const {

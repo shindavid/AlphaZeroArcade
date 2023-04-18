@@ -67,9 +67,10 @@ public:
     void handle_end_game(const EndGame& payload);
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
+    void stop();
 
   private:
-    void send_action_packet();
+    void send_action_packet(action_index_t action);
     void run();
 
     std::condition_variable cv_;
@@ -86,6 +87,7 @@ public:
     // below fields are used for inter-thread communication
     ActionMask valid_actions_;
     action_index_t action_ = -1;
+    bool active_ = true;
   };
   using thread_array_t = std::array<PlayerThread*, kNumPlayers>;  // indexed by player_id_t
   using thread_vec_t = std::vector<thread_array_t>;  // index by game_thread_id_t
@@ -107,6 +109,7 @@ public:
 
 private:
   void init_player_threads();
+  void destroy_player_threads();
   void handle_start_game(const GeneralPacket& packet);
   void handle_state_change(const GeneralPacket& packet);
   void handle_action_prompt(const GeneralPacket& packet);

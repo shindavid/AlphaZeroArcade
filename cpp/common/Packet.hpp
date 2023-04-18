@@ -180,7 +180,13 @@ public:
   PacketPayload& payload() { return payload_; }
 
   void send_to(io::Socket*) const;
-  void read_from(io::Socket*);
+
+  /*
+   * Effectively a reinterpret_cast of the bytes on the socket to this.
+   *
+   * Returns false if the socket was shutdown.
+   */
+  bool read_from(io::Socket*);
 
 private:
   PacketHeader header_;
@@ -201,7 +207,7 @@ public:
   template<PacketPayloadConcept PacketPayload> const PacketPayload& payload_as() const;
 
   /*
-   * Effectively of a reinterpret_cast of the bytes on the socket to this.
+   * Effectively a reinterpret_cast of the bytes on the socket to this.
    *
    * Returns false if the socket was shutdown.
    */
