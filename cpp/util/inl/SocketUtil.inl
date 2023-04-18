@@ -28,8 +28,8 @@ inline void Socket::write(char const* data, int size) {
   }
 }
 
-inline void Socket::close() {
-  ::close(fd_);
+inline void Socket::shutdown() {
+  ::shutdown(fd_, SHUT_RDWR);
 }
 
 inline Socket* Socket::create_server_socket(io::port_t port, int max_connections) {
@@ -91,7 +91,7 @@ inline Socket::Reader::~Reader() {
   }
 }
 
-inline void Socket::Reader::read(char* data, int size) {
+inline int Socket::Reader::read(char* data, int size) {
   if (released_) {
     throw util::Exception("Socket::Reader::read() called after release()");
   }
@@ -99,6 +99,7 @@ inline void Socket::Reader::read(char* data, int size) {
   if (n < 0) {
     throw util::Exception("Could not read from socket");
   }
+  return n;
 }
 
 inline void Socket::Reader::release() {

@@ -35,6 +35,7 @@ public:
   public:
     static PacketDispatcher* create(io::Socket* socket);
     static void start_all(int num_game_threads);
+    static void teardown();
 
     void add_player(RemotePlayerProxy* player);
     void start();

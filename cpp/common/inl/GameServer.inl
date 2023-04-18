@@ -368,6 +368,8 @@ void GameServer<GameState>::run() {
     thread->join();
   }
 
+  RemotePlayerProxy<GameState>::PacketDispatcher::teardown();
+
   int num_games = shared_data_.num_games_started();
   time_point_t t2 = std::chrono::steady_clock::now();
   duration_t duration = t2 - t1;

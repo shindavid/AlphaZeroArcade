@@ -200,7 +200,12 @@ public:
    */
   template<PacketPayloadConcept PacketPayload> const PacketPayload& payload_as() const;
 
-  void read_from(io::Socket*);
+  /*
+   * Effectively of a reinterpret_cast of the bytes on the socket to this.
+   *
+   * Returns false if the socket was shutdown.
+   */
+  bool read_from(io::Socket*);
 
 private:
   PacketHeader header_;

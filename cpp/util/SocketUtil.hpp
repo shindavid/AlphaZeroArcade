@@ -35,7 +35,7 @@ public:
 
   static Socket* get_instance(file_descriptor_t fd);
   void write(char const* data, int size);
-  void close();
+  void shutdown();
 
   static Socket* create_server_socket(port_t port, int max_connections);
   static Socket* create_client_socket(std::string const& host, port_t port);
@@ -46,7 +46,7 @@ public:
     Reader(Socket* socket);
     ~Reader();
 
-    void read(char* data, int size);
+    int read(char* data, int size);  // return number of bytes read. 0 means orderly-shutdown
     void release();
 
   private:

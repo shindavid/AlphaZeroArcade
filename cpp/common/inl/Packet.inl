@@ -86,19 +86,24 @@ template<PacketPayloadConcept PacketPayload> const PacketPayload& GeneralPacket:
   return *reinterpret_cast<const PacketPayload*>(payload_);
 }
 
-inline void GeneralPacket::read_from(io::Socket* socket) {
+inline bool GeneralPacket::read_from(io::Socket* socket) {
   char* buf = reinterpret_cast<char*>(this);
   constexpr int header_size = sizeof(header_);
 
   io::Socket::Reader reader(socket);
-  reader.read(buf, header_size);
+  if (!reader.read(buf, header_size)) {
+    return false;
+  }
 
   if (header_.payload_size > (int)sizeof(payload_)) {
     throw util::Exception("GeneralPacket::read_from() invalid payload_size (%d>%d)",
                           header_.payload_size, (int)sizeof(payload_));
   }
 
-  reader.read(buf + header_size, header_.payload_size);
+  if (header_.payload_size > 0 && !reader.read(buf + header_size, header_.payload_size)) {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace common

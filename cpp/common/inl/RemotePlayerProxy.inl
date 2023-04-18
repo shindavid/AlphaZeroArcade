@@ -41,6 +41,14 @@ void RemotePlayerProxy<GameState>::PacketDispatcher::start_all(int num_game_thre
 }
 
 template<GameStateConcept GameState>
+void RemotePlayerProxy<GameState>::PacketDispatcher::teardown() {
+  for (auto it : dispatcher_map_) {
+    PacketDispatcher *dispatcher = it.second;
+    dispatcher->socket_->shutdown();
+  }
+}
+
+template<GameStateConcept GameState>
 void RemotePlayerProxy<GameState>::PacketDispatcher::add_player(RemotePlayerProxy<GameState> *player) {
   game_thread_id_t game_thread_id = player->game_thread_id_;
   player_id_t player_id = player->player_id_;
@@ -63,7 +71,10 @@ template<GameStateConcept GameState>
 void RemotePlayerProxy<GameState>::PacketDispatcher::loop() {
   while (true) {  // TODO: track num listeners and change this condition to break when num listeners == 0
     GeneralPacket packet;
-    packet.read_from(socket_);
+    if (!packet.read_from(socket_)) {
+      // socket was shutdown()
+      break;
+    }
 
     auto type = packet.header().type;
     switch (type) {
