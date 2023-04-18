@@ -61,6 +61,9 @@ public:
                                 common::action_index_t action) const;
   void deserialize_state_change(const char* buffer, common::seat_index_t* seat, common::action_index_t* action);
 
+  size_t serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const;
+  void deserialize_game_end(const char* buffer, GameOutcome* outcome);
+
   common::seat_index_t get_current_player() const;
   GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;

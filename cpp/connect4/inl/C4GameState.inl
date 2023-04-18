@@ -45,6 +45,30 @@ inline void GameState::deserialize_state_change(
   apply_move(*action);
 }
 
+inline size_t GameState::serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const {
+  bool r = outcome[kRed] > 0;
+  bool y = outcome[kYellow] > 0;
+  int ry = 2 * r + y;
+  size_t n = snprintf(buffer, buffer_size, "%d", ry);
+  if (n >= buffer_size) {
+    throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
+  }
+  return n;
+}
+
+inline void GameState::deserialize_game_end(const char* buffer, GameOutcome* outcome) {
+  int ry = boost::lexical_cast<int>(buffer);
+  if (ry < 1 || ry > 3) {
+    throw util::Exception("Invalid game end %d parsed from \"%s\"", ry, buffer);
+  }
+  bool r = ry >= 2;
+  bool y = ry % 2 == 1;
+
+  (*outcome)(kRed) = r;
+  (*outcome)(kYellow) = y;
+  *outcome /= outcome->sum();
+}
+
 inline common::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }

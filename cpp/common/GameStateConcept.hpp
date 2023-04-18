@@ -54,6 +54,9 @@ concept GameStateConcept = requires(S state) {
    * size_t serialize_state_change(char* buf, size_t buf_size, seat_index_t seat, action_index_t action) const;
    * void deserialize_state_change(const char* buf, seat_index_t* seat, action_index_t* action);
    *
+   * size_t serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const;
+   * void deserialize_game_end(const char* buffer, GameOutcome* outcome);
+   *
    * The serialize_* methods are expected to write to the given buffer, and return the number of bytes written.
    *
    * The deserialize_* methods are expected to act as inverse-functions of their serialize_* counterparts, writing to
@@ -75,20 +78,14 @@ concept GameStateConcept = requires(S state) {
   { S::serialize_action(std::declval<char*>(), size_t(), action_index_t()) } -> std::same_as<size_t>;
   { S::deserialize_action(std::declval<char*>(), std::declval<action_index_t*>()) };
 
-  { state.serialize_action_prompt(std::declval<char*>(), size_t(), typename GameStateTypes<S>::ActionMask{}) };
+  { state.serialize_action_prompt(std::declval<char*>(), size_t(), typename GameStateTypes<S>::ActionMask{}) } -> std::same_as<size_t>;
   { state.deserialize_action_prompt(std::declval<char*>(), std::declval<typename GameStateTypes<S>::ActionMask*>()) };
 
-  { state.serialize_state_change(
-      std::declval<char*>(),
-      size_t(),
-      seat_index_t(),
-      action_index_t())
-  } -> std::same_as<size_t>;
-  { state.deserialize_state_change(
-      std::declval<char *>(),
-      std::declval<seat_index_t *>(),
-      std::declval<action_index_t *>())
-  };
+  { state.serialize_state_change(std::declval<char*>(), size_t(), seat_index_t(), action_index_t()) } -> std::same_as<size_t>;
+  { state.deserialize_state_change(std::declval<char *>(), std::declval<seat_index_t *>(), std::declval<action_index_t *>()) };
+
+  { state.serialize_game_end(std::declval<char*>(), size_t(), typename GameStateTypes<S>::GameOutcome{}) } -> std::same_as<size_t>;
+  { state.deserialize_game_end(std::declval<char *>(), std::declval<typename GameStateTypes<S>::GameOutcome*>()) };
 
   /*
    * Return the current player.

@@ -40,23 +40,28 @@ void RemotePlayerProxy<GameState>::receive_state_change(
 
 template<GameStateConcept GameState>
 action_index_t RemotePlayerProxy<GameState>::get_action(const GameState& state, const ActionMask& valid_actions) {
+  state_ = &state;
+  action_ = -1;
+
   Packet<ActionPrompt> packet;
   auto buf = packet.payload().dynamic_size_section.buf;
   int buf_size = state.serialize_action_prompt(buf, sizeof(buf), valid_actions);
   packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 
-  // TODO: detect invalid packet and engage in a retry-protocol with remote player
-  Packet<Action> response;
-  response.read_from(socket_);
-  action_index_t action;
-  state.deserialize_action(response.payload().dynamic_size_section.buf, &action);
-  return action;
+  std::unique_lock lock(mutex_);
+  cv_.wait(lock, [&] { return action_ != -1; });
+  return action_;
 }
 
 template<GameStateConcept GameState>
-void RemotePlayerProxy<GameState>::end_game(const GameState&, const GameOutcome&) {
-  util::clean_assert(false, "Not implemented yet.");
+void RemotePlayerProxy<GameState>::end_game(const GameState& state, const GameOutcome& outcome) {
+  Packet<EndGame> packet;
+  packet.payload().game_thread_id = game_thread_id_;
+  packet.payload().player_id = player_id_;
+  auto buf = packet.payload().dynamic_size_section.buf;
+  packet.set_dynamic_section_size(state.serialize_game_end(buf, sizeof(buf), outcome));
+  packet.send_to(socket_);
 }
 
 }  // namespace common

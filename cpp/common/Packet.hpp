@@ -36,7 +36,8 @@ struct PacketHeader {
     kStateChange = 5,
     kActionPrompt = 6,
     kAction = 7,
-    kNumTypes = 8
+    kEndGame = 8,
+    kNumTypes = 9
   };
 
   Type type;
@@ -134,6 +135,19 @@ struct Action {
     char buf[kSerializationLimit];
   };
 
+  game_thread_id_t game_thread_id;
+  player_id_t player_id;
+  dynamic_size_section_t dynamic_size_section;
+};
+
+struct EndGame {
+  static constexpr PacketHeader::Type kType = PacketHeader::kEndGame;
+  struct dynamic_size_section_t {
+    char buf[kSerializationLimit];
+  };
+
+  game_thread_id_t game_thread_id;
+  player_id_t player_id;
   dynamic_size_section_t dynamic_size_section;
 };
 
@@ -145,7 +159,8 @@ using PayloadTypeList = mp::TypeList<
     StartGame,
     StateChange,
     ActionPrompt,
-    Action>;
+    Action,
+    EndGame>;
 static_assert(mp::Length_v<PayloadTypeList> == PacketHeader::kNumTypes);
 
 template <PacketPayloadConcept PacketPayload>
