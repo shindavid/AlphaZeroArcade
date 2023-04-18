@@ -90,70 +90,87 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
 }
 
 template<GameStateConcept GameState>
-GameServerProxy<GameState>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
-: shared_data_(shared_data), id_(id)
+GameServerProxy<GameState>::PlayerThread::PlayerThread(
+    SharedData& shared_data, Player* player, game_thread_id_t game_thread_id, player_id_t player_id)
+: shared_data_(shared_data)
+, player_(player)
+, game_thread_id_(game_thread_id)
+, player_id_(player_id)
 {
-  for (int p = 0; p < kNumPlayers; ++p) {
-    PlayerGenerator* gen = shared_data_.get_gen(p);
-    if (gen) {
-      Player* player = gen->generate(id);
-      player_states_[p].player = player;
-      player_states_[p].state = new GameState();
-    }
-  }
+  thread_ = new std::thread([&] { run(); });
 }
 
 template<GameStateConcept GameState>
-GameServerProxy<GameState>::GameThread::~GameThread() {
+GameServerProxy<GameState>::PlayerThread::~PlayerThread() {
   delete thread_;
-  for (int p = 0; p < kNumPlayers; ++p) {
-    delete player_states_[p].player;
-    delete player_states_[p].state;
-  }
+  delete player_;
 }
 
 template<GameStateConcept GameState>
-void GameServerProxy<GameState>::GameThread::handle_start_game(const StartGame& payload) {
-  player_id_t player_id = payload.player_id;
+void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame& payload) {
   game_id_t game_id = payload.game_id;
   player_name_array_t player_names;
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  Player* player = player_states_[player_id].player;
-  util::clean_assert(player, "Invalid player_id: %d", (int)payload.player_id);
-
-  std::unique_lock lock(mutex_);
-  player->init_game(game_id, player_names, seat_assignment);
+  player_->init_game(game_id, player_names, seat_assignment);
 }
 
 template<GameStateConcept GameState>
-void GameServerProxy<GameState>::GameThread::handle_state_change(const StateChange& payload) {
-  player_id_t player_id = payload.player_id;
+void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateChange& payload) {
   const char* buf = payload.dynamic_size_section.buf;
-
-  Player* player = player_states_[player_id].player;
-  GameState* state = player_states_[player_id].state;
 
   seat_index_t seat;
   action_index_t action;
-  state->deserialize_state_change(buf, &seat, &action);
-  player->receive_state_change(seat, *state, action);
+
+  state_.deserialize_state_change(buf, &seat, &action);
+  player_->receive_state_change(seat, state_, action);
 }
 
 template<GameStateConcept GameState>
-void GameServerProxy<GameState>::GameThread::launch() {
-  thread_ = new std::thread([&] { run(); });
-}
+void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
+  const char* buf = payload.dynamic_size_section.buf;
 
-template<GameStateConcept GameState>
-void GameServerProxy<GameState>::GameThread::run()
-{
+  state_.deserialize_action_prompt(buf, &valid_actions_);
+  cv_.notify_one();
+
   std::unique_lock lock(mutex_);
   cv_.wait(lock);
 
+  send_action_packet();
+}
+
+template<GameStateConcept GameState>
+void GameServerProxy<GameState>::PlayerThread::handle_end_game(const EndGame& payload) {
+  const char* buf = payload.dynamic_size_section.buf;
+
+  GameOutcome outcome;
+
+  state_.deserialize_game_end(buf, &outcome);
+  player_->end_game(state_, outcome);
+}
+
+template<GameStateConcept GameState>
+void GameServerProxy<GameState>::PlayerThread::send_action_packet() {
+  Packet<Action> packet;
+  Action& action = packet.payload();
+  char* buf = action.dynamic_size_section.buf;
+  action.game_thread_id = game_thread_id_;
+  action.player_id = player_id_;
+  packet.set_dynamic_section_size(state_.serialize_action(buf, sizeof(buf), action_));
+  packet.send_to(shared_data_.socket());
+}
+
+template<GameStateConcept GameState>
+void GameServerProxy<GameState>::PlayerThread::run()
+{
   while (true) {
-    // TODO: synchronization magic with mutex/cv
+    std::unique_lock lock(mutex_);
+    cv_.wait(lock);
+
+    action_ = player_->get_action(state_, valid_actions_);
+    lock.unlock();
+    cv_.notify_one();
   }
 }
 
@@ -161,7 +178,7 @@ template <GameStateConcept GameState>
 void GameServerProxy<GameState>::run()
 {
   shared_data_.init_socket();
-  init_game_threads();
+  init_player_threads();
 
   while (true) {
     GeneralPacket response_packet;
@@ -188,16 +205,22 @@ void GameServerProxy<GameState>::run()
 }
 
 template <GameStateConcept GameState>
-void GameServerProxy<GameState>::init_game_threads()
+void GameServerProxy<GameState>::init_player_threads()
 {
   Packet<GameThreadInitialization> recv_packet;
   recv_packet.read_from(shared_data_.socket());
   int num_game_threads = recv_packet.payload().num_game_threads;
 
-  for (int i = 0; i < num_game_threads; ++i) {
-    GameThread* thread = new GameThread(shared_data_, i);
-    thread->launch();
-    thread_vec_.push_back(thread);
+  for (game_thread_id_t g = 0; g < (game_thread_id_t)num_game_threads; ++g) {
+    thread_array_t& array = thread_vec_.emplace_back();
+    for (player_id_t p = 0; p < (player_id_t)kNumPlayers; ++p) {
+      array[p] = nullptr;
+      PlayerGenerator* gen = shared_data_.get_gen(p);
+      if (gen) {
+        Player* player = gen->generate(g);
+        array[p] = new PlayerThread(shared_data_, player, g, p);
+      }
+    }
   }
 
   Packet<GameThreadInitializationResponse> send_packet;
@@ -207,27 +230,25 @@ void GameServerProxy<GameState>::init_game_threads()
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::handle_start_game(const GeneralPacket& packet) {
   const StartGame& payload = packet.payload_as<StartGame>();
-
-  GameThread* thread = thread_vec_[payload.game_thread_id];
-  thread->handle_start_game(payload);
+  thread_vec_[payload.game_thread_id][payload.player_id]->handle_start_game(payload);
 }
 
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::handle_state_change(const GeneralPacket& packet) {
   const StateChange& payload = packet.payload_as<StateChange>();
-
-  GameThread* thread = thread_vec_[payload.game_thread_id];
-  thread->handle_state_change(payload);
+  thread_vec_[payload.game_thread_id][payload.player_id]->handle_state_change(payload);
 }
 
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::handle_action_prompt(const GeneralPacket& packet) {
-  throw util::Exception("TODO");
+  const ActionPrompt& payload = packet.payload_as<ActionPrompt>();
+  thread_vec_[payload.game_thread_id][payload.player_id]->handle_action_prompt(payload);
 }
 
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::handle_end_game(const GeneralPacket& packet) {
-  throw util::Exception("TODO");
+  const EndGame& payload = packet.payload_as<EndGame>();
+  thread_vec_[payload.game_thread_id][payload.player_id]->handle_end_game(payload);
 }
 
 }  // namespace common

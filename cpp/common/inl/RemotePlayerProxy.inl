@@ -134,6 +134,8 @@ action_index_t RemotePlayerProxy<GameState>::get_action(const GameState& state, 
   action_ = -1;
 
   Packet<ActionPrompt> packet;
+  packet.payload().game_thread_id = game_thread_id_;
+  packet.payload().player_id = player_id_;
   auto buf = packet.payload().dynamic_size_section.buf;
   int buf_size = state.serialize_action_prompt(buf, sizeof(buf), valid_actions);
   packet.set_dynamic_section_size(buf_size);

@@ -58,6 +58,7 @@ inline size_t GameState::serialize_game_end(char* buffer, size_t buffer_size, co
 }
 
 inline void GameState::deserialize_game_end(const char* buffer, GameOutcome* outcome) {
+  outcome->setZero();
   const char* c = buffer;
   while (*c != '\0') {
     switch (*c) {

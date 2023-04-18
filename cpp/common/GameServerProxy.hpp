@@ -18,6 +18,8 @@ class GameServerProxy {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
 
+  using ActionMask = typename GameState::ActionMask;
+  using GameOutcome = typename GameState::GameOutcome;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<GameState>;
@@ -38,12 +40,6 @@ public:
     int remote_port = 0;
   };
 
-  struct player_state_t {
-    GameState* state = nullptr;
-    Player* player = nullptr;
-  };
-  using player_state_array_t = std::array<player_state_t, kNumPlayers>;
-
   class SharedData {
   public:
     SharedData(const Params& params);
@@ -59,28 +55,39 @@ public:
     io::Socket* socket_ = nullptr;
   };
 
-  class GameThread {
+  class PlayerThread {
   public:
-    GameThread(SharedData& shared_data, game_thread_id_t id);
-    ~GameThread();
+    PlayerThread(SharedData& shared_data, Player* player, game_thread_id_t game_thread_id, player_id_t player_id);
+    ~PlayerThread();
 
     void handle_start_game(const StartGame& payload);
     void handle_state_change(const StateChange& payload);
+    void handle_action_prompt(const ActionPrompt& payload);
+    void handle_end_game(const EndGame& payload);
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
-    void launch();
 
   private:
+    void send_action_packet();
     void run();
 
     std::condition_variable cv_;
     mutable std::mutex mutex_;
+
     SharedData& shared_data_;
-    player_state_array_t player_states_;
-    game_thread_id_t id_;
+    Player* const player_;
+    const game_thread_id_t game_thread_id_;
+    const player_id_t player_id_;
     std::thread* thread_ = nullptr;
+
+    GameState state_;
+
+    // below fields are used for inter-thread communication
+    ActionMask valid_actions_;
+    action_index_t action_ = -1;
   };
-  using thread_vec_t = std::vector<GameThread*>;  // index by game_thread_id_t
+  using thread_array_t = std::array<PlayerThread*, kNumPlayers>;  // indexed by player_id_t
+  using thread_vec_t = std::vector<thread_array_t>;  // index by game_thread_id_t
 
   GameServerProxy(const Params& params) : shared_data_(params) {}
 
@@ -99,7 +106,7 @@ public:
   void run();
 
 private:
-  void init_game_threads();
+  void init_player_threads();
   void handle_start_game(const GeneralPacket& packet);
   void handle_state_change(const GeneralPacket& packet);
   void handle_action_prompt(const GeneralPacket& packet);
