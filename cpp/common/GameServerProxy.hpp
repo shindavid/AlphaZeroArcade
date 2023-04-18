@@ -88,6 +88,7 @@ public:
     ActionMask valid_actions_;
     action_index_t action_ = -1;
     bool active_ = true;
+    bool ready_to_get_action_ = false;
   };
   using thread_array_t = std::array<PlayerThread*, kNumPlayers>;  // indexed by player_id_t
   using thread_vec_t = std::vector<thread_array_t>;  // index by game_thread_id_t

@@ -140,17 +140,20 @@ template<GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
   const char* buf = payload.dynamic_size_section.buf;
 
+  std::unique_lock lock(mutex_);
   state_.deserialize_action_prompt(buf, &valid_actions_);
+  ready_to_get_action_ = true;
+  lock.unlock();
   cv_.notify_one();
 
-  std::unique_lock lock(mutex_);
-  cv_.wait(lock);
+  lock.lock();
+  cv_.wait(lock, [&] { return !active_ || action_ >= 0; });
   if (!active_) return;
   action_index_t action = action_;
+  action_ = -1;
   lock.unlock();
 
   send_action_packet(action);
-  action_ = -1;
 }
 
 template<GameStateConcept GameState>
@@ -183,13 +186,13 @@ void GameServerProxy<GameState>::PlayerThread::send_action_packet(action_index_t
 }
 
 template<GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::run()
-{
+void GameServerProxy<GameState>::PlayerThread::run() {
   while (true) {
     std::unique_lock lock(mutex_);
-    cv_.wait(lock);
+    cv_.wait(lock, [&] { return !active_ || ready_to_get_action_; });
     if (!active_) break;
 
+    ready_to_get_action_ = false;
     action_ = player_->get_action(state_, valid_actions_);
     lock.unlock();
     cv_.notify_one();
@@ -263,8 +266,7 @@ void GameServerProxy<GameState>::init_player_threads()
 }
 
 template <GameStateConcept GameState>
-void GameServerProxy<GameState>::destroy_player_threads()
-{
+void GameServerProxy<GameState>::destroy_player_threads() {
   for (auto& array : thread_vec_) {
     for (auto& thread : array) {
       if (thread) {
