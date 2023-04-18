@@ -35,10 +35,15 @@ inline void Socket::shutdown() {
   }
 }
 
-inline Socket* Socket::create_server_socket(io::port_t port, int max_connections) {
+inline Socket* Socket::create_server_socket(io::port_t port, int max_connections)
+{
   auto fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
     throw util::Exception("Could not create socket");
+  }
+  const int enable = 1;
+  if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
+    throw util::Exception("setsockopt(SO_REUSEADDR) failed");
   }
 
   sockaddr_in addr;
