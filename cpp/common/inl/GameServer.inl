@@ -40,6 +40,15 @@ auto GameServer<GameState>::Params::make_options_description() {
 }
 
 template<GameStateConcept GameState>
+GameServer<GameState>::SharedData::~SharedData() {
+  if (bar_) delete bar_;
+
+  for (auto& reg : registrations_) {
+    delete reg.gen;
+  }
+}
+
+template<GameStateConcept GameState>
 void GameServer<GameState>::SharedData::init_progress_bar() {
   std::lock_guard<std::mutex> guard(mutex_);
   if (bar_) return;
@@ -108,7 +117,7 @@ int GameServer<GameState>::SharedData::compute_parallelism_factor() const {
 }
 
 template<GameStateConcept GameState>
-player_id_t GameServer<GameState>::SharedData::register_player(
+void GameServer<GameState>::SharedData::register_player(
     seat_index_t seat, PlayerGenerator* gen, bool implicit_remote) {
   util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
@@ -131,7 +140,6 @@ player_id_t GameServer<GameState>::SharedData::register_player(
   player_id_t player_id = registrations_.size();
   util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
   registrations_.emplace_back(gen, seat, player_id);
-  return player_id;
 }
 
 template<GameStateConcept GameState>

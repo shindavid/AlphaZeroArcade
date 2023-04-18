@@ -43,6 +43,13 @@ GameServerProxy<GameState>::SharedData::SharedData(const Params& params)
 }
 
 template <GameStateConcept GameState>
+GameServerProxy<GameState>::SharedData::~SharedData() {
+  for (auto gen : player_generators_) {
+    delete gen;
+  }
+}
+
+template <GameStateConcept GameState>
 void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen) {
   std::string name = gen->get_name();
   util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"%s\" size=%d)",
@@ -200,6 +207,15 @@ void GameServerProxy<GameState>::run()
         break;
       default:
         throw util::Exception("Unexpected packet type: %d", (int) type);
+    }
+  }
+}
+
+template <GameStateConcept GameState>
+GameServerProxy<GameState>::~GameServerProxy() {
+  for (auto& array : thread_vec_) {
+    for (auto& thread : array) {
+      delete thread;
     }
   }
 }

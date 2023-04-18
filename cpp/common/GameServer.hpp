@@ -79,7 +79,7 @@ private:
   class SharedData {
   public:
     SharedData(const Params& params) : params_(params) {}
-    ~SharedData() { if (bar_) delete bar_; }
+    ~SharedData();
 
     const Params& params() const { return params_; }
     void init_progress_bar();
@@ -90,7 +90,7 @@ private:
     bool ready_to_start() const;
     int compute_parallelism_factor() const;
     int num_games_started() const { return num_games_started_; }
-    player_id_t register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
+    void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
     int num_registrations() const { return registrations_.size(); }
     player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations) const;
     registration_vec_t& registration_templates() { return registrations_; }
@@ -132,18 +132,14 @@ public:
   GameServer(const Params& params);
 
   /*
-   * If seat is not specified, then the player generator is assigned a random seat.
-   *
-   * Otherwise, the player generated is assigned the specified seat.
+   * A negative seat implies a random seat. Otherwise, the player generated is assigned the specified seat.
    *
    * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in which the
-   * registrations are made. This value is returned by this function. When aggregate game outcome stats are reported,
-   * they are aggregated by player_id_t.
+   * registrations are made. When aggregate game outcome stats are reported, they are aggregated by player_id_t.
+   *
+   * Takes ownership of the pointer.
    */
-  player_id_t register_player(PlayerGenerator* gen) { return register_player(-1, gen); }
-  player_id_t register_player(seat_index_t seat, PlayerGenerator* gen) {
-    return shared_data_.register_player(seat, gen);
-  }
+  void register_player(seat_index_t seat, PlayerGenerator* gen) { shared_data_.register_player(seat, gen); }
 
   /*
    * Blocks until all players have registered.

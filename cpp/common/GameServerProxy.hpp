@@ -43,6 +43,7 @@ public:
   class SharedData {
   public:
     SharedData(const Params& params);
+    ~SharedData();
     void register_player(seat_index_t seat, PlayerGenerator* gen);
     void init_socket();
     io::Socket* socket() const { return socket_; }
@@ -90,17 +91,16 @@ public:
   using thread_vec_t = std::vector<thread_array_t>;  // index by game_thread_id_t
 
   GameServerProxy(const Params& params) : shared_data_(params) {}
+  ~GameServerProxy();
 
   /*
-   * If seat is not specified, then the player generator is assigned a random seat.
-   *
-   * Otherwise, the player generated is assigned the specified seat.
+   * A negative seat implies a random seat. Otherwise, the player generated is assigned the specified seat.
    *
    * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in which the
-   * registrations are made. This value is returned by this function. When aggregate game outcome stats are reported,
-   * they are aggregated by player_id_t.
+   * registrations are made. When aggregate game outcome stats are reported, they are aggregated by player_id_t.
+   *
+   * Takes ownership of the pointer.
    */
-  void register_player(PlayerGenerator* gen) { register_player(-1, gen); }
   void register_player(seat_index_t seat, PlayerGenerator* gen) { shared_data_.register_player(seat, gen); }
 
   void run();
