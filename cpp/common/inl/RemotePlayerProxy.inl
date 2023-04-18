@@ -7,12 +7,93 @@
 namespace common {
 
 template<GameStateConcept GameState>
+typename RemotePlayerProxy<GameState>::PacketDispatcher::dispatcher_map_t
+RemotePlayerProxy<GameState>::PacketDispatcher::dispatcher_map_;
+
+template<GameStateConcept GameState>
+RemotePlayerProxy<GameState>::PacketDispatcher* RemotePlayerProxy<GameState>::PacketDispatcher::create(
+    io::Socket* socket)
+{
+  auto it = dispatcher_map_.find(socket);
+  if (it != dispatcher_map_.end()) {
+    return it->second;
+  }
+  auto dispatcher = new PacketDispatcher(socket);
+  dispatcher_map_[socket] = dispatcher;
+  return dispatcher;
+}
+
+template<GameStateConcept GameState>
+void RemotePlayerProxy<GameState>::PacketDispatcher::start_all() {
+  for (auto it : dispatcher_map_) {
+    it.second->start();
+  }
+}
+
+template<GameStateConcept GameState>
+void RemotePlayerProxy<GameState>::PacketDispatcher::add_player(RemotePlayerProxy<GameState> *player) {
+  game_thread_id_t game_thread_id = player->game_thread_id_;
+  player_id_t player_id = player->player_id_;
+
+  util::clean_assert(player_id >= 0 && (int)player_id < kNumPlayers, "Invalid player_id (%d)", (int)player_id);
+  auto& vec = player_vec_array_[player_id];
+
+  util::clean_assert((int)game_thread_id == (int)vec.size(), "Unexpected game_thread_id (%d != %d)",
+                     (int)game_thread_id, (int)vec.size());
+
+  vec.push_back(player);
+}
+
+template<GameStateConcept GameState>
+void RemotePlayerProxy<GameState>::PacketDispatcher::start() {
+  thread_ = new std::thread([&] { loop(); });
+}
+
+template<GameStateConcept GameState>
+void RemotePlayerProxy<GameState>::PacketDispatcher::loop() {
+  while (true) {  // TODO: track num listeners and change this condition to break when num listeners == 0
+    GeneralPacket packet;
+    packet.read_from(socket_);
+
+    auto type = packet.header().type;
+    switch (type) {
+      case PacketHeader::kAction:
+        handle_action(packet);
+        break;
+      default:
+        throw util::Exception("Unexpected packet type: %d", (int) type);
+    }
+  }
+}
+
+template<GameStateConcept GameState>
+RemotePlayerProxy<GameState>::PacketDispatcher::PacketDispatcher(io::Socket* socket) : socket_(socket) {}
+
+template<GameStateConcept GameState>
+void RemotePlayerProxy<GameState>::PacketDispatcher::handle_action(const GeneralPacket& packet) {
+  const Action& payload = packet.payload_as<Action>();
+
+  game_thread_id_t game_thread_id = payload.game_thread_id;
+  player_id_t player_id = payload.player_id;
+
+  RemotePlayerProxy* player = player_vec_array_[player_id][game_thread_id];
+
+  // TODO: detect invalid packet and engage in a retry-protocol with remote player
+  player->state_->deserialize_action(payload.dynamic_size_section.buf, &player->action_);
+  player->cv_.notify_one();
+}
+
+template<GameStateConcept GameState>
 RemotePlayerProxy<GameState>::RemotePlayerProxy(
     io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id, int max_simultaneous_games)
 : socket_(socket)
 , player_id_(player_id)
 , game_thread_id_(game_thread_id)
-, max_simultaneous_games_(max_simultaneous_games) {}
+, max_simultaneous_games_(max_simultaneous_games)
+{
+  auto dispatcher = PacketDispatcher::create(socket);
+  dispatcher->add_player(this);
+}
 
 template<GameStateConcept GameState>
 void RemotePlayerProxy<GameState>::start_game() {

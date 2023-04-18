@@ -347,6 +347,7 @@ void GameServer<GameState>::run() {
     if (thread->max_simultaneous_games() == (int)threads.size()) break;
   }
 
+  RemotePlayerProxy<GameState>::PacketDispatcher::start_all();
   time_point_t t1 = std::chrono::steady_clock::now();
 
   for (auto thread : threads) {
