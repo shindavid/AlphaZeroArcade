@@ -1,6 +1,7 @@
 import os
 from typing import Dict, List
-from custom_types import Generation
+
+from alphazero.custom_types import Generation
 
 
 class SelfPlayGameMetadata:

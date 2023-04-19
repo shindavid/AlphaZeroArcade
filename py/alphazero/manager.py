@@ -50,6 +50,7 @@ from util.repo_util import Repo
 from alphazero.custom_types import Generation
 from alphazero.data.games_dataset import GamesDataset
 
+
 class PathInfo:
     def __init__(self, path: str):
         self.path: str = path

@@ -1,11 +1,10 @@
 import torch
-from typing import List
-from util.torch_util import Shape
-from alphazero.optimization_args import ModelingArgs
-from alphazero.data.metadata import (
-    SelfPlayMetadata,
-)
 from torch.utils.data import Dataset
+
+from alphazero.optimization_args import ModelingArgs
+from alphazero.data.metadata import SelfPlayMetadata
+from util.torch_util import Shape
+
 
 class GamesDataset(Dataset):
     def __init__(self, self_play_data_dir: str):
@@ -32,7 +31,6 @@ class GamesDataset(Dataset):
         p = position_metadata.position_index
         data = torch.jit.load(game_metadata.filename).state_dict()
         return data['input'][p], data['value'][p], data['policy'][p]
-
 
 
 def compute_n_window(n_total: int) -> int:
