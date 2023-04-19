@@ -21,6 +21,13 @@ BASE_DIR/
              gen-1.ptj
              gen-2.ptj
              ...
+         bins/
+             {hash1}
+             {hash2}
+             ...
+         players/
+             gen-1.txt  # bin --player "--type=... ..."
+             ...
          checkpoints/
              gen-1.ptc
              gen-2.ptc
@@ -45,7 +52,7 @@ from torch.utils.data import DataLoader
 from alphazero.optimization_args import ModelingArgs
 from connect4.tensorizor import C4Net
 from util import subprocess_util
-from util.py_util import timed_print, make_hidden_filename
+from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo
 from alphazero.custom_types import Generation
 from alphazero.data.games_dataset import GamesDataset
@@ -109,10 +116,14 @@ class AlphaZeroManager:
 
         self.stdout_filename = os.path.join(self.c4_base_dir, 'stdout.txt')
         self.models_dir = os.path.join(self.c4_base_dir, 'models')
+        self.bins_dir = os.path.join(self.c4_base_dir, 'bins')
+        self.players_dir = os.path.join(self.c4_base_dir, 'players')
         self.checkpoints_dir = os.path.join(self.c4_base_dir, 'checkpoints')
         self.self_play_data_dir = os.path.join(self.c4_base_dir, 'self-play-data')
 
         os.makedirs(self.models_dir, exist_ok=True)
+        os.makedirs(self.bins_dir, exist_ok=True)
+        os.makedirs(self.players_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
 
@@ -150,7 +161,6 @@ class AlphaZeroManager:
 
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
-            gen = 1
             input_shape = loader.dataset.get_input_shape()
             self._net = C4Net(input_shape)
             timed_print(f'Creating new net with input shape {input_shape}')
@@ -173,7 +183,7 @@ class AlphaZeroManager:
         weight_decay = ModelingArgs.weight_decay
         self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
-        # TODO: SWA, cycling learning rate
+        # TODO: SWA, cyclic learning rate
 
         return self._net, self._opt
 
@@ -243,7 +253,12 @@ class AlphaZeroManager:
         gen = self.get_latest_model_generation()
 
         games_dir = self.get_self_play_data_subdir(gen)
-        c4_bin = os.path.join(Repo.root(), 'target/Release/bin/c4')
+        c4_bin_src = os.path.join(Repo.root(), 'target/Release/bin/c4')
+        c4_bin_md5 = str(sha256sum(c4_bin_src))
+        c4_bin_tgt = os.path.join(self.bins_dir, c4_bin_md5)
+        rsync_cmd = ['rsync', '-t', c4_bin_src, c4_bin_tgt]
+        subprocess_util.run(rsync_cmd)
+
         if gen == 0:
             n_games = self.n_gen0_games
         elif not async_mode:
@@ -251,32 +266,38 @@ class AlphaZeroManager:
         else:
             n_games = 0
 
+        base_player_args = ['--no-forced-playouts']
+        if gen == 0:
+            base_player_args.append('--uniform-model')
+        else:
+            model = self.get_model_filename(gen)
+            base_player_args.extend(['--nnet-filename', model])
+
         player_args = [
             '--type=MCTS-T',
             '--name=MCTS',
-            '--no-forced-playouts',
             '-g', games_dir,
-        ]
+        ] + base_player_args
+        if gen:
+            player_args.append('--no-clear-dir')
+
         player2_args = [
             '--name=MCTS2',
             '--copy-from=MCTS',
         ]
 
-        if gen == 0:
-            player_args.append('--uniform-model')
-        else:
-            model = self.get_model_filename(gen)
-            player_args.extend([
-                '--nnet-filename', model,
-                '--no-clear-dir',
-            ])
-
         self_play_cmd = [
-            c4_bin,
+            c4_bin_tgt,
             '-G', n_games,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
+
+        competitive_player_args = ['--type=MCTS-C'] + base_player_args
+        competitive_player_str = '%s --player "%s"\n' % (c4_bin_tgt, ' '.join(map(str, competitive_player_args)))
+        player_filename = os.path.join(self.players_dir, f'gen-{gen}.txt')
+        with open(player_filename, 'w') as f:
+            f.write(competitive_player_str)
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
         return SelfPlayProcData(self_play_cmd, n_games, gen, games_dir)
