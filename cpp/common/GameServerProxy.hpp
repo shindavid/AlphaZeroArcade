@@ -9,6 +9,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Packet.hpp>
+#include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
 
 namespace common {
@@ -17,6 +18,7 @@ template <GameStateConcept GameState>
 class GameServerProxy {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr bool kEnableDebug = IS_MACRO_ASSIGNED_TO_1(GAME_SERVER_PROXY_DEBUG);
 
   using ActionMask = typename GameState::ActionMask;
   using GameOutcome = typename GameState::GameOutcome;
@@ -86,7 +88,6 @@ public:
 
     // below fields are used for inter-thread communication
     ActionMask valid_actions_;
-    action_index_t action_ = -1;
     bool active_ = true;
     bool ready_to_get_action_ = false;
   };

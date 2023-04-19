@@ -15,6 +15,7 @@
 #include <common/Constants.hpp>
 #include <common/Packet.hpp>
 #include <util/Exception.hpp>
+#include <util/ThreadSafePrinter.hpp>
 
 namespace common {
 
@@ -115,6 +116,10 @@ GameServerProxy<GameState>::PlayerThread::~PlayerThread() {
 
 template<GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame& payload) {
+  if (kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_, (int)player_id_);
+  }
   game_id_t game_id = payload.game_id;
   player_name_array_t player_names;
   seat_index_t seat_assignment = payload.seat_assignment;
@@ -127,6 +132,10 @@ void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame
 
 template<GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateChange& payload) {
+  if (kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_, (int)player_id_);
+  }
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat;
@@ -138,6 +147,10 @@ void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateCh
 
 template<GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
+  if (kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_, (int)player_id_);
+  }
   const char* buf = payload.dynamic_size_section.buf;
 
   std::unique_lock lock(mutex_);
@@ -145,19 +158,14 @@ void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const Action
   ready_to_get_action_ = true;
   lock.unlock();
   cv_.notify_one();
-
-  lock.lock();
-  cv_.wait(lock, [&] { return !active_ || action_ >= 0; });
-  if (!active_) return;
-  action_index_t action = action_;
-  action_ = -1;
-  lock.unlock();
-
-  send_action_packet(action);
 }
 
 template<GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_end_game(const EndGame& payload) {
+  if (kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_, (int)player_id_);
+  }
   const char* buf = payload.dynamic_size_section.buf;
 
   GameOutcome outcome;
@@ -189,13 +197,15 @@ template<GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::run() {
   while (true) {
     std::unique_lock lock(mutex_);
+    if (kEnableDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("%s() loop game_thread:%d player:%d\n", __func__, (int)game_thread_id_, (int)player_id_);
+    }
     cv_.wait(lock, [&] { return !active_ || ready_to_get_action_; });
     if (!active_) break;
 
     ready_to_get_action_ = false;
-    action_ = player_->get_action(state_, valid_actions_);
-    lock.unlock();
-    cv_.notify_one();
+    send_action_packet(player_->get_action(state_, valid_actions_));
   }
 }
 
