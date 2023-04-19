@@ -1,6 +1,43 @@
 import datetime
+import hashlib
 import os
 import shutil
+
+
+_sha256_cache = {}
+
+
+def sha256sum(filename, use_cache=True):
+    """
+    Returns the sha256 checksum of the file specified by filename.
+
+    If use_cache is True, then as an optimization, if the checksum has already been computed and the file has not been
+    modified since the checksum was computed, then the cached checksum is returned.
+    """
+    if not use_cache:
+        return sha256sum_helper(filename)
+
+    mtime = os.path.getmtime(filename)
+    if filename in _sha256_cache:
+        cached_mtime, cached_checksum = _sha256_cache[filename]
+        if cached_mtime == mtime:
+            return cached_checksum
+
+    checksum = sha256sum_helper(filename)
+
+    _sha256_cache[filename] = (mtime, checksum)
+    return checksum
+
+
+def sha256sum_helper(filename):
+    # https://stackoverflow.com/a/44873382/543913
+    h = hashlib.sha256()
+    b = bytearray(128*1024)
+    mv = memoryview(b)
+    with open(filename, 'rb', buffering=0) as f:
+        while n := f.readinto(mv):
+            h.update(mv[:n])
+    return h.hexdigest()
 
 
 def timed_print(s, *args, **kwargs):
