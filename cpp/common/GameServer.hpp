@@ -32,6 +32,7 @@ public:
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using duration_t = std::chrono::nanoseconds;
+  using player_id_array_t = std::array<player_id_t, kNumPlayers>;
 
   /*
    * A player_instantiation_t is instantiated from a registration_t. See registration_t for more detail.
@@ -92,13 +93,15 @@ private:
     int num_games_started() const { return num_games_started_; }
     void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
     int num_registrations() const { return registrations_.size(); }
-    player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations) const;
+    player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations);
     registration_vec_t& registration_templates() { return registrations_; }
 
   private:
     const Params params_;
 
     registration_vec_t registrations_;
+    player_id_array_t random_seat_indices_;
+    int num_random_seats_ = 0;
 
     mutable std::mutex mutex_;
     progressbar* bar_ = nullptr;

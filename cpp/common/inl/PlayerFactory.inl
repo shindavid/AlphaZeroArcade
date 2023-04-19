@@ -19,7 +19,10 @@ auto PlayerFactory<GameState>::Params::make_options_description() {
       .template add_option<"name">(po::value<std::string>(&name), "Name. Required")
       .template add_option<"copy-from">(po::value<std::string>(&copy_from),
           "If specified, copy everything but --name and --seat from the --player with this name")
-      .template add_option<"seat">(po::value<int>(&seat), "seat (0 or 1). Random if unspecified")
+      .template add_option<"seat">(po::value<int>(&seat),
+          "zero-indexed seat (0=first-player, 1=second-player, etc.). If unspecified, then the seat is selected "
+          "randomly among the available seats for the first game. For subsequent games, we round-robin through the "
+          "set of N! possible seat assignments, where N is the number of players with unspecified seats.")
       ;
 }
 

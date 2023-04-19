@@ -140,38 +140,31 @@ void GameServer<GameState>::SharedData::register_player(
   player_id_t player_id = registrations_.size();
   util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
   registrations_.emplace_back(gen, seat, player_id);
+  if (seat < 0) {
+    random_seat_indices_[num_random_seats_++] = player_id;
+    util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
+  }
 }
 
 template<GameStateConcept GameState>
 typename GameServer<GameState>::player_instantiation_array_t
-GameServer<GameState>::SharedData::generate_player_order(const player_instantiation_array_t &registrations) const {
+GameServer<GameState>::SharedData::generate_player_order(const player_instantiation_array_t &instantiations) {
+  std::unique_lock lock(mutex_);
+  std::next_permutation(random_seat_indices_.begin(), random_seat_indices_.begin() + num_random_seats_);
+  player_id_array_t random_seat_index_permutation = random_seat_indices_;
+  lock.unlock();
+
   player_instantiation_array_t player_order;
 
-  player_instantiation_array_t random_seat_assignments;
-  int num_random_assignments = 0;
-
-  // first seat players that have dedicated seats
-  for (const auto& reg : registrations) {
-    if (reg.seat < 0) {
-      random_seat_assignments[num_random_assignments++] = reg;
-      continue;
-    }
-    util::clean_assert(!player_order[reg.seat].player, "double-seated player at seat %d", reg.seat);
-    player_order[reg.seat] = reg;
-  }
-
-  // now randomly seat players at the remaining seats
-  if (num_random_assignments) {
-    util::Random::shuffle(&random_seat_assignments[0], &random_seat_assignments[num_random_assignments]);
-    int r = 0;
-    for (int p = 0; p < kNumPlayers; ++p) {
-      if (player_order[p].player) continue;
-      assert(r < num_random_assignments);
-      player_order[p] = random_seat_assignments[r++];
-    }
-  }
-
+  int r = 0;
   for (int p = 0; p < kNumPlayers; ++p) {
+    if (registrations_[p].seat < 0) {
+      player_order[p] = instantiations[random_seat_index_permutation[r++]];
+      util::clean_assert(player_order[p].seat < 0, "unexpected bug (p=%d, seat=%d)", p, (int)player_order[p].seat);
+    } else {
+      player_order[p] = instantiations[p];
+      util::clean_assert(player_order[p].seat >= 0, "unexpected bug (p=%d, seat=%d)", p, (int)player_order[p].seat);
+    }
     player_order[p].seat = p;
   }
 
