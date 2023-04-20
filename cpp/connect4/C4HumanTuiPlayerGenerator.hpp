@@ -3,16 +3,19 @@
 #include <string>
 #include <vector>
 
+#include <boost/program_options.hpp>
+
 #include <common/AbstractPlayer.hpp>
-#include <common/AbstractPlayerGenerator.hpp>
 #include <common/BasicTypes.hpp>
+#include <common/HumanTuiPlayerGenerator.hpp>
 #include <connect4/C4GameState.hpp>
 #include <connect4/C4CheatingHumanTuiPlayer.hpp>
 #include <connect4/C4PerfectPlayer.hpp>
+#include <util/BoostUtil.hpp>
 
 namespace c4 {
 
-class HumanTuiPlayerGenerator : public common::AbstractPlayerGenerator<c4::GameState> {
+class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<c4::GameState> {
 public:
   struct Params {
     bool cheat_mode;
@@ -29,8 +32,6 @@ public:
     }
   };
 
-  std::vector<std::string> get_types() const override { return {"TUI"}; }
-  std::string get_description() const override { return "Human player"; }
   common::AbstractPlayer<c4::GameState>* generate(common::game_thread_id_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
