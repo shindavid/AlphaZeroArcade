@@ -140,10 +140,16 @@ void GameServer<GameState>::SharedData::register_player(
   player_id_t player_id = registrations_.size();
   util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
   registrations_.emplace_back(gen, seat, player_id);
-  if (seat < 0) {
-    random_seat_indices_[num_random_seats_++] = player_id;
-    util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
+}
+
+template<GameStateConcept GameState>
+void GameServer<GameState>::SharedData::init_random_seat_indices() {
+  for (registration_t& reg : registrations_) {
+    if (reg.seat < 0) {
+      random_seat_indices_[num_random_seats_++] = reg.player_id;
+    }
   }
+  util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
 }
 
 template<GameStateConcept GameState>
@@ -339,6 +345,7 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
 template<GameStateConcept GameState>
 void GameServer<GameState>::run() {
   wait_for_remote_player_registrations();
+  shared_data_.init_random_seat_indices();
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
   int parallelism = shared_data_.compute_parallelism_factor();

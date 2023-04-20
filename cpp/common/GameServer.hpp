@@ -94,6 +94,7 @@ private:
     void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
     int num_registrations() const { return registrations_.size(); }
     player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations);
+    void init_random_seat_indices();
     registration_vec_t& registration_templates() { return registrations_; }
 
   private:
