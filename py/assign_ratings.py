@@ -16,15 +16,15 @@ the N agents beforehand, to see if working with a smaller subset of agents leads
 Some additional agents are added to the set of agents to be rated:
 
 - Random: an agent that chooses uniformly randomly from all legal moves.
-- (c4-only) Perfect: An agent that plays according to the perfect strategy for the game.
 - Gen-0 i=4: The zero-eth generation agent, but with 4 MCTS iterations.
 - Gen-0 i=16: The zero-eth generation agent, but with 16 MCTS iterations.
 - Gen-0 i=64: The zero-eth generation agent, but with 64 MCTS iterations.
+- (c4-only) Perfect: An agent that plays according to the perfect strategy for the game.
 
 The ratings will be calibrated so that Random has a rating of 0.
 
 Additionally, we forcibly add round-robin matches between {Random, Gen-0 i=4, Gen-0 i=16, Gen-0 i=64} before starting
-the loop.
+the loop. These agents are referred to as "special" agents.
 
 Rationale: it is good to have a well-defined player like Random in the population with a fixed rating, as it helps with
 the interpretability of the ratings. However, in order to properly calibrate Random's rating relative to the rest of the
@@ -35,15 +35,18 @@ Furthermore, the Gen-0 i=64 agent is able to win a non-negligible fraction of th
 against opponents are advanced as Gen-50.
 """
 import argparse
+import collections
 import os
 import random
 import sqlite3
-from typing import Optional
+import time
+from typing import Optional, Dict
 
 import trueskill
 from natsort import natsorted
 
 from config import Config
+from util import subprocess_util
 from util.py_util import timed_print
 
 """
@@ -119,12 +122,69 @@ def inject_args(cmdline: str, kwargs: dict):
     return cmdline
 
 
+def int_parse(s: str, prefix: str):
+    assert s.startswith(prefix), s
+    return int(s[len(prefix):])
+
+
+class WinLossDrawCounts:
+    def __init__(self, win=0, loss=0, draw=0):
+        self.win = win
+        self.loss = loss
+        self.draw = draw
+
+    def __iadd__(self, other):
+        self.win += other.win
+        self.loss += other.loss
+        self.draw += other.draw
+        return self
+
+
+class MatchRecord:
+    def __init__(self):
+        self.counts: Dict[int, WinLossDrawCounts] = collections.defaultdict(WinLossDrawCounts)
+
+    def update(self, player_id: int, counts: WinLossDrawCounts):
+        self.counts[player_id] += counts
+
+    def get(self, player_id: int) -> WinLossDrawCounts:
+        return self.counts[player_id]
+
+    def empty(self) -> bool:
+        return len(self.counts) == 0
+
+
+def extract_match_record(stdout: str) -> MatchRecord:
+    """
+    ...
+    All games complete!
+    P0 W40 L24 D0 [40]
+    P1 W24 L40 D0 [24]
+    ...
+    """
+    record = MatchRecord()
+    for line in stdout.splitlines():
+        tokens = line.split()
+        if len(tokens) > 1 and tokens[0][0] == 'P' and tokens[0][1:].isdigit():
+            player_id = int_parse(tokens[0], 'P')
+            win = int_parse(tokens[1], 'W')
+            loss = int_parse(tokens[2], 'L')
+            draw = int_parse(tokens[3], 'D')
+            counts = WinLossDrawCounts(win, loss, draw)
+            record.update(player_id, counts)
+
+    assert not record.empty(), stdout
+    return record
+
+
 class Agent:
-    def __init__(self, cmd: str, rowid: Optional[int] = None, special: bool = False):
+    def __init__(self, cmd: str, row_id: Optional[int] = None, special: bool = False):
         """
         cmd looks like:
 
         <binary> --player "--type=MCTS-C --nnet-filename /media/dshin/c4f/models/gen-10.ptj"
+
+        See documentation at top of file for description of "special".
         """
         assert cmd.count('"') == 2, cmd
         tokens = cmd.split()
@@ -137,7 +197,7 @@ class Agent:
         self.binary = tokens[0]
         self.player_str = cmd[cmd.find('"') + 1: cmd.rfind('"')]
         self.rating = trueskill.Rating()
-        self.rowid = rowid
+        self.row_id = row_id
         self.special = special
 
     def get_cmd(self, binary_kwargs: Optional[dict] = None, player_kwargs: Optional[dict] = None):
@@ -235,8 +295,8 @@ class Arena:
     def init_agents(self):
         c = self.conn.cursor()
         res = c.execute('SELECT rowid, cmd, special FROM agents')
-        for rowid, cmd, special in res.fetchall():
-            agent = Agent(cmd, rowid, special)
+        for row_id, cmd, special in res.fetchall():
+            agent = Agent(cmd, row_id, special)
             self.all_agents.append(agent)
             if special:
                 self.special_agents.append(agent)
@@ -246,12 +306,12 @@ class Arena:
         trueskill.setup(tau=0, draw_probability=DRAW_PROBABILITY, backend='scipy')
         self.init_db()
         self.init_agents()
+        self.all_agents = self.all_agents[:12]  # temporary
 
         self.play_special_round()
         for round in range(Args.num_rounds):
             timed_print(f'Round {round}')
             self.play_round()
-            self.update_ratings()
 
     def play_special_round(self):
         for agent in self.special_agents:
@@ -268,32 +328,48 @@ class Arena:
             self.play_match(agent, opponent)
 
     def play_match(self, agent1: Agent, agent2: Agent):
+        timed_print('Playing match')
+        timed_print(f'Agent 1: {agent1.cmd}')
+        timed_print(f'Agent 2: {agent2.cmd}')
+
         binary_kwargs = {'-G': Args.n_games}
 
-        player1_kwargs = {'--name': 'P1'}
+        player1_kwargs = {'--name': 'Player1'}
         if not agent1.special:
             player1_kwargs['-i'] = Args.mcts_iters
 
-        player2_kwargs = {'--name': 'P2'}
+        player2_kwargs = {'--name': 'Player2'}
         if not agent2.special:
             player2_kwargs['-i'] = Args.mcts_iters
 
-        if agent1.binary == agent2.binary:
+        special = agent1.special or agent2.special
+        if agent1.binary == agent2.binary and not special:
             # might as well run both in the same process
             cmd = agent1.get_cmd(binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
             player_str2 = inject_args(agent2.player_str, player2_kwargs)
             cmd += f' --player "{player_str2}"'
-            print('cmd: ' + cmd)
+            proc = subprocess_util.run(cmd)
+            record = extract_match_record(proc.stdout)
         else:
             port = 12345
             binary_kwargs['--port'] = port
             cmd1 = agent1.get_cmd(binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
             cmd2 = agent2.get_cmd(binary_kwargs={'--remote-port': port}, player_kwargs=player2_kwargs)
-            print('cmd1: ' + cmd1)
-            print('cmd2: ' + cmd2)
+            proc1 = subprocess_util.Popen(cmd1)
+            time.sleep(0.1)  # won't be necessary soon
+            subprocess_util.Popen(cmd2)
 
-    def update_ratings(self):
-        print('TODO: update ratings')
+            subprocess_util.wait_for(proc1)
+            record = extract_match_record(proc1.stdout)
+
+        timed_print('Updating ratings')
+        counts1 = record.get(0)
+        for _ in range(counts1.win):
+            agent1.rating, agent2.rating = trueskill.rate_1vs1(agent1.rating, agent2.rating)
+        for _ in range(counts1.loss):
+            agent2.rating, agent1.rating = trueskill.rate_1vs1(agent2.rating, agent1.rating)
+        for _ in range(counts1.draw):
+            agent1.rating, agent2.rating = trueskill.rate_1vs1(agent1.rating, agent2.rating, drawn=True)
 
 
 def main():
