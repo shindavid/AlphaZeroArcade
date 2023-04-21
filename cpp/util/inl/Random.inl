@@ -6,6 +6,9 @@ namespace util {
 
 template<typename T, typename U>
 inline auto Random::uniform_sample(T lower, U upper) {
+  if (lower >= upper) {
+    throw std::runtime_error("Random::uniform_sample() - invalid range");
+  }
   using V = decltype(std::declval<T>() + std::declval<U>());
   std::uniform_int_distribution<V> dist{(V)lower, (V)(upper - 1)};
   return dist(instance()->prng_);
@@ -13,6 +16,9 @@ inline auto Random::uniform_sample(T lower, U upper) {
 
 template<typename FloatType>
 FloatType Random::uniform_real(FloatType left, FloatType right) {
+  if (right >= left) {
+    throw std::runtime_error("Random::uniform_real() - invalid range");
+  }
   std::uniform_real_distribution<FloatType> dist(left, right);
   return dist(instance()->prng_);
 }
