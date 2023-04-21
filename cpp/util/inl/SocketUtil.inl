@@ -1,8 +1,10 @@
 #include <util/SocketUtil.hpp>
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <thread>
 #include <unistd.h>
 
 #include <util/Exception.hpp>
@@ -73,7 +75,15 @@ inline Socket* Socket::create_client_socket(std::string const& host, port_t port
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
   addr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr *) *entry->h_addr_list));
-  if (connect(fd, (sockaddr*)&addr, sizeof(addr)) < 0) {
+
+  int retry_count = 5;
+  int sleep_time_ms = 100;
+  while (connect(fd, (sockaddr*)&addr, sizeof(addr)) < 0 && retry_count > 0) {
+    retry_count--;
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time_ms));
+    sleep_time_ms *= 2;
+  }
+  if (retry_count == 0) {
     throw util::Exception("Could not connect to socket");
   }
 
