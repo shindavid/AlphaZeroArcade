@@ -42,12 +42,14 @@ import os
 import random
 import sqlite3
 import time
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from natsort import natsorted
+import numpy as np
 
 from config import Config
 from util import subprocess_util
+from util.graph_util import transitive_closure, direct_children
 from util.py_util import timed_print
 
 
@@ -172,8 +174,31 @@ def extract_match_record(stdout: str) -> MatchRecord:
     return record
 
 
+def construct_cmd(binary: str,
+                  player_str: str,
+                  binary_kwargs: Optional[dict] = None,
+                  player_kwargs: Optional[dict] = None)-> str:
+    cmd = binary
+    if binary_kwargs:
+        for key, value in binary_kwargs.items():
+            assert key.startswith('-'), key
+            cmd += f' {key} {value}'
+
+    if player_kwargs:
+        for key, value in player_kwargs.items():
+            player_str = inject_arg(player_str, key, str(value))
+
+    cmd += f' --player "{player_str}"'
+    return cmd
+
+
 class Agent:
-    def __init__(self, cmd: str, row_id: Optional[int] = None, special: bool = False):
+    def __init__(self, cmd: str, *,
+                 rand: bool = False,
+                 perfect: bool = False,
+                 gen: Optional[int] = None,
+                 iters: Optional[int] = None,
+                 row_id: Optional[int] = None):
         """
         cmd looks like:
 
@@ -191,23 +216,15 @@ class Agent:
         self.cmd = cmd
         self.binary = tokens[0]
         self.player_str = cmd[cmd.find('"') + 1: cmd.rfind('"')]
+
+        self.rand = rand
+        self.perfect = perfect
+        self.gen = gen
+        self.iters = iters
         self.row_id = row_id
-        self.special = special
 
     def get_cmd(self, binary_kwargs: Optional[dict] = None, player_kwargs: Optional[dict] = None):
-        cmd = self.binary
-        if binary_kwargs:
-            for key, value in binary_kwargs.items():
-                assert key.startswith('-'), key
-                cmd += f' {key} {value}'
-
-        player_str = self.player_str
-        if player_kwargs:
-            for key, value in player_kwargs.items():
-                player_str = inject_arg(player_str, key, str(value))
-
-        cmd += f' --player "{player_str}"'
-        return cmd
+        return construct_cmd(self.binary, self.player_str, binary_kwargs, player_kwargs)
 
 
 class Arena:
@@ -217,8 +234,9 @@ class Arena:
         self.arena_dir = os.path.join(self.c4_base_dir, 'arena')
         os.makedirs(self.arena_dir, exist_ok=True)
 
-        self.all_agents = []
-        self.special_agents = []
+        self.agents: List[Agent] = []
+        self.E = None  # expected relative skill matrix
+        self.virtual_wins = None
         self.db_filename = os.path.join(self.arena_dir, 'arena.db')
         self._conn = None
 
@@ -241,7 +259,10 @@ class Arena:
         if not agents_table_exists:
             c.execute("""CREATE TABLE agents (
                 cmd,
-                special);
+                rand,
+                perfect,
+                gen,
+                iters);
             """)
             c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS lookup ON agents (cmd);""")
 
@@ -254,19 +275,25 @@ class Arena:
                 with open(os.path.join(players_dir, filename)) as f:
                     cmd = f.read().strip()
 
-                cmd_tuples = [(cmd, False)]
+                agent = Agent(cmd)
+                cmd_with_iters = agent.get_cmd(player_kwargs={'-i': Args.mcts_iters})
+                cmd_tuples = [(cmd_with_iters, False, False, gen, Args.mcts_iters)]
                 if gen == 0:
-                    agent = Agent(cmd)
                     rand_cmd = f'{agent.binary} --player "--type=Random"'
                     perfect_cmd = f'{agent.binary} --player "--type=Perfect"'
                     cmd4 = agent.get_cmd(player_kwargs={'-i': 4})
                     cmd16 = agent.get_cmd(player_kwargs={'-i': 16})
                     cmd64 = agent.get_cmd(player_kwargs={'-i': 64})
-                    aux_cmds = [rand_cmd, cmd4, cmd16, cmd64]
-                    aux_cmd_tuples = [(cmd, True) for cmd in aux_cmds]
-                    cmd_tuples = aux_cmd_tuples + [(perfect_cmd, False)] + cmd_tuples
 
-                c.executemany('INSERT INTO agents VALUES (?, ?)', cmd_tuples)
+                    cmd_tuples.extend([
+                        (rand_cmd, True, False, -1, 0),
+                        (perfect_cmd, False, True, -1, 0),
+                        (cmd4, False, False, gen, 4),
+                        (cmd16, False, False, gen, 16),
+                        (cmd64, False, False, gen, 64),
+                    ])
+
+                c.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?)', cmd_tuples)
 
         # TODO: generalize below table for multiplayer games
         c.execute("""CREATE TABLE IF NOT EXISTS matches (
@@ -288,36 +315,68 @@ class Arena:
 
     def init_agents(self):
         c = self.conn.cursor()
-        res = c.execute('SELECT rowid, cmd, special FROM agents')
-        for row_id, cmd, special in res.fetchall():
-            agent = Agent(cmd, row_id, special)
-            self.all_agents.append(agent)
-            if special:
-                self.special_agents.append(agent)
-        timed_print(f'Loaded {len(self.all_agents)} agents (including {len(self.special_agents)} special agents)')
+        res = c.execute('SELECT rowid, cmd, rand, perfect, gen, iters FROM agents')
+        for row_id, cmd, rand, perfect, gen, iters in res.fetchall():
+            agent = Agent(cmd, row_id)
+            self.agents.append(agent)
+        n = len(self.agents)
+        timed_print(f'Loaded {n} agents')
+
+    def init_expected_relative_skill_matrix(self):
+        n = len(self.agents)
+        self.E = np.zeros((n, n), dtype=bool)
+        for i in range(n):
+            agent_i = self.agents[i]
+            if agent_i.rand:
+                self.E[i] = 1
+                continue
+            if agent_i.perfect:
+                self.E[:, i] = 1
+                continue
+            for j in range(n):
+                if i == j:
+                    continue
+                agent_j = self.agents[j]
+                if agent_j.rand or agent_j.perfect:
+                    continue
+
+                if agent_i.gen < agent_j.gen:
+                    self.E[i, j] = 1
+                    continue
+                elif agent_i.gen == agent_j.gen and agent_i.iters < agent_j.iters:
+                    self.E[i, j] = 1
+                    continue
+
+        self.E = transitive_closure(self.E)
+        timed_print(f'Constructed ({n}, {n})-shaped Expected Relative Skill Matrix')
+
+    def add_virtual_wins(self):
+        n = len(self.agents)
+        self.virtual_wins = np.zeros((n, n), dtype=bool)
+        for u, v in zip(*np.where(direct_children(self.E))):
+            self.virtual_wins[u, v] = 1
+
+        for u in range(n):
+            m = sum(self.virtual_wins[u])
+            if m > 0:
+                self.virtual_wins[u] /= m
+        timed_print(f'Added virtual wins')
 
     def launch(self):
         self.init_db()
         self.init_agents()
-        self.all_agents = self.all_agents[:12]  # temporary
+        self.init_expected_relative_skill_matrix()
+        self.add_virtual_wins()
 
-        self.play_special_round()
         for round in range(Args.num_rounds):
             timed_print(f'Round {round}')
             self.play_round()
 
-    def play_special_round(self):
-        for agent in self.special_agents:
-            opponent = agent
-            while opponent is agent:
-                opponent = random.choice(self.all_agents)
-            self.play_match(agent, opponent)
-
     def play_round(self):
-        for agent in self.all_agents:
+        for agent in self.agents:
             opponent = agent
             while opponent is agent:
-                opponent = random.choice(self.all_agents)
+                opponent = random.choice(self.agents)
             self.play_match(agent, opponent)
 
     def play_match(self, agent1: Agent, agent2: Agent):
