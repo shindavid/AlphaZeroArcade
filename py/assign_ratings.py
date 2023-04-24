@@ -1,38 +1,40 @@
 #!/usr/bin/env python3
 
 """
-Assigns TrueSkill ratings to a fixed set of agents produced by the alphazero main loop. Each is configured to use
-i=256 MCTS iterations.
+Assigns skill ratings to a fixed set of agents produced by the alphazero main loop.
 
-The ratings are computed by running a series of matches between the agents. For now, the methodology looks like this:
+We use the basic Bradley-Terry model, without the generalized capabilities of first-player advantage or draws. This
+model models agent i's skill as a parameter beta_i, and predicts the expected win-rate in a match between agent i
+and agent j as:
 
-for K in [0, 1, 2, ...]:
-  - For each of the N agents, we uniformly randomly select an opponent, and pit the two against each other for G games.
-  - Compute ratings for the N agents based on the cumulative N*(K+1)*G games so far, and export those ratings as R(K).
+P(i beats j) = e^beta_i / (e^beta_i + e^beta_j)
 
-The plan is to study the progression of R(0), R(1), ..., to see if/how the ratings converge. We can also sample from
-the N agents beforehand, to see if working with a smaller subset of agents leads to similar ratings.
+To estimate the beta_i's, we run a series of matches between the agents. Below is a description of the methodology.
 
-Some additional agents are added to the set of agents to be rated:
+Let N be the total number of agents in our system. As a baseline, we can use the agents produced by the alphazero main
+loop, with each agent configured to use i=256 MCTS iterations. If we want, we can produce additional agents by
+parameterizing those baseline agents differently (e.g., using a different number of MCTS iterations). We can also
+add additional non-MCTS agents (Random, Perfect for c4, etc.).
 
-- Random: an agent that chooses uniformly randomly from all legal moves.
-- Gen-0 i=4: The zero-eth generation agent, but with 4 MCTS iterations.
-- Gen-0 i=16: The zero-eth generation agent, but with 16 MCTS iterations.
-- Gen-0 i=64: The zero-eth generation agent, but with 64 MCTS iterations.
-- (c4-only) Perfect: An agent that plays according to the perfect strategy for the game.
+We have some expectations on the relative skill level of these agents. For example, we expect the generation-k agent
+to be inferior to the generation-(k+1) agent. If we choose to use different parameterizations of the same generation,
+we have expectations amongst those. For example, all else equal, we expect that increasing the number of MCTS
+iterations increases the skill level of the agent. We also expect that the random agent will be inferior to all other
+agents, and that the perfect agent will be superior to all other agents. We can encode all these expectations into an
+(n, n)-shaped boolean "Expected Relative Skill Matrix", E. The (i, j)-th entry of this matrix will be true if we
+expect agent i to be inferior to agent j.
 
-The ratings will be calibrated so that Random has a rating of 0.
+Let G be the N-node graph with directed edges defined by this matrix E. G should not contain cycles if the skill
+expectations are coherent. Thus, G is a DAG, and we can extend it to its transitive closure by adding edges between
+nodes u and v if there is a directed path from u to v in G.
 
-Additionally, we forcibly add round-robin matches between {Random, Gen-0 i=4, Gen-0 i=16, Gen-0 i=64} before starting
-the loop. These agents are referred to as "special" agents.
+We initialize our game records data by first including a fractional virtual win for agent i over agent j for each edge
+(i, j) in G. This softly encodes our expectations on the relative skill levels of the agents.
 
-Rationale: it is good to have a well-defined player like Random in the population with a fixed rating, as it helps with
-the interpretability of the ratings. However, in order to properly calibrate Random's rating relative to the rest of the
-population, we need to include matchups where Random can win. Against the default setting of i=256 MCTS iterations,
-Random empirically loses 100% or near-100% against even the zero-eth generation net. Empirically, however, Random is
-able to win a non-negligible fraction of the time against the first generation net with 4, 16, or 64 MCTS iterations.
-Furthermore, the Gen-0 i=64 agent is able to win a non-negligible fraction of the time against many i=256 agents, even
-against opponents are advanced as Gen-50.
+After this, we repeatedly sample an edge of G and then run a set of matches between the corresponding agents. Consider
+the digraph H formed by drawing an edge from u to v whenever u records at least one win (or draw) against v. We
+require H to be strongly connected before we can make proper predictions, so our match sampling will initially favor
+sampling edges that can potentially connect clusters of H. The sampling details can be found in the code.
 """
 import argparse
 import collections
@@ -42,18 +44,11 @@ import sqlite3
 import time
 from typing import Optional, Dict
 
-import trueskill
 from natsort import natsorted
 
 from config import Config
 from util import subprocess_util
 from util.py_util import timed_print
-
-"""
-TODO: set DRAW_PROBABILITY in a more principled way. Beware twiddling it haphazardly, however, since it can mess with
-existing ratings.
-"""
-DRAW_PROBABILITY = 0.1
 
 
 class Args:
@@ -196,7 +191,6 @@ class Agent:
         self.cmd = cmd
         self.binary = tokens[0]
         self.player_str = cmd[cmd.find('"') + 1: cmd.rfind('"')]
-        self.rating = trueskill.Rating()
         self.row_id = row_id
         self.special = special
 
@@ -303,7 +297,6 @@ class Arena:
         timed_print(f'Loaded {len(self.all_agents)} agents (including {len(self.special_agents)} special agents)')
 
     def launch(self):
-        trueskill.setup(tau=0, draw_probability=DRAW_PROBABILITY, backend='scipy')
         self.init_db()
         self.init_agents()
         self.all_agents = self.all_agents[:12]  # temporary
@@ -362,14 +355,8 @@ class Arena:
             subprocess_util.wait_for(proc1)
             record = extract_match_record(proc1.stdout)
 
-        timed_print('Updating ratings')
+        timed_print('TODO: update ratings')
         counts1 = record.get(0)
-        for _ in range(counts1.win):
-            agent1.rating, agent2.rating = trueskill.rate_1vs1(agent1.rating, agent2.rating)
-        for _ in range(counts1.loss):
-            agent2.rating, agent1.rating = trueskill.rate_1vs1(agent2.rating, agent1.rating)
-        for _ in range(counts1.draw):
-            agent1.rating, agent2.rating = trueskill.rate_1vs1(agent1.rating, agent2.rating, drawn=True)
 
 
 def main():
