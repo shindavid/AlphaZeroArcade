@@ -53,6 +53,9 @@ from util.graph_util import transitive_closure, direct_children
 from util.py_util import timed_print
 
 
+BETA_SCALE_FACTOR = 100.0 / np.log(1/.36 - 1)  # 100-point difference corresponds to 64% win-rate to match Elo
+
+
 class Args:
     c4_base_dir_root: str
     tag: str
@@ -136,6 +139,9 @@ class WinLossDrawCounts:
         self.draw += other.draw
         return self
 
+    def __str__(self):
+        return f'W{self.win} L{self.loss} D{self.draw}'
+
 
 class MatchRecord:
     def __init__(self):
@@ -194,6 +200,7 @@ def construct_cmd(binary: str,
 
 class Agent:
     def __init__(self, cmd: str, *,
+                 index: int = -1,
                  rand: bool = False,
                  perfect: bool = False,
                  gen: Optional[int] = None,
@@ -217,6 +224,7 @@ class Agent:
         self.binary = tokens[0]
         self.player_str = cmd[cmd.find('"') + 1: cmd.rfind('"')]
 
+        self.index = index
         self.rand = rand
         self.perfect = perfect
         self.gen = gen
@@ -225,6 +233,12 @@ class Agent:
 
     def get_cmd(self, binary_kwargs: Optional[dict] = None, player_kwargs: Optional[dict] = None):
         return construct_cmd(self.binary, self.player_str, binary_kwargs, player_kwargs)
+
+    def __str__(self):
+        return f'Agent("{self.player_str}")'
+
+    def __repr__(self):
+        return str(self)
 
 
 class Arena:
@@ -235,8 +249,11 @@ class Arena:
         os.makedirs(self.arena_dir, exist_ok=True)
 
         self.agents: List[Agent] = []
+        self.agent_dict: Dict[int, Agent] = {}
         self.E = None  # expected relative skill matrix
+        self.beta = None  # skill estimates
         self.virtual_wins = None
+        self.real_wins = None
         self.db_filename = os.path.join(self.arena_dir, 'arena.db')
         self._conn = None
 
@@ -272,6 +289,10 @@ class Arena:
                     continue
 
                 gen = int(filename.split('.')[0].split('-')[1])
+                if gen % 10 != 0:
+                    # only use every 10th generation for now
+                    continue
+
                 with open(os.path.join(players_dir, filename)) as f:
                     cmd = f.read().strip()
 
@@ -285,13 +306,13 @@ class Arena:
                     cmd16 = agent.get_cmd(player_kwargs={'-i': 16})
                     cmd64 = agent.get_cmd(player_kwargs={'-i': 64})
 
-                    cmd_tuples.extend([
+                    cmd_tuples = [
                         (rand_cmd, True, False, -1, 0),
                         (perfect_cmd, False, True, -1, 0),
                         (cmd4, False, False, gen, 4),
                         (cmd16, False, False, gen, 16),
                         (cmd64, False, False, gen, 64),
-                    ])
+                    ] + cmd_tuples
 
                 c.executemany('INSERT INTO agents VALUES (?, ?, ?, ?, ?)', cmd_tuples)
 
@@ -308,18 +329,26 @@ class Arena:
 
         c.execute("""CREATE TABLE IF NOT EXISTS ratings (
             agent_id INT,
-            mu REAL, 
-            sigma REAL);
+            match_id INT,
+            beta REAL);
         """)
+        c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (agent_id, match_id);""")
         self.conn.commit()
 
     def init_agents(self):
         c = self.conn.cursor()
         res = c.execute('SELECT rowid, cmd, rand, perfect, gen, iters FROM agents')
         for row_id, cmd, rand, perfect, gen, iters in res.fetchall():
-            agent = Agent(cmd, row_id)
+            agent = Agent(cmd, index=len(self.agents), row_id=row_id, rand=rand, perfect=perfect, gen=gen, iters=iters)
             self.agents.append(agent)
+            self.agent_dict[row_id] = agent
+
         n = len(self.agents)
+        self.beta = np.zeros(n, dtype=np.float64)
+
+        assert self.agents[0].rand
+        assert all(not agent.rand for agent in self.agents[1:])
+
         timed_print(f'Loaded {n} agents')
 
     def init_expected_relative_skill_matrix(self):
@@ -347,75 +376,158 @@ class Arena:
                     self.E[i, j] = 1
                     continue
 
-        self.E = transitive_closure(self.E)
+        np.fill_diagonal(self.E, 0)
+
+        # Above construction should yield a matrix that is its own transitive closure
+        # self.E = transitive_closure(self.E)
         timed_print(f'Constructed ({n}, {n})-shaped Expected Relative Skill Matrix')
 
     def add_virtual_wins(self):
-        n = len(self.agents)
-        self.virtual_wins = np.zeros((n, n), dtype=bool)
-        for u, v in zip(*np.where(direct_children(self.E))):
-            self.virtual_wins[u, v] = 1
-
-        for u in range(n):
-            m = sum(self.virtual_wins[u])
-            if m > 0:
-                self.virtual_wins[u] /= m
+        # If agent i is expected to be inferior to agent j, record .01 wins of i over j, and .1 wins for j over i.
+        Ef = self.E.astype(float)
+        self.virtual_wins = 0.1 * Ef.T + 0.01 * Ef
         timed_print(f'Added virtual wins')
+
+    def load_matches(self):
+        n = len(self.agents)
+        self.real_wins = np.zeros((n, n), dtype=float)
+        c = self.conn.cursor()
+        res = c.execute('SELECT rowid, agent_id1, agent_id2, wins1, draws, wins2 FROM matches')
+        match_count = 0
+        for row_id, agent_id1, agent_id2, wins1, draws, wins2 in res.fetchall():
+            match_count += 1
+            agent1 = self.agent_dict[agent_id1]
+            agent2 = self.agent_dict[agent_id2]
+
+            i1 = agent1.row_id
+            i2 = agent2.row_id
+            self.real_wins[i1, i2] = wins1 + 0.5 * draws
+            self.real_wins[i2, i1] = wins2 + 0.5 * draws
+        timed_print(f'Loaded {match_count} matches')
 
     def launch(self):
         self.init_db()
         self.init_agents()
         self.init_expected_relative_skill_matrix()
         self.add_virtual_wins()
+        self.load_matches()
+        self.update_ratings()
 
-        for round in range(Args.num_rounds):
-            timed_print(f'Round {round}')
-            self.play_round()
+        for r in range(Args.num_rounds):
+            self.play_round(r)
 
-    def play_round(self):
-        for agent in self.agents:
-            opponent = agent
-            while opponent is agent:
-                opponent = random.choice(self.agents)
-            self.play_match(agent, opponent)
+    def play_round(self, round_num: int):
+        """
+        For now, we do something really simple. We randomly pick an agent that has not yet played a match this round,
+        and pit it against a random opponent that it has not yet played over all rounds. Repeat until every agent has
+        played at least one match this round.
+
+        Later, we can make this more sophisticated, choosing matchups that are more likely to be informative.
+        """
+        timed_print(f'Round {round_num}')
+        n = len(self.agents)
+        played_this_round = np.zeros(n, dtype=bool)
+        while not np.all(played_this_round):
+            i = random.choice(np.where(~played_this_round)[0])
+            played_this_round[i] = True
+
+            candidates = np.where((self.real_wins[i] == 0) & (self.real_wins[:, i] == 0))[0]
+            candidates[i] = False
+            if not np.any(candidates):
+                continue
+
+            j = random.choice(candidates)
+            played_this_round[j] = True
+
+            self.play_match(self.agents[i], self.agents[j])
+            self.update_ratings()
+        self.commit_ratings()
 
     def play_match(self, agent1: Agent, agent2: Agent):
         timed_print('Playing match')
-        timed_print(f'Agent 1: {agent1.cmd}')
-        timed_print(f'Agent 2: {agent2.cmd}')
+        timed_print(f'Agent 1: {agent1}')
+        timed_print(f'Agent 2: {agent2}')
 
         binary_kwargs = {'-G': Args.n_games}
 
         player1_kwargs = {'--name': 'Player1'}
-        if not agent1.special:
-            player1_kwargs['-i'] = Args.mcts_iters
-
         player2_kwargs = {'--name': 'Player2'}
-        if not agent2.special:
-            player2_kwargs['-i'] = Args.mcts_iters
 
-        special = agent1.special or agent2.special
-        if agent1.binary == agent2.binary and not special:
-            # might as well run both in the same process
-            cmd = agent1.get_cmd(binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
-            player_str2 = inject_args(agent2.player_str, player2_kwargs)
-            cmd += f' --player "{player_str2}"'
-            proc = subprocess_util.run(cmd)
-            record = extract_match_record(proc.stdout)
-        else:
-            port = 12345
-            binary_kwargs['--port'] = port
-            cmd1 = agent1.get_cmd(binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
-            cmd2 = agent2.get_cmd(binary_kwargs={'--remote-port': port}, player_kwargs=player2_kwargs)
-            proc1 = subprocess_util.Popen(cmd1)
-            time.sleep(0.1)  # won't be necessary soon
-            subprocess_util.Popen(cmd2)
+        port = 12345
+        binary_kwargs['--port'] = port
+        cmd1 = agent1.get_cmd(binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
+        cmd2 = agent2.get_cmd(binary_kwargs={'--remote-port': port}, player_kwargs=player2_kwargs)
+        timed_print(f'cmd1: {cmd1}')
+        proc1 = subprocess_util.Popen(cmd1)
+        time.sleep(0.1)  # won't be necessary soon
+        timed_print(f'cmd2: {cmd2}')
+        subprocess_util.Popen(cmd2)
 
-            subprocess_util.wait_for(proc1)
-            record = extract_match_record(proc1.stdout)
+        stdout, stderr = proc1.communicate()
+        if proc1.returncode:
+            raise RuntimeError(f'proc1 exited with code {proc1.returncode}')
+        record = extract_match_record(stdout)
 
-        timed_print('TODO: update ratings')
         counts1 = record.get(0)
+        counts2 = record.get(1)
+        assert (counts1.win, counts1.loss, counts1.draw) == (counts2.loss, counts2.win, counts2.draw)
+        timed_print(f'Agent 1: {counts1}')
+
+        i = agent1.index
+        j = agent2.index
+        self.real_wins[i, j] += counts1.win + 0.5 * counts1.draw
+        self.real_wins[j, i] += counts2.win + 0.5 * counts2.draw
+
+        match_tuple = (agent1.row_id, agent2.row_id, counts1.win, counts1.draw, counts2.win)
+        c = self.conn.cursor()
+        c.execute('INSERT INTO matches VALUES (?, ?, ?, ?, ?)', match_tuple)
+        self.conn.commit()
+
+    def update_ratings(self):
+        eps = 1e-6
+        w = self.real_wins + self.virtual_wins
+        assert np.all(w >= 0)
+        assert w.diagonal().sum() == 0
+        ww = w + w.T
+        W = np.sum(w, axis=1)
+
+        p = np.exp(self.beta / BETA_SCALE_FACTOR)
+        k = 0
+        while True:
+            pp = p.reshape((-1, 1)) + p.reshape((1, -1))
+            wp_sum = np.sum(ww / pp, axis=1)
+            gradient = W / p - wp_sum
+            max_gradient = np.max(np.abs(gradient))
+            if max_gradient < eps:
+                break
+
+            q = W / wp_sum
+            q /= q[0]  # so that Random agent's rating is 0
+            p = q
+            k += 1
+
+        prev_beta = self.beta
+        self.beta = np.log(p) * BETA_SCALE_FACTOR
+        beta_delta = self.beta - prev_beta
+        beta_delta_indices = list(sorted(range(len(self.beta)), key=lambda i: -np.abs(beta_delta[i])))
+
+        timed_print('Updated ratings after %d iterations (top-3 beta changes: %.3f, %.3f, %.3f, max-beta:%.3f)' %
+                    (k, beta_delta[beta_delta_indices[0]],
+                     beta_delta[beta_delta_indices[1]], beta_delta[beta_delta_indices[2]], np.max(self.beta)))
+
+    def commit_ratings(self):
+        c = self.conn.cursor()
+
+        match_id = c.execute('SELECT MAX(rowid) FROM matches').fetchone()[0]
+        insert_tuples = []
+        for agent in self.agents:
+            agent_id = agent.row_id
+            beta = self.beta[agent.index]
+            insert_tuples.append((match_id, agent_id, beta))
+
+        c.executemany('INSERT INTO ratings VALUES (?, ?, ?)', insert_tuples)
+        self.conn.commit()
+        timed_print(f'Committed ratings')
 
 
 def main():
