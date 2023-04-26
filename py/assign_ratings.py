@@ -473,7 +473,6 @@ class Arena:
         cmd2 = agent2.get_cmd(binary=Args.binary, binary_kwargs={'--remote-port': port}, player_kwargs=player2_kwargs)
         timed_print(f'cmd1: {cmd1}')
         proc1 = subprocess_util.Popen(cmd1)
-        time.sleep(0.1)  # won't be necessary soon
         timed_print(f'cmd2: {cmd2}')
         subprocess_util.Popen(cmd2)
 
