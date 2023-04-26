@@ -431,9 +431,10 @@ class Arena:
             i = random.choice(np.where(~played_this_round)[0])
             played_this_round[i] = True
 
-            candidates = np.where((self.real_wins[i] == 0) & (self.real_wins[:, i] == 0))[0]
-            candidates[i] = False
-            if not np.any(candidates):
+            candidate_arr = (self.real_wins[i] == 0) & (self.real_wins[:, i] == 0)
+            candidate_arr[i] = False
+            candidates = np.where(candidate_arr)[0]
+            if len(candidates) == 0:
                 continue
 
             j = random.choice(candidates)
