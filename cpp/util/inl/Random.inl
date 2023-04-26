@@ -16,7 +16,7 @@ inline auto Random::uniform_sample(T lower, U upper) {
 
 template<typename FloatType>
 FloatType Random::uniform_real(FloatType left, FloatType right) {
-  if (right >= left) {
+  if (left >= right) {
     throw std::runtime_error("Random::uniform_real() - invalid range");
   }
   std::uniform_real_distribution<FloatType> dist(left, right);
