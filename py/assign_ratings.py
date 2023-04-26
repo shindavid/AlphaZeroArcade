@@ -58,6 +58,7 @@ BETA_SCALE_FACTOR = 100.0 / np.log(1/.36 - 1)  # 100-point difference correspond
 
 class Args:
     c4_base_dir_root: str
+    binary: Optional[str]
     tag: str
     clear_db: bool
     n_games: int
@@ -68,6 +69,7 @@ class Args:
     @staticmethod
     def load(args):
         Args.c4_base_dir_root = args.c4_base_dir_root
+        Args.binary = args.binary
         Args.tag = args.tag
         Args.clear_db = bool(args.clear_db)
         Args.n_games = args.n_games
@@ -84,6 +86,7 @@ def load_args():
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root',
                             help='base-dir-root for game/model files')
+    parser.add_argument('-b', '--binary', help='binary to use for playing games (default: binary saved by alphazero process')
     parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
     parser.add_argument('-n', '--n-games', type=int, default=64,
                         help='number of games to play per matchup (default: %(default)s))')
@@ -92,7 +95,7 @@ def load_args():
     parser.add_argument('-p', '--parallelism-factor', type=int, default=64,
                         help='parallelism factor (default: %(default)s)')
     parser.add_argument('-r', '--num-rounds', type=int, default=10,
-                        help='num round-robin rounds (default: %(default)s)')
+                        help='runs matches until each agent has played this many rounds (default: %(default)s)')
 
     args = parser.parse_args()
     Args.load(args)
@@ -231,8 +234,10 @@ class Agent:
         self.iters = iters
         self.row_id = row_id
 
-    def get_cmd(self, binary_kwargs: Optional[dict] = None, player_kwargs: Optional[dict] = None):
-        return construct_cmd(self.binary, self.player_str, binary_kwargs, player_kwargs)
+    def get_cmd(self, binary: Optional[str] = None, binary_kwargs: Optional[dict] = None,
+                player_kwargs: Optional[dict] = None):
+        binary = binary if binary else self.binary
+        return construct_cmd(binary, self.player_str, binary_kwargs, player_kwargs)
 
     def __str__(self):
         return f'Agent("{self.player_str}")'
@@ -300,8 +305,9 @@ class Arena:
                 cmd_with_iters = agent.get_cmd(player_kwargs={'-i': Args.mcts_iters})
                 cmd_tuples = [(cmd_with_iters, False, False, gen, Args.mcts_iters)]
                 if gen == 0:
-                    rand_cmd = f'{agent.binary} --player "--type=Random"'
-                    perfect_cmd = f'{agent.binary} --player "--type=Perfect"'
+                    binary = Args.binary if Args.binary else agent.binary
+                    rand_cmd = f'{binary} --player "--type=Random"'
+                    perfect_cmd = f'{binary} --player "--type=Perfect"'
                     cmd4 = agent.get_cmd(player_kwargs={'-i': 4})
                     cmd16 = agent.get_cmd(player_kwargs={'-i': 16})
                     cmd64 = agent.get_cmd(player_kwargs={'-i': 64})
@@ -327,6 +333,7 @@ class Arena:
         c.execute("""CREATE INDEX IF NOT EXISTS matches_agent_id1 ON matches (agent_id1);""")
         c.execute("""CREATE INDEX IF NOT EXISTS matches_agent_id2 ON matches (agent_id2);""")
 
+        # an entry in ratings is computed using all match data up to and including match_id
         c.execute("""CREATE TABLE IF NOT EXISTS ratings (
             agent_id INT,
             match_id INT,
@@ -399,8 +406,8 @@ class Arena:
             agent1 = self.agent_dict[agent_id1]
             agent2 = self.agent_dict[agent_id2]
 
-            i1 = agent1.row_id
-            i2 = agent2.row_id
+            i1 = agent1.row_id - 1
+            i2 = agent2.row_id - 1
             self.real_wins[i1, i2] = wins1 + 0.5 * draws
             self.real_wins[i2, i1] = wins2 + 0.5 * draws
         timed_print(f'Loaded {match_count} matches')
@@ -412,37 +419,43 @@ class Arena:
         self.add_virtual_wins()
         self.load_matches()
         self.update_ratings()
+        self.play_rounds()
 
-        for r in range(Args.num_rounds):
-            self.play_round(r)
-
-    def play_round(self, round_num: int):
+    def play_rounds(self):
         """
-        For now, we do something really simple. We randomly pick an agent that has not yet played a match this round,
-        and pit it against a random opponent that it has not yet played over all rounds. Repeat until every agent has
-        played at least one match this round.
+        For now, we do something really simple. We randomly pick an agent A that has played fewer than round_num
+        total matches. We then identify the set S of agents that A has not yet played, and randomly choose an agent B
+        among the agents of S that have played the fewest number of total matches. We then play a match between A and B.
+        The round ends once every agent has played at least round_num total matches.
 
         Later, we can make this more sophisticated, choosing matchups that are more likely to be informative.
         """
-        timed_print(f'Round {round_num}')
-        n = len(self.agents)
-        played_this_round = np.zeros(n, dtype=bool)
-        while not np.all(played_this_round):
-            i = random.choice(np.where(~played_this_round)[0])
-            played_this_round[i] = True
+        while True:
+            match_matrix = (self.real_wins + self.real_wins.T) > 0
+            match_counts = np.sum(match_matrix, axis=1)
+            round_num = np.min(match_counts)
+            if round_num == Args.num_rounds:
+                break
 
-            candidate_arr = (self.real_wins[i] == 0) & (self.real_wins[:, i] == 0)
-            candidate_arr[i] = False
-            candidates = np.where(candidate_arr)[0]
+            candidates = np.where(match_counts == round_num)[0]
+            timed_print(f'Round {round_num + 1} num_candidates: {len(candidates)}')
             if len(candidates) == 0:
-                continue
+                break
+
+            i = random.choice(candidates)
+
+            candidate_opponent_arr = match_matrix[i] == 0
+            candidate_opponent_arr[i] = False
+            minimal_candidate_opponent_arr = match_counts * candidate_opponent_arr
+            m = np.min(minimal_candidate_opponent_arr[minimal_candidate_opponent_arr > 0])
+            candidates = np.where((match_counts == m) & candidate_opponent_arr)[0]
+            assert len(candidates) > 0
 
             j = random.choice(candidates)
-            played_this_round[j] = True
 
             self.play_match(self.agents[i], self.agents[j])
             self.update_ratings()
-        self.commit_ratings()
+            self.commit_ratings()
 
     def play_match(self, agent1: Agent, agent2: Agent):
         timed_print('Playing match')
@@ -456,8 +469,8 @@ class Arena:
 
         port = 12345
         binary_kwargs['--port'] = port
-        cmd1 = agent1.get_cmd(binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
-        cmd2 = agent2.get_cmd(binary_kwargs={'--remote-port': port}, player_kwargs=player2_kwargs)
+        cmd1 = agent1.get_cmd(binary=Args.binary, binary_kwargs=binary_kwargs, player_kwargs=player1_kwargs)
+        cmd2 = agent2.get_cmd(binary=Args.binary, binary_kwargs={'--remote-port': port}, player_kwargs=player2_kwargs)
         timed_print(f'cmd1: {cmd1}')
         proc1 = subprocess_util.Popen(cmd1)
         time.sleep(0.1)  # won't be necessary soon
