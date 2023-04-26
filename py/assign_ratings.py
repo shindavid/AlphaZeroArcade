@@ -451,8 +451,11 @@ class Arena:
             candidate_opponent_arr = match_matrix[i] == 0
             candidate_opponent_arr[i] = False
             minimal_candidate_opponent_arr = match_counts * candidate_opponent_arr
-            m = np.min(minimal_candidate_opponent_arr[minimal_candidate_opponent_arr > 0])
-            candidates = np.where((match_counts == m) & candidate_opponent_arr)[0]
+            if np.sum(minimal_candidate_opponent_arr) == 0:
+                candidates = np.where(candidate_opponent_arr)[0]
+            else:
+                m = np.min(minimal_candidate_opponent_arr[minimal_candidate_opponent_arr > 0])
+                candidates = np.where((match_counts == m) & candidate_opponent_arr)[0]
             assert len(candidates) > 0
 
             j = random.choice(candidates)
