@@ -430,10 +430,14 @@ class Arena:
 
         Later, we can make this more sophisticated, choosing matchups that are more likely to be informative.
         """
+        last_round_num = None
         while True:
             match_matrix = (self.real_wins + self.real_wins.T) > 0
             match_counts = np.sum(match_matrix, axis=1)
             round_num = np.min(match_counts)
+            if last_round_num not in (None, round_num):
+                self.commit_ratings()
+            last_round_num = round_num
             if round_num == Args.num_rounds:
                 break
 
@@ -455,7 +459,6 @@ class Arena:
 
             self.play_match(self.agents[i], self.agents[j])
             self.update_ratings()
-            self.commit_ratings()
 
     def play_match(self, agent1: Agent, agent2: Agent):
         timed_print('Playing match')
@@ -536,7 +539,7 @@ class Arena:
         for agent in self.agents:
             agent_id = agent.row_id
             beta = self.beta[agent.index]
-            insert_tuples.append((match_id, agent_id, beta))
+            insert_tuples.append((agent_id, match_id, beta))
 
         c.executemany('INSERT INTO ratings VALUES (?, ?, ?)', insert_tuples)
         self.conn.commit()
