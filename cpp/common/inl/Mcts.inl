@@ -1523,6 +1523,7 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SearchParams& search_params
 
   PUCTStats stats(params_, search_params, root_);
 
+  auto orig_counts = results_.counts;
   const auto& P = stats.P;
   const auto& N = stats.N;
   const auto& V = stats.V;
@@ -1551,12 +1552,19 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SearchParams& search_params
     }
   }
 
-  if (!results_.counts.isFinite().all() || results_.counts.sum() <= 0) {
+  if (results_.counts.sum() <= 0) {
+    // can happen in certain edge cases
+    results_.counts = orig_counts;
+    return;
+  }
+
+  if (!results_.counts.isFinite().all()) {
     std::cout << "P: " << P.transpose() << std::endl;
     std::cout << "N: " << N.transpose() << std::endl;
     std::cout << "V: " << V.transpose() << std::endl;
     std::cout << "PUCT: " << PUCT.transpose() << std::endl;
     std::cout << "n_forced: " << n_forced.transpose() << std::endl;
+    std::cout << "orig_counts: " << orig_counts.transpose() << std::endl;
     std::cout << "results_.counts: " << results_.counts.transpose() << std::endl;
     throw util::Exception("prune_counts: counts problem");
   }
