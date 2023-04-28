@@ -138,31 +138,6 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
   return mask;
 }
 
-inline std::string GameState::compact_repr() const {
-  char buffer[kNumCells + 1];
-
-  common::seat_index_t current_player = get_current_player();
-  char cur_color = current_player == kRed ? 'R' : 'Y';
-  char opp_color = current_player == kRed ? 'Y' : 'R';
-
-  for (int col = 0; col < kNumColumns; ++col) {
-    for (int row = 0; row < kNumRows; ++row) {
-      int read_index = _to_bit_index(col, row);
-      mask_t piece_mask = 1UL << read_index;
-      int write_index = 6 * col + row;
-      if (cur_player_mask_ & piece_mask) {
-        buffer[write_index] = cur_color;
-      } else if (full_mask_ & piece_mask) {
-        buffer[write_index] = opp_color;
-      } else {
-        buffer[write_index] = '.';
-      }
-    }
-  }
-  buffer[kNumCells] = 0;
-  return buffer;
-}
-
 inline int GameState::get_move_number() const {
   return 1 + std::popcount(full_mask_);
 }

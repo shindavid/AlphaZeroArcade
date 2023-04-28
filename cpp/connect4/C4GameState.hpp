@@ -67,7 +67,6 @@ public:
   common::seat_index_t get_current_player() const;
   GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
-  std::string compact_repr() const;
   int get_move_number() const;
 
   template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;

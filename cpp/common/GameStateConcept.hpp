@@ -103,11 +103,6 @@ concept GameStateConcept = requires(S state) {
   { state.get_valid_actions() } -> util::BitSetConcept;
 
   /*
-   * A compact string representation, used for debugging purposes in conjunction with javascript visualizer.
-   */
-  { state.compact_repr() } -> std::same_as<std::string>;
-
-  /*
    * Must be hashable.
    */
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;

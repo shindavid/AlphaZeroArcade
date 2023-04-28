@@ -82,10 +82,6 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
   throw util::Exception("TODO");
 }
 
-inline std::string GameState::compact_repr() const {
-  throw util::Exception("TODO");
-}
-
 template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(InputSlab& tensor) const {
   throw util::Exception("TODO");
 }
