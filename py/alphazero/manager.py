@@ -266,7 +266,7 @@ class AlphaZeroManager:
         else:
             n_games = 0
 
-        base_player_args = ['--no-forced-playouts']
+        base_player_args = []  # '--no-forced-playouts']
         if gen == 0:
             base_player_args.append('--uniform-model')
         else:
