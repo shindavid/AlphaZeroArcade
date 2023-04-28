@@ -183,6 +183,8 @@ class ProgressVisualizer:
         round_slider = Slider(title='Arena Round', start=1, end=num_match_ids, step=1, value=1)
 
         def update_helper(match_id):
+            # TODO: for horizontal lines, use a Span, dynamically adjusting location using js_* method.
+            # See: https://stackoverflow.com/a/76127040/543913
             (perfect_rating, random_rating, mcts_ratings) = self.match_dict[match_id]
             source.data = {
                 'm': mcts_ratings,
