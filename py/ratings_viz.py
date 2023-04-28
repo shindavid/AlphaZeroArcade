@@ -16,15 +16,14 @@ cd py;
 import argparse
 import os
 import pipes
+import sqlite3
 import sys
 from collections import defaultdict, Counter
 
 import numpy as np
 from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, RangeSlider, CheckboxGroup, Slider
+from bokeh.models import ColumnDataSource, Slider
 from bokeh.plotting import figure, curdoc
-from natsort import natsorted
-import sqlite3
 
 from config import Config
 
@@ -84,12 +83,6 @@ class ProgressVisualizer:
 
         self.gens = None
         self.match_dict = None
-        # self.match_ids = None
-        # self.generations = None
-        # self.mcts_ratings = None
-        # self.random_rating = None
-        # self.perfect_rating = None
-        # self.data = {}
         self.load_db()
 
     @property
@@ -131,49 +124,6 @@ class ProgressVisualizer:
 
         self.gens = gens
         self.match_dict = match_dict
-
-        # res = c.execute('SELECT rowid, rand, perfect, gen, iters FROM agents')
-        # for row_id, rand, perfect, gen, iters in res.fetchall():
-        #     if rand:
-        #         self.rand_agent_id = row_id
-        #     elif perfect:
-        #         self.perfect_agent_id = row_id
-        #     else:
-        #         self.iters_gen_agent_id_dict[iters][gen] = row_id
-        #         iter_counts[iters] += 1
-        #
-        # most_common_iter_count = iter_counts.most_common(1)[0][0]
-        # gen_agent_id_dict = self.iters_gen_agent_id_dict[most_common_iter_count]
-        # agent_id_gen_dict = {v: k for k, v in gen_agent_id_dict.items()}
-        #
-        # res = c.execute('SELECT agent_id, match_id, beta FROM ratings')
-        # ratings_data = list(res.fetchall())  # (agent_id, match_id, beta)
-        #
-        # self.match_ids = np.array(sorted(set(r[1] for r in ratings_data)))
-        # self.generations = np.array(sorted(gen_agent_id_dict.keys()))
-        #
-        # inv_match_ids = {m: i for i, m in enumerate(self.match_ids)}
-        # inv_generations = {g: i for i, g in enumerate(self.generations)}
-        #
-        # m = len(self.match_ids)
-        # g = len(gen_agent_id_dict)
-        #
-        # self.mcts_ratings = np.zeros((m, g))
-        # self.random_rating = np.zeros(m)
-        # self.perfect_rating = np.zeros(m)
-        #
-        # for agent_id, match_id, beta in ratings_data:
-        #     if agent_id == self.rand_agent_id:
-        #         self.random_rating[inv_match_ids[match_id]] = beta
-        #     elif agent_id == self.perfect_agent_id:
-        #         self.perfect_rating[inv_match_ids[match_id]] = beta
-        #     else:
-        #         gen = agent_id_gen_dict[agent_id]
-        #         self.mcts_ratings[inv_match_ids[match_id], inv_generations[gen]] = beta
-        #
-        # self.data = {
-        #
-        # }
 
     def plot(self):
         source = ColumnDataSource()
