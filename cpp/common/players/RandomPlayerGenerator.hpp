@@ -6,7 +6,7 @@
 #include <common/AbstractPlayerGenerator.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/RandomPlayer.hpp>
+#include <common/players/RandomPlayer.hpp>
 
 namespace common {
 

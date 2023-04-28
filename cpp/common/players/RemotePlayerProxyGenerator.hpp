@@ -6,7 +6,7 @@
 #include <common/AbstractPlayerGenerator.hpp>
 #include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/RemotePlayerProxy.hpp>
+#include <common/players/RemotePlayerProxy.hpp>
 #include <util/SocketUtil.hpp>
 
 namespace common {
@@ -34,4 +34,4 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
 
 }  // namespace common
 
-#include <common/inl/RemotePlayerProxyGenerator.inl>
+#include <common/players/inl/RemotePlayerProxyGenerator.inl>

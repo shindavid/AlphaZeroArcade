@@ -34,4 +34,5 @@ protected:
 
 }  // namespace common
 
-#include <common/inl/HumanTuiPlayer.inl>
+#include <common/players/inl/HumanTuiPlayer.inl>
+

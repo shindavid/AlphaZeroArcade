@@ -1,4 +1,4 @@
-#include <common/HumanTuiPlayer.hpp>
+#include <common/players/HumanTuiPlayer.hpp>
 
 #include <cstdlib>
 #include <iostream>

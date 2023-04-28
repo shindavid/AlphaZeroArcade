@@ -9,10 +9,10 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/AbstractPlayerGenerator.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/HumanTuiPlayer.hpp>
 #include <common/Mcts.hpp>
-#include <common/MctsPlayer.hpp>
-#include <common/RandomPlayer.hpp>
+#include <common/players/HumanTuiPlayer.hpp>
+#include <common/players/MctsPlayer.hpp>
+#include <common/players/RandomPlayer.hpp>
 #include <util/CppUtil.hpp>
 #include <util/MetaProgramming.hpp>
 

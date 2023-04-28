@@ -1,8 +1,7 @@
-#include <common/MctsPlayer.hpp>
+#include <common/players/MctsPlayer.hpp>
 
 #include <unistd.h>
 
-#include <common/HumanTuiPlayerBase.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>

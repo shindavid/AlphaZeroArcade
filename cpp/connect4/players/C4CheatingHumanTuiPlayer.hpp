@@ -1,8 +1,8 @@
 #pragma once
 
-#include <common/HumanTuiPlayer.hpp>
+#include <common/players/HumanTuiPlayer.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/players/C4PerfectPlayer.hpp>
 
 namespace c4 {
 
@@ -23,4 +23,4 @@ private:
 
 }  // namespace c4
 
-#include <connect4/inl/C4CheatingHumanTuiPlayer.inl>
+#include <connect4/players/inl/C4CheatingHumanTuiPlayer.inl>

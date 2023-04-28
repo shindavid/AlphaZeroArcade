@@ -15,11 +15,11 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/ParallelGameRunner.hpp>
-#include <common/RandomPlayer.hpp>
 #include <common/TrainingDataWriter.hpp>
+#include <common/players/RandomPlayer.hpp>
 #include <connect4/C4Constants.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/players/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 
 namespace bf = boost::filesystem;

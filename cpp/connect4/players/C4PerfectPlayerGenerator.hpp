@@ -6,7 +6,7 @@
 #include <common/AbstractPlayer.hpp>
 #include <common/AbstractPlayerGenerator.hpp>
 #include <common/BasicTypes.hpp>
-#include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/players/C4PerfectPlayer.hpp>
 
 namespace c4 {
 
@@ -24,4 +24,4 @@ private:
 
 }  // namespace c4
 
-#include <connect4/inl/C4PerfectPlayerGenerator.inl>
+#include <connect4/players/inl/C4PerfectPlayerGenerator.inl>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <connect4/OracleGradedMctsPlayer.hpp>
+#include <connect4/players/OracleGradedMctsPlayer.hpp>
 
 #include <iostream>
 

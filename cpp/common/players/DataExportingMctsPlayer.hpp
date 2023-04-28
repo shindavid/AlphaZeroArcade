@@ -3,9 +3,9 @@
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/MctsPlayer.hpp>
 #include <common/TensorizorConcept.hpp>
 #include <common/TrainingDataWriter.hpp>
+#include <common/players/MctsPlayer.hpp>
 
 namespace common {
 
@@ -45,4 +45,5 @@ protected:
 
 }  // namespace common
 
-#include <common/inl/DataExportingMctsPlayer.inl>
+#include <common/players/inl/DataExportingMctsPlayer.inl>
+

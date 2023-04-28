@@ -1,4 +1,4 @@
-#include <connect4/C4PerfectPlayerGenerator.hpp>
+#include <connect4/players/C4PerfectPlayerGenerator.hpp>
 
 #include <boost/program_options.hpp>
 

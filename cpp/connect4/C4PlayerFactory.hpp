@@ -1,14 +1,14 @@
 #pragma once
 
 #include <common/PlayerFactory.hpp>
-#include <common/MctsPlayerGenerator.hpp>
-#include <common/RandomPlayerGenerator.hpp>
-#include <common/RemotePlayerProxyGenerator.hpp>
+#include <common/players/MctsPlayerGenerator.hpp>
+#include <common/players/RandomPlayerGenerator.hpp>
+#include <common/players/RemotePlayerProxyGenerator.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4HumanTuiPlayerGenerator.hpp>
-#include <connect4/C4MctsPlayerGenerator.hpp>
-#include <connect4/C4PerfectPlayerGenerator.hpp>
 #include <connect4/C4Tensorizor.hpp>
+#include <connect4/players/C4HumanTuiPlayerGenerator.hpp>
+#include <connect4/players/C4MctsPlayerGenerator.hpp>
+#include <connect4/players/C4PerfectPlayerGenerator.hpp>
 
 namespace c4 {
 

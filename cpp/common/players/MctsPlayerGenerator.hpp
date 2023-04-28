@@ -5,11 +5,11 @@
 #include <vector>
 
 #include <common/AbstractPlayerGenerator.hpp>
-#include <common/DataExportingMctsPlayer.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Mcts.hpp>
-#include <common/MctsPlayer.hpp>
 #include <common/TensorizorConcept.hpp>
+#include <common/players/DataExportingMctsPlayer.hpp>
+#include <common/players/MctsPlayer.hpp>
 
 namespace common {
 
@@ -100,4 +100,5 @@ protected:
 
 }  // namespace common
 
-#include <common/inl/MctsPlayerGenerator.inl>
+#include <common/players/inl/MctsPlayerGenerator.inl>
+

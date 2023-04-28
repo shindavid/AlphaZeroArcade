@@ -5,7 +5,7 @@
 
 #include <common/AbstractPlayerGenerator.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/HumanTuiPlayer.hpp>
+#include <common/players/HumanTuiPlayer.hpp>
 
 namespace common {
 

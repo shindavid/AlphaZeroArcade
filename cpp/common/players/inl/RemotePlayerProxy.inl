@@ -1,4 +1,4 @@
-#include <common/RemotePlayerProxy.hpp>
+#include <common/players/RemotePlayerProxy.hpp>
 
 #include <sys/socket.h>
 

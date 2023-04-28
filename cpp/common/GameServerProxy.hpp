@@ -49,11 +49,11 @@ public:
     void register_player(seat_index_t seat, PlayerGenerator* gen);
     void init_socket();
     io::Socket* socket() const { return socket_; }
-    PlayerGenerator* get_gen(player_id_t p) const { return player_generators_[p]; }
+    PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
 
   private:
     seat_generator_vec_t seat_generators_;  // temp storage
-    player_generator_array_t player_generators_ = {};  // indexed by player_id_t
+    player_generator_array_t players_ = {};  // indexed by player_id_t
     Params params_;
     io::Socket* socket_ = nullptr;
   };

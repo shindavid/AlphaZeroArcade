@@ -4,9 +4,9 @@
  * MctsPlayer that is graded by the perfect oracle.
  */
 
-#include <common/MctsPlayer.hpp>
+#include <common/players/MctsPlayer.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/players/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
 
 #include <map>
@@ -67,4 +67,4 @@ protected:
 
 }  // namespace c4
 
-#include <connect4/inl/OracleGradedMctsPlayer.inl>
+#include <connect4/players/inl/OracleGradedMctsPlayer.inl>

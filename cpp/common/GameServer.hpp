@@ -10,7 +10,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
-#include <common/RemotePlayerProxyGenerator.hpp>
+#include <common/players/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
 
 namespace common {

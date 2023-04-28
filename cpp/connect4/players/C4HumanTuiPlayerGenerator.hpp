@@ -7,10 +7,10 @@
 
 #include <common/AbstractPlayer.hpp>
 #include <common/BasicTypes.hpp>
-#include <common/HumanTuiPlayerGenerator.hpp>
+#include <common/players/HumanTuiPlayerGenerator.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4CheatingHumanTuiPlayer.hpp>
-#include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/players/C4CheatingHumanTuiPlayer.hpp>
+#include <connect4/players/C4PerfectPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace c4 {
@@ -42,4 +42,4 @@ private:
 
 }  // namespace c4
 
-#include <connect4/inl/C4HumanTuiPlayerGenerator.inl>
+#include <connect4/players/inl/C4HumanTuiPlayerGenerator.inl>

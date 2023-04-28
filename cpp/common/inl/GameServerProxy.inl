@@ -45,7 +45,7 @@ GameServerProxy<GameState>::SharedData::SharedData(const Params& params)
 
 template <GameStateConcept GameState>
 GameServerProxy<GameState>::SharedData::~SharedData() {
-  for (auto gen : player_generators_) {
+  for (auto gen : players_) {
     delete gen;
   }
 }
@@ -91,7 +91,7 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     player_id_t player_id = response.player_id;
     util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d", (int)player_id);
 
-    player_generators_[player_id] = gen;
+    players_[player_id] = gen;
     printf("Registered player \"%s\" at seat %d (player_id:%d)\n", name.c_str(), seat, (int)player_id);
     std::cout.flush();
   }

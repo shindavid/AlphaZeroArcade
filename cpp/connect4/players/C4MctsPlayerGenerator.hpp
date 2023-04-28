@@ -7,11 +7,11 @@
 
 #include <common/AbstractPlayer.hpp>
 #include <common/AbstractPlayerGenerator.hpp>
-#include <common/MctsPlayerGenerator.hpp>
+#include <common/players/MctsPlayerGenerator.hpp>
 #include <connect4/C4GameState.hpp>
-#include <connect4/C4PerfectPlayer.hpp>
+#include <connect4/players/C4PerfectPlayer.hpp>
 #include <connect4/C4Tensorizor.hpp>
-#include <connect4/OracleGradedMctsPlayer.hpp>
+#include <connect4/players/OracleGradedMctsPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace c4 {
@@ -58,4 +58,4 @@ using TrainingMctsPlayerGenerator = common::TrainingMctsPlayerGenerator<c4::Game
 
 }  // namespace c4
 
-#include <connect4/inl/C4MctsPlayerGenerator.inl>
+#include <connect4/players/inl/C4MctsPlayerGenerator.inl>

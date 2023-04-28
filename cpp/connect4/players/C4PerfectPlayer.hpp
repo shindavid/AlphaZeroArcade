@@ -112,4 +112,4 @@ private:
 
 }  // namespace c4
 
-#include <connect4/inl/C4PerfectPlayer.inl>
+#include <connect4/players/inl/C4PerfectPlayer.inl>

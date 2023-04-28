@@ -78,4 +78,5 @@ private:
 
 }  // namespace common
 
-#include <common/inl/RemotePlayerProxy.inl>
+#include <common/players/inl/RemotePlayerProxy.inl>
+

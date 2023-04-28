@@ -1,4 +1,4 @@
-#include <common/RemotePlayerProxyGenerator.hpp>
+#include <common/players/RemotePlayerProxyGenerator.hpp>
 
 #include <common/Packet.hpp>
 #include <util/Exception.hpp>
