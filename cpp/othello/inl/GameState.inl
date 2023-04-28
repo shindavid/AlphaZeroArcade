@@ -99,7 +99,28 @@ inline bool GameState::operator==(const GameState& other) const {
 }
 
 inline common::action_index_t GameState::prompt_for_action() {
-  throw util::Exception("TODO");
+  std::cout << "Enter move [A1-H7]: ";
+  std::cout.flush();
+  std::string input;
+  std::getline(std::cin, input);
+  if (input.size() < 2) {
+    return -1;
+  }
+
+  int col = input[0] - 'A';
+  int row;
+  try {
+    row = std::stoi(input.substr(1)) - 1;
+  } catch (std::invalid_argument& e) {
+    return -1;
+  } catch (std::out_of_range& e) {
+    return -1;
+  }
+
+  if (col < 0 || col >= kBoardDimension || row < 0 || row >= kBoardDimension) {
+    return -1;
+  }
+  return row * kBoardDimension + col;
 }
 
 inline void GameState::dump_mcts_output(

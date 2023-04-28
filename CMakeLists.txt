@@ -24,10 +24,12 @@ include_directories(${MY_TINYEXPR_DIR})
 
 add_executable(c4 cpp/connect4/main/Connect4.cpp)
 add_executable(dshin_scratch cpp/connect4/main/DshinScratch.cpp)
+add_executable(othello cpp/othello/main/Othello.cpp)
 
 set(executables
         c4
         dshin_scratch
+        othello
         )
 
 add_subdirectory("cpp/util")
