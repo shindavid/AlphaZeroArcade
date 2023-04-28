@@ -37,12 +37,9 @@ inline common::action_index_t HumanTuiPlayer<GameState_>::get_action(
       printf("Invalid input!\n");
     }
     complain = true;
-    try {
-      my_action = GameState::prompt_for_action();
-      if (!valid_actions.test(my_action)) continue;
-    } catch(...) {
-      continue;
-    }
+    my_action = GameState::prompt_for_action();
+    if (my_action < 0 || my_action >= (int)valid_actions.size()) continue;
+    if (!valid_actions.test(my_action)) continue;
     break;
   }
 

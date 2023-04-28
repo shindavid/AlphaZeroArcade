@@ -210,7 +210,13 @@ inline common::action_index_t GameState::prompt_for_action() {
   std::cout.flush();
   std::string input;
   std::getline(std::cin, input);
-  return std::stoi(input) - 1;
+  try {
+    return std::stoi(input) - 1;
+  } catch (std::invalid_argument& e) {
+    return -1;
+  } catch (std::out_of_range& e) {
+    return -1;
+  }
 }
 
 inline void GameState::dump_mcts_output(
