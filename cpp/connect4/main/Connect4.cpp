@@ -7,9 +7,9 @@
 
 #include <common/GameServer.hpp>
 #include <common/GameServerProxy.hpp>
-#include <connect4/C4GameState.hpp>
-#include <connect4/C4PlayerFactory.hpp>
-#include <connect4/C4Tensorizor.hpp>
+#include <connect4/GameState.hpp>
+#include <connect4/PlayerFactory.hpp>
+#include <connect4/Tensorizor.hpp>
 #include <util/Exception.hpp>
 #include <util/ParamDumper.hpp>
 

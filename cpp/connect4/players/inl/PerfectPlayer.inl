@@ -1,4 +1,4 @@
-#include <connect4/players/C4PerfectPlayer.hpp>
+#include <connect4/players/PerfectPlayer.hpp>
 
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>

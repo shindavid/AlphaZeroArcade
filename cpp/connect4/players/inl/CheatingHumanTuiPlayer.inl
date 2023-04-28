@@ -1,4 +1,4 @@
-#include <connect4/players/C4CheatingHumanTuiPlayer.hpp>
+#include <connect4/players/CheatingHumanTuiPlayer.hpp>
 
 namespace c4 {
 

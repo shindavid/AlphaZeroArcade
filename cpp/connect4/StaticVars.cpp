@@ -1,4 +1,4 @@
-#include <connect4/C4Tensorizor.hpp>
+#include <connect4/Tensorizor.hpp>
 
 namespace c4 {
 

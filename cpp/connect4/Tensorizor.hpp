@@ -9,8 +9,8 @@
 #include <common/DerivedTypes.hpp>
 #include <common/IdentityTransform.hpp>
 #include <common/TensorizorConcept.hpp>
-#include <connect4/C4Constants.hpp>
-#include <connect4/C4GameState.hpp>
+#include <connect4/Constants.hpp>
+#include <connect4/GameState.hpp>
 #include <util/CppUtil.hpp>
 
 namespace c4 {
@@ -50,4 +50,4 @@ private:
 
 static_assert(common::TensorizorConcept<c4::Tensorizor, c4::GameState>);
 
-#include <connect4/inl/C4Tensorizor.inl>
+#include <connect4/inl/Tensorizor.inl>

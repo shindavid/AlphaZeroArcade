@@ -12,7 +12,7 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/MctsResults.hpp>
-#include <connect4/C4Constants.hpp>
+#include <connect4/Constants.hpp>
 #include <util/EigenUtil.hpp>
 
 namespace c4 { class GameState; }
@@ -96,4 +96,4 @@ using Player = common::AbstractPlayer<GameState>;
 
 }  // namespace c4
 
-#include <connect4/inl/C4GameState.inl>
+#include <connect4/inl/GameState.inl>

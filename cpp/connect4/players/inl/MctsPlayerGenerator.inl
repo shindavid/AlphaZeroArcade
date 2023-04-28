@@ -1,4 +1,4 @@
-#include <connect4/players/C4MctsPlayerGenerator.hpp>
+#include <connect4/players/MctsPlayerGenerator.hpp>
 
 namespace c4 {
 

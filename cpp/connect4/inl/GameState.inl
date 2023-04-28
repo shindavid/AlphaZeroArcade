@@ -1,4 +1,4 @@
-#include <connect4/C4GameState.hpp>
+#include <connect4/GameState.hpp>
 
 #include <bit>
 #include <iostream>
