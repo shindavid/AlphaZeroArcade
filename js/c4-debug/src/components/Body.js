@@ -106,18 +106,6 @@ function MiniRightNAVArrow(props) {
   );
 }
 
-function MyColor(props) {
-  const player_index = props.player_index;
-  const my_color = player_index === 0 ? redcircle : yellowcircle;
-  return (
-    <div className="centertext">
-      My Color:&nbsp;
-      <span className="minicircle center"><img src={my_color} alt="color" /></span>
-      <br/><br/>
-    </div>
-  );
-}
-
 function GameHistory(props) {
   const history = props.history;
   const move_index = props.move_index;
@@ -346,9 +334,7 @@ function ValueTable(props) {
     </tr>
     <tr>
       <td className="vert">
-        <span className="minicircle center">
-          <img src={redcircle} alt="color" />
-        </span>
+        <span className="minicircle center red" />
       </td>
       <td className="vert">{player===0 ? "X" : ""}</td>
       <td className="vert">{displayBar(visit.eval[0], eval_total)}</td>
@@ -356,9 +342,7 @@ function ValueTable(props) {
     </tr>
     <tr>
       <td className="vert">
-        <span className="minicircle center">
-          <img src={yellowcircle} alt="color" />
-        </span>
+        <span className="minicircle center yellow" />
       </td>
       <td className="vert">{player===1 ? "X" : ""}</td>
       <td className="vert">{displayBar(visit.eval[1], eval_total)}</td>
@@ -525,9 +509,6 @@ class Body extends Component {
 
     return (
       <div className="center">
-        <MyColor
-          player_index={player_index}
-        />
         <GameHistory
           updateMoveIndex={(m) => this.updateMoveIndex(m)}
           history={history}
