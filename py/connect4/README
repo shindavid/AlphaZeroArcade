@@ -25,7 +25,8 @@ STEPS
   * Loads c4_model.ptj by default
 
 * Visualize the debug file:
-  * cd $REPO_ROOT/js; npm start
+      $ cd $REPO_ROOT/js/c4-debug
+      $ npm install  # one-time
+      $ npm start
   * Should open up http://localhost:3000/ in browser, upload your file
-  * TODO: there is some npm instruction missing here, I think - doesn't seem to work at present
 
