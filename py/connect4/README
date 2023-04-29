@@ -2,16 +2,18 @@ STEPS
 
 * Set up external perfect solver
   * Clone this repo: https://github.com/PascalPons/connect4
-  * Will refer to that directory as $CONNECT4
-  * Download the opening book ("7x6.book") from here and copy to $CONNECT4/: https://github.com/PascalPons/connect4/releases/tag/book
+  * Download the opening book ("7x6.book") from here and copy to that directory: https://github.com/PascalPons/connect4/releases/tag/book
   * Build the binary via make
   * TODO: take care of above via git-submodule + setup script?
 
+* Set up config:
+  * Make a file at repo root called config.txt
+  * Add the line "c4.solver_dir = <dir>" to this file, where <dir> is the directory of your above cloned repo
+
 * Generate training data
-  * Make sure "openmpi" is installed. Otherwise install it.
-  * mpirun -n 6 ./generate_training_data.py -c $CONNECT4 -n 10000
-  * Above uses 6 cores. Pass different value based on your hardware. Leave out "mpirun -n 6" for single-process.
-  * Instead of passing -c $CONNECT4, can add a mapping for "c4.solver_dir" in the git-ignored $REPO_ROOT/config.txt
+  * ./generate_training_data.py -n 10000  # generates 10k games of random-self-play data
+  * Can accelerate the above by install openmpi and running with k-fold parallelism like so:
+       mpirun -n k ./generate_training_data.py -n 10000
   * Writes data to c4_games/ by default
 
 * Train a model:
@@ -25,4 +27,5 @@ STEPS
 * Visualize the debug file:
   * cd $REPO_ROOT/js; npm start
   * Should open up http://localhost:3000/ in browser, upload your file
+  * TODO: there is some npm instruction missing here, I think - doesn't seem to work at present
 
