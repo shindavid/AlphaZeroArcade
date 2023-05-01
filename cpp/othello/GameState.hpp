@@ -95,6 +95,8 @@ public:
 
 private:
   void row_dump(row_t row, column_t blink_column) const;
+  static mask_t get_moves(mask_t P, mask_t O);
+  static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 
   mask_t full_mask_ = 0;  // spaces occupied by either player
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
