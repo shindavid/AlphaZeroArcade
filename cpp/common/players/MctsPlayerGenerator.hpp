@@ -32,6 +32,8 @@ protected:
   virtual BaseMctsPlayer* generate_from_scratch() = 0;
   virtual BaseMctsPlayer* generate_from_mcts(Mcts* mcts) = 0;
 
+  void validate_params();
+
   using mcts_vec_t = std::vector<Mcts*>;
   using mcts_map_t = std::map<game_thread_id_t, mcts_vec_t>;
 
