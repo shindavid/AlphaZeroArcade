@@ -322,8 +322,8 @@ static uint64_t flip_A1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0101010101010100ULL, ~0x8040201008040200ULL };
-  static const __v2di next = { 0x0000000000000100ULL, 0x0000000000000200ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0101010101010100ULL, ~0x8040201008040200ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000000100ULL, 0x0000000000000200ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -348,8 +348,8 @@ static uint64_t flip_B1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0202020202020200ULL, ~0x0080402010080400ULL };
-  static const __v2di next = { 0x0000000000000200ULL, 0x0000000000000400ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0202020202020200ULL, ~0x0080402010080400ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000000200ULL, 0x0000000000000400ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -374,8 +374,8 @@ static uint64_t flip_C1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0404040404040400ULL, ~0x0000804020100800ULL };
-  static const __v2di next = { 0x0000000000000400ULL, 0x0000000000000800ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0404040404040400ULL, ~0x0000804020100800ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000000400ULL, 0x0000000000000800ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -402,8 +402,8 @@ static uint64_t flip_D1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h, outflank_d7;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0808080808080800ULL, ~0x0000008040201000ULL };
-  static const __v2di next = { 0x0000000000000800ULL, 0x0000000000001000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0808080808080800ULL, ~0x0000008040201000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000000800ULL, 0x0000000000001000ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -431,8 +431,8 @@ static uint64_t flip_E1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h, outflank_d9;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x1010101010101000ULL, ~0x0000000102040800ULL };
-  static const __v2di next = { 0x0000000000001000ULL, 0x0000000000000800ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x1010101010101000ULL, ~0x0000000102040800ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000001000ULL, 0x0000000000000800ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -460,8 +460,8 @@ static uint64_t flip_F1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x2020202020202000ULL, ~0x0000010204081000ULL };
-  static const __v2di next = { 0x0000000000002000ULL, 0x0000000000001000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x2020202020202000ULL, ~0x0000010204081000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000002000ULL, 0x0000000000001000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -488,8 +488,8 @@ static uint64_t flip_G1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x4040404040404000ULL, ~0x0001020408102000ULL };
-  static const __v2di next = { 0x0000000000004000ULL, 0x0000000000002000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x4040404040404000ULL, ~0x0001020408102000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000004000ULL, 0x0000000000002000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -514,8 +514,8 @@ static uint64_t flip_H1(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x8080808080808000ULL, ~0x0102040810204000ULL };
-  static const __v2di next = { 0x0000000000008000ULL, 0x0000000000004000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x8080808080808000ULL, ~0x0102040810204000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000008000ULL, 0x0000000000004000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -540,8 +540,8 @@ static uint64_t flip_A2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0101010101010000ULL, ~0x4020100804020000ULL };
-  static const __v2di next = { 0x0000000000010000ULL, 0x0000000000020000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0101010101010000ULL, ~0x4020100804020000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000010000ULL, 0x0000000000020000ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -566,8 +566,8 @@ static uint64_t flip_B2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0202020202020000ULL, ~0x8040201008040000ULL };
-  static const __v2di next = { 0x0000000000020000ULL, 0x0000000000040000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0202020202020000ULL, ~0x8040201008040000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000020000ULL, 0x0000000000040000ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -592,8 +592,8 @@ static uint64_t flip_C2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0404040404040000ULL, ~0x0080402010080000ULL };
-  static const __v2di next = { 0x0000000000040000ULL, 0x0000000000080000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0404040404040000ULL, ~0x0080402010080000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000040000ULL, 0x0000000000080000ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -620,8 +620,8 @@ static uint64_t flip_D2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped, outflank_d7;
   __v2di  outflank_v_d9;
-  static const __v2di mask = { ~0x0808080808080000ULL, ~0x0000804020100000ULL };
-  static const __v2di next = { 0x0000000000080000ULL, 0x0000000000100000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x0808080808080000ULL, ~0x0000804020100000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000080000ULL, 0x0000000000100000ULL);
 
   outflank_v_d9 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d9 = ~mask & (~flipmask(outflank_v_d9) & (outflank_v_d9 - next));
@@ -649,8 +649,8 @@ static uint64_t flip_E2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped, outflank_d9;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x1010101010100000ULL, ~0x0000010204080000ULL };
-  static const __v2di next = { 0x0000000000100000ULL, 0x0000000000080000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x1010101010100000ULL, ~0x0000010204080000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000100000ULL, 0x0000000000080000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -678,8 +678,8 @@ static uint64_t flip_F2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x2020202020200000ULL, ~0x0001020408100000ULL };
-  static const __v2di next = { 0x0000000000200000ULL, 0x0000000000100000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x2020202020200000ULL, ~0x0001020408100000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000200000ULL, 0x0000000000100000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -706,8 +706,8 @@ static uint64_t flip_G2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x4040404040400000ULL, ~0x0102040810200000ULL };
-  static const __v2di next = { 0x0000000000400000ULL, 0x0000000000200000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x4040404040400000ULL, ~0x0102040810200000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000400000ULL, 0x0000000000200000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -732,8 +732,8 @@ static uint64_t flip_H2(const uint64_t P, const uint64_t O)
   unsigned int outflank_h;
   uint64_t flipped;
   __v2di  outflank_v_d7;
-  static const __v2di mask = { ~0x8080808080800000ULL, ~0x0204081020400000ULL };
-  static const __v2di next = { 0x0000000000800000ULL, 0x0000000000400000ULL };
+  static const __v2di mask = _mm_set_epi64x(~0x8080808080800000ULL, ~0x0204081020400000ULL);
+  static const __v2di next = _mm_set_epi64x(0x0000000000800000ULL, 0x0000000000400000ULL);
 
   outflank_v_d7 = ~mask & (((_mm_set1_epi64x(O) | mask) + next) & _mm_set1_epi64x(P));
   outflank_v_d7 = ~mask & (~flipmask(outflank_v_d7) & (outflank_v_d7 - next));
@@ -1051,25 +1051,25 @@ static uint64_t flip_C4(const uint64_t P, const uint64_t O)
  * @param O opponent's disc pattern.
  * @return flipped disc pattern.
  */
-static uint64_t flip_D4(const uint64_t P, const uint64_t O)
-{
-  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
-  uint64_t flipped;
-
-  outflank_v = OUTFLANK_3[((O & 0x0008080808080800ULL) * 0x0020408102040810ULL) >> 57] & (((P & 0x0808080808080808ULL) * 0x0020408102040810ULL) >> 56);
-  flipped = FLIPPED_3_V[outflank_v] & 0x0008080808080800ULL;
-
-  outflank_h = OUTFLANK_3[(O >> 25) & 0x3f] & (P >> 24);
-  flipped |= FLIPPED_3_H[outflank_h] & 0x00000000ff000000ULL;
-
-  outflank_d7 = OUTFLANK_3[((O & 0x0000020408102000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0001020408102040ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_3_H[outflank_d7] & 0x0000020408102000ULL;
-
-  outflank_d9 = OUTFLANK_3[((O & 0x0040201008040200ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x8040201008040201ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_3_H[outflank_d9] & 0x0040201008040200ULL;
-
-  return flipped;
-}
+//static uint64_t flip_D4(const uint64_t P, const uint64_t O)
+//{
+//  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
+//  uint64_t flipped;
+//
+//  outflank_v = OUTFLANK_3[((O & 0x0008080808080800ULL) * 0x0020408102040810ULL) >> 57] & (((P & 0x0808080808080808ULL) * 0x0020408102040810ULL) >> 56);
+//  flipped = FLIPPED_3_V[outflank_v] & 0x0008080808080800ULL;
+//
+//  outflank_h = OUTFLANK_3[(O >> 25) & 0x3f] & (P >> 24);
+//  flipped |= FLIPPED_3_H[outflank_h] & 0x00000000ff000000ULL;
+//
+//  outflank_d7 = OUTFLANK_3[((O & 0x0000020408102000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0001020408102040ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_3_H[outflank_d7] & 0x0000020408102000ULL;
+//
+//  outflank_d9 = OUTFLANK_3[((O & 0x0040201008040200ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x8040201008040201ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_3_H[outflank_d9] & 0x0040201008040200ULL;
+//
+//  return flipped;
+//}
 
 /**
  * Compute flipped discs when playing on square E3.
@@ -1078,25 +1078,25 @@ static uint64_t flip_D4(const uint64_t P, const uint64_t O)
  * @param O opponent's disc pattern.
  * @return flipped disc pattern.
  */
-static uint64_t flip_E4(const uint64_t P, const uint64_t O)
-{
-  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
-  uint64_t flipped;
-
-  outflank_v = OUTFLANK_3[((O & 0x0010101010101000ULL) * 0x0010204081020408ULL) >> 57] & (((P & 0x1010101010101010ULL) * 0x0010204081020408ULL) >> 56);
-  flipped = FLIPPED_3_V[outflank_v] & 0x0010101010101000ULL;
-
-  outflank_h = OUTFLANK_4[(O >> 25) & 0x3f] & (P >> 24);
-  flipped |= FLIPPED_4_H[outflank_h] & 0x00000000ff000000ULL;
-
-  outflank_d7 = OUTFLANK_4[((O & 0x0002040810204000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0102040810204080ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_4_H[outflank_d7] & 0x0002040810204000ULL;
-
-  outflank_d9 = OUTFLANK_4[((O & 0x0000402010080400ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0080402010080402ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_4_H[outflank_d9] & 0x0000402010080400ULL;
-
-  return flipped;
-}
+//static uint64_t flip_E4(const uint64_t P, const uint64_t O)
+//{
+//  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
+//  uint64_t flipped;
+//
+//  outflank_v = OUTFLANK_3[((O & 0x0010101010101000ULL) * 0x0010204081020408ULL) >> 57] & (((P & 0x1010101010101010ULL) * 0x0010204081020408ULL) >> 56);
+//  flipped = FLIPPED_3_V[outflank_v] & 0x0010101010101000ULL;
+//
+//  outflank_h = OUTFLANK_4[(O >> 25) & 0x3f] & (P >> 24);
+//  flipped |= FLIPPED_4_H[outflank_h] & 0x00000000ff000000ULL;
+//
+//  outflank_d7 = OUTFLANK_4[((O & 0x0002040810204000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0102040810204080ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_4_H[outflank_d7] & 0x0002040810204000ULL;
+//
+//  outflank_d9 = OUTFLANK_4[((O & 0x0000402010080400ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0080402010080402ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_4_H[outflank_d9] & 0x0000402010080400ULL;
+//
+//  return flipped;
+//}
 
 /**
  * Compute flipped discs when playing on square F4.
@@ -1265,25 +1265,25 @@ static uint64_t flip_C5(const uint64_t P, const uint64_t O)
  * @param O opponent's disc pattern.
  * @return flipped disc pattern.
  */
-static uint64_t flip_D5(const uint64_t P, const uint64_t O)
-{
-  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
-  uint64_t flipped;
-
-  outflank_v = OUTFLANK_4[((O & 0x0008080808080800ULL) * 0x0020408102040810ULL) >> 57] & (((P & 0x0808080808080808ULL) * 0x0020408102040810ULL) >> 56);
-  flipped = FLIPPED_4_V[outflank_v] & 0x0008080808080800ULL;
-
-  outflank_h = OUTFLANK_3[(O >> 33) & 0x3f] & (P >> 32);
-  flipped |= FLIPPED_3_H[outflank_h] & 0x000000ff00000000ULL;
-
-  outflank_d7 = OUTFLANK_3[((O & 0x0002040810204000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0102040810204080ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_3_H[outflank_d7] & 0x0002040810204000ULL;
-
-  outflank_d9 = OUTFLANK_3[((O & 0x0020100804020000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x4020100804020100ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_3_H[outflank_d9] & 0x0020100804020000ULL;
-
-  return flipped;
-}
+//static uint64_t flip_D5(const uint64_t P, const uint64_t O)
+//{
+//  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
+//  uint64_t flipped;
+//
+//  outflank_v = OUTFLANK_4[((O & 0x0008080808080800ULL) * 0x0020408102040810ULL) >> 57] & (((P & 0x0808080808080808ULL) * 0x0020408102040810ULL) >> 56);
+//  flipped = FLIPPED_4_V[outflank_v] & 0x0008080808080800ULL;
+//
+//  outflank_h = OUTFLANK_3[(O >> 33) & 0x3f] & (P >> 32);
+//  flipped |= FLIPPED_3_H[outflank_h] & 0x000000ff00000000ULL;
+//
+//  outflank_d7 = OUTFLANK_3[((O & 0x0002040810204000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0102040810204080ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_3_H[outflank_d7] & 0x0002040810204000ULL;
+//
+//  outflank_d9 = OUTFLANK_3[((O & 0x0020100804020000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x4020100804020100ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_3_H[outflank_d9] & 0x0020100804020000ULL;
+//
+//  return flipped;
+//}
 
 /**
  * Compute flipped discs when playing on square E5.
@@ -1292,25 +1292,25 @@ static uint64_t flip_D5(const uint64_t P, const uint64_t O)
  * @param O opponent's disc pattern.
  * @return flipped disc pattern.
  */
-static uint64_t flip_E5(const uint64_t P, const uint64_t O)
-{
-  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
-  uint64_t flipped;
-
-  outflank_v = OUTFLANK_4[((O & 0x0010101010101000ULL) * 0x0010204081020408ULL) >> 57] & (((P & 0x1010101010101010ULL) * 0x0010204081020408ULL) >> 56);
-  flipped = FLIPPED_4_V[outflank_v] & 0x0010101010101000ULL;
-
-  outflank_h = OUTFLANK_4[(O >> 33) & 0x3f] & (P >> 32);
-  flipped |= FLIPPED_4_H[outflank_h] & 0x000000ff00000000ULL;
-
-  outflank_d7 = OUTFLANK_4[((O & 0x0004081020400000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0204081020408000ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_4_H[outflank_d7] & 0x0004081020400000ULL;
-
-  outflank_d9 = OUTFLANK_4[((O & 0x0040201008040200ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x8040201008040201ULL) * 0x0101010101010101ULL) >> 56);
-  flipped |= FLIPPED_4_H[outflank_d9] & 0x0040201008040200ULL;
-
-  return flipped;
-}
+//static uint64_t flip_E5(const uint64_t P, const uint64_t O)
+//{
+//  unsigned int outflank_h, outflank_v, outflank_d7, outflank_d9;
+//  uint64_t flipped;
+//
+//  outflank_v = OUTFLANK_4[((O & 0x0010101010101000ULL) * 0x0010204081020408ULL) >> 57] & (((P & 0x1010101010101010ULL) * 0x0010204081020408ULL) >> 56);
+//  flipped = FLIPPED_4_V[outflank_v] & 0x0010101010101000ULL;
+//
+//  outflank_h = OUTFLANK_4[(O >> 33) & 0x3f] & (P >> 32);
+//  flipped |= FLIPPED_4_H[outflank_h] & 0x000000ff00000000ULL;
+//
+//  outflank_d7 = OUTFLANK_4[((O & 0x0004081020400000ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x0204081020408000ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_4_H[outflank_d7] & 0x0004081020400000ULL;
+//
+//  outflank_d9 = OUTFLANK_4[((O & 0x0040201008040200ULL) * 0x0101010101010101ULL) >> 57] & (((P & 0x8040201008040201ULL) * 0x0101010101010101ULL) >> 56);
+//  flipped |= FLIPPED_4_H[outflank_d9] & 0x0040201008040200ULL;
+//
+//  return flipped;
+//}
 
 /**
  * Compute flipped discs when playing on square F5.
