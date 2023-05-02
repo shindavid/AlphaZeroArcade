@@ -5,11 +5,7 @@
 namespace c4 {
 
 inline common::AbstractPlayer<c4::GameState>* HumanTuiPlayerGenerator::generate(common::game_thread_id_t) {
-  if (params_.cheat_mode) {
-    return new CheatingHumanTuiPlayer();
-  } else {
-    return new common::HumanTuiPlayer<GameState>();
-  }
+  return new c4::HumanTuiPlayer(params_.cheat_mode);
 }
 
 inline void HumanTuiPlayerGenerator::parse_args(const std::vector<std::string>& args) {

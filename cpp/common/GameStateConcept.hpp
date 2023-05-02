@@ -108,13 +108,6 @@ concept GameStateConcept = requires(S state) {
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
 
   /*
-   * For TUI-playing. Print a prompt to cout requesting an input, and then parse cin into an action.
-   *
-   * If the input was invalid, returns a negative value.
-   */
-  { S::prompt_for_action() } -> std::same_as<common::action_index_t>;
-
-  /*
    * Pretty-print mcts output to terminal for debugging purposes.
    *
    * TODO: clean up this interface

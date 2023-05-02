@@ -9,8 +9,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/players/HumanTuiPlayerGenerator.hpp>
 #include <connect4/GameState.hpp>
-#include <connect4/players/CheatingHumanTuiPlayer.hpp>
-#include <connect4/players/PerfectPlayer.hpp>
+#include <connect4/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace c4 {

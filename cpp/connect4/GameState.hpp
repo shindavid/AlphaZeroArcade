@@ -74,7 +74,6 @@ public:
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
-  static common::action_index_t prompt_for_action();
   static void dump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
                                 const MctsResults& results);
 
