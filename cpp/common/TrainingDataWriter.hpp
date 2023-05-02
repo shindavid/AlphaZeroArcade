@@ -48,17 +48,8 @@ public:
   static constexpr size_t kBytesPerInputRow = eigen_util::total_size_v<typename InputSlab::Sizes>
       * sizeof(typename InputSlab::Scalar);
   static constexpr size_t kBytesPerPolicyRow = PolicySlab::Cols * sizeof(typename PolicySlab::Scalar);
-  static constexpr size_t kBytesPerValueRow = ValueSlab::Cols * sizeof(typename ValueSlab::Scalar);
-  static constexpr size_t kBytesPerRow = kBytesPerInputRow + kBytesPerPolicyRow + kBytesPerValueRow;
-
-  /*
-   * For AlphaGo, we have 19 x 19 x 17 input, which with 4-byte floats comes out to 24KB.
-   *
-   * With 1MB chunks, each chunk can fit about 40 positions. Seems pretty reasonable.
-   */
-  static constexpr size_t kBytesPerChunk = 1024 * 1024;  // 1MB
-  static constexpr int kRowsPerChunk = 1 + kBytesPerChunk / kBytesPerRow;
-  static_assert(kRowsPerChunk > 20, "Unreasonably small chunks");
+  static constexpr size_t kEigenStackAllocationLimit = EIGEN_STACK_ALLOCATION_LIMIT;
+  static constexpr int kRowsPerChunk = kEigenStackAllocationLimit / std::max(kBytesPerInputRow, kBytesPerPolicyRow);
 
   using InputChunk = typename TensorizorTypes::template InputTensor<kRowsPerChunk>;
   using PolicyChunk = typename GameStateTypes::template PolicyArray<kRowsPerChunk>;
