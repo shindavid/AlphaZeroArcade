@@ -49,8 +49,6 @@
 #include <exception>
 #include <x86intrin.h>
 
-#include <util/CppUtil.hpp>
-
 namespace othello {
 
 /** outflank array (indexed with inner 6 bits) */
