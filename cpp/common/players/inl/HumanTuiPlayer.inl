@@ -10,6 +10,7 @@ namespace common {
 
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::start_game() {
+  last_action_ = -1;
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
