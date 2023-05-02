@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <tuple>
 
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
@@ -13,6 +14,7 @@
 #include <common/GameStateConcept.hpp>
 #include <common/MctsResults.hpp>
 #include <othello/Constants.hpp>
+#include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
 namespace othello { class GameState; }
@@ -25,32 +27,11 @@ struct std::hash<othello::GameState> {
 namespace othello {
 
 /*
- * Bit order encoding for the board:
- *
- * 56 57 58 59 60 61 62 63
- * 48 49 50 51 52 53 54 55
- * 40 41 42 43 44 45 46 47
- * 32 33 34 35 36 37 38 39
- * 24 25 26 27 28 29 30 31
- * 16 17 18 19 20 21 22 23
- *  8  9 10 11 12 13 14 15
- *  0  1  2  3  4  5  6  7
+ * See <othello/Constants.hpp> for bitboard representation details.
  *
  * The algorithms for manipulating the board are lifted from:
  *
  * https://github.com/abulmo/edax-reversi
- *
- * For human-readable notation purposes, we adopt chess-notation:
- *
- * A8 B8 C8 D8 E8 F8 G8 H8
- * A7 B7 C7 D7 E7 F7 G7 H7
- * A6 B6 C6 D6 E6 F6 G6 H6
- * A5 B5 C5 D5 E5 F5 G5 H5
- * A4 B4 C4 D4 E4 F4 G4 H4
- * A3 B3 C3 D3 E3 F3 G3 H3
- * A2 B2 C2 D2 E2 F2 G2 H2
- * A1 B1 C1 D1 E1 F1 G1 H1
- *
  */
 class GameState {
 public:
@@ -86,24 +67,28 @@ public:
 
   template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;
   void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
-  bool operator==(const GameState& other) const;
-  std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
+  bool operator==(const GameState& other) const = default;
+  std::size_t hash() const;
 
-  static common::action_index_t prompt_for_action();
   static void dump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
                                const MctsResults& results);
 
 private:
+  auto to_tuple() const { return std::make_tuple(opponent_mask_, cur_player_mask_, cur_player_, pass_count_); }
+  GameOutcome compute_outcome() const;  // assumes game has ended
   void row_dump(row_t row, column_t blink_column) const;
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 
-  mask_t full_mask_ = 0;  // spaces occupied by either player
-  mask_t cur_player_mask_ = 0;  // spaces occupied by current player
+  mask_t opponent_mask_ = kStartingWhiteMask;  // spaces occupied by either player
+  mask_t cur_player_mask_ = kStartingBlackMask;  // spaces occupied by current player
   common::seat_index_t cur_player_ = kBlack;
+  int8_t pass_count_ = 0;
 };
 
 static_assert(common::GameStateConcept<othello::GameState>);
+
+extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 
 using Player = common::AbstractPlayer<GameState>;
 

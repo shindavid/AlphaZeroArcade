@@ -1,5 +1,6 @@
 #include <othello/GameState.hpp>
 
+#include <algorithm>
 #include <bit>
 #include <iostream>
 
@@ -16,7 +17,7 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 namespace othello {
 
 inline size_t GameState::serialize_action(char* buffer, size_t buffer_size, common::action_index_t action) {
-  size_t n = snprintf(buffer, buffer_size, "%c%d", 'A' + (action % kBoardDimension), 1 + (action / kBoardDimension));
+  size_t n = snprintf(buffer, buffer_size, "%d", action);
   if (n >= buffer_size) {
     throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
   }
@@ -24,13 +25,11 @@ inline size_t GameState::serialize_action(char* buffer, size_t buffer_size, comm
 }
 
 inline void GameState::deserialize_action(const char* buffer, common::action_index_t* action) {
-  int col = buffer[0] - 'A';
-  int row = boost::lexical_cast<int>(buffer + 1) - 1;
+  *action = boost::lexical_cast<int>(buffer);
 
-  if (col < 0 || col >= kBoardDimension || row < 0 || row >= kBoardDimension) {
-    throw util::Exception("Invalid action \"%s\" (col=%d, row=%d)", buffer, col, row);
+  if (*action < 0 || *action >= othello::kNumGlobalActions) {
+    throw util::Exception("Invalid action \"%s\" (action=%d)", buffer, *action);
   }
-  *action = row * kBoardDimension + col;
 }
 
 inline size_t GameState::serialize_state_change(
@@ -74,12 +73,39 @@ inline void GameState::deserialize_game_end(const char* buffer, GameOutcome* out
   *outcome /= outcome->sum();
 }
 
+// copied from edax-reversi repo - board_next()
 inline common::GameStateTypes<GameState>::GameOutcome GameState::apply_move(common::action_index_t action) {
-  throw util::Exception("TODO");
+  if (action == kPass) {
+    std::swap(cur_player_mask_, opponent_mask_);
+    cur_player_ = 1 - cur_player_;
+    pass_count_++;
+    if (pass_count_ == kNumPlayers) {
+      return compute_outcome();
+    }
+  } else {
+    mask_t flipped = flip[action](cur_player_mask_, opponent_mask_);
+    mask_t cur_player_mask = opponent_mask_ ^ flipped;
+
+    opponent_mask_ = cur_player_mask_ ^ (flipped | (1ULL << action));
+    cur_player_mask_ = cur_player_mask;
+    cur_player_ = 1 - cur_player_;
+    pass_count_ = 0;
+
+    if ((opponent_mask_ | cur_player_mask_) == kCompleteBoardMask) {
+      return compute_outcome();
+    }
+  }
+
+  GameOutcome outcome;
+  outcome.setZero();
+  return outcome;
 }
 
 inline GameState::ActionMask GameState::get_valid_actions() const {
-  mask_t mask = get_moves(cur_player_mask_, full_mask_ ^ cur_player_mask_);
+  mask_t mask = get_moves(cur_player_mask_, opponent_mask_);
+  if (mask == 0) {
+    mask = 1ULL << kPass;
+  }
   return reinterpret_cast<ActionMask&>(mask);
 }
 
@@ -91,43 +117,35 @@ inline void GameState::dump(common::action_index_t last_action, const player_nam
   throw util::Exception("TODO");
 }
 
-inline void GameState::row_dump(row_t row, column_t blink_column) const {
-  throw util::Exception("TODO");
-}
-
-inline bool GameState::operator==(const GameState& other) const {
-  return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_ && cur_player_ == other.cur_player_;
-}
-
-inline common::action_index_t GameState::prompt_for_action() {
-  std::cout << "Enter move [A1-H7]: ";
-  std::cout.flush();
-  std::string input;
-  std::getline(std::cin, input);
-  if (input.size() < 2) {
-    return -1;
-  }
-
-  int col = input[0] - 'A';
-  int row;
-  try {
-    row = std::stoi(input.substr(1)) - 1;
-  } catch (std::invalid_argument& e) {
-    return -1;
-  } catch (std::out_of_range& e) {
-    return -1;
-  }
-
-  if (col < 0 || col >= kBoardDimension || row < 0 || row >= kBoardDimension) {
-    return -1;
-  }
-  return row * kBoardDimension + col;
+inline std::size_t GameState::hash() const {
+  return util::tuple_hash(to_tuple());
 }
 
 inline void GameState::dump_mcts_output(
     const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
 {
   throw util::Exception("TODO");
+}
+
+inline void GameState::row_dump(row_t row, column_t blink_column) const {
+  throw util::Exception("TODO");
+}
+
+inline typename GameState::GameOutcome GameState::compute_outcome() const {
+  GameOutcome outcome;
+  outcome.setZero();
+
+  int opponent_count = std::popcount(opponent_mask_);
+  int cur_player_count = std::popcount(cur_player_mask_);
+  if (cur_player_count > opponent_count) {
+    outcome(cur_player_) = 1;
+  } else if (opponent_count > cur_player_count) {
+    outcome(1 - cur_player_) = 1;
+  } else {
+    outcome.setConstant(0.5);
+  }
+
+  return outcome;
 }
 
 // copied from edax-reversi repo
