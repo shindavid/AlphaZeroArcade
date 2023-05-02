@@ -161,7 +161,7 @@ template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(Inp
 }
 
 inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
-  if (!util::tty_mode()) {
+  if (!util::tty_mode() && last_action > -1) {
     std::string s(2*last_action+1, ' ');
     printf("%sx\n", s.c_str());
   }
