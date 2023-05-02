@@ -110,11 +110,43 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
 }
 
 template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(InputSlab& tensor) const {
-  throw util::Exception("TODO");
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      int index = row * kBoardDimension + col;
+      bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
+      tensor(0, 0, row, col) = occupied_by_cur_player;
+    }
+  }
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      int index = row * kBoardDimension + col;
+      bool occupied_by_opp_player = (1UL << index) & opponent_mask_;
+      tensor(0, 1, row, col) = occupied_by_opp_player;
+    }
+  }
 }
 
 inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
-  throw util::Exception("TODO");
+  bool display_last_action = last_action >= 0;
+  int blink_row = -1;
+  int blink_col = -1;
+  if (display_last_action && last_action != kPass) {
+    blink_row = last_action / kBoardDimension;
+    blink_col = last_action % kBoardDimension;
+  }
+  if (!util::tty_mode() && display_last_action) {
+    std::string s(2*blink_col+3, ' ');
+    printf("%sx\n", s.c_str());
+  }
+  printf("  |A|B|C|D|E|F|G|H|\n");
+  for (int row = 0; row < kBoardDimension; ++row) {
+    row_dump(row, row == blink_row ? blink_col : -1);
+  }
+  if (player_names) {
+    printf("%s%s%s: %s\n", ansi::kBlue(), ansi::kCircle(), ansi::kReset(), (*player_names)[kBlack].c_str());
+    printf("%s%s%s: %s\n\n", ansi::kWhite(), ansi::kCircle(), ansi::kReset(), (*player_names)[kWhite].c_str());
+  }
+  std::cout.flush();
 }
 
 inline std::size_t GameState::hash() const {
@@ -124,11 +156,32 @@ inline std::size_t GameState::hash() const {
 inline void GameState::dump_mcts_output(
     const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
 {
-  throw util::Exception("TODO");
+  printf("TODO: mcts output\n");
 }
 
 inline void GameState::row_dump(row_t row, column_t blink_column) const {
-  throw util::Exception("TODO");
+  common::seat_index_t current_player = get_current_player();
+  const char* cur_color = current_player == kBlack ? ansi::kBlue() : ansi::kWhite();
+  const char* opp_color = current_player == kBlack ? ansi::kWhite() : ansi::kBlue();
+
+  char prefix = ' ';
+  if (!util::tty_mode() && blink_column >= 0) {
+    prefix = 'x';
+  }
+  printf("%c%d", prefix, (int)(row+1));
+  for (int col = 0; col < kBoardDimension; ++col) {
+    int index = row * kBoardDimension + col;
+    bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
+    bool occupied_by_opp_player = (1UL << index) & opponent_mask_;
+    bool occupied = occupied_by_cur_player || occupied_by_opp_player;
+
+    const char* color = occupied_by_cur_player ? cur_color : (occupied_by_opp_player ? opp_color : "");
+    const char* c = occupied ? ansi::kCircle() : " ";
+
+    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink() : "", color, c, occupied ? ansi::kReset() : "");
+  }
+
+  printf("|\n");
 }
 
 inline typename GameState::GameOutcome GameState::compute_outcome() const {

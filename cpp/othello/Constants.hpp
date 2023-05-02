@@ -140,5 +140,6 @@ const int kTypicalNumMovesPerGame = kBoardSize - kNumStartingPieces;
 
 const common::seat_index_t kBlack = 0;
 const common::seat_index_t kWhite = 1;
+const common::seat_index_t kStartingColor = kBlack;
 
 }  // namespace othello

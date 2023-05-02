@@ -10,12 +10,16 @@ inline Codes::Codes() {
     kBlink_ = "\033[5m";
     kRed_ = "\033[31m";
     kYellow_ = "\033[33m";
+    kBlue_ = "\033[34m";
+    kWhite_ = "\033[37m";
     kReset_ = "\033[00m";
   } else {
     kCircle_ = "";
     kBlink_ = "";
     kRed_ = "R";
     kYellow_ = "Y";
+    kBlue_ = "B";
+    kWhite_ = "W";
     kReset_ = "";
   }
 }

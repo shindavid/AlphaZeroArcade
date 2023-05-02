@@ -12,6 +12,8 @@ public:
   static const char* kBlink() { return instance()->kBlink_; }
   static const char* kRed() { return instance()->kRed_; }
   static const char* kYellow() { return instance()->kYellow_; }
+  static const char* kBlue() { return instance()->kBlue_; }
+  static const char* kWhite() { return instance()->kWhite_; }
   static const char* kReset() { return instance()->kReset_; }
 
 private:
@@ -24,6 +26,8 @@ private:
   const char* kBlink_ = nullptr;
   const char* kRed_ = nullptr;
   const char* kYellow_ = nullptr;
+  const char* kBlue_ = nullptr;
+  const char* kWhite_ = nullptr;
   const char* kReset_ = nullptr;
 };
 
@@ -31,6 +35,8 @@ inline const char* kCircle() { return Codes::kCircle(); }
 inline const char* kBlink() { return Codes::kBlink(); }
 inline const char* kRed() { return Codes::kRed(); }
 inline const char* kYellow() { return Codes::kYellow(); }
+inline const char* kBlue() { return Codes::kBlue(); }
+inline const char* kWhite() { return Codes::kWhite(); }
 inline const char* kReset() { return Codes::kReset(); }
 
 }  // namespace ansi;

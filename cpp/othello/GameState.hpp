@@ -82,7 +82,7 @@ private:
 
   mask_t opponent_mask_ = kStartingWhiteMask;  // spaces occupied by either player
   mask_t cur_player_mask_ = kStartingBlackMask;  // spaces occupied by current player
-  common::seat_index_t cur_player_ = kBlack;
+  common::seat_index_t cur_player_ = kStartingColor;
   int8_t pass_count_ = 0;
 };
 
