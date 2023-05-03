@@ -15,63 +15,6 @@ inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& sta
 
 namespace c4 {
 
-inline size_t GameState::serialize_action(char* buffer, size_t buffer_size, common::action_index_t action) {
-  size_t n = snprintf(buffer, buffer_size, "%d", action + 1);
-  if (n >= buffer_size) {
-    throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
-  }
-  return n;
-}
-
-inline void GameState::deserialize_action(const char* buffer, common::action_index_t* action) {
-  auto a = boost::lexical_cast<common::action_index_t>(buffer) - 1;
-  if (a < 0 || a >= kNumColumns) {
-    throw util::Exception("Invalid action %d parsed from \"%s\"", a, buffer);
-  }
-  *action = a;
-}
-
-inline size_t GameState::serialize_state_change(
-    char* buffer, size_t buffer_size, common::seat_index_t seat, common::action_index_t action) const
-{
-  return serialize_action(buffer, buffer_size, action);
-}
-
-inline void GameState::deserialize_state_change(
-    const char* buffer, common::seat_index_t* seat, common::action_index_t* action)
-{
-  *seat = get_current_player();
-  deserialize_action(buffer, action);
-  apply_move(*action);
-}
-
-inline size_t GameState::serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const {
-  size_t n = 0;
-  bool r = outcome[kRed] > 0;
-  bool y = outcome[kYellow] > 0;
-  n += snprintf(buffer + n, buffer_size - n, r ? "R" : "");
-  n += snprintf(buffer + n, buffer_size - n, y ? "Y" : "");
-  if (n >= buffer_size) {
-    throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
-  }
-  return n;
-}
-
-inline void GameState::deserialize_game_end(const char* buffer, GameOutcome* outcome) {
-  outcome->setZero();
-  const char* c = buffer;
-  while (*c != '\0') {
-    switch (*c) {
-      case 'R': (*outcome)(kRed) = 1; break;
-      case 'Y': (*outcome)(kYellow) = 1; break;
-      default: throw util::Exception(R"(Invalid game end "%c" parsed from "%s")", *c, buffer);
-    }
-    ++c;
-  }
-
-  *outcome /= outcome->sum();
-}
-
 inline common::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }

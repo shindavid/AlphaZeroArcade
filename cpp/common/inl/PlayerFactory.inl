@@ -15,12 +15,12 @@ auto PlayerFactory<GameState>::Params::make_options_description() {
 
   po2::options_description desc("PlayerFactory options, for each instance of --player \"...\"");
   return desc
-      .template add_option<"type">(po::value<std::string>(&type), "Player type. Required")
+      .template add_option<"type">(po::value<std::string>(&type), "required")
       .template add_option<"name">(po::value<std::string>(&name),
-          "Name. If unspecified, then a name like \"P0\", \"P1\", etc. is assigned, where the number after \"P\" "
+          "if unspecified, then a name like \"P0\", \"P1\", etc. is assigned, where the number after \"P\" "
           "is the player index")
       .template add_option<"copy-from">(po::value<std::string>(&copy_from),
-          "If specified, copy everything but --name and --seat from the --player with this name")
+          "copy everything but --name and --seat from the --player with this name")
       .template add_option<"seat">(po::value<int>(&seat),
           "zero-indexed seat (0=first-player, 1=second-player, etc.). If unspecified, then the seat is selected "
           "randomly among the available seats for the first game. For subsequent games, we round-robin through the "

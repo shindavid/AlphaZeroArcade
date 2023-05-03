@@ -9,6 +9,7 @@
 #include <common/BasicTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Packet.hpp>
+#include <common/SerializerTypes.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
 
@@ -28,6 +29,7 @@ public:
   using player_name_array_t = typename Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
+  using serializer_t = common::serializer_t<GameState>;
 
   struct seat_generator_t {
     seat_index_t seat;
@@ -50,8 +52,10 @@ public:
     void init_socket();
     io::Socket* socket() const { return socket_; }
     PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
+    const serializer_t& serializer() const { return serializer_; }
 
   private:
+    serializer_t serializer_;
     seat_generator_vec_t seat_generators_;  // temp storage
     player_generator_array_t players_ = {};  // indexed by player_id_t
     Params params_;

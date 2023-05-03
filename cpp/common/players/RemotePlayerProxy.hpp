@@ -12,6 +12,7 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/Packet.hpp>
+#include <common/SerializerTypes.hpp>
 #include <util/SocketUtil.hpp>
 
 namespace common {
@@ -30,6 +31,7 @@ public:
   using Player = AbstractPlayer<GameState>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_thread_id_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;
+  using serializer_t = common::serializer_t<GameState>;
 
   class PacketDispatcher {
   public:
@@ -52,6 +54,7 @@ public:
 
     static dispatcher_map_t dispatcher_map_;
 
+    serializer_t serializer_;
     std::thread* thread_ = nullptr;
     io::Socket* socket_;
     player_vec_array_t player_vec_array_;
@@ -68,6 +71,7 @@ private:
   std::condition_variable cv_;
   mutable std::mutex mutex_;
 
+  serializer_t serializer_;
   const GameState* state_ = nullptr;
   action_index_t action_ = -1;
 

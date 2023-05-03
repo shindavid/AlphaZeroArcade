@@ -13,6 +13,8 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/MctsResults.hpp>
+#include <common/SerializerTypes.hpp>
+#include <common/serializers/DeterministicGameSerializer.hpp>
 #include <othello/Constants.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -48,19 +50,6 @@ public:
   using LocalPolicyProbDistr = GameStateTypes::LocalPolicyProbDistr;
   using GameOutcome = GameStateTypes::GameOutcome;
 
-  static size_t serialize_action(char* buffer, size_t buffer_size, common::action_index_t action);
-  static void deserialize_action(const char* buffer, common::action_index_t* action);
-
-  size_t serialize_action_prompt(char* buffer, size_t buffer_size, const ActionMask& valid_actions) const { return 0; }
-  void deserialize_action_prompt(const char* buffer, ActionMask* valid_actions) const { *valid_actions = get_valid_actions(); }
-
-  size_t serialize_state_change(char* buffer, size_t buffer_size, common::seat_index_t seat,
-                                common::action_index_t action) const;
-  void deserialize_state_change(const char* buffer, common::seat_index_t* seat, common::action_index_t* action);
-
-  size_t serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const;
-  void deserialize_game_end(const char* buffer, GameOutcome* outcome);
-
   common::seat_index_t get_current_player() const { return cur_player_; }
   GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
@@ -93,5 +82,14 @@ extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 using Player = common::AbstractPlayer<GameState>;
 
 }  // namespace c4
+
+namespace common {
+
+// template specialization
+template<> struct serializer<othello::GameState> {
+  using type = DeterministicGameSerializer<othello::GameState>;
+};
+
+}  // namespace common
 
 #include <othello/inl/GameState.inl>

@@ -16,63 +16,6 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 
 namespace othello {
 
-inline size_t GameState::serialize_action(char* buffer, size_t buffer_size, common::action_index_t action) {
-  size_t n = snprintf(buffer, buffer_size, "%d", action);
-  if (n >= buffer_size) {
-    throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
-  }
-  return n;
-}
-
-inline void GameState::deserialize_action(const char* buffer, common::action_index_t* action) {
-  *action = boost::lexical_cast<int>(buffer);
-
-  if (*action < 0 || *action >= othello::kNumGlobalActions) {
-    throw util::Exception("Invalid action \"%s\" (action=%d)", buffer, *action);
-  }
-}
-
-inline size_t GameState::serialize_state_change(
-    char* buffer, size_t buffer_size, common::seat_index_t seat, common::action_index_t action) const
-{
-  return serialize_action(buffer, buffer_size, action);
-}
-
-inline void GameState::deserialize_state_change(
-    const char* buffer, common::seat_index_t* seat, common::action_index_t* action)
-{
-  *seat = get_current_player();
-  deserialize_action(buffer, action);
-  apply_move(*action);
-}
-
-inline size_t GameState::serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const {
-  size_t n = 0;
-  bool b = outcome[kBlack] > 0;
-  bool w = outcome[kWhite] > 0;
-  n += snprintf(buffer + n, buffer_size - n, b ? "B" : "");
-  n += snprintf(buffer + n, buffer_size - n, w ? "W" : "");
-  if (n >= buffer_size) {
-    throw util::Exception("Buffer too small (%ld >= %ld)", n, buffer_size);
-  }
-  return n;
-}
-
-inline void GameState::deserialize_game_end(const char* buffer, GameOutcome* outcome) {
-  outcome->setZero();
-  const char* c = buffer;
-  while (*c != '\0') {
-    switch (*c) {
-      case 'B': (*outcome)(kBlack) = 1; break;
-      case 'W': (*outcome)(kWhite) = 1; break;
-      default: throw util::Exception(R"(Invalid game end "%c" parsed from "%s")", *c, buffer);
-    }
-    ++c;
-  }
-
-  *outcome /= outcome->sum();
-}
-
 // copied from edax-reversi repo - board_next()
 inline common::GameStateTypes<GameState>::GameOutcome GameState::apply_move(common::action_index_t action) {
   if (action == kPass) {

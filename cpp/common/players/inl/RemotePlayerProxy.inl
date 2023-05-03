@@ -100,7 +100,7 @@ void RemotePlayerProxy<GameState>::PacketDispatcher::handle_action(const General
   RemotePlayerProxy* player = player_vec_array_[player_id][game_thread_id];
 
   // TODO: detect invalid packet and engage in a retry-protocol with remote player
-  player->state_->deserialize_action(payload.dynamic_size_section.buf, &player->action_);
+  serializer_.deserialize_action(payload.dynamic_size_section.buf, &player->action_);
   player->cv_.notify_one();
 }
 
@@ -135,7 +135,8 @@ void RemotePlayerProxy<GameState>::receive_state_change(
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;
   auto buf = packet.payload().dynamic_size_section.buf;
-  packet.set_dynamic_section_size(state.serialize_state_change(buf, sizeof(buf), seat, action));
+  int buf_size = serializer_.serialize_state_change(buf, sizeof(buf), state, seat, action);
+  packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 }
 
@@ -148,7 +149,7 @@ action_index_t RemotePlayerProxy<GameState>::get_action(const GameState& state, 
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;
   auto buf = packet.payload().dynamic_size_section.buf;
-  int buf_size = state.serialize_action_prompt(buf, sizeof(buf), valid_actions);
+  int buf_size = serializer_.serialize_action_prompt(buf, sizeof(buf), valid_actions);
   packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 
@@ -163,7 +164,8 @@ void RemotePlayerProxy<GameState>::end_game(const GameState& state, const GameOu
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;
   auto buf = packet.payload().dynamic_size_section.buf;
-  packet.set_dynamic_section_size(state.serialize_game_end(buf, sizeof(buf), outcome));
+  int buf_size = serializer_.serialize_game_end(buf, sizeof(buf), outcome);
+  packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 }
 

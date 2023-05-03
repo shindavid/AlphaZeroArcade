@@ -141,7 +141,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateCh
   seat_index_t seat;
   action_index_t action;
 
-  state_.deserialize_state_change(buf, &seat, &action);
+  shared_data_.serializer().deserialize_state_change(buf, &state_, &seat, &action);
   player_->receive_state_change(seat, state_, action);
 }
 
@@ -154,7 +154,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const Action
   const char* buf = payload.dynamic_size_section.buf;
 
   std::unique_lock lock(mutex_);
-  state_.deserialize_action_prompt(buf, &valid_actions_);
+  shared_data_.serializer().deserialize_action_prompt(buf, &valid_actions_);
   ready_to_get_action_ = true;
   lock.unlock();
   cv_.notify_one();
@@ -170,7 +170,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_end_game(const EndGame& pa
 
   GameOutcome outcome;
 
-  state_.deserialize_game_end(buf, &outcome);
+  shared_data_.serializer().deserialize_game_end(buf, &outcome);
   player_->end_game(state_, outcome);
 }
 
@@ -189,7 +189,7 @@ void GameServerProxy<GameState>::PlayerThread::send_action_packet(action_index_t
   char* buf = action.dynamic_size_section.buf;
   action.game_thread_id = game_thread_id_;
   action.player_id = player_id_;
-  packet.set_dynamic_section_size(state_.serialize_action(buf, sizeof(buf), action_index));
+  packet.set_dynamic_section_size(shared_data_.serializer().serialize_action(buf, sizeof(buf), action_index));
   packet.send_to(shared_data_.socket());
 }
 
