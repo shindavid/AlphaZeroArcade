@@ -15,8 +15,10 @@ auto PlayerFactory<GameState>::Params::make_options_description() {
 
   po2::options_description desc("PlayerFactory options, for each instance of --player \"...\"");
   return desc
-      .template add_option<"type">(po::value<std::string>(&type), "player type. Required")
-      .template add_option<"name">(po::value<std::string>(&name), "Name. Required")
+      .template add_option<"type">(po::value<std::string>(&type), "Player type. Required")
+      .template add_option<"name">(po::value<std::string>(&name),
+          "Name. If unspecified, then a name like \"P0\", \"P1\", etc. is assigned, where the number after \"P\" "
+          "is the player index")
       .template add_option<"copy-from">(po::value<std::string>(&copy_from),
           "If specified, copy everything but --name and --seat from the --player with this name")
       .template add_option<"seat">(po::value<int>(&seat),
@@ -53,8 +55,6 @@ PlayerFactory<GameState>::parse(const std::vector<std::string>& player_strs) {
 
     std::string name = boost_util::pop_option_value(tokens, "name");
     std::string seat_str = boost_util::pop_option_value(tokens, "seat");
-
-    util::clean_assert(!name.empty(), "Missing --name in --player \"%s\"", player_str.c_str());
 
     int seat = -1;
     if (!seat_str.empty()) {
@@ -174,8 +174,10 @@ PlayerFactory<GameState>::parse_helper(
   }
 
   util::clean_assert(!type.empty(), "Must specify --type or --copy-from in --player \"%s\"", player_str.c_str());
-  util::clean_assert(!name_map_.count(name), "Duplicate --name \"%s\"", name.c_str());
-  name_map_[name] = orig_tokens;
+  if (!name.empty()) {
+    util::clean_assert(!name_map_.count(name), "Duplicate --name \"%s\"", name.c_str());
+    name_map_[name] = orig_tokens;
+  }
   for (auto* creator : creators_) {
     auto* generator = creator->create();
     if (matches(generator, type)) {

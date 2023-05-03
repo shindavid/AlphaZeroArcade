@@ -44,6 +44,17 @@ void StartGame::parse_player_names(std::array<std::string, N>& player_names) con
 }
 
 template <PacketPayloadConcept PacketPayload>
+void Packet<PacketPayload>::set_player_name(const std::string& name) {
+  constexpr int buf_size = sizeof(payload_.dynamic_size_section.player_name);
+  if (name.size() + 1 > buf_size) {  // + 1 for null terminator
+    throw util::Exception("Packet<%d>::set_player_name() name too long [\"%s\"] (%d + 1 > %d)",
+                          (int)PacketPayload::kType, name.c_str(), (int)name.size(), buf_size);
+  }
+  memcpy(payload_.dynamic_size_section.player_name, name.c_str(), name.size() + 1);
+  set_dynamic_section_size(name.size() + 1);  // + 1 for null terminator
+}
+
+template <PacketPayloadConcept PacketPayload>
 void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
   constexpr int orig_size = sizeof(typename PacketPayload::dynamic_size_section_t);
   if (buf_size < 0 || buf_size > orig_size) {

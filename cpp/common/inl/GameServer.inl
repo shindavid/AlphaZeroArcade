@@ -139,6 +139,11 @@ void GameServer<GameState>::SharedData::register_player(
   }
   player_id_t player_id = registrations_.size();
   util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
+  std::string name = gen->get_name();
+  if (name.empty()) {
+    name = util::create_string("P%d", player_id);
+    gen->set_name(name);
+  }
   registrations_.emplace_back(gen, seat, player_id);
 }
 
@@ -322,18 +327,25 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
       Packet<Registration> packet;
       packet.read_from(socket);  // TODO: catch exception and engage in retry-protocol with client
       const Registration &registration = packet.payload();
-      const std::string &name = registration.dynamic_size_section.player_name;
+      std::string registered_name = registration.dynamic_size_section.player_name;
       remaining_requests = registration.remaining_requests;
       int max_simultaneous_games = registration.max_simultaneous_games;
       seat_index_t seat = registration.requested_seat;
 
       auto reg = remote_player_registrations[r++];
+      if (!registered_name.empty()) {
+        reg->gen->set_name(registered_name);
+      }
+      std::string name = reg->gen->get_name();
+      util::clean_assert(!name.empty(), "Unexpected empty name");
+
       RemotePlayerProxyGenerator *gen = dynamic_cast<RemotePlayerProxyGenerator *>(reg->gen);
-      gen->initialize(name, socket, max_simultaneous_games, reg->player_id);
+      gen->initialize(socket, max_simultaneous_games, reg->player_id);
       reg->seat = seat;
 
       Packet<RegistrationResponse> response_packet;
       response_packet.payload().player_id = reg->player_id;
+      response_packet.set_player_name(name);
       response_packet.send_to(socket);
 
       printf("Registered player: \"%s\" (seat: %d, remaining: %d)\n", name.c_str(), (int) seat, remaining_requests);

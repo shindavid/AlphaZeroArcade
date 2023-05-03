@@ -73,8 +73,12 @@ struct Registration {
 
 struct RegistrationResponse {
   static constexpr PacketHeader::Type kType = PacketHeader::kRegistrationResponse;
+  struct dynamic_size_section_t {
+    char player_name[kMaxNameLength + 1];  // +1 for null terminator
+  };
 
   player_id_t player_id;
+  dynamic_size_section_t dynamic_size_section;
 };
 
 struct GameThreadInitialization {
@@ -171,6 +175,14 @@ public:
    * Constructor initializes header but not the payload. The payload must be initialized separately.
    */
   Packet() : header_(PacketPayload::kType, sizeof(PacketPayload)) {}
+
+  /*
+   * Assumes that PakcetPayload has a member dynamic_size_section, which has a single char buf[] member player_name.
+   *
+   * Does a size-check on the name, and then copies it to that char buf[], calling this->set_dynamic_section_size()
+   * properly.
+   */
+  void set_player_name(const std::string& name);
 
   void set_dynamic_section_size(int buf_size);
   size_t size() const { return header_.payload_size + sizeof(PacketHeader); }

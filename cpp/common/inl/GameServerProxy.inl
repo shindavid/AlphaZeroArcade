@@ -67,9 +67,9 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     seat_index_t seat = seat_generator.seat;
     PlayerGenerator* gen = seat_generator.gen;
 
-    std::string name = gen->get_name();
+    const std::string registered_name = gen->get_name();
 
-    printf("Registering player \"%s\" at seat %d\n", name.c_str(), seat);
+    printf("Registering player \"%s\" at seat %d\n", registered_name.c_str(), seat);
     std::cout.flush();
 
     Packet<Registration> send_packet;
@@ -77,20 +77,20 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     registration.remaining_requests = n - i - 1;
     registration.max_simultaneous_games = gen->max_simultaneous_games();
     registration.requested_seat = seat;
-
-    char* name_buf = registration.dynamic_size_section.player_name;
-    size_t name_buf_size = sizeof(registration.dynamic_size_section.player_name);
-    strncpy(name_buf, name.c_str(), name_buf_size);
-    name_buf[name_buf_size - 1] = '\0';  // not needed because of clean_assert() above, but makes compiler happy
-    send_packet.set_dynamic_section_size(name.size() + 1);  // + 1 for null-delimiter
+    send_packet.set_player_name(registered_name);
     send_packet.send_to(socket_);
 
     Packet<RegistrationResponse> recv_packet;
     recv_packet.read_from(socket_);
     const RegistrationResponse& response = recv_packet.payload();
     player_id_t player_id = response.player_id;
-    util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d", (int)player_id);
+    std::string name = response.dynamic_size_section.player_name;
 
+    util::clean_assert(player_id >= 0 && player_id < kNumPlayers, "Invalid player_id: %d", (int)player_id);
+    util::clean_assert(registered_name.empty() || registered_name == name,
+                       "Unexpected name in response: \"%s\" != \"%s\"", registered_name.c_str(), name.c_str());
+
+    gen->set_name(name);
     players_[player_id] = gen;
     printf("Registered player \"%s\" at seat %d (player_id:%d)\n", name.c_str(), seat, (int)player_id);
     std::cout.flush();

@@ -9,9 +9,8 @@ namespace common {
 
 template <GameStateConcept GameState>
 void RemotePlayerProxyGenerator<GameState>::initialize(
-    const std::string& name, io::Socket* socket, int max_simultaneous_games, player_id_t player_id)
+    io::Socket* socket, int max_simultaneous_games, player_id_t player_id)
 {
-  this->set_name(name);
   socket_ = socket;
   max_simultaneous_games_ = max_simultaneous_games;
   player_id_ = player_id;
