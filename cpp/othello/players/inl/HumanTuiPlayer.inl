@@ -10,6 +10,9 @@ namespace othello {
 inline common::action_index_t HumanTuiPlayer::prompt_for_action(const GameState&, const ActionMask& valid_actions) {
   if (valid_actions[kPass]) {
     std::cout << "Press Enter to pass: ";
+    std::cout.flush();
+    std::string input;
+    std::getline(std::cin, input);
     return kPass;
   }
   std::cout << "Enter move [A1-H8]: ";
