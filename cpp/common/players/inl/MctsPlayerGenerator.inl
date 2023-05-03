@@ -23,14 +23,6 @@ AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::gener
   return player;
 }
 
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void MctsPlayerGeneratorBase<GameState, Tensorizor>::validate_params() {
-  if (!(mcts_params_.model_filename.empty() ^ mcts_params_.uniform_model)) {
-    throw util::CleanException(
-        "Invalid MCTS player: exactly one of --model-filename or --uniform-model must be specified");
-  }
-}
-
 // CompetitiveMctsPlayerGenerator
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -55,7 +47,6 @@ CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::generate_from_mcts(Mcts* 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::parse_args(const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
-  this->validate_params();
 }
 
 // TrainingMctsPlayerGenerator
@@ -82,7 +73,6 @@ TrainingMctsPlayerGenerator<GameState, Tensorizor>::generate_from_mcts(Mcts* mct
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void TrainingMctsPlayerGenerator<GameState, Tensorizor>::parse_args(const std::vector<std::string>& args) {
   this->parse_args_helper(make_options_description(), args);
-  this->validate_params();
 }
 
 }  // namespace common

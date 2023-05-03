@@ -56,7 +56,7 @@ public:
   std::vector<std::string> get_types() const override { return {"MCTS-C", "MCTS-Competitive"}; }
   std::string get_description() const override { return "Competitive MCTS player"; }
   void print_help(std::ostream& s) override { make_options_description().print(s); }
-  void parse_args(const std::vector<std::string>& args);
+  void parse_args(const std::vector<std::string>& args) override;
 
 protected:
   auto make_options_description() {

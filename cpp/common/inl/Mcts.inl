@@ -55,9 +55,8 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
 
   return desc
       .template add_option<"model-filename", 'm'>
-          (po::value<std::string>(&model_filename)->default_value(default_model_filename), "model filename")
-      .template add_option<"uniform-model", 'u'>(
-          po::bool_switch(&uniform_model), "uniform model (--model-filename is ignored)")
+          (po::value<std::string>(&model_filename)->default_value(default_model_filename),
+           "model filename. If not specified, a uniform model is implicitly used")
       .template add_option<"num-search-threads", 'n'>(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
@@ -1343,7 +1342,7 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
     init_profiling_dir(profiling_dir().string());
   }
 
-  if (!params.uniform_model) {
+  if (params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(this);
   }
   if (num_search_threads() < 1) {
@@ -1519,7 +1518,7 @@ void Mcts<GameState, Tensorizor>::get_cache_stats(
  */
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void Mcts<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
-  if (params_.uniform_model) return;
+  if (params_.model_filename.empty()) return;
 
   PUCTStats stats(params_, search_params, root_);
 

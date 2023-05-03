@@ -267,9 +267,7 @@ class AlphaZeroManager:
             n_games = 0
 
         base_player_args = []  # '--no-forced-playouts']
-        if gen == 0:
-            base_player_args.append('-u')
-        else:
+        if gen:
             model = self.get_model_filename(gen)
             base_player_args.extend(['-m', model])
 

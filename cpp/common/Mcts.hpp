@@ -103,7 +103,6 @@ public:
     bool operator==(const Params& other) const = default;
 
     std::string model_filename;
-    bool uniform_model = false;
     int num_search_threads = 8;
     int batch_size_limit = 216;
     bool run_offline = false;
