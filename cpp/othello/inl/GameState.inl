@@ -156,7 +156,53 @@ inline std::size_t GameState::hash() const {
 inline void GameState::dump_mcts_output(
     const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
 {
-  printf("TODO: mcts output\n");
+  const auto& valid_actions = results.valid_actions;
+  const auto& net_value = results.value_prior;
+  const auto& net_policy = results.policy_prior;
+  const auto& mcts_counts = results.counts;
+
+  assert(net_policy.size() == (int)valid_actions.count());
+
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kBlack),
+         100 * mcts_value(kBlack));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kWhite),
+         100 * mcts_value(kWhite));
+  printf("\n");
+
+  auto tuple0 = std::make_tuple(valid_actions[0], mcts_counts(0), mcts_policy(0), net_policy(0), 0);
+  using tuple_t = decltype(tuple0);
+  using tuple_array_t = std::array<tuple_t, kNumGlobalActions>;
+  tuple_array_t tuples;
+  tuples[0] = tuple0;
+  for (int i = 1; i < kNumGlobalActions; ++i) {
+    tuples[i] = std::make_tuple(valid_actions[i], mcts_counts(i), mcts_policy(i), net_policy(i), i);
+  }
+  std::sort(tuples.begin(), tuples.end());
+  std::reverse(tuples.begin(), tuples.end());
+
+  constexpr int kNumActionsToPrint = 10;
+  printf("%4s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
+  for (int i = 0; i < kNumActionsToPrint; ++i) {
+    const auto& tuple = tuples[i];
+    bool valid_action = std::get<0>(tuple);
+    if (!valid_action) {
+      printf("\n");
+      continue;
+    }
+
+    float count = std::get<1>(tuple);
+    auto mcts_p = std::get<2>(tuple);
+    auto net_p = std::get<3>(tuple);
+    int action = std::get<4>(tuple);
+
+    if (action == kPass) {
+      printf("%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count, mcts_p);
+    } else {
+      int row = action / kBoardDimension;
+      int col = action % kBoardDimension;
+      printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + row, col + 1, net_p, count, mcts_p);
+    }
+  }
 }
 
 inline void GameState::row_dump(row_t row, column_t blink_column) const {
