@@ -97,12 +97,12 @@ public:
   virtual int max_simultaneous_games() const { return 0; }
 
   const std::string& get_name() const { return name_; }
-  void set_name(const std::string& name) { name_ = name; }
-  AbstractPlayer<GameState>* generate_with_name(game_thread_id_t game_thread_id) {
-    auto player = generate(game_thread_id);
-    player->set_name(name_);
-    return player;
-  }
+
+  /*
+   * Validates name, raising an exception if the name is invalid (too long or uses invalid characters).
+   */
+  void set_name(const std::string& name);
+  AbstractPlayer<GameState>* generate_with_name(game_thread_id_t game_thread_id);
 
 protected:
   /*
@@ -134,3 +134,5 @@ public:
 };
 
 }  // namespace common
+
+#include <common/inl/AbstractPlayerGenerator.inl>
