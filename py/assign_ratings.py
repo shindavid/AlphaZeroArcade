@@ -164,18 +164,18 @@ def extract_match_record(stdout: str) -> MatchRecord:
     """
     ...
     All games complete!
-    P0 W40 L24 D0 [40]
-    P1 W24 L40 D0 [24]
+    pid=0 name=foo W40 L24 D0 [40]
+    pid=1 name=bar W24 L40 D0 [24]
     ...
     """
     record = MatchRecord()
     for line in stdout.splitlines():
         tokens = line.split()
-        if len(tokens) > 1 and tokens[0][0] == 'P' and tokens[0][1:].isdigit():
-            player_id = int_parse(tokens[0], 'P')
-            win = int_parse(tokens[1], 'W')
-            loss = int_parse(tokens[2], 'L')
-            draw = int_parse(tokens[3], 'D')
+        if len(tokens) > 1 and tokens[0].startswith('pid=') and tokens[0][4:].isdigit():
+            player_id = int_parse(tokens[0], 'pid=')
+            win = int_parse(tokens[2], 'W')
+            loss = int_parse(tokens[3], 'L')
+            draw = int_parse(tokens[4], 'D')
             counts = WinLossDrawCounts(win, loss, draw)
             record.update(player_id, counts)
 

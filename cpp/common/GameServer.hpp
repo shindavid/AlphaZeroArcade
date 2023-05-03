@@ -96,6 +96,7 @@ private:
     player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations);
     void init_random_seat_indices();
     registration_vec_t& registration_templates() { return registrations_; }
+    const std::string& get_player_name(player_id_t p) const { return registrations_[p].gen->get_name(); }
 
   private:
     const Params params_;
@@ -108,7 +109,7 @@ private:
     progressbar* bar_ = nullptr;
     int num_games_started_ = 0;
 
-    results_array_t results_array_;
+    results_array_t results_array_;  // indexed by player_id
     int64_t total_ns_ = 0;
     int64_t min_ns_ = std::numeric_limits<int64_t>::max();
     int64_t max_ns_ = 0;

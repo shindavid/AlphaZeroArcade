@@ -386,8 +386,8 @@ void GameServer<GameState>::run() {
   results_array_t results = shared_data_.get_results();
 
   printf("\nAll games complete!\n");
-  for (seat_index_t s = 0; s < kNumPlayers; ++s) {
-    printf("P%d %s\n", s, get_results_str(results[s]).c_str());
+  for (player_id_t p = 0; p < kNumPlayers; ++p) {
+    printf("pid=%d name=%s %s\n", p, shared_data_.get_player_name(p).c_str(), get_results_str(results[p]).c_str());
   }
   util::ParamDumper::add("Parallelism factor", "%d", (int)threads.size());
   util::ParamDumper::add("Num games", "%d", num_games);
