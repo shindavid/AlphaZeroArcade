@@ -25,9 +25,9 @@ AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::gener
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void MctsPlayerGeneratorBase<GameState, Tensorizor>::validate_params() {
-  if (!(mcts_params_.nnet_filename.empty() ^ mcts_params_.uniform_model)) {
+  if (!(mcts_params_.model_filename.empty() ^ mcts_params_.uniform_model)) {
     throw util::CleanException(
-        "Invalid MCTS player: exactly one of --nnet-filename or --uniform-model must be specified");
+        "Invalid MCTS player: exactly one of --model-filename or --uniform-model must be specified");
   }
 }
 

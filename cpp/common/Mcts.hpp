@@ -102,7 +102,7 @@ public:
     auto make_options_description();
     bool operator==(const Params& other) const = default;
 
-    std::string nnet_filename;
+    std::string model_filename;
     bool uniform_model = false;
     int num_search_threads = 8;
     int batch_size_limit = 216;
@@ -499,7 +499,7 @@ private:
     /*
      * Constructs an evaluation thread and returns it.
      *
-     * If another thread with the given nnet_filename has already been create()'d, then returns that. If that returned
+     * If another thread with the given model_filename has already been create()'d, then returns that. If that returned
      * thread does not match the thread parameters (batch_size, nn_eval_timeout_ns, cache_size), then raises an
      * exception.
      */

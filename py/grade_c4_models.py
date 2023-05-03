@@ -74,7 +74,7 @@ class ModelGrader:
             '--name=MCTS',
             '-i', Args.mcts_iters,
             '--batch-size-limit', Args.batch_size_limit,
-            '--nnet-filename', self.get_model_filename(gen),
+            '-m', self.get_model_filename(gen),
             '--no-forced-playouts',
             '--grade-moves',
         ]

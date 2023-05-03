@@ -43,9 +43,9 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  boost::filesystem::path default_nnet_filename_path = util::Repo::root() / "c4_model.ptj";
-  std::string default_nnet_filename = util::Config::instance()->get(
-      "nnet_filename", default_nnet_filename_path.string());
+  boost::filesystem::path default_model_filename_path = util::Repo::root() / "c4_model.ptj";
+  std::string default_model_filename = util::Config::instance()->get(
+      "model_filename", default_model_filename_path.string());
 
   boost::filesystem::path default_profiling_dir_path = util::Repo::root() / "output" / "mcts_profiling";
   std::string default_profiling_dir = util::Config::instance()->get(
@@ -54,14 +54,14 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   po2::options_description desc("Mcts options");
 
   return desc
-      .template add_option<"nnet-filename">
-          (po::value<std::string>(&nnet_filename)->default_value(default_nnet_filename), "nnet filename")
-      .template add_option<"uniform-model">(
-          po::bool_switch(&uniform_model), "uniform model (--nnet-filename is ignored)")
-      .template add_option<"num-search-threads">(
+      .template add_option<"model-filename", 'm'>
+          (po::value<std::string>(&model_filename)->default_value(default_model_filename), "model filename")
+      .template add_option<"uniform-model", 'u'>(
+          po::bool_switch(&uniform_model), "uniform model (--model-filename is ignored)")
+      .template add_option<"num-search-threads", 'n'>(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
-      .template add_option<"batch-size-limit">(
+      .template add_option<"batch-size-limit", 'b'>(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
           "batch size limit")
       .template add_bool_switches<"run-offline", "no-run-offline">(
@@ -78,8 +78,8 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"root-softmax-temp">(
           po::value<std::string>(&root_softmax_temperature_str)->default_value(root_softmax_temperature_str),
           "root softmax temperature")
-      .template add_option<"cpuct">(po2::float_value("%.2f", &cPUCT), "cPUCT value")
-      .template add_option<"dirichlet-mult">(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
+      .template add_option<"cpuct", 'c'>(po2::float_value("%.2f", &cPUCT), "cPUCT value")
+      .template add_option<"dirichlet-mult", 'd'>(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
       .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
       .template add_bool_switches<"disable-eliminations", "enable-eliminations">(
           &disable_eliminations, "disable eliminations", "enable eliminations")
@@ -781,16 +781,16 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 typename Mcts<GameState, Tensorizor>::NNEvaluationService*
 Mcts<GameState, Tensorizor>::NNEvaluationService::create(const Mcts* mcts) {
   int64_t timeout_ns = mcts->params().nn_eval_timeout_ns;
-  boost::filesystem::path net_filename(mcts->params().nnet_filename);
+  boost::filesystem::path model_filename(mcts->params().model_filename);
   size_t cache_size = mcts->params().cache_size;
   int batch_size_limit = mcts->params().batch_size_limit;
 
   std::chrono::nanoseconds timeout_duration(timeout_ns);
-  auto it = instance_map_.find(net_filename);
+  auto it = instance_map_.find(model_filename);
   if (it == instance_map_.end()) {
     NNEvaluationService* instance = new NNEvaluationService(
-        net_filename, batch_size_limit, timeout_duration, cache_size, mcts->profiling_dir());
-    instance_map_[net_filename] = instance;
+        model_filename, batch_size_limit, timeout_duration, cache_size, mcts->profiling_dir());
+    instance_map_[model_filename] = instance;
     return instance;
   }
   NNEvaluationService* instance = it->second;
@@ -831,10 +831,10 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::disconnect() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
-    const boost::filesystem::path& net_filename, int batch_size, std::chrono::nanoseconds timeout_duration,
+    const boost::filesystem::path& model_filename, int batch_size, std::chrono::nanoseconds timeout_duration,
     size_t cache_size, const boost::filesystem::path& profiling_dir)
 : instance_id_(next_instance_id_++)
-, net_(net_filename)
+, net_(model_filename)
 , batch_data_(batch_size)
 , cache_(cache_size)
 , timeout_duration_(timeout_duration)
@@ -1077,7 +1077,7 @@ int Mcts<GameState, Tensorizor>::NNEvaluationService::allocate_reserve_index(
    * The significance of being reserved is that other search threads will be blocked from reserving if the batch is
    * fully reserved.
    *
-   * The significance of not yet being committed is that the service thread won't yet proceed with nnet eval.
+   * The significance of not yet being committed is that the service thread won't yet proceed with model eval.
    */
   return my_index;
 }

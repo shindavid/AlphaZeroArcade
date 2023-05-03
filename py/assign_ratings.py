@@ -212,7 +212,7 @@ class Agent:
         """
         cmd looks like:
 
-        <binary> --player "--type=MCTS-C --nnet-filename /media/dshin/c4f/models/gen-10.ptj"
+        <binary> --player "--type=MCTS-C -m /media/dshin/c4f/models/gen-10.ptj"
 
         See documentation at top of file for description of "special".
         """

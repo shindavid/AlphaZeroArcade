@@ -268,10 +268,10 @@ class AlphaZeroManager:
 
         base_player_args = []  # '--no-forced-playouts']
         if gen == 0:
-            base_player_args.append('--uniform-model')
+            base_player_args.append('-u')
         else:
             model = self.get_model_filename(gen)
-            base_player_args.extend(['--nnet-filename', model])
+            base_player_args.extend(['-m', model])
 
         player_args = [
             '--type=MCTS-T',
