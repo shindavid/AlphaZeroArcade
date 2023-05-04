@@ -41,7 +41,7 @@ public:
 
   using Tensorizor = Tensorizor_;
   using TensorizorTypes = typename common::TensorizorTypes<Tensorizor>;
-  using TensorShape = typename Tensorizor::Shape;
+  using InputShape = typename Tensorizor::InputShape;
   using InputSlab = typename TensorizorTypes::InputSlab;
   using InputEigenSlab = typename TensorizorTypes::InputEigenSlab;
 

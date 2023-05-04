@@ -18,7 +18,7 @@ namespace c4 {
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 2;
-  using Shape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
+  using InputShape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using InputEigenSlab = TensorizorTypes::InputSlab::EigenType;

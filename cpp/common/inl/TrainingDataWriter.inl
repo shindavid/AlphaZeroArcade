@@ -38,7 +38,7 @@ typename TrainingDataWriter<GameState_, Tensorizor_>::EigenSlab
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_slab() {
   int rows = rows_++;
   return EigenSlab{
-    input_.template eigenSlab<typename TensorizorTypes::Shape<1>>(rows),
+    input_.template eigenSlab<typename TensorizorTypes::InputShape<1>>(rows),
     policy_.eigenSlab(rows),
     value_.eigenSlab(rows)
     };
@@ -53,7 +53,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(cons
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::input_shape(int rows) {
-  return util::to_std_array<int>(rows, util::std_array_v<int, TensorShape>);
+  return util::to_std_array<int>(rows, util::std_array_v<int, InputShape>);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

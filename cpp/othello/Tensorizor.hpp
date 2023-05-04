@@ -18,7 +18,7 @@ namespace othello {
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
-  using Shape = util::int_sequence<kNumPlayers, kBoardDimension, kBoardDimension>;
+  using InputShape = util::int_sequence<kNumPlayers, kBoardDimension, kBoardDimension>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using InputEigenSlab = TensorizorTypes::InputSlab::EigenType;

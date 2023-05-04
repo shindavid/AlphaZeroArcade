@@ -83,18 +83,18 @@ template<typename Tensorizor>
 struct TensorizorTypes {
   using dtype = torch_util::dtype;
   static constexpr int kMaxNumSymmetries = Tensorizor::kMaxNumSymmetries;
-  using BaseShape = typename Tensorizor::Shape;
+  using BaseInputShape = typename Tensorizor::InputShape;
 
   using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 
-  template <int NumRows> using Shape = eigen_util::to_sizes_t<
-      util::concat_int_sequence_t<util::int_sequence<NumRows>, BaseShape>>;
-  template <int NumRows> using InputTensor = eigentorch::TensorFixedSize<dtype, Shape<NumRows>>;
+  template <int NumRows> using InputShape = eigen_util::to_sizes_t<
+      util::concat_int_sequence_t<util::int_sequence<NumRows>, BaseInputShape>>;
+  template <int NumRows> using InputTensor = eigentorch::TensorFixedSize<dtype, InputShape<NumRows>>;
 
   using InputSlab = InputTensor<1>;
   using InputEigenSlab = typename InputSlab::EigenType;
 
-  using DynamicInputTensor = eigentorch::Tensor<dtype, BaseShape::size() + 1>;
+  using DynamicInputTensor = eigentorch::Tensor<dtype, BaseInputShape::size() + 1>;
 };
 
 template<typename GameState>

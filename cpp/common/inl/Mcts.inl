@@ -849,7 +849,7 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_dat
     int batch_size)
 : policy(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
 , value(batch_size, kNumPlayers, util::to_std_array<int>(batch_size, kNumPlayers))
-, input(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::Shape>))
+, input(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::InputShape>))
 {
   input.asEigen().setZero();
   eval_ptr_data = new eval_ptr_data_t[batch_size];
@@ -1093,7 +1093,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   thread->record_for_profiling(SearchThread::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
-  auto& input = batch_data_.input.template eigenSlab<typename TensorizorTypes::Shape<1>>(reserve_index);
+  auto& input = batch_data_.input.template eigenSlab<typename TensorizorTypes::InputShape<1>>(reserve_index);
   tensorizor.tensorize(input, state);
   auto transform = tensorizor.get_symmetry(sym_index);
   transform->transform_input(input);

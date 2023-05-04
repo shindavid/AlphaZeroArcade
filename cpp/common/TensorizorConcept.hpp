@@ -22,7 +22,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
   /*
    * The shape of the tensor representation of a game state.
    */
-  { typename Tensorizor::Shape{} } -> util::IntSequenceConcept;
+  { typename Tensorizor::InputShape{} } -> util::IntSequenceConcept;
 
   /*
    * The maximum number of symmetries.
