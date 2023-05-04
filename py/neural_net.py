@@ -82,11 +82,28 @@ class NeuralNet(nn.Module):
         if verbose:
             print(f'Model saved to {filename}')
 
-    @classmethod
+    @staticmethod
     @abc.abstractmethod
-    def load_checkpoint(cls, filename: str) -> 'NeuralNet':
+    def create(input_shape: Shape) -> 'NeuralNet':
+        """
+        Create a new neural net of the derived type, with the given input shape.
+
+        Different implementations of this method might differ in how they initialize architecture parameters (for
+        example by loading from a config file). They also might differ in how they initialize model weights.
+        """
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def load_checkpoint(filename: str) -> 'NeuralNet':
+        """
+        Inverse of save_checkpoint(). Load a neural net from disk, so that it can be used for inference.
+        """
         pass
 
     @abc.abstractmethod
     def save_checkpoint(self, filename: str):
+        """
+        Serialize the current state of this neural net to disk, so that it can be loaded later via load_checkpoint().
+        """
         pass

@@ -34,8 +34,15 @@ class C4Net(NeuralNet):
             x = block(x)
         return self.policy_head(x), self.value_head(x)
 
-    @classmethod
-    def load_checkpoint(cls, filename: str) -> 'C4Net':
+    @staticmethod
+    def create(input_shape: Shape) -> 'C4Net':
+        """
+        TODO: load architecture parameters from config and pass them to constructor call
+        """
+        return C4Net(input_shape)
+
+    @staticmethod
+    def load_checkpoint(filename: str) -> 'C4Net':
         checkpoint = torch.load(filename)
         model_state_dict = checkpoint['model_state_dict']
         input_shape = checkpoint['input_shape']

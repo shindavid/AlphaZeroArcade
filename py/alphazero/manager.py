@@ -33,9 +33,6 @@ BASE_DIR/
              gen-1.ptc
              gen-2.ptc
              ...
-
-
-TODO: make this game-agnostic. There is some hard-coded c4 stuff in here at present.
 """
 import os
 import shutil
@@ -51,7 +48,7 @@ from natsort import natsorted
 from torch import optim
 from torch.utils.data import DataLoader
 from alphazero.optimization_args import ModelingArgs
-from connect4.tensorizor import C4Net
+from games import GameType
 from util import subprocess_util
 from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo
@@ -97,7 +94,8 @@ class SelfPlayProcData:
 
 
 class AlphaZeroManager:
-    def __init__(self, c4_base_dir: str):
+    def __init__(self, game_type: GameType, base_dir: str):
+        self.game_type = game_type
         self.py_cuda_device: int = 0
         if not ModelingArgs.synchronous_mode:
             """
@@ -110,17 +108,17 @@ class AlphaZeroManager:
 
         self.n_gen0_games = 4000
         self.n_sync_games = 1000
-        self.c4_base_dir: str = c4_base_dir
+        self.base_dir: str = base_dir
 
         self._net = None
         self._opt = None
 
-        self.stdout_filename = os.path.join(self.c4_base_dir, 'stdout.txt')
-        self.models_dir = os.path.join(self.c4_base_dir, 'models')
-        self.bins_dir = os.path.join(self.c4_base_dir, 'bins')
-        self.players_dir = os.path.join(self.c4_base_dir, 'players')
-        self.checkpoints_dir = os.path.join(self.c4_base_dir, 'checkpoints')
-        self.self_play_data_dir = os.path.join(self.c4_base_dir, 'self-play-data')
+        self.stdout_filename = os.path.join(self.base_dir, 'stdout.txt')
+        self.models_dir = os.path.join(self.base_dir, 'models')
+        self.bins_dir = os.path.join(self.base_dir, 'bins')
+        self.players_dir = os.path.join(self.base_dir, 'players')
+        self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
+        self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
 
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.bins_dir, exist_ok=True)
@@ -163,7 +161,7 @@ class AlphaZeroManager:
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             input_shape = loader.dataset.get_input_shape()
-            self._net = C4Net(input_shape)
+            self._net = self.game_type.net_type.create(input_shape)
             timed_print(f'Creating new net with input shape {input_shape}')
         else:
             gen = checkpoint_info.generation
@@ -174,7 +172,7 @@ class AlphaZeroManager:
             with tempfile.TemporaryDirectory() as tmp:
                 tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
-                self._net = C4Net.load_checkpoint(tmp_checkpoint_filename)
+                self._net = self.game_type.net_type.load_checkpoint(tmp_checkpoint_filename)
 
         self._net.cuda(device=self.py_cuda_device)
         self._net.train()
@@ -254,10 +252,11 @@ class AlphaZeroManager:
         gen = self.get_latest_model_generation()
 
         games_dir = self.get_self_play_data_subdir(gen)
-        c4_bin_src = os.path.join(Repo.root(), 'target/Release/bin/c4')
-        c4_bin_md5 = str(sha256sum(c4_bin_src))
-        c4_bin_tgt = os.path.join(self.bins_dir, c4_bin_md5)
-        rsync_cmd = ['rsync', '-t', c4_bin_src, c4_bin_tgt]
+        bin_name = self.game_type.binary_name
+        bin_src = os.path.join(Repo.root(), f'target/Release/bin/{bin_name}')
+        bin_md5 = str(sha256sum(bin_src))
+        bin_tgt = os.path.join(self.bins_dir, bin_md5)
+        rsync_cmd = ['rsync', '-t', bin_src, bin_tgt]
         subprocess_util.run(rsync_cmd)
 
         if gen == 0:
@@ -286,14 +285,14 @@ class AlphaZeroManager:
         ]
 
         self_play_cmd = [
-            c4_bin_tgt,
+            bin_tgt,
             '-G', n_games,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
 
         competitive_player_args = ['--type=MCTS-C'] + base_player_args
-        competitive_player_str = '%s --player "%s"\n' % (c4_bin_tgt, ' '.join(map(str, competitive_player_args)))
+        competitive_player_str = '%s --player "%s"\n' % (bin_tgt, ' '.join(map(str, competitive_player_args)))
         player_filename = os.path.join(self.players_dir, f'gen-{gen}.txt')
         with open(player_filename, 'w') as f:
             f.write(competitive_player_str)
