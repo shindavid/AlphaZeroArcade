@@ -43,10 +43,6 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
-  boost::filesystem::path default_model_filename_path = util::Repo::root() / "c4_model.ptj";
-  std::string default_model_filename = util::Config::instance()->get(
-      "model_filename", default_model_filename_path.string());
-
   boost::filesystem::path default_profiling_dir_path = util::Repo::root() / "output" / "mcts_profiling";
   std::string default_profiling_dir = util::Config::instance()->get(
       "mcts_profiling_dir", default_profiling_dir_path.string());
@@ -55,8 +51,8 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
 
   return desc
       .template add_option<"model-filename", 'm'>
-          (po::value<std::string>(&model_filename)->default_value(default_model_filename),
-           "model filename. If not specified, a uniform model is implicitly used")
+          (po::value<std::string>(&model_filename),
+          "model filename. If not specified, a uniform model is implicitly used")
       .template add_option<"num-search-threads", 'n'>(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
@@ -1342,7 +1338,7 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
     init_profiling_dir(profiling_dir().string());
   }
 
-  if (params.model_filename.empty()) {
+  if (!params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(this);
   }
   if (num_search_threads() < 1) {
