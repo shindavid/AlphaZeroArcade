@@ -1,5 +1,6 @@
 """
-NOTE: to clearly differentiate the different types of files, I have invented the following extensions:
+NOTE: in pytorch, it is standard to use the .pt extension for all sorts of files. I find this confused. To clearly
+differentiate the different types of files, I have invented the following extensions:
 
 - .ptd: pytorch-data files
 - .ptc: pytorch-checkpoint files
