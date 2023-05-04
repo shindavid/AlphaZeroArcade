@@ -1,3 +1,4 @@
+import math
 from typing import List
 
 import numpy as np
@@ -19,12 +20,13 @@ from util.torch_util import Shape
 class C4Net(NeuralNet):
     def __init__(self, input_shape: Shape, n_conv_filters=64, n_res_blocks=19):
         super(C4Net, self).__init__(input_shape)
+        board_size = math.prod(input_shape[1:])
         self.n_conv_filters = n_conv_filters
         self.n_res_blocks = n_res_blocks
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
-        self.policy_head = PolicyHead(n_conv_filters)
-        self.value_head = ValueHead(n_conv_filters)
+        self.policy_head = PolicyHead(board_size, NUM_COLUMNS, n_conv_filters)
+        self.value_head = ValueHead(board_size, NUM_COLORS, n_conv_filters)
 
     def forward(self, x):
         x = self.conv_block(x)

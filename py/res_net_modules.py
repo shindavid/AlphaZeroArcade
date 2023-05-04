@@ -1,8 +1,6 @@
 from torch import nn as nn
 from torch.nn import functional as F
 
-from connect4.game_logic import NUM_COLUMNS, NUM_ROWS
-
 
 class ConvBlock(nn.Module):
     """
@@ -70,17 +68,19 @@ class PolicyHead(nn.Module):
 
     https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
     """
-    def __init__(self, n_input_channels: int):
+    def __init__(self, board_size: int, n_actions: int, n_input_channels: int):
         super(PolicyHead, self).__init__()
+        self.board_size = board_size
         self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
         self.batch = nn.BatchNorm2d(2)
-        self.linear = nn.Linear(2 * NUM_COLUMNS * NUM_ROWS, NUM_COLUMNS)
+        self.linear = nn.Linear(2 * board_size, n_actions)
+        self.do_print = True
 
     def forward(self, x):
         x = self.conv(x)
         x = self.batch(x)
         x = F.relu(x)
-        x = x.view(-1, 2 * NUM_COLUMNS * NUM_ROWS)
+        x = x.view(-1, 2 * self.board_size)
         x = self.linear(x)
         return x
 
@@ -104,16 +104,17 @@ class ValueHead(nn.Module):
     Here, we are choosing to replace the scalar with a length-p array to generalize for p-player games. The output
     will be interpreted as logit probabilities for the corresponding player's expected win shares.
     """
-    def __init__(self, n_input_channels: int):
+    def __init__(self, board_size: int, n_players: int, n_input_channels: int):
         super(ValueHead, self).__init__()
+        self.board_size = board_size
         self.conv = nn.Conv2d(n_input_channels, 1, kernel_size=1, stride=1, bias=False)
         self.batch = nn.BatchNorm2d(1)
-        self.linear1 = nn.Linear(NUM_COLUMNS * NUM_ROWS, 256)
-        self.linear2 = nn.Linear(256, 2)
+        self.linear1 = nn.Linear(board_size, 256)
+        self.linear2 = nn.Linear(256, n_players)
 
     def forward(self, x):
         x = F.relu(self.batch(self.conv(x)))
-        x = x.view(-1, NUM_COLUMNS * NUM_ROWS)
+        x = x.view(-1, self.board_size)
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
         return x
