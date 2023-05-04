@@ -2,6 +2,7 @@ from typing import Type, Optional
 
 from connect4.tensorizor import C4Net
 from neural_net import NeuralNet
+from othello.othello_net import OthelloNet
 
 
 class GameType:
@@ -12,7 +13,7 @@ class GameType:
 
 
 Connect4 = GameType('c4', C4Net)
-Othello = GameType('othello', None)  # OthelloNet)
+Othello = GameType('othello', OthelloNet)
 
 
 ALL_GAME_TYPES = [Connect4, Othello]
