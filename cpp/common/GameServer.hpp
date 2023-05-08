@@ -33,6 +33,7 @@ public:
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
   using duration_t = std::chrono::nanoseconds;
   using player_id_array_t = std::array<player_id_t, kNumPlayers>;
+  using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
 
   /*
    * A player_instantiation_t is instantiated from a registration_t. See registration_t for more detail.
@@ -102,7 +103,7 @@ private:
     const Params params_;
 
     registration_vec_t registrations_;
-    player_id_array_t random_seat_indices_;
+    seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
     int num_random_seats_ = 0;
 
     mutable std::mutex mutex_;

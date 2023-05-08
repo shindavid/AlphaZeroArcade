@@ -149,10 +149,15 @@ void GameServer<GameState>::SharedData::register_player(
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::SharedData::init_random_seat_indices() {
+  std::bitset<kNumPlayers> fixed_seat_indices;
   for (registration_t& reg : registrations_) {
-    if (reg.seat < 0) {
-      random_seat_indices_[num_random_seats_++] = reg.player_id;
+    if (reg.seat >= 0) {
+      fixed_seat_indices.set(reg.seat);
     }
+  }
+
+  for (seat_index_t random_seat : bitset_util::off_indices(fixed_seat_indices)) {
+    random_seat_indices_[num_random_seats_++] = random_seat;
   }
   util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
 }
@@ -167,15 +172,21 @@ GameServer<GameState>::SharedData::generate_player_order(const player_instantiat
 
   player_instantiation_array_t player_order;
 
+  for (int p = 0; p < kNumPlayers; ++p) {
+    int s = registrations_[p].seat;
+    if (s < 0) continue;
+    player_order[s] = instantiations[p];
+  }
+
   int r = 0;
   for (int p = 0; p < kNumPlayers; ++p) {
-    if (registrations_[p].seat < 0) {
-      player_order[p] = instantiations[random_seat_index_permutation[r++]];
-      util::clean_assert(player_order[p].seat < 0, "unexpected bug (p=%d, seat=%d)", p, (int)player_order[p].seat);
-    } else {
-      player_order[p] = instantiations[p];
-      util::clean_assert(player_order[p].seat >= 0, "unexpected bug (p=%d, seat=%d)", p, (int)player_order[p].seat);
-    }
+    int s = registrations_[p].seat;
+    if (s >= 0) continue;
+    s = random_seat_index_permutation[r++];
+    player_order[s] = instantiations[p];
+  }
+
+  for (int p = 0; p < kNumPlayers; ++p) {
     player_order[p].seat = p;
   }
 
