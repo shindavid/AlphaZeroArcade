@@ -1,3 +1,3 @@
-add_library(connect4
+add_library(connect4-lib
         StaticVars.cpp
         )
