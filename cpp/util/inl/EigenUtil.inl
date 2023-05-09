@@ -59,6 +59,26 @@ void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src) {
   }
 }
 
+template<ShapeConcept Shape, typename TensorT> const auto& slice(const TensorT& tensor, int row) {
+  using Scalar = typename TensorT::Scalar;
+  constexpr int Options = TensorT::Options;
+  using SliceType = Eigen::TensorFixedSize<Scalar, Shape, Options>;
+
+  const Scalar* data = tensor.data();
+  data += Shape::total_size * row;
+  return *reinterpret_cast<const SliceType*>(data);
+}
+
+template<ShapeConcept Shape, typename TensorT> auto& slice(TensorT& tensor, int row) {
+  using Scalar = typename TensorT::Scalar;
+  constexpr int Options = TensorT::Options;
+  using SliceType = Eigen::TensorFixedSize<Scalar, Shape, Options>;
+
+  Scalar* data = tensor.data();
+  data += Shape::total_size * row;
+  return *reinterpret_cast<SliceType*>(data);
+}
+
 template<typename Array> auto softmax(const Array& array) {
   auto normalized_array = array - array.maxCoeff();
   auto z = normalized_array.exp();

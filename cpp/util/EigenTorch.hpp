@@ -32,8 +32,6 @@
  * eigentorch::TensorFixedSize can be thought of as a c++ union of torch::Tensor and Eigen::TensorFixedSize.
  *
  * eigentorch::Tensor can be thought of as a c++ union of torch::Tensor and Eigen::Tensor.
- *
- * eigentorch::Array can be thought of as a c++ union of torch::Tensor and Eigen::Array.
  */
 namespace eigentorch {
 
@@ -120,59 +118,6 @@ public:
 
 private:
   EigenType eigen_tensor_;
-  TorchType torch_tensor_;
-};
-
-/*
- * Can be thought of as a c++ union of torch::Tensor and Eigen::Array.
- *
- * The torch tensor and eigen array will share the same datatype, specified by Scalar_. By default, they will also
- * share the same 2-dimensional shape, specified by Rows_ and Cols_ (or by constructor args if either are Dynamic).
- * The torch shape can be overridden by passing it in as a constructor argument.
- *
- * The recommendation is to do all operations and manipulations via asEigen(), and to only use asTorch() when
- * absolutely needed (i.e., when using as input for neural network evaluation input/output).
- *
- * WARNING: when mixing reading of t.asTorch() with writing of t.asEigen() or similar, I'm not sure if the compiler
- * will know not to reorder those operations.
- */
-template <typename Scalar_, int Rows_, int Cols_, int Options_=Eigen::RowMajor>
-class Array {
-public:
-  using Scalar = Scalar_;
-  static constexpr int Rows = Rows_;
-  static constexpr int Cols = Cols_;
-  static constexpr int Options = Options_;
-  using EigenType = Eigen::Array<Scalar, Rows, Cols, Options>;
-  using EigenSliceType = Eigen::Array<Scalar, 1, Cols, Options>;
-  using TorchType = torch::Tensor;
-
-  /*
-   * The first two constructors have the torch Tensor exactly match the eigen Tensor in shape. The default constructor
-   * is only appropriate in the case where Rows_ and Cols_ are fixed, while the second constructor is only
-   * appropriate when at least one of the two is Dynamic.
-   *
-   * The third and fourth constructor are similar, but also allow you to explicitly specify the torch shape.
-   */
-  Array();
-  Array(int rows, int cols);
-  template<typename IntT, size_t N> Array(const std::array<IntT, N>& torch_shape);
-  template<typename IntT, size_t N> Array(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape);
-
-  /*
-   * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
-   */
-  const EigenSliceType& eigenSlice(int row) const;
-  EigenSliceType& eigenSlice(int row);
-
-  EigenType& asEigen() { return eigen_matrix_; }
-  const EigenType& asEigen() const { return eigen_matrix_; }
-
-  TorchType& asTorch() { return torch_tensor_; }
-  const TorchType& asTorch() const { return torch_tensor_; }
-
-private:
-  EigenType eigen_matrix_;
   TorchType torch_tensor_;
 };
 

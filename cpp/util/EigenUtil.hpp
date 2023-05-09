@@ -186,6 +186,18 @@ template<ptrdiff_t... Indices> struct total_size<Eigen::Sizes<Indices...>> {
 template<typename T> constexpr ptrdiff_t total_size_v = total_size<T>::size;
 
 /*
+ * Accepts an eigen Tensor and an int row.
+ *
+ * Reinterprets the tensor as being of shape (N, Shape...) and returns the row-th slice of the tensor, as an
+ * Eigen::TensorFixedSize of shape Shape.
+ *
+ * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
+ */
+template<ShapeConcept Shape, typename TensorT> const auto& slice(const TensorT& tensor, int row);
+template<ShapeConcept Shape, typename TensorT> auto& slice(TensorT& tensor, int row);
+
+
+/*
  * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */
 template<typename Array> auto softmax(const Array& arr);
