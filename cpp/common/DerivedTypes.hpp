@@ -96,6 +96,7 @@ struct TensorizorTypes {
   template <int NumRows> using InputShapeN = eigen_util::prepend_dim_t<NumRows, InputShape>;
   template <int NumRows> using InputTensorN = eigentorch::TensorFixedSize<dtype, InputShapeN<NumRows>>;
   using InputTensor = eigentorch::TensorFixedSize<dtype, InputShape>;
+  using InputEigenTensor = typename InputTensor::EigenType;
   using DynamicInputTensor = eigentorch::Tensor<dtype, InputShape::count + 1>;
 };
 

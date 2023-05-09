@@ -25,11 +25,13 @@ include_directories(${MY_TINYEXPR_DIR})
 add_executable(c4 cpp/connect4/main/Connect4.cpp)
 #add_executable(dshin_scratch cpp/connect4/main/DshinScratch.cpp)
 add_executable(othello cpp/othello/main/Othello.cpp)
+add_executable(unit_tests_othello cpp/othello/main/UnitTests.cpp)
 
 set(executables
         c4
 #        dshin_scratch
         othello
+        unit_tests_othello
         )
 
 add_subdirectory("cpp/util")
@@ -50,6 +52,8 @@ foreach(tgt ${executables})
     if (${tgt} STREQUAL "c4")
         target_link_libraries(${tgt} connect4-lib)
     elseif (${tgt} STREQUAL "othello")
+        target_link_libraries(${tgt} othello-lib)
+    elseif (${tgt} STREQUAL "unit_tests_othello")
         target_link_libraries(${tgt} othello-lib)
     endif()
     foreach(lib ${common-libs})
