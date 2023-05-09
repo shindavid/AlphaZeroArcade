@@ -57,8 +57,9 @@ BETA_SCALE_FACTOR = 100.0 / np.log(1/.36 - 1)  # 100-point difference correspond
 
 
 class Args:
-    c4_base_dir_root: str
+    alphazero_dir: str
     binary: Optional[str]
+    game: str
     tag: str
     clear_db: bool
     n_games: int
@@ -68,8 +69,9 @@ class Args:
 
     @staticmethod
     def load(args):
-        Args.c4_base_dir_root = args.c4_base_dir_root
+        Args.alphazero_dir = args.alphazero_dir
         Args.binary = args.binary
+        Args.game = args.game
         Args.tag = args.tag
         Args.clear_db = bool(args.clear_db)
         Args.n_games = args.n_games
@@ -83,9 +85,9 @@ def load_args():
     parser = argparse.ArgumentParser()
     cfg = Config.instance()
 
+    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
+    parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
-    cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root',
-                            help='base-dir-root for game/model files')
     parser.add_argument('-b', '--binary', help='binary to use for playing games (default: binary saved by alphazero process')
     parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
     parser.add_argument('-n', '--n-games', type=int, default=64,
@@ -248,9 +250,9 @@ class Agent:
 
 class Arena:
     def __init__(self):
-        self.c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
-        assert os.path.isdir(self.c4_base_dir), self.c4_base_dir
-        self.arena_dir = os.path.join(self.c4_base_dir, 'arena')
+        self.base_dir = os.path.join(Args.base_dir_root, Args.game, Args.tag)
+        assert os.path.isdir(self.base_dir), self.base_dir
+        self.arena_dir = os.path.join(self.base_dir, 'arena')
         os.makedirs(self.arena_dir, exist_ok=True)
 
         self.agents: List[Agent] = []
@@ -288,7 +290,7 @@ class Arena:
             """)
             c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS lookup ON agents (cmd);""")
 
-            players_dir = os.path.join(self.c4_base_dir, 'players')
+            players_dir = os.path.join(self.base_dir, 'players')
             for filename in natsorted(os.listdir(players_dir)):  # gen-13.txt
                 if filename.startswith('.') or not filename.endswith('.txt'):
                     continue
@@ -324,10 +326,10 @@ class Arena:
 
         # TODO: generalize below table for multiplayer games
         c.execute("""CREATE TABLE IF NOT EXISTS matches (
-            agent_id1 INT, 
-            agent_id2 INT, 
-            wins1 INT, 
-            draws INT, 
+            agent_id1 INT,
+            agent_id2 INT,
+            wins1 INT,
+            draws INT,
             wins2 INT);
         """)
         c.execute("""CREATE INDEX IF NOT EXISTS matches_agent_id1 ON matches (agent_id1);""")

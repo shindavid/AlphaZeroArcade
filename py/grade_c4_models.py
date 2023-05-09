@@ -11,7 +11,7 @@ from util.repo_util import Repo
 
 
 class Args:
-    c4_base_dir_root: str
+    alphazero_dir: str
     tag: str
     n_games: int
     mcts_iters: int
@@ -21,7 +21,7 @@ class Args:
 
     @staticmethod
     def load(args):
-        Args.c4_base_dir_root = args.c4_base_dir_root
+        Args.alphazero_dir = args.alphazero_dir
         Args.tag = args.tag
         Args.n_games = args.n_games
         Args.mcts_iters = args.mcts_iters
@@ -36,8 +36,7 @@ def load_args():
     cfg = Config.instance()
 
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
-    cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root',
-                            help='base-dir-root for game/model files')
+    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     parser.add_argument('-n', '--n-games', type=int, default=200,
                         help='number of games to play per generation (default: %(default)s))')
     parser.add_argument('-i', '--mcts-iters', type=int, default=300,
@@ -54,21 +53,21 @@ def load_args():
 
 class ModelGrader:
     def __init__(self):
-        self.c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
-        assert os.path.isdir(self.c4_base_dir), self.c4_base_dir
-        self.grading_logs_dir = os.path.join(self.c4_base_dir, 'grading-logs')
+        self.base_dir = os.path.join(Args.alphazero_dir, 'c4', Args.tag)
+        assert os.path.isdir(self.base_dir), self.base_dir
+        self.grading_logs_dir = os.path.join(self.base_dir, 'grading-logs')
         os.makedirs(self.grading_logs_dir, exist_ok=True)
         self.next_gen = 1
 
     def get_model_filename(self, gen):
-        return os.path.join(self.c4_base_dir, 'models', f'gen-{gen}.ptj')
+        return os.path.join(self.base_dir, 'models', f'gen-{gen}.ptj')
 
     def get_log_filename(self, gen):
         return os.path.join(self.grading_logs_dir, f'gen-{gen}.log')
 
     def grade(self, gen):
-        c4_bin = os.path.join(Repo.root(), 'target/Release/bin/c4')
-        assert os.path.isfile(c4_bin)
+        game_bin = os.path.join(Repo.root(), 'target/Release/bin/c4')
+        assert os.path.isfile(game_bin)
         player_args = [
             '--type=MCTS-C',
             '--name=MCTS',
@@ -84,7 +83,7 @@ class ModelGrader:
         ]
 
         cmd = [
-            c4_bin,
+            game_bin,
             '-G', Args.n_games,
             '-p', Args.parallelism_factor,
             '--player', '"%s"' % (' '.join(map(str, player_args))),

@@ -7,7 +7,7 @@ Usage:
 
 cd py;
 
-./alphazero/main_loop.py -t <TAG>
+./alphazero/main_loop.py -g c4 -t <TAG>
 
 While the above is running, launch the grading daemon, preferably from a different machine:
 
@@ -33,14 +33,14 @@ from config import Config
 
 class Args:
     launch: bool
-    c4_base_dir_root: str
+    alphazero_dir: str
     tag: str
     port: int
 
     @staticmethod
     def load(args):
         Args.launch = bool(args.launch)
-        Args.c4_base_dir_root = args.c4_base_dir_root
+        Args.alphazero_dir = args.alphazero_dir
         Args.tag = args.tag
         Args.port = args.port
 
@@ -53,7 +53,7 @@ def load_args():
 
     parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
-    cfg.add_parser_argument('c4.base_dir_root', parser, '-d', '--c4-base-dir-root', help='base-dir-root for game/model files')
+    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     parser.add_argument('-p', '--port', type=int, default=5006, help='bokeh port (default: %(default)s)')
 
     args = parser.parse_args()
@@ -69,7 +69,7 @@ if not Args.launch:
     sys.exit(os.system(cmd))
 
 
-c4_base_dir = os.path.join(Args.c4_base_dir_root, Args.tag)
+base_dir = os.path.join(Args.base_dir_root, 'c4', Args.tag)
 
 
 class ProgressVisualizer:
@@ -267,7 +267,7 @@ class ProgressVisualizer:
         return inputs
 
 
-viz = ProgressVisualizer(c4_base_dir)
+viz = ProgressVisualizer(base_dir)
 
 
 curdoc().add_root(viz.plot())
