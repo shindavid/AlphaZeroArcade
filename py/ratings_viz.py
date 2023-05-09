@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Use this script to visualize the evolution of ratings of a C4 alphazero run.
+Use this script to visualize the evolution of ratings of an alphazero run.
 
 Usage:
 
@@ -31,6 +31,7 @@ from config import Config
 class Args:
     launch: bool
     alphazero_dir: str
+    game: str
     tag: str
     port: int
 
@@ -38,6 +39,7 @@ class Args:
     def load(args):
         Args.launch = bool(args.launch)
         Args.alphazero_dir = args.alphazero_dir
+        Args.game = args.game
         Args.tag = args.tag
         Args.port = args.port
 
@@ -49,6 +51,7 @@ def load_args():
     cfg = Config.instance()
 
     parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     parser.add_argument('-p', '--port', type=int, default=5006, help='bokeh port (default: %(default)s)')
@@ -66,7 +69,7 @@ if not Args.launch:
     sys.exit(os.system(cmd))
 
 
-base_dir = os.path.join(Args.base_dir_root, 'c4', Args.tag)
+base_dir = os.path.join(Args.alphazero_dir, Args.game, Args.tag)
 
 
 class ProgressVisualizer:

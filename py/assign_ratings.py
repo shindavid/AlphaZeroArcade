@@ -250,7 +250,7 @@ class Agent:
 
 class Arena:
     def __init__(self):
-        self.base_dir = os.path.join(Args.base_dir_root, Args.game, Args.tag)
+        self.base_dir = os.path.join(Args.alphazero_dir, Args.game, Args.tag)
         assert os.path.isdir(self.base_dir), self.base_dir
         self.arena_dir = os.path.join(self.base_dir, 'arena')
         os.makedirs(self.arena_dir, exist_ok=True)

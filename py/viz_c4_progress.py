@@ -69,7 +69,7 @@ if not Args.launch:
     sys.exit(os.system(cmd))
 
 
-base_dir = os.path.join(Args.base_dir_root, 'c4', Args.tag)
+base_dir = os.path.join(Args.alphazero_dir, 'c4', Args.tag)
 
 
 class ProgressVisualizer:
