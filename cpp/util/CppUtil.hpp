@@ -5,8 +5,11 @@
 #include <bitset>
 #include <cstdint>
 #include <tuple>
+#include <typeinfo>
 #include <type_traits>
 #include <unistd.h>
+
+#include <boost/core/demangle.hpp>
 
 #define CONCAT_HELPER(x, y) x ## y
 #define CONCAT(x, y) CONCAT_HELPER(x, y)
@@ -27,6 +30,9 @@
 #define IS_MACRO_ASSIGNED_TO_1(macro) (XSTR(macro)[0] == '1')
 
 namespace util {
+
+template<typename T> std::string get_typename() { return boost::core::demangle(typeid(T).name()); }
+template<typename T> std::string get_typename(const T& t) { return get_typename<T>(); }
 
 /*
  * Returns true if the output is a terminal, false otherwise.
