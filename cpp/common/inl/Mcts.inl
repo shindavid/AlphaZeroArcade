@@ -97,10 +97,10 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::instance_map_;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
-    const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions)
+    const ValueEigenTensor& value, const PolicyEigenTensor& policy, const ActionMask& valid_actions)
 {
   GameStateTypes::global_to_local(policy, valid_actions, local_policy_logit_distr_);
-  value_prob_distr_ = eigen_util::softmax(value);
+  value_prob_distr_ = eigen_util::softmax(eigen_util::reinterpret_as_array(value));
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -217,7 +217,7 @@ inline void Mcts<GameState, Tensorizor>::Node::adopt_children() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline typename Mcts<GameState, Tensorizor>::GlobalPolicyCountDistr
+inline typename Mcts<GameState, Tensorizor>::PolicyEigenTensor
 Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
 {
   // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
@@ -225,15 +225,15 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
   bool eliminated = stats_.eliminated();
 
   seat_index_t cp = stable_data().current_player;
-  GlobalPolicyCountDistr counts;
+  PolicyEigenTensor counts;
   counts.setZero();
   if (eliminated) {
-    ValueArray1DExtrema V_floor_extrema = get_V_floor_extrema_among_children();
-    float max_V_floor = V_floor_extrema.max[cp];
+    ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
+    float max_V_floor = V_floor_extrema.max(cp);
     for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
       Node* child = get_child(c);
       if (child) {
-        counts(child->action()) = (child->stats().V_floor(cp) == max_V_floor);
+        counts.data()[child->action()] = (child->stats().V_floor(cp) == max_V_floor);
       }
     }
     return counts;
@@ -241,7 +241,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
   for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
     Node* child = get_child(c);
     if (child) {
-      counts(child->action()) = child->stats().effective_count();
+      counts.data()[child->action()] = child->stats().effective_count();
     }
   }
   return counts;
@@ -284,8 +284,8 @@ inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueProbDistr& outcome) {
-  ValueArray1DExtrema V_floor_extrema = get_V_floor_extrema_among_children();
-  ValueArray1D V_floor;
+  ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
+  ValueArray V_floor;
   seat_index_t cp = stable_data().current_player;
   for (seat_index_t p = 0; p < kNumPlayers; ++p) {
     if (p == cp) {
@@ -306,12 +306,12 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueP
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts<GameState, Tensorizor>::ValueArray1D
+typename Mcts<GameState, Tensorizor>::ValueArray
 Mcts<GameState, Tensorizor>::Node::make_virtual_loss() const {
   constexpr float x = 1.0 / (kNumPlayers - 1);
-  ValueArray1D virtual_loss;
+  ValueArray virtual_loss;
   virtual_loss.setZero();
-  virtual_loss[stable_data().current_player] = x;
+  virtual_loss(stable_data().current_player) = x;
   return virtual_loss;
 }
 
@@ -351,16 +351,16 @@ Mcts<GameState, Tensorizor>::Node::lookup_child_by_action(action_index_t action)
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::ValueArray1DExtrema
+inline Mcts<GameState, Tensorizor>::ValueArrayExtrema
 Mcts<GameState, Tensorizor>::Node::get_V_floor_extrema_among_children() const {
-  ValueArray1DExtrema extrema;
+  ValueArrayExtrema extrema;
   extrema.min.setConstant(1);
   extrema.max.setConstant(0);
 
   for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
     Node* child = get_child(c);
     if (child) {
-      const ValueArray1D& V_floor = child->stats().V_floor;
+      const ValueArray& V_floor = child->stats().V_floor;
       extrema.min = extrema.min.min(V_floor);
       extrema.max = extrema.max.max(V_floor);
     } else {
@@ -559,12 +559,11 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   bool used_cache = false;
   if (!mcts_->nn_eval_service()) {
     // no-model mode
-    ValueArray1D uniform_value;
-    PolicyArray1D uniform_policy;
+    ValueEigenTensor uniform_value;
+    PolicyEigenTensor uniform_policy;
     uniform_value.setConstant(1.0 / kNumPlayers);
     uniform_policy.setConstant(0);
-    data->evaluation = std::make_shared<NNEvaluation>(
-        uniform_value, uniform_policy, stable_data.valid_action_mask);
+    data->evaluation = std::make_shared<NNEvaluation>(uniform_value, uniform_policy, stable_data.valid_action_mask);
   } else {
     symmetry_index_t sym_index = stable_data.sym_index;
     typename NNEvaluationService::Request request{this, tree, sym_index};
@@ -847,9 +846,9 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_data_t(
     int batch_size)
-: policy(batch_size, kNumGlobalActions, util::to_std_array<int>(batch_size, kNumGlobalActions))
-, value(batch_size, kNumPlayers, util::to_std_array<int>(batch_size, kNumPlayers))
-, input(util::to_std_array<int>(batch_size, util::std_array_v<int, typename Tensorizor::InputShape>))
+: policy(util::to_std_array<int>(batch_size, eigen_util::to_int64_std_array_v<PolicyShape>))
+, value(util::to_std_array<int>(batch_size, kNumPlayers))
+, input(util::to_std_array<int>(batch_size, eigen_util::to_int64_std_array_v<InputShape>))
 {
   input.asEigen().setZero();
   eval_ptr_data = new eval_ptr_data_t[batch_size];
@@ -961,12 +960,11 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   record_for_profiling(kCopyingToPool);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
     eval_ptr_data_t &edata = batch_data_.eval_ptr_data[i];
-    auto &policy = batch_data_.policy.eigenSlab(i);
-    auto &value = batch_data_.value.eigenSlab(i);
+    auto &policy = batch_data_.policy.template eigenSlice<typename GameStateTypes::PolicyShape>(i);
+    auto &value = batch_data_.value.template eigenSlice<typename GameStateTypes::ValueShape>(i);
 
     edata.transform->transform_policy(policy);
-    edata.eval_ptr.store(std::make_shared<NNEvaluation>(
-        eigen_util::to_array1d(value), eigen_util::to_array1d(policy), edata.valid_actions));
+    edata.eval_ptr.store(std::make_shared<NNEvaluation>(value, policy, edata.valid_actions));
   }
 
   record_for_profiling(kAcquiringCacheMutex);
@@ -1093,7 +1091,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   thread->record_for_profiling(SearchThread::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
-  auto& input = batch_data_.input.template eigenSlab<typename TensorizorTypes::InputShape<1>>(reserve_index);
+  auto& input = batch_data_.input.template eigenSlice<InputShape>(reserve_index);
   tensorizor.tensorize(input, state);
   auto transform = tensorizor.get_symmetry(sym_index);
   transform->transform_input(input);
@@ -1436,7 +1434,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
   NNEvaluation_sptr evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
-  results_.counts = root_->get_effective_counts().template cast<dtype>();
+  results_.counts = root_->get_effective_counts();
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }
@@ -1547,20 +1545,21 @@ void Mcts<GameState, Tensorizor>::prune_counts(const SearchParams& search_params
     }
   }
 
-  if (results_.counts.sum() <= 0) {
+  const auto& counts_array = eigen_util::reinterpret_as_array(results_.counts);
+  if (counts_array.sum() <= 0) {
     // can happen in certain edge cases
     results_.counts = orig_counts;
     return;
   }
 
-  if (!results_.counts.isFinite().all()) {
+  if (!counts_array.isFinite().all()) {
     std::cout << "P: " << P.transpose() << std::endl;
     std::cout << "N: " << N.transpose() << std::endl;
     std::cout << "V: " << V.transpose() << std::endl;
     std::cout << "PUCT: " << PUCT.transpose() << std::endl;
     std::cout << "n_forced: " << n_forced.transpose() << std::endl;
-    std::cout << "orig_counts: " << orig_counts.transpose() << std::endl;
-    std::cout << "results_.counts: " << results_.counts.transpose() << std::endl;
+    std::cout << "orig_counts: " << eigen_util::reinterpret_as_array(orig_counts).transpose() << std::endl;
+    std::cout << "results_.counts: " << counts_array.transpose() << std::endl;
     throw util::Exception("prune_counts: counts problem");
   }
 }

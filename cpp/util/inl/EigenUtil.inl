@@ -38,6 +38,27 @@ auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array) {
   return a;
 }
 
+template<FixedTensorConcept DstTensorT, typename SrcTensorT, bool Aligned>
+void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src) {
+  if (Aligned) {
+    dst = src;
+  } else {
+    constexpr bool SrcDstTypeMatch = std::is_same_v<SrcTensorT, DstTensorT>;
+    if (SrcDstTypeMatch) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+      memcpy(&dst, &src, packed_fixed_tensor_size_v<DstTensorT>);
+#pragma GCC diagnostic pop
+    } else {
+      DstTensorT tmp = src;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+      memcpy(&dst, &tmp, packed_fixed_tensor_size_v<DstTensorT>);
+#pragma GCC diagnostic pop
+    }
+  }
+}
+
 template<typename Array> auto softmax(const Array& array) {
   auto normalized_array = array - array.maxCoeff();
   auto z = normalized_array.exp();
@@ -47,10 +68,75 @@ template<typename Array> auto softmax(const Array& array) {
 template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim) {
   using Sizes = extract_sizes_t<Tensor>;
   constexpr int N = Sizes::count;
+  static_assert(N > 0);
+
   Eigen::array<bool, N> rev;
   rev.fill(false);
   rev[dim] = true;
   return tensor.reverse(rev);
+}
+
+template<ShapeConcept Shape>
+auto fixed_bool_tensor_to_std_bitset(const Eigen::TensorFixedSize<bool, Shape, Eigen::RowMajor>& tensor) {
+  constexpr int N = Shape::count;
+  std::bitset<N> bitset;
+  for (int i = 0; i < N; ++i) {
+    bitset[i] = tensor.data()[i];
+  }
+  return bitset;
+}
+
+template<ShapeConcept Shape, size_t N>
+auto std_bitset_to_fixed_bool_tensor(const std::bitset<N>& bitset) {
+  Eigen::TensorFixedSize<bool, Shape, Eigen::RowMajor> tensor;
+  for (int i = 0; i < N; ++i) {
+    tensor.data()[i] = bitset[i];
+  }
+  return tensor;
+}
+
+template<typename Scalar, ShapeConcept Shape, int Options>
+const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
+  constexpr int N = total_size_v<Shape>;
+  using ArrayT = Eigen::Array<Scalar, N, 1>;
+  return reinterpret_cast<const ArrayT&>(tensor);
+}
+
+template<typename Scalar, ShapeConcept Shape, int Options>
+auto& reinterpret_as_array(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
+  constexpr int N = total_size_v<Shape>;
+  using ArrayT = Eigen::Array<Scalar, N, 1>;
+  return reinterpret_cast<ArrayT&>(tensor);
+}
+
+template<ShapeConcept Shape, typename Scalar, int N>
+const auto& reinterpret_as_tensor(const Eigen::Array<Scalar, N, 1>& array) {
+  using TensorT = Eigen::TensorFixedSize<Scalar, Shape, Eigen::RowMajor>;
+  return reinterpret_cast<const TensorT&>(array);
+}
+
+template<ShapeConcept Shape, typename Scalar, int N>
+auto& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array) {
+  using TensorT = Eigen::TensorFixedSize<Scalar, Shape, Eigen::RowMajor>;
+  return reinterpret_cast<TensorT&>(array);
+}
+
+template<typename TensorT> auto sum(const TensorT& tensor) {
+  using Scalar = typename TensorT::Scalar;
+  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.sum();
+  return out;
+}
+
+template<typename TensorT> auto max(const TensorT& tensor) {
+  using Scalar = typename TensorT::Scalar;
+  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.maximum();
+  return out;
+}
+
+template<typename TensorT> auto min(const TensorT& tensor) {
+  using Scalar = typename TensorT::Scalar;
+  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.minimum();
+  return out;
 }
 
 }  // namespace eigen_util

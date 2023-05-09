@@ -34,31 +34,31 @@ TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::DataChunk()
 , value_(value_shape(kRowsPerChunk)) {}
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-typename TrainingDataWriter<GameState_, Tensorizor_>::EigenSlab
-TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_slab() {
+typename TrainingDataWriter<GameState_, Tensorizor_>::TensorRefGroup
+TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_group() {
   int rows = rows_++;
-  return EigenSlab{
-    input_.template eigenSlab<typename TensorizorTypes::InputShape<1>>(rows),
-    policy_.eigenSlab(rows),
-    value_.eigenSlab(rows)
+  return TensorRefGroup{
+    input_.template eigenSlice<InputShape>(rows),
+    policy_.template eigenSlice<PolicyShape>(rows),
+    value_.template eigenSlice<ValueShape>(rows)
     };
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(const ValueEigenSlab& value) {
+void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(const GameOutcome& value) {
   for (int i = 0; i < rows_; ++i) {
-    value_.eigenSlab(i) = value;
+    value_.template eigenSlice<ValueShape>(i) = eigen_util::reinterpret_as_tensor<ValueShape>(value);
   }
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::input_shape(int rows) {
-  return util::to_std_array<int>(rows, util::std_array_v<int, InputShape>);
+  return util::to_std_array<int>(rows, eigen_util::to_int64_std_array_v<InputShape>);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::policy_shape(int rows) {
-  return util::to_std_array<int>(rows, GameState::kNumGlobalActions);
+  return util::to_std_array<int>(rows, eigen_util::to_int64_std_array_v<PolicyShape>);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -67,9 +67,9 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::value_shap
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-typename TrainingDataWriter<GameState_, Tensorizor_>::EigenSlab
-TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_slab() {
-  return get_next_chunk()->get_next_slab();
+typename TrainingDataWriter<GameState_, Tensorizor_>::TensorRefGroup
+TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_group() {
+  return get_next_chunk()->get_next_group();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -82,7 +82,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const ValueEigenSlab& value) {
+void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const GameOutcome& value) {
   for (DataChunk& chunk : chunks_) {
     chunk.record_for_all(value);
   }
@@ -176,8 +176,8 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   }
 
   InputBlob input(input_shape(rows));
-  PolicyBlob policy(rows, PolicySlab::Cols, policy_shape(rows));
-  ValueBlob value(rows, ValueSlab::Cols, value_shape(rows));
+  PolicyBlob policy(policy_shape(rows));
+  ValueBlob value(value_shape(rows));
 
   using namespace torch::indexing;
   for (const DataChunk& chunk : data->chunks()) {

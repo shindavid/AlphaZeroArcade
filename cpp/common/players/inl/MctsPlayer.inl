@@ -167,13 +167,14 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     SearchMode search_mode, const MctsResults* mcts_results, const ActionMask& valid_actions) const
 {
-  GlobalPolicyProbDistr policy;
+  PolicyArray policy;
   ValueProbDistr value;
   if (search_mode == kRawPolicy) {
-    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
+    PolicyProbEigenTensor& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyShape>(policy);
+    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy_tensor);
     value = mcts_results->value_prior;
   } else {
-    policy = mcts_results->counts;
+    policy = eigen_util::reinterpret_as_array(mcts_results->counts);
     float temp = move_temperature_.value();
     if (temp != 0) {
       policy = policy.pow(1.0 / temp);
@@ -185,12 +186,14 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
 
   if (verbose_info_) {
     policy /= policy.sum();
+    PolicyProbEigenTensor& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyShape>(policy);
     verbose_info_->mcts_value = value;
-    GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->mcts_policy);
+    GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->mcts_policy);
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  if (mcts_results->counts.sum() == 0) {
+  const PolicyArray& counts_array = eigen_util::reinterpret_as_array(mcts_results->counts);
+  if (counts_array.sum() == 0) {
     // This happens if eliminations are enabled and if MCTS proves that the position is losing
     return bitset_util::choose_random_on_index(valid_actions);
   }

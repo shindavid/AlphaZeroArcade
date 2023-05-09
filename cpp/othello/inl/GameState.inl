@@ -52,19 +52,19 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
   return reinterpret_cast<ActionMask&>(mask);
 }
 
-template<eigen_util::FixedTensorConcept InputSlab> void GameState::tensorize(InputSlab& tensor) const {
+template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       int index = row * kBoardDimension + col;
       bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
-      tensor(0, 0, row, col) = occupied_by_cur_player;
+      tensor(0, row, col) = occupied_by_cur_player;
     }
   }
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       int index = row * kBoardDimension + col;
       bool occupied_by_opp_player = (1UL << index) & opponent_mask_;
-      tensor(0, 1, row, col) = occupied_by_opp_player;
+      tensor(1, row, col) = occupied_by_opp_player;
     }
   }
 }

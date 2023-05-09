@@ -121,6 +121,13 @@ template<uint64_t... Ints> struct is_uint64_sequence<uint64_sequence<Ints...>> {
 template<typename T> inline constexpr bool is_uint64_sequence_v = is_uint64_sequence<T>::value;
 template<typename T> concept UInt64SequenceConcept = is_uint64_sequence_v<T>;
 
+template<typename T> struct integer_sequence_product {};
+template<typename T> struct integer_sequence_product<std::integer_sequence<T>> { static constexpr T value = 1; };
+template<typename T, T I, T... Is> struct integer_sequence_product<std::integer_sequence<T, I, Is...>> {
+  static constexpr T value = I * integer_sequence_product<std::integer_sequence<T, Is...>>::value;
+};
+template<typename T> static constexpr auto integer_sequence_product_v = integer_sequence_product<T>::value;
+
 /*
  * true: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 1>
  * true: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 5>

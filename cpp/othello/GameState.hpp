@@ -37,9 +37,9 @@ namespace othello {
  */
 class GameState {
 public:
+  using PolicyShape = eigen_util::Shape<kBoardDimension, kBoardDimension>;
   static constexpr int kNumPlayers = othello::kNumPlayers;
-  static constexpr int kNumGlobalActions = othello::kNumGlobalActions;
-  static constexpr int kMaxNumLocalActions = othello::kNumGlobalActions;
+  static constexpr int kMaxNumLocalActions = othello::kMaxNumLocalActions;
   static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
 
   using GameStateTypes = common::GameStateTypes<GameState>;
@@ -54,7 +54,7 @@ public:
   GameOutcome apply_move(common::action_index_t action);
   ActionMask get_valid_actions() const;
 
-  template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;
+  template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
   void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;

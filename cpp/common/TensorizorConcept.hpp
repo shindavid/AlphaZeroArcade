@@ -8,6 +8,7 @@
 #include <common/AbstractSymmetryTransform.hpp>
 #include <common/BasicTypes.hpp>
 #include <util/CppUtil.hpp>
+#include <util/EigenUtil.hpp>
 
 namespace common {
 
@@ -17,12 +18,12 @@ namespace common {
  * A Tensorizor is responsible for converting a GameState into a Tensor.
  */
 template <class Tensorizor, class GameState>
-concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor::InputEigenSlab input)
+concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor::InputEigenTensor input)
 {
   /*
    * The shape of the tensor representation of a game state.
    */
-  { typename Tensorizor::InputShape{} } -> util::IntSequenceConcept;
+  { typename Tensorizor::InputShape{} } -> eigen_util::ShapeConcept;
 
   /*
    * The maximum number of symmetries.
@@ -40,7 +41,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
   { tensorizor.receive_state_change(GameState{}, action_index_t{}) };
 
   /*
-   * Takes an InputSlab reference and writes to it.
+   * Takes an eigen Tensor reference and writes to it.
    */
   { tensorizor.tensorize(input, GameState{}) };
 

@@ -40,8 +40,8 @@ namespace c4 {
  */
 class GameState {
 public:
+  using PolicyShape = eigen_util::Shape<kNumColumns>;
   static constexpr int kNumPlayers = c4::kNumPlayers;
-  static constexpr int kNumGlobalActions = kNumColumns;
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
 
@@ -58,7 +58,7 @@ public:
   ActionMask get_valid_actions() const;
   int get_move_number() const;
 
-  template<eigen_util::FixedTensorConcept InputSlab> void tensorize(InputSlab&) const;
+  template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
   void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }

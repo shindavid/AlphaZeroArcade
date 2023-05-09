@@ -15,9 +15,11 @@ public:
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
   using GameStateTypes = common::GameStateTypes<GameState>;
+  using dtype = typename GameStateTypes::dtype;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
+  using ValueShape = typename GameStateTypes::ValueShape;
+  using PolicyProbTensor = typename GameStateTypes::PolicyTensor;
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
   using TrainingDataWriterParams = typename TrainingDataWriter::Params;
 

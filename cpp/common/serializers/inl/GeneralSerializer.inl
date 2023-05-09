@@ -19,7 +19,7 @@ template <GameStateConcept GameState>
 void GeneralSerializer<GameState>::deserialize_action(const char* buf, action_index_t* action) const {
   *action = boost::lexical_cast<action_index_t>(buf);
 
-  if (*action < 0 || *action >= GameState::kNumGlobalActions) {
+  if (*action < 0 || *action >= GameStateTypes::kNumGlobalActions) {
     throw util::Exception("Invalid action \"%s\" (action=%d)", buf, *action);
   }
 }

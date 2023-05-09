@@ -34,39 +34,45 @@ template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome_<NumPlay
 template<typename GameState>
 struct GameStateTypes {
   using dtype = torch_util::dtype;
+
+  using PolicyShape = typename GameState::PolicyShape;
+  using ValueShape = eigen_util::Shape<GameState::kNumPlayers>;
+
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
+  static constexpr int kNumGlobalActions = PolicyShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
   using GameOutcome = GameOutcome_<kNumPlayers>;
 
-  template <int NumRows> using PolicyArray = eigentorch::Array<dtype, NumRows, kNumGlobalActions, Eigen::RowMajor>;
-  template <int NumRows> using ValueArray = eigentorch::Array<dtype, NumRows, kNumPlayers, Eigen::RowMajor>;
+  template <int NumRows> using PolicyShapeN = eigen_util::prepend_dim_t<NumRows, PolicyShape>;
+  template <int NumRows> using PolicyTensorN = eigentorch::TensorFixedSize<dtype, PolicyShapeN<NumRows>>;
+  using PolicyTensor = eigentorch::TensorFixedSize<dtype, PolicyShape>;
+  using PolicyEigenTensor = typename PolicyTensor::EigenType;
 
-  using PolicySlab = PolicyArray<1>;
-  using ValueSlab = ValueArray<1>;
+  template <int NumRows> using ValueShapeN = eigen_util::prepend_dim_t<NumRows, ValueShape>;
+  template <int NumRows> using ValueTensorN = eigentorch::TensorFixedSize<dtype, ValueShapeN<NumRows>>;
+  using ValueTensor = eigentorch::TensorFixedSize<dtype, ValueShape>;
+  using ValueEigenTensor = typename ValueTensor::EigenType;
 
-  using PolicyEigenSlab = typename PolicySlab::EigenType;
-  using ValueEigenSlab = typename ValueSlab::EigenType;
-
-  using PolicyArray1D = Eigen::Array<dtype, kNumGlobalActions, 1>;
-  using ValueArray1D = Eigen::Array<dtype, kNumPlayers, 1>;
+  // flattened versions of PolicyTensor and ValueTensor
+  using PolicyArray = Eigen::Array<dtype, kNumGlobalActions, 1>;
+  using ValueArray = Eigen::Array<dtype, kNumPlayers, 1>;
 
   using ValueProbDistr = Eigen::Array<dtype, kNumPlayers, 1>;
   using LocalPolicyLogitDistr = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
   using LocalPolicyProbDistr = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
-  using GlobalPolicyCountDistr = Eigen::Array<int, kNumGlobalActions, 1>;
-  using GlobalPolicyProbDistr = Eigen::Array<dtype, kNumGlobalActions, 1>;
+  using DynamicPolicyTensor = eigentorch::Tensor<dtype, PolicyShape::count + 1>;
+  using DynamicValueTensor = eigentorch::Tensor<dtype, ValueShape::count + 1>;
 
   using ActionMask = std::bitset<kNumGlobalActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 
-  static LocalPolicyProbDistr global_to_local(const PolicyArray1D& policy, const ActionMask& mask);
-  static void global_to_local(const PolicyArray1D& policy, const ActionMask& mask, LocalPolicyProbDistr& out);
+  static LocalPolicyProbDistr global_to_local(const PolicyEigenTensor& policy, const ActionMask& mask);
+  static void global_to_local(const PolicyEigenTensor& policy, const ActionMask& mask, LocalPolicyProbDistr& out);
 
-  static PolicyArray1D local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask);
-  static void local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyArray1D& out);
+  static PolicyEigenTensor local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask);
+  static void local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyEigenTensor& out);
 
   /*
    * Provides variable bindings, so that we can specify certain config variables as expressions of game parameters.
@@ -83,18 +89,14 @@ template<typename Tensorizor>
 struct TensorizorTypes {
   using dtype = torch_util::dtype;
   static constexpr int kMaxNumSymmetries = Tensorizor::kMaxNumSymmetries;
-  using BaseInputShape = typename Tensorizor::InputShape;
+  using InputShape = typename Tensorizor::InputShape;
 
   using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 
-  template <int NumRows> using InputShape = eigen_util::to_sizes_t<
-      util::concat_int_sequence_t<util::int_sequence<NumRows>, BaseInputShape>>;
-  template <int NumRows> using InputTensor = eigentorch::TensorFixedSize<dtype, InputShape<NumRows>>;
-
-  using InputSlab = InputTensor<1>;
-  using InputEigenSlab = typename InputSlab::EigenType;
-
-  using DynamicInputTensor = eigentorch::Tensor<dtype, BaseInputShape::size() + 1>;
+  template <int NumRows> using InputShapeN = eigen_util::prepend_dim_t<NumRows, InputShape>;
+  template <int NumRows> using InputTensorN = eigentorch::TensorFixedSize<dtype, InputShapeN<NumRows>>;
+  using InputTensor = eigentorch::TensorFixedSize<dtype, InputShape>;
+  using DynamicInputTensor = eigentorch::Tensor<dtype, InputShape::count + 1>;
 };
 
 template<typename GameState>

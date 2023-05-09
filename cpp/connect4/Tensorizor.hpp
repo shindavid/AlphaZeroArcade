@@ -12,29 +12,33 @@
 #include <connect4/Constants.hpp>
 #include <connect4/GameState.hpp>
 #include <util/CppUtil.hpp>
+#include <util/EigenUtil.hpp>
 
 namespace c4 {
 
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 2;
-  using InputShape = util::int_sequence<kNumPlayers, kNumColumns, kNumRows>;
+  using InputShape = eigen_util::Shape<kNumPlayers, kNumColumns, kNumRows>;
+
+  using GameStateTypes = common::GameStateTypes<GameState>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
-  using InputEigenSlab = TensorizorTypes::InputSlab::EigenType;
+  using InputEigenTensor = TensorizorTypes::InputTensor::EigenType;
+  using PolicyEigenTensor = GameStateTypes::PolicyTensor::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, 2>;
 
   class ReflectionTransform : public SymmetryTransform {
   public:
-    void transform_input(InputEigenSlab& input) override;
-    void transform_policy(PolicyEigenSlab& policy) override;
+    void transform_input(InputEigenTensor& input) override;
+    void transform_policy(PolicyEigenTensor& policy) override;
   };
 
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
-  void tensorize(InputEigenSlab& tensor, const GameState& state) const { state.tensorize(tensor); }
+  void tensorize(InputEigenTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
   SymmetryIndexSet get_symmetry_indices(const GameState&) const;
   SymmetryTransform* get_symmetry(common::symmetry_index_t index) const;

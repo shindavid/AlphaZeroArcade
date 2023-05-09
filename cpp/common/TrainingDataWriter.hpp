@@ -33,36 +33,42 @@ public:
 
   using GameState = GameState_;
   using GameStateTypes = typename common::GameStateTypes<GameState>;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ValueSlab = typename GameStateTypes::ValueSlab;
-  using PolicySlab = typename GameStateTypes::PolicySlab;
-  using ValueEigenSlab = typename GameStateTypes::ValueEigenSlab;
-  using PolicyEigenSlab = typename GameStateTypes::PolicyEigenSlab;
-
   using Tensorizor = Tensorizor_;
   using TensorizorTypes = typename common::TensorizorTypes<Tensorizor>;
-  using InputShape = typename Tensorizor::InputShape;
-  using InputSlab = typename TensorizorTypes::InputSlab;
-  using InputEigenSlab = typename TensorizorTypes::InputEigenSlab;
 
-  static constexpr size_t kBytesPerInputRow = eigen_util::total_size_v<typename InputSlab::Sizes>
-      * sizeof(typename InputSlab::Scalar);
-  static constexpr size_t kBytesPerPolicyRow = PolicySlab::Cols * sizeof(typename PolicySlab::Scalar);
+  using GameOutcome = typename GameStateTypes::GameOutcome;
+
+  using InputShape = typename TensorizorTypes::InputShape;
+  using PolicyShape = typename GameStateTypes::PolicyShape;
+  using ValueShape = typename GameStateTypes::ValueShape;
+
+  using InputTensor = typename TensorizorTypes::InputTensor;
+  using PolicyTensor = typename GameStateTypes::PolicyTensor;
+  using ValueTensor = typename GameStateTypes::ValueTensor;
+
+  using InputEigenTensor = typename InputTensor::EigenType;
+  using PolicyEigenTensor = typename PolicyTensor::EigenType;
+  using ValueEigenTensor = typename ValueTensor::EigenType;
+
+  static constexpr size_t InputScalarSize = sizeof(typename InputTensor::Scalar);
+  static constexpr size_t PolicyScalarSize = sizeof(typename PolicyTensor::Scalar);
+  static constexpr size_t kBytesPerInputRow = eigen_util::total_size_v<typename InputTensor::Sizes> * InputScalarSize;
+  static constexpr size_t kBytesPerPolicyRow = eigen_util::total_size_v<typename PolicyTensor::Sizes> * PolicyScalarSize;
   static constexpr size_t kEigenStackAllocationLimit = EIGEN_STACK_ALLOCATION_LIMIT;
   static constexpr int kRowsPerChunk = kEigenStackAllocationLimit / std::max(kBytesPerInputRow, kBytesPerPolicyRow);
 
-  using InputChunk = typename TensorizorTypes::template InputTensor<kRowsPerChunk>;
-  using PolicyChunk = typename GameStateTypes::template PolicyArray<kRowsPerChunk>;
-  using ValueChunk = typename GameStateTypes::template ValueArray<kRowsPerChunk>;
+  using InputChunk = typename TensorizorTypes::template InputTensorN<kRowsPerChunk>;
+  using PolicyChunk = typename GameStateTypes::template PolicyTensorN<kRowsPerChunk>;
+  using ValueChunk = typename GameStateTypes::template ValueTensorN<kRowsPerChunk>;
 
   using InputBlob = typename TensorizorTypes::DynamicInputTensor;
-  using PolicyBlob = typename GameStateTypes::template PolicyArray<Eigen::Dynamic>;
-  using ValueBlob = typename GameStateTypes::template ValueArray<Eigen::Dynamic>;
+  using PolicyBlob = typename GameStateTypes::DynamicPolicyTensor;
+  using ValueBlob = typename GameStateTypes::DynamicValueTensor;
 
-  struct EigenSlab {
-    InputEigenSlab& input;
-    PolicyEigenSlab& policy;
-    ValueEigenSlab& value;
+  struct TensorRefGroup {
+    InputEigenTensor& input;
+    PolicyEigenTensor& policy;
+    ValueEigenTensor& value;
   };
 
   /*
@@ -72,8 +78,8 @@ public:
   public:
     DataChunk();
 
-    EigenSlab get_next_slab();
-    void record_for_all(const ValueEigenSlab& value);
+    TensorRefGroup get_next_group();
+    void record_for_all(const GameOutcome& value);
     const InputChunk& input() const { return input_; }
     const PolicyChunk& policy() const { return policy_; }
     const ValueChunk& value() const { return value_; }
@@ -99,8 +105,8 @@ public:
    */
   class GameData {
   public:
-    EigenSlab get_next_slab();
-    void record_for_all(const ValueEigenSlab& value);
+    TensorRefGroup get_next_group();
+    void record_for_all(const GameOutcome& value);
 
   protected:
     // friend classes only intended to use these protected members

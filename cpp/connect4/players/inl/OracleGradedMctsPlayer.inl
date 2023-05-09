@@ -74,21 +74,22 @@ inline common::action_index_t OracleGradedMctsPlayer::get_action(
     if (result.score >= 0) {  // winning or drawn position
       assert(search_mode != base_t::kRawPolicy);
       auto policy_prior = GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions);
+      PolicyArray& policy_prior_array = eigen_util::reinterpret_as_array(policy_prior);
 
-      auto visit_counts = mcts_results->counts.cast<torch_util::dtype>();
+      const PolicyArray& visit_counts = eigen_util::reinterpret_as_array(mcts_results->counts);
       auto visit_distr = visit_counts / visit_counts.sum();
-      update_mistake_stats(result, policy_prior, visit_distr, valid_actions, state.get_move_number());
+      update_mistake_stats(result, policy_prior_array, visit_distr, valid_actions, state.get_move_number());
     }
   }
   return this->get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
 inline void OracleGradedMctsPlayer::update_mistake_stats(
-    const PerfectOracle::QueryResult& result, const GlobalPolicyProbDistr& net_policy_t1,
-    const GlobalPolicyProbDistr& posterior_policy_t1, const ActionMask& valid_actions, int move_number) const
+    const PerfectOracle::QueryResult& result, const PolicyArray& net_policy_t1,
+    const PolicyArray& posterior_policy_t1, const ActionMask& valid_actions, int move_number) const
 {
-  GlobalPolicyProbDistr net_policy_t0 = (net_policy_t1 == net_policy_t1.maxCoeff()).template cast<torch_util::dtype>();
-  GlobalPolicyProbDistr posterior_policy_t0 = (posterior_policy_t1 == posterior_policy_t1.maxCoeff()).template cast<torch_util::dtype>();
+  PolicyArray net_policy_t0 = (net_policy_t1 == net_policy_t1.maxCoeff()).template cast<dtype>();
+  PolicyArray posterior_policy_t0 = (posterior_policy_t1 == posterior_policy_t1.maxCoeff()).template cast<dtype>();
 
   net_policy_t0 /= net_policy_t0.sum();
   posterior_policy_t0 /= posterior_policy_t0.sum();

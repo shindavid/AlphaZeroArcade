@@ -47,6 +47,8 @@ protected:
 class OracleGradedMctsPlayer : public common::MctsPlayer<GameState, Tensorizor> {
 public:
   using base_t = common::MctsPlayer<GameState, Tensorizor>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
+  using PolicyArray = typename GameStateTypes::PolicyArray;
 
   template<typename... BaseArgs>
   OracleGradedMctsPlayer(OracleGrader*, BaseArgs&&...);
@@ -57,8 +59,8 @@ public:
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 protected:
-  void update_mistake_stats(const PerfectOracle::QueryResult& result, const GlobalPolicyProbDistr& net_policy,
-                            const GlobalPolicyProbDistr& posterior_policy, const ActionMask& valid_actions,
+  void update_mistake_stats(const PerfectOracle::QueryResult& result, const PolicyArray& net_policy,
+                            const PolicyArray& posterior_policy, const ActionMask& valid_actions,
                             int move_number) const;
 
   OracleGrader* grader_;

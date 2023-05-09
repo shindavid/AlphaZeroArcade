@@ -5,59 +5,59 @@
 
 namespace othello {
 
-inline void Tensorizor::Rotation90Transform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::Rotation90Transform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::Rotation90Transform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::Rotation90Transform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::Rotation180Transform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::Rotation180Transform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::Rotation180Transform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::Rotation180Transform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::Rotation270Transform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::Rotation270Transform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::Rotation270Transform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::Rotation270Transform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalTransform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::ReflectionOverHorizontalTransform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputEigenSlab& tensor) {
+inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputEigenTensor& tensor) {
   throw std::runtime_error("Not implemented");
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_policy(PolicyEigenSlab& vector) {
+inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_policy(PolicyEigenTensor& vector) {
   throw std::runtime_error("Not implemented");
 }
 

@@ -5,12 +5,12 @@
 
 namespace c4 {
 
-inline void Tensorizor::ReflectionTransform::transform_input(InputEigenSlab& tensor) {
-  tensor = eigen_util::reverse(tensor, 2).eval();  // axis 2 corresponds to columns
+inline void Tensorizor::ReflectionTransform::transform_input(InputEigenTensor& tensor) {
+  eigen_util::packed_fixed_tensor_cp(tensor, eigen_util::reverse(tensor, 1).eval());  // axis 1 corresponds to columns
 }
 
-inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenSlab& vector) {
-  std::reverse(vector.begin(), vector.end());
+inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenTensor& policy) {
+  eigen_util::packed_fixed_tensor_cp(policy, eigen_util::reverse(policy, 0).eval());  // axis 0 corresponds to columns
 }
 
 inline Tensorizor::transform_array_t Tensorizor::transforms() {

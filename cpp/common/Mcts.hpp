@@ -50,17 +50,18 @@ private:
   class SearchThread;
 
 public:
+  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
+
   static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
   static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
   static constexpr bool kEnableThreadingDebug = IS_MACRO_ASSIGNED_TO_1(MCTS_THREADING_DEBUG);
   static constexpr bool kDeterministic = IS_MACRO_ASSIGNED_TO_1(DETERMINISTIC_MCTS);
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
+  static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
-  using GameStateTypes = common::GameStateTypes<GameState>;
   using dtype = typename GameStateTypes::dtype;
   using child_index_t = int;
 
@@ -71,19 +72,23 @@ public:
   using ActionMask = typename GameStateTypes::ActionMask;
   using LocalPolicyLogitDistr = typename GameStateTypes::LocalPolicyLogitDistr;
   using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
-  using GlobalPolicyCountDistr = typename GameStateTypes::GlobalPolicyCountDistr;
+  using PolicyEigenTensor = typename GameStateTypes::PolicyEigenTensor;
+  using ValueEigenTensor = typename GameStateTypes::ValueEigenTensor;
+
+  using InputShape = typename TensorizorTypes::InputShape;
+  using PolicyShape = typename GameStateTypes::PolicyShape;
 
   using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
-  using FullValueArray = typename GameStateTypes::template ValueArray<Eigen::Dynamic>;
-  using FullPolicyArray = typename GameStateTypes::template PolicyArray<Eigen::Dynamic>;
-  using ValueArray1D = typename GameStateTypes::ValueArray1D;
-  using PolicyArray1D = typename GameStateTypes::PolicyArray1D;
+  using FullValueTensor = typename GameStateTypes::DynamicValueTensor;
+  using FullPolicyTensor = typename GameStateTypes::DynamicPolicyTensor;
+  using ValueArray = typename GameStateTypes::ValueArray;
+  using PolicyArray = typename GameStateTypes::PolicyArray;
 
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
-  struct ValueArray1DExtrema {
-    ValueArray1D min;
-    ValueArray1D max;
+  struct ValueArrayExtrema {
+    ValueArray min;
+    ValueArray max;
   };
 
   enum DefaultParamsType {
@@ -142,7 +147,7 @@ public:
 private:
   class NNEvaluation {
   public:
-    NNEvaluation(const ValueArray1D& value, const PolicyArray1D& policy, const ActionMask& valid_actions);
+    NNEvaluation(const ValueEigenTensor& value, const PolicyEigenTensor& policy, const ActionMask& valid_actions);
     const ValueProbDistr& value_prob_distr() const { return value_prob_distr_; }
     const LocalPolicyProbDistr& local_policy_logit_distr() const { return local_policy_logit_distr_; }
 
@@ -245,8 +250,8 @@ private:
       bool eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
       auto effective_value_avg(seat_index_t s) const { return has_certain_outcome() ? V_floor(s) : value_avg(s); }
 
-      ValueArray1D value_avg;
-      ValueArray1D V_floor;  // used for eliminations
+      ValueArray value_avg;
+      ValueArray V_floor;  // used for eliminations
       int count = 0;
       int virtual_count = 0;  // only used for debugging
     };
@@ -283,12 +288,12 @@ private:
     std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() const { return stats_mutex_; }
 
-    GlobalPolicyCountDistr get_effective_counts() const;
+    PolicyEigenTensor get_effective_counts() const;
     void backprop(const ValueProbDistr& value);
     void backprop_with_virtual_undo(const ValueProbDistr& value);
     void virtual_backprop();
     void perform_eliminations(const ValueProbDistr& outcome);
-    ValueArray1D make_virtual_loss() const;
+    ValueArray make_virtual_loss() const;
     void mark_as_fully_analyzed();
 
     const stable_data_t& stable_data() const { return stable_data_; }
@@ -309,7 +314,7 @@ private:
     evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
   private:
-    ValueArray1DExtrema get_V_floor_extrema_among_children() const;
+    ValueArrayExtrema get_V_floor_extrema_among_children() const;
 
     std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex evaluation_data_mutex_;
@@ -643,8 +648,8 @@ private:
       batch_data_t(int batch_size);
 
       std::mutex mutex;
-      FullPolicyArray policy;
-      FullValueArray value;
+      FullPolicyTensor policy;
+      FullValueTensor value;
       FullInputTensor input;
       eval_ptr_data_t* eval_ptr_data;
     };

@@ -66,20 +66,20 @@ TensorFixedSize<Scalar_, Sizes_, Options_>::TensorFixedSize(const std::array<Int
 
 template <typename Scalar_, typename Sizes_, int Options_>
 template<typename Sizes>
-const typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSlabType<Sizes>&
-TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlab(int row) const {
+const typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSliceType<Sizes>&
+TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlice(int row) const {
   Scalar* data = eigen_tensor_.data();
   data += Sizes::total_size * row;
-  return *reinterpret_cast<EigenSlabType<Sizes>*>(data);
+  return *reinterpret_cast<EigenSliceType<Sizes>*>(data);
 }
 
 template <typename Scalar_, typename Sizes_, int Options_>
 template<typename Sizes>
-typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSlabType<Sizes>&
-TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlab(int row) {
+typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSliceType<Sizes>&
+TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlice(int row) {
   Scalar* data = eigen_tensor_.data();
   data += Sizes::total_size * row;
-  return *reinterpret_cast<EigenSlabType<Sizes>*>(data);
+  return *reinterpret_cast<EigenSliceType<Sizes>*>(data);
 }
 
 template <typename Scalar_, int Rank_, int Options_>
@@ -99,20 +99,20 @@ Tensor<Scalar_, Rank_, Options_>::Tensor(
 
 template <typename Scalar_, int Rank_, int Options_>
 template<typename Sizes>
-const typename Tensor<Scalar_, Rank_, Options_>::template EigenSlabType<Sizes>&
-Tensor<Scalar_, Rank_, Options_>::eigenSlab(int row) const {
+const typename Tensor<Scalar_, Rank_, Options_>::template EigenSliceType<Sizes>&
+Tensor<Scalar_, Rank_, Options_>::eigenSlice(int row) const {
   Scalar* data = eigen_tensor_.data();
   data += Sizes::total_size * row;
-  return *reinterpret_cast<EigenSlabType<Sizes>*>(data);
+  return *reinterpret_cast<EigenSliceType<Sizes>*>(data);
 }
 
 template <typename Scalar_, int Rank_, int Options_>
 template<typename Sizes>
-typename Tensor<Scalar_, Rank_, Options_>::template EigenSlabType<Sizes>&
-Tensor<Scalar_, Rank_, Options_>::eigenSlab(int row) {
+typename Tensor<Scalar_, Rank_, Options_>::template EigenSliceType<Sizes>&
+Tensor<Scalar_, Rank_, Options_>::eigenSlice(int row) {
   Scalar* data = eigen_tensor_.data();
   data += Sizes::total_size * row;
-  return *reinterpret_cast<EigenSlabType<Sizes>*>(data);
+  return *reinterpret_cast<EigenSliceType<Sizes>*>(data);
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
@@ -150,21 +150,21 @@ Array<Scalar_, Rows_, Cols_, Options_>::Array(int eigen_rows, int eigen_cols, co
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
-const typename Array<Scalar_, Rows_, Cols_, Options_>::EigenSlabType&
-Array<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) const {
+const typename Array<Scalar_, Rows_, Cols_, Options_>::EigenSliceType&
+Array<Scalar_, Rows_, Cols_, Options_>::eigenSlice(int row) const {
   static_assert(Cols != Eigen::Dynamic);
   Scalar* data = eigen_matrix_.data();
   data += Cols * row;
-  return *reinterpret_cast<EigenSlabType*>(data);
+  return *reinterpret_cast<EigenSliceType*>(data);
 }
 
 template <typename Scalar_, int Rows_, int Cols_, int Options_>
-typename Array<Scalar_, Rows_, Cols_, Options_>::EigenSlabType&
-Array<Scalar_, Rows_, Cols_, Options_>::eigenSlab(int row) {
+typename Array<Scalar_, Rows_, Cols_, Options_>::EigenSliceType&
+Array<Scalar_, Rows_, Cols_, Options_>::eigenSlice(int row) {
   static_assert(Cols != Eigen::Dynamic);
   Scalar* data = eigen_matrix_.data();
   data += Cols * row;
-  return *reinterpret_cast<EigenSlabType*>(data);
+  return *reinterpret_cast<EigenSliceType*>(data);
 }
 
 }  // namespace eigentorch

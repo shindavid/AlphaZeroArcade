@@ -4,7 +4,7 @@ namespace common {
 
 template<typename GameState>
 typename GameStateTypes<GameState>::LocalPolicyProbDistr
-GameStateTypes<GameState>::global_to_local(const PolicyArray1D& policy, const ActionMask& mask) {
+GameStateTypes<GameState>::global_to_local(const PolicyEigenTensor& policy, const ActionMask& mask) {
   LocalPolicyProbDistr out;
   global_to_local(policy, mask, out);
   return out;
@@ -12,7 +12,7 @@ GameStateTypes<GameState>::global_to_local(const PolicyArray1D& policy, const Ac
 
 template<typename GameState>
 void GameStateTypes<GameState>::global_to_local(
-    const PolicyArray1D& policy, const ActionMask& mask, LocalPolicyProbDistr& out)
+    const PolicyEigenTensor& policy, const ActionMask& mask, LocalPolicyProbDistr& out)
 {
   out.resize(mask.count());
   int i = 0;
@@ -22,27 +22,28 @@ void GameStateTypes<GameState>::global_to_local(
 }
 
 template<typename GameState>
-typename GameStateTypes<GameState>::PolicyArray1D
+typename GameStateTypes<GameState>::PolicyEigenTensor
 GameStateTypes<GameState>::local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask) {
-  PolicyArray1D out;
+  PolicyEigenTensor out;
   local_to_global(policy, mask, out);
   return out;
 }
 
 template<typename GameState>
 void GameStateTypes<GameState>::local_to_global(
-    const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyArray1D& out)
+    const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyEigenTensor& out)
 {
-  out.setConstant(0);
+  PolicyArray& out_array = eigen_util::reinterpret_as_array(out);
+  out_array.setConstant(0);
   int i = 0;
   for (action_index_t action : bitset_util::on_indices(mask)) {
-    out[action] = policy(i++);
+    out_array[action] = policy(i++);
   }
-  if (out.sum()) {
-    out /= out.sum();
+  if (out_array.sum()) {
+    out_array /= out_array.sum();
   } else {
     for (action_index_t action : bitset_util::on_indices(mask)) {
-      out[action] = 1.0f / mask.count();
+      out_array[action] = 1.0f / mask.count();
     }
   }
 }

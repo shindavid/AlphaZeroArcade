@@ -54,6 +54,7 @@ public:
 
   using GameStateTypes = common::GameStateTypes<GameState>;
 
+  using dtype = typename GameStateTypes::dtype;
   using Mcts = common::Mcts<GameState, Tensorizor>;
   using MctsSearchParams = typename Mcts::SearchParams;
   using MctsResults = common::MctsResults<GameState>;
@@ -63,7 +64,10 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ValueProbDistr = typename Mcts::ValueProbDistr;
   using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
-  using GlobalPolicyProbDistr = typename GameStateTypes::GlobalPolicyProbDistr;
+  using PolicyProbTensor = typename GameStateTypes::PolicyTensor;
+  using PolicyProbEigenTensor = typename PolicyProbTensor::EigenType;
+  using PolicyShape = typename GameStateTypes::PolicyShape;
+  using PolicyArray = typename GameStateTypes::PolicyArray;
 
   MctsPlayer(const Params&, Mcts* mcts);
   template <typename... Ts> MctsPlayer(const Params&, Ts&&... mcts_params_args);

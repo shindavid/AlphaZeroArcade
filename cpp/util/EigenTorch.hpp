@@ -56,14 +56,17 @@ public:
   using Sizes = Sizes_;
   static constexpr int Options = Options_;
   using EigenType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
-  template<typename Sizes> using EigenSlabType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
+  template<typename Sizes> using EigenSliceType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
   using TorchType = torch::Tensor;
 
   TensorFixedSize();
   template<typename IntT, size_t N> TensorFixedSize(const std::array<IntT, N>& torch_shape);
 
-  template<typename Sizes> const EigenSlabType<Sizes>& eigenSlab(int row) const;
-  template<typename Sizes> EigenSlabType<Sizes>& eigenSlab(int row);
+  /*
+   * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
+   */
+  template<typename Sizes> const EigenSliceType<Sizes>& eigenSlice(int row) const;
+  template<typename Sizes> EigenSliceType<Sizes>& eigenSlice(int row);
 
   EigenType& asEigen() { return eigen_tensor_; }
   const EigenType& asEigen() const { return eigen_tensor_; }
@@ -95,7 +98,7 @@ public:
   static constexpr int Rank = Rank_;
   static constexpr int Options = Options_;
   using EigenType = Eigen::Tensor<Scalar, Rank, Options>;
-  template<typename Sizes> using EigenSlabType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
+  template<typename Sizes> using EigenSliceType = Eigen::TensorFixedSize<Scalar, Sizes, Options>;
   using TorchType = torch::Tensor;
 
   template<typename IntT, size_t N> Tensor(const std::array<IntT, N>& eigen_shape);
@@ -103,8 +106,11 @@ public:
   template<typename IntT1, size_t N1, typename IntT2, size_t N2>
   Tensor(const std::array<IntT1, N1>& eigen_shape, const std::array<IntT2, N2>& torch_shape);
 
-  template<typename Sizes> const EigenSlabType<Sizes>& eigenSlab(int row) const;
-  template<typename Sizes> EigenSlabType<Sizes>& eigenSlab(int row);
+  /*
+   * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
+   */
+  template<typename Sizes> const EigenSliceType<Sizes>& eigenSlice(int row) const;
+  template<typename Sizes> EigenSliceType<Sizes>& eigenSlice(int row);
 
   EigenType& asEigen() { return eigen_tensor_; }
   const EigenType& asEigen() const { return eigen_tensor_; }
@@ -138,7 +144,7 @@ public:
   static constexpr int Cols = Cols_;
   static constexpr int Options = Options_;
   using EigenType = Eigen::Array<Scalar, Rows, Cols, Options>;
-  using EigenSlabType = Eigen::Array<Scalar, 1, Cols, Options>;
+  using EigenSliceType = Eigen::Array<Scalar, 1, Cols, Options>;
   using TorchType = torch::Tensor;
 
   /*
@@ -153,8 +159,11 @@ public:
   template<typename IntT, size_t N> Array(const std::array<IntT, N>& torch_shape);
   template<typename IntT, size_t N> Array(int eigen_rows, int eigen_cols, const std::array<IntT, N>& torch_shape);
 
-  const EigenSlabType& eigenSlab(int row) const;
-  EigenSlabType& eigenSlab(int row);
+  /*
+   * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
+   */
+  const EigenSliceType& eigenSlice(int row) const;
+  EigenSliceType& eigenSlice(int row);
 
   EigenType& asEigen() { return eigen_matrix_; }
   const EigenType& asEigen() const { return eigen_matrix_; }
