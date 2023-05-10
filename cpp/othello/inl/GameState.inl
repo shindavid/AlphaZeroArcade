@@ -125,9 +125,10 @@ inline void GameState::dump_mcts_output(
   std::sort(tuples.begin(), tuples.end());
   std::reverse(tuples.begin(), tuples.end());
 
-  int num_actions_to_print = std::min(i, 10);
+  int num_rows = 10;
+  int num_actions = i;
   printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
-  for (i = 0; i < num_actions_to_print; ++i) {
+  for (i = 0; i < std::min(num_rows, num_actions); ++i) {
     const auto& tuple = tuples[i];
 
     float count = std::get<0>(tuple);
@@ -142,6 +143,9 @@ inline void GameState::dump_mcts_output(
       int col = action % kBoardDimension;
       printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1, net_p, count, mcts_p);
     }
+  }
+  for (i = num_actions; i < num_rows; ++i) {
+    printf("\n");
   }
 }
 
