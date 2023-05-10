@@ -726,7 +726,6 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
   E.setZero();
 
   std::bitset<kNumGlobalActions> fpu_bits;
-  fpu_bits.set();
 
   for (child_index_t c = 0; c < tree->stable_data().num_valid_actions(); ++c) {
     /*
@@ -734,7 +733,10 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
      * arbitrarily-partially-written data.
      */
     Node* child = tree->get_child(c);
-    if (!child) continue;
+    if (!child) {
+      fpu_bits[c] = true;
+      continue;
+    }
     auto child_stats = child->stats();  // struct copy to simplify reasoning about race conditions
 
     V(c) = child_stats.effective_value_avg(cp);
