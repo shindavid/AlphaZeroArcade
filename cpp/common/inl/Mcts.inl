@@ -1491,9 +1491,11 @@ inline void Mcts<GameState, Tensorizor>::run_search(SearchThread* thread, int tr
    * - changes in root_ are always synchronized via stop_search_threads()
    * - race-conditions on root_->stats_ reads can at worst cause us to do more visits than required
    */
-  while (thread->needs_more_visits(root_, tree_size_limit)) {
-    thread->visit(root_, 1);
-    thread->dump_profiling_stats();
+  if (!thread->offline_search() && root_->stable_data().num_valid_actions() > 1) {
+    while (thread->needs_more_visits(root_, tree_size_limit)) {
+      thread->visit(root_, 1);
+      thread->dump_profiling_stats();
+    }
   }
 
   std::unique_lock<std::mutex> lock(search_mutex_);

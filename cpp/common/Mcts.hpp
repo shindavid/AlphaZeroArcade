@@ -138,10 +138,11 @@ public:
    * By contrast, Params pertains to a single Mcts instance.
    */
   struct SearchParams {
-    static SearchParams make_offline_params(int limit) { return SearchParams{limit, true}; }
+    static SearchParams make_offline_params(int limit) { return SearchParams{limit, true, true}; }
 
     int tree_size_limit = 100;
     bool disable_exploration = false;
+    bool offline = false;
   };
 
 private:
@@ -338,6 +339,7 @@ private:
     void launch(const SearchParams* search_params);
     bool needs_more_visits(Node* root, int tree_size_limit);
     void visit(Node* tree, int depth);
+    bool offline_search() const { return search_params_->offline; }
 
     enum region_t {
       kCheckVisitReady = 0,
