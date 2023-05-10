@@ -170,7 +170,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
   PolicyArray policy;
   ValueProbDistr value;
   if (search_mode == kRawPolicy) {
-    PolicyProbEigenTensor& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyShape>(policy);
+    auto& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyProbEigenTensor>(policy);
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy_tensor);
     value = mcts_results->value_prior;
   } else {
@@ -186,7 +186,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
 
   if (verbose_info_) {
     policy /= policy.sum();
-    PolicyProbEigenTensor& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyShape>(policy);
+    auto& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyProbEigenTensor>(policy);
     verbose_info_->mcts_value = value;
     GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->mcts_policy);
     verbose_info_->mcts_results = *mcts_results;

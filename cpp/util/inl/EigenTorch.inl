@@ -68,14 +68,14 @@ template <typename Scalar_, typename Sizes_, int Options_>
 template<typename Sizes>
 const typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSliceType<Sizes>&
 TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlice(int row) const {
-  return eigen_util::slice<Sizes>(eigen_tensor_, row);
+  return eigen_util::slice(eigen_tensor_, row);
 }
 
 template <typename Scalar_, typename Sizes_, int Options_>
 template<typename Sizes>
 typename TensorFixedSize<Scalar_, Sizes_, Options_>::template EigenSliceType<Sizes>&
 TensorFixedSize<Scalar_, Sizes_, Options_>::eigenSlice(int row) {
-  return eigen_util::slice<Sizes>(eigen_tensor_, row);
+  return eigen_util::slice(eigen_tensor_, row);
 }
 
 template <typename Scalar_, int Rank_, int Options_>

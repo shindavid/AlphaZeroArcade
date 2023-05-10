@@ -5,60 +5,106 @@
 
 namespace othello {
 
-inline void Tensorizor::Rotation90Transform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline Tensorizor::MatrixT& Tensorizor::slice_as_matrix(InputEigenTensor& input, int row) {
+  return eigen_util::reinterpret_as_matrix<MatrixT>(eigen_util::slice(input, row));
 }
 
-inline void Tensorizor::Rotation90Transform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline Tensorizor::MatrixT& Tensorizor::as_matrix(PolicyEigenTensor& policy) {
+  return eigen_util::reinterpret_as_matrix<MatrixT>(policy);
 }
 
-inline void Tensorizor::Rotation180Transform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::Rotation90Transform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.transposeInPlace();
+    matrix.rowwise().reverseInPlace();
+  }
 }
 
-inline void Tensorizor::Rotation180Transform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::Rotation90Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.rowwise().reverseInPlace();
+  matrix.transposeInPlace();
 }
 
-inline void Tensorizor::Rotation270Transform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::Rotation180Transform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.rowwise().reverseInPlace();
+    matrix.colwise().reverseInPlace();
+  }
 }
 
-inline void Tensorizor::Rotation270Transform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::Rotation180Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.rowwise().reverseInPlace();
+  matrix.colwise().reverseInPlace();
 }
 
-inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::Rotation270Transform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.transposeInPlace();
+    matrix.colwise().reverseInPlace();
+  }
 }
 
-inline void Tensorizor::ReflectionOverHorizontalTransform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::Rotation270Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.colwise().reverseInPlace();
+  matrix.transposeInPlace();
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.colwise().reverseInPlace();
+  }
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::ReflectionOverHorizontalTransform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.colwise().reverseInPlace();
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.transposeInPlace();
+  }
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.transposeInPlace();
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputEigenTensor& tensor) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.rowwise().reverseInPlace();
+  }
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_policy(PolicyEigenTensor& vector) {
-  throw std::runtime_error("Not implemented");
+inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.rowwise().reverseInPlace();
+}
+
+inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputEigenTensor& input) {
+  for (int row = 0; row < 2; ++row) {
+    auto& matrix = slice_as_matrix(input, row);
+    matrix.transposeInPlace();
+    matrix.rowwise().reverseInPlace();
+    matrix.colwise().reverseInPlace();
+  }
+}
+
+inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto& matrix = as_matrix(policy);
+  matrix.transposeInPlace();
+  matrix.rowwise().reverseInPlace();
+  matrix.colwise().reverseInPlace();
 }
 
 inline Tensorizor::transform_array_t Tensorizor::transforms() {

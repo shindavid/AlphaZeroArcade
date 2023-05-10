@@ -47,7 +47,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_group() {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(const GameOutcome& value) {
   for (int i = 0; i < rows_; ++i) {
-    value_.template eigenSlice<ValueShape>(i) = eigen_util::reinterpret_as_tensor<ValueShape>(value);
+    value_.template eigenSlice<ValueShape>(i) = eigen_util::reinterpret_as_tensor<ValueEigenTensor>(value);
   }
 }
 

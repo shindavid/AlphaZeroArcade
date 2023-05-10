@@ -52,8 +52,8 @@ public:
 
   static constexpr size_t InputScalarSize = sizeof(typename InputTensor::Scalar);
   static constexpr size_t PolicyScalarSize = sizeof(typename PolicyTensor::Scalar);
-  static constexpr size_t kBytesPerInputRow = eigen_util::total_size_v<typename InputTensor::Sizes> * InputScalarSize;
-  static constexpr size_t kBytesPerPolicyRow = eigen_util::total_size_v<typename PolicyTensor::Sizes> * PolicyScalarSize;
+  static constexpr size_t kBytesPerInputRow = InputTensor::Sizes::total_size * InputScalarSize;
+  static constexpr size_t kBytesPerPolicyRow = PolicyTensor::Sizes::total_size * PolicyScalarSize;
   static constexpr size_t kEigenStackAllocationLimit = EIGEN_STACK_ALLOCATION_LIMIT;
   static constexpr int kRowsPerChunk = kEigenStackAllocationLimit / std::max(kBytesPerInputRow, kBytesPerPolicyRow);
 

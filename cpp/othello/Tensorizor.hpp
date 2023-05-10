@@ -20,12 +20,19 @@ class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
+  using GameStateTypes = common::GameStateTypes<GameState>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using InputEigenTensor = TensorizorTypes::InputTensor::EigenType;
+  using PolicyEigenTensor = GameStateTypes::PolicyTensor::EigenType;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, kMaxNumSymmetries>;
+
+  using MatrixT = Eigen::Matrix<torch_util::dtype, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
+
+  static MatrixT& slice_as_matrix(InputEigenTensor& input, int row);
+  static MatrixT& as_matrix(PolicyEigenTensor& policy);
 
   struct Rotation90Transform : public SymmetryTransform {
     void transform_input(InputEigenTensor& input) override;

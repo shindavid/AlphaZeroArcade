@@ -34,6 +34,17 @@ template<int64_t N, int64_t... Is> struct prepend_dim<N, Eigen::Sizes<Is...>> {
 template<int64_t N, ShapeConcept Shape> using prepend_dim_t = typename prepend_dim<N, Shape>::type;
 
 /*
+ * subshape_t<Eigen::Sizes<10, 20, 30>> is Eigen::Sizes<20, 30>
+ *
+ * This undoes the effect of prepend_dim_t.
+ */
+template<ShapeConcept Shape> struct subshape {};
+template<int64_t I, int64_t... Is> struct subshape<Eigen::Sizes<I, Is...>> {
+  using type = Eigen::Sizes<Is...>;
+};
+template<ShapeConcept Shape> using subshape_t = typename subshape<Shape>::type;
+
+/*
  * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not well-suited for
  * usages with: (1) fixed dimension Matrices, and (2) a uniform alpha distribution.
  *
@@ -130,11 +141,26 @@ template<typename T, typename S> struct is_fixed_tensor<fixed_tensor_t<T, S>> { 
 template<typename T> inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T>::value;
 template<typename T> concept FixedTensorConcept = is_fixed_tensor_v<T>;
 
+template<typename T> struct is_fixed_matrix { static const bool value = false; };
+template<typename Scalar, int Rows, int Cols, int Options>
+struct is_fixed_matrix<Eigen::Matrix<Scalar, Rows, Cols, Options>> {
+  static constexpr bool value = Rows > 0 && Cols > 0;
+};
+template<typename T> inline constexpr bool is_fixed_matrix_v = is_fixed_matrix<T>::value;
+template<typename T> concept FixedMatrixConcept = is_fixed_matrix_v<T>;
+
 template<FixedTensorConcept FixedTensorT>
 struct packed_fixed_tensor_size {
   static constexpr int value = sizeof(typename FixedTensorT::Scalar) * FixedTensorT::Dimensions::total_size;
 };
 template<FixedTensorConcept FixedTensorT> constexpr int packed_fixed_tensor_size_v = packed_fixed_tensor_size<FixedTensorT>::value;
+
+template<FixedTensorConcept FixedTensorT>
+struct alignment_safe {
+  static constexpr bool value = packed_fixed_tensor_size_v<FixedTensorT> % 8 == 0;
+};
+template<FixedTensorConcept FixedTensorT> constexpr bool alignment_safe_v = alignment_safe<FixedTensorT>::value;
+
 
 /*
  * The naive way to copy to a Eigen::TensorFixedSize is this:
@@ -161,8 +187,7 @@ template<FixedTensorConcept FixedTensorT> constexpr int packed_fixed_tensor_size
  *
  * in order to avoid potential aliasing. See: https://eigen.tuxfamily.org/dox/group__TopicAliasing.html
  */
-template<FixedTensorConcept DstTensorT, typename SrcTensorT,
-    bool Aligned=(packed_fixed_tensor_size_v<DstTensorT> % 8 == 0)>
+template<FixedTensorConcept DstTensorT, typename SrcTensorT, bool Aligned=alignment_safe_v<DstTensorT>>
 void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src);
 
 /*
@@ -171,13 +196,13 @@ void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src);
  * using S = Eigen::Sizes<1, 2, 3>;
  *
  * using T = eigen_util::fixed_tensor_t<float, Eigen::Sizes<1, 2, 3>>;
- * using S = extract_sizes_t<T>;
+ * using S = extract_shape_t<T>;
  */
-template<typename T> struct extract_sizes {};
-template<typename T, typename S> struct extract_sizes<fixed_tensor_t<T, S>> {
+template<typename T> struct extract_shape {};
+template<typename T, typename S> struct extract_shape<fixed_tensor_t<T, S>> {
   using type = S;
 };
-template<typename T> using extract_sizes_t = typename extract_sizes<T>::type;
+template<typename T> using extract_shape_t = typename extract_shape<T>::type;
 
 template<typename T> struct total_size {};
 template<ptrdiff_t... Indices> struct total_size<Eigen::Sizes<Indices...>> {
@@ -191,8 +216,13 @@ template<typename T> constexpr ptrdiff_t total_size_v = total_size<T>::size;
  * Reinterprets the tensor as being of shape (N, Shape...) and returns the row-th slice of the tensor, as an
  * Eigen::TensorFixedSize of shape Shape.
  *
+ * If the input tensor is a TensorFixedSize, then the shape is inferred from the input tensor's shape. Otherwise, the
+ * shape needs to be passed as a template parameter.
+ *
  * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
  */
+template<FixedTensorConcept TensorT> const auto& slice(const TensorT& tensor, int row);
+template<FixedTensorConcept TensorT> auto& slice(TensorT& tensor, int row);
 template<ShapeConcept Shape, typename TensorT> const auto& slice(const TensorT& tensor, int row);
 template<ShapeConcept Shape, typename TensorT> auto& slice(TensorT& tensor, int row);
 
@@ -225,7 +255,9 @@ template<ShapeConcept Shape, size_t N>
 auto std_bitset_to_fixed_bool_tensor(const std::bitset<N>& bitset);
 
 /*
- * Flattens a fixed-size tensor into an Eigen::Array<Scalar, N, 1>
+ * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>
+ *
+ * auto& array = reinterpret_as_array(tensor);
  */
 template<typename Scalar, ShapeConcept Shape, int Options>
 const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
@@ -235,12 +267,28 @@ auto& reinterpret_as_array(Eigen::TensorFixedSize<Scalar, Shape, Options>& tenso
 
 /*
  * Inverse of reinterpret_as_array()
+ *
+ * auto& tensor = reinterpret_as_tensor<TensorT>(array);
+ *
+ * or using c++
  */
-template<ShapeConcept Shape, typename Scalar, int N>
-const auto& reinterpret_as_tensor(const Eigen::Array<Scalar, N, 1>& array);
+template<FixedTensorConcept TensorT, typename Scalar, int N>
+const TensorT& reinterpret_as_tensor(const Eigen::Array<Scalar, N, 1>& array);
 
-template<ShapeConcept Shape, typename Scalar, int N>
-auto& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array);
+template<FixedTensorConcept TensorT, typename Scalar, int N>
+TensorT& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array);
+
+/*
+ * Reinterpret a fixed-size tensor as an Eigen::Matrix.
+ *
+ * auto& tensor = reinterpret_as_matrix<MatrixT>(tensor);
+ */
+template<FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
+const MatrixT& reinterpret_as_matrix(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
+
+template<FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
+MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
+
 
 /*
  * sum(), max(), and min() return a 1-element Eigen::TensorFixedSize. To convert to a scalar, access via (0)
