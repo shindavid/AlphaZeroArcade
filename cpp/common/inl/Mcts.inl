@@ -725,7 +725,7 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
   VN.setZero();
   E.setZero();
 
-  std::bitset<kNumGlobalActions> fpu_bits;
+  std::bitset<kMaxNumLocalActions> fpu_bits;
 
   for (child_index_t c = 0; c < tree->stable_data().num_valid_actions(); ++c) {
     /*
