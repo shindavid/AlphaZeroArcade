@@ -1,5 +1,10 @@
+import math
+from typing import Union
+
 from torch import nn as nn
 from torch.nn import functional as F
+
+from util.torch_util import Shape
 
 
 class ConvBlock(nn.Module):
@@ -68,12 +73,16 @@ class PolicyHead(nn.Module):
 
     https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
     """
-    def __init__(self, board_size: int, n_actions: int, n_input_channels: int):
+    def __init__(self, board_size: int, policy_shape: Union[Shape, int], n_input_channels: int):
         super(PolicyHead, self).__init__()
+        policy_shape = tuple([policy_shape]) if isinstance(policy_shape, int) else policy_shape
         self.board_size = board_size
+        self.policy_shape = policy_shape
+        self.policy_size = math.prod(policy_shape)
+
         self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
         self.batch = nn.BatchNorm2d(2)
-        self.linear = nn.Linear(2 * board_size, n_actions)
+        self.linear = nn.Linear(2 * board_size, self.policy_size)
         self.do_print = True
 
     def forward(self, x):
@@ -82,6 +91,7 @@ class PolicyHead(nn.Module):
         x = F.relu(x)
         x = x.view(-1, 2 * self.board_size)
         x = self.linear(x)
+        x = x.view(-1, *self.policy_shape)
         return x
 
 

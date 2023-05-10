@@ -396,8 +396,11 @@ class AlphaZeroManager:
 
 
 def get_num_correct_policy_predictions(policy_outputs, policy_labels):
-    selected_moves = torch.argmax(policy_outputs, dim=1)
-    correct_policy_preds = policy_labels.gather(1, selected_moves.view(-1, 1))
+    shape = policy_outputs.shape
+    flattened_policy_outputs = policy_outputs.view(shape[0], -1)
+    flattened_policy_labels = policy_labels.view(shape[0], -1)
+    selected_moves = torch.argmax(flattened_policy_outputs, dim=1)
+    correct_policy_preds = flattened_policy_labels.gather(1, selected_moves.view(-1, 1))
     return int(sum(correct_policy_preds))
 
 
