@@ -112,38 +112,35 @@ inline void GameState::dump_mcts_output(
          100 * mcts_value(kWhite));
   printf("\n");
 
-  auto tuple0 = std::make_tuple(valid_actions[0], mcts_counts(0), mcts_policy(0), net_policy(0), 0);
+  auto tuple0 = std::make_tuple(mcts_counts(0), mcts_policy(0), net_policy(0), 0);
   using tuple_t = decltype(tuple0);
   using tuple_array_t = std::array<tuple_t, kNumGlobalActions>;
   tuple_array_t tuples;
-  tuples[0] = tuple0;
-  for (int i = 1; i < kNumGlobalActions; ++i) {
-    tuples[i] = std::make_tuple(valid_actions[i], mcts_counts(i), mcts_policy(i), net_policy(i), i);
+  int i = 0;
+  for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
+    tuples[i] = std::make_tuple(mcts_counts.data()[action], mcts_policy(i), net_policy(i), action);
+    i++;
   }
+
   std::sort(tuples.begin(), tuples.end());
   std::reverse(tuples.begin(), tuples.end());
 
-  constexpr int kNumActionsToPrint = 10;
-  printf("%4s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
-  for (int i = 0; i < kNumActionsToPrint; ++i) {
+  int num_actions_to_print = std::min(i, 10);
+  printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
+  for (i = 0; i < num_actions_to_print; ++i) {
     const auto& tuple = tuples[i];
-    bool valid_action = std::get<0>(tuple);
-    if (!valid_action) {
-      printf("\n");
-      continue;
-    }
 
-    float count = std::get<1>(tuple);
-    auto mcts_p = std::get<2>(tuple);
-    auto net_p = std::get<3>(tuple);
-    int action = std::get<4>(tuple);
+    float count = std::get<0>(tuple);
+    auto mcts_p = std::get<1>(tuple);
+    auto net_p = std::get<2>(tuple);
+    int action = std::get<3>(tuple);
 
     if (action == kPass) {
       printf("%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count, mcts_p);
     } else {
       int row = action / kBoardDimension;
       int col = action % kBoardDimension;
-      printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + row, col + 1, net_p, count, mcts_p);
+      printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1, net_p, count, mcts_p);
     }
   }
 }
