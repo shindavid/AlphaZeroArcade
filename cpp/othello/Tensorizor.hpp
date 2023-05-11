@@ -19,7 +19,7 @@ namespace othello {
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
-  using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
+  using InputShape = eigen_util::Shape<kNumPlayers + 1, kBoardDimension, kBoardDimension>;  // +1 for current-player
   using GameStateTypes = common::GameStateTypes<GameState>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
