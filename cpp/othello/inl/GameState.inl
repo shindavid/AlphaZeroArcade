@@ -67,7 +67,6 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
       tensor(1, row, col) = occupied_by_opp_player;
     }
   }
-  eigen_util::slice(tensor, 2).setConstant(cur_player_);
 }
 
 inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
