@@ -60,6 +60,7 @@ public:
   using InputChunk = typename TensorizorTypes::template InputTensorN<kRowsPerChunk>;
   using PolicyChunk = typename GameStateTypes::template PolicyTensorN<kRowsPerChunk>;
   using ValueChunk = typename GameStateTypes::template ValueTensorN<kRowsPerChunk>;
+  using CurrentPlayerChunk = Eigen::Array<seat_index_t, kRowsPerChunk, 1>;
 
   using InputBlob = typename TensorizorTypes::DynamicInputTensor;
   using PolicyBlob = typename GameStateTypes::DynamicPolicyTensor;
@@ -69,6 +70,7 @@ public:
     InputEigenTensor& input;
     PolicyEigenTensor& policy;
     ValueEigenTensor& value;
+    seat_index_t& current_player;
   };
 
   /*
@@ -90,6 +92,7 @@ public:
     InputChunk input_;
     PolicyChunk policy_;
     ValueChunk value_;
+    CurrentPlayerChunk current_player_;
 
     int rows_ = 0;
   };

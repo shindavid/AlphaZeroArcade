@@ -40,14 +40,17 @@ TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_group() {
   return TensorRefGroup{
     input_.template eigenSlice<InputShape>(rows),
     policy_.template eigenSlice<PolicyShape>(rows),
-    value_.template eigenSlice<ValueShape>(rows)
+    value_.template eigenSlice<ValueShape>(rows),
+    current_player_[rows]
     };
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(const GameOutcome& value) {
   for (int i = 0; i < rows_; ++i) {
-    value_.template eigenSlice<ValueShape>(i) = eigen_util::reinterpret_as_tensor<ValueEigenTensor>(value);
+    GameOutcome shifted_value = value;
+    eigen_util::left_rotate(shifted_value, current_player_[i]);
+    value_.template eigenSlice<ValueShape>(i) = eigen_util::reinterpret_as_tensor<ValueEigenTensor>(shifted_value);
   }
 }
 

@@ -83,6 +83,7 @@ public:
   using FullPolicyTensor = typename GameStateTypes::DynamicPolicyTensor;
   using ValueArray = typename GameStateTypes::ValueArray;
   using PolicyArray = typename GameStateTypes::PolicyArray;
+  using FullCurrentPlayerArray = Eigen::Array<seat_index_t, Eigen::Dynamic, 1>;
 
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
@@ -648,11 +649,13 @@ private:
     NeuralNet net_;
     struct batch_data_t {
       batch_data_t(int batch_size);
+      ~batch_data_t();
 
       std::mutex mutex;
       FullPolicyTensor policy;
       FullValueTensor value;
       FullInputTensor input;
+      FullCurrentPlayerArray current_player;
       eval_ptr_data_t* eval_ptr_data;
     };
     batch_data_t batch_data_;
