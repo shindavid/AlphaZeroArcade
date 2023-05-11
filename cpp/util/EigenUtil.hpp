@@ -297,6 +297,19 @@ template<typename TensorT> auto sum(const TensorT& tensor);
 template<typename TensorT> auto max(const TensorT& tensor);
 template<typename TensorT> auto min(const TensorT& tensor);
 
+/*
+ * left_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]
+ * left_rotate([0, 1, 2, 3], 1) -> [1, 2, 3, 0]
+ * left_rotate([0, 1, 2, 3], 2) -> [2, 3, 0, 1]
+ * left_rotate([0, 1, 2, 3], 3) -> [3, 0, 1, 2]
+ *
+ * right_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]
+ * right_rotate([0, 1, 2, 3], 1) -> [3, 0, 1, 2]
+ * right_rotate([0, 1, 2, 3], 2) -> [2, 3, 0, 1]
+ * right_rotate([0, 1, 2, 3], 3) -> [1, 2, 3, 0]
+ */
+template<typename Scalar, int N> void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
+template<typename Scalar, int N> void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
 
 }  // namespace eigen_util
 

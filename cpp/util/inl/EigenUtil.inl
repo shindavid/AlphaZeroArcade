@@ -201,4 +201,14 @@ template<typename TensorT> auto min(const TensorT& tensor) {
   return out;
 }
 
+template<typename Scalar, int N> void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n) {
+  Scalar* data = array.data();
+  std::rotate(data, data + n, data + N);
+}
+
+template<typename Scalar, int N> void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n) {
+  Scalar* data = array.data();
+  std::rotate(data, data + N - n, data + N);
+}
+
 }  // namespace eigen_util
