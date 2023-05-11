@@ -857,9 +857,13 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_dat
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::~batch_data_t() {
+  delete[] eval_ptr_data;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluationService::~NNEvaluationService() {
   disconnect();
-  delete[] batch_data_.eval_ptr_data;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

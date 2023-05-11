@@ -648,6 +648,7 @@ private:
     NeuralNet net_;
     struct batch_data_t {
       batch_data_t(int batch_size);
+      ~batch_data_t();
 
       std::mutex mutex;
       FullPolicyTensor policy;
