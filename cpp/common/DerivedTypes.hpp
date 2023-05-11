@@ -27,9 +27,9 @@ namespace common {
  *
  * If the game is not yet over, the outcome will have all zeros.
  */
-template<int NumPlayers> using GameOutcome_ = Eigen::Array<torch_util::dtype, NumPlayers, 1>;
-template<int NumPlayers> bool is_terminal_outcome(const GameOutcome_<NumPlayers>& outcome) { return outcome.sum() > 0; }
-template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome_<NumPlayers> o; o.setZero(); return o; }
+template<int NumPlayers> using GameOutcome = Eigen::Array<torch_util::dtype, NumPlayers, 1>;
+template<int NumPlayers> bool is_terminal_outcome(const GameOutcome<NumPlayers>& outcome) { return outcome.sum() > 0; }
+template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome<NumPlayers> o; o.setZero(); return o; }
 
 template<typename GameState>
 struct GameStateTypes {
@@ -42,7 +42,7 @@ struct GameStateTypes {
   static constexpr int kNumGlobalActions = PolicyShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using GameOutcome = GameOutcome_<kNumPlayers>;
+  using GameOutcome = common::GameOutcome<kNumPlayers>;
 
   template <int NumRows> using PolicyShapeN = eigen_util::prepend_dim_t<NumRows, PolicyShape>;
   template <int NumRows> using PolicyTensorN = eigentorch::TensorFixedSize<dtype, PolicyShapeN<NumRows>>;
