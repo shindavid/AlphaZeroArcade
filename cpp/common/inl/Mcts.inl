@@ -851,6 +851,7 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_dat
 : policy(util::to_std_array<int>(batch_size, eigen_util::to_int64_std_array_v<PolicyShape>))
 , value(util::to_std_array<int>(batch_size, kNumPlayers))
 , input(util::to_std_array<int>(batch_size, eigen_util::to_int64_std_array_v<InputShape>))
+, current_player(batch_size)
 {
   input.asEigen().setZero();
   eval_ptr_data = new eval_ptr_data_t[batch_size];
@@ -968,7 +969,9 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
     eval_ptr_data_t &edata = batch_data_.eval_ptr_data[i];
     auto &policy = batch_data_.policy.template eigenSlice<typename GameStateTypes::PolicyShape>(i);
     auto &value = batch_data_.value.template eigenSlice<typename GameStateTypes::ValueShape>(i);
+    seat_index_t current_player = batch_data_.current_player[i];
 
+    eigen_util::right_rotate(eigen_util::reinterpret_as_array(value), current_player);
     edata.transform->transform_policy(policy);
     edata.eval_ptr.store(std::make_shared<NNEvaluation>(value, policy, edata.valid_actions));
   }
@@ -1092,6 +1095,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   const Tensorizor& tensorizor = stable_data.tensorizor;
   const GameState& state = stable_data.state;
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
+  seat_index_t current_player = stable_data.current_player;
   symmetry_index_t sym_index = cache_key.sym_index;
 
   thread->record_for_profiling(SearchThread::kTensorizing);
@@ -1102,6 +1106,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   auto transform = tensorizor.get_symmetry(sym_index);
   transform->transform_input(input);
 
+  batch_data_.current_player[reserve_index] = current_player;
   batch_data_.eval_ptr_data[reserve_index].eval_ptr.store(nullptr);
   batch_data_.eval_ptr_data[reserve_index].cache_key = cache_key;
   batch_data_.eval_ptr_data[reserve_index].valid_actions = valid_action_mask;

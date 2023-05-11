@@ -56,6 +56,7 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   auto group = game_data_->get_next_group();
   auto& input = group.input;
   auto& policy = group.policy;
+  auto& current_player = group.current_player;
 
   this->tensorizor_.tensorize(input, state);
 
@@ -69,6 +70,7 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   }
 
   policy_array /= sum;
+  current_player = this->get_my_seat();
 }
 
 }  // namespace common
