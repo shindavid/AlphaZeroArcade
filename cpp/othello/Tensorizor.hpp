@@ -13,12 +13,18 @@
 #include <othello/GameState.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/TorchUtil.hpp>
 
 namespace othello {
 
+/*
+ * Note: all the transforms leave the center 4 squares of the board untouched. This is done because of the
+ * (questionable?) decision to encode the "pass" move as the center D4 square.
+ */
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
+  using dtype = torch_util::dtype;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
   using GameStateTypes = common::GameStateTypes<GameState>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
@@ -30,6 +36,16 @@ public:
   using transform_array_t = std::array<SymmetryTransform*, kMaxNumSymmetries>;
 
   using MatrixT = Eigen::Matrix<torch_util::dtype, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
+
+  struct CenterFourSquares {
+    dtype starting_white1;
+    dtype starting_white2;
+    dtype starting_black1;
+    dtype starting_black2;
+  };
+
+  static CenterFourSquares get_center_four_squares(const PolicyEigenTensor& policy);
+  static void set_center_four_squares(PolicyEigenTensor& policy, const CenterFourSquares& center_four_squares);
 
   static MatrixT& slice_as_matrix(InputEigenTensor& input, int row);
   static MatrixT& as_matrix(PolicyEigenTensor& policy);

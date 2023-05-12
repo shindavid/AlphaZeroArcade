@@ -1,9 +1,28 @@
 #include <othello/Tensorizor.hpp>
 
+#include <othello/Constants.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Random.hpp>
 
 namespace othello {
+
+inline Tensorizor::CenterFourSquares Tensorizor::get_center_four_squares(const PolicyEigenTensor& policy) {
+  CenterFourSquares center;
+  center.starting_white1 = policy.data()[kStartingWhite1];
+  center.starting_white2 = policy.data()[kStartingWhite2];
+  center.starting_black1 = policy.data()[kStartingBlack1];
+  center.starting_black2 = policy.data()[kStartingBlack2];
+  return center;
+}
+
+inline void Tensorizor::set_center_four_squares(PolicyEigenTensor& policy, const CenterFourSquares& center_four_squares)
+{
+  policy.data()[kStartingWhite1] = center_four_squares.starting_white1;
+  policy.data()[kStartingWhite2] = center_four_squares.starting_white2;
+  policy.data()[kStartingBlack1] = center_four_squares.starting_black1;
+  policy.data()[kStartingBlack2] = center_four_squares.starting_black2;
+}
+
 
 inline Tensorizor::MatrixT& Tensorizor::slice_as_matrix(InputEigenTensor& input, int row) {
   return eigen_util::reinterpret_as_matrix<MatrixT>(eigen_util::slice(input, row));
@@ -22,9 +41,11 @@ inline void Tensorizor::Rotation90Transform::transform_input(InputEigenTensor& i
 }
 
 inline void Tensorizor::Rotation90Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.rowwise().reverseInPlace();
   matrix.transposeInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline void Tensorizor::Rotation180Transform::transform_input(InputEigenTensor& input) {
@@ -36,9 +57,11 @@ inline void Tensorizor::Rotation180Transform::transform_input(InputEigenTensor& 
 }
 
 inline void Tensorizor::Rotation180Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.rowwise().reverseInPlace();
   matrix.colwise().reverseInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline void Tensorizor::Rotation270Transform::transform_input(InputEigenTensor& input) {
@@ -50,9 +73,11 @@ inline void Tensorizor::Rotation270Transform::transform_input(InputEigenTensor& 
 }
 
 inline void Tensorizor::Rotation270Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.colwise().reverseInPlace();
   matrix.transposeInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputEigenTensor& input) {
@@ -63,8 +88,10 @@ inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(Input
 }
 
 inline void Tensorizor::ReflectionOverHorizontalTransform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.colwise().reverseInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputEigenTensor& input) {
@@ -75,8 +102,10 @@ inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transfo
 }
 
 inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.transposeInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputEigenTensor& input) {
@@ -87,8 +116,10 @@ inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transf
 }
 
 inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.rowwise().reverseInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputEigenTensor& input) {
@@ -101,10 +132,12 @@ inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transf
 }
 
 inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_policy(PolicyEigenTensor& policy) {
+  auto center = get_center_four_squares(policy);
   auto& matrix = as_matrix(policy);
   matrix.transposeInPlace();
   matrix.rowwise().reverseInPlace();
   matrix.colwise().reverseInPlace();
+  set_center_four_squares(policy, center);
 }
 
 inline Tensorizor::transform_array_t Tensorizor::transforms() {
