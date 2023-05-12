@@ -15,11 +15,11 @@ public:
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
   using GameStateTypes = common::GameStateTypes<GameState>;
+  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using dtype = typename GameStateTypes::dtype;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ValueShape = typename GameStateTypes::ValueShape;
-  using PolicyProbTensor = typename GameStateTypes::PolicyTensor;
+  using InputEigenTensor = typename TensorizorTypes::InputEigenTensor;
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
   using TrainingDataWriterParams = typename TrainingDataWriter::Params;
 
@@ -27,7 +27,6 @@ public:
   using Params = base_t::Params;
   using Mcts = base_t::Mcts;
   using MctsResults = base_t::MctsResults;
-  using player_array_t = base_t::player_array_t;
 
   template<typename... BaseArgs>
   DataExportingMctsPlayer(const TrainingDataWriterParams& writer_params, BaseArgs&&...);
@@ -39,7 +38,7 @@ public:
   void end_game(const GameState&, const GameOutcome&) override;
 
 protected:
-  void record_position(const GameState& state, const MctsResults*);
+  void record_position(const GameState& state, const ActionMask& valid_actions, const MctsResults*);
 
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameData_sptr game_data_;

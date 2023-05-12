@@ -35,7 +35,7 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
   const MctsResults* mcts_results = this->mcts_search(state, search_mode);
 
   if (search_mode == base_t::kFull) {
-    record_position(state, mcts_results);
+    record_position(state, valid_actions, mcts_results);
   }
   return base_t::get_action_helper(search_mode, mcts_results, valid_actions);
 }
@@ -51,26 +51,36 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
-    const GameState& state, const MctsResults* mcts_results)
+    const GameState& state, const ActionMask& valid_actions, const MctsResults* mcts_results)
 {
-  auto group = game_data_->get_next_group();
-  auto& input = group.input;
-  auto& policy = group.policy;
-  auto& current_player = group.current_player;
-
-  this->tensorizor_.tensorize(input, state);
-
-  policy = mcts_results->counts;
+  auto policy = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   float sum = policy_array.sum();
   if (sum == 0) {
     // Happens if eliminations is enabled and MCTS proves that the position is losing.
-    policy_array.setConstant(1.0);
-    sum = policy_array.sum();
+    float p = 1.0 / valid_actions.count();
+    for (action_index_t a : bitset_util::on_indices(valid_actions)) {
+      policy_array[a] = p;
+    }
+  } else {
+    policy_array /= sum;
   }
 
-  policy_array /= sum;
-  current_player = this->get_my_seat();
+  InputEigenTensor input;
+  this->tensorizor_.tensorize(input, state);
+
+  auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
+  for (symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
+    auto group = game_data_->get_next_group();
+
+    group.input = input;
+    group.policy = policy;
+    group.current_player = this->get_my_seat();
+
+    auto transform = this->tensorizor_.get_symmetry(sym_index);
+    transform->transform_input(group.input);
+    transform->transform_policy(group.policy);
+  }
 }
 
 }  // namespace common
