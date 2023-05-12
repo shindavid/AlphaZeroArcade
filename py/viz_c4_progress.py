@@ -209,7 +209,8 @@ class ProgressVisualizer:
         source.data = dict(self.data)
         x = self.data['x']
 
-        plot = figure(height=600, width=800, title='Mistake Rate', x_range=[x[0], x[-1]], y_range=[0, 1],
+        title = f'{Args.tag} Mistake Rate'
+        plot = figure(height=600, width=800, title=title, x_range=[x[0], x[-1]], y_range=[0, 1],
                       y_axis_label='Mistake Rate', x_axis_label='Generation')  # , tools='wheel_zoom')
         plot.line('x', 'b', source=source, line_color='blue', legend_label='baseline')
         plot.line('x', 'n1', source=source, line_color='green', legend_label='net (temp=1)')
