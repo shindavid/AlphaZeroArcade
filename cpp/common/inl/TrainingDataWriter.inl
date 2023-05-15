@@ -72,12 +72,14 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::value_shap
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::TensorRefGroup
 TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_group() {
+  std::unique_lock<std::mutex> lock(mutex_);
   return get_next_chunk()->get_next_group();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::DataChunk*
 TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
+  std::unique_lock<std::mutex> lock(mutex_);
   if (chunks_.empty() || chunks_.back().full()) {
     chunks_.emplace_back();
   }
@@ -86,6 +88,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const GameOutcome& value) {
+  std::unique_lock<std::mutex> lock(mutex_);
   for (DataChunk& chunk : chunks_) {
     chunk.record_for_all(value);
   }

@@ -124,6 +124,8 @@ public:
   private:
     // friend classes not intended to use these private members
     DataChunk* get_next_chunk();
+
+    std::mutex mutex_;
     data_chunk_list_t chunks_;
     const game_id_t id_;
     bool closed_ = false;
