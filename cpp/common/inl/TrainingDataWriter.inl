@@ -79,7 +79,6 @@ TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_group() {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::DataChunk*
 TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
-  std::unique_lock<std::mutex> lock(mutex_);
   if (chunks_.empty() || chunks_.back().full()) {
     chunks_.emplace_back();
   }
