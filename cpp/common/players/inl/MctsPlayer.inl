@@ -167,26 +167,28 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     SearchMode search_mode, const MctsResults* mcts_results, const ActionMask& valid_actions) const
 {
-  PolicyArray policy;
-  ValueProbDistr value;
+  PolicyTensor policy_tensor;
+  ValueArray value;
   if (search_mode == kRawPolicy) {
-    auto& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyProbEigenTensor>(policy);
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy_tensor);
     value = mcts_results->value_prior;
   } else {
-    policy = eigen_util::reinterpret_as_array(mcts_results->counts);
+    policy_tensor = mcts_results->counts;
+    value = mcts_results->win_rates;
+  }
+
+  PolicyArray policy = eigen_util::reinterpret_as_array(policy_tensor);
+  if (search_mode != kRawPolicy) {
     float temp = move_temperature_.value();
     if (temp != 0) {
       policy = policy.pow(1.0 / temp);
     } else {
       policy = (policy == policy.maxCoeff()).template cast<torch_util::dtype>();
     }
-    value = mcts_results->win_rates;
   }
 
   if (verbose_info_) {
     policy /= policy.sum();
-    auto& policy_tensor = eigen_util::reinterpret_as_tensor<PolicyProbEigenTensor>(policy);
     verbose_info_->mcts_value = value;
     GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->mcts_policy);
     verbose_info_->mcts_results = *mcts_results;

@@ -28,49 +28,33 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::DataChunk()
-: input_(input_shape(kRowsPerChunk))
-, policy_(policy_shape(kRowsPerChunk))
-, value_(value_shape(kRowsPerChunk)) {}
+TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::DataChunk() {
+  tensors_ = new TensorGroup[kRowsPerChunk];
+}
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-typename TrainingDataWriter<GameState_, Tensorizor_>::TensorRefGroup
+TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::~DataChunk() {
+  delete[] tensors_;
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+typename TrainingDataWriter<GameState_, Tensorizor_>::TensorGroup&
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_group() {
-  int rows = rows_++;
-  return TensorRefGroup{
-    input_.template eigenSlice<InputShape>(rows),
-    policy_.template eigenSlice<PolicyShape>(rows),
-    value_.template eigenSlice<ValueShape>(rows),
-    current_player_[rows]
-    };
+  return tensors_[rows_++];
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(const GameOutcome& value) {
   for (int i = 0; i < rows_; ++i) {
+    TensorGroup& group = tensors_[i];
     GameOutcome shifted_value = value;
-    eigen_util::left_rotate(shifted_value, current_player_[i]);
-    value_.template eigenSlice<ValueShape>(i) = eigen_util::reinterpret_as_tensor<ValueEigenTensor>(shifted_value);
+    eigen_util::left_rotate(shifted_value, group.current_player);
+    group.value = eigen_util::reinterpret_as_tensor<ValueTensor>(shifted_value);
   }
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::input_shape(int rows) {
-  return util::to_std_array<int>(rows, eigen_util::to_int64_std_array_v<InputShape>);
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::policy_shape(int rows) {
-  return util::to_std_array<int>(rows, eigen_util::to_int64_std_array_v<PolicyShape>);
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-auto TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter::value_shape(int rows) {
-  return util::to_std_array<int>(rows, GameState::kNumPlayers);
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-typename TrainingDataWriter<GameState_, Tensorizor_>::TensorRefGroup
+typename TrainingDataWriter<GameState_, Tensorizor_>::TensorGroup&
 TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_group() {
   std::unique_lock<std::mutex> lock(mutex_);
   return get_next_chunk()->get_next_group();
@@ -175,23 +159,38 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* data) {
-  int rows = 0;
+  int total_rows = 0;
   for (const DataChunk& chunk : data->chunks()) {
-    rows += chunk.rows();
+    total_rows += chunk.rows();
   }
 
-  InputBlob input(input_shape(rows));
-  PolicyBlob policy(policy_shape(rows));
-  ValueBlob value(value_shape(rows));
+  auto input_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<InputShape>);
+  auto policy_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<PolicyShape>);
+  auto value_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<ValueShape>);
 
-  using namespace torch::indexing;
+  torch::Tensor input = torch::empty(input_shape, torch_util::to_dtype_v<InputScalar>);
+  torch::Tensor policy = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
+  torch::Tensor value = torch::empty(value_shape, torch_util::to_dtype_v<ValueScalar>);
+
+  constexpr size_t input_size = InputShape::total_size;
+  constexpr size_t policy_size = PolicyShape::total_size;
+  constexpr size_t value_size = ValueShape::total_size;
+
+  InputScalar* input_data = input.data_ptr<InputScalar>();
+  PolicyScalar* policy_data = policy.data_ptr<PolicyScalar>();
+  ValueScalar* value_data = value.data_ptr<ValueScalar>();
+
+  int rows = 0;
   for (const DataChunk& chunk : data->chunks()) {
-    auto write_slice = Slice(0, rows);
-    auto read_slice = Slice(0, chunk.rows());
+    for (int r = 0; r < chunk.rows(); ++r) {
+      const TensorGroup& group = chunk.get_group(r);
 
-    input.asTorch().index_put_({write_slice}, chunk.input().asTorch().index({read_slice}));
-    policy.asTorch().index_put_({write_slice}, chunk.policy().asTorch().index({read_slice}));
-    value.asTorch().index_put_({write_slice}, chunk.value().asTorch().index({read_slice}));
+      memcpy(input_data + input_size * rows, group.input.data(), input_size * sizeof(InputScalar));
+      memcpy(policy_data + policy_size * rows, group.policy.data(), policy_size * sizeof(PolicyScalar));
+      memcpy(value_data + value_size * rows, group.value.data(), value_size * sizeof(ValueScalar));
+
+      rows++;
+    }
   }
 
   int64_t ns_since_epoch = util::ns_since_epoch(std::chrono::steady_clock::now());
@@ -200,13 +199,12 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   boost::filesystem::path output_path = games_dir() / output_filename;
   boost::filesystem::path tmp_output_path = games_dir() / tmp_output_filename;
 
-  auto slice = torch::indexing::Slice(torch::indexing::None, rows);
   using tensor_map_t = std::map<std::string, torch::Tensor>;
 
   tensor_map_t tensor_map;
-  tensor_map["input"] = input.asTorch().index({slice});
-  tensor_map["policy"] = policy.asTorch().index({slice});
-  tensor_map["value"] = value.asTorch().index({slice});
+  tensor_map["input"] = input;
+  tensor_map["policy"] = policy;
+  tensor_map["value"] = value;
 
   // write-then-mv to avoid race-conditions with partially-written files
   torch_util::save(tensor_map, tmp_output_path.string());

@@ -46,54 +46,36 @@ public:
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
-  using InputEigenTensor = typename InputTensor::EigenType;
-  using PolicyEigenTensor = typename PolicyTensor::EigenType;
-  using ValueEigenTensor = typename ValueTensor::EigenType;
+  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
+  using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
+  using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 
-  static constexpr size_t InputScalarSize = sizeof(typename InputTensor::Scalar);
-  static constexpr size_t PolicyScalarSize = sizeof(typename PolicyTensor::Scalar);
-  static constexpr size_t kBytesPerInputRow = InputTensor::Sizes::total_size * InputScalarSize;
-  static constexpr size_t kBytesPerPolicyRow = PolicyTensor::Sizes::total_size * PolicyScalarSize;
-  static constexpr size_t kEigenStackAllocationLimit = EIGEN_STACK_ALLOCATION_LIMIT;
-  static constexpr int kRowsPerChunk = kEigenStackAllocationLimit / std::max(kBytesPerInputRow, kBytesPerPolicyRow);
+  static constexpr int kRowsPerChunk = 64;
 
-  using InputChunk = typename TensorizorTypes::template InputTensorN<kRowsPerChunk>;
-  using PolicyChunk = typename GameStateTypes::template PolicyTensorN<kRowsPerChunk>;
-  using ValueChunk = typename GameStateTypes::template ValueTensorN<kRowsPerChunk>;
-  using CurrentPlayerChunk = Eigen::Array<seat_index_t, kRowsPerChunk, 1>;
-
-  using InputBlob = typename TensorizorTypes::DynamicInputTensor;
-  using PolicyBlob = typename GameStateTypes::DynamicPolicyTensor;
-  using ValueBlob = typename GameStateTypes::DynamicValueTensor;
-
-  struct TensorRefGroup {
-    InputEigenTensor& input;
-    PolicyEigenTensor& policy;
-    ValueEigenTensor& value;
-    seat_index_t& current_player;
+  struct TensorGroup {
+    InputTensor input;
+    PolicyTensor policy;
+    ValueTensor value;
+    seat_index_t current_player;
   };
 
-  /*
-   * A single game is recorded onto one or more DataChunk's.
-   */
+    /*
+     * A single game is recorded onto one or more DataChunk's.
+     */
   class DataChunk {
   public:
     DataChunk();
+    ~DataChunk();
 
-    TensorRefGroup get_next_group();
+    TensorGroup& get_next_group();
     void record_for_all(const GameOutcome& value);
-    const InputChunk& input() const { return input_; }
-    const PolicyChunk& policy() const { return policy_; }
-    const ValueChunk& value() const { return value_; }
     int rows() const { return rows_; }
     bool full() const { return rows_ >= kRowsPerChunk; }
 
-  private:
-    InputChunk input_;
-    PolicyChunk policy_;
-    ValueChunk value_;
-    CurrentPlayerChunk current_player_;
+    const TensorGroup& get_group(int i) const { return tensors_[i]; }
 
+  private:
+    TensorGroup* tensors_;
     int rows_ = 0;
   };
 
@@ -108,7 +90,7 @@ public:
    */
   class GameData {
   public:
-    TensorRefGroup get_next_group();
+    TensorGroup& get_next_group();
     void record_for_all(const GameOutcome& value);
 
   protected:
@@ -156,10 +138,6 @@ protected:
 
   void loop();
   void write_to_file(const GameData* data);
-
-  static auto input_shape(int rows);
-  static auto policy_shape(int rows);
-  static auto value_shape(int rows);
 
   const Params params_;
   std::thread* thread_;

@@ -97,7 +97,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::instance_map_;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
-    const ValueEigenTensor& value, const PolicyEigenTensor& policy, const ActionMask& valid_actions)
+    const ValueTensor& value, const PolicyTensor& policy, const ActionMask& valid_actions)
 {
   GameStateTypes::global_to_local(policy, valid_actions, local_policy_logit_distr_);
   value_prob_distr_ = eigen_util::softmax(eigen_util::reinterpret_as_array(value));
@@ -217,15 +217,14 @@ inline void Mcts<GameState, Tensorizor>::Node::adopt_children() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline typename Mcts<GameState, Tensorizor>::PolicyEigenTensor
-Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
-{
+inline typename Mcts<GameState, Tensorizor>::PolicyTensor
+Mcts<GameState, Tensorizor>::Node::get_effective_counts() const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
   // thread-safety
   bool eliminated = stats_.eliminated();
 
   seat_index_t cp = stable_data().current_player;
-  PolicyEigenTensor counts;
+  PolicyTensor counts;
   counts.setZero();
   if (eliminated) {
     ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
@@ -248,8 +247,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& outcome)
-{
+inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueArray& outcome) {
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg = (stats_.value_avg * stats_.count + outcome) / (stats_.count + 1);
   stats_.count++;
@@ -259,9 +257,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueProbDistr& ou
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(
-    const ValueProbDistr& value)
-{
+inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(const ValueArray& value) {
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg += (value - make_virtual_loss()) / stats_.count;
   stats_.virtual_count--;
@@ -283,7 +279,7 @@ inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueProbDistr& outcome) {
+inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueArray& outcome) {
   ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
   ValueArray V_floor;
   seat_index_t cp = stable_data().current_player;
@@ -457,7 +453,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tree, const ValueProbDistr& outcome) {
+inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tree, const ValueArray& outcome) {
   record_for_profiling(kBackpropOutcome);
   if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
@@ -469,9 +465,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tr
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::SearchThread::perform_eliminations(
-    Node* tree, const ValueProbDistr& outcome)
-{
+inline void Mcts<GameState, Tensorizor>::SearchThread::perform_eliminations(Node* tree, const ValueArray& outcome) {
   if (params_.disable_eliminations) return;
   record_for_profiling(kPerformEliminations);
   tree->perform_eliminations(outcome);
@@ -559,8 +553,8 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
   bool used_cache = false;
   if (!mcts_->nn_eval_service()) {
     // no-model mode
-    ValueEigenTensor uniform_value;
-    PolicyEigenTensor uniform_policy;
+    ValueTensor uniform_value;
+    PolicyTensor uniform_policy;
     uniform_value.setConstant(1.0 / kNumPlayers);
     uniform_policy.setConstant(0);
     data->evaluation = std::make_shared<NNEvaluation>(uniform_value, uniform_policy, stable_data.valid_action_mask);
@@ -582,7 +576,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     lock->lock();
   }
 
-  LocalPolicyProbDistr P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
+  LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
   if (tree->is_root()) {
     if (!search_params_->disable_exploration) {
       if (params_.dirichlet_mult) {
@@ -635,7 +629,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
 
   PUCTStats stats(params_, *search_params_, tree);
 
-  using PVec = LocalPolicyProbDistr;
+  using PVec = LocalPolicyArray;
 
   const PVec& P = stats.P;
   const PVec& N = stats.N;
@@ -832,11 +826,19 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
 : instance_id_(next_instance_id_++)
 , net_(model_filename)
 , batch_data_(batch_size)
+, full_input_(util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<InputShape>))
 , cache_(cache_size)
 , timeout_duration_(timeout_duration)
 , batch_size_limit_(batch_size)
 {
-  torch_input_gpu_ = batch_data_.input.asTorch().clone().to(torch::kCUDA);
+  auto input_shape = util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<InputShape>);
+  auto policy_shape = util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<PolicyShape>);
+  auto value_shape = util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<ValueShape>);
+
+  torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<dtype>).to(torch::kCUDA);
+  torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
+  torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<ValueScalar>);
+
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
@@ -846,20 +848,39 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_data_t(
-    int batch_size)
-: policy(util::to_std_array<int>(batch_size, eigen_util::to_int64_std_array_v<PolicyShape>))
-, value(util::to_std_array<int>(batch_size, kNumPlayers))
-, input(util::to_std_array<int>(batch_size, eigen_util::to_int64_std_array_v<InputShape>))
-, current_player(batch_size)
+inline void Mcts<GameState, Tensorizor>::NNEvaluationService::tensor_group_t::load_output_from(
+    int row, torch::Tensor& torch_policy, torch::Tensor& torch_value)
 {
-  input.asEigen().setZero();
-  eval_ptr_data = new eval_ptr_data_t[batch_size];
+  constexpr size_t policy_size = PolicyShape::total_size;
+  constexpr size_t value_size = ValueShape::total_size;
+
+  memcpy(policy.data(), torch_policy.data_ptr<PolicyScalar>() + row * policy_size, policy_size * sizeof(PolicyScalar));
+  memcpy(value.data(), torch_value.data_ptr<ValueScalar>() + row * value_size, value_size * sizeof(ValueScalar));
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::batch_data_t(int batch_size) {
+  tensor_groups_ = new tensor_group_t[batch_size];
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::~batch_data_t() {
-  delete[] eval_ptr_data;
+  delete[] tensor_groups_;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+inline void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_data_t::copy_input_to(
+    int num_rows, DynamicInputFloatTensor& full_input)
+{
+  dtype* full_input_data = full_input.data();
+  constexpr size_t input_size = InputShape::total_size;
+  int r = 0;
+  for (int row = 0; row < num_rows; row++) {
+    const tensor_group_t& group = tensor_groups_[row];
+    InputFloatTensor float_input = group.input.template cast<dtype>();
+    memcpy(full_input_data + r, float_input.data(), input_size * sizeof(dtype));
+    r += input_size;
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -960,27 +981,34 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   }
 
   record_for_profiling(kCopyingCpuToGpu);
-  torch_input_gpu_.copy_(batch_data_.input.asTorch());
+  int num_rows = batch_metadata_.reserve_index;
+  batch_data_.copy_input_to(num_rows, full_input_);
+  auto input_shape = util::to_std_array<int64_t>(num_rows, eigen_util::to_int64_std_array_v<InputShape>);
+  torch::Tensor full_input_torch = torch::from_blob(full_input_.data(), input_shape);
+  torch_input_gpu_.resize_(input_shape);
+  torch_input_gpu_.copy_(full_input_torch);
+
   record_for_profiling(kEvaluatingNeuralNet);
-  net_.predict(input_vec_, batch_data_.policy.asTorch(), batch_data_.value.asTorch());
+  torch_policy_.resize_(util::to_std_array<int64_t>(num_rows, eigen_util::to_int64_std_array_v<PolicyShape>));
+  torch_value_.resize_(util::to_std_array<int64_t>(num_rows, eigen_util::to_int64_std_array_v<ValueShape>));
+  net_.predict(input_vec_, torch_policy_, torch_value_);
 
   record_for_profiling(kCopyingToPool);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
-    eval_ptr_data_t &edata = batch_data_.eval_ptr_data[i];
-    auto &policy = batch_data_.policy.template eigenSlice<typename GameStateTypes::PolicyShape>(i);
-    auto &value = batch_data_.value.template eigenSlice<typename GameStateTypes::ValueShape>(i);
-    seat_index_t current_player = batch_data_.current_player[i];
+    tensor_group_t& group = batch_data_.tensor_groups_[i];
+    group.load_output_from(i, torch_policy_, torch_value_);
+    eval_ptr_data_t& edata = group.eval_ptr_data;
 
-    eigen_util::right_rotate(eigen_util::reinterpret_as_array(value), current_player);
-    edata.transform->transform_policy(policy);
-    edata.eval_ptr.store(std::make_shared<NNEvaluation>(value, policy, edata.valid_actions));
+    eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
+    edata.transform->transform_policy(group.policy);
+    edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
   }
 
   record_for_profiling(kAcquiringCacheMutex);
   std::unique_lock<std::mutex> lock(cache_mutex_);
   record_for_profiling(kFinishingUp);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
-    const eval_ptr_data_t &edata = batch_data_.eval_ptr_data[i];
+    const eval_ptr_data_t &edata = batch_data_.tensor_groups_[i].eval_ptr_data;
     cache_.insert(edata.cache_key, edata.eval_ptr);
   }
   lock.unlock();
@@ -1101,16 +1129,16 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   thread->record_for_profiling(SearchThread::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
-  auto& input = batch_data_.input.template eigenSlice<InputShape>(reserve_index);
-  tensorizor.tensorize(input, state);
+  tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
+  tensorizor.tensorize(group.input, state);
   auto transform = tensorizor.get_symmetry(sym_index);
-  transform->transform_input(input);
+  transform->transform_input(group.input);
 
-  batch_data_.current_player[reserve_index] = current_player;
-  batch_data_.eval_ptr_data[reserve_index].eval_ptr.store(nullptr);
-  batch_data_.eval_ptr_data[reserve_index].cache_key = cache_key;
-  batch_data_.eval_ptr_data[reserve_index].valid_actions = valid_action_mask;
-  batch_data_.eval_ptr_data[reserve_index].transform = transform;
+  group.current_player = current_player;
+  group.eval_ptr_data.eval_ptr.store(nullptr);
+  group.eval_ptr_data.cache_key = cache_key;
+  group.eval_ptr_data.valid_actions = valid_action_mask;
+  group.eval_ptr_data.transform = transform;
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1145,7 +1173,7 @@ Mcts<GameState, Tensorizor>::NNEvaluation_sptr Mcts<GameState, Tensorizor>::NNEv
     return false;
   });
 
-  return batch_data_.eval_ptr_data[reserve_index].eval_ptr.load();
+  return batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr.load();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1456,11 +1484,10 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyProbDistr& P) {
+inline void Mcts<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyArray& P) {
   int rows = P.rows();
   double alpha = params_.dirichlet_alpha_sum / rows;
-  LocalPolicyProbDistr noise = dirichlet_gen_.template generate<LocalPolicyProbDistr>(
-      rng_, alpha, rows);
+  LocalPolicyArray noise = dirichlet_gen_.template generate<LocalPolicyArray>(rng_, alpha, rows);
   P = (1.0 - params_.dirichlet_mult) * P + params_.dirichlet_mult * noise;
 }
 

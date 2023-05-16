@@ -5,11 +5,11 @@
 
 namespace c4 {
 
-inline void Tensorizor::ReflectionTransform::transform_input(InputEigenTensor& tensor) {
+inline void Tensorizor::ReflectionTransform::transform_input(InputTensor& tensor) {
   eigen_util::packed_fixed_tensor_cp(tensor, eigen_util::reverse(tensor, 1).eval());  // axis 1 corresponds to columns
 }
 
-inline void Tensorizor::ReflectionTransform::transform_policy(PolicyEigenTensor& policy) {
+inline void Tensorizor::ReflectionTransform::transform_policy(PolicyTensor& policy) {
   eigen_util::packed_fixed_tensor_cp(policy, eigen_util::reverse(policy, 0).eval());  // axis 0 corresponds to columns
 }
 

@@ -66,12 +66,12 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
     policy_array /= sum;
   }
 
-  InputEigenTensor input;
+  InputTensor input;
   this->tensorizor_.tensorize(input, state);
 
   auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
   for (symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
-    auto group = game_data_->get_next_group();
+    auto& group = game_data_->get_next_group();
 
     group.input = input;
     group.policy = policy;

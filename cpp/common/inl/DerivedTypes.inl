@@ -3,16 +3,16 @@
 namespace common {
 
 template<typename GameState>
-typename GameStateTypes<GameState>::LocalPolicyProbDistr
-GameStateTypes<GameState>::global_to_local(const PolicyEigenTensor& policy, const ActionMask& mask) {
-  LocalPolicyProbDistr out;
+typename GameStateTypes<GameState>::LocalPolicyArray
+GameStateTypes<GameState>::global_to_local(const PolicyTensor& policy, const ActionMask& mask) {
+  LocalPolicyArray out;
   global_to_local(policy, mask, out);
   return out;
 }
 
 template<typename GameState>
 void GameStateTypes<GameState>::global_to_local(
-    const PolicyEigenTensor& policy, const ActionMask& mask, LocalPolicyProbDistr& out)
+    const PolicyTensor& policy, const ActionMask& mask, LocalPolicyArray& out)
 {
   out.resize(mask.count());
   int i = 0;
@@ -22,16 +22,16 @@ void GameStateTypes<GameState>::global_to_local(
 }
 
 template<typename GameState>
-typename GameStateTypes<GameState>::PolicyEigenTensor
-GameStateTypes<GameState>::local_to_global(const LocalPolicyProbDistr& policy, const ActionMask& mask) {
-  PolicyEigenTensor out;
+typename GameStateTypes<GameState>::PolicyTensor
+GameStateTypes<GameState>::local_to_global(const LocalPolicyArray& policy, const ActionMask& mask) {
+  PolicyTensor out;
   local_to_global(policy, mask, out);
   return out;
 }
 
 template<typename GameState>
 void GameStateTypes<GameState>::local_to_global(
-    const LocalPolicyProbDistr& policy, const ActionMask& mask, PolicyEigenTensor& out)
+    const LocalPolicyArray& policy, const ActionMask& mask, PolicyTensor& out)
 {
   PolicyArray& out_array = eigen_util::reinterpret_as_array(out);
   out_array.setConstant(0);

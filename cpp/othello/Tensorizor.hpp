@@ -24,70 +24,74 @@ namespace othello {
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
-  using dtype = torch_util::dtype;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
+  using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
+
   using GameStateTypes = common::GameStateTypes<GameState>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
-  using InputEigenTensor = TensorizorTypes::InputTensor::EigenType;
-  using PolicyEigenTensor = GameStateTypes::PolicyTensor::EigenType;
+  using PolicyTensor = GameStateTypes::PolicyTensor;
   using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
   using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, kMaxNumSymmetries>;
 
-  using MatrixT = Eigen::Matrix<torch_util::dtype, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
+  using InputScalar = typename InputTensor::Scalar;
+  using PolicyScalar = typename PolicyTensor::Scalar;
+
+  template<typename Scalar>
+  using MatrixT = Eigen::Matrix<Scalar, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
 
   struct CenterFourSquares {
-    dtype starting_white1;
-    dtype starting_white2;
-    dtype starting_black1;
-    dtype starting_black2;
+    bool starting_white1;
+    bool starting_white2;
+    bool starting_black1;
+    bool starting_black2;
   };
 
-  static CenterFourSquares get_center_four_squares(const PolicyEigenTensor& policy);
-  static void set_center_four_squares(PolicyEigenTensor& policy, const CenterFourSquares& center_four_squares);
+  static CenterFourSquares get_center_four_squares(const PolicyTensor& policy);
+  static void set_center_four_squares(PolicyTensor& policy, const CenterFourSquares& center_four_squares);
 
-  static MatrixT& slice_as_matrix(InputEigenTensor& input, int row);
-  static MatrixT& as_matrix(PolicyEigenTensor& policy);
+  static MatrixT<InputScalar>& slice_as_matrix(InputTensor& input, int row);
+  static MatrixT<PolicyScalar>& as_matrix(PolicyTensor& policy);
 
   struct Rotation90Transform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   struct Rotation180Transform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   struct Rotation270Transform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalTransform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalWithRotation90Transform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalWithRotation180Transform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalWithRotation270Transform : public SymmetryTransform {
-    void transform_input(InputEigenTensor& input) override;
-    void transform_policy(PolicyEigenTensor& policy) override;
+    void transform_input(InputTensor& input) override;
+    void transform_policy(PolicyTensor& policy) override;
   };
 
   void clear() {}
   void receive_state_change(const GameState& state, common::action_index_t action_index) {}
-  void tensorize(InputEigenTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
+  void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
   SymmetryIndexSet get_symmetry_indices(const GameState&) const;
   SymmetryTransform* get_symmetry(common::symmetry_index_t index) const;

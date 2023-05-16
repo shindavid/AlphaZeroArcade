@@ -18,12 +18,12 @@ namespace common {
  * A Tensorizor is responsible for converting a GameState into a Tensor.
  */
 template <class Tensorizor, class GameState>
-concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor::InputEigenTensor input)
+concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor::InputTensor input)
 {
   /*
-   * The shape of the tensor representation of a game state.
+   * The Tensor type used to represent the game state.
    */
-  { typename Tensorizor::InputShape{} } -> eigen_util::ShapeConcept;
+  { typename Tensorizor::InputTensor{} } -> eigen_util::FixedTensorConcept;
 
   /*
    * The maximum number of symmetries.

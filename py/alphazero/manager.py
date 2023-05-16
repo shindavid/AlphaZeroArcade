@@ -331,7 +331,7 @@ class AlphaZeroManager:
             for data in loader:
                 t1 = time.time()
                 inputs, value_labels, policy_labels = data
-                inputs = inputs.to(self.py_cuda_device_str)
+                inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
                 value_labels = value_labels.to(self.py_cuda_device_str)
                 policy_labels = policy_labels.to(self.py_cuda_device_str)
 
