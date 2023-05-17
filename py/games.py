@@ -1,6 +1,6 @@
 from typing import Type, Optional
 
-from connect4.tensorizor import C4Net
+from connect4.connect4_net import C4Net
 from neural_net import NeuralNet
 from othello.othello_net import OthelloNet
 
