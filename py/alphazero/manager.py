@@ -351,6 +351,8 @@ class AlphaZeroManager:
                 if steps == ModelingArgs.snapshot_steps:
                     break
             stats.dump()
+            if steps >= ModelingArgs.snapshot_steps:
+                break
 
         t3 = time.time()
         total_time = t3 - t0
