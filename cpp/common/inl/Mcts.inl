@@ -10,7 +10,6 @@
 
 #include <util/BoostUtil.hpp>
 #include <util/Config.hpp>
-#include <util/EigenTorch.hpp>
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>

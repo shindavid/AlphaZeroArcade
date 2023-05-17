@@ -25,7 +25,6 @@
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
-#include <util/EigenTorch.hpp>
 #include <util/LRUCache.hpp>
 #include <util/Math.hpp>
 #include <util/Profiler.hpp>

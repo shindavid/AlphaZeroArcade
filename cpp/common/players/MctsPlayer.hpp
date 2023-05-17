@@ -14,7 +14,6 @@
 #include <common/TensorizorConcept.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
-#include <util/EigenTorch.hpp>
 #include <util/Math.hpp>
 
 namespace common {

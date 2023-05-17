@@ -10,7 +10,6 @@
 #include <common/BasicTypes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
-#include <util/EigenTorch.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
 #include <util/TorchUtil.hpp>
