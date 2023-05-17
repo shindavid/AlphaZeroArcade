@@ -11,8 +11,9 @@ public:
   using InputTensor = typename base_t::InputTensor;
   using PolicyTensor = typename base_t::PolicyTensor;
 
-  void transform_input(InputTensor& input) override {}
-  void transform_policy(PolicyTensor& policy) override {}
+  template<typename InputTensorT> void transform_input(InputTensorT&) {}  // unit tests need general scalar type
+  void transform_input(InputTensor&) override {}
+  void transform_policy(PolicyTensor&) override {}
 };
 
 }

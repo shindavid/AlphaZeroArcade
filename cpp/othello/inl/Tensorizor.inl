@@ -23,16 +23,17 @@ inline void Tensorizor::set_center_four_squares(PolicyTensor& policy, const Cent
   policy.data()[kStartingBlack2] = center_four_squares.starting_black2;
 }
 
-
-inline Tensorizor::MatrixT<Tensorizor::InputScalar>& Tensorizor::slice_as_matrix(InputTensor& input, int row) {
-  return eigen_util::reinterpret_as_matrix<MatrixT<InputScalar>>(eigen_util::slice(input, row));
+template<typename Scalar>
+inline auto& Tensorizor::slice_as_matrix(InputTensorX<Scalar>& input, int row) {
+  return eigen_util::reinterpret_as_matrix<MatrixT<Scalar>>(eigen_util::slice(input, row));
 }
 
 inline Tensorizor::MatrixT<Tensorizor::PolicyScalar>& Tensorizor::as_matrix(PolicyTensor& policy) {
   return eigen_util::reinterpret_as_matrix<MatrixT<PolicyScalar>>(policy);
 }
 
-inline void Tensorizor::Rotation90Transform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::Rotation90Transform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.transposeInPlace();
@@ -48,7 +49,8 @@ inline void Tensorizor::Rotation90Transform::transform_policy(PolicyTensor& poli
   set_center_four_squares(policy, center);
 }
 
-inline void Tensorizor::Rotation180Transform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::Rotation180Transform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.rowwise().reverseInPlace();
@@ -64,7 +66,8 @@ inline void Tensorizor::Rotation180Transform::transform_policy(PolicyTensor& pol
   set_center_four_squares(policy, center);
 }
 
-inline void Tensorizor::Rotation270Transform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::Rotation270Transform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.transposeInPlace();
@@ -80,7 +83,8 @@ inline void Tensorizor::Rotation270Transform::transform_policy(PolicyTensor& pol
   set_center_four_squares(policy, center);
 }
 
-inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::ReflectionOverHorizontalTransform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.colwise().reverseInPlace();
@@ -94,7 +98,8 @@ inline void Tensorizor::ReflectionOverHorizontalTransform::transform_policy(Poli
   set_center_four_squares(policy, center);
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.transposeInPlace();
@@ -108,7 +113,8 @@ inline void Tensorizor::ReflectionOverHorizontalWithRotation90Transform::transfo
   set_center_four_squares(policy, center);
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.rowwise().reverseInPlace();
@@ -122,7 +128,8 @@ inline void Tensorizor::ReflectionOverHorizontalWithRotation180Transform::transf
   set_center_four_squares(policy, center);
 }
 
-inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputTensor& input) {
+template<typename Scalar>
+inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transform_input(InputTensorX<Scalar>& input) {
   for (int row = 0; row < 2; ++row) {
     auto& matrix = slice_as_matrix(input, row);
     matrix.transposeInPlace();

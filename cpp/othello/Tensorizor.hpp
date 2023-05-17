@@ -20,12 +20,16 @@ namespace othello {
 /*
  * Note: all the transforms leave the center 4 squares of the board untouched. This is done because of the
  * (questionable?) decision to encode the "pass" move as the center D4 square.
+ *
+ * All transforms have a templated transform_input() method. This generality exists to support unit tests, which
+ * use non-bool input tensors.
  */
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
+  template<typename Scalar> using InputTensorX = Eigen::TensorFixedSize<Scalar, InputShape, Eigen::RowMajor>;
 
   using GameStateTypes = common::GameStateTypes<GameState>;
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
@@ -42,50 +46,57 @@ public:
   using MatrixT = Eigen::Matrix<Scalar, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
 
   struct CenterFourSquares {
-    bool starting_white1;
-    bool starting_white2;
-    bool starting_black1;
-    bool starting_black2;
+    PolicyScalar starting_white1;
+    PolicyScalar starting_white2;
+    PolicyScalar starting_black1;
+    PolicyScalar starting_black2;
   };
 
   static CenterFourSquares get_center_four_squares(const PolicyTensor& policy);
   static void set_center_four_squares(PolicyTensor& policy, const CenterFourSquares& center_four_squares);
 
-  static MatrixT<InputScalar>& slice_as_matrix(InputTensor& input, int row);
+  template<typename Scalar> static auto& slice_as_matrix(InputTensorX<Scalar>& input, int row);
   static MatrixT<PolicyScalar>& as_matrix(PolicyTensor& policy);
 
   struct Rotation90Transform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
   struct Rotation180Transform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
   struct Rotation270Transform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalTransform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalWithRotation90Transform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalWithRotation180Transform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
   struct ReflectionOverHorizontalWithRotation270Transform : public SymmetryTransform {
-    void transform_input(InputTensor& input) override;
+    template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
+    void transform_input(InputTensor& input) override { transform_input<InputScalar>(input); }
     void transform_policy(PolicyTensor& policy) override;
   };
 
