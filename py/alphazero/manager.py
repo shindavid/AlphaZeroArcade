@@ -312,11 +312,11 @@ class AlphaZeroManager:
         for_loop_time = 0
         t0 = time.time()
         steps = 0
-        while steps < ModelingArgs.snapshot_steps:
+        while True:
             games_dataset = GamesDataset(self.self_play_data_dir)
             loader = torch.utils.data.DataLoader(
                 games_dataset,
-                batch_size = ModelingArgs.minibatch_size,
+                batch_size=ModelingArgs.minibatch_size,
                 num_workers=4,
                 pin_memory=True,
                 shuffle=True)
