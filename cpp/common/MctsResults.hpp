@@ -9,15 +9,15 @@ struct MctsResults {
   using GameStateTypes = common::GameStateTypes<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
-  using PolicyEigenTensor = typename GameStateTypes::PolicyTensor::EigenType;
-  using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
-  using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
+  using PolicyTensor = typename GameStateTypes::PolicyTensor;
+  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
+  using ValueArray = typename GameStateTypes::ValueArray;
 
   ActionMask valid_actions;
-  PolicyEigenTensor counts;
-  LocalPolicyProbDistr policy_prior;
-  ValueProbDistr win_rates;
-  ValueProbDistr value_prior;
+  PolicyTensor counts;
+  LocalPolicyArray policy_prior;
+  ValueArray win_rates;
+  ValueArray value_prior;
 };
 
 }  // namespace common

@@ -132,6 +132,23 @@ void save(const std::map<std::string, torch::Tensor>& tensor_map, SaveToArgs&&..
  */
 void init_tensor(torch::Tensor& tensor);
 
+using dtype_t = decltype(torch::kFloat32);
+
+template<typename T> struct to_dtype {};
+template<> struct to_dtype<bool> { static constexpr dtype_t value = torch::kUInt8; };
+template<> struct to_dtype<uint8_t> { static constexpr dtype_t value = torch::kUInt8; };
+template<> struct to_dtype<int8_t> { static constexpr dtype_t value = torch::kInt8; };
+template<> struct to_dtype<int16_t> { static constexpr dtype_t value = torch::kInt16; };
+template<> struct to_dtype<int32_t> { static constexpr dtype_t value = torch::kInt32; };
+template<> struct to_dtype<int64_t> { static constexpr dtype_t value = torch::kInt64; };
+template<> struct to_dtype<float> { static constexpr dtype_t value = torch::kFloat; };
+template<> struct to_dtype<double> { static constexpr dtype_t value = torch::kDouble; };
+template<typename T> static constexpr dtype_t to_dtype_v = to_dtype<T>::value;
+
+template <typename T> struct convert_type { using type = T; };
+template <> struct convert_type<bool> { using type = uint8_t; };
+template<typename T> using convert_type_t = typename convert_type<T>::type;
+
 }  // namespace torch_util
 
 #include <util/inl/TorchUtil.inl>

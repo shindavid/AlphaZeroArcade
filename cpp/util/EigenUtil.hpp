@@ -79,31 +79,6 @@ private:
 };
 
 /*
- * Flattens an Array<T, M, N, ..> into an Array<T, M*N, 1>
- */
-template <typename Scalar, int Rows, int Cols, int Options>
-auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array);
-
-/*
- * The following are equivalent:
- *
- * using T = Eigen::Sizes<1, 2, 3>;
- *
- * and:
- *
- * using S = util::int_sequence<1, 2, 3>;
- * using T = eigen_util::to_sizes_t<S>;
- *
- * and:
- *
- * using S = Eigen::Sizes<1, 2, 3>;
- * using T = eigen_util::to_sizes_t<S>;
- */
-template<typename T> struct to_sizes { using type = T; };
-template<int... Ints> struct to_sizes<util::int_sequence<Ints...>> { using type = Eigen::Sizes<Ints...>; };
-template<typename T> using to_sizes_t = typename to_sizes<T>::type;
-
-/*
  * The following are equivalent:
  *
  * using T = std::array<int64_t, 2>(5, 6);
@@ -131,13 +106,16 @@ template<typename T> auto to_int64_std_array_v = to_int64_std_array<T>::value;
  *
  * The reason we default to RowMajor is for smooth interoperability with pytorch, which is row-major by default.
  */
-template<typename T, typename S> using fixed_tensor_t = Eigen::TensorFixedSize<T, S, Eigen::RowMajor>;
+template<typename Scalar, ShapeConcept Shape>
+using fixed_tensor_t = Eigen::TensorFixedSize<Scalar, Shape, Eigen::RowMajor>;
 
 /*
  * FixedTensorConcept is a concept corresponding to fixed_tensor_t
  */
 template<typename T> struct is_fixed_tensor { static const bool value = false; };
-template<typename T, typename S> struct is_fixed_tensor<fixed_tensor_t<T, S>> { static const bool value = true; };
+template<typename Scalar, typename Shape> struct is_fixed_tensor<fixed_tensor_t<Scalar, Shape>> {
+  static const bool value = true;
+};
 template<typename T> inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T>::value;
 template<typename T> concept FixedTensorConcept = is_fixed_tensor_v<T>;
 
@@ -199,16 +177,10 @@ void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src);
  * using S = extract_shape_t<T>;
  */
 template<typename T> struct extract_shape {};
-template<typename T, typename S> struct extract_shape<fixed_tensor_t<T, S>> {
-  using type = S;
+template<typename Scalar, ShapeConcept Shape> struct extract_shape<fixed_tensor_t<Scalar, Shape>> {
+  using type = Shape;
 };
 template<typename T> using extract_shape_t = typename extract_shape<T>::type;
-
-template<typename T> struct total_size {};
-template<ptrdiff_t... Indices> struct total_size<Eigen::Sizes<Indices...>> {
-  static constexpr ptrdiff_t size = Eigen::internal::arg_prod(Indices...);
-};
-template<typename T> constexpr ptrdiff_t total_size_v = total_size<T>::size;
 
 /*
  * Accepts an eigen Tensor and an int row.

@@ -45,9 +45,9 @@ public:
   using GameStateTypes = common::GameStateTypes<GameState>;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
-  using ValueProbDistr = GameStateTypes::ValueProbDistr;
+  using ValueArray = GameStateTypes::ValueArray;
   using MctsResults = common::MctsResults<GameState>;
-  using LocalPolicyProbDistr = GameStateTypes::LocalPolicyProbDistr;
+  using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
 
   common::seat_index_t get_current_player() const { return cur_player_; }
@@ -59,7 +59,7 @@ public:
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;
 
-  static void dump_mcts_output(const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy,
+  static void dump_mcts_output(const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy,
                                const MctsResults& results);
 
 private:

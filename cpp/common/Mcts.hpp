@@ -25,7 +25,6 @@
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
-#include <util/EigenTorch.hpp>
 #include <util/LRUCache.hpp>
 #include <util/Math.hpp>
 #include <util/Profiler.hpp>
@@ -67,23 +66,27 @@ public:
 
   using MctsResults = common::MctsResults<GameState>;
   using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
-  using ValueProbDistr = typename GameStateTypes::ValueProbDistr;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
-  using LocalPolicyLogitDistr = typename GameStateTypes::LocalPolicyLogitDistr;
-  using LocalPolicyProbDistr = typename GameStateTypes::LocalPolicyProbDistr;
-  using PolicyEigenTensor = typename GameStateTypes::PolicyEigenTensor;
-  using ValueEigenTensor = typename GameStateTypes::ValueEigenTensor;
+
+  using PolicyArray = typename GameStateTypes::PolicyArray;
+  using ValueArray = typename GameStateTypes::ValueArray;
+  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
+
+  using InputTensor = typename TensorizorTypes::InputTensor;
+  using PolicyTensor = typename GameStateTypes::PolicyTensor;
+  using ValueTensor = typename GameStateTypes::ValueTensor;
 
   using InputShape = typename TensorizorTypes::InputShape;
   using PolicyShape = typename GameStateTypes::PolicyShape;
+  using ValueShape = typename GameStateTypes::ValueShape;
 
-  using FullInputTensor = typename TensorizorTypes::DynamicInputTensor;
-  using FullValueTensor = typename GameStateTypes::DynamicValueTensor;
-  using FullPolicyTensor = typename GameStateTypes::DynamicPolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using PolicyArray = typename GameStateTypes::PolicyArray;
-  using FullCurrentPlayerArray = Eigen::Array<seat_index_t, Eigen::Dynamic, 1>;
+  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
+  using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
+  using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
+
+  using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
+  using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
 
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
@@ -149,13 +152,13 @@ public:
 private:
   class NNEvaluation {
   public:
-    NNEvaluation(const ValueEigenTensor& value, const PolicyEigenTensor& policy, const ActionMask& valid_actions);
-    const ValueProbDistr& value_prob_distr() const { return value_prob_distr_; }
-    const LocalPolicyProbDistr& local_policy_logit_distr() const { return local_policy_logit_distr_; }
+    NNEvaluation(const ValueTensor& value, const PolicyTensor& policy, const ActionMask& valid_actions);
+    const ValueArray& value_prob_distr() const { return value_prob_distr_; }
+    const LocalPolicyArray& local_policy_logit_distr() const { return local_policy_logit_distr_; }
 
   protected:
-    ValueProbDistr value_prob_distr_;
-    LocalPolicyLogitDistr local_policy_logit_distr_;
+    ValueArray value_prob_distr_;
+    LocalPolicyArray local_policy_logit_distr_;
   };
   using NNEvaluation_sptr = std::shared_ptr<NNEvaluation>;
   using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
@@ -227,7 +230,7 @@ private:
       evaluation_data_t(const ActionMask& valid_actions);
 
       NNEvaluation_asptr ptr;
-      LocalPolicyProbDistr local_policy_prob_distr;
+      LocalPolicyArray local_policy_prob_distr;
       evaluation_state_t state = kUnset;
       ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
     };
@@ -290,11 +293,11 @@ private:
     std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() const { return stats_mutex_; }
 
-    PolicyEigenTensor get_effective_counts() const;
-    void backprop(const ValueProbDistr& value);
-    void backprop_with_virtual_undo(const ValueProbDistr& value);
+    PolicyTensor get_effective_counts() const;
+    void backprop(const ValueArray& value);
+    void backprop_with_virtual_undo(const ValueArray& value);
     void virtual_backprop();
-    void perform_eliminations(const ValueProbDistr& outcome);
+    void perform_eliminations(const ValueArray& outcome);
     ValueArray make_virtual_loss() const;
     void mark_as_fully_analyzed();
 
@@ -402,8 +405,8 @@ private:
       bool backpropagated_virtual_loss;
     };
 
-    void backprop_outcome(Node* tree, const ValueProbDistr& outcome);
-    void perform_eliminations(Node* tree, const ValueProbDistr& outcome);
+    void backprop_outcome(Node* tree, const ValueArray& outcome);
+    void perform_eliminations(Node* tree, const ValueArray& outcome);
     void mark_as_fully_analyzed(Node* tree);
     evaluate_and_expand_result_t evaluate_and_expand(Node* tree, bool speculative);
     void evaluate_and_expand_unset(
@@ -430,7 +433,7 @@ private:
 
   struct PUCTStats {
     static constexpr float eps = 1e-6;  // needed when N == 0
-    using PVec = LocalPolicyProbDistr;
+    using PVec = LocalPolicyArray;
 
     PUCTStats(const Params& params, const SearchParams& search_params, const Node* tree);
 
@@ -647,21 +650,32 @@ private:
     std::condition_variable cv_evaluate_;
 
     NeuralNet net_;
+
+    struct tensor_group_t {
+      void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value);
+
+      InputTensor input;
+      PolicyTensor policy;
+      ValueTensor value;
+      seat_index_t current_player;
+      eval_ptr_data_t eval_ptr_data;
+    };
+
     struct batch_data_t {
       batch_data_t(int batch_size);
       ~batch_data_t();
+      void copy_input_to(int num_rows, DynamicInputFloatTensor& full_input);
 
       std::mutex mutex;
-      FullPolicyTensor policy;
-      FullValueTensor value;
-      FullInputTensor input;
-      FullCurrentPlayerArray current_player;
-      eval_ptr_data_t* eval_ptr_data;
+      tensor_group_t* tensor_groups_;
     };
     batch_data_t batch_data_;
 
     common::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;
+    torch::Tensor torch_policy_;
+    torch::Tensor torch_value_;
+    DynamicInputFloatTensor full_input_;
     cache_t cache_;
 
     const std::chrono::nanoseconds timeout_duration_;
@@ -745,7 +759,7 @@ public:
   void clear();
   void receive_state_change(seat_index_t, const GameState&, action_index_t);
   const MctsResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
-  void add_dirichlet_noise(LocalPolicyProbDistr& P);
+  void add_dirichlet_noise(LocalPolicyArray& P);
   float root_softmax_temperature() const { return root_softmax_temperature_.value(); }
 
   void start_search_threads(const SearchParams* search_params);

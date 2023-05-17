@@ -14,7 +14,6 @@
 #include <common/TensorizorConcept.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
-#include <util/EigenTorch.hpp>
 #include <util/Math.hpp>
 
 namespace common {
@@ -62,10 +61,9 @@ public:
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ValueProbDistr = typename Mcts::ValueProbDistr;
-  using LocalPolicyProbDistr = typename Mcts::LocalPolicyProbDistr;
-  using PolicyProbTensor = typename GameStateTypes::PolicyTensor;
-  using PolicyProbEigenTensor = typename PolicyProbTensor::EigenType;
+  using ValueArray = typename Mcts::ValueArray;
+  using LocalPolicyArray = typename Mcts::LocalPolicyArray;
+  using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using PolicyShape = typename GameStateTypes::PolicyShape;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
@@ -87,8 +85,8 @@ protected:
   action_index_t get_action_helper(SearchMode, const MctsResults*, const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
-    ValueProbDistr mcts_value;
-    LocalPolicyProbDistr mcts_policy;
+    ValueArray mcts_value;
+    LocalPolicyArray mcts_policy;
     MctsResults mcts_results;
 
     bool initialized = false;

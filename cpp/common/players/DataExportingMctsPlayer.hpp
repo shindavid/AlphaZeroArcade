@@ -19,9 +19,9 @@ public:
   using dtype = typename GameStateTypes::dtype;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using InputEigenTensor = typename TensorizorTypes::InputEigenTensor;
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
   using TrainingDataWriterParams = typename TrainingDataWriter::Params;
+  using InputTensor = typename TensorizorTypes::InputTensor;
 
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;

@@ -149,7 +149,7 @@ inline bool GameState::operator==(const GameState& other) const {
 }
 
 inline void GameState::dump_mcts_output(
-    const ValueProbDistr& mcts_value, const LocalPolicyProbDistr& mcts_policy, const MctsResults& results)
+    const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy, const MctsResults& results)
 {
   const auto& valid_actions = results.valid_actions;
   const auto& net_value = results.value_prior;

@@ -15,8 +15,9 @@
 
 using GameStateTypes = common::GameStateTypes<othello::GameState>;
 using TensorizorTypes = common::TensorizorTypes<othello::Tensorizor>;
-using PolicyEigenTensor = GameStateTypes::PolicyEigenTensor;
-using InputEigenTensor = TensorizorTypes::InputEigenTensor;
+using PolicyTensor = GameStateTypes::PolicyTensor;
+using InputTensor = Eigen::TensorFixedSize<int, TensorizorTypes::InputShape, Eigen::RowMajor>;
+using InputScalar = InputTensor::Scalar;
 
 int global_pass_count = 0;
 int global_fail_count = 0;
@@ -27,8 +28,8 @@ void test_symmetry_input(
     const std::string& expected_repr0,
     const std::string& expected_repr1)
 {
-  InputEigenTensor input;
-  for (int i = 0; i < eigen_util::extract_shape_t<InputEigenTensor>::total_size; ++i) {
+  InputTensor input;
+  for (int i = 0; i < eigen_util::extract_shape_t<InputTensor>::total_size; ++i) {
     input.data()[i] = i;
   }
 
@@ -41,12 +42,12 @@ void test_symmetry_input(
   }
 
   using SliceShape = Eigen::Sizes<8, 8>;
-  using InputEigenTensorSlice = Eigen::TensorFixedSize<float, SliceShape, Eigen::RowMajor>;
+  using InputTensorSlice = Eigen::TensorFixedSize<InputScalar, SliceShape, Eigen::RowMajor>;
 
   for (int slice = 0; slice < 2; ++slice) {
     const std::string &expected_repr = slice == 0 ? expected_repr0 : expected_repr1;
 
-    InputEigenTensorSlice input_slice;
+    InputTensorSlice input_slice;
     eigen_util::packed_fixed_tensor_cp(input_slice, eigen_util::slice(input, slice));
     std::ostringstream ss;
     ss << input_slice;
@@ -68,9 +69,9 @@ void test_symmetry_input(
 
 template<typename TransformT>
 void test_symmetry_policy(TransformT& transform, const std::string& expected_repr) {
-  PolicyEigenTensor policy;
+  PolicyTensor policy;
 
-  for (int i = 0; i < eigen_util::extract_shape_t<PolicyEigenTensor>::total_size; ++i) {
+  for (int i = 0; i < eigen_util::extract_shape_t<PolicyTensor>::total_size; ++i) {
     policy.data()[i] = i;
   }
 

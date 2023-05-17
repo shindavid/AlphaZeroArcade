@@ -24,20 +24,6 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
   return out;
 }
 
-template <typename Scalar, int Rows, int Cols, int Options>
-auto to_array1d(const Eigen::Array<Scalar, Rows, Cols, Options>& array) {
-  static_assert(Rows>0);
-  static_assert(Cols>0);
-  constexpr int N = Rows * Cols;
-  using Array1D = Eigen::Array<Scalar, N, 1>;
-  Array1D a;
-  for (int i = 0; i < N; ++i) {
-    a(i) = array.data()[i];
-  }
-
-  return a;
-}
-
 template<FixedTensorConcept DstTensorT, typename SrcTensorT, bool Aligned>
 void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src) {
   if (Aligned) {

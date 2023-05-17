@@ -83,8 +83,8 @@ concept GameStateConcept = requires(S state) {
    * Pretty-print mcts output for debugging purposes.
    */
   { S::dump_mcts_output(
-      typename GameStateTypes<S>::ValueProbDistr{},
-      typename GameStateTypes<S>::LocalPolicyProbDistr{},
+      typename GameStateTypes<S>::ValueArray{},
+      typename GameStateTypes<S>::LocalPolicyArray{},
       MctsResults<S>{})
   };
 };
