@@ -10,23 +10,15 @@ STEPS
   * Make a file at repo root called config.txt
   * Add the line "c4.solver_dir = <dir>" to this file, where <dir> is the directory of your above cloned repo
 
-* Generate training data
-  * ./generate_training_data.py -n 10000  # generates 10k games of random-self-play data
-  * Can accelerate the above by install openmpi and running with k-fold parallelism like so:
-       mpirun -n k ./generate_training_data.py -n 10000
-  * Writes data to c4_games/ by default
+* Debug files
+  * We used to have a python mcts implementation, which would produce a debug file that could be visualized through an
+    interactive web tool. We deleted this python code because it was not longer used.
+  * At some point, we may add the capability to produce these debug files on the c++ side.
+  * To visualize the debug file:
 
-* Train a model:
-  * ./train_nn.py
-  * Reads data from c4_games/ by default, writes to c4_model.ptj by default
-
-* Play against the CPU, creating a debug file:
-  * ./play_vs_cpu.py -d debug.xml
-  * Loads c4_model.ptj by default
-
-* Visualize the debug file:
       $ cd $REPO_ROOT/js/c4-debug
       $ npm install  # one-time
       $ npm start
-  * Should open up http://localhost:3000/ in browser, upload your file
+
+    This should open up http://localhost:3000/ in browser, upload your file
 
