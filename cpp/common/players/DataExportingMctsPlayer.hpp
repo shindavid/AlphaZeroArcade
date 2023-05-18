@@ -9,6 +9,9 @@
 
 namespace common {
 
+/*
+ * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
+ */
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
 public:

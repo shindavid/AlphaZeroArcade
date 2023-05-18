@@ -18,6 +18,12 @@
 
 namespace common {
 
+/*
+ * The MctsPlayer uses MCTS to select actions.
+ *
+ * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they can share the same
+ * MCTS tree, as an optimization. This implementation supports this optimization.
+ */
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class MctsPlayer : public AbstractPlayer<GameState_> {
 public:
@@ -25,6 +31,7 @@ public:
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
 
+  // See KataGo paper for description of search modes.
   enum SearchMode {
     kFast,
     kFull,
@@ -67,7 +74,7 @@ public:
   using PolicyShape = typename GameStateTypes::PolicyShape;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
-  MctsPlayer(const Params&, Mcts* mcts);
+  MctsPlayer(const Params&, Mcts* mcts);  // uses this constructor when sharing an MCTS tree
   template <typename... Ts> MctsPlayer(const Params&, Ts&&... mcts_params_args);
   ~MctsPlayer();
 

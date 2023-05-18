@@ -1,8 +1,5 @@
 #pragma once
 
-/*
- * Like std::runtime_error, but allows printf-style formatting.
- */
 #include <cstdarg>
 #include <iostream>
 
@@ -12,6 +9,8 @@ namespace util {
  * Like std::runtime_error, but allows printf-style arguments.
  *
  * TODO: dynamic resizing in case the error text exceeds 1024 chars.
+ *
+ * TODO: once the std::format library is implemented in gcc, use that instead of printf-style formatting.
  */
 class Exception : public std::exception {
 public:

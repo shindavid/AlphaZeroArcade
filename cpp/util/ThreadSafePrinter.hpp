@@ -26,6 +26,8 @@ namespace util {
  *
  * Finally, each line is optionally prefixed with a timestamp (before the thread whitespace). This is enabled by
  * default, but can be disabled by passing false as the second constructor argument.
+ *
+ * TODO: once the std::format library is implemented in gcc, use that instead of printf-style formatting.
  */
 
 class ThreadSafePrinter {

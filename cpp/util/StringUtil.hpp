@@ -32,6 +32,8 @@ std::vector<std::string> split(const std::string& s);
  * Like sprintf(), but conveniently bypasses need to declare the char buffer at the call-site.
  *
  * The template parameter N dictates the char buffer size. In case of overflow, throws an exception.
+ *
+ * TODO: once the std::format library is implemented in gcc, use that instead of printf-style formatting.
  */
 template<int N=1024>
 inline std::string create_string(char const* fmt, ...);
