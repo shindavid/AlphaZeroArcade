@@ -20,4 +20,4 @@ docker compose up -d
 docker-compose exec server bash
 ```
 
-By default the repo is mounted to the `/app` directory within the image
+By default the repo is mounted to the `/AlphaZeroArcade` directory within the image
