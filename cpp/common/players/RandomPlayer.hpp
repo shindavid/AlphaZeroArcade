@@ -7,6 +7,9 @@
 
 namespace common {
 
+/*
+ * RandomPlayer always chooses uniformly at random among the set of legal moves.
+ */
 template<GameStateConcept GameState>
 class RandomPlayer : public AbstractPlayer<GameState> {
 public:

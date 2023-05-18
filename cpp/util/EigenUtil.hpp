@@ -11,6 +11,9 @@
 
 #include <util/CppUtil.hpp>
 
+/*
+ * Various util functions that make the eigen3 library more pleasant to use.
+ */
 namespace eigen_util {
 
 // eigen_util::Shape<...> is a type alias for Eigen::Sizes<...>

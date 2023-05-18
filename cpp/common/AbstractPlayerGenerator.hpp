@@ -73,7 +73,7 @@ public:
    * Takes a list of arguments and parses them. This is called before generate(). The tokens that will be passed here
    * are extracted from the value of a --player argument.
    *
-   * The --type and --seat parts of the tokens are removed first before passing to this method.
+   * The --type, --name, and --seat parts of the tokens are removed first before passing to this method.
    *
    * If there are no associated options for this player type, then this method does not need to be overriden.
    */
@@ -102,6 +102,10 @@ public:
    * Validates name, raising an exception if the name is invalid (too long or uses invalid characters).
    */
   void set_name(const std::string& name);
+
+  /*
+   * Convenience method that composes generate() with set_name().
+   */
   AbstractPlayer<GameState>* generate_with_name(game_thread_id_t game_thread_id);
 
 protected:

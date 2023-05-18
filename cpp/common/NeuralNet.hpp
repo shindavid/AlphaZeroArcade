@@ -7,6 +7,9 @@
 
 namespace common {
 
+/*
+ * A thin wrapper around a PyTorch model.
+ */
 class NeuralNet {
 public:
   using input_vec_t = std::vector<torch::jit::IValue>;

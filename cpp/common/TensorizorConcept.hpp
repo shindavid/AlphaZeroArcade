@@ -16,6 +16,9 @@ namespace common {
  * All Tensorizor classes must satisfy the TensorizorConcept concept.
  *
  * A Tensorizor is responsible for converting a GameState into a Tensor.
+ *
+ * AlphaGo includes a history of the past 7 game states in the input tensor. If you want to include history like this,
+ * the Tensorizor class is the appropriate place to maintain that state.
  */
 template <class Tensorizor, class GameState>
 concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor::InputTensor input)
@@ -31,7 +34,8 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
   { util::decay_copy(Tensorizor::kMaxNumSymmetries) } -> std::same_as<int>;
 
   /*
-   * Used to clear state between games. (Is this necessary?)
+   * Used to clear state between games. Needed if the Tensorizor maintains state, as is done when recent history is
+   * included as part of the input tensor.
    */
   { tensorizor.clear() };
 

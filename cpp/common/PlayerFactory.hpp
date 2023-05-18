@@ -19,7 +19,7 @@
 /*
  * The PlayerFactory is a template class that facilitates the creation of player objects from command line arguments.
  *
- * See cpp/connect4/C4PlayerFactor.hpp for an example of how to use this class.
+ * See cpp/connect4/PlayerFactory.hpp for an example of how to use this class.
  */
 namespace common {
 

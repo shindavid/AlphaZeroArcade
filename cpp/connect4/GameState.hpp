@@ -36,7 +36,9 @@ namespace c4 {
  *  1  9 17 25 33 41 49
  *  0  8 16 24 32 40 48
  *
- * Unlike the connect4 package, we use 0-indexing for column indices.
+ * Based on https://github.com/PascalPons/connect4
+ *
+ * Unlike the PascalPons package, we use 0-indexing for column indices.
  */
 class GameState {
 public:
