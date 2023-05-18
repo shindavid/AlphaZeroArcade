@@ -21,7 +21,6 @@
 #include <common/MctsResults.hpp>
 #include <common/NeuralNet.hpp>
 #include <common/TensorizorConcept.hpp>
-#include <util/AtomicSharedPtr.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
@@ -161,7 +160,6 @@ private:
     LocalPolicyArray local_policy_logit_distr_;
   };
   using NNEvaluation_sptr = std::shared_ptr<NNEvaluation>;
-  using NNEvaluation_asptr = util::AtomicSharedPtr<NNEvaluation>;
 
   /*
    * A Node consists of n=3 main groups of non-const member variables:
@@ -229,7 +227,7 @@ private:
     struct evaluation_data_t {
       evaluation_data_t(const ActionMask& valid_actions);
 
-      NNEvaluation_asptr ptr;
+      NNEvaluation_sptr ptr;
       LocalPolicyArray local_policy_prob_distr;
       evaluation_state_t state = kUnset;
       ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
@@ -558,7 +556,7 @@ private:
   private:
     using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
     using cache_key_t = StateEvaluationKey<GameState>;
-    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+    using cache_t = util::LRUCache<cache_key_t, NNEvaluation_sptr>;
 
     NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
                         std::chrono::nanoseconds timeout_duration, size_t cache_size,
@@ -584,7 +582,7 @@ private:
     bool active() const { return num_connections_; }
 
     struct eval_ptr_data_t {
-      NNEvaluation_asptr eval_ptr;
+      NNEvaluation_sptr eval_ptr;
 
       cache_key_t cache_key;
       ActionMask valid_actions;

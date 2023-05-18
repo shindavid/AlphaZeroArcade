@@ -483,7 +483,7 @@ Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool 
 
   std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
   typename Node::evaluation_data_t& evaluation_data = tree->evaluation_data();
-  evaluate_and_expand_result_t data{evaluation_data.ptr.load(), false};
+  evaluate_and_expand_result_t data{std::atomic_load(&evaluation_data.ptr), false};
   auto state = evaluation_data.state;
 
   switch (state) {
@@ -504,7 +504,7 @@ Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand(Node* tree, bool 
           tree->cv_evaluate_and_expand().wait(lock);
           assert(evaluation_data.state == Node::kSet);
         }
-        data.evaluation = evaluation_data.ptr.load();
+        data.evaluation = std::atomic_load(&evaluation_data.ptr);
         assert(data.evaluation.get());
       }
       break;
@@ -586,7 +586,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
     }
   }
   evaluation_data.local_policy_prob_distr = P;
-  evaluation_data.ptr.store(data->evaluation);
+  std::atomic_store(&evaluation_data.ptr, data->evaluation);
   evaluation_data.state = Node::kSet;
 }
 
@@ -1000,7 +1000,8 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
     edata.transform->transform_policy(group.policy);
-    edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
+    auto ptr = std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions);
+    std::atomic_store(&edata.eval_ptr, ptr);
   }
 
   record_for_profiling(kAcquiringCacheMutex);
@@ -1134,7 +1135,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::tensorize_and_transform_i
   transform->transform_input(group.input);
 
   group.current_player = current_player;
-  group.eval_ptr_data.eval_ptr.store(nullptr);
+  std::atomic_store(&group.eval_ptr_data.eval_ptr, NNEvaluation_sptr());
   group.eval_ptr_data.cache_key = cache_key;
   group.eval_ptr_data.valid_actions = valid_action_mask;
   group.eval_ptr_data.transform = transform;
@@ -1172,7 +1173,7 @@ Mcts<GameState, Tensorizor>::NNEvaluation_sptr Mcts<GameState, Tensorizor>::NNEv
     return false;
   });
 
-  return batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr.load();
+  return std::atomic_load(&batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -1470,7 +1471,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
   const auto& evaluation_data = root_->evaluation_data();
   const auto& stable_data = root_->stable_data();
 
-  NNEvaluation_sptr evaluation = evaluation_data.ptr.load();
+  NNEvaluation_sptr evaluation = std::atomic_load(&evaluation_data.ptr);
   results_.valid_actions = stable_data.valid_action_mask;
   results_.counts = root_->get_effective_counts();
   if (params_.forced_playouts && add_noise) {

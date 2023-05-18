@@ -2,6 +2,10 @@
 
 namespace util {
 
+namespace detail {
+
+}  // namespace detail
+
 template<class Key_, class Value_>
 void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value)
 {
