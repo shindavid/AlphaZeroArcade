@@ -10,12 +10,19 @@ build:
   ./py/build.py
 
 # start a docker shell
-shell:
-  ./docker/shell
+shell *ARGS:
+  ./docker/shell {{ARGS}}
 
 # push repo to a remote machine with rsync
 push hostname:
   rsync -avP {{repodir}} {{hostname}}:
+
+# set up a new lambda cloud node
+setup-lambda hostname:
+  ./cloud/lambda/setup.sh {{hostname}}
+
+goto hostname:
+  ssh -t {{hostname}} 'cd AlphaZeroArcade && just shell'
 
 # generate repo configuration file
 genconfig:

@@ -11,4 +11,8 @@ fi
 
 id=$(docker ps | grep "$IMAGENAME" | awk '{print $1}' | head -1)
 
-docker exec -it $id bash -l
+if [ "$#" == 0 ]; then
+    docker exec -it $id bash -l
+else
+    docker exec $id $@
+fi
