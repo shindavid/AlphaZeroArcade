@@ -37,14 +37,12 @@ def get_args():
 
 def validate_gcc_version():
     """
-    Our c++ code uses std::atomic<std::shared_ptr>>, which is only supported in gcc-12+.
-
-    See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
+    Validates gcc is at version 11+
     """
     output = subprocess.getoutput('gcc --version')
     version_str = output.splitlines()[0].split()[-1]
     version = pkg_resources.parse_version(version_str)
-    required_version_str = '12'
+    required_version_str = '11'
     required_version = pkg_resources.parse_version(required_version_str)
     if version >= required_version:
         return
@@ -52,21 +50,19 @@ def validate_gcc_version():
     print(f'Your gcc version ({version_str}) is old. Please update to version {required_version_str}+')
     print('Recommended action:')
     print('')
-    print('sudo apt-get install gcc-12')
-    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
+    print('sudo apt-get install gcc-11')
+    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 60 --slave /usr/bin/g++ g++ /usr/bin/g++-11')
     sys.exit(0)
 
 
 def validate_gxx_version():
     """
-    Our c++ code uses std::atomic<std::shared_ptr>>, which is only supported in gcc-12+.
-
-    See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
+    Validates g++ is at version 11+
     """
     output = subprocess.getoutput('g++ --version')
     version_str = output.splitlines()[0].split()[-1]
     version = pkg_resources.parse_version(version_str)
-    required_version_str = '12'
+    required_version_str = '11'
     required_version = pkg_resources.parse_version(required_version_str)
     if version >= required_version:
         return
@@ -74,8 +70,8 @@ def validate_gxx_version():
     print(f'Your g++ version ({version_str}) is old. Please update to version {required_version_str}+')
     print('Recommended action:')
     print('')
-    print('sudo apt install g++-12')
-    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
+    print('sudo apt install g++-11')
+    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 60 --slave /usr/bin/g++ g++ /usr/bin/g++-11')
     sys.exit(0)
 
 
