@@ -177,7 +177,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     value = mcts_results->win_rates;
   }
 
-  PolicyArray policy = eigen_util::reinterpret_as_array(policy_tensor);
+  PolicyArray& policy = eigen_util::reinterpret_as_array(policy_tensor);
   if (search_mode != kRawPolicy) {
     float temp = move_temperature_.value();
     if (temp != 0) {

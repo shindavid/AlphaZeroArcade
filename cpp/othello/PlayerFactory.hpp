@@ -6,6 +6,7 @@
 #include <common/players/RemotePlayerProxyGenerator.hpp>
 #include <othello/GameState.hpp>
 #include <othello/Tensorizor.hpp>
+#include <othello/players/EdaxPlayerGenerator.hpp>
 #include <othello/players/HumanTuiPlayerGenerator.hpp>
 
 namespace othello {
@@ -20,7 +21,8 @@ public:
 private:
   static player_generator_creator_vec_t make_generators() {
     return {
-      new common::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
+        new common::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
+        new common::PlayerGeneratorCreator<othello::EdaxPlayerGenerator>(),
       new common::PlayerGeneratorCreator<common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
       new common::PlayerGeneratorCreator<common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
       new common::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
