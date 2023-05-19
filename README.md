@@ -9,6 +9,8 @@ A command-runner called `just` is used for various scripting.
 
 Install instructions are here: https://github.com/casey/just#packages
 
+To view available commands, just run: `just`
+
 ## Docker and Cloud GPUs
 
 Some instructions for building and running on GPUs in the cloud
