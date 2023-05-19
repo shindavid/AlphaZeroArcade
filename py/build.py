@@ -41,7 +41,7 @@ def validate_gcc_version():
 
     See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
     """
-    output = subprocess.getoutput('g++ --version')
+    output = subprocess.getoutput('gcc --version')
     version_str = output.splitlines()[0].split()[-1]
     version = pkg_resources.parse_version(version_str)
     required_version_str = '12'
@@ -55,6 +55,7 @@ def validate_gcc_version():
     print('sudo apt-get install gcc-12')
     print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
     sys.exit(0)
+
 
 def validate_gxx_version():
     """
@@ -76,6 +77,7 @@ def validate_gxx_version():
     print('sudo apt install g++-12')
     print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
     sys.exit(0)
+
 
 def get_targets(targets: List[str], args) -> List[str]:
     if targets:
@@ -127,27 +129,6 @@ def get_tinyexpr_dir():
     assert os.path.isdir(tinyexpr_dir)
     return tinyexpr_dir
 
-
-# def get_conda_prefix():
-#     conda_prefix = os.environ.get('CONDA_PREFIX', None)
-#     assert conda_prefix, 'It appears you do not have a conda environment activated. Please activate!'
-#     return conda_prefix
-
-
-# def check_for_eigen_dir(conda_prefix):
-#     eigen_dir = os.path.join(conda_prefix, 'share/eigen3/cmake')
-#     assert os.path.isdir(eigen_dir), 'Please conda install eigen.'
-
-
-# def check_for_boost_dir(conda_prefix):
-#     lib_cmake_dir = os.path.join(conda_prefix, 'lib/cmake')
-#     assert os.path.isdir(lib_cmake_dir)
-#     for path in os.listdir(lib_cmake_dir):
-#         if path.startswith('Boost-') and os.path.isdir(os.path.join(lib_cmake_dir, path)):
-#             return
-#     raise Exception('Please conda install boost.')
-
-
 def main():
     cwd = os.getcwd()
     args = get_args()
@@ -168,13 +149,9 @@ def main():
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     os.chdir(repo_root)
 
-    #torch_dir =  '/root/miniconda3/lib/python3.10/site-packages/torch'  #get_torch_dir()
     torch_dir = get_torch_dir()
     eigenrand_dir = get_eigenrand_dir()
     tinyexpr_dir = get_tinyexpr_dir()
-    # conda_prefix = get_conda_prefix()
-    # check_for_eigen_dir(conda_prefix)
-    # check_for_boost_dir(conda_prefix)
 
     macro_defines = args.macro_defines if args.macro_defines else []
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
@@ -193,8 +170,6 @@ def main():
         f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DMY_TINYEXPR_DIR={tinyexpr_dir}',
-        # f'-DCMAKE_PREFIX_PATH={conda_prefix}',
-        f'-D__NV_NO_HOST_COMPILER_CHECK=1',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
     if debug:
