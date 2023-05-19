@@ -26,21 +26,21 @@ inline EdaxPlayer::EdaxPlayer(const Params& params) : params_(params) {
   std::string edax_bin_str = util::Config::instance()->get("othello.edax_bin", "");
 
   if (edax_dir_str.empty()) {
-    throw util::CleanException("othello.edax_dir not specified! Please add 'othello.edax_dir' entry in $REPO_ROOT/%s",
-                               util::Config::kFilename);
+    throw util::CleanException("othello.edax_dir not specified! Please follow setup instructions in py/othello/README.md");
   }
   if (edax_bin_str.empty()) {
-    throw util::CleanException("othello.edax_bin not specified! Please add 'othello.edax_bin' entry in $REPO_ROOT/%s",
-                               util::Config::kFilename);
+    throw util::CleanException("othello.edax_bin not specified! Please follow setup instructions in py/othello/README.md");
   }
   boost::filesystem::path edax_dir(edax_dir_str);
   boost::filesystem::path edax_bin = edax_dir / edax_bin_str;
   if (!boost::filesystem::is_directory(edax_dir)) {
-    throw util::Exception("Dir specified by config value 'othello.edax_dir' does not exist: %s", edax_dir.c_str());
+    throw util::Exception("Dir specified by config value 'othello.edax_dir' does not exist: %s. "
+                          "Please follow setup instructions in py/othello/README.md", edax_dir.c_str());
   }
   if (!boost::filesystem::is_regular_file(edax_bin)) {
     throw util::Exception("File formed by combining config values 'othello.edax_dir' and 'othello.edax_bin' "
-                          "does not exist: %s", edax_bin.c_str());
+                          "does not exist: %s. Please follow setup instructions in py/othello/README.md",
+                          edax_bin.c_str());
   }
 
   namespace bp = boost::process;
