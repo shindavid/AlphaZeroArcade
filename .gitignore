@@ -3,6 +3,10 @@
 .vscode
 cmake-build-debug
 
+# emacs tmp files
+*~
+\#*#
+
 # python cache
 **/__pycache__
 

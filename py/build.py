@@ -129,27 +129,6 @@ def get_tinyexpr_dir():
     assert os.path.isdir(tinyexpr_dir)
     return tinyexpr_dir
 
-
-def get_conda_prefix():
-    conda_prefix = os.environ.get('CONDA_PREFIX', None)
-    assert conda_prefix, 'It appears you do not have a conda environment activated. Please activate!'
-    return conda_prefix
-
-
-def check_for_eigen_dir(conda_prefix):
-    eigen_dir = os.path.join(conda_prefix, 'share/eigen3/cmake')
-    assert os.path.isdir(eigen_dir), 'Please conda install eigen.'
-
-
-def check_for_boost_dir(conda_prefix):
-    lib_cmake_dir = os.path.join(conda_prefix, 'lib/cmake')
-    assert os.path.isdir(lib_cmake_dir)
-    for path in os.listdir(lib_cmake_dir):
-        if path.startswith('Boost-') and os.path.isdir(os.path.join(lib_cmake_dir, path)):
-            return
-    raise Exception('Please conda install boost.')
-
-
 def main():
     cwd = os.getcwd()
     args = get_args()
@@ -173,9 +152,6 @@ def main():
     torch_dir = get_torch_dir()
     eigenrand_dir = get_eigenrand_dir()
     tinyexpr_dir = get_tinyexpr_dir()
-    conda_prefix = get_conda_prefix()
-    check_for_eigen_dir(conda_prefix)
-    check_for_boost_dir(conda_prefix)
 
     macro_defines = args.macro_defines if args.macro_defines else []
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
@@ -194,7 +170,6 @@ def main():
         f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DMY_TINYEXPR_DIR={tinyexpr_dir}',
-        f'-DCMAKE_PREFIX_PATH={conda_prefix}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
     if debug:
@@ -228,4 +203,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
