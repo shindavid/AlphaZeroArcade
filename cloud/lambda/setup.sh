@@ -8,4 +8,4 @@ fi
 hostname=$1
 
 just push $hostname
-ssh $hostname bash -l -c './AlphaZeroArcade/cloud/lambda/setup_local.sh'
+ssh $hostname ./AlphaZeroArcade/cloud/lambda/setup_local.sh
