@@ -7,8 +7,8 @@ from util.torch_util import Shape
 
 
 class GamesDataset(Dataset):
-    def __init__(self, self_play_data_dir: str):
-        self.self_play_metadata = SelfPlayMetadata(self_play_data_dir)
+    def __init__(self, self_play_data_dir: str, first_gen=0):
+        self.self_play_metadata = SelfPlayMetadata(self_play_data_dir, first_gen=first_gen)
         self.n_total_games = self.self_play_metadata.n_total_games
         self.n_total_positions = self.self_play_metadata.n_total_positions
         self.n_window = compute_n_window(self.n_total_positions)

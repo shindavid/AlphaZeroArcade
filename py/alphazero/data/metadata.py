@@ -63,7 +63,7 @@ class GenerationMetadata:
 
 
 class SelfPlayMetadata:
-    def __init__(self, self_play_dir: str):
+    def __init__(self, self_play_dir: str, first_gen=0):
         self.self_play_dir = self_play_dir
         self.metadata: Dict[Generation, GenerationMetadata] = {}
         self.n_total_positions = 0
@@ -71,6 +71,8 @@ class SelfPlayMetadata:
         for gen_dir in os.listdir(self_play_dir):
             assert gen_dir.startswith('gen-'), gen_dir
             generation = int(gen_dir.split('-')[1])
+            if generation < first_gen:
+                continue
             full_gen_dir = os.path.join(self_play_dir, gen_dir)
             metadata = GenerationMetadata(full_gen_dir)
             self.metadata[generation] = metadata
