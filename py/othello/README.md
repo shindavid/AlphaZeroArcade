@@ -1,4 +1,4 @@
-# Connect4
+# Othello
 
 ## Edax solver
 
