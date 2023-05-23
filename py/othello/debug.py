@@ -89,13 +89,22 @@ def main():
 
     num_rows = 0
     batch_num = 0
+    filtered_rows = 0
 
-    for epoch in range(5):
+    for epoch in range(1):
         for data in loader:
             inputs, value_labels, policy_labels = data
             inputs = inputs.type(torch.float32).to(device=1)
             # value_labels = value_labels.to(device=1)
             policy_labels = policy_labels.to(device=1)
+
+            if Args.omit_passes:
+                n_original_rows = inputs.shape[0]
+                non_pass_indices = torch.where(policy_labels[:, 3, 3] < 0.5)[0]
+                inputs = inputs[non_pass_indices]
+                policy_labels = policy_labels[non_pass_indices]
+                value_labels = value_labels[non_pass_indices]
+                filtered_rows += n_original_rows - inputs.shape[0]
 
             optimizer.zero_grad()
             policy_outputs, value_outputs = net(inputs)
@@ -119,8 +128,8 @@ def main():
             num_rows += inputs.shape[0]
             batch_num += 1
             if batch_num % 100 == 0:
-                timed_print('Epoch %d Processed %8d rows, spread=%.3f sub_mass=%.3f subpolicy=[%.3f %.3f %.3f %.3f]' %
-                            (epoch+1, num_rows, spread, mass, subpolicy[0], subpolicy[1], subpolicy[2], subpolicy[3]))
+                timed_print('Epoch %d Processed %8d rows, filtered %8d rows, spread=%.3f sub_mass=%.3f subpolicy=[%.3f %.3f %.3f %.3f]' %
+                            (epoch+1, num_rows, filtered_rows, spread, mass, subpolicy[0], subpolicy[1], subpolicy[2], subpolicy[3]))
 
 
 if __name__ == '__main__':
