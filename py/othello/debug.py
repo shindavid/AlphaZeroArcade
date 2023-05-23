@@ -91,7 +91,7 @@ def main():
     batch_num = 0
     filtered_rows = 0
 
-    for epoch in range(1):
+    for epoch in range(5):
         for data in loader:
             inputs, value_labels, policy_labels = data
             inputs = inputs.type(torch.float32).to(device=1)
