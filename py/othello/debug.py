@@ -24,6 +24,7 @@ class Args:
     tag: str
     start_gen: int
     omit_passes: bool
+    starting_position_only: bool
 
     @staticmethod
     def load(args):
@@ -31,6 +32,9 @@ class Args:
         Args.tag = args.tag
         Args.start_gen = args.start_gen
         Args.omit_passes = bool(args.omit_passes)
+        Args.starting_position_only = bool(args.starting_position_only)
+
+        assert not Args.omit_passes and Args.starting_position_only, 'Use -o or -O, not both'
         assert Args.tag, 'Required option: --tag/-t'
 
 
@@ -41,6 +45,7 @@ def load_args():
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     parser.add_argument('-g', '--start-gen', type=int, default=5800, help='gen to start at')
     parser.add_argument('-o', '--omit-passes', action='store_true', help='omit passes from training data')
+    parser.add_argument('-O', '--starting-position-only', action='store_true', help='use starting position only')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     ModelingArgs.add_args(parser)
 
@@ -91,6 +96,9 @@ def main():
     batch_num = 0
     filtered_rows = 0
 
+    policy_sum = torch.zeros((8, 8)).to(device=1)
+    policy_count = 0
+
     for epoch in range(5):
         for data in loader:
             inputs, value_labels, policy_labels = data
@@ -104,6 +112,16 @@ def main():
                 inputs = inputs[non_pass_indices]
                 policy_labels = policy_labels[non_pass_indices]
                 value_labels = value_labels[non_pass_indices]
+                filtered_rows += n_original_rows - inputs.shape[0]
+            elif Args.starting_position_only:
+                n_original_rows = inputs.shape[0]
+                starting_filter = (torch.sum(inputs, dim=(1, 2, 3)) == 4) & (inputs[:, 0, 3, 4] == 1)
+                starting_position_indices = torch.where(starting_filter)[0]
+                inputs = inputs[starting_position_indices]
+                policy_labels = policy_labels[starting_position_indices]
+
+                policy_sum += torch.sum(policy_labels, dim=0)
+                policy_count += policy_labels.shape[0]
                 filtered_rows += n_original_rows - inputs.shape[0]
 
             optimizer.zero_grad()
@@ -130,6 +148,10 @@ def main():
             if batch_num % 100 == 0:
                 timed_print('Epoch %d Processed %8d rows, filtered %8d rows, spread=%.3f sub_mass=%.3f subpolicy=[%.3f %.3f %.3f %.3f]' %
                             (epoch+1, num_rows, filtered_rows, spread, mass, subpolicy[0], subpolicy[1], subpolicy[2], subpolicy[3]))
+
+                if Args.starting_position_only:
+                    policy_avg = policy_sum / max(1, policy_count)
+                    print(policy_avg)
 
 
 if __name__ == '__main__':
