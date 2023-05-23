@@ -337,7 +337,7 @@ class AlphaZeroManager:
 
                 optimizer.zero_grad()
                 policy_outputs, value_outputs = net(inputs)
-                policy_loss = policy_criterion(policy_outputs, policy_labels)
+                policy_loss = policy_criterion(policy_outputs.flatten(), policy_labels.flatten())
                 value_loss = value_criterion(value_outputs, value_labels)
                 loss = policy_loss + value_loss * value_loss_lambda
 
