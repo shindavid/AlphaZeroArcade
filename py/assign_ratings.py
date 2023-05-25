@@ -45,13 +45,10 @@ from typing import Optional, Dict, List
 from natsort import natsorted
 import numpy as np
 
-from alphazero.ratings import extract_match_record
+from alphazero.ratings import extract_match_record, compute_ratings
 from config import Config
 from util import subprocess_util
 from util.py_util import timed_print
-
-
-BETA_SCALE_FACTOR = 100.0 / np.log(1/.36 - 1)  # 100-point difference corresponds to 64% win-rate to match Elo
 
 
 class Args:
@@ -444,36 +441,15 @@ class Arena:
         self.conn.commit()
 
     def update_ratings(self):
-        eps = 1e-6
-        w = self.real_wins + self.virtual_wins
-        assert np.all(w >= 0)
-        assert w.diagonal().sum() == 0
-        ww = w + w.T
-        W = np.sum(w, axis=1)
-
-        p = np.exp(self.beta / BETA_SCALE_FACTOR)
-        k = 0
-        while True:
-            pp = p.reshape((-1, 1)) + p.reshape((1, -1))
-            wp_sum = np.sum(ww / pp, axis=1)
-            gradient = W / p - wp_sum
-            max_gradient = np.max(np.abs(gradient))
-            if max_gradient < eps:
-                break
-
-            q = W / wp_sum
-            q /= q[0]  # so that Random agent's rating is 0
-            p = q
-            k += 1
-
         prev_beta = self.beta
-        self.beta = np.log(p) * BETA_SCALE_FACTOR
+        w = self.real_wins + self.virtual_wins
+        self.beta = compute_ratings(w)
         beta_delta = self.beta - prev_beta
         beta_delta_indices = list(sorted(range(len(self.beta)), key=lambda i: -np.abs(beta_delta[i])))
 
-        timed_print('Updated ratings after %d iterations (top-3 beta changes: %.3f, %.3f, %.3f, max-beta:%.3f)' %
-                    (k, beta_delta[beta_delta_indices[0]],
-                     beta_delta[beta_delta_indices[1]], beta_delta[beta_delta_indices[2]], np.max(self.beta)))
+        timed_print('Updated ratings (top-3 beta changes: %.3f, %.3f, %.3f, max-beta:%.3f)' %
+                    (beta_delta[beta_delta_indices[0]], beta_delta[beta_delta_indices[1]],
+                     beta_delta[beta_delta_indices[2]], np.max(self.beta)))
 
     def commit_ratings(self):
         c = self.conn.cursor()

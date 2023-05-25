@@ -1,6 +1,11 @@
 import collections
 from typing import Dict
 
+import numpy as np
+
+
+BETA_SCALE_FACTOR = 100.0 / np.log(1/.36 - 1)  # 100-point difference corresponds to 64% win-rate to match Elo
+
 
 def int_parse(s: str, prefix: str):
     assert s.startswith(prefix), s
@@ -65,3 +70,36 @@ def extract_match_record(stdout: str) -> MatchRecord:
     counts2 = record.get(1)
     assert (counts1.win, counts1.loss, counts1.draw) == (counts2.loss, counts2.win, counts2.draw)
     return record
+
+
+def compute_ratings(w: np.ndarray) -> np.ndarray:
+    """
+    Accepts an (n, n)-shaped matrix w, where w[i, j] is the number of wins player i has over player j.
+
+    Outputs a length-n array beta, where beta[i] is the rating of player i.
+
+    Fixes beta[0] = 0 arbitrarily.
+    """
+    eps = 1e-6
+    n = w.shape[0]
+    assert w.shape == (n, n)
+    assert np.all(w >= 0)
+    assert w.diagonal().sum() == 0
+    ww = w + w.T
+    W = np.sum(w, axis=1)
+
+    p = np.ones(n, dtype=np.float64)
+    while True:
+        pp = p.reshape((-1, 1)) + p.reshape((1, -1))
+        wp_sum = np.sum(ww / pp, axis=1)
+        gradient = W / p - wp_sum
+        max_gradient = np.max(np.abs(gradient))
+        if max_gradient < eps:
+            break
+
+        q = W / wp_sum
+        q /= q[0]  # so that Random agent's rating is 0
+        p = q
+
+    beta = np.log(p) * BETA_SCALE_FACTOR
+    return beta
