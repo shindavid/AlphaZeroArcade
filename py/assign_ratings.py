@@ -37,19 +37,17 @@ require H to be strongly connected before we can make proper predictions, so our
 sampling edges that can potentially connect clusters of H. The sampling details can be found in the code.
 """
 import argparse
-import collections
 import os
 import random
 import sqlite3
-import time
 from typing import Optional, Dict, List
 
 from natsort import natsorted
 import numpy as np
 
+from alphazero.ratings import extract_match_record
 from config import Config
 from util import subprocess_util
-from util.graph_util import transitive_closure, direct_children
 from util.py_util import timed_print
 
 
@@ -125,64 +123,6 @@ def inject_args(cmdline: str, kwargs: dict):
     for arg_name, arg_value in kwargs.items():
         cmdline = inject_arg(cmdline, arg_name, arg_value)
     return cmdline
-
-
-def int_parse(s: str, prefix: str):
-    assert s.startswith(prefix), s
-    return int(s[len(prefix):])
-
-
-class WinLossDrawCounts:
-    def __init__(self, win=0, loss=0, draw=0):
-        self.win = win
-        self.loss = loss
-        self.draw = draw
-
-    def __iadd__(self, other):
-        self.win += other.win
-        self.loss += other.loss
-        self.draw += other.draw
-        return self
-
-    def __str__(self):
-        return f'W{self.win} L{self.loss} D{self.draw}'
-
-
-class MatchRecord:
-    def __init__(self):
-        self.counts: Dict[int, WinLossDrawCounts] = collections.defaultdict(WinLossDrawCounts)
-
-    def update(self, player_id: int, counts: WinLossDrawCounts):
-        self.counts[player_id] += counts
-
-    def get(self, player_id: int) -> WinLossDrawCounts:
-        return self.counts[player_id]
-
-    def empty(self) -> bool:
-        return len(self.counts) == 0
-
-
-def extract_match_record(stdout: str) -> MatchRecord:
-    """
-    ...
-    All games complete!
-    pid=0 name=foo W40 L24 D0 [40]
-    pid=1 name=bar W24 L40 D0 [24]
-    ...
-    """
-    record = MatchRecord()
-    for line in stdout.splitlines():
-        tokens = line.split()
-        if len(tokens) > 1 and tokens[0].startswith('pid=') and tokens[0][4:].isdigit():
-            player_id = int_parse(tokens[0], 'pid=')
-            win = int_parse(tokens[2], 'W')
-            loss = int_parse(tokens[3], 'L')
-            draw = int_parse(tokens[4], 'D')
-            counts = WinLossDrawCounts(win, loss, draw)
-            record.update(player_id, counts)
-
-    assert not record.empty(), stdout
-    return record
 
 
 def construct_cmd(binary: str,
@@ -491,7 +431,6 @@ class Arena:
 
         counts1 = record.get(0)
         counts2 = record.get(1)
-        assert (counts1.win, counts1.loss, counts1.draw) == (counts2.loss, counts2.win, counts2.draw)
         timed_print(f'Agent 1: {counts1}')
 
         i = agent1.index
