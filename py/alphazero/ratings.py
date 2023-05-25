@@ -39,6 +39,10 @@ class MatchRecord:
 
 def extract_match_record(stdout: str) -> MatchRecord:
     """
+    Parses the stdout of the c++ binary that runs the matches.
+
+    Looks for this text:
+
     ...
     All games complete!
     pid=0 name=foo W40 L24 D0 [40]
@@ -50,9 +54,9 @@ def extract_match_record(stdout: str) -> MatchRecord:
         tokens = line.split()
         if len(tokens) > 1 and tokens[0].startswith('pid=') and tokens[0][4:].isdigit():
             player_id = int_parse(tokens[0], 'pid=')
-            win = int_parse(tokens[2], 'W')
-            loss = int_parse(tokens[3], 'L')
-            draw = int_parse(tokens[4], 'D')
+            win = int_parse(tokens[-4], 'W')
+            loss = int_parse(tokens[-3], 'L')
+            draw = int_parse(tokens[-2], 'D')
             counts = WinLossDrawCounts(win, loss, draw)
             record.update(player_id, counts)
 
