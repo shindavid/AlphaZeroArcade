@@ -60,9 +60,9 @@ inline void EdaxPlayer::start_game() {
 inline void EdaxPlayer::receive_state_change(common::seat_index_t seat, const GameState&, common::action_index_t action) {
   if (seat == this->get_my_seat()) return;
   char move_str[3];
-  if (action == kPass) {  // "PA" is edax notation for pass
+  if (action == kPass) {  // "PS" is edax notation for pass
     move_str[0] = 'P';
-    move_str[1] = 'A';
+    move_str[1] = 'S';
     move_str[2] = '\n';
   } else {
     move_str[0] = char('A' + action % 8);
@@ -75,6 +75,8 @@ inline void EdaxPlayer::receive_state_change(common::seat_index_t seat, const Ga
 
 inline common::action_index_t EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
   if (valid_actions[kPass]) {
+    in_.write("PS\n", 3);
+    in_.flush();
     return kPass;
   }
   in_.write("go\n", 3);
@@ -86,7 +88,7 @@ inline common::action_index_t EdaxPlayer::get_action(const GameState&, const Act
     const std::string& line = line_buffer_[n];
     if (line.starts_with("Edax plays ")) {
       std::string move_str = line.substr(11, 2);
-      if (move_str.starts_with("PA")) {
+      if (move_str.starts_with("PS")) {  // "PS" is edax notation for pass
         action = kPass;
         break;
       } else {
@@ -101,7 +103,7 @@ inline common::action_index_t EdaxPlayer::get_action(const GameState&, const Act
 
   if (action < 0 || action >= kNumGlobalActions || !valid_actions[action]) {
     for (size_t i = 0; i < n; ++i) {
-      std::cerr << line_buffer_[i];
+      std::cerr << line_buffer_[i] << std::endl;
     }
     throw util::Exception("EdaxPlayer::get_action: invalid action: %d", action);
   }
