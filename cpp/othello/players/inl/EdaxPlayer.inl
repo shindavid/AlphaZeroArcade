@@ -57,7 +57,8 @@ inline void EdaxPlayer::start_game() {
   in_.flush();
 }
 
-inline void EdaxPlayer::receive_state_change(common::seat_index_t, const GameState&, common::action_index_t action) {
+inline void EdaxPlayer::receive_state_change(common::seat_index_t seat, const GameState&, common::action_index_t action) {
+  if (seat == this->get_my_seat()) return;
   char move_str[3];
   if (action == kPass) {  // "PA" is edax notation for pass
     move_str[0] = 'P';
