@@ -59,25 +59,15 @@ inline void EdaxPlayer::start_game() {
 
 inline void EdaxPlayer::receive_state_change(common::seat_index_t seat, const GameState&, common::action_index_t action) {
   if (seat == this->get_my_seat()) return;
-  char move_str[3];
-  if (action == kPass) {  // "PS" is edax notation for pass
-    move_str[0] = 'P';
-    move_str[1] = 'S';
-    move_str[2] = '\n';
-  } else {
-    move_str[0] = char('A' + action % 8);
-    move_str[1] = char('1' + action / 8);
-    move_str[2] = '\n';
-  }
-  in_.write(move_str, 3);
-  in_.flush();
+  submit_action(action);
 }
 
 inline common::action_index_t EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
-  if (valid_actions[kPass]) {
-    in_.write("PS\n", 3);
-    in_.flush();
-    return kPass;
+  if (valid_actions.count() == 1) {  // only 1 possible move, no need to incur edax/IO overhead
+    for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
+      submit_action(action);
+      return action;
+    }
   }
   in_.write("go\n", 3);
   in_.flush();
@@ -108,6 +98,20 @@ inline common::action_index_t EdaxPlayer::get_action(const GameState&, const Act
     throw util::Exception("EdaxPlayer::get_action: invalid action: %d", action);
   }
   return action;
+}
+
+inline void EdaxPlayer::submit_action(common::action_index_t action) {
+  if (action == kPass) {
+    in_.write("PS\n", 3);
+    in_.flush();
+  } else {
+    char move_str[3];
+    move_str[0] = char('A' + action % 8);
+    move_str[1] = char('1' + action / 8);
+    move_str[2] = '\n';
+    in_.write(move_str, 3);
+    in_.flush();
+  }
 }
 
 }  // namespace othello

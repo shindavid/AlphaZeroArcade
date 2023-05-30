@@ -41,6 +41,8 @@ public:
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:
+  void submit_action(common::action_index_t action);
+
   const Params params_;
   std::vector<std::string> line_buffer_;
   boost::process::ipstream out_;
