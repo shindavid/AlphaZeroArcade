@@ -14,7 +14,7 @@ class NeuralNet {
 public:
   using input_vec_t = std::vector<torch::jit::IValue>;
 
-  NeuralNet(const boost::filesystem::path& path);
+  NeuralNet(const boost::filesystem::path& path, const std::string& cuda_device);
   void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) const;
 
 private:

@@ -112,6 +112,7 @@ public:
     bool operator==(const Params& other) const = default;
 
     std::string model_filename;
+    std::string cuda_device = "cuda:0";
     int num_search_threads = 8;
     int batch_size_limit = 216;
     bool run_offline = false;
@@ -560,8 +561,8 @@ private:
     using cache_key_t = StateEvaluationKey<GameState>;
     using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
 
-    NNEvaluationService(const boost::filesystem::path& net_filename, int batch_size_limit,
-                        std::chrono::nanoseconds timeout_duration, size_t cache_size,
+    NNEvaluationService(const boost::filesystem::path& net_filename, const std::string& cuda_device,
+                        int batch_size_limit, std::chrono::nanoseconds timeout_duration, size_t cache_size,
                         const boost::filesystem::path& profiling_dir);
     ~NNEvaluationService();
 

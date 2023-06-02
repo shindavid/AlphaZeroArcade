@@ -51,7 +51,9 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
   return desc
       .template add_option<"model-filename", 'm'>
           (po::value<std::string>(&model_filename),
-          "model filename. If not specified, a uniform model is implicitly used")
+           "model filename. If not specified, a uniform model is implicitly used")
+      .template add_option<"cuda-device">
+          (po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device")
       .template add_option<"num-search-threads", 'n'>(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
@@ -782,7 +784,8 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::create(const Mcts* mcts) {
   auto it = instance_map_.find(model_filename);
   if (it == instance_map_.end()) {
     NNEvaluationService* instance = new NNEvaluationService(
-        model_filename, batch_size_limit, timeout_duration, cache_size, mcts->profiling_dir());
+        model_filename, mcts->params().cuda_device, batch_size_limit, timeout_duration, cache_size,
+        mcts->profiling_dir());
     instance_map_[model_filename] = instance;
     return instance;
   }
@@ -824,10 +827,10 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::disconnect() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
-    const boost::filesystem::path& model_filename, int batch_size, std::chrono::nanoseconds timeout_duration,
-    size_t cache_size, const boost::filesystem::path& profiling_dir)
+    const boost::filesystem::path& model_filename, const std::string& cuda_device, int batch_size,
+    std::chrono::nanoseconds timeout_duration, size_t cache_size, const boost::filesystem::path& profiling_dir)
 : instance_id_(next_instance_id_++)
-, net_(model_filename)
+, net_(model_filename, cuda_device)
 , batch_data_(batch_size)
 , full_input_(util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<InputShape>))
 , cache_(cache_size)
@@ -838,7 +841,7 @@ inline Mcts<GameState, Tensorizor>::NNEvaluationService::NNEvaluationService(
   auto policy_shape = util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<PolicyShape>);
   auto value_shape = util::to_std_array<int64_t>(batch_size, eigen_util::to_int64_std_array_v<ValueShape>);
 
-  torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<dtype>).to(torch::kCUDA);
+  torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<dtype>).to(at::Device(cuda_device));
   torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
   torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<ValueScalar>);
 
