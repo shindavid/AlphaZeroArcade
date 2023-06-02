@@ -49,6 +49,7 @@ from alphazero.ratings import extract_match_record, compute_ratings
 from config import Config
 from util import subprocess_util
 from util.py_util import timed_print
+from util.str_util import inject_arg
 
 
 class Args:
@@ -96,30 +97,6 @@ def load_args():
 
     args = parser.parse_args()
     Args.load(args)
-
-
-def inject_arg(cmdline: str, arg_name: str, arg_value: str):
-    """
-    Takes a cmdline and adds {arg_name}={arg_value} into it, overriding any existing value for {arg_name}.
-    """
-    assert arg_name.startswith('-'), arg_name
-    tokens = cmdline.split()
-    for i, token in enumerate(tokens):
-        if token == arg_name:
-            tokens[i+1] = arg_value
-            return ' '.join(tokens)
-
-        if token.startswith(f'{arg_name}='):
-            tokens[i] = f'{arg_name}={arg_value}'
-            return ' '.join(tokens)
-
-    return f'{cmdline} {arg_name} {arg_value}'
-
-
-def inject_args(cmdline: str, kwargs: dict):
-    for arg_name, arg_value in kwargs.items():
-        cmdline = inject_arg(cmdline, arg_name, arg_value)
-    return cmdline
 
 
 def construct_cmd(binary: str,
