@@ -18,6 +18,16 @@ class WinLossDrawCounts:
         self.loss = loss
         self.draw = draw
 
+    @property
+    def n_games(self):
+        return self.win + self.loss + self.draw
+
+    def win_rate(self):
+        n = self.n_games
+        if n == 0:
+            return 0
+        return (2 * self.win + self.draw) / (2 * n)
+
     def __iadd__(self, other):
         self.win += other.win
         self.loss += other.loss

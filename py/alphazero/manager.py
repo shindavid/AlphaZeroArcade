@@ -97,13 +97,6 @@ class AlphaZeroManager:
     def __init__(self, game_type: GameType, base_dir: str):
         self.game_type = game_type
         self.py_cuda_device: int = 0
-        if not ModelingArgs.synchronous_mode:
-            """
-            TODO: assert that 2 GPU's are actually available.
-            TODO: make this configurable, this is specific to dshin's setup
-            """
-            self.py_cuda_device = 1
-        self.py_cuda_device_str: str = f'cuda:{self.py_cuda_device}'
         self.log_file = None
 
         self.n_gen0_games = 4000
@@ -120,11 +113,16 @@ class AlphaZeroManager:
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
 
+    def makedirs(self):
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.bins_dir, exist_ok=True)
         os.makedirs(self.players_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
+
+    @property
+    def py_cuda_device_str(self) -> str:
+        return f'cuda:{self.py_cuda_device}'
 
     def erase_data_after(self, gen: Generation):
         """
@@ -390,8 +388,14 @@ class AlphaZeroManager:
             f.write(f'done\n')
 
     def run(self, async_mode: bool = True):
-        self.init_logging(self.stdout_filename)
+        if async_mode:
+            """
+            TODO: assert that 2 GPU's are actually available.
+            TODO: make this configurable, this is specific to dshin's setup
+            """
+            self.py_cuda_device = 1
 
+        self.init_logging(self.stdout_filename)
         while True:
             self_play_proc_data = self.get_self_play_proc(async_mode)
             self.train_step()

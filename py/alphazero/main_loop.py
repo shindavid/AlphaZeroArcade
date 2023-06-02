@@ -45,6 +45,7 @@ def main():
     base_dir = os.path.join(Args.alphazero_dir, Args.game, Args.tag)
     game_type = games.get_game_type(Args.game)
     manager = AlphaZeroManager(game_type, base_dir)
+    manager.makedirs()
     if Args.restart_gen:
         manager.erase_data_after(Args.restart_gen)
     manager.run(async_mode=not ModelingArgs.synchronous_mode)
