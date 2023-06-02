@@ -31,6 +31,7 @@ from bokeh.plotting import figure, curdoc
 from natsort import natsorted
 
 from config import Config
+from util.py_util import timed_print
 
 
 class Args:
@@ -91,6 +92,8 @@ for mcts_gen, edax_rating in res.fetchall():
     gen_rating_pairs.append((mcts_gen, edax_rating))
 
 conn.close()
+n = len(gen_rating_pairs)
+timed_print(f'Loaded {n} rows of data from {db_filename}')
 
 gen_rating_pairs.sort()
 
