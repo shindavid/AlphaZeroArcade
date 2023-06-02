@@ -246,6 +246,13 @@ class AlphaZeroManager:
     def get_latest_self_play_data_subdir(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.self_play_data_dir)
 
+    def get_player_cmd(self, gen: Generation) -> Optional[str]:
+        filename = os.path.join(self.players_dir, f'gen-{gen}.txt')
+        if not os.path.exists(filename):
+            return None
+        with open(filename, 'r') as f:
+            return f.read().strip()
+
     def get_self_play_proc(self, async_mode: bool) -> SelfPlayProcData:
         gen = self.get_latest_model_generation()
 
