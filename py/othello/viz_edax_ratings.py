@@ -32,9 +32,8 @@ import sys
 
 import numpy as np
 from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, RangeSlider, CheckboxGroup
+from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure, curdoc
-from natsort import natsorted
 
 from config import Config
 from util.py_util import timed_print
