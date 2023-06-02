@@ -661,6 +661,10 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
     printer.endl();
     printer << __func__ << "() " << genealogy;
     printer.endl();
+    printer << "value_avg: " << tree->stats().value_avg.transpose();
+    printer.endl();
+    printer << "V_floor: " << tree->stats().V_floor.transpose();
+    printer.endl();
     printer << "P: " << P.transpose();
     printer.endl();
     printer << "N: " << N.transpose();
