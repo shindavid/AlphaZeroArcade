@@ -50,15 +50,12 @@ import time
 from collections import defaultdict
 from typing import Dict, Optional, Tuple
 
-import numpy as np
-
 import games
 from alphazero.manager import AlphaZeroManager
-from alphazero.ratings import extract_match_record, compute_ratings, WinLossDrawCounts
+from alphazero.ratings import extract_match_record, WinLossDrawCounts
 from config import Config
 from util import subprocess_util
 from util.py_util import timed_print
-from util.repo_util import Repo
 from util.str_util import inject_args
 
 
