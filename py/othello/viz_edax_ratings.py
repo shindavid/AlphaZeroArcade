@@ -13,9 +13,15 @@ While the above is running, launch the grading daemon, preferably from a differe
 
 ./othello/assign_edax_ratings.py -t <TAG> -D
 
+Alternatively, if you don't have enough hardware, stop the main loop before running the above. You don't need daemon
+mode (-D) in this case.
+
 While the above is running, launch the visualizer:
 
 ./othello/viz_edax_ratings.py -t <TAG>
+
+The visualizer will show a graph based on the rating data generated so-far by assign_edax_ratings.py. Refreshing the
+browser window will cause the visualizer to update the graph with the latest data.
 """
 import argparse
 import json
