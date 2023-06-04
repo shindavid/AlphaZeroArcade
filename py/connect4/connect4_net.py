@@ -5,7 +5,7 @@ import torch
 from torch import nn as nn
 
 from neural_net import NeuralNet, PolicyTarget, ValueTarget, OwnershipTarget
-from res_net_modules import ConvBlock, ResBlock, PolicyHead, ValueHead, OwnershipHead
+from res_net_modules import ConvBlock, ResBlock, GPResBlock, PolicyHead, ValueHead, OwnershipHead
 from util.torch_util import Shape
 
 

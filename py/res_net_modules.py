@@ -111,6 +111,7 @@ class ResBlock(nn.Module):
         out += identity  # skip connection
         return F.relu(out)
 
+
 class GPResBlock(nn.Module):
     """
     From "Accelerating Self-Play Learning in Go" (KataGo paper):
@@ -141,6 +142,7 @@ class GPResBlock(nn.Module):
         out = self.batch2(self.conv2(out))
         out += identity  # skip connection
         return F.relu(out)
+
 
 class PolicyHead(nn.Module):
     """
