@@ -1,10 +1,63 @@
 import math
 from typing import Union
-
+import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
 from util.torch_util import Shape
+
+
+class GlobalPoolingLayer(nn.Module):
+    """
+    From "Accelerating Self-Play Learning in Go" (KataGo paper):
+    The Global Pooling module as described in the paper:
+    1. The mean of each channel
+    2. The mean of each channel multiplied by 1/10 ( b - b_avg )
+    3. The maximum of each channel.
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    def __init__(self, scale=1/10):
+        super(GlobalPoolingLayer, self).__init__()
+        self.scale = scale
+
+    def forward(self, x):
+        g_mean = torch.mean(x, keepdim=True, dim=(2, 3))
+        g_scaled_mean = self.scale * g_mean
+        # g_max shape: NC1
+        g_max, _ = torch.max(x.view(x.shape[:2] + (-1,)), dim=-1, keepdim=True)
+        return torch.cat([g_mean, g_scaled_mean, g_max[..., None]], dim=1)
+
+
+class GlobalPoolingBiasStruct(nn.Module):
+    """
+    From "Accelerating Self-Play Learning in Go" (KataGo paper):
+    The  global pooling bias structure as described in the paper:
+    • Input tensors X (shape b x b x cX) and G (shape b x b x cG).
+    • A batch normalization layer and ReLu activation applied to G (output shape b x b x cG).
+    • A global pooling layer (output shape 3cG).
+    • A fully connected layer to cX outputs (output shape cX).
+    • Channelwise addition with X (output shape b x b x cX).
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    def __init__(self, g_channels):
+        super(GlobalPoolingBiasStruct, self).__init__()
+        self.global_pool = GlobalPoolingLayer()
+        self.bn = nn.BatchNorm2d(g_channels)
+        self.relu = nn.ReLU()
+        self.fc = nn.Linear(3 * g_channels, g_channels)
+
+    def forward(self, p, g):
+        """
+        (My understanding*) For the policy head:
+        X: the board feature map (b x b x cx)
+        P: output of 1x1 convolution ?
+        G: output of 1x1 convolution ?
+        (Maybe X here becomes P?)
+        GlobalPoolingBiasStruct pools G to bias the output of P
+        """
+        g = self.global_pool(self.relu(self.bn(g)))
+        g = self.fc(g[..., 0, 0])[..., None, None]
+        return p + g
 
 
 class ConvBlock(nn.Module):
@@ -58,6 +111,36 @@ class ResBlock(nn.Module):
         out += identity  # skip connection
         return F.relu(out)
 
+class GPResBlock(nn.Module):
+    """
+    From "Accelerating Self-Play Learning in Go" (KataGo paper):
+    The residual block with global pooling bias structure as described in the paper
+    https://arxiv.org/pdf/1902.10565.pdf
+    """
+    def __init__(self, n_conv_filters: int):
+        super(GPResBlock, self).__init__()
+        assert n_conv_filters % 2 == 0, 'n_conv_filters has to be even'
+        self.c_mid = n_conv_filters // 2
+        self.gpbs = GlobalPoolingBiasStruct(self.c_mid)
+        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
+        self.batch1 = nn.BatchNorm2d(n_conv_filters)
+        self.conv2 = nn.Conv2d(self.c_mid, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
+        self.batch2 = nn.BatchNorm2d(n_conv_filters)
+
+    def forward(self, x):
+        identity = x
+        # outputs [N, C, H, W]
+        out = F.relu(self.batch1(self.conv1(x)))
+        # use first c_pool layers, to bias the the other part 
+        # outputs [N, Cp, H, W]
+        print(out[:, :self.c_mid].shape)
+        print(self.c_mid)
+        # return torch.zeros(0)
+        out = self.gpbs(out[:, self.c_mid:], out[:, :self.c_mid])
+        # outputs [N, C, H, W]
+        out = self.batch2(self.conv2(out))
+        out += identity  # skip connection
+        return F.relu(out)
 
 class PolicyHead(nn.Module):
     """
