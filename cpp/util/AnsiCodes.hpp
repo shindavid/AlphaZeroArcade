@@ -1,44 +1,21 @@
 #pragma once
 
+#include <util/CppUtil.hpp>
+
 /*
  * ANSI codes.
  */
-
 namespace ansi {
 
-class Codes {
-public:
-  static const char* kCircle() { return instance()->kCircle_; }
-  static const char* kBlink() { return instance()->kBlink_; }
-  static const char* kRed() { return instance()->kRed_; }
-  static const char* kYellow() { return instance()->kYellow_; }
-  static const char* kBlue() { return instance()->kBlue_; }
-  static const char* kWhite() { return instance()->kWhite_; }
-  static const char* kReset() { return instance()->kReset_; }
-
-private:
-  Codes();
-
-  static Codes* instance();
-  static Codes* instance_;
-
-  const char* kCircle_ = nullptr;
-  const char* kBlink_ = nullptr;
-  const char* kRed_ = nullptr;
-  const char* kYellow_ = nullptr;
-  const char* kBlue_ = nullptr;
-  const char* kWhite_ = nullptr;
-  const char* kReset_ = nullptr;
-};
-
-inline const char* kCircle() { return Codes::kCircle(); }
-inline const char* kBlink() { return Codes::kBlink(); }
-inline const char* kRed() { return Codes::kRed(); }
-inline const char* kYellow() { return Codes::kYellow(); }
-inline const char* kBlue() { return Codes::kBlue(); }
-inline const char* kWhite() { return Codes::kWhite(); }
-inline const char* kReset() { return Codes::kReset(); }
+/*
+ * Optional argument is used in non-tty mode.
+ */
+inline const char* kCircle(const char* s=nullptr) { return util::tty_mode() ? "\u25CF" : s; }
+inline const char* kBlink(const char* s=nullptr) { return util::tty_mode() ? "\033[5m" : s; }
+inline const char* kRed(const char* s=nullptr) { return util::tty_mode() ? "\033[31m" : s; }
+inline const char* kYellow(const char* s=nullptr) { return util::tty_mode() ? "\033[33m" : s; }
+inline const char* kBlue(const char* s=nullptr) { return util::tty_mode() ? "\033[34m" : s; }
+inline const char* kWhite(const char* s=nullptr) { return util::tty_mode() ? "\033[37m" : s; }
+inline const char* kReset(const char* s=nullptr) { return util::tty_mode() ? "\033[00m" : s; }
 
 }  // namespace ansi;
-
-#include <util/inl/AnsiCodes.inl>

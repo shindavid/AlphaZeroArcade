@@ -1,4 +1,3 @@
-#include <util/AnsiCodes.hpp>
 #include <util/Config.hpp>
 #include <util/ParamDumper.hpp>
 #include <util/Random.hpp>
@@ -6,12 +5,6 @@
 #include <util/ScreenUtil.hpp>
 #include <util/ThreadSafePrinter.hpp>
 #include <util/SocketUtil.hpp>
-
-namespace ansi {
-
-Codes* Codes::instance_ = nullptr;
-
-}  // namespace ansi
 
 namespace util {
 
