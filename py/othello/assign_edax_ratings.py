@@ -168,7 +168,8 @@ class Arena:
         assert 0 <= edax_depth <= Args.max_depth, (mcts_gen, edax_depth, Args.max_depth)
         counts = self.match_data[mcts_gen][edax_depth]
         n_games = Args.n_games - counts.n_games
-        assert n_games > 0, f'Already played {Args.n_games} games for mcts-{mcts_gen} vs edax-{edax_depth} [{counts}]'
+        if n_games <= 0:
+            return counts
         cmd = self.create_cmd(mcts_gen, edax_depth, n_games)
         timed_print(f'Running mcts-{mcts_gen} vs edax-{edax_depth} match: {cmd}')
 
