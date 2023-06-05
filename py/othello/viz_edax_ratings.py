@@ -33,6 +33,7 @@ import os
 import pipes
 import sqlite3
 import sys
+from collections import defaultdict
 
 import numpy as np
 from bokeh.layouts import column
@@ -121,27 +122,27 @@ data_list = [RatingData(tag) for tag in Args.tag.split(',')]
 
 class ProgressVisualizer:
     def __init__(self):
-        self.source = ColumnDataSource()
-        self.data = {}
+        self.sources = defaultdict(ColumnDataSource)
 
         self.max_x = None
         self.max_y = None
 
-        for data in data_list:
-            x = np.array([g[0] for g in data.gen_rating_pairs])
-            y = np.array([g[1] for g in data.gen_rating_pairs])
-            self.data[data.tag + '.x'] = x
-            self.data[data.tag + '.y'] = y
+        for rating_data in data_list:
+            x = np.array([g[0] for g in rating_data.gen_rating_pairs])
+            y = np.array([g[1] for g in rating_data.gen_rating_pairs])
+            data = {
+                'x': x,
+                'y': y,
+            }
 
             mx = max(x)
             my = max(y)
             self.max_x = mx if self.max_x is None else max(self.max_x, mx)
             self.max_y = my if self.max_y is None else max(self.max_y, my)
 
-        self.source.data = self.data
+            self.sources[rating_data.tag].data = data
 
     def plot(self):
-        source = self.source
         x_range = [1, self.max_x]
         y_range = [0, self.max_y+1]
 
@@ -151,11 +152,10 @@ class ProgressVisualizer:
 
         n = len(data_list)
         colors = viridis(n)
-        for data, color in zip(data_list, colors):
-            x = data.tag + '.x'
-            y = data.tag + '.y'
-            label = data.label
-            plot.line(x, y, source=source, line_color=color, legend_label=label)
+        for rating_data, color in zip(data_list, colors):
+            source = self.sources[rating_data.tag]
+            label = rating_data.label
+            plot.line('x', 'y', source=source, line_color=color, legend_label=label)
 
         plot.legend.location = 'top_left'
         inputs = column(plot)
