@@ -404,7 +404,7 @@ class Arena:
 
         if est_rating is not None:
             assert max_left_depth < est_rating < min_right_depth
-            depth = int(math.floor(est_rating))
+            depth = int(round(est_rating))
             counts = self.test_mcts_vs_edax(gen, depth)
             if counts.win_rate() < 0.5:  # mcts has losing record against edax
                 depth2 = depth - 1
