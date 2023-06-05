@@ -298,7 +298,7 @@ private:
     void backprop(const ValueArray& value);
     void backprop_with_virtual_undo(const ValueArray& value);
     void virtual_backprop();
-    void perform_eliminations(const ValueArray& outcome);
+    void perform_eliminations(const ValueArray* outcome);
     ValueArray make_virtual_loss() const;
     void mark_as_fully_analyzed();
 

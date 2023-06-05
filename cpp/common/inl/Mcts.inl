@@ -280,15 +280,20 @@ inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueArray& outcome) {
-  ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
+inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueArray* outcome) {
   ValueArray V_floor;
-  seat_index_t cp = stable_data().current_player;
-  for (seat_index_t p = 0; p < kNumPlayers; ++p) {
-    if (p == cp) {
-      V_floor[p] = V_floor_extrema.max[p];
-    } else {
-      V_floor[p] = V_floor_extrema.min[p];
+
+  if (outcome) {
+    V_floor = *outcome;
+  } else {
+    ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
+    seat_index_t cp = stable_data().current_player;
+    for (seat_index_t p = 0; p < kNumPlayers; ++p) {
+      if (p == cp) {
+        V_floor[p] = V_floor_extrema.max[p];
+      } else {
+        V_floor[p] = V_floor_extrema.min[p];
+      }
     }
   }
 
@@ -298,7 +303,7 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueA
   lock.unlock();
 
   if (recurse) {
-    parent()->perform_eliminations(outcome);
+    parent()->perform_eliminations(nullptr);
   }
 }
 
@@ -469,7 +474,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::perform_eliminations(Node* tree, const ValueArray& outcome) {
   if (params_.disable_eliminations) return;
   record_for_profiling(kPerformEliminations);
-  tree->perform_eliminations(outcome);
+  tree->perform_eliminations(&outcome);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
