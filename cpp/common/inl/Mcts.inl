@@ -280,14 +280,14 @@ inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueArray* outcome) {
+inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(int thread_id, const ValueArray* outcome) {
   ValueArray V_floor;
+  seat_index_t cp = stable_data().current_player;
 
   if (outcome) {
     V_floor = *outcome;
   } else {
     ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
-    seat_index_t cp = stable_data().current_player;
     for (seat_index_t p = 0; p < kNumPlayers; ++p) {
       if (p == cp) {
         V_floor[p] = V_floor_extrema.max[p];
@@ -298,12 +298,21 @@ inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueA
   }
 
   std::unique_lock<std::mutex> lock(stats_mutex_);
+  if (kEnableThreadingDebug) {
+    bool was_eliminated = stats_.V_floor.maxCoeff() == 1;
+    bool is_eliminated = V_floor.maxCoeff() == 1;
+    if (is_eliminated && !was_eliminated) {
+      util::ThreadSafePrinter printer(thread_id);
+      printer << "Eliminated " << genealogy_str() << " [cp=" << (int)cp << "] with V_floor = " << V_floor.transpose();
+      printer.endl();
+    }
+  }
   stats_.V_floor = V_floor;
   bool recurse = parent() && stats_.eliminated();
   lock.unlock();
 
   if (recurse) {
-    parent()->perform_eliminations(nullptr);
+    parent()->perform_eliminations(thread_id, nullptr);
   }
 }
 
@@ -421,7 +430,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
   if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << " " << tree->genealogy_str();
+    printer << __func__ << " " << tree->genealogy_str() << " cp=" << (int)tree->stable_data().current_player;
     printer.endl();
   }
 
@@ -474,7 +483,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::perform_eliminations(Node* tree, const ValueArray& outcome) {
   if (params_.disable_eliminations) return;
   record_for_profiling(kPerformEliminations);
-  tree->perform_eliminations(&outcome);
+  tree->perform_eliminations(thread_id_, &outcome);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -667,6 +676,11 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
     printer << "*************";
     printer.endl();
     printer << __func__ << "() " << genealogy;
+    printer.endl();
+    printer << "valid:";
+    for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
+      printer << " " << v;
+    }
     printer.endl();
     printer << "value_avg: " << tree->stats().value_avg.transpose();
     printer.endl();
