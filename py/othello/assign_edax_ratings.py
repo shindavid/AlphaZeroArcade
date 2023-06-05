@@ -67,6 +67,7 @@ class Args:
     mcts_iters: int
     max_depth: int
     parallelism_factor: int
+    binary: str
     daemon_mode: bool
 
     @staticmethod
@@ -78,6 +79,7 @@ class Args:
         Args.mcts_iters = args.mcts_iters
         Args.max_depth = args.max_depth
         Args.parallelism_factor = args.parallelism_factor
+        Args.binary = args.binary
         Args.daemon_mode = bool(args.daemon_mode)
         assert Args.tag, 'Required option: -t'
 
@@ -97,6 +99,7 @@ def load_args():
                         help='max edax depth (default: %(default)s)')
     parser.add_argument('-p', '--parallelism-factor', type=int, default=100,
                         help='parallelism factor (default: %(default)s)')
+    parser.add_argument('-b', '--binary', help='optional binary')
     parser.add_argument('-D', '--daemon-mode', action='store_true', help='daemon mode (run forever)')
 
     args = parser.parse_args()
@@ -121,6 +124,8 @@ class Arena:
         return f'MCTS-{gen}'
 
     def get_binary(self, gen: int):
+        if Args.binary:
+            return Args.binary
         cmd = self.manager.get_player_cmd(gen)
         assert cmd is not None, gen
         return cmd.split()[0]
