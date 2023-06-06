@@ -239,6 +239,13 @@ class AlphaZeroManager:
         info = AlphaZeroManager.get_latest_info(self.models_dir)
         return 0 if info is None else info.generation
 
+    def get_latest_player_generation(self) -> Generation:
+        info = AlphaZeroManager.get_latest_info(self.players_dir)
+        return 0 if info is None else info.generation
+
+    def get_latest_generation(self) -> Generation:
+        return min(self.get_latest_model_generation(), self.get_latest_player_generation())
+
     def get_latest_self_play_data_generation(self) -> Generation:
         info = AlphaZeroManager.get_latest_info(self.self_play_data_dir)
         return 0 if info is None else info.generation

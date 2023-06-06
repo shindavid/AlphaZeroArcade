@@ -294,7 +294,7 @@ class Arena:
         Finally, we find the largest gap in G, and return the midpoint of that gap. If G is fully saturated, we return
         M if M is not in G. If no such number exists, we return None.
         """
-        latest_gen = self.manager.get_latest_model_generation()
+        latest_gen = self.manager.get_latest_generation()
         if latest_gen == 0:
             return None, None
 
