@@ -165,9 +165,10 @@ inline void GameState::dump_mcts_output(
   printf("\n");
   printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
 
+  int j = 0;
   for (int i = 0; i < kNumColumns; ++i) {
     if (valid_actions[i]) {
-      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(j++));
     } else {
       printf("%3d\n", i + 1);
     }
