@@ -88,12 +88,9 @@ public:
   using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
   using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
 
-  using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
+  using player_bitset_t = std::bitset<kNumPlayers>;
 
-  struct ValueArrayExtrema {
-    ValueArray min;
-    ValueArray max;
-  };
+  using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
 
   enum DefaultParamsType {
     kCompetitive,
@@ -250,16 +247,14 @@ private:
      */
     struct stats_t {
       stats_t();
-
-      int effective_count() const { return eliminated() ? 0 : count; }
-      bool has_certain_outcome() const { return V_floor.sum() > 1 - 1e-6; }  // 1e-6 fudge factor for floating-point error
-      bool eliminated() const { return V_floor.maxCoeff() == 1; }  // won/lost positions, not drawn ones
-      auto effective_value_avg(seat_index_t s) const { return has_certain_outcome() ? V_floor(s) : value_avg(s); }
+      void zero_out();
+      void remove(const ValueArray& rm_sum, int rm_count);
 
       ValueArray value_avg;
-      ValueArray V_floor;  // used for eliminations
       int count = 0;
       int virtual_count = 0;  // only used for debugging
+      player_bitset_t forcibly_winning;  // used for eliminations
+      player_bitset_t forcibly_losing;  // used for eliminations
     };
 
     Node(Node* parent, action_index_t action);
@@ -294,11 +289,22 @@ private:
     std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
     std::mutex& stats_mutex() const { return stats_mutex_; }
 
-    PolicyTensor get_effective_counts() const;
+    PolicyTensor get_counts() const;
     void backprop(const ValueArray& value);
     void backprop_with_virtual_undo(const ValueArray& value);
     void virtual_backprop();
-    void perform_eliminations(int thread_id, const ValueArray* outcome);
+    void eliminate(int thread_id, player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing,
+                   ValueArray& accumulated_value, int& accumulated_count);
+    void compute_forced_lines(player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing) const;
+
+    bool forcibly_winning(const stats_t& stats) const { return stats.forcibly_winning[stable_data_.current_player]; }
+    bool forcibly_losing(const stats_t& stats) const { return stats.forcibly_losing[stable_data_.current_player]; }
+    bool eliminated(const stats_t& stats) const { return forcibly_winning(stats) || forcibly_losing(stats); }
+
+    bool forcibly_winning() const { return forcibly_winning(stats_); }
+    bool forcibly_losing() const { return forcibly_losing(stats_); }
+    bool eliminated() const { return eliminated(stats_); }
+
     ValueArray make_virtual_loss() const;
     void mark_as_fully_analyzed();
 
@@ -320,8 +326,6 @@ private:
     evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
   private:
-    ValueArrayExtrema get_V_floor_extrema_among_children() const;
-
     std::condition_variable cv_evaluate_and_expand_;
     mutable std::mutex evaluation_data_mutex_;
     mutable std::mutex children_mutex_;
