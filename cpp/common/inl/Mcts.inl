@@ -242,16 +242,35 @@ Mcts<GameState, Tensorizor>::Node::get_counts() const {
   seat_index_t cp = stable_data().current_player;
   bool forced_win = stats_.forcibly_winning[cp];
 
+  if (kEnableThreadingDebug) {
+    std::cout << "get_counts()" << std::endl;
+    std::cout << "  cp: " << int(cp) << std::endl;
+    std::cout << "  forcibly_winning: " << bitset_util::to_string(stats_.forcibly_winning) << std::endl;
+    std::cout << "  forced_win: " << forced_win << std::endl;
+  }
+
   PolicyTensor counts;
   counts.setZero();
 
   for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
     Node* child = get_child(c);
     if (child) {
-      if (!forced_win || child->stats().forcibly_winning[cp]) {
+      if (kEnableThreadingDebug) {
+        std::cout << "  child[" << c << "]: " << std::endl;
+        std::cout << "    action: " << int(child->action()) << std::endl;
+        std::cout << "    forcibly_winning: " << bitset_util::to_string(child->stats().forcibly_winning) << std::endl;
+        std::cout << "    count: " << child->stats().count << std::endl;
+      }
+      if (forced_win) {
+        counts.data()[child->action()] = child->stats().forcibly_winning[cp];
+      } else {
         counts.data()[child->action()] = child->stats().count;
       }
     }
+  }
+
+  if (kEnableThreadingDebug) {
+    std::cout << "  counts:\n" << counts << std::endl;
   }
   return counts;
 }
@@ -308,7 +327,7 @@ inline void Mcts<GameState, Tensorizor>::Node::eliminate(
   stats_.forcibly_losing = forcibly_losing;
 
   if (losing) {
-    // pretend we never visited this path!
+    // pretend these visits were never made!
     accumulated_value = stats_.value_avg * stats_.count;
     accumulated_count = stats_.count;
     stats_.zero_out();
@@ -320,8 +339,8 @@ inline void Mcts<GameState, Tensorizor>::Node::eliminate(
     util::ThreadSafePrinter printer(thread_id);
     printer << "eliminate() " << genealogy_str() << " [cp=" << (int)cp << "]";
     printer.endl();
-    printer.printf("  forcibly_winning: %s\n", forcibly_winning.to_string().c_str());
-    printer.printf("  forcibly_losing: %s\n", forcibly_losing.to_string().c_str());
+    printer.printf("  forcibly_winning: %s\n", bitset_util::to_string(forcibly_winning).c_str());
+    printer.printf("  forcibly_losing: %s\n", bitset_util::to_string(forcibly_losing).c_str());
     printer.printf("  winning: %d\n", int(winning));
     printer.printf("  losing: %d\n", int(losing));
     printer << "  accumulated_value: " << accumulated_value.transpose();
