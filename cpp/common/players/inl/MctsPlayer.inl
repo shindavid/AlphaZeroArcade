@@ -187,17 +187,20 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     }
   }
 
+  if (policy.sum() == 0) {
+    // This happens if eliminations are enabled and if MCTS proves that the position is losing.
+    // In this case we just choose a random valid action.
+    for (action_index_t action : bitset_util::on_indices(valid_actions)) {
+      policy[action] = 1;
+    }
+  }
+
   if (verbose_info_) {
     policy /= policy.sum();
     verbose_info_->mcts_value = value;
     GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->mcts_policy);
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
-  }
-  const PolicyArray& counts_array = eigen_util::reinterpret_as_array(mcts_results->counts);
-  if (counts_array.sum() == 0) {
-    // This happens if eliminations are enabled and if MCTS proves that the position is losing
-    return bitset_util::choose_random_on_index(valid_actions);
   }
   action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
   assert(valid_actions[action]);
