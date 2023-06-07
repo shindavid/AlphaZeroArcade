@@ -372,7 +372,10 @@ void Mcts<GameState, Tensorizor>::Node::compute_forced_lines(
 
   for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
     Node *child = get_child(c);
-    if (!child) continue;
+    if (!child) {
+      forcibly_losing.reset();
+      break;
+    }
     const player_bitset_t& fl = child->stats().forcibly_losing;
     if (c == 0) {
       forcibly_losing = fl;
