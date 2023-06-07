@@ -1,5 +1,6 @@
 #include <util/BitSet.hpp>
 
+#include <algorithm>
 #include <cassert>
 
 #include <util/Exception.hpp>
@@ -94,6 +95,12 @@ template<size_t N> int choose_random_off_index(const std::bitset<N>& bitset) {
   int p = 0;
   for (; c; ++p) c -= not bitset[p];
   return p - 1;
+}
+
+template<size_t N> std::string to_string(const std::bitset<N>& bitset) {
+  std::string s = bitset.to_string();
+  std::reverse(s.begin(), s.end());
+  return s;
 }
 
 }  // namespace bitset_util

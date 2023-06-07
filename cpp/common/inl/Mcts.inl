@@ -153,7 +153,23 @@ inline Mcts<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(c
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
   value_avg.setZero();
-  V_floor.setZero();
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::Node::stats_t::zero_out()
+{
+  value_avg.setZero();
+  count = 0;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::Node::stats_t::remove(const ValueArray& rm_sum, int rm_count) {
+  if (count <= rm_count) {
+    zero_out();
+  } else {
+    value_avg = (value_avg * count - rm_sum) / (count - rm_count);
+    count -= rm_count;
+  }
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -219,30 +235,42 @@ inline void Mcts<GameState, Tensorizor>::Node::adopt_children() {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline typename Mcts<GameState, Tensorizor>::PolicyTensor
-Mcts<GameState, Tensorizor>::Node::get_effective_counts() const {
+Mcts<GameState, Tensorizor>::Node::get_counts() const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
   // thread-safety
-  bool eliminated = stats_.eliminated();
 
   seat_index_t cp = stable_data().current_player;
+  bool forced_win = stats_.forcibly_winning[cp];
+
+  if (kEnableThreadingDebug) {
+    std::cout << "get_counts()" << std::endl;
+    std::cout << "  cp: " << int(cp) << std::endl;
+    std::cout << "  forcibly_winning: " << bitset_util::to_string(stats_.forcibly_winning) << std::endl;
+    std::cout << "  forced_win: " << forced_win << std::endl;
+  }
+
   PolicyTensor counts;
   counts.setZero();
-  if (eliminated) {
-    ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
-    float max_V_floor = V_floor_extrema.max(cp);
-    for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-      Node* child = get_child(c);
-      if (child) {
-        counts.data()[child->action()] = (child->stats().V_floor(cp) == max_V_floor);
-      }
-    }
-    return counts;
-  }
+
   for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
     Node* child = get_child(c);
     if (child) {
-      counts.data()[child->action()] = child->stats().effective_count();
+      if (kEnableThreadingDebug) {
+        std::cout << "  child[" << c << "]: " << std::endl;
+        std::cout << "    action: " << int(child->action()) << std::endl;
+        std::cout << "    forcibly_winning: " << bitset_util::to_string(child->stats().forcibly_winning) << std::endl;
+        std::cout << "    count: " << child->stats().count << std::endl;
+      }
+      if (forced_win) {
+        counts.data()[child->action()] = child->stats().forcibly_winning[cp];
+      } else {
+        counts.data()[child->action()] = child->stats().count;
+      }
     }
+  }
+
+  if (kEnableThreadingDebug) {
+    std::cout << "  counts:\n" << counts << std::endl;
   }
   return counts;
 }
@@ -250,6 +278,7 @@ Mcts<GameState, Tensorizor>::Node::get_effective_counts() const {
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueArray& outcome) {
   std::unique_lock<std::mutex> lock(stats_mutex_);
+  if (forcibly_losing()) return;
   stats_.value_avg = (stats_.value_avg * stats_.count + outcome) / (stats_.count + 1);
   stats_.count++;
   lock.unlock();
@@ -260,6 +289,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueArray& outcom
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(const ValueArray& value) {
   std::unique_lock<std::mutex> lock(stats_mutex_);
+  if (forcibly_losing()) return;
   stats_.value_avg += (value - make_virtual_loss()) / stats_.count;
   stats_.virtual_count--;
   lock.unlock();
@@ -270,6 +300,7 @@ inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(const 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
   std::unique_lock<std::mutex> lock(stats_mutex_);
+  if (forcibly_losing()) return;
   auto loss = make_virtual_loss();
   stats_.value_avg = (stats_.value_avg * stats_.count + loss) / (stats_.count + 1);
   stats_.count++;
@@ -280,25 +311,96 @@ inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::perform_eliminations(const ValueArray& outcome) {
-  ValueArrayExtrema V_floor_extrema = get_V_floor_extrema_among_children();
-  ValueArray V_floor;
+inline void Mcts<GameState, Tensorizor>::Node::eliminate(
+    int thread_id, player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing,
+    ValueArray& accumulated_value, int& accumulated_count)
+{
   seat_index_t cp = stable_data().current_player;
-  for (seat_index_t p = 0; p < kNumPlayers; ++p) {
-    if (p == cp) {
-      V_floor[p] = V_floor_extrema.max[p];
+  bool winning = forcibly_winning[cp];
+  bool losing = forcibly_losing[cp];
+
+  std::unique_lock<std::mutex> lock(stats_mutex_);
+  if (eliminated()) return;  // possible if concurrent eliminations due to race-condition
+
+  stats_t prev_stats = stats_;
+  stats_.forcibly_winning = forcibly_winning;
+  stats_.forcibly_losing = forcibly_losing;
+
+  if (losing) {
+    // pretend these visits were never made!
+    accumulated_value = stats_.value_avg * stats_.count;
+    accumulated_count = stats_.count;
+    stats_.zero_out();
+  } else {
+    stats_.remove(accumulated_value, accumulated_count);
+  }
+
+  if (kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id);
+    printer << "eliminate() " << genealogy_str() << " [cp=" << (int)cp << "]";
+    printer.endl();
+    printer.printf("  forcibly_winning: %s\n", bitset_util::to_string(forcibly_winning).c_str());
+    printer.printf("  forcibly_losing: %s\n", bitset_util::to_string(forcibly_losing).c_str());
+    printer.printf("  winning: %d\n", int(winning));
+    printer.printf("  losing: %d\n", int(losing));
+    printer << "  accumulated_value: " << accumulated_value.transpose();
+    printer.endl();
+    printer << "  accumulated_count: " << accumulated_count;
+    printer.endl();
+    printer << "  value_avg: " << prev_stats.value_avg.transpose() << " -> " << stats_.value_avg.transpose();
+    printer.endl();
+    printer << "  count: " << prev_stats.count << " -> " << stats_.count;
+    printer.endl();
+  }
+
+  lock.unlock();
+
+  if (parent()) {
+    parent()->compute_forced_lines(forcibly_winning, forcibly_losing);
+    parent()->eliminate(thread_id, forcibly_winning, forcibly_losing, accumulated_value, accumulated_count);
+  }
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::Node::compute_forced_lines(
+    player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing) const
+{
+  forcibly_winning.reset();
+  forcibly_losing.reset();
+  seat_index_t cp = stable_data().current_player;
+
+  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
+    Node *child = get_child(c);
+    if (!child) continue;
+    const player_bitset_t& fw = child->stats().forcibly_winning;
+    if (fw[cp]) {
+      forcibly_winning = fw;
+      break;
+    }
+    if (c == 0) {
+      forcibly_winning = fw;
     } else {
-      V_floor[p] = V_floor_extrema.min[p];
+      forcibly_winning &= fw;
     }
   }
 
-  std::unique_lock<std::mutex> lock(stats_mutex_);
-  stats_.V_floor = V_floor;
-  bool recurse = parent() && stats_.eliminated();
-  lock.unlock();
+  if (forcibly_winning.any()) {
+    forcibly_losing = ~forcibly_winning;
+    return;
+  }
 
-  if (recurse) {
-    parent()->perform_eliminations(outcome);
+  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
+    Node *child = get_child(c);
+    if (!child) {
+      forcibly_losing.reset();
+      break;
+    }
+    const player_bitset_t& fl = child->stats().forcibly_losing;
+    if (c == 0) {
+      forcibly_losing = fl;
+    } else {
+      forcibly_losing &= fl;
+    }
   }
 }
 
@@ -348,27 +450,6 @@ Mcts<GameState, Tensorizor>::Node::lookup_child_by_action(action_index_t action)
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::ValueArrayExtrema
-Mcts<GameState, Tensorizor>::Node::get_V_floor_extrema_among_children() const {
-  ValueArrayExtrema extrema;
-  extrema.min.setConstant(1);
-  extrema.max.setConstant(0);
-
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node* child = get_child(c);
-    if (child) {
-      const ValueArray& V_floor = child->stats().V_floor;
-      extrema.min = extrema.min.min(V_floor);
-      extrema.max = extrema.max.max(V_floor);
-    } else {
-      extrema.min.setConstant(0);
-    }
-  }
-
-  return extrema;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::SearchThread::SearchThread(Mcts* mcts, int thread_id)
 : mcts_(mcts)
 , params_(mcts->params())
@@ -409,14 +490,14 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 bool Mcts<GameState, Tensorizor>::SearchThread::needs_more_visits(Node* root, int tree_size_limit) {
   record_for_profiling(kCheckVisitReady);
   const auto& stats = root->stats();
-  return mcts_->search_active() && stats.effective_count() <= tree_size_limit && !stats.eliminated();
+  return mcts_->search_active() && stats.count <= tree_size_limit && !root->eliminated();
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
   if (kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << " " << tree->genealogy_str();
+    printer << __func__ << " " << tree->genealogy_str() << " cp=" << (int)tree->stable_data().current_player;
     printer.endl();
   }
 
@@ -468,8 +549,23 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tr
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::perform_eliminations(Node* tree, const ValueArray& outcome) {
   if (params_.disable_eliminations) return;
+  player_bitset_t forcibly_winning;
+  player_bitset_t forcibly_losing;
+  for (int p = 0; p < kNumPlayers; ++p) {
+    forcibly_winning.set(p, outcome(p) == 1);
+    forcibly_losing.set(p, outcome(p) == 0);
+  }
+  int cp = tree->stable_data().current_player;
+  bool winning = outcome(cp) == 1;
+  bool losing = outcome(cp) == 0;
+  if (!winning && !losing) return;  // drawn position, no elimination possible
+
+  ValueArray accumulated_value;
+  accumulated_value.setZero();
+  int accumulated_count = 0;
+
   record_for_profiling(kPerformEliminations);
-  tree->perform_eliminations(outcome);
+  tree->eliminate(thread_id_, forcibly_winning, forcibly_losing, accumulated_value, accumulated_count);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -647,7 +743,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
     PUCT = PUCT * (1 - F) + F * 1e+6;
   }
 
-  PUCT *= 1 - E;
+  PUCT -= E * (100 + PUCT.maxCoeff() - PUCT.minCoeff());  // zero-out where E==1
 
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
@@ -663,9 +759,12 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
     printer.endl();
     printer << __func__ << "() " << genealogy;
     printer.endl();
-    printer << "value_avg: " << tree->stats().value_avg.transpose();
+    printer << "valid:";
+    for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
+      printer << " " << v;
+    }
     printer.endl();
-    printer << "V_floor: " << tree->stats().V_floor.transpose();
+    printer << "value_avg: " << tree->stats().value_avg.transpose();
     printer.endl();
     printer << "P: " << P.transpose();
     printer.endl();
@@ -738,10 +837,10 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
     }
     auto child_stats = child->stats();  // struct copy to simplify reasoning about race conditions
 
-    V(c) = child_stats.effective_value_avg(cp);
-    N(c) = child_stats.effective_count();
+    V(c) = child_stats.value_avg(cp);
+    N(c) = child_stats.count;
     VN(c) = child_stats.virtual_count;
-    E(c) = child_stats.eliminated();
+    E(c) = child->eliminated(child_stats);
 
     fpu_bits[c] = (N(c) == 0);
   }
@@ -751,7 +850,7 @@ inline Mcts<GameState, Tensorizor>::PUCTStats::PUCTStats(
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto& stats = tree->stats();  // no struct copy, not needed here
-    dtype PV = stats.effective_value_avg(cp);
+    dtype PV = stats.value_avg(cp);
 
     bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
@@ -1479,7 +1578,7 @@ inline const typename Mcts<GameState, Tensorizor>::MctsResults* Mcts<GameState, 
 
   NNEvaluation_sptr evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
-  results_.counts = root_->get_effective_counts();
+  results_.counts = root_->get_counts();
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }

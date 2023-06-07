@@ -117,18 +117,18 @@ inline void GameState::dump(common::action_index_t last_action, const player_nam
   for (row_t row = kNumRows - 1; row >= 0; --row) {
     row_dump(row, row == blink_row ? blink_column : -1);
   }
-  printf("|1|2|3|4|5|6|7|\n");
+  printf("|1|2|3|4|5|6|7|\n\n");
   if (player_names) {
-    printf("%s%s%s: %s\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), (*player_names)[kRed].c_str());
-    printf("%s%s%s: %s\n\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), (*player_names)[kYellow].c_str());
+    printf("%s%s%s: %s\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""), (*player_names)[kRed].c_str());
+    printf("%s%s%s: %s\n\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""), (*player_names)[kYellow].c_str());
   }
   std::cout.flush();
 }
 
 inline void GameState::row_dump(row_t row, column_t blink_column) const {
   common::seat_index_t current_player = get_current_player();
-  const char* cur_color = current_player == kRed ? ansi::kRed() : ansi::kYellow();
-  const char* opp_color = current_player == kRed ? ansi::kYellow() : ansi::kRed();
+  const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
+  const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
 
   for (int col = 0; col < kNumColumns; ++col) {
     int index = _to_bit_index(col, row);
@@ -136,9 +136,9 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
     bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
-    const char* c = occupied ? ansi::kCircle() : " ";
+    const char* c = occupied ? ansi::kCircle("") : " ";
 
-    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink() : "", color, c, occupied ? ansi::kReset() : "");
+    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c, occupied ? ansi::kReset("") : "");
   }
 
   printf("|\n");
@@ -158,16 +158,17 @@ inline void GameState::dump_mcts_output(
 
   assert(net_policy.size() == (int)valid_actions.count());
 
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kRed),
-                100 * mcts_value(kRed));
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kYellow),
-                100 * mcts_value(kYellow));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
+         100 * net_value(kRed), 100 * mcts_value(kRed));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
+         100 * net_value(kYellow), 100 * mcts_value(kYellow));
   printf("\n");
   printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
 
+  int j = 0;
   for (int i = 0; i < kNumColumns; ++i) {
     if (valid_actions[i]) {
-      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(i));
+      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(j++));
     } else {
       printf("%3d\n", i + 1);
     }

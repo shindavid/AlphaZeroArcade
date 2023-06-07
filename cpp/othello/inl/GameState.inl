@@ -70,6 +70,7 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
 }
 
 inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
+  ActionMask valid_actions = get_valid_actions();
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
   int blink_col = -1;
@@ -81,15 +82,30 @@ inline void GameState::dump(common::action_index_t last_action, const player_nam
     std::string s(2*blink_col+3, ' ');
     printf("%sx\n", s.c_str());
   }
-  printf("  |A|B|C|D|E|F|G|H|\n");
+  printf("   A B C D E F G H\n");
   for (int row = 0; row < kBoardDimension; ++row) {
-    row_dump(row, row == blink_row ? blink_col : -1);
+    row_dump(valid_actions, row, row == blink_row ? blink_col : -1);
   }
+  std::cout << std::endl;
+  int opponent_disc_count = std::popcount(opponent_mask_);
+  int cur_player_disc_count = std::popcount(cur_player_mask_);
+
+  int black_disc_count = cur_player_ == kBlack ? cur_player_disc_count : opponent_disc_count;
+  int white_disc_count = cur_player_ == kWhite ? cur_player_disc_count : opponent_disc_count;
+
+  printf("Score: Player\n");
+  printf("%5d: %s%s%s", black_disc_count, ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""));
   if (player_names) {
-    printf("%s%s%s: %s\n", ansi::kBlue(), ansi::kCircle(), ansi::kReset(), (*player_names)[kBlack].c_str());
-    printf("%s%s%s: %s\n\n", ansi::kWhite(), ansi::kCircle(), ansi::kReset(), (*player_names)[kWhite].c_str());
+    printf(" [%s]", (*player_names)[kBlack].c_str());
   }
-  std::cout.flush();
+  printf("\n");
+
+  printf("%5d: %s%s%s", white_disc_count, ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""));
+  if (player_names) {
+    printf(" [%s]", (*player_names)[kWhite].c_str());
+  }
+  printf("\n");
+  std::cout << std::endl;
 }
 
 inline std::size_t GameState::hash() const {
@@ -106,10 +122,10 @@ inline void GameState::dump_mcts_output(
 
   assert(net_policy.size() == (int)valid_actions.count());
 
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kBlack),
-         100 * mcts_value(kBlack));
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(), ansi::kCircle(), ansi::kReset(), 100 * net_value(kWhite),
-         100 * mcts_value(kWhite));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""),
+         100 * net_value(kBlack), 100 * mcts_value(kBlack));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""),
+         100 * net_value(kWhite), 100 * mcts_value(kWhite));
   printf("\n");
 
   auto tuple0 = std::make_tuple(mcts_counts(0), mcts_policy(0), net_policy(0), 0);
@@ -149,10 +165,10 @@ inline void GameState::dump_mcts_output(
   }
 }
 
-inline void GameState::row_dump(row_t row, column_t blink_column) const {
+inline void GameState::row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const {
   common::seat_index_t current_player = get_current_player();
-  const char* cur_color = current_player == kBlack ? ansi::kBlue() : ansi::kWhite();
-  const char* opp_color = current_player == kBlack ? ansi::kWhite() : ansi::kBlue();
+  const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
+  const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
 
   char prefix = ' ';
   if (!util::tty_mode() && blink_column >= 0) {
@@ -161,14 +177,15 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
   printf("%c%d", prefix, (int)(row+1));
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
+    bool valid = valid_actions[index];
     bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
     bool occupied_by_opp_player = (1UL << index) & opponent_mask_;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
 
     const char* color = occupied_by_cur_player ? cur_color : (occupied_by_opp_player ? opp_color : "");
-    const char* c = occupied ? ansi::kCircle() : " ";
+    const char* c = occupied ? ansi::kCircle("") : (valid ? "." : " ");
 
-    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink() : "", color, c, occupied ? ansi::kReset() : "");
+    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c, occupied ? ansi::kReset("") : "");
   }
 
   printf("|\n");

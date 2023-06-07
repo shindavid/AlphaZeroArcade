@@ -2,6 +2,8 @@
 
 #include <ctime>
 
+#include <util/CppUtil.hpp>
+
 namespace util {
 
 template<typename T, typename U>
@@ -52,6 +54,6 @@ inline Random* Random::instance() {
   return instance_;
 }
 
-inline Random::Random() : prng_(std::time(nullptr)) {}
+inline Random::Random() : prng_(IS_MACRO_ASSIGNED_TO_1(DETERMINISTIC_MODE) ? 1234 : std::time(nullptr)) {}
 
 }  // namespace util

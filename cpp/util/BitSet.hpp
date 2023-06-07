@@ -55,6 +55,12 @@ template<size_t N> int count_on_indices_before(const std::bitset<N>&, int i);
 template<size_t N> int choose_random_on_index(const std::bitset<N>&);
 template<size_t N> int choose_random_off_index(const std::bitset<N>&);
 
+/*
+ * std::bitset::to_string() represents the bits in "reverse" order. This function simply flips that order to the
+ * more intuitive one.
+ */
+template<size_t N> std::string to_string(const std::bitset<N>&);
+
 }  // namespace bitset_util
 
 #include <util/inl/BitSet.inl>

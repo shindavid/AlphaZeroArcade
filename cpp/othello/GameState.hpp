@@ -65,7 +65,7 @@ public:
 private:
   auto to_tuple() const { return std::make_tuple(opponent_mask_, cur_player_mask_, cur_player_, pass_count_); }
   GameOutcome compute_outcome() const;  // assumes game has ended
-  void row_dump(row_t row, column_t blink_column) const;
+  void row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const;
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 
