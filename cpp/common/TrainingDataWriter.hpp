@@ -55,6 +55,7 @@ public:
   struct TensorGroup {
     InputTensor input;
     PolicyTensor policy;
+    PolicyTensor opp_policy;
     ValueTensor value;
     seat_index_t current_player;
   };

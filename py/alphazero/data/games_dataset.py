@@ -30,7 +30,7 @@ class GamesDataset(Dataset):
         # COMMENT: How is position index selected?
         p = position_metadata.position_index
         data = torch.jit.load(game_metadata.filename).state_dict()
-        return data['input'][p], data['value'][p], data['policy'][p]
+        return data['input'][p], data['value'][p], data['policy'][p], data['opp_policy'][p]
 
 
 def compute_n_window(n_total: int) -> int:

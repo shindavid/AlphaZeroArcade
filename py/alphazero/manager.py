@@ -40,7 +40,7 @@ import signal
 import sys
 import tempfile
 import time
-from typing import Optional, List
+from typing import Optional, List, Callable
 
 import torch
 import torch.nn as nn
@@ -311,6 +311,7 @@ class AlphaZeroManager:
         timed_print(f'Train gen:{gen}')
 
         value_loss_lambda = ModelingArgs.value_loss_lambda
+        opp_policy_loss_lambda = ModelingArgs.opp_policy_loss_lambda
         policy_criterion = nn.CrossEntropyLoss()
         value_criterion = nn.CrossEntropyLoss()
 
@@ -335,19 +336,27 @@ class AlphaZeroManager:
             stats = TrainingStats()
             for data in loader:
                 t1 = time.time()
-                inputs, value_labels, policy_labels = data
+                inputs, value_labels, policy_labels, opp_policy_labels = data
                 inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
                 value_labels = value_labels.to(self.py_cuda_device_str)
                 policy_labels = policy_labels.to(self.py_cuda_device_str)
+                opp_policy_labels = opp_policy_labels.to(self.py_cuda_device_str)
 
                 optimizer.zero_grad()
-                policy_outputs, value_outputs = net(inputs)
-                n = policy_outputs.shape[0]
-                policy_loss = policy_criterion(policy_outputs.reshape((n, -1)), policy_labels.reshape((n, -1)))
-                value_loss = value_criterion(value_outputs, value_labels)
-                loss = policy_loss + value_loss * value_loss_lambda
+                policy_outputs, value_outputs, opp_policy_outputs = net(inputs)
 
-                stats.update(policy_labels, policy_outputs, policy_loss, value_labels, value_outputs, value_loss)
+                policy_labels, policy_outputs = reshape_and_mask(policy_labels, policy_outputs)
+                opp_policy_labels, opp_policy_outputs = reshape_and_mask(opp_policy_labels, opp_policy_outputs)
+
+                policy_loss = policy_criterion(policy_outputs, policy_labels)
+                opp_policy_loss = policy_criterion(opp_policy_outputs, opp_policy_labels)
+                value_loss = value_criterion(value_outputs, value_labels)
+                loss = policy_loss + value_loss * value_loss_lambda + opp_policy_loss * opp_policy_loss_lambda
+
+                policy_results = EvaluationResults(policy_labels, policy_outputs, policy_loss)
+                value_results = EvaluationResults(value_labels, value_outputs, value_loss)
+                opp_policy_results = EvaluationResults(opp_policy_labels, opp_policy_outputs, opp_policy_loss)
+                stats.update(policy_results, value_results, opp_policy_results)
 
                 loss.backward()
                 optimizer.step()
@@ -409,12 +418,27 @@ class AlphaZeroManager:
             self_play_proc_data.terminate(timeout=300)
 
 
+def reshape_and_mask(labels: torch.Tensor, outputs: torch.Tensor):
+    """
+    The c++ outputs labels of all zeros for rows that are intended to be masked.
+
+    This function reshapes the labels and outputs to be 2D, and then masks the zero rows.
+    """
+    n = labels.shape[0]
+    labels = labels.reshape((n, -1))
+    outputs = outputs.reshape((n, -1))
+
+    label_sums = labels.sum(dim=1)
+    mask = label_sums != 0
+    labels = labels[mask]
+    outputs = outputs[mask]
+
+    return labels, outputs
+
+
 def get_num_correct_policy_predictions(policy_outputs, policy_labels):
-    shape = policy_outputs.shape
-    flattened_policy_outputs = policy_outputs.view(shape[0], -1)
-    flattened_policy_labels = policy_labels.view(shape[0], -1)
-    selected_moves = torch.argmax(flattened_policy_outputs, dim=1)
-    correct_policy_preds = flattened_policy_labels.gather(1, selected_moves.view(-1, 1))
+    selected_moves = torch.argmax(policy_outputs, dim=1)
+    correct_policy_preds = policy_labels.gather(1, selected_moves.view(-1, 1))
     return int(sum(correct_policy_preds))
 
 
@@ -424,29 +448,59 @@ def get_num_correct_value_predictions(value_outputs, value_labels):
     return int(sum((deltas < 0.25).all(dim=1)))
 
 
-class TrainingStats:
-    def __init__(self):
-        self.policy_accuracy_num = 0.0
-        self.policy_loss_num = 0.0
-        self.value_accuracy_num = 0.0
-        self.value_loss_num = 0.0
+class EvaluationResults:
+    def __init__(self, labels, outputs, loss):
+        self.labels = labels
+        self.outputs = outputs
+        self.loss = loss
+
+    def __len__(self):
+        return len(self.labels)
+
+
+class TrainingSubStats:
+    max_descr_len = 0
+
+    def __init__(self, descr: str, accuracy_func: Callable):
+        self.descr = descr
+        self.accuracy_func = accuracy_func
+        self.accuracy_num = 0.0
+        self.loss_num = 0.0
         self.den = 0
 
-    def update(self, policy_labels, policy_outputs, policy_loss, value_labels, value_outputs, value_loss):
-        n = len(policy_labels)
-        self.policy_loss_num += float(policy_loss.item()) * n
-        self.value_loss_num += float(value_loss.item()) * n
+        TrainingSubStats.max_descr_len = max(TrainingSubStats.max_descr_len, len(descr))
+
+    def update(self, results: EvaluationResults):
+        n = len(results)
+        self.accuracy_num += self.accuracy_func(results.outputs, results.labels)
+        self.loss_num += float(results.loss.item()) * n
         self.den += n
-        self.policy_accuracy_num += get_num_correct_policy_predictions(policy_outputs, policy_labels)
-        self.value_accuracy_num += get_num_correct_value_predictions(value_outputs, value_labels)
+
+    def accuracy(self):
+        return self.accuracy_num / self.den if self.den else 0.0
+
+    def loss(self):
+        return self.loss_num / self.den if self.den else 0.0
 
     def dump(self):
-        policy_accuracy = self.policy_accuracy_num / self.den
-        avg_policy_loss = self.policy_loss_num / self.den
-        value_accuracy = self.value_accuracy_num / self.den
-        avg_value_loss = self.value_loss_num / self.den
+        descr = self.descr.rjust(TrainingSubStats.max_descr_len)
+        print(f'{descr} accuracy: %8.6f' % self.accuracy())
+        print(f'{descr} loss:     %8.6f' % self.loss())
 
-        print(f'Policy accuracy: %8.6f' % policy_accuracy)
-        print(f'Policy loss:     %8.6f' % avg_policy_loss)
-        print(f'Value accuracy:  %8.6f' % value_accuracy)
-        print(f'Value loss:      %8.6f' % avg_value_loss)
+
+class TrainingStats:
+    def __init__(self):
+        self.policy_substats = TrainingSubStats('policy', get_num_correct_policy_predictions)
+        self.value_substats = TrainingSubStats('value', get_num_correct_value_predictions)
+        self.opp_policy_substats = TrainingSubStats('opp_policy', get_num_correct_policy_predictions)
+
+    def update(self, policy_results: EvaluationResults, value_results: EvaluationResults,
+               opp_policy_results: EvaluationResults):
+        self.policy_substats.update(policy_results)
+        self.value_substats.update(value_results)
+        self.opp_policy_substats.update(opp_policy_results)
+
+    def dump(self):
+        self.policy_substats.dump()
+        self.value_substats.dump()
+        self.opp_policy_substats.dump()

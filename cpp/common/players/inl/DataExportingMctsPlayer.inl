@@ -7,6 +7,10 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+DataExportingMctsPlayer<GameState_, Tensorizor_>::transform_group_vec_t
+DataExportingMctsPlayer<GameState_, Tensorizor_>::transform_groups_;
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 template<typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
     const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
@@ -32,16 +36,33 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
+  bool record = search_mode == base_t::kFull;
+  bool record_reply = !transform_groups_.empty();
+
+  if (kForceFullSearchIfRecordingAsOppReply && record_reply) {
+    search_mode = base_t::kFull;
+  }
+
   const MctsResults* mcts_results = this->mcts_search(state, search_mode);
 
-  if (search_mode == base_t::kFull) {
-    record_position(state, valid_actions, mcts_results);
+  if (record_reply || record) {
+    auto policy = extract_policy(mcts_results);
+    if (record_reply) {
+      record_opp_reply(policy);
+      transform_groups_.clear();
+    }
+
+    if (record) {
+      record_position(state, valid_actions, policy);
+    }
   }
+
   return base_t::get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&, const GameOutcome& outcome) {
+  transform_groups_.clear();
   if (is_terminal_outcome(outcome)) {
     game_data_->record_for_all(outcome);
     writer_->close(game_data_);
@@ -50,22 +71,24 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
-    const GameState& state, const ActionMask& valid_actions, const MctsResults* mcts_results)
-{
+DataExportingMctsPlayer<GameState_, Tensorizor_>::PolicyTensor
+DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsResults* mcts_results) {
   auto policy = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   float sum = policy_array.sum();
   if (sum == 0) {
-    // Happens if eliminations is enabled and MCTS proves that the position is losing.
-    float p = 1.0 / valid_actions.count();
-    for (action_index_t a : bitset_util::on_indices(valid_actions)) {
-      policy_array[a] = p;
-    }
+    // Happens if eliminations is enabled and MCTS proves that the position is losing. No need to do anything in this
+    // case; the python training code will ignore these rows for policy training.
   } else {
     policy_array /= sum;
   }
+  return policy;
+}
 
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
+    const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy)
+{
   InputTensor input;
   this->tensorizor_.tensorize(input, state);
 
@@ -75,11 +98,25 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
 
     group.input = input;
     group.policy = policy;
+    group.opp_policy.setZero();
     group.current_player = this->get_my_seat();
 
     auto transform = this->tensorizor_.get_symmetry(sym_index);
     transform->transform_input(group.input);
     transform->transform_policy(group.policy);
+
+    transform_groups_.emplace_back(transform, &group);
+  }
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_opp_reply(const PolicyTensor& policy) {
+  for (auto& transform_group : transform_groups_) {
+    auto* transform = transform_group.transform;
+    auto* group = transform_group.group;
+
+    group->opp_policy = policy;
+    transform->transform_policy(group->opp_policy);
   }
 }
 

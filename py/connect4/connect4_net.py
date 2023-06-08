@@ -22,12 +22,13 @@ class C4Net(NeuralNet):
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
         self.policy_head = PolicyHead(board_size, NUM_COLUMNS, n_conv_filters)
         self.value_head = ValueHead(board_size, NUM_COLORS, n_conv_filters)
+        self.opp_policy_head = PolicyHead(board_size, NUM_COLUMNS, n_conv_filters)
 
     def forward(self, x):
         x = self.conv_block(x)
         for block in self.res_blocks:
             x = block(x)
-        return self.policy_head(x), self.value_head(x)
+        return self.policy_head(x), self.value_head(x), self.opp_policy_head(x)
 
     @staticmethod
     def create(input_shape: Shape) -> 'C4Net':

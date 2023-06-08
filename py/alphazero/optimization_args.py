@@ -44,6 +44,7 @@ class ModelingArgs:
     weight_decay: float
     learning_rate: float
     value_loss_lambda: float
+    opp_policy_loss_lambda: float
     synchronous_mode: bool
 
     @staticmethod
@@ -57,6 +58,7 @@ class ModelingArgs:
         ModelingArgs.weight_decay = args.weight_decay
         ModelingArgs.learning_rate = args.learning_rate
         ModelingArgs.value_loss_lambda = args.value_loss_lambda
+        ModelingArgs.opp_policy_loss_lambda = args.opp_policy_loss_lambda
         ModelingArgs.synchronous_mode = args.synchronous_mode
 
     @staticmethod
@@ -81,5 +83,7 @@ class ModelingArgs:
                            help='learning rate (default: %(default)s)')
         group.add_argument('-V', '--value-loss-lambda', type=float, default=1.5,
                            help='value loss lambda (default: %(default)s)')
+        group.add_argument('-O', '--opp-policy-loss-lambda', type=float, default=0.15,
+                           help='opponent policy loss lambda (default: %(default)s)')
         group.add_argument('-S', '--synchronous-mode', action='store_true',
                            help='synchronous mode (default: asynchronous)')

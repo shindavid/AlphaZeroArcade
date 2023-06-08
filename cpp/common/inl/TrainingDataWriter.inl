@@ -170,6 +170,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   torch::Tensor input = torch::empty(input_shape, torch_util::to_dtype_v<InputScalar>);
   torch::Tensor policy = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
+  torch::Tensor opp_policy = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
   torch::Tensor value = torch::empty(value_shape, torch_util::to_dtype_v<ValueScalar>);
 
   constexpr size_t input_size = InputShape::total_size;
@@ -178,6 +179,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   InputScalar* input_data = input.data_ptr<InputScalar>();
   PolicyScalar* policy_data = policy.data_ptr<PolicyScalar>();
+  PolicyScalar* opp_policy_data = opp_policy.data_ptr<PolicyScalar>();
   ValueScalar* value_data = value.data_ptr<ValueScalar>();
 
   int rows = 0;
@@ -187,6 +189,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
       memcpy(input_data + input_size * rows, group.input.data(), input_size * sizeof(InputScalar));
       memcpy(policy_data + policy_size * rows, group.policy.data(), policy_size * sizeof(PolicyScalar));
+      memcpy(opp_policy_data + policy_size * rows, group.opp_policy.data(), policy_size * sizeof(PolicyScalar));
       memcpy(value_data + value_size * rows, group.value.data(), value_size * sizeof(ValueScalar));
 
       rows++;
@@ -204,6 +207,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   tensor_map_t tensor_map;
   tensor_map["input"] = input;
   tensor_map["policy"] = policy;
+  tensor_map["opp_policy"] = opp_policy;
   tensor_map["value"] = value;
 
   // write-then-mv to avoid race-conditions with partially-written files
