@@ -1,3 +1,5 @@
+from typing import List
+
 import torch
 from torch.utils.data import Dataset
 
@@ -13,6 +15,7 @@ class GamesDataset(Dataset):
         self.n_total_positions = self.self_play_metadata.n_total_positions
         self.n_window = compute_n_window(self.n_total_positions)
         self.window = self.self_play_metadata.get_window(self.n_window)
+        self.key_order: List[str] = []
 
     def get_input_shape(self) -> Shape:
         for position_metadata in self.window:
@@ -20,6 +23,17 @@ class GamesDataset(Dataset):
             data = torch.jit.load(game_metadata.filename).state_dict()
             return data['input'].shape[1:]
         raise Exception('Could not determine input shape!')
+
+    def get_target_names(self) -> List[str]:
+        for position_metadata in self.window:
+            game_metadata = position_metadata.game_metadata
+            data = torch.jit.load(game_metadata.filename).state_dict()
+            names = list(data.keys())
+            return [n for n in names if n != 'input']
+        raise Exception('Could not extract target names!')
+
+    def set_key_order(self, target_names: List[str]):
+        self.key_order = ['input'] + target_names
 
     def __len__(self):
         return len(self.window)
@@ -30,7 +44,7 @@ class GamesDataset(Dataset):
         # COMMENT: How is position index selected?
         p = position_metadata.position_index
         data = torch.jit.load(game_metadata.filename).state_dict()
-        return data['input'][p], data['value'][p], data['policy'][p], data['opp_policy'][p]
+        return [data[key][p] for key in self.key_order]
 
 
 def compute_n_window(n_total: int) -> int:

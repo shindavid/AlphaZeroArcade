@@ -40,20 +40,22 @@ import signal
 import sys
 import tempfile
 import time
-from typing import Optional, List, Callable
+from typing import Optional, List, Tuple
 
 import torch
-import torch.nn as nn
 from natsort import natsorted
 from torch import optim
 from torch.utils.data import DataLoader
+
+from alphazero.custom_types import Generation
+from alphazero.data.games_dataset import GamesDataset
 from alphazero.optimization_args import ModelingArgs
 from games import GameType
+from neural_net import NeuralNet, LearningTarget
 from util import subprocess_util
 from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo
-from alphazero.custom_types import Generation
-from alphazero.data.games_dataset import GamesDataset
+from util.torch_util import apply_mask
 
 
 class PathInfo:
@@ -152,14 +154,15 @@ class AlphaZeroManager:
                 break
             g += 1
 
-    def get_net_and_optimizer(self, loader: 'DataLoader'):
+    def get_net_and_optimizer(self, loader: 'DataLoader') -> Tuple[NeuralNet, optim.Optimizer]:
         if self._net is not None:
             return self._net, self._opt
 
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             input_shape = loader.dataset.get_input_shape()
-            self._net = self.game_type.net_type.create(input_shape)
+            target_names = loader.dataset.get_target_names()
+            self._net = self.game_type.net_type.create(input_shape, target_names)
             timed_print(f'Creating new net with input shape {input_shape}')
         else:
             gen = checkpoint_info.generation
@@ -310,11 +313,6 @@ class AlphaZeroManager:
         gen = self.get_latest_model_generation() + 1
         timed_print(f'Train gen:{gen}')
 
-        value_loss_lambda = ModelingArgs.value_loss_lambda
-        opp_policy_loss_lambda = ModelingArgs.opp_policy_loss_lambda
-        policy_criterion = nn.CrossEntropyLoss()
-        value_criterion = nn.CrossEntropyLoss()
-
         for_loop_time = 0
         t0 = time.time()
         steps = 0
@@ -329,34 +327,43 @@ class AlphaZeroManager:
             assert games_dataset.n_total_games >= self.n_gen0_games
 
             net, optimizer = self.get_net_and_optimizer(loader)
+            games_dataset.set_key_order(net.target_names())
+
+            loss_fns = [target.loss_fn() for target in net.learning_targets]
 
             timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
                         f'{games_dataset.n_total_positions} total positions (minibatches processed: {steps})')
 
-            stats = TrainingStats()
+            stats = TrainingStats(net)
             for data in loader:
                 t1 = time.time()
-                inputs, value_labels, policy_labels, opp_policy_labels = data
+                inputs = data[0]
+                labels_list = data[1:]
                 inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
-                value_labels = value_labels.to(self.py_cuda_device_str)
-                policy_labels = policy_labels.to(self.py_cuda_device_str)
-                opp_policy_labels = opp_policy_labels.to(self.py_cuda_device_str)
+
+                labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
 
                 optimizer.zero_grad()
-                policy_outputs, value_outputs, opp_policy_outputs = net(inputs)
+                outputs_list = net(inputs)
+                assert len(outputs_list) == len(labels_list)
 
-                policy_labels, policy_outputs = reshape_and_mask(policy_labels, policy_outputs)
-                opp_policy_labels, opp_policy_outputs = reshape_and_mask(opp_policy_labels, opp_policy_outputs)
+                labels_list = [labels.reshape((labels.shape[0], -1)) for labels in labels_list]
+                outputs_list = [outputs.reshape((outputs.shape[0], -1)) for outputs in outputs_list]
 
-                policy_loss = policy_criterion(policy_outputs, policy_labels)
-                opp_policy_loss = policy_criterion(opp_policy_outputs, opp_policy_labels)
-                value_loss = value_criterion(value_outputs, value_labels)
-                loss = policy_loss + value_loss * value_loss_lambda + opp_policy_loss * opp_policy_loss_lambda
+                masks = [target.get_mask(labels) for labels, target in zip(labels_list, net.learning_targets)]
 
-                policy_results = EvaluationResults(policy_labels, policy_outputs, policy_loss)
-                value_results = EvaluationResults(value_labels, value_outputs, value_loss)
-                opp_policy_results = EvaluationResults(opp_policy_labels, opp_policy_outputs, opp_policy_loss)
-                stats.update(policy_results, value_results, opp_policy_results)
+                labels_list = [apply_mask(labels, mask) for mask, labels in zip(masks, labels_list)]
+                outputs_list = [apply_mask(outputs, mask) for mask, outputs in zip(masks, outputs_list)]
+
+                loss_list = [loss_fn(outputs, labels) for loss_fn, outputs, labels in
+                             zip(loss_fns, outputs_list, labels_list)]
+
+                loss = sum([loss * target.loss_weight for loss, target in zip(loss_list, net.learning_targets)])
+
+                results_list = [EvaluationResults(labels, outputs, loss) for labels, outputs, loss in
+                                zip(labels_list, outputs_list, loss_list)]
+
+                stats.update(results_list)
 
                 loss.backward()
                 optimizer.step()
@@ -418,36 +425,6 @@ class AlphaZeroManager:
             self_play_proc_data.terminate(timeout=300)
 
 
-def reshape_and_mask(labels: torch.Tensor, outputs: torch.Tensor):
-    """
-    The c++ outputs labels of all zeros for rows that are intended to be masked.
-
-    This function reshapes the labels and outputs to be 2D, and then masks the zero rows.
-    """
-    n = labels.shape[0]
-    labels = labels.reshape((n, -1))
-    outputs = outputs.reshape((n, -1))
-
-    label_sums = labels.sum(dim=1)
-    mask = label_sums != 0
-    labels = labels[mask]
-    outputs = outputs[mask]
-
-    return labels, outputs
-
-
-def get_num_correct_policy_predictions(policy_outputs, policy_labels):
-    selected_moves = torch.argmax(policy_outputs, dim=1)
-    correct_policy_preds = policy_labels.gather(1, selected_moves.view(-1, 1))
-    return int(sum(correct_policy_preds))
-
-
-def get_num_correct_value_predictions(value_outputs, value_labels):
-    value_output_probs = value_outputs.softmax(dim=1)
-    deltas = abs(value_output_probs - value_labels)
-    return int(sum((deltas < 0.25).all(dim=1)))
-
-
 class EvaluationResults:
     def __init__(self, labels, outputs, loss):
         self.labels = labels
@@ -461,18 +438,21 @@ class EvaluationResults:
 class TrainingSubStats:
     max_descr_len = 0
 
-    def __init__(self, descr: str, accuracy_func: Callable):
-        self.descr = descr
-        self.accuracy_func = accuracy_func
+    def __init__(self, target: LearningTarget):
+        self.target = target
         self.accuracy_num = 0.0
         self.loss_num = 0.0
         self.den = 0
 
-        TrainingSubStats.max_descr_len = max(TrainingSubStats.max_descr_len, len(descr))
+        TrainingSubStats.max_descr_len = max(TrainingSubStats.max_descr_len, len(self.descr))
+
+    @property
+    def descr(self) -> str:
+        return self.target.name
 
     def update(self, results: EvaluationResults):
         n = len(results)
-        self.accuracy_num += self.accuracy_func(results.outputs, results.labels)
+        self.accuracy_num += self.target.get_num_correct_predictions(results.outputs, results.labels)
         self.loss_num += float(results.loss.item()) * n
         self.den += n
 
@@ -483,24 +463,24 @@ class TrainingSubStats:
         return self.loss_num / self.den if self.den else 0.0
 
     def dump(self):
-        descr = self.descr.rjust(TrainingSubStats.max_descr_len)
-        print(f'{descr} accuracy: %8.6f' % self.accuracy())
-        print(f'{descr} loss:     %8.6f' % self.loss())
+        tuples = [
+            (' accuracy:', self.accuracy()),
+            (' loss:', self.loss()),
+        ]
+        max_str_len = max([len(t[0]) for t in tuples]) + TrainingSubStats.max_descr_len
+        for key, value in tuples:
+            full_key = self.descr + key
+            print(f'{full_key.ljust(max_str_len)} %8.6f' % value)
 
 
 class TrainingStats:
-    def __init__(self):
-        self.policy_substats = TrainingSubStats('policy', get_num_correct_policy_predictions)
-        self.value_substats = TrainingSubStats('value', get_num_correct_value_predictions)
-        self.opp_policy_substats = TrainingSubStats('opp_policy', get_num_correct_policy_predictions)
+    def __init__(self, net: NeuralNet):
+        self.substats_list = [TrainingSubStats(target) for target in net.learning_targets]
 
-    def update(self, policy_results: EvaluationResults, value_results: EvaluationResults,
-               opp_policy_results: EvaluationResults):
-        self.policy_substats.update(policy_results)
-        self.value_substats.update(value_results)
-        self.opp_policy_substats.update(opp_policy_results)
+    def update(self, results_list: List[EvaluationResults]):
+        for results, substats in zip(results_list, self.substats_list):
+            substats.update(results)
 
     def dump(self):
-        self.policy_substats.dump()
-        self.value_substats.dump()
-        self.opp_policy_substats.dump()
+        for substats in self.substats_list:
+            substats.dump()
