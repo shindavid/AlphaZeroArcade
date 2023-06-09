@@ -9,6 +9,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
+#include <common/AbstractSymmetryTransform.hpp>
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/TensorizorConcept.hpp>
@@ -50,6 +51,8 @@ public:
   using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
   using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 
+  using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
+
   static constexpr int kRowsPerChunk = 64;
 
   struct TensorGroup {
@@ -60,9 +63,31 @@ public:
     seat_index_t current_player;
   };
 
-    /*
-     * A single game is recorded onto one or more DataChunk's.
-     */
+  /*
+   * In order to support the opponent-reply auxiliary policy target (see Section 3.4 of the KataGo paper), we need to
+   * temporarily store the partially-written TensorGroup(s), to be completed after the opponent's reply. This demands
+   * sharing of per-game data across distinct MctsPlayer instances, which makes the GameData class the natural home
+   * for this data. This assumes that the MctsPlayer instances live in the same process, asn assumption that is enforced
+   * with a check in GameServerProxy.
+   *
+   * We store a vector of pending groups as opposed to a single group because we have data augmentation via symmetry
+   * transforms, and all the augmented data need to be updated with the opponent's reply.
+   *
+   * The last move of the game will not have a corresponding opponent reply. We deal with this by writing all zeros
+   * for the opponent reply policy in this case. The python training code masks out these rows when computing the
+   * loss for the opponent reply.
+   */
+  struct transform_group_t {
+    transform_group_t(SymmetryTransform* t, TensorGroup* g) : transform(t), group(g) {}
+
+    SymmetryTransform* transform;
+    TensorGroup* group;
+  };
+  using transform_group_vec_t = std::vector<transform_group_t>;
+
+  /*
+   * A single game is recorded onto one or more DataChunk's.
+   */
   class DataChunk {
   public:
     DataChunk();
@@ -93,6 +118,9 @@ public:
   public:
     TensorGroup& get_next_group();
     void record_for_all(const GameOutcome& value);
+    void add_pending_group(SymmetryTransform* transform, TensorGroup* group);
+    bool contains_pending_groups() const { return !pending_groups_.empty(); }
+    void commit_opp_reply_to_pending_groups(const PolicyTensor& opp_policy);
 
   protected:
     // friend classes only intended to use these protected members
@@ -110,6 +138,7 @@ public:
 
     std::mutex mutex_;
     data_chunk_list_t chunks_;
+    transform_group_vec_t pending_groups_;  // for opponent-reply auxiliary policy target
     const game_id_t id_;
     bool closed_ = false;
   };

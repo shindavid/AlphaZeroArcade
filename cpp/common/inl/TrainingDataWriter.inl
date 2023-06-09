@@ -75,6 +75,27 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const
   for (DataChunk& chunk : chunks_) {
     chunk.record_for_all(value);
   }
+  pending_groups_.clear();
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::GameData::add_pending_group(
+    SymmetryTransform* transform, TensorGroup* group) {
+  pending_groups_.emplace_back(transform, group);
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_pending_groups(
+    const PolicyTensor& opp_policy)
+{
+  for (auto& transform_group : pending_groups_) {
+    auto* transform = transform_group.transform;
+    auto* group = transform_group.group;
+
+    group->opp_policy = opp_policy;
+    transform->transform_policy(group->opp_policy);
+  }
+  pending_groups_.clear();
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

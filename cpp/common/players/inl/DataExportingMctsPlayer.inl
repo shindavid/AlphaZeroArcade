@@ -7,10 +7,6 @@
 namespace common {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-DataExportingMctsPlayer<GameState_, Tensorizor_>::transform_group_vec_t
-DataExportingMctsPlayer<GameState_, Tensorizor_>::transform_groups_;
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 template<typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
     const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
@@ -37,7 +33,7 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
 {
   auto search_mode = this->choose_search_mode();
   bool record = search_mode == base_t::kFull;
-  bool record_reply = !transform_groups_.empty();
+  bool record_reply = game_data_->contains_pending_groups();
 
   if (kForceFullSearchIfRecordingAsOppReply && record_reply) {
     search_mode = base_t::kFull;
@@ -48,8 +44,7 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
   if (record_reply || record) {
     auto policy = extract_policy(mcts_results);
     if (record_reply) {
-      record_opp_reply(policy);
-      transform_groups_.clear();
+      game_data_->commit_opp_reply_to_pending_groups(policy);
     }
 
     if (record) {
@@ -62,12 +57,9 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&, const GameOutcome& outcome) {
-  transform_groups_.clear();
-  if (is_terminal_outcome(outcome)) {
-    game_data_->record_for_all(outcome);
-    writer_->close(game_data_);
-    game_data_ = nullptr;
-  }
+  game_data_->record_for_all(outcome);
+  writer_->close(game_data_);
+  game_data_ = nullptr;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -105,18 +97,7 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
     transform->transform_input(group.input);
     transform->transform_policy(group.policy);
 
-    transform_groups_.emplace_back(transform, &group);
-  }
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_opp_reply(const PolicyTensor& policy) {
-  for (auto& transform_group : transform_groups_) {
-    auto* transform = transform_group.transform;
-    auto* group = transform_group.group;
-
-    group->opp_policy = policy;
-    transform->transform_policy(group->opp_policy);
+    game_data_->add_pending_group(transform, &group);
   }
 }
 
