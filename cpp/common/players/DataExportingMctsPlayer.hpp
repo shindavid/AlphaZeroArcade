@@ -7,6 +7,8 @@
 #include <common/TrainingDataWriter.hpp>
 #include <common/players/MctsPlayer.hpp>
 
+#include <vector>
+
 namespace common {
 
 /*
@@ -15,6 +17,14 @@ namespace common {
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
 public:
+  /*
+   * The argument for using a full search is so that the opp reply target is more accurate.
+   *
+   * The argument against is that the opp reply target is not that important, making full searches for that purpose
+   * an inefficient use of compute budget.
+   */
+  static constexpr bool kForceFullSearchIfRecordingAsOppReply = false;
+
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
   using GameStateTypes = common::GameStateTypes<GameState>;
@@ -25,6 +35,7 @@ public:
   using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
   using TrainingDataWriterParams = typename TrainingDataWriter::Params;
   using InputTensor = typename TensorizorTypes::InputTensor;
+  using PolicyTensor = typename GameStateTypes::PolicyTensor;
 
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;
@@ -41,7 +52,8 @@ public:
   void end_game(const GameState&, const GameOutcome&) override;
 
 protected:
-  void record_position(const GameState& state, const ActionMask& valid_actions, const MctsResults*);
+  static PolicyTensor extract_policy(const MctsResults* results);
+  void record_position(const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy);
 
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameData_sptr game_data_;
