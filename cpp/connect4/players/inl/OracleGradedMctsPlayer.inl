@@ -71,7 +71,7 @@ inline common::action_index_t OracleGradedMctsPlayer::get_action(
   if (search_mode != kRawPolicy) {
     PerfectOracle *oracle = grader_->oracle();
     auto result = oracle->query(move_history_);
-    if (result.score >= 0) {  // winning or drawn position
+    if (result.best_score >= 0) {  // winning or drawn position
       assert(search_mode != base_t::kRawPolicy);
       auto policy_prior = GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions);
       PolicyArray& policy_prior_array = eigen_util::reinterpret_as_array(policy_prior);
@@ -94,8 +94,10 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
   net_policy_t0 /= net_policy_t0.sum();
   posterior_policy_t0 /= posterior_policy_t0.sum();
 
-  int score = result.score;
-  auto correct_moves = result.good_moves;
+  ActionMask correct_moves;
+  for (int i = 0; i < kNumColumns; ++i) {
+    correct_moves.set(i, result.scores[i] >= result.best_score);
+  }
 
   float mistake_prior_t0_num = 0;
   float mistake_prior_t0_den = 0;
@@ -147,7 +149,7 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
   float mistake_mcts_t1_rate = mistake_posterior_t1_den ? mistake_posterior_t1_num / mistake_posterior_t1_den : 0;
   float baseline = baseline_num * 1.0 / baseline_den;
 
-  grader_->update(score, move_number, mistake_prior_t0_rate, mistake_prior_t1_rate,
+  grader_->update(result.best_score, move_number, mistake_prior_t0_rate, mistake_prior_t1_rate,
                   mistake_mcts_t0_rate, mistake_mcts_t1_rate, baseline);
 }
 

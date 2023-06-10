@@ -39,10 +39,13 @@ inline std::string PerfectOracle::QueryResult::get_overlay() const {
   char chars[kNumColumns];
 
   for (int i = 0; i < kNumColumns; ++i) {
-    if (score<0 || !good_moves[i]) {
-      chars[i] = drawing_moves[i] ? '0' : ' ';
+    int score = scores[i];
+    if (score < 0) {
+      chars[i] = ' ';
+    } else if (score == 0) {
+      chars[i] = '0';
     } else {
-      chars[i] = drawing_moves[i] ? '0' : '+';
+      chars[i] = '+';
     }
   }
   return util::create_string(" %c %c %c %c %c %c %c",
@@ -87,49 +90,42 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
     std::getline(out_, s);
   }
   auto tokens = util::split(s);
-  int move_scores[kNumColumns];
+
+  QueryResult result;
   for (int j = 0; j < kNumColumns; ++j) {
-    int score = std::stoi(tokens[tokens.size() - kNumColumns + j]);
-    move_scores[j] = score;
+    int raw_score = std::stoi(tokens[tokens.size() - kNumColumns + j]);
+    if (raw_score == QueryResult::kIllegalMoveScore) {
+      result.scores[j] = QueryResult::kIllegalMoveScore;
+    } else if (raw_score < 0) {
+      result.scores[j] = -22 + (history.length() + 1) / 2 - raw_score;
+    } else if (raw_score > 0) {
+      result.scores[j] = 22 - history.length() / 2 - raw_score;
+    } else {
+      result.scores[j] = 0;
+    }
   }
-  int best_score = *std::max_element(move_scores, move_scores + kNumColumns);
 
-  ActionMask good_moves;
-  ActionMask best_moves;
-  ActionMask drawing_moves;
-
-  int good_bound;
-  int best_bound = best_score;
-  if (best_score > 0) {
-    good_bound = 1;
-  } else if (best_score == 0) {
-    good_bound = 0;
+  int max_score = result.scores.maxCoeff();
+  if (max_score > 0) {
+    // set best_score to the positive score closest to 0
+    result.best_score = max_score;
+    for (int j = 0; j < kNumColumns; ++j) {
+      if (result.scores[j] > 0 && result.scores[j] < result.best_score) {
+        result.best_score = result.scores[j];
+      }
+    }
+  } else if (max_score < 0) {
+    // set best_score to the most negative non-illegal score
+    result.best_score = 0;
+    for (int j = 0; j < kNumColumns; ++j) {
+      int score = result.scores[j];
+      if (score < result.best_score && score != QueryResult::kIllegalMoveScore) {
+        result.best_score = result.scores[j];
+      }
+    }
   } else {
-    good_bound = -999;  // -1000 indicates illegal move
+    result.best_score = 0;
   }
-
-  for (int j = 0; j < c4::kNumColumns; ++j) {
-    best_moves[j] = move_scores[j] >= best_bound;
-    good_moves[j] = move_scores[j] >= good_bound;
-    drawing_moves[j] = move_scores[j] == 0;
-  }
-
-  int converted_score = best_score;
-  if (best_score > 0) {
-    converted_score = 22 - history.length() / 2 - best_score;
-    if (converted_score <= 0) {
-      throw util::Exception("Bad score conversion (score=%d, history=%s(%d), converted_score=%d)",
-                            best_score, history.to_string().c_str(), history.length(), converted_score);
-    }
-  } else if (best_score < 0 && best_score != -1000) {  // -1000 means no more legal moves
-    converted_score = -22 + (history.length() + 1) / 2 - best_score;
-    if (converted_score >= 0) {
-      throw util::Exception("Bad score conversion (score=%d, history=%s(%d), converted_score=%d)",
-                            best_score, history.to_string().c_str(), history.length(), converted_score);
-    }
-  }
-
-  QueryResult result{best_moves, good_moves, drawing_moves, converted_score};
   return result;
 }
 
@@ -139,20 +135,16 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
   po2::options_description desc("c4::PerfectPlayer options");
   return desc
-      .template add_option<"mode", 'm'>
-          (po::value<std::string>(&mode)->default_value(mode), "strong|weak. Strong mode prefers fast wins")
+      .template add_option<"strength", 's'>
+          (po::value<int>(&strength)->default_value(strength),
+           "strength (0-21). The last s moves are played perfectly, the others randomly. 0 is random, 21 is perfect.")
+      .template add_option<"verbose", 'v'>(
+          po::bool_switch(&verbose)->default_value(verbose), "mcts player verbose mode")
       ;
 }
 
-inline PerfectPlayer::PerfectPlayer(const Params& params)
-{
-  if (params.mode == "strong") {
-    strong_mode_ = true;
-  } else if (params.mode == "weak") {
-    strong_mode_ = false;
-  } else {
-    throw util::Exception("Invalid mode: %s", params.mode.c_str());
-  }
+inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
+  util::clean_assert(params_.strength >= 0 && params_.strength <= 21, "strength must be in [0, 21]");
 }
 
 inline void PerfectPlayer::start_game() {
@@ -165,13 +157,47 @@ inline void PerfectPlayer::receive_state_change(
   move_history_.append(action);
 }
 
-inline common::action_index_t PerfectPlayer::get_action(const GameState&, const ActionMask&) {
+inline common::action_index_t PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
-  if (!strong_mode_ && result.score > 0) {
-    return bitset_util::choose_random_on_index(result.good_moves);
-  } else {
-    return bitset_util::choose_random_on_index(result.best_moves);
+
+  ActionMask candidates;
+
+  // first add clearly winning moves
+  for (int j = 0; j < kNumColumns; ++j) {
+    if (result.scores[j] > 0 && result.scores[j] <= params_.strength) {
+      candidates.set(j);
+    }
   }
+
+  // if no known winning moves, then add all draws/uncertain moves
+  bool known_win = candidates.any();
+  if (!known_win) {
+    for (int j = 0; j < kNumColumns; ++j) {
+      int score = result.scores[j];
+      if (score == PerfectOracle::QueryResult::kIllegalMoveScore) {
+        continue;
+      }
+      candidates.set(j, abs(score) > params_.strength || score == 0);
+    }
+  }
+
+  // if no candidates, then everything is a certain loss. Choose randomly among slowest losses.
+  if (!candidates.any()) {
+    for (int j = 0; j < kNumColumns; ++j) {
+      candidates.set(j, result.scores[j] == result.best_score);
+    }
+  }
+
+  if (params_.verbose) {
+    std::cout << "get_action()" << std::endl;
+    state.dump();
+    std::cout << "scores: " << result.scores.transpose() << std::endl;
+    std::cout << "best_score: " << result.best_score << std::endl;
+    std::cout << "my_strength: " << params_.strength << std::endl;
+    std::cout << "candidates: " << bitset_util::to_string(candidates) << std::endl;
+  }
+
+  return bitset_util::choose_random_on_index(candidates);
 }
 
 }  // namespace c4

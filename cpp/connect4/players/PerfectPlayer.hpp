@@ -19,6 +19,7 @@ class PerfectOracle {
 public:
   using GameStateTypes = common::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
+  using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
   class MoveHistory {
   public:
@@ -39,30 +40,25 @@ public:
   };
 
   /*
-   * Let P be current player and Q be other player.
+   * Interpretation of s = scores[k]:
    *
-   * If P wins with optimal play...
-   *  - score will be N, where N is the number of additional moves P needs.
-   *  - good_moves will be a mask of all moves that win against optimal play
-   *  - best_moves will be a mask of all moves leading to the fastest win against optimal play
+   * If s == kInvalidScore, then the move is not valid.
    *
-   * If Q wins with optimal play...
-   *  - score will be -N, where N is the number of additional moves Q needs
-   *  - good_moves will be a mask of all valid moves
-   *  - best_moves will be a mask of all moves leading to the slowest loss against optimal play
+   * If s < 0, then the move loses in -s moves against perfect counter-play.
    *
-   * If P can force a draw against optimal play...
-   *  - good_moves and best_moves will be a mask of all moves forcing a draw
-   *  - score will be 0
+   * If s == 0, then the move results in a draw against perfect counter-play.
    *
-   * For *exact* queries, the score, when positive, will correspond to the number of moves left in the
-   * game given perfect play by both sides.
+   * If s > 0, then the move wins in s moves against perfect counter-play.
+   *
+   * If the position is winning, the member best_score is set to the positive score closest to zero. If the position is
+   * losing, the member best_score is set to the negative score closest to zero. If the position is drawn, the member
+   * best_score is set to 0.
    */
   struct QueryResult {
-    ActionMask best_moves;
-    ActionMask good_moves;
-    ActionMask drawing_moves;
-    int score;
+    static constexpr int kIllegalMoveScore = -1000;
+
+    ScoreArray scores;
+    int best_score;
 
     std::string get_overlay() const;
   };
@@ -85,15 +81,29 @@ public:
 
   struct Params {
     /*
-     * "strong" or "weak"
+     * The strength parameter controls how well the player plays. It effectively acts as a look-ahead depth. More
+     * specifically, the agent will choose randomly among all moves that can force a win within <strength> moves, if
+     * such moves exist; otherwise, it will choose randomly among all moves that can avoid a loss within <strength>
+     * moves, if such moves exist.
      *
-     * In strong mode, PerfectPlayer always prefers the fastest win among winning moves.
+     * if it can
+     * force a win within <strength> moves, or avoid a loss within <strength> moves, it will do so. Ote
      *
-     * In weak mode, PerfectPlayer has no preference among winning moves.
+     * Plays best-moves in mate/draw-in-N situations for N <= strength.
      *
-     * In losing positions, PerfectPlayer prefers the slowest loss regardless of mode.
+     * In mate/draw-in-N situations for N > strength, randomly mixes in a second-best-move.
+     *
+     * In mate
+     *
+     * Randomly picks (21 - strength) integers among the 21 integers {1, 2, ..., 21}. The moves corresponding to
+     * these integers are played weakly, by adding a non-best move to the set of candidate moves. The other moves
+     * are played perfectly.
+     *
+     * A weak move is played by adding a single second-best move (as judged by the oracle) to the set of candidate
+     * moves.
      */
-    std::string mode = "strong";
+    int strength = 21;
+    bool verbose = false;
 
     auto make_options_description();
   };
@@ -105,9 +115,10 @@ public:
   common::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:
+  const Params params_;
+
   PerfectOracle oracle_;
   PerfectOracle::MoveHistory move_history_;
-  bool strong_mode_;
 };
 
 }  // namespace c4
