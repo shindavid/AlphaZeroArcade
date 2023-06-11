@@ -43,7 +43,10 @@ class GamesDataset(Dataset):
         game_metadata = position_metadata.game_metadata
         # COMMENT: How is position index selected?
         p = position_metadata.position_index
-        data = torch.jit.load(game_metadata.filename).state_dict()
+        try:
+            data = torch.jit.load(game_metadata.filename).state_dict()
+        except:
+            raise Exception('Could not load data from file: {}'.format(game_metadata.filename))
         return [data[key][p] for key in self.key_order]
 
 
