@@ -1,5 +1,5 @@
 import subprocess
-from typing import Union, List, Dict, Any
+from typing import Union, List, Dict, Any, Optional
 
 
 def defaultize_kwargs(cmd: Union[str, List[str]], **kwargs) -> Dict[str, Any]:
@@ -35,12 +35,12 @@ def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
     return subprocess.Popen(cmd, **defaultize_kwargs(cmd, **kwargs))
 
 
-def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code=0):
+def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code: Optional[int] = 0):
     """
     Waits until proc is complete, validates returncode, and return.
     """
     stdout, stderr = proc.communicate(timeout=timeout)
-    if proc.returncode != expected_return_code:
+    if expected_return_code not in (proc.returncode, None):
         print(f'Expected rc={expected_return_code}, got rc={proc.returncode}')
         print(stdout)
         print(stderr)

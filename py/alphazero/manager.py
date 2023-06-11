@@ -40,6 +40,7 @@ import signal
 import sys
 import tempfile
 import time
+import traceback
 from typing import Optional, List, Tuple
 
 import torch
@@ -72,6 +73,9 @@ class PathInfo:
 
 class SelfPlayProcData:
     def __init__(self, cmd: str, n_games: int, gen: Generation, games_dir: str):
+        done_file = os.path.join(games_dir, 'done.txt')
+        if os.path.exists(done_file):
+            os.remove(done_file)
         self.proc_complete = False
         self.proc = subprocess_util.Popen(cmd)
         self.n_games = n_games
@@ -82,15 +86,19 @@ class SelfPlayProcData:
         if self.n_games:
             self.wait_for_completion()
 
-    def terminate(self, timeout: Optional[int] = None):
+    def terminate(self, timeout: Optional[int] = None, finalize_games_dir = True,
+                  expected_return_code: Optional[int] = -int(signal.SIGKILL)):
         if self.proc_complete:
             return
         self.proc.kill()
-        self.wait_for_completion(timeout=timeout, expected_return_code=-int(signal.SIGKILL))
+        self.wait_for_completion(timeout=timeout, finalize_games_dir=finalize_games_dir,
+                                 expected_return_code=expected_return_code)
 
-    def wait_for_completion(self, timeout: Optional[int] = None, expected_return_code: int = 0):
+    def wait_for_completion(self, timeout: Optional[int] = None, finalize_games_dir = True,
+                            expected_return_code: Optional[int] = 0):
         subprocess_util.wait_for(self.proc, timeout=timeout, expected_return_code=expected_return_code)
-        AlphaZeroManager.finalize_games_dir(self.games_dir)
+        if finalize_games_dir:
+            AlphaZeroManager.finalize_games_dir(self.games_dir)
         timed_print(f'Completed gen-{self.gen} self-play [{self.proc.pid}]')
         self.proc_complete = True
 
@@ -100,6 +108,7 @@ class AlphaZeroManager:
         self.game_type = game_type
         self.py_cuda_device: int = 0
         self.log_file = None
+        self.self_play_proc_data: Optional[SelfPlayProcData] = None
 
         self.n_gen0_games = 4000
         self.n_sync_games = 1000
@@ -404,10 +413,14 @@ class AlphaZeroManager:
 
     @staticmethod
     def finalize_games_dir(games_dir: str):
+        timed_print('Finalizing games dir: %s' % games_dir)
         n_positions = 0
         n_games = 0
         for filename in os.listdir(games_dir):
-            n = int(filename.split('-')[1].split('.')[0])
+            try:
+                n = int(filename.split('-')[1].split('.')[0])
+            except:
+                raise Exception('Could not parse filename: %s in %s' % (filename, games_dir))
             n_positions += n
             n_games += 1
 
@@ -426,10 +439,24 @@ class AlphaZeroManager:
             self.py_cuda_device = 1
 
         self.init_logging(self.stdout_filename)
-        while True:
-            self_play_proc_data = self.get_self_play_proc(async_mode)
-            self.train_step()
-            self_play_proc_data.terminate(timeout=300)
+        try:
+            while True:
+                self.self_play_proc_data = self.get_self_play_proc(async_mode)
+                self.train_step()
+                self.self_play_proc_data.terminate(timeout=300)
+        except:
+            traceback.print_exc()
+            timed_print('Shutting down...')
+            self.shutdown()
+
+    def shutdown(self):
+        """
+        If there is an active self-play process, kill it, without finalizing games dir (so that on a restart, it
+        continues on the same games dir).
+        """
+        if self.self_play_proc_data is not None:
+            self.self_play_proc_data.terminate(timeout=300, finalize_games_dir=False, expected_return_code=None)
+            self.self_play_proc_data = None
 
 
 class EvaluationResults:
