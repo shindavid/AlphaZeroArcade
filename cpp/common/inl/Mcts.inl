@@ -110,7 +110,7 @@ inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(Node* p, 
 : parent(p)
 , tensorizor(p->stable_data().tensorizor)
 , state(p->stable_data().state)
-, outcome(state.apply_move(action))
+, outcome(state.apply_move(a))
 , action(a)
 {
   tensorizor.receive_state_change(state, action);
