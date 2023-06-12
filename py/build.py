@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument('-D', '--macro-defines', action='append',
                         help='macro definitions to forward to make cmd (-D FOO -D BAR=2). If a macro name is passed'
                         ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
-                        ' IS_MACRO_ASSIGNED_TO_1() macro function defined in cpp/util/CppUtil.hpp')
+                        ' IS_MACRO_ENABLED() macro function defined in cpp/util/CppUtil.hpp')
     return parser.parse_args()
 
 

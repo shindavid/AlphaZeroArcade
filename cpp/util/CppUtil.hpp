@@ -24,10 +24,10 @@
  * #define FOO 1
  * // #define BAR
  *
- * static_assert(IS_MACRO_ASSIGNED_TO_1(FOO))
- * static_assert(!IS_MACRO_ASSIGNED_TO_1(BAR))
+ * static_assert(IS_MACRO_ENABLED(FOO))
+ * static_assert(!IS_MACRO_ENABLED(BAR))
  */
-#define IS_MACRO_ASSIGNED_TO_1(macro) (XSTR(macro)[0] == '1')
+#define IS_MACRO_ENABLED(macro) (XSTR(macro)[0] == '1')
 
 namespace util {
 

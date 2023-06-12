@@ -19,7 +19,7 @@ template <GameStateConcept GameState>
 class GameServerProxy {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr bool kEnableDebug = IS_MACRO_ASSIGNED_TO_1(GAME_SERVER_PROXY_DEBUG);
+  static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
   using ActionMask = typename GameState::ActionMask;
   using GameOutcome = typename GameState::GameOutcome;

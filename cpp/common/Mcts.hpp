@@ -52,9 +52,9 @@ public:
   using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
   using GameStateTypes = common::GameStateTypes<GameState>;
 
-  static constexpr bool kEnableProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS);
-  static constexpr bool kEnableVerboseProfiling = IS_MACRO_ASSIGNED_TO_1(PROFILE_MCTS_VERBOSE);
-  static constexpr bool kEnableThreadingDebug = IS_MACRO_ASSIGNED_TO_1(MCTS_THREADING_DEBUG);
+  static constexpr bool kEnableProfiling = IS_MACRO_ENABLED(PROFILE_MCTS);
+  static constexpr bool kEnableVerboseProfiling = IS_MACRO_ENABLED(PROFILE_MCTS_VERBOSE);
+  static constexpr bool kEnableThreadingDebug = IS_MACRO_ENABLED(MCTS_THREADING_DEBUG);
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;

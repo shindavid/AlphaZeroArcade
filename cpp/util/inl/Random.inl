@@ -54,6 +54,6 @@ inline Random* Random::instance() {
   return instance_;
 }
 
-inline Random::Random() : prng_(IS_MACRO_ASSIGNED_TO_1(DETERMINISTIC_MODE) ? 1234 : std::time(nullptr)) {}
+inline Random::Random() : prng_(IS_MACRO_ENABLED(DETERMINISTIC_MODE) ? 1234 : std::time(nullptr)) {}
 
 }  // namespace util
