@@ -21,6 +21,7 @@ public:
   using Mcts = common::Mcts<GameState, Tensorizor>;
   using MctsParams = typename Mcts::Params;
   using BaseMctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
+  using SharedData = typename BaseMctsPlayer::SharedData;
 
   MctsPlayerGeneratorBase(Mcts::DefaultParamsType type) : mcts_params_(type) {}
 
@@ -37,7 +38,11 @@ protected:
   void validate_params();
 
   using mcts_vec_t = std::vector<Mcts*>;
-  using mcts_map_t = std::map<game_thread_id_t, mcts_vec_t>;
+  struct mcts_map_value_t {
+    mcts_vec_t vec;
+    SharedData* shared_data = nullptr;
+  };
+  using mcts_map_t = std::map<game_thread_id_t, mcts_map_value_t>;
 
   static mcts_map_t mcts_cache_;
 

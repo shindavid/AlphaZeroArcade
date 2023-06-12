@@ -58,6 +58,18 @@ public:
     bool verbose = false;
   };
 
+  /*
+   * Some data needs to be shared by players participating in the same game. This struct holds such data.
+   */
+  struct SharedData {
+    /*
+     * The number of moves to play directly proportionally to the raw policy at the start of each game. If this value
+     * is 5 in a 2-player game, that means that the first player will play 3 moves directly proportionally to the raw
+     * policy and the second player will play 2 moves directly proportionally to the raw policy.
+     */
+    int num_raw_policy_starting_moves = 0;
+  };
+
   using GameStateTypes = common::GameStateTypes<GameState>;
 
   using dtype = typename GameStateTypes::dtype;
@@ -86,6 +98,9 @@ public:
   float avg_batch_size() const { return mcts_->avg_batch_size(); }
   void set_facing_human_tui_player() override { facing_human_tui_player_ = true; }  // affects printing
 
+  SharedData* init_shared_data();
+  void set_shared_data(SharedData* shared_data);
+
 protected:
   const MctsResults* mcts_search(const GameState& state, SearchMode search_mode) const;
   SearchMode choose_search_mode() const;
@@ -106,14 +121,18 @@ protected:
   Tensorizor tensorizor_;
 
   Mcts* mcts_;
+  SharedData* shared_data_ = nullptr;
   const MctsSearchParams search_params_[kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   float num_raw_policy_starting_moves_distr_mean_;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;
+  bool owns_shared_data_ = false;
   bool facing_human_tui_player_ = false;
 
-  int num_remaining_raw_policy_starting_moves_ = 0;
+  /*
+   * Number of moves that have been made (by either player) so far this game.
+   */
   int move_count_ = 0;
 };
 

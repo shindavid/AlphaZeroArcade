@@ -10,16 +10,24 @@ typename MctsPlayerGeneratorBase<GameState, Tensorizor>::mcts_map_t
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::generate(game_thread_id_t game_thread_id) {
-  mcts_vec_t& vec = mcts_cache_[game_thread_id];
-  for (Mcts* mcts : vec) {
+  mcts_map_value_t& value = mcts_cache_[game_thread_id];
+  for (Mcts* mcts : value.vec) {
     if (mcts->params() == mcts_params_) {
-      return generate_from_mcts(mcts);
+      auto player = generate_from_mcts(mcts);
+      util::clean_assert(value.shared_data, "unexpected null shared_data");
+      player->set_shared_data(value.shared_data);
+      return player;
     }
   }
 
   auto player = generate_from_scratch();
+  if (value.shared_data == nullptr) {
+    value.shared_data = player->init_shared_data();
+  } else {
+    player->set_shared_data(value.shared_data);
+  }
   Mcts* mcts = player->get_mcts();
-  vec.push_back(mcts);
+  value.vec.push_back(mcts);
   return player;
 }
 

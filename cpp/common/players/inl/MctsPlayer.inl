@@ -92,7 +92,6 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
       params.num_raw_policy_starting_moves_distr_mean_str.c_str(), GameStateTypes::get_var_bindings()))
 , owns_mcts_(mcts==nullptr)
 {
-  printf("DBG num_raw_policy_starting_moves_distr_mean_ = %g\n", num_raw_policy_starting_moves_distr_mean_);
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
@@ -112,16 +111,17 @@ inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
     delete verbose_info_;
   }
   if (owns_mcts_) delete mcts_;
+  if (owns_shared_data_) delete shared_data_;
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 {
   move_count_ = 0;
-  if (num_raw_policy_starting_moves_distr_mean_) {
+  util::clean_assert(shared_data_, "shared_data_ not set");
+  if (owns_shared_data_) {
     float lambda = 1.0 / num_raw_policy_starting_moves_distr_mean_;
-    num_remaining_raw_policy_starting_moves_ = std::floor(util::Random::exponential(lambda));
-    printf("DEBUG num_remaining_raw_policy_starting_moves_=%d\n", num_remaining_raw_policy_starting_moves_);
+    shared_data_->num_raw_policy_starting_moves = std::floor(util::Random::exponential(lambda));
   }
   move_temperature_.reset();
   tensorizor_.clear();
@@ -138,7 +138,6 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
   move_temperature_.step();
   tensorizor_.receive_state_change(state, action);
   if (owns_mcts_) {
-    if (num_remaining_raw_policy_starting_moves_) num_remaining_raw_policy_starting_moves_--;
     mcts_->receive_state_change(seat, state, action);
   }
   if (base_t::get_my_seat() == seat && params_.verbose) {
@@ -169,6 +168,18 @@ inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline MctsPlayer<GameState_, Tensorizor_>::SharedData* MctsPlayer<GameState_, Tensorizor_>::init_shared_data() {
+  owns_shared_data_ = true;
+  shared_data_ = new SharedData();
+  return shared_data_;
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+inline void MctsPlayer<GameState_, Tensorizor_>::set_shared_data(SharedData* shared_data) {
+  shared_data_ = shared_data;
+}
+
+template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchMode search_mode) const {
   return mcts_->search(tensorizor_, state, search_params_[search_mode]);
@@ -177,7 +188,7 @@ MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchM
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline typename MctsPlayer<GameState_, Tensorizor_>::SearchMode
 MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
-  bool use_raw_policy = num_remaining_raw_policy_starting_moves_ > 0;
+  bool use_raw_policy = move_count_ < shared_data_->num_raw_policy_starting_moves;
   return use_raw_policy ? kRawPolicy : get_random_search_mode();
 }
 
