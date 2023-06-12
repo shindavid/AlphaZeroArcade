@@ -60,11 +60,12 @@ auto Mcts<GameState, Tensorizor>::Params::make_options_description() {
       .template add_option<"batch-size-limit", 'b'>(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
           "batch size limit")
-      .template add_bool_switches<"run-offline", "no-run-offline">(
-          &run_offline, "run search while opponent is thinking", "do NOT run search while opponent is thinking")
-      .template add_option<"offline-tree-size-limit">(
-          po::value<int>(&offline_tree_size_limit)->default_value(
-          offline_tree_size_limit), "max tree size to grow to offline (only respected in --run-offline mode)")
+      .template add_bool_switches<"enable-pondering", "disable-pondering">(
+          &enable_pondering, "enable pondering (search during opponent's turn)",
+          "disable pondering (search during opponent's turn)")
+      .template add_option<"pondering-tree-size-limit">(
+          po::value<int>(&pondering_tree_size_limit)->default_value(pondering_tree_size_limit),
+          "max tree size to grow to when pondering (only respected in --enable-pondering mode)")
       .template add_option<"nn-eval-timeout-ns">(
           po::value<int64_t>(&nn_eval_timeout_ns)->default_value(
           nn_eval_timeout_ns), "nn eval thread timeout in ns")
@@ -1466,7 +1467,7 @@ void Mcts<GameState, Tensorizor>::NodeReleaseService::release_helper(Node* node,
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 : params_(params)
-, offline_search_params_(SearchParams::make_offline_params(params.offline_tree_size_limit))
+, pondering_search_params_(SearchParams::make_pondering_params(params.pondering_tree_size_limit))
 , instance_id_(next_instance_id_++)
 , root_softmax_temperature_(math::ExponentialDecay::parse(
     params.root_softmax_temperature_str, GameStateTypes::get_var_bindings()))
@@ -1486,8 +1487,8 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
   }
-  if (params.run_offline && num_search_threads() == 1) {
-    throw util::Exception("run_offline does not work with only 1 search thread");
+  if (params.enable_pondering && num_search_threads() == 1) {
+    throw util::Exception("pondering mode does not work with only 1 search thread");
   }
   for (int i = 0; i < num_search_threads(); ++i) {
     search_threads_.push_back(new SearchThread(this, i));
@@ -1550,8 +1551,8 @@ inline void Mcts<GameState, Tensorizor>::receive_state_change(
   root_ = new_root_copy;
   root_->adopt_children();
 
-  if (params_.run_offline) {
-    start_search_threads(&offline_search_params_);
+  if (params_.enable_pondering) {
+    start_search_threads(&pondering_search_params_);
   }
 }
 
@@ -1629,7 +1630,7 @@ inline void Mcts<GameState, Tensorizor>::run_search(SearchThread* thread, int tr
   thread->visit(root_, 1);
   thread->dump_profiling_stats();
 
-  if (!thread->offline_search() && root_->stable_data().num_valid_actions() > 1) {
+  if (!thread->is_pondering() && root_->stable_data().num_valid_actions() > 1) {
     while (thread->needs_more_visits(root_, tree_size_limit)) {
       thread->visit(root_, 1);
       thread->dump_profiling_stats();

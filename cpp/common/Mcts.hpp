@@ -112,8 +112,8 @@ public:
     std::string cuda_device = "cuda:0";
     int num_search_threads = 8;
     int batch_size_limit = 216;
-    bool run_offline = false;
-    int offline_tree_size_limit = 4096;
+    bool enable_pondering = false;  // pondering = think during opponent's turn
+    int pondering_tree_size_limit = 4096;
     int64_t nn_eval_timeout_ns = util::us_to_ns(250);
     size_t cache_size = 1048576;
 
@@ -140,11 +140,11 @@ public:
    * By contrast, Params pertains to a single Mcts instance.
    */
   struct SearchParams {
-    static SearchParams make_offline_params(int limit) { return SearchParams{limit, true, true}; }
+    static SearchParams make_pondering_params(int limit) { return SearchParams{limit, true, true}; }
 
     int tree_size_limit = 100;
     bool disable_exploration = false;
-    bool offline = false;
+    bool ponder = false;
   };
 
 private:
@@ -348,7 +348,7 @@ private:
     void launch(const SearchParams* search_params);
     bool needs_more_visits(Node* root, int tree_size_limit);
     void visit(Node* tree, int depth);
-    bool offline_search() const { return search_params_->offline; }
+    bool is_pondering() const { return search_params_->ponder; }
 
     enum region_t {
       kCheckVisitReady = 0,
@@ -792,7 +792,7 @@ private:
   Eigen::Rand::P8_mt19937_64 rng_;
 
   const Params params_;
-  const SearchParams offline_search_params_;
+  const SearchParams pondering_search_params_;
   const int instance_id_;
   math::ExponentialDecay root_softmax_temperature_;
   search_thread_vec_t search_threads_;
