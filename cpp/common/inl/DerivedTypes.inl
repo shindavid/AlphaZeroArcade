@@ -52,6 +52,7 @@ template<typename GameState>
 math::var_bindings_map_t GameStateTypes<GameState>::get_var_bindings() {
   math::var_bindings_map_t bindings;
   bindings["b"] = kMaxNumLocalActions;
+  bindings["m"] = kTypicalNumMovesPerGame;
   return bindings;
 }
 

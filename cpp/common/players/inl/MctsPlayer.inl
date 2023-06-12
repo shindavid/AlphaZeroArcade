@@ -24,11 +24,13 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
     num_full_iters = 0;
     full_pct = 0.0;
     move_temperature_str = "0.5->0.2:2*sqrt(b)";
+    num_raw_policy_starting_moves_distr_mean_str = "0";
   } else if (type == kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
     move_temperature_str = "0.8->0.2:2*sqrt(b)";
+    num_raw_policy_starting_moves_distr_mean_str = "0.07*m";
   } else {
     throw util::Exception("Unknown type: %d", (int)type);
   }
@@ -43,8 +45,10 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
     util::ParamDumper::add("MctsPlayer num fast iters", "%d", num_fast_iters);
     util::ParamDumper::add("MctsPlayer num full iters", "%d", num_full_iters);
     util::ParamDumper::add("MctsPlayer num fast iters", "%.8g", full_pct);
-    util::ParamDumper::add("MctsPlayer move temperature", "%s", move_temperature_str.c_str());
   }
+  util::ParamDumper::add("MctsPlayer move temperature", "%s", move_temperature_str.c_str());
+  util::ParamDumper::add("MctsPlayer num raw policy starting moves distr mean", "%s",
+                         num_raw_policy_starting_moves_distr_mean_str.c_str());
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -62,8 +66,13 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
           "num mcts iterations to do per full move")
       .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
           "pct of moves that should be full")
-      .template add_option<"move-temp", 't'>(po::value<std::string>(&move_temperature_str)->default_value(move_temperature_str),
+      .template add_option<"move-temp", 't'>(
+          po::value<std::string>(&move_temperature_str)->default_value(move_temperature_str),
           "temperature for move selection")
+      .template add_option<"num-raw-policy-starting-moves-distr-mean", 'r'>(
+          po::value<std::string>(&num_raw_policy_starting_moves_distr_mean_str)->default_value(
+              num_raw_policy_starting_moves_distr_mean_str),
+              "exponential distribution mean for num raw policy starting moves")
       .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
           "mcts player verbose mode")
       ;
@@ -79,8 +88,11 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
         {1, true}  // kRawPolicy
   }
 , move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str, GameStateTypes::get_var_bindings()))
+, num_raw_policy_starting_moves_distr_mean_(math::parse_expression(
+      params.num_raw_policy_starting_moves_distr_mean_str.c_str(), GameStateTypes::get_var_bindings()))
 , owns_mcts_(mcts==nullptr)
 {
+  printf("DBG num_raw_policy_starting_moves_distr_mean_ = %g\n", num_raw_policy_starting_moves_distr_mean_);
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
@@ -106,6 +118,11 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 {
   move_count_ = 0;
+  if (num_raw_policy_starting_moves_distr_mean_) {
+    float lambda = 1.0 / num_raw_policy_starting_moves_distr_mean_;
+    num_remaining_raw_policy_starting_moves_ = std::floor(util::Random::exponential(lambda));
+    printf("DEBUG num_remaining_raw_policy_starting_moves_=%d\n", num_remaining_raw_policy_starting_moves_);
+  }
   move_temperature_.reset();
   tensorizor_.clear();
   if (owns_mcts_) {
@@ -121,6 +138,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
   move_temperature_.step();
   tensorizor_.receive_state_change(state, action);
   if (owns_mcts_) {
+    if (num_remaining_raw_policy_starting_moves_) num_remaining_raw_policy_starting_moves_--;
     mcts_->receive_state_change(seat, state, action);
   }
   if (base_t::get_my_seat() == seat && params_.verbose) {
@@ -159,7 +177,7 @@ MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchM
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline typename MctsPlayer<GameState_, Tensorizor_>::SearchMode
 MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
-  bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
+  bool use_raw_policy = num_remaining_raw_policy_starting_moves_ > 0;
   return use_raw_policy ? kRawPolicy : get_random_search_mode();
 }
 

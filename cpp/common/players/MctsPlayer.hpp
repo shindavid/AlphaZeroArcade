@@ -54,7 +54,7 @@ public:
     int num_full_iters;
     float full_pct;
     std::string move_temperature_str;
-    int num_raw_policy_starting_moves = 0;
+    std::string num_raw_policy_starting_moves_distr_mean_str;
     bool verbose = false;
   };
 
@@ -108,9 +108,12 @@ protected:
   Mcts* mcts_;
   const MctsSearchParams search_params_[kNumSearchModes];
   math::ExponentialDecay move_temperature_;
+  float num_raw_policy_starting_moves_distr_mean_;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_mcts_;
   bool facing_human_tui_player_ = false;
+
+  int num_remaining_raw_policy_starting_moves_ = 0;
   int move_count_ = 0;
 };
 

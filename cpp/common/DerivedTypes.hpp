@@ -40,6 +40,7 @@ struct GameStateTypes {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActions = PolicyShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
+  static constexpr int kTypicalNumMovesPerGame = GameState::kTypicalNumMovesPerGame;
 
   using GameOutcome = common::GameOutcome<kNumPlayers>;
 
@@ -70,7 +71,8 @@ struct GameStateTypes {
    *
    * Bindings:
    *
-   * "b" -> kMaxNumLocalActions (max _b_ranching factor)
+   * "b" -> kMaxNumLocalActions (max branching factor)
+   * "m" -> kTypicalNumMovesPerGame
    */
   static math::var_bindings_map_t get_var_bindings();
 };
