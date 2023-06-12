@@ -108,10 +108,10 @@ inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(Node* p, action_index_t a)
 : parent(p)
-, action(a)
 , tensorizor(p->stable_data().tensorizor)
 , state(p->stable_data().state)
 , outcome(state.apply_move(action))
+, action(a)
 {
   tensorizor.receive_state_change(state, action);
   aux_init();
@@ -121,10 +121,10 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
     Node* p, action_index_t a, const Tensorizor& t, const GameState& s, const GameOutcome& o)
 : parent(p)
-, action(a)
 , tensorizor(t)
 , state(s)
 , outcome(o)
+, action(a)
 {
   aux_init();
 }

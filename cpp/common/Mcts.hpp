@@ -188,11 +188,11 @@ private:
       int num_valid_actions() const { return valid_action_mask.count(); }  // consider saving in member variable
 
       Node* parent;
-      action_index_t action;
       Tensorizor tensorizor;
       GameState state;
       GameOutcome outcome;
       ActionMask valid_action_mask;
+      action_index_t action;
       seat_index_t current_player;
       symmetry_index_t sym_index;
 
