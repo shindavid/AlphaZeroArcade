@@ -140,11 +140,7 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::Node::stable_data_t::aux_init() {
   valid_action_mask = state.get_valid_actions();
   current_player = state.get_current_player();
-  if (kDeterministic) {
-    sym_index = 0;
-  } else {
-    sym_index = bitset_util::choose_random_on_index(tensorizor.get_symmetry_indices(state));
-  }
+  sym_index = bitset_util::choose_random_on_index(tensorizor.get_symmetry_indices(state));
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
