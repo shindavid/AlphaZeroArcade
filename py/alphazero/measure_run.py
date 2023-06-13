@@ -58,12 +58,12 @@ on Bradley-Terry in the future, but for now, we use the simpler definition above
 """
 import argparse
 import json
-import math
 import os
 import sqlite3
 import time
 from collections import defaultdict
-from typing import Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Dict, Optional, List
 
 import games
 from alphazero.manager import AlphaZeroManager
@@ -77,7 +77,7 @@ from util.str_util import inject_args
 class Args:
     alphazero_dir: str
     game: str
-    tag: str
+    tags: List[str]
     clear_db: bool
     n_games: int
     mcts_iters: int
@@ -87,16 +87,16 @@ class Args:
 
     @staticmethod
     def load(args):
+        assert args.tag, 'Required option: -t'
         Args.alphazero_dir = args.alphazero_dir
         Args.game = args.game
-        Args.tag = args.tag
+        Args.tags = [t for t in args.tag.split(',') if t]
         Args.clear_db = bool(args.clear_db)
         Args.n_games = args.n_games
         Args.mcts_iters = args.mcts_iters
         Args.parallelism_factor = args.parallelism_factor
         Args.binary = args.binary
         Args.daemon_mode = bool(args.daemon_mode)
-        assert Args.tag, 'Required option: -t'
 
 
 def load_args():
@@ -104,7 +104,7 @@ def load_args():
     cfg = Config.instance()
 
     parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
-    parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
+    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1")')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
     parser.add_argument('-n', '--n-games', type=int, default=100,
@@ -120,10 +120,32 @@ def load_args():
     Args.load(args)
 
 
+@dataclass
+class WorkItem:
+    """
+    Represents a unit of work for the Arena to process. The key field is mcts_gen, which is the generation that needs
+    to be rated.
+
+    The est_rating field is used as a hint to guide the rating computation.
+
+    The rating_gap field is the size of the generation-gap that would get filled by rating mcts_gen.
+
+    The recency_boost field is True if the item is chosen because a new generation has been produced by a currently
+    running alphazero process. The selection process gives a boost for recency because we usually want to see recent
+    results in the skill visualization graph quickly.
+    """
+    mcts_gen: int
+    est_rating: Optional[float]
+    rating_gap: int
+    recency_boost: bool
+    arena: 'Arena'
+
+
 class Arena:
-    def __init__(self):
+    def __init__(self, tag):
+        self.tag = tag
         self.game_type = games.get_game_type(Args.game)
-        self.base_dir = os.path.join(Args.alphazero_dir, Args.game, Args.tag)
+        self.base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
         self.manager = AlphaZeroManager(self.game_type, self.base_dir)
 
         self.min_ref_strength = self.game_type.reference_player_family.min_strength
@@ -188,7 +210,7 @@ class Arena:
         cmd = self.create_cmd(mcts_gen, ref_strength, n_games)
         mcts_name = Arena.get_mcts_player_name(mcts_gen)
         ref_name = Arena.get_reference_player_name(ref_strength)
-        timed_print(f'Running {mcts_name} vs {ref_name} match: {cmd}')
+        timed_print(f'[{self.tag}] Running {mcts_name} vs {ref_name} match: {cmd}')
 
         proc = subprocess_util.Popen(cmd)
         stdout, stderr = proc.communicate()
@@ -197,7 +219,7 @@ class Arena:
         record = extract_match_record(stdout)
         counts += record.get(0)
         self.commit_counts(mcts_gen, ref_strength, counts)
-        timed_print('Match result:', counts)
+        timed_print(f'[{self.tag}] Match result: {counts}')
         return counts
 
     @property
@@ -213,7 +235,7 @@ class Arena:
                 'n_games': Args.n_games,
                 'mcts_iters': Args.mcts_iters,
             }, f, indent=4)
-        timed_print('Dumped metadata to', metadata_filename)
+        timed_print(f'[{self.tag}] Dumped metadata to {metadata_filename}')
 
     def init_db(self):
         if os.path.isfile(self.db_filename):
@@ -222,7 +244,7 @@ class Arena:
             else:
                 return
 
-        timed_print('Initializing database')
+        timed_print(f'[{self.tag}] Initializing database')
         c = self.conn.cursor()
         c.execute("""CREATE TABLE IF NOT EXISTS matches (
             mcts_gen INT,
@@ -244,7 +266,7 @@ class Arena:
         self.conn.commit()
 
     def load_past_data(self):
-        timed_print('Loading past data...')
+        timed_print(f'[{self.tag}] Loading past data...')
         c = self.conn.cursor()
         res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE mcts_iters = ?',
                         (Args.mcts_iters,))
@@ -256,12 +278,13 @@ class Arena:
         for mcts_gen, rating in res.fetchall():
             self.ratings[mcts_gen] = rating
 
+        count = 0
         for mcts_gen in sorted(self.match_data):
             rating = self.compute_rating(mcts_gen)
             if rating is not None:
-                print(f'Loaded mcts-{mcts_gen} rating: {rating:.3f}')
+                count += 1
 
-        timed_print('Done loading past data!')
+        timed_print(f'[{self.tag}] Loaded {count} ratings')
 
     def compute_rating(self, mcts_gen: int):
         """
@@ -299,16 +322,17 @@ class Arena:
 
         return None
 
-    def select_next_mcts_gen_to_rate(self) -> Tuple[Optional[int], Optional[float]]:
+    def get_next_work_item(self) -> Optional[WorkItem]:
         """
-        Returns the next gen to rate, along with an estimate of its rating.
+        Returns the next work item.
 
         Description of selection algorithm:
 
         Let G be the set of gens that we have graded thus far, and let M be the max generation that exists in the
         models directory.
 
-        If M is at least 10 greater than the max element of G, then we return M.
+        If M is at least 10 greater than the max element of G, then we return M. This is to keep up with a currently
+        running alphazero run.
 
         Otherwise, if 1 is not in G, then we return 1.
 
@@ -317,19 +341,19 @@ class Arena:
         """
         latest_gen = self.manager.get_latest_generation()
         if latest_gen == 0:
-            return None, None
+            return None
 
         graded_gens = list(sorted(self.ratings.keys()))
         if not graded_gens:
-            return latest_gen, None
+            return WorkItem(latest_gen, None, latest_gen, False, self)
 
         max_graded_gen = graded_gens[-1]
         assert latest_gen >= max_graded_gen
         if latest_gen - max_graded_gen >= 10:
-            return latest_gen, self.ratings.get(max_graded_gen, None)
+            return WorkItem(latest_gen, self.ratings.get(max_graded_gen, None), latest_gen - max_graded_gen, True, self)
 
         if 1 not in self.ratings:
-            return 1, 0.5
+            return WorkItem(1, 0.5, max_graded_gen, False, self)
 
         graded_gen_gaps = [graded_gens[i] - graded_gens[i - 1] for i in range(1, len(graded_gens))]
         gap_index_pairs = [(gap, i) for i, gap in enumerate(graded_gen_gaps)]
@@ -341,28 +365,20 @@ class Arena:
             gen = prev_gen + largest_gap // 2
             assert gen not in self.ratings, gen
             rating = 0.5 * (self.ratings[prev_gen] + self.ratings[next_gen])
-            return gen, rating
+            return WorkItem(gen, rating, largest_gap, False, self)
 
         if latest_gen != max_graded_gen:
-            return latest_gen, self.ratings[max_graded_gen]
+            return WorkItem(latest_gen, self.ratings[max_graded_gen], latest_gen - max_graded_gen, True, self)
 
-        return None, None
+        return None
 
-    def run(self):
-        while True:
-            gen, est_rating = self.select_next_mcts_gen_to_rate()
-
-            if gen is None:
-                if Args.daemon_mode:
-                    time.sleep(5)
-                    continue
-                else:
-                    return
-
-            self.run_matches(gen, est_rating)
-            rating = self.compute_rating(gen)
-            assert rating is not None, gen
-            self.commit_rating(gen, rating)
+    def process(self, item: WorkItem):
+        gen = item.mcts_gen
+        est_rating = item.est_rating
+        self.run_matches(gen, est_rating)
+        rating = self.compute_rating(gen)
+        assert rating is not None, gen
+        self.commit_rating(gen, rating)
 
     def commit_rating(self, gen: int, rating: float):
         rating_tuple = (gen, Args.mcts_iters, Args.n_games, rating)
@@ -392,7 +408,7 @@ class Arena:
 
         Throughout this method, we assume that win-rate is a non-decreasing function of ref-strength.
         """
-        timed_print('Running matches for gen %s (est rating %s)' %
+        timed_print(f'[{self.tag}] Running matches for gen %s (est rating %s)' %
                     (gen, None if est_rating is None else '%.3f' % est_rating))
 
         ref_dict = {k: v for k, v in self.match_data[gen].items() if v.n_games >= Args.n_games}
@@ -412,15 +428,16 @@ class Arena:
             if est_rating <= max_left_strength or est_rating >= min_right_strength:
                 est_rating = None
         self.run_matches_helper(gen, est_rating, max_left_strength, min_right_strength)
-        timed_print('Computed gen-%d rating: %.3f' % (gen, self.compute_rating(gen)))
+        timed_print('[%s] Computed gen-%d rating: %.3f' % (self.tag, gen, self.compute_rating(gen)))
 
     def run_matches_helper(self, gen: int, est_rating: Optional[float],
                            max_left_strength: int, min_right_strength: int):
         """
         Helper method to run_matches().
         """
-        timed_print('run_matches_helper(gen=%d, est_rating=%s, max_left_strength=%d, min_right_strength=%d)' %
-                    (gen, 'None' if est_rating is None else '%.3f' % est_rating, max_left_strength, min_right_strength))
+        est_rating_str = 'None' if est_rating is None else '%.3f' % est_rating
+        timed_print('[%s] run_matches_helper(gen=%d, est_rating=%s, max_left_strength=%d, min_right_strength=%d)' %
+                    (self.tag, gen, est_rating_str, max_left_strength, min_right_strength))
         assert max_left_strength < min_right_strength
         if max_left_strength + 1 == min_right_strength:
             return
@@ -451,17 +468,32 @@ class Arena:
         else:
             self.run_matches_helper(gen, None, mid_strength, min_right_strength)
 
-    def launch(self):
+    def prepare(self):
         self.dump_metadata()
         self.init_db()
         self.load_past_data()
-        self.run()
 
 
 def main():
     load_args()
-    arena = Arena()
-    arena.launch()
+    arenas = [Arena(tag) for tag in Args.tags]
+    for arena in arenas:
+        arena.prepare()
+
+    while True:
+        queue = [arena.get_next_work_item() for arena in arenas]
+        queue = [item for item in queue if item is not None]
+        if not queue:
+            if Args.daemon_mode:
+                time.sleep(5)
+                continue
+            else:
+                return
+
+        queue.sort(key=lambda item: (item.recency_boost, item.rating_gap))
+        for item in reversed(queue):
+            item.arena.process(item)
+            break
 
 
 if __name__ == '__main__':
