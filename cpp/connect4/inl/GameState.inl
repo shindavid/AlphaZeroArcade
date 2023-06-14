@@ -144,10 +144,6 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
   printf("|\n");
 }
 
-inline bool GameState::operator==(const GameState& other) const {
-  return full_mask_ == other.full_mask_ && cur_player_mask_ == other.cur_player_mask_;
-}
-
 inline void GameState::dump_mcts_output(
     const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy, const MctsResults& results)
 {

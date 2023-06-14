@@ -62,7 +62,7 @@ public:
 
   template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
   void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
-  bool operator==(const GameState& other) const;
+  bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
   static void dump_mcts_output(const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy,
