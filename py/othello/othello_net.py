@@ -5,7 +5,7 @@ import torch
 from torch import nn as nn
 
 from neural_net import NeuralNet, PolicyTarget, ValueTarget, ScoreMarginTarget, OwnershipTarget
-from res_net_modules import ConvBlock, ResBlock, PolicyHead, ValueHead, ScoreMarginHead, OwnershipHead
+from res_net_modules import ConvBlock, GPResBlock, ResBlock, PolicyHead, ValueHead, ScoreMarginHead, OwnershipHead
 from util.torch_util import Shape
 
 
@@ -29,7 +29,10 @@ class OthelloNet(NeuralNet):
         self.n_conv_filters = n_conv_filters
         self.n_res_blocks = n_res_blocks
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
-        self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
+        self.res_blocks = nn.ModuleList(
+            [ResBlock(n_conv_filters) for _ in range(n_res_blocks - 2)] +
+            [GPResBlock(n_conv_filters), ResBlock(n_conv_filters)]
+            )
 
         self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('policy', 1.0))
         self.add_head(ValueHead(board_size, NUM_PLAYERS, n_conv_filters), ValueTarget('value', 1.5))
