@@ -31,7 +31,7 @@ class OthelloNet(NeuralNet):
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList(
             [ResBlock(n_conv_filters) for _ in range(n_res_blocks - 2)] +
-            [GPResBlock(n_conv_filters), ResBlock(n_conv_filters)]
+            [GPResBlock(n_conv_filters), GPResBlock(n_conv_filters)]
             )
 
         self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('policy', 1.0))

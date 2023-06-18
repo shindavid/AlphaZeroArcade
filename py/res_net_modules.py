@@ -134,8 +134,6 @@ class GPResBlock(nn.Module):
         out = F.relu(self.batch1(self.conv1(x)))
         # use first c_pool layers, to bias the the other part 
         # outputs [N, Cp, H, W]
-        print(out[:, :self.c_mid].shape)
-        print(self.c_mid)
         # return torch.zeros(0)
         out = self.gpbs(out[:, self.c_mid:], out[:, :self.c_mid])
         # outputs [N, C, H, W]
