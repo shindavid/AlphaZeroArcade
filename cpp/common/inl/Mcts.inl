@@ -24,6 +24,9 @@ template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::NNEvaluationService::next_instance_id_ = 0;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+bool Mcts<GameState, Tensorizor>::NNEvaluationService::session_ended_ = false;
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 Mcts<GameState, Tensorizor>::Params::Params(DefaultParamsType type) {
   if (type == kCompetitive) {
     dirichlet_mult = 0;
@@ -1041,6 +1044,35 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::get_cache_stats(
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::record_puct_calc(bool virtual_loss_influenced) {
+  this->total_puct_calcs_++;
+  if (virtual_loss_influenced) {
+    this->virtual_loss_influenced_puct_calcs_++;
+  }
+}
+
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void Mcts<GameState, Tensorizor>::NNEvaluationService::end_session() {
+  if (session_ended_) return;
+
+  int64_t evaluated_positions = 0;
+  int64_t batches_evaluated = 0;
+  for (auto it : instance_map_) {
+    NNEvaluationService* service = it.second;
+    evaluated_positions += service->evaluated_positions_;
+    batches_evaluated += service->batches_evaluated_;
+  }
+
+  float avg_batch_size = batches_evaluated > 0 ? evaluated_positions * 1.0 / batches_evaluated : 0.0f;
+
+  util::ParamDumper::add("MCTS evaluated positions", "%ld", evaluated_positions);
+  util::ParamDumper::add("MCTS batches evaluated", "%ld", batches_evaluated);
+  util::ParamDumper::add("MCTS avg batch size", "%.2f", avg_batch_size);
+  session_ended_ = true;
+}
+
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 float Mcts<GameState, Tensorizor>::NNEvaluationService::pct_virtual_loss_influenced_puct_calcs() {
   int64_t num = 0;
   int64_t den = 0;
@@ -1052,20 +1084,6 @@ float Mcts<GameState, Tensorizor>::NNEvaluationService::pct_virtual_loss_influen
   }
 
   return 100.0 * num / den;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-float Mcts<GameState, Tensorizor>::NNEvaluationService::global_avg_batch_size() {
-  int64_t num = 0;
-  int64_t den = 0;
-
-  for (auto it : instance_map_) {
-    NNEvaluationService* service = it.second;
-    num += service->evaluated_positions();
-    den += service->batches_evaluated();
-  }
-
-  return num * 1.0 / std::max(int64_t(1), den);
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

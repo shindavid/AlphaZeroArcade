@@ -30,6 +30,8 @@ public:
    */
   AbstractPlayer<GameState>* generate(game_thread_id_t game_thread_id) override;
 
+  void end_session() override;
+
 protected:
   virtual BaseMctsPlayer* generate_from_scratch() = 0;
   virtual BaseMctsPlayer* generate_from_mcts(Mcts* mcts) = 0;

@@ -23,6 +23,11 @@ AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>::gener
   return player;
 }
 
+template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void MctsPlayerGeneratorBase<GameState, Tensorizor>::end_session() {
+  Mcts::end_session();
+}
+
 // CompetitiveMctsPlayerGenerator
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

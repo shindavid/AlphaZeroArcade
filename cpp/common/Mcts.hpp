@@ -544,20 +544,10 @@ private:
     Response evaluate(const Request&);
 
     void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
+    void record_puct_calc(bool virtual_loss_influenced);
 
-    int64_t evaluated_positions() const { return evaluated_positions_; }
-    int64_t batches_evaluated() const { return batches_evaluated_; }
-    float avg_batch_size() const { return evaluated_positions() * 1.0 / std::max(int64_t(1), batches_evaluated()); }
-
-    void record_puct_calc(bool virtual_loss_influenced) {
-      this->total_puct_calcs_++;
-      if (virtual_loss_influenced) {
-        this->virtual_loss_influenced_puct_calcs_++;
-      }
-    }
-
+    static void end_session();
     static float pct_virtual_loss_influenced_puct_calcs();  // summed over all instances
-    static float global_avg_batch_size();  // averaged over all instances
 
   private:
     using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
@@ -643,6 +633,7 @@ private:
 
     static instance_map_t instance_map_;
     static int next_instance_id_;
+    static bool session_ended_;
 
     const int instance_id_;  // for naming debug/profiling output files
 
@@ -771,11 +762,10 @@ public:
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
-  float avg_batch_size() const { return nn_eval_service_->avg_batch_size(); }
-  static float global_avg_batch_size() { return NNEvaluationService::global_avg_batch_size(); }
   void record_puct_calc(bool virtual_loss_influenced) { if (nn_eval_service_) nn_eval_service_->record_puct_calc(virtual_loss_influenced); }
 
   static float pct_virtual_loss_influenced_puct_calcs() { return NNEvaluationService::pct_virtual_loss_influenced_puct_calcs(); }
+  static void end_session() { NNEvaluationService::end_session(); }
 
 #ifdef PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return boost::filesystem::path(params_.profiling_dir); }

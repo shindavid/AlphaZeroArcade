@@ -86,10 +86,6 @@ int main(int ac, char* av[]) {
       server.run();
     }
 
-//  mcts_player_params.dump();
-//  util::ParamDumper::add("MCTS search threads", "%d", mcts_params.num_search_threads);
-//  util::ParamDumper::add("MCTS max batch size", "%d", mcts_params.batch_size_limit);
-    util::ParamDumper::add("MCTS avg batch size", "%.2f", Mcts::global_avg_batch_size());
     util::ParamDumper::flush();
   } catch (const util::CleanException& e) {
     std::cerr << "Caught a CleanException: ";

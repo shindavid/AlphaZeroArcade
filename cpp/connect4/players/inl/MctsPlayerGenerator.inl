@@ -36,6 +36,7 @@ inline void CompetitiveMctsPlayerGenerator::parse_args(const std::vector<std::st
 }
 
 inline void CompetitiveMctsPlayerGenerator::end_session() {
+  base_t::end_session();
   if (grader_) grader_->dump();
 }
 
