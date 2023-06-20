@@ -18,7 +18,7 @@ mode (-D) in this case.
 
 While the above is running, launch the visualizer:
 
-./othello/viz_ratings.py -t <TAG>
+./alphazero/viz_ratings.py -t <TAG>
 
 If you have multiple main-loops (running or completed), you can pass a comma-separated list of tags for the -t option
 for both compute_ratings.py and viz_ratings.py.
