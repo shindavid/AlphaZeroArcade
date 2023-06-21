@@ -101,6 +101,13 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
   }
 }
 
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::SharedData::end_session() {
+  for (auto& sg : seat_generators_) {
+    sg.gen->end_session();
+  }
+}
+
 template<GameStateConcept GameState>
 GameServerProxy<GameState>::PlayerThread::PlayerThread(
     SharedData& shared_data, Player* player, game_thread_id_t game_thread_id, player_id_t player_id)
@@ -245,6 +252,8 @@ void GameServerProxy<GameState>::run()
   }
 
   destroy_player_threads();
+  shared_data_.end_session();
+  util::ParamDumper::flush();
 }
 
 template <GameStateConcept GameState>

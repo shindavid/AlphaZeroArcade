@@ -29,7 +29,6 @@ public:
     bool operator==(const Params& other) const = default;
 
     std::string games_dir = "c4_games";
-    bool clear_dir = true;  // before writing, clear the directory if it exists
   };
 
   using GameState = GameState_;

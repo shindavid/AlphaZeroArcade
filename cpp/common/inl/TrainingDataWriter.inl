@@ -20,8 +20,6 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
 
   po2::options_description desc("TrainingDataWriter options");
   return desc
-      .template add_bool_switches<"clear-dir", "no-clear-dir">(
-          &clear_dir, "rm {games-dir}/* before running", "do NOT rm {games-dir}/* before running")
       .template add_option<"games-dir", 'g'>(
           po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games")
       ;
@@ -149,12 +147,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& pa
 : params_(params)
 {
   namespace bf = boost::filesystem;
-
-  if (params.clear_dir && bf::is_directory(games_dir())) {
-    bf::remove_all(games_dir());
-  }
   bf::create_directories(games_dir());
-
   thread_ = new std::thread([&] { loop(); });
 }
 

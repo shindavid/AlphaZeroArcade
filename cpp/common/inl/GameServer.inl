@@ -28,6 +28,8 @@ auto GameServer<GameState>::Params::make_options_description() {
   po2::options_description desc("GameServer options");
 
   return desc
+      .template add_option<"kill-file", 'k'>(po::value<std::string>(&kill_file),
+          "if specified, the server will exit when this file is created")
       .template add_option<"port">(po::value<int>(&port)->default_value(port),
           "port for external players to connect to (must be set to a nonzero value if using external players)")
       .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
@@ -224,15 +226,10 @@ GameServer<GameState>::GameThread::~GameThread() {
 }
 
 template<GameStateConcept GameState>
-void GameServer<GameState>::GameThread::launch() {
-  thread_ = new std::thread([&] { run(); });
-}
-
-template<GameStateConcept GameState>
 void GameServer<GameState>::GameThread::run() {
   const Params& params = shared_data_.params();
 
-  while (true) {
+  while (!decommissioned_) {
     if (!shared_data_.request_game(params.num_games)) return;
 
     player_instantiation_array_t player_order = shared_data_.generate_player_order(instantiations_);
@@ -298,6 +295,14 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
 
 template<GameStateConcept GameState>
 GameServer<GameState>::GameServer(const Params& params) : shared_data_(params) {}
+
+template<GameStateConcept GameState>
+GameServer<GameState>::~GameServer() {
+  if (kill_thread_) {
+    if (kill_thread_->joinable()) kill_thread_->detach();
+    delete kill_thread_;
+  }
+}
 
 template<GameStateConcept GameState>
 void GameServer<GameState>::wait_for_remote_player_registrations() {
@@ -372,26 +377,21 @@ void GameServer<GameState>::run() {
   util::clean_assert(shared_data_.ready_to_start(), "Game not ready to start");
 
   int parallelism = shared_data_.compute_parallelism_factor();
-  std::vector<GameThread*> threads;
   for (int p = 0; p < parallelism; ++p) {
-    GameThread* thread = new GameThread(shared_data_, (int)threads.size());
-    threads.push_back(thread);
+    GameThread* thread = new GameThread(shared_data_, (int)threads_.size());
+    threads_.push_back(thread);
   }
 
   RemotePlayerProxy<GameState>::PacketDispatcher::start_all(parallelism);
-  time_point_t t1 = std::chrono::steady_clock::now();
 
-  for (auto thread : threads) {
-    thread->launch();
-  }
-
-  for (auto thread : threads) {
-    thread->join();
-  }
+  time_point_t start_time = std::chrono::steady_clock::now();
+  if (!params().kill_file.empty()) { kill_thread_ = new std::thread([&] { kill_file_checker(); }); }
+  for (auto thread : threads_) { thread->launch(); }
+  for (auto thread : threads_) { thread->join(); }
+  time_point_t end_time = std::chrono::steady_clock::now();
 
   int num_games = shared_data_.num_games_started();
-  time_point_t t2 = std::chrono::steady_clock::now();
-  duration_t duration = t2 - t1;
+  duration_t duration = end_time - start_time;
   int64_t ns = duration.count();
 
   results_array_t results = shared_data_.get_results();
@@ -400,16 +400,33 @@ void GameServer<GameState>::run() {
   for (player_id_t p = 0; p < kNumPlayers; ++p) {
     printf("pid=%d name=%s %s\n", p, shared_data_.get_player_name(p).c_str(), get_results_str(results[p]).c_str());
   }
-  util::ParamDumper::add("Parallelism factor", "%d", (int)threads.size());
+
+  util::ParamDumper::add("Parallelism factor", "%d", (int)threads_.size());
   util::ParamDumper::add("Num games", "%d", num_games);
   util::ParamDumper::add("Total runtime", "%.3fs", ns*1e-9);
   util::ParamDumper::add("Avg runtime", "%.3fs", ns*1e-9 / num_games);
 
-  for (auto thread: threads) {
+  for (auto thread: threads_) {
     delete thread;
   }
 
   shared_data_.end_session();
+  util::ParamDumper::flush();
+}
+
+template<GameStateConcept GameState>
+void GameServer<GameState>::kill_file_checker() {
+  boost::filesystem::path kill_path(params().kill_file);
+  while (!boost::filesystem::exists(kill_path)) {
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+
+  std::cout << "Kill file detected [" << kill_path << "]" << std::endl;
+  std::cout << "Shutting down..." << std::endl;
+
+  for (auto thread : threads_) {
+    thread->decommission();
+  }
 }
 
 template<GameStateConcept GameState>

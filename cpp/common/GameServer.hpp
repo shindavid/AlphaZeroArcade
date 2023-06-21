@@ -65,6 +65,7 @@ public:
   struct Params {
     auto make_options_description();
 
+    std::string kill_file;  // if non-empty, kill server when this file is created
     int num_games = 1000;  // if <=0, run indefinitely
     int parallelism = 100;  // number of games to run simultaneously
     int port = 0;
@@ -122,7 +123,8 @@ private:
     ~GameThread();
 
     void join() { if (thread_ && thread_->joinable()) thread_->join(); }
-    void launch();
+    void launch() { thread_ = new std::thread([&] { run(); }); }
+    void decommission() { decommissioned_ = true; }
 
   private:
     void run();
@@ -132,10 +134,12 @@ private:
     player_instantiation_array_t instantiations_;
     std::thread* thread_ = nullptr;
     game_thread_id_t id_;
+    bool decommissioned_ = false;
   };
 
 public:
   GameServer(const Params& params);
+  ~GameServer();
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the specified seat.
@@ -156,9 +160,14 @@ public:
   int get_port() const { return params().port; }
   int num_registered_players() const { return shared_data_.num_registrations(); }
   void run();
+  void shutdown();
 
 private:
+  void kill_file_checker();
+
   SharedData shared_data_;
+  std::vector<GameThread*> threads_;
+  std::thread* kill_thread_ = nullptr;
 };
 
 }  // namespace common

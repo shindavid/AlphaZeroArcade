@@ -10,6 +10,7 @@ BASE_DIR/
          stdout.txt
          self-play-data/
              gen-0/
+                 kill.txt  # marker to communicate stop signal to self-play process
                  done.txt  # written after gen is complete
                  {timestamp}-{num_positions}.ptd
                  ...
@@ -71,11 +72,41 @@ class PathInfo:
                 self.generation = int(tokens[t+1])
 
 
+class SelfPlayResults:
+    def __init__(self, stdout: str):
+        """
+        Parallelism factor:           25
+        Num games:                    25
+        Total runtime:            3.220s
+        Avg runtime:              0.129s
+        MCTS evaluated positions:   6654
+        MCTS batches evaluated:      139
+        MCTS avg batch size:       47.87
+        """
+        mappings = {}
+        for line in stdout.splitlines():
+            colon = line.find(':')
+            if colon == -1:
+                continue
+            key = line[:colon].strip()
+            value = line[colon+1:].strip()
+            mappings[key] = value
+
+        self.num_games = int(mappings['Num games'])
+        self.total_runtime = float(mappings['Total runtime'].split('s')[0])
+        self.mcts_evaluated_positions = int(mappings['MCTS evaluated positions'])
+        self.mcts_batches_evaluated = int(mappings['MCTS batches evaluated'])
+
+
 class SelfPlayProcData:
     def __init__(self, cmd: str, n_games: int, gen: Generation, games_dir: str):
-        done_file = os.path.join(games_dir, 'done.txt')
-        if os.path.exists(done_file):
-            os.remove(done_file)
+        if os.path.exists(games_dir):
+            # This likely means that we are resuming a previous run that already wrote some games to this directory.
+            # In principle, we could make use of those games. However, that complicates the tracking of some stats, like
+            # the total amount of time spent on self-play. Since not a lot of compute/time is spent on each generation,
+            # we just blow away the directory to make our lives simpler
+            shutil.rmtree(games_dir)
+
         self.proc_complete = False
         self.proc = subprocess_util.Popen(cmd)
         self.n_games = n_games
@@ -86,19 +117,21 @@ class SelfPlayProcData:
         if self.n_games:
             self.wait_for_completion()
 
-    def terminate(self, timeout: Optional[int] = None, finalize_games_dir = True,
-                  expected_return_code: Optional[int] = -int(signal.SIGKILL)):
+    def terminate(self, timeout: Optional[int] = None, finalize_games_dir=True,
+                  expected_return_code: Optional[int] = 0):
         if self.proc_complete:
             return
-        self.proc.kill()
+        kill_file = os.path.join(self.games_dir, 'kill.txt')
+        os.system(f'touch {kill_file}')  # signals c++ process to stop
         self.wait_for_completion(timeout=timeout, finalize_games_dir=finalize_games_dir,
                                  expected_return_code=expected_return_code)
 
-    def wait_for_completion(self, timeout: Optional[int] = None, finalize_games_dir = True,
+    def wait_for_completion(self, timeout: Optional[int] = None, finalize_games_dir=True,
                             expected_return_code: Optional[int] = 0):
-        subprocess_util.wait_for(self.proc, timeout=timeout, expected_return_code=expected_return_code)
+        stdout = subprocess_util.wait_for(self.proc, timeout=timeout, expected_return_code=expected_return_code)
+        results = SelfPlayResults(stdout)
         if finalize_games_dir:
-            AlphaZeroManager.finalize_games_dir(self.games_dir)
+            AlphaZeroManager.finalize_games_dir(self.games_dir, results)
         timed_print(f'Completed gen-{self.gen} self-play [{self.proc.pid}]')
         self.proc_complete = True
 
@@ -300,8 +333,6 @@ class AlphaZeroManager:
             '--name=MCTS',
             '-g', games_dir,
         ] + base_player_args
-        if gen:
-            player_args.append('--no-clear-dir')
 
         player2_args = [
             '--name=MCTS2',
@@ -314,6 +345,12 @@ class AlphaZeroManager:
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
+
+        if n_games == 0:
+            kill_file = os.path.join(games_dir, 'kill.txt')
+            self_play_cmd.extend([
+                '--kill-file', kill_file
+            ])
 
         competitive_player_args = ['--type=MCTS-C'] + base_player_args
         competitive_player_str = '%s --player "%s"\n' % (bin_tgt, ' '.join(map(str, competitive_player_args)))
@@ -412,11 +449,13 @@ class AlphaZeroManager:
         timed_print(f'Model saved: {model_filename}')
 
     @staticmethod
-    def finalize_games_dir(games_dir: str):
+    def finalize_games_dir(games_dir: str, results: SelfPlayResults):
         timed_print('Finalizing games dir: %s' % games_dir)
         n_positions = 0
         n_games = 0
         for filename in os.listdir(games_dir):
+            if filename.endswith('.txt'):
+                continue
             try:
                 n = int(filename.split('-')[1].split('.')[0])
             except:
@@ -424,11 +463,16 @@ class AlphaZeroManager:
             n_positions += n
             n_games += 1
 
+        assert n_games == results.num_games, 'n_games=%d, results.num_games=%d' % (n_games, results.num_games)
         done_file = os.path.join(games_dir, 'done.txt')
-        with open(done_file, 'w') as f:
+        tmp_done_file = make_hidden_filename(done_file)
+        with open(tmp_done_file, 'w') as f:
             f.write(f'n_games={n_games}\n')
             f.write(f'n_positions={n_positions}\n')
-            f.write(f'done\n')
+            f.write(f'runtime={results.total_runtime}\n')
+            f.write(f'n_evaluated_positions={results.mcts_evaluated_positions}\n')
+            f.write(f'n_batches_evaluated={results.mcts_batches_evaluated}\n')
+        os.rename(tmp_done_file, done_file)
 
     def run(self, async_mode: bool = True):
         if async_mode:
@@ -439,20 +483,15 @@ class AlphaZeroManager:
             self.py_cuda_device = 1
 
         self.init_logging(self.stdout_filename)
-        try:
-            while True:
-                self.self_play_proc_data = self.get_self_play_proc(async_mode)
-                self.train_step()
-                self.self_play_proc_data.terminate(timeout=300)
-        except:
-            traceback.print_exc()
-            timed_print('Shutting down...')
-            self.shutdown()
+        while True:
+            self.self_play_proc_data = self.get_self_play_proc(async_mode)
+            self.train_step()
+            self.self_play_proc_data.terminate(timeout=300)
 
     def shutdown(self):
         """
         If there is an active self-play process, kill it, without finalizing games dir (so that on a restart, it
-        continues on the same games dir).
+        continues on the same generation).
         """
         if self.self_play_proc_data is not None:
             self.self_play_proc_data.terminate(timeout=300, finalize_games_dir=False, expected_return_code=None)

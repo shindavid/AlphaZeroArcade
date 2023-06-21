@@ -37,14 +37,20 @@ def Popen(cmd: Union[str, List[str]], **kwargs) -> subprocess.Popen:
 
 def wait_for(proc: subprocess.Popen, timeout=None, expected_return_code: Optional[int] = 0):
     """
-    Waits until proc is complete, validates returncode, and return.
+    Waits until proc is complete, validates returncode, and returns stdout.
     """
     stdout, stderr = proc.communicate(timeout=timeout)
     if expected_return_code not in (proc.returncode, None):
         print(f'Expected rc={expected_return_code}, got rc={proc.returncode}')
+        print('----------------------------')
+        print('STDOUT:')
         print(stdout)
+        print('----------------------------')
+        print('STDERR:')
         print(stderr)
+        print('----------------------------')
         raise subprocess.CalledProcessError(proc.returncode, proc.args)
+    return stdout
 
 
 def run(cmd: Union[str, List[str]], validate_rc=True, **kwargs) -> subprocess.CompletedProcess:

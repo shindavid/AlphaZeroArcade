@@ -53,6 +53,7 @@ public:
     io::Socket* socket() const { return socket_; }
     PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
     const serializer_t& serializer() const { return serializer_; }
+    void end_session();
 
   private:
     serializer_t serializer_;

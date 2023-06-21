@@ -81,8 +81,6 @@ int main(int ac, char* av[]) {
       }
       server.run();
     }
-
-    util::ParamDumper::flush();
   } catch (const util::CleanException& e) {
     std::cerr << "Caught a CleanException: ";
     std::cerr << e.what() << std::endl;

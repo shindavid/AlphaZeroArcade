@@ -29,12 +29,11 @@ class GenerationMetadata:
             with open(done_file, 'r') as f:
                 lines = list(f.readlines())
 
-            if len(lines) >= 3:
-                assert lines[0].startswith('n_games='), lines
-                assert lines[1].startswith('n_positions='), lines
-                self.n_games = int(lines[0].split('=')[1].strip())
-                self.n_positions = int(lines[1].split('=')[1].strip())
-                return
+            assert lines[0].startswith('n_games='), lines
+            assert lines[1].startswith('n_positions='), lines
+            self.n_games = int(lines[0].split('=')[1].strip())
+            self.n_positions = int(lines[1].split('=')[1].strip())
+            return
 
         self.n_positions = 0
         self.n_games = 0
@@ -51,7 +50,7 @@ class GenerationMetadata:
 
         self._loaded = True
         for filename in os.listdir(self.full_gen_dir):
-            if filename.startswith('.') or filename == 'done.txt':
+            if filename.startswith('.') or filename.endswith('.txt'):
                 continue
             full_filename = os.path.join(self.full_gen_dir, filename)
             game_metadata = SelfPlayGameMetadata(full_filename)
