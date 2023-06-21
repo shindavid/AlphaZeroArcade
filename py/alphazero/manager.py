@@ -42,7 +42,7 @@ import sys
 import tempfile
 import time
 import traceback
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Callable
 
 import torch
 from natsort import natsorted
@@ -128,6 +128,7 @@ class SelfPlayProcData:
 
     def wait_for_completion(self, timeout: Optional[int] = None, finalize_games_dir=True,
                             expected_return_code: Optional[int] = 0):
+        timed_print(f'Waiting for self-play proc [{self.proc.pid}] to complete...')
         stdout = subprocess_util.wait_for(self.proc, timeout=timeout, expected_return_code=expected_return_code)
         results = SelfPlayResults(stdout)
         if finalize_games_dir:
@@ -361,7 +362,17 @@ class AlphaZeroManager:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
         return SelfPlayProcData(self_play_cmd, n_games, gen, games_dir)
 
-    def train_step(self):
+    def train_step(self, pre_commit_func: Optional[Callable[[], None]] = None):
+        """
+        Performs a train-step. This performs N minibatch-updates of size S, where:
+
+        N = ModelingArgs.snapshot_steps
+        S = ModelingArgs.minibatch_size
+
+        After the last minibatch update is complete, but before the model is committed to disk, pre_commit_func() is
+        called. We use this function shutdown the c++ self-play process. This is necessary because the self-play process
+        prints important metadata to stdout, and we don't want to commit a model for which we don't have the metadata.
+        """
         print('******************************')
         gen = self.get_latest_model_generation() + 1
         timed_print(f'Train gen:{gen}')
@@ -384,8 +395,11 @@ class AlphaZeroManager:
 
             loss_fns = [target.loss_fn() for target in net.learning_targets]
 
+            suffix = ''
+            if steps:
+                suffix = f' (minibatches processed: {steps})'
             timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
-                        f'{games_dataset.n_total_positions} total positions (minibatches processed: {steps})')
+                        f'{games_dataset.n_total_positions} total positions{suffix}')
 
             stats = TrainingStats(net)
             for data in loader:
@@ -437,6 +451,9 @@ class AlphaZeroManager:
         timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
         timed_print(f'Training time:     {for_loop_time:10.3f} seconds')
 
+        if pre_commit_func:
+            pre_commit_func()
+
         checkpoint_filename = self.get_checkpoint_filename(gen)
         model_filename = self.get_model_filename(gen)
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
@@ -463,7 +480,6 @@ class AlphaZeroManager:
             n_positions += n
             n_games += 1
 
-        assert n_games == results.num_games, 'n_games=%d, results.num_games=%d' % (n_games, results.num_games)
         done_file = os.path.join(games_dir, 'done.txt')
         tmp_done_file = make_hidden_filename(done_file)
         with open(tmp_done_file, 'w') as f:
@@ -485,8 +501,7 @@ class AlphaZeroManager:
         self.init_logging(self.stdout_filename)
         while True:
             self.self_play_proc_data = self.get_self_play_proc(async_mode)
-            self.train_step()
-            self.self_play_proc_data.terminate(timeout=300)
+            self.train_step(pre_commit_func=lambda: self.self_play_proc_data.terminate(timeout=300))
 
     def shutdown(self):
         """
