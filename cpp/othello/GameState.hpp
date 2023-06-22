@@ -13,6 +13,7 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/MctsResults.hpp>
+#include <common/MctsResultsDumper.hpp>
 #include <common/SerializerTypes.hpp>
 #include <common/serializers/DeterministicGameSerializer.hpp>
 #include <othello/Constants.hpp>
@@ -59,9 +60,6 @@ public:
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;
 
-  static void dump_mcts_output(const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy,
-                               const MctsResults& results);
-
 private:
   auto to_tuple() const { return std::make_tuple(opponent_mask_, cur_player_mask_, cur_player_, pass_count_); }
   GameOutcome compute_outcome() const;  // assumes game has ended
@@ -88,6 +86,13 @@ namespace common {
 // template specialization
 template<> struct serializer<othello::GameState> {
   using type = DeterministicGameSerializer<othello::GameState>;
+};
+
+template<> struct MctsResultsDumper<othello::GameState> {
+  using LocalPolicyArray = othello::GameState::LocalPolicyArray;
+  using MctsResults = common::MctsResults<othello::GameState>;
+
+  static void dump(const LocalPolicyArray& action_policy, const MctsResults& results);
 };
 
 }  // namespace common

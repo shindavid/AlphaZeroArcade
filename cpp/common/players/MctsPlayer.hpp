@@ -91,8 +91,7 @@ protected:
   action_index_t get_action_helper(SearchMode, const MctsResults*, const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
-    ValueArray mcts_value;
-    LocalPolicyArray mcts_policy;
+    LocalPolicyArray action_policy;
     MctsResults mcts_results;
 
     bool initialized = false;

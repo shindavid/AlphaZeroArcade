@@ -6,7 +6,6 @@
 
 #include <common/BasicTypes.hpp>
 #include <common/DerivedTypes.hpp>
-#include <common/MctsResults.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -78,15 +77,6 @@ concept GameStateConcept = requires(S state) {
    * Currently, we still use MCTS, not MCGS, so this is a forward-looking requirement.
    */
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
-
-  /*
-   * Pretty-print mcts output for debugging purposes.
-   */
-  { S::dump_mcts_output(
-      typename GameStateTypes<S>::ValueArray{},
-      typename GameStateTypes<S>::LocalPolicyArray{},
-      MctsResults<S>{})
-  };
 };
 
 }  // namespace common

@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 
+#include <common/MctsResultsDumper.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
@@ -168,13 +169,10 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     SearchMode search_mode, const MctsResults* mcts_results, const ActionMask& valid_actions) const
 {
   PolicyTensor policy_tensor;
-  ValueArray value;
   if (search_mode == kRawPolicy) {
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy_tensor);
-    value = mcts_results->value_prior;
   } else {
     policy_tensor = mcts_results->counts;
-    value = mcts_results->win_rates;
   }
 
   PolicyArray& policy = eigen_util::reinterpret_as_array(policy_tensor);
@@ -197,8 +195,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
 
   if (verbose_info_) {
     policy /= policy.sum();
-    verbose_info_->mcts_value = value;
-    GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->mcts_policy);
+    GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->action_policy);
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
@@ -218,12 +215,11 @@ template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
-  const auto& mcts_value = verbose_info_->mcts_value;
-  const auto& mcts_policy = verbose_info_->mcts_policy;
+  const auto& action_policy = verbose_info_->action_policy;
   const auto& mcts_results = verbose_info_->mcts_results;
 
   printf("CPU pos eval:\n");
-  GameState::dump_mcts_output(mcts_value, mcts_policy, mcts_results);
+  common::MctsResultsDumper<GameState>::dump(action_policy, mcts_results);
   std::cout << std::endl;
 }
 

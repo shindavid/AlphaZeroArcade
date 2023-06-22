@@ -144,33 +144,6 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
   printf("|\n");
 }
 
-inline void GameState::dump_mcts_output(
-    const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy, const MctsResults& results)
-{
-  const auto& valid_actions = results.valid_actions;
-  const auto& net_value = results.value_prior;
-  const auto& net_policy = results.policy_prior;
-  const auto& mcts_counts = results.counts;
-
-  assert(net_policy.size() == (int)valid_actions.count());
-
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
-         100 * net_value(kRed), 100 * mcts_value(kRed));
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
-         100 * net_value(kYellow), 100 * mcts_value(kYellow));
-  printf("\n");
-  printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "MCTS");
-
-  int j = 0;
-  for (int i = 0; i < kNumColumns; ++i) {
-    if (valid_actions[i]) {
-      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), mcts_policy(j++));
-    } else {
-      printf("%3d\n", i + 1);
-    }
-  }
-}
-
 inline constexpr int GameState::_to_bit_index(column_t col, row_t row) {
   return 8 * col + row;
 }
@@ -192,3 +165,33 @@ inline constexpr mask_t GameState::_full_bottom_mask() {
 }
 
 }  // namespace c4
+
+namespace common {
+
+inline void MctsResultsDumper<c4::GameState>::dump(const LocalPolicyArray& action_policy, const MctsResults& results) {
+  const auto& valid_actions = results.valid_actions;
+  const auto& mcts_counts = results.counts;
+  const auto& net_policy = results.policy_prior;
+  const auto& win_rates = results.win_rates;
+  const auto& net_value = results.value_prior;
+
+  assert(net_policy.size() == (int)valid_actions.count());
+
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
+         100 * net_value(c4::kRed), 100 * win_rates(c4::kRed));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
+         100 * net_value(c4::kYellow), 100 * win_rates(c4::kYellow));
+  printf("\n");
+  printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
+
+  int j = 0;
+  for (int i = 0; i < c4::kNumColumns; ++i) {
+    if (valid_actions[i]) {
+      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), action_policy(j++));
+    } else {
+      printf("%3d\n", i + 1);
+    }
+  }
+}
+
+}  // namespace common

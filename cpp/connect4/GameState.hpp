@@ -12,6 +12,7 @@
 #include <common/DerivedTypes.hpp>
 #include <common/GameStateConcept.hpp>
 #include <common/MctsResults.hpp>
+#include <common/MctsResultsDumper.hpp>
 #include <common/SerializerTypes.hpp>
 #include <common/serializers/DeterministicGameSerializer.hpp>
 #include <connect4/Constants.hpp>
@@ -91,6 +92,13 @@ namespace common {
 // template specialization
 template<> struct serializer<c4::GameState> {
   using type = DeterministicGameSerializer<c4::GameState>;
+};
+
+template<> struct MctsResultsDumper<c4::GameState> {
+  using LocalPolicyArray = c4::GameState::LocalPolicyArray;
+  using MctsResults = common::MctsResults<c4::GameState>;
+
+  static void dump(const LocalPolicyArray& action_policy, const MctsResults& results);
 };
 
 }  // namespace common

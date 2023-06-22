@@ -112,59 +112,6 @@ inline std::size_t GameState::hash() const {
   return util::tuple_hash(to_tuple());
 }
 
-inline void GameState::dump_mcts_output(
-    const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy, const MctsResults& results)
-{
-  const auto& valid_actions = results.valid_actions;
-  const auto& net_value = results.value_prior;
-  const auto& net_policy = results.policy_prior;
-  const auto& mcts_counts = results.counts;
-
-  assert(net_policy.size() == (int)valid_actions.count());
-
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""),
-         100 * net_value(kBlack), 100 * mcts_value(kBlack));
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""),
-         100 * net_value(kWhite), 100 * mcts_value(kWhite));
-  printf("\n");
-
-  auto tuple0 = std::make_tuple(mcts_counts(0), mcts_policy(0), net_policy(0), 0);
-  using tuple_t = decltype(tuple0);
-  using tuple_array_t = std::array<tuple_t, kNumGlobalActions>;
-  tuple_array_t tuples;
-  int i = 0;
-  for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
-    tuples[i] = std::make_tuple(mcts_counts.data()[action], mcts_policy(i), net_policy(i), action);
-    i++;
-  }
-
-  std::sort(tuples.begin(), tuples.end());
-  std::reverse(tuples.begin(), tuples.end());
-
-  int num_rows = 10;
-  int num_actions = i;
-  printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
-  for (i = 0; i < std::min(num_rows, num_actions); ++i) {
-    const auto& tuple = tuples[i];
-
-    float count = std::get<0>(tuple);
-    auto mcts_p = std::get<1>(tuple);
-    auto net_p = std::get<2>(tuple);
-    int action = std::get<3>(tuple);
-
-    if (action == kPass) {
-      printf("%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count, mcts_p);
-    } else {
-      int row = action / kBoardDimension;
-      int col = action % kBoardDimension;
-      printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1, net_p, count, mcts_p);
-    }
-  }
-  for (i = num_actions; i < num_rows; ++i) {
-    printf("\n");
-  }
-}
-
 inline void GameState::row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const {
   common::seat_index_t current_player = get_current_player();
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
@@ -270,3 +217,62 @@ inline mask_t GameState::get_some_moves(mask_t P, mask_t mask, int dir) {
 }
 
 }  // namespace othello
+
+namespace common {
+
+inline void MctsResultsDumper<othello::GameState>::dump(
+    const LocalPolicyArray &action_policy, const MctsResults &results)
+{
+  const auto& valid_actions = results.valid_actions;
+  const auto& mcts_counts = results.counts;
+  const auto& net_policy = results.policy_prior;
+  const auto& win_rates = results.win_rates;
+  const auto& net_value = results.value_prior;
+
+  assert(net_policy.size() == (int)valid_actions.count());
+
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""),
+         100 * net_value(othello::kBlack), 100 * win_rates(othello::kBlack));
+  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""),
+         100 * net_value(othello::kWhite), 100 * win_rates(othello::kWhite));
+  printf("\n");
+
+  auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
+  using tuple_t = decltype(tuple0);
+  using tuple_array_t = std::array<tuple_t, othello::kNumGlobalActions>;
+  tuple_array_t tuples;
+  int i = 0;
+  for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
+    tuples[i] = std::make_tuple(mcts_counts.data()[action], action_policy(i), net_policy(i), action);
+    i++;
+  }
+
+  std::sort(tuples.begin(), tuples.end());
+  std::reverse(tuples.begin(), tuples.end());
+
+  int num_rows = 10;
+  int num_actions = i;
+  printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
+  for (i = 0; i < std::min(num_rows, num_actions); ++i) {
+    const auto& tuple = tuples[i];
+
+    float count = std::get<0>(tuple);
+    auto action_p = std::get<1>(tuple);
+    auto net_p = std::get<2>(tuple);
+    int action = std::get<3>(tuple);
+
+    if (action == othello::kPass) {
+      printf("%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count, action_p);
+    } else {
+      int row = action / othello::kBoardDimension;
+      int col = action % othello::kBoardDimension;
+      printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1, net_p, count, action_p);
+    }
+  }
+  for (i = num_actions; i < num_rows; ++i) {
+    printf("\n");
+  }
+}
+
+
+}  // namespace common
