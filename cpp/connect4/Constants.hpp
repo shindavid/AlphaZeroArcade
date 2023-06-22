@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/BasicTypes.hpp>
+#include <core/BasicTypes.hpp>
 
 namespace c4 {
 

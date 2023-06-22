@@ -5,9 +5,9 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/AbstractPlayer.hpp>
-#include <common/AbstractPlayerGenerator.hpp>
-#include <common/players/MctsPlayerGenerator.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/AbstractPlayerGenerator.hpp>
+#include <core/players/MctsPlayerGenerator.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/players/PerfectPlayer.hpp>
 #include <connect4/Tensorizor.hpp>

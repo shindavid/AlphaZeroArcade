@@ -6,9 +6,9 @@
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
 
-#include <common/AbstractPlayer.hpp>
-#include <common/BasicTypes.hpp>
-#include <common/DerivedTypes.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/BasicTypes.hpp>
+#include <core/DerivedTypes.hpp>
 #include <othello/Constants.hpp>
 #include <othello/GameState.hpp>
 #include <util/BoostUtil.hpp>

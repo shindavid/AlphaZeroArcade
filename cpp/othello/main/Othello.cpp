@@ -4,8 +4,8 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/GameServer.hpp>
-#include <common/GameServerProxy.hpp>
+#include <core/GameServer.hpp>
+#include <core/GameServerProxy.hpp>
 #include <othello/GameState.hpp>
 #include <othello/PlayerFactory.hpp>
 #include <util/Exception.hpp>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/players/HumanTuiPlayer.hpp>
+#include <core/players/HumanTuiPlayer.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/players/PerfectPlayer.hpp>
 

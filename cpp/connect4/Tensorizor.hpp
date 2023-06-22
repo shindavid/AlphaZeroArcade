@@ -5,10 +5,10 @@
 
 #include <torch/torch.h>
 
-#include <common/AbstractSymmetryTransform.hpp>
-#include <common/DerivedTypes.hpp>
-#include <common/IdentityTransform.hpp>
-#include <common/TensorizorConcept.hpp>
+#include <core/AbstractSymmetryTransform.hpp>
+#include <core/DerivedTypes.hpp>
+#include <core/IdentityTransform.hpp>
+#include <core/TensorizorConcept.hpp>
 #include <connect4/Constants.hpp>
 #include <connect4/GameState.hpp>
 #include <util/CppUtil.hpp>

@@ -1,6 +1,6 @@
 #include <sstream>
 
-#include <common/DerivedTypes.hpp>
+#include <core/DerivedTypes.hpp>
 #include <othello/GameState.hpp>
 #include <othello/Tensorizor.hpp>
 #include <util/CppUtil.hpp>

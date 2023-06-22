@@ -7,14 +7,14 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <common/AbstractPlayer.hpp>
-#include <common/BasicTypes.hpp>
-#include <common/DerivedTypes.hpp>
-#include <common/GameStateConcept.hpp>
-#include <common/MctsResults.hpp>
-#include <common/MctsResultsDumper.hpp>
-#include <common/SerializerTypes.hpp>
-#include <common/serializers/DeterministicGameSerializer.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/BasicTypes.hpp>
+#include <core/DerivedTypes.hpp>
+#include <core/GameStateConcept.hpp>
+#include <core/MctsResults.hpp>
+#include <core/MctsResultsDumper.hpp>
+#include <core/SerializerTypes.hpp>
+#include <core/serializers/DeterministicGameSerializer.hpp>
 #include <connect4/Constants.hpp>
 #include <util/EigenUtil.hpp>
 

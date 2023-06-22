@@ -5,8 +5,8 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/AbstractPlayer.hpp>
-#include <common/BasicTypes.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/BasicTypes.hpp>
 #include <othello/GameState.hpp>
 #include <othello/players/EdaxPlayer.hpp>
 #include <util/BoostUtil.hpp>

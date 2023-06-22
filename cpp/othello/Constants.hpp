@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include <common/BasicTypes.hpp>
+#include <core/BasicTypes.hpp>
 
 /*
  * Bit order encoding for the board:

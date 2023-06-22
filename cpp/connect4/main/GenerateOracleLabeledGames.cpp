@@ -12,11 +12,11 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/AbstractPlayer.hpp>
-#include <common/DerivedTypes.hpp>
-#include <common/ParallelGameRunner.hpp>
-#include <common/TrainingDataWriter.hpp>
-#include <common/players/RandomPlayer.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/DerivedTypes.hpp>
+#include <core/ParallelGameRunner.hpp>
+#include <core/TrainingDataWriter.hpp>
+#include <core/players/RandomPlayer.hpp>
 #include <connect4/Constants.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/players/PerfectPlayer.hpp>

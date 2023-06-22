@@ -5,8 +5,8 @@
 
 #include <boost/program_options.hpp>
 
-#include <common/GameServer.hpp>
-#include <common/GameServerProxy.hpp>
+#include <core/GameServer.hpp>
+#include <core/GameServerProxy.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/PlayerFactory.hpp>
 #include <connect4/Tensorizor.hpp>

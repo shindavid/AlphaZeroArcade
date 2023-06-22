@@ -8,7 +8,7 @@
 #include <chrono>
 #include <vector>
 
-#include <common/NeuralNet.hpp>
+#include <core/NeuralNet.hpp>
 #include <util/CudaUtil.hpp>
 #include <util/RepoUtil.hpp>
 

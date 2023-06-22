@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
-#include <common/AbstractPlayer.hpp>
-#include <common/AbstractPlayerGenerator.hpp>
-#include <common/BasicTypes.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/AbstractPlayerGenerator.hpp>
+#include <core/BasicTypes.hpp>
 #include <connect4/players/PerfectPlayer.hpp>
 
 namespace c4 {
