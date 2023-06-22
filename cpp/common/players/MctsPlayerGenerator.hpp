@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include <common/DataExportingMctsPlayer.hpp>
-#include <common/MctsPlayer.hpp>
+#include <common/players/DataExportingMctsPlayer.hpp>
+#include <common/players/MctsPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/Mcts.hpp>
@@ -102,5 +102,5 @@ protected:
 
 }  // namespace common
 
-#include <common/inl/MctsPlayerGenerator.inl>
+#include <common/players/inl/MctsPlayerGenerator.inl>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/MctsPlayer.hpp>
+#include <common/players/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -61,5 +61,5 @@ protected:
 
 }  // namespace common
 
-#include <common/inl/DataExportingMctsPlayer.inl>
+#include <common/players/inl/DataExportingMctsPlayer.inl>
 

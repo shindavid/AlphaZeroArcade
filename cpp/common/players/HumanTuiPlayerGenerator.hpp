@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <common/HumanTuiPlayer.hpp>
+#include <common/players/HumanTuiPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 

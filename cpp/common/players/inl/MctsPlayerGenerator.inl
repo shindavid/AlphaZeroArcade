@@ -1,4 +1,4 @@
-#include <common/MctsPlayerGenerator.hpp>
+#include <common/players/MctsPlayerGenerator.hpp>
 
 namespace common {
 
