@@ -22,10 +22,10 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
-add_executable(c4 cpp/connect4/main/Connect4.cpp)
-#add_executable(dshin_scratch cpp/connect4/main/DshinScratch.cpp)
-add_executable(othello cpp/othello/main/Othello.cpp)
-add_executable(unit_tests_othello cpp/othello/main/UnitTests.cpp)
+add_executable(c4 cpp/games/connect4/main/Connect4.cpp)
+#add_executable(dshin_scratch cpp/games/connect4/main/DshinScratch.cpp)
+add_executable(othello cpp/games/othello/main/Othello.cpp)
+add_executable(unit_tests_othello cpp/games/othello/main/UnitTests.cpp)
 
 set(executables
         c4
@@ -35,8 +35,8 @@ set(executables
         )
 
 add_subdirectory("cpp/util")
-add_subdirectory("cpp/connect4")
-add_subdirectory("cpp/othello")
+add_subdirectory("cpp/games/connect4")
+add_subdirectory("cpp/games/othello")
 
 set(common-libs util)
 set(other-libs connect4-lib othello-lib)
