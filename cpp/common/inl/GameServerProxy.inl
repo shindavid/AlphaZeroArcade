@@ -14,7 +14,6 @@
 
 #include <common/Constants.hpp>
 #include <common/Packet.hpp>
-#include <common/players/MctsPlayerGenerator.hpp>
 #include <util/Exception.hpp>
 #include <util/ThreadSafePrinter.hpp>
 
@@ -53,13 +52,11 @@ GameServerProxy<GameState>::SharedData::~SharedData() {
 
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen) {
+  // TODO: assert that we are not constructing MCTS-T players, since the MCTS-T implementation implicitly assumes
+  // that all MCTS-T agents are running in the same process.
   std::string name = gen->get_name();
   util::clean_assert(name.size() + 1 < kMaxNameLength, "Player name too long (\"%s\" size=%d)",
                      name.c_str(), (int) name.size());
-
-  if (dynamic_cast<TrainingMctsPlayerGeneratorBase*>(gen)) {
-    throw util::CleanException("Cannot register a MCTS-T player remotely - all MCTS-T players must be local");
-  }
   seat_generators_.emplace_back(seat, gen);
 }
 

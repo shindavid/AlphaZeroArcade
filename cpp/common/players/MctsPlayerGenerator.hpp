@@ -13,8 +13,6 @@
 
 namespace common {
 
-class TrainingMctsPlayerGeneratorBase {};
-
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class MctsPlayerGeneratorBase : public AbstractPlayerGenerator<GameState> {
 public:
@@ -47,8 +45,7 @@ protected:
 };
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-class CompetitiveMctsPlayerGenerator :
-    public MctsPlayerGeneratorBase<GameState, Tensorizor> {
+class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Tensorizor> {
 public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
@@ -74,8 +71,7 @@ protected:
 };
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-class TrainingMctsPlayerGenerator :
-    public MctsPlayerGeneratorBase<GameState, Tensorizor>, public TrainingMctsPlayerGeneratorBase {
+class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Tensorizor> {
 public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
