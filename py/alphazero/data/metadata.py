@@ -4,6 +4,30 @@ from typing import Dict, List
 from alphazero.custom_types import Generation
 
 
+class DoneFileInfo:
+    """
+    done.txt contains a key=value pair on each line. This class parses the file and stores the values.
+
+    Note that the appropriate parsing of the values (e.g. to int or to float) is left to the caller.
+    """
+    def __init__(self, filename: str):
+        self.mappings = {}
+        with open(filename, 'r') as f:
+            lines = list(f.readlines())
+
+        for line in lines:
+            line = line.strip()
+            if line:
+                tokens = line.split('=')
+                assert len(tokens) == 2, line
+                key = tokens[0].strip()
+                value = tokens[1].strip()
+                self.mappings[key] = value
+
+    def __getitem__(self, key):
+        return self.mappings[key]
+
+
 class SelfPlayGameMetadata:
     def __init__(self, filename: str):
         self.filename = filename
@@ -26,13 +50,9 @@ class GenerationMetadata:
 
         done_file = os.path.join(full_gen_dir, 'done.txt')
         if os.path.isfile(done_file):
-            with open(done_file, 'r') as f:
-                lines = list(f.readlines())
-
-            assert lines[0].startswith('n_games='), lines
-            assert lines[1].startswith('n_positions='), lines
-            self.n_games = int(lines[0].split('=')[1].strip())
-            self.n_positions = int(lines[1].split('=')[1].strip())
+            done_file_info = DoneFileInfo(done_file)
+            self.n_games = int(done_file_info['n_games'])
+            self.n_positions = int(done_file_info['n_positions'])
             return
 
         self.n_positions = 0

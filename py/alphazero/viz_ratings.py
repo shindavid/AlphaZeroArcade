@@ -35,9 +35,9 @@ import sys
 from collections import defaultdict
 from typing import List
 
-import numpy as np
+import pandas as pd
 from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Span
+from bokeh.models import ColumnDataSource, Span, RadioGroup
 from bokeh.palettes import viridis
 from bokeh.plotting import figure, curdoc
 
@@ -92,23 +92,32 @@ class RatingData:
         db_filename = os.path.join(base_dir, 'ratings.db')
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
-        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? AND n_games >= ?',
+        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? AND n_games >= ? ORDER BY mcts_gen',
                              (mcts_iters, n_games))
 
-        gen_rating_pairs = []
-        for mcts_gen, rating in res.fetchall():
-            gen_rating_pairs.append((mcts_gen, rating))
+        gen_ratings = res.fetchall()
+
+        x_values_columns = ['mcts_gen', 'n_games', 'runtime', 'n_evaluated_positions', 'n_batches_evaluated']
+        res = cursor.execute('SELECT %s FROM x_values ORDER BY mcts_gen' % (', '.join(x_values_columns)))
+        x_values = res.fetchall()
+
+        gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
+        x_df = pd.DataFrame(x_values, columns=x_values_columns).set_index('mcts_gen')
+
+        for col in x_df:
+            x_df[col] = x_df[col].cumsum()
+
+        assert set(gen_df.index).issubset(set(x_df.index))
+        gen_df = gen_df.join(x_df).reset_index()
 
         conn.close()
-        n = len(gen_rating_pairs)
+        n = len(gen_df)
         timed_print(f'Loaded {n} rows of data from {db_filename}')
-
-        gen_rating_pairs.sort()
 
         self.tag = tag
         self.n_games = n_games
         self.mcts_iters = mcts_iters
-        self.gen_rating_pairs = gen_rating_pairs
+        self.gen_df = gen_df
         self.label = f'{tag} (i={mcts_iters}, G={n_games})'
 
 
@@ -120,32 +129,44 @@ class ProgressVisualizer:
         game = games.get_game_type(Args.game)
         self.y_limit = game.reference_player_family.max_strength
 
-        self.max_x = None
+        self.max_x_dict = {}
         self.max_y = None
-
         for rating_data in data_list:
-            x = np.array([g[0] for g in rating_data.gen_rating_pairs])
-            y = np.array([g[1] for g in rating_data.gen_rating_pairs])
-            data = {
-                'x': x,
-                'y': y,
-            }
+            data = rating_data.gen_df
 
-            mx = max(x)
+            for col in data:
+                x = data[col]
+                mx = max(x)
+                self.max_x_dict[col] = mx if col not in self.max_x_dict else max(self.max_x_dict[col], mx)
+
+            y = data['rating']
             my = max(y)
-            self.max_x = mx if self.max_x is None else max(self.max_x, mx)
             self.max_y = my if self.max_y is None else max(self.max_y, my)
-
-            self.sources[rating_data.tag].data = data
+            self.sources[rating_data.tag].data = {'y': y}
 
     def plot(self):
+        x_var_dict = {
+            'Generation': 'mcts_gen',
+            'Games': 'n_games',
+            'Self-Play Runtime (sec)': 'runtime',
+            'Num Evaluated Positions': 'n_evaluated_positions',
+            'Num Evaluated Batches': 'n_batches_evaluated',
+        }
+        x_vars = list(x_var_dict.keys())
+        x_var_columns = list(x_var_dict.values())
+        default_x_var_index = 0
+        default_x_var = x_vars[default_x_var_index]
+        default_x_var_column = x_var_columns[default_x_var_index]
+
+        radio_group = RadioGroup(labels=x_vars, active=default_x_var_index)
+
         data_list = self.data_list
-        x_range = [1, self.max_x]
+        x_range = [0, self.max_x_dict[default_x_var_column]]
         y_range = [0, self.max_y+1]
 
         title = f'{Args.game} Alphazero Ratings'
         plot = figure(height=600, width=800, title=title, x_range=x_range, y_range=y_range,
-                      y_axis_label='Rating', x_axis_label='Generation')
+                      y_axis_label='Rating', x_axis_label=default_x_var)
         hline = Span(location=self.y_limit, dimension='width', line_color='gray', line_dash='dashed', line_width=1)
         plot.add_layout(hline)
 
@@ -153,11 +174,28 @@ class ProgressVisualizer:
         colors = viridis(n)
         for rating_data, color in zip(data_list, colors):
             source = self.sources[rating_data.tag]
+            source.data['x'] = rating_data.gen_df[default_x_var_column]
             label = rating_data.label
             plot.line('x', 'y', source=source, line_color=color, legend_label=label)
 
         plot.legend.location = 'bottom_right'
-        inputs = column(plot)
+
+        def update_data(attr, old, new):
+            x_var_index = radio_group.active
+            x_var_column = x_var_columns[x_var_index]
+
+            for rating_data in self.data_list:
+                source = self.sources[rating_data.tag]
+                source.data['x'] = rating_data.gen_df[x_var_column]
+
+            plot.x_range.end = self.max_x_dict[x_var_column]
+            plot.xaxis.axis_label = x_vars[x_var_index]
+
+        widgets = [radio_group]
+        for widget in widgets:
+            widget.on_change('active', update_data)
+
+        inputs = column(plot, radio_group)
         return inputs
 
 

@@ -66,6 +66,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 import games
+from alphazero.data.metadata import DoneFileInfo
 from alphazero.manager import AlphaZeroManager
 from alphazero.ratings import extract_match_record, WinLossDrawCounts
 from config import Config
@@ -263,7 +264,49 @@ class Arena:
             rating FLOAT);
         """)
         c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (mcts_gen, mcts_iters);""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS x_values (
+            mcts_gen INT,
+            n_games INT,
+            runtime FLOAT,
+            n_evaluated_positions BIGINT,
+            n_batches_evaluated INT);
+        """)
+        c.execute("""CREATE UNIQUE INDEX IF NOT EXISTS lookup ON x_values (mcts_gen);""")
+
         self.conn.commit()
+
+    def dump_x_var_data(self):
+        c = self.conn.cursor()
+
+        mcts_gen_set = set()
+        res = c.execute('SELECT mcts_gen FROM x_values')
+        for gen in res.fetchall():
+            mcts_gen_set.add(gen[0])
+
+        latest_gen = self.manager.get_latest_generation()
+        full_mcts_gen_set = set(range(1, latest_gen + 1))
+
+        missing_mcts_gen_set = full_mcts_gen_set - mcts_gen_set
+        if not missing_mcts_gen_set:
+            timed_print(f'[{self.tag}] Skipping x var data dump - fully dumped.')
+            return
+
+        values = []
+        for gen in missing_mcts_gen_set:
+            done_file = os.path.join(self.manager.get_self_play_data_subdir(gen - 1), 'done.txt')
+            done_file_info = DoneFileInfo(done_file)
+            n_games = int(done_file_info['n_games'])
+            runtime = float(done_file_info['runtime'])
+            n_evaluated_positions = int(done_file_info['n_evaluated_positions'])
+            n_batches_evaluated = int(done_file_info['n_batches_evaluated'])
+
+            x_value_tuple = (gen, n_games, runtime, n_evaluated_positions, n_batches_evaluated)
+            values.append(x_value_tuple)
+
+        c.executemany('INSERT INTO x_values VALUES (?, ?, ?, ?, ?)', values)
+        self.conn.commit()
+        timed_print(f'[{self.tag}] Dumped {len(values)} rows of x var data...')
 
     def load_past_data(self):
         timed_print(f'[{self.tag}] Loading past data...')
@@ -471,6 +514,7 @@ class Arena:
     def prepare(self):
         self.dump_metadata()
         self.init_db()
+        self.dump_x_var_data()
         self.load_past_data()
 
 
