@@ -7,7 +7,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
-#include <core/players/MctsPlayerGenerator.hpp>
+#include <common/MctsPlayerGenerator.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/players/PerfectPlayer.hpp>
 #include <connect4/Tensorizor.hpp>

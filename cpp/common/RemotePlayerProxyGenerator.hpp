@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
+#include <common/RemotePlayerProxy.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/players/RemotePlayerProxy.hpp>
 #include <util/SocketUtil.hpp>
 
 namespace common {
@@ -34,4 +34,4 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
 
 }  // namespace common
 
-#include <core/players/inl/RemotePlayerProxyGenerator.inl>
+#include <common/inl/RemotePlayerProxyGenerator.inl>

@@ -7,7 +7,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/players/HumanTuiPlayerGenerator.hpp>
+#include <common/HumanTuiPlayerGenerator.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>

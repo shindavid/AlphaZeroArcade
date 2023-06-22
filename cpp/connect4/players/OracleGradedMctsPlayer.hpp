@@ -4,7 +4,7 @@
  * MctsPlayer that is graded by the perfect oracle.
  */
 
-#include <core/players/MctsPlayer.hpp>
+#include <common/MctsPlayer.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/players/PerfectPlayer.hpp>
 #include <connect4/Tensorizor.hpp>

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <common/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <core/TrainingDataWriter.hpp>
-#include <core/players/MctsPlayer.hpp>
 
 #include <vector>
 
@@ -61,5 +61,5 @@ protected:
 
 }  // namespace common
 
-#include <core/players/inl/DataExportingMctsPlayer.inl>
+#include <common/inl/DataExportingMctsPlayer.inl>
 

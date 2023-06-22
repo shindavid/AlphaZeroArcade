@@ -1,4 +1,4 @@
-#include <core/players/MctsPlayer.hpp>
+#include <common/MctsPlayer.hpp>
 
 #include <unistd.h>
 

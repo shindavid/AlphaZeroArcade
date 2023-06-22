@@ -9,8 +9,8 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/players/HumanTuiPlayer.hpp>
-#include <core/players/RandomPlayer.hpp>
+#include <common/HumanTuiPlayer.hpp>
+#include <common/RandomPlayer.hpp>
 #include <util/CppUtil.hpp>
 #include <util/MetaProgramming.hpp>
 

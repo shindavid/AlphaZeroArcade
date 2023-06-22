@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
+#include <common/RandomPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/players/RandomPlayer.hpp>
 
 namespace common {
 

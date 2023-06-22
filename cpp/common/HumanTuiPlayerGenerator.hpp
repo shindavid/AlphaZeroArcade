@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
+#include <common/HumanTuiPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/players/HumanTuiPlayer.hpp>
 
 namespace common {
 

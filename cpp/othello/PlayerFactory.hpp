@@ -1,9 +1,9 @@
 #pragma once
 
 #include <core/PlayerFactory.hpp>
-#include <core/players/MctsPlayerGenerator.hpp>
-#include <core/players/RandomPlayerGenerator.hpp>
-#include <core/players/RemotePlayerProxyGenerator.hpp>
+#include <common/MctsPlayerGenerator.hpp>
+#include <common/RandomPlayerGenerator.hpp>
+#include <common/RemotePlayerProxyGenerator.hpp>
 #include <othello/GameState.hpp>
 #include <othello/Tensorizor.hpp>
 #include <othello/players/EdaxPlayerGenerator.hpp>

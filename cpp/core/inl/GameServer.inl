@@ -9,7 +9,7 @@
 
 #include <core/DerivedTypes.hpp>
 #include <core/Packet.hpp>
-#include <core/players/RemotePlayerProxy.hpp>
+#include <common/RemotePlayerProxy.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>

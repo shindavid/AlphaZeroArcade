@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/players/DataExportingMctsPlayer.hpp>
+#include <common/DataExportingMctsPlayer.hpp>
 
 #include <util/BitSet.hpp>
 

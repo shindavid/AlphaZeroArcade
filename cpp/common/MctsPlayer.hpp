@@ -114,5 +114,5 @@ protected:
 
 }  // namespace common
 
-#include <core/players/inl/MctsPlayer.inl>
+#include <common/inl/MctsPlayer.inl>
 
