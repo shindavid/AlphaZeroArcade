@@ -101,355 +101,6 @@ typename Mcts<GameState, Tensorizor>::NNEvaluationService::instance_map_t
 Mcts<GameState, Tensorizor>::NNEvaluationService::instance_map_;
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::NNEvaluation::NNEvaluation(
-    const ValueTensor& value, const PolicyTensor& policy, const ActionMask& valid_actions)
-{
-  GameStateTypes::global_to_local(policy, valid_actions, local_policy_logit_distr_);
-  value_prob_distr_ = eigen_util::softmax(eigen_util::reinterpret_as_array(value));
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(Node* p, action_index_t a)
-: parent(p)
-, tensorizor(p->stable_data().tensorizor)
-, state(p->stable_data().state)
-, outcome(state.apply_move(a))
-, action(a)
-{
-  tensorizor.receive_state_change(state, action);
-  aux_init();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(
-    Node* p, action_index_t a, const Tensorizor& t, const GameState& s, const GameOutcome& o)
-: parent(p)
-, tensorizor(t)
-, state(s)
-, outcome(o)
-, action(a)
-{
-  aux_init();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
-{
-  *this = data;
-  if (prune_parent) parent = nullptr;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::stable_data_t::aux_init() {
-  valid_action_mask = state.get_valid_actions();
-  current_player = state.get_current_player();
-  sym_index = bitset_util::choose_random_on_index(tensorizor.get_symmetry_indices(state));
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::evaluation_data_t::evaluation_data_t(const ActionMask& valid_actions)
-: fully_analyzed_actions(~valid_actions) {}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::stats_t::stats_t() {
-  value_avg.setZero();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::Node::stats_t::zero_out()
-{
-  value_avg.setZero();
-  count = 0;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::Node::stats_t::remove(const ValueArray& rm_sum, int rm_count) {
-  if (count <= rm_count) {
-    zero_out();
-  } else {
-    value_avg = (value_avg * count - rm_sum) / (count - rm_count);
-    count -= rm_count;
-  }
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::Node(Node* parent, action_index_t action)
-: stable_data_(parent, action)
-, evaluation_data_(stable_data().valid_action_mask) {}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::Node(
-    const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-: stable_data_(nullptr, -1, tensorizor, state, outcome)
-, evaluation_data_(stable_data().valid_action_mask) {}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node::Node(const Node& node, bool prune_parent)
-: stable_data_(node.stable_data_, prune_parent)
-, children_data_(node.children_data_)
-, evaluation_data_(node.evaluation_data_)
-, stats_(node.stats_) {}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline std::string Mcts<GameState, Tensorizor>::Node::genealogy_str() const {
-  const char* delim = kNumGlobalActions < 10 ? "" : ":";
-  std::vector<std::string> vec;
-  const Node* n = this;
-  while (n->parent()) {
-    vec.push_back(std::to_string(n->action()));
-    n = n->parent();
-  }
-
-  std::reverse(vec.begin(), vec.end());
-  return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::debug_dump() const {
-  std::cout << "value[" << stats_.count << "]: " << stats_.value_avg.transpose() << std::endl;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::release(Node* protected_child) {
-  // If we got here, the Node and its children (besides protected_child) should not be referenced from anywhere, so it
-  // should be safe to delete it without worrying about thread-safety.
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node* child = get_child(c);
-    if (!child) continue;
-    if (child != protected_child) child->release();
-    clear_child(c);  // not needed currently, but might be needed if we switch to smart-pointers
-  }
-
-  delete this;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::adopt_children() {
-  // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
-  // thread-safety
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node* child = get_child(c);
-    if (child) child->stable_data_.parent = this;
-  }
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline typename Mcts<GameState, Tensorizor>::PolicyTensor
-Mcts<GameState, Tensorizor>::Node::get_counts() const {
-  // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
-  // thread-safety
-
-  seat_index_t cp = stable_data().current_player;
-  bool forced_win = stats_.forcibly_winning[cp];
-
-  if (kEnableThreadingDebug) {
-    std::cout << "get_counts()" << std::endl;
-    std::cout << "  cp: " << int(cp) << std::endl;
-    std::cout << "  forcibly_winning: " << bitset_util::to_string(stats_.forcibly_winning) << std::endl;
-    std::cout << "  forced_win: " << forced_win << std::endl;
-  }
-
-  PolicyTensor counts;
-  counts.setZero();
-
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node* child = get_child(c);
-    if (child) {
-      if (kEnableThreadingDebug) {
-        std::cout << "  child[" << c << "]: " << std::endl;
-        std::cout << "    action: " << int(child->action()) << std::endl;
-        std::cout << "    forcibly_winning: " << bitset_util::to_string(child->stats().forcibly_winning) << std::endl;
-        std::cout << "    count: " << child->stats().count << std::endl;
-      }
-      if (forced_win) {
-        counts.data()[child->action()] = child->stats().forcibly_winning[cp];
-      } else {
-        counts.data()[child->action()] = child->stats().count;
-      }
-    }
-  }
-
-  if (kEnableThreadingDebug) {
-    std::cout << "  counts:\n" << counts << std::endl;
-  }
-  return counts;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::backprop(const ValueArray& outcome) {
-  std::unique_lock<std::mutex> lock(stats_mutex_);
-  if (forcibly_losing()) return;
-  stats_.value_avg = (stats_.value_avg * stats_.count + outcome) / (stats_.count + 1);
-  stats_.count++;
-  lock.unlock();
-
-  if (parent()) parent()->backprop(outcome);
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::backprop_with_virtual_undo(const ValueArray& value) {
-  std::unique_lock<std::mutex> lock(stats_mutex_);
-  if (forcibly_losing()) return;
-  stats_.value_avg += (value - make_virtual_loss()) / stats_.count;
-  stats_.virtual_count--;
-  lock.unlock();
-
-  if (parent()) parent()->backprop_with_virtual_undo(value);
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::virtual_backprop() {
-  std::unique_lock<std::mutex> lock(stats_mutex_);
-  if (forcibly_losing()) return;
-  auto loss = make_virtual_loss();
-  stats_.value_avg = (stats_.value_avg * stats_.count + loss) / (stats_.count + 1);
-  stats_.count++;
-  stats_.virtual_count++;
-  lock.unlock();
-
-  if (parent()) parent()->virtual_backprop();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline void Mcts<GameState, Tensorizor>::Node::eliminate(
-    int thread_id, player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing,
-    ValueArray& accumulated_value, int& accumulated_count)
-{
-  seat_index_t cp = stable_data().current_player;
-  bool winning = forcibly_winning[cp];
-  bool losing = forcibly_losing[cp];
-
-  std::unique_lock<std::mutex> lock(stats_mutex_);
-  if (eliminated()) return;  // possible if concurrent eliminations due to race-condition
-
-  stats_t prev_stats = stats_;
-  stats_.forcibly_winning = forcibly_winning;
-  stats_.forcibly_losing = forcibly_losing;
-
-  if (losing) {
-    // pretend these visits were never made!
-    accumulated_value = stats_.value_avg * stats_.count;
-    accumulated_count = stats_.count;
-    stats_.zero_out();
-  } else {
-    stats_.remove(accumulated_value, accumulated_count);
-  }
-
-  if (kEnableThreadingDebug) {
-    util::ThreadSafePrinter printer(thread_id);
-    printer << "eliminate() " << genealogy_str() << " [cp=" << (int)cp << "]";
-    printer.endl();
-    printer.printf("  forcibly_winning: %s\n", bitset_util::to_string(forcibly_winning).c_str());
-    printer.printf("  forcibly_losing: %s\n", bitset_util::to_string(forcibly_losing).c_str());
-    printer.printf("  winning: %d\n", int(winning));
-    printer.printf("  losing: %d\n", int(losing));
-    printer << "  accumulated_value: " << accumulated_value.transpose();
-    printer.endl();
-    printer << "  accumulated_count: " << accumulated_count;
-    printer.endl();
-    printer << "  value_avg: " << prev_stats.value_avg.transpose() << " -> " << stats_.value_avg.transpose();
-    printer.endl();
-    printer << "  count: " << prev_stats.count << " -> " << stats_.count;
-    printer.endl();
-  }
-
-  lock.unlock();
-
-  if (parent()) {
-    parent()->compute_forced_lines(forcibly_winning, forcibly_losing);
-    parent()->eliminate(thread_id, forcibly_winning, forcibly_losing, accumulated_value, accumulated_count);
-  }
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::Node::compute_forced_lines(
-    player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing) const
-{
-  forcibly_winning.reset();
-  forcibly_losing.reset();
-  seat_index_t cp = stable_data().current_player;
-
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node *child = get_child(c);
-    if (!child) continue;
-    const player_bitset_t& fw = child->stats().forcibly_winning;
-    if (fw[cp]) {
-      forcibly_winning = fw;
-      break;
-    }
-    if (c == 0) {
-      forcibly_winning = fw;
-    } else {
-      forcibly_winning &= fw;
-    }
-  }
-
-  if (forcibly_winning.any()) {
-    forcibly_losing = ~forcibly_winning;
-    return;
-  }
-
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node *child = get_child(c);
-    if (!child) {
-      forcibly_losing.reset();
-      break;
-    }
-    const player_bitset_t& fl = child->stats().forcibly_losing;
-    if (c == 0) {
-      forcibly_losing = fl;
-    } else {
-      forcibly_losing &= fl;
-    }
-  }
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts<GameState, Tensorizor>::ValueArray
-Mcts<GameState, Tensorizor>::Node::make_virtual_loss() const {
-  constexpr float x = 1.0 / (kNumPlayers - 1);
-  ValueArray virtual_loss;
-  virtual_loss.setZero();
-  virtual_loss(stable_data().current_player) = x;
-  return virtual_loss;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void Mcts<GameState, Tensorizor>::Node::mark_as_fully_analyzed() {
-  Node* my_parent = parent();
-  if (!my_parent) return;
-
-  std::unique_lock<std::mutex> lock(my_parent->evaluation_data_mutex());
-  my_parent->evaluation_data_.fully_analyzed_actions[action()] = true;
-  bool full = my_parent->evaluation_data_.fully_analyzed_actions.all();
-  lock.unlock();
-  if (!full) return;
-
-  my_parent->mark_as_fully_analyzed();
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-inline Mcts<GameState, Tensorizor>::Node* Mcts<GameState, Tensorizor>::Node::init_child(child_index_t c) {
-  std::lock_guard guard(children_mutex_);
-
-  Node* child = get_child(c);
-  if (child) return child;
-
-  const auto& valid_action_mask = stable_data().valid_action_mask;
-  action_index_t action = bitset_util::get_nth_on_index(valid_action_mask, c);
-
-  child = new Node(this, action);
-  children_data_.set(c, child);
-  return child;
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-typename Mcts<GameState, Tensorizor>::Node*
-Mcts<GameState, Tensorizor>::Node::lookup_child_by_action(action_index_t action) const {
-  return get_child(bitset_util::count_on_indices_before(stable_data().valid_action_mask, action));
-}
-
-template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline Mcts<GameState, Tensorizor>::SearchThread::SearchThread(Mcts* mcts, int thread_id)
 : mcts_(mcts)
 , params_(mcts->params())
@@ -495,7 +146,7 @@ bool Mcts<GameState, Tensorizor>::SearchThread::needs_more_visits(Node* root, in
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int depth) {
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
     printer << __func__ << " " << tree->genealogy_str() << " cp=" << (int)tree->stable_data().current_player;
     printer.endl();
@@ -519,7 +170,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
   if (data.backpropagated_virtual_loss) {
     record_for_profiling(kBackpropEvaluation);
 
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread_id());
       printer << "backprop_with_virtual_undo " << tree->genealogy_str();
       printer << " " << evaluation->value_prob_distr().transpose();
@@ -537,7 +188,7 @@ inline void Mcts<GameState, Tensorizor>::SearchThread::visit(Node* tree, int dep
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 inline void Mcts<GameState, Tensorizor>::SearchThread::backprop_outcome(Node* tree, const ValueArray& outcome) {
   record_for_profiling(kBackpropOutcome);
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << tree->genealogy_str() << " " << outcome.transpose();
     printer.endl();
@@ -618,7 +269,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 {
   record_for_profiling(kEvaluateAndExpandUnset);
 
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << tree->genealogy_str();
     printer.endl();
@@ -637,7 +288,7 @@ void Mcts<GameState, Tensorizor>::SearchThread::evaluate_and_expand_unset(
 
   if (!speculative) {
     record_for_profiling(kVirtualBackprop);
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread_id_);
       printer << "virtual_backprop " << tree->genealogy_str();
       printer.endl();
@@ -750,7 +401,7 @@ Mcts<GameState, Tensorizor>::SearchThread::get_best_child_index(Node* tree, NNEv
 
   mcts_->record_puct_calc(VN.sum() > 0);
 
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     std::string genealogy = tree->genealogy_str();
 
     util::ThreadSafePrinter printer(thread_id());
@@ -999,7 +650,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
   SearchThread* thread = request.thread;
   const Node* tree = request.tree;
 
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     std::string genealogy = tree->genealogy_str();
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("evaluate() %s\n", genealogy.c_str());
@@ -1025,7 +676,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::evaluate(const Request& reques
 
   cv_evaluate_.notify_all();
 
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  evaluated!\n");
   }
@@ -1094,7 +745,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::batch_evaluate() {
   assert(batch_metadata_.reserve_index > 0);
   assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
 
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- NNEvaluationService::%s(%s) ---------------------->\n",
                    __func__, batch_metadata_.repr().c_str());
@@ -1160,7 +811,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::Response
 Mcts<GameState, Tensorizor>::NNEvaluationService::check_cache(SearchThread* thread, const cache_key_t& cache_key) {
   thread->record_for_profiling(SearchThread::kCheckingCache);
 
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  waiting for cache lock...\n");
   }
@@ -1168,7 +819,7 @@ Mcts<GameState, Tensorizor>::NNEvaluationService::check_cache(SearchThread* thre
   std::unique_lock<std::mutex> cache_lock(cache_mutex_);
   auto cached = cache_.get(cache_key);
   if (cached.has_value()) {
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread->thread_id());
       printer.printf("  hit cache\n");
     }
@@ -1186,13 +837,13 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_batch_reservab
   thread->record_for_profiling(SearchThread::kWaitingUntilBatchReservable);
 
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.unread_count == 0 && batch_metadata_.reserve_index < batch_size_limit_ && batch_metadata_.accepting_reservations) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread->thread_id());
       printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
     }
@@ -1215,7 +866,7 @@ int Mcts<GameState, Tensorizor>::NNEvaluationService::allocate_reserve_index(
   assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
 
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s) allocation complete\n", func, batch_metadata_.repr().c_str());
   }
@@ -1267,7 +918,7 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::increment_commit_count(Se
   thread->record_for_profiling(SearchThread::kIncrementingCommitCount);
 
   batch_metadata_.commit_count++;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", __func__, batch_metadata_.repr().c_str());
   }
@@ -1275,18 +926,19 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::increment_commit_count(Se
 }
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-Mcts<GameState, Tensorizor>::NNEvaluation_sptr Mcts<GameState, Tensorizor>::NNEvaluationService::get_eval(
+typename Mcts<GameState, Tensorizor>::NNEvaluation_sptr
+Mcts<GameState, Tensorizor>::NNEvaluationService::get_eval(
     SearchThread* thread, int reserve_index, std::unique_lock<std::mutex>& metadata_lock)
 {
   const char* func = __func__;
   thread->record_for_profiling(SearchThread::kWaitingForReservationProcessing);
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.reserve_index == 0) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread->thread_id());
       printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
     }
@@ -1304,13 +956,13 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_all_read(
   batch_metadata_.unread_count--;
 
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread->thread_id());
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread->thread_id());
       printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
     }
@@ -1325,14 +977,14 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_until_batch_ready()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -1348,14 +1000,14 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_first_reservatio
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.reserve_index > 0) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -1371,14 +1023,14 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_last_reservation
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait_until(lock, deadline_, [&]{
     if (batch_metadata_.reserve_index == batch_size_limit_) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -1395,14 +1047,14 @@ void Mcts<GameState, Tensorizor>::NNEvaluationService::wait_for_commits()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (kEnableThreadingDebug) {
+  if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.reserve_index == batch_metadata_.commit_count) return true;
-    if (kEnableThreadingDebug) {
+    if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -1488,7 +1140,7 @@ inline Mcts<GameState, Tensorizor>::Mcts(const Params& params)
 {
   namespace bf = boost::filesystem;
 
-  if (kEnableProfiling) {
+  if (mcts::kEnableProfiling) {
     if (profiling_dir().empty()) {
       throw util::Exception("Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in config.txt");
     }
