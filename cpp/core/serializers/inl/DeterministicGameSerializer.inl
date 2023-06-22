@@ -4,7 +4,7 @@
 
 #include <util/Exception.hpp>
 
-namespace common {
+namespace core {
 
 template <GameStateConcept GameState>
 size_t DeterministicGameSerializer<GameState>::serialize_state_change(
@@ -20,4 +20,4 @@ void DeterministicGameSerializer<GameState>::deserialize_state_change(
   state->apply_move(*action);
 }
 
-}  // namespace common
+}  // namespace core

@@ -13,7 +13,7 @@ const int kNumCells = kNumColumns * kNumRows;
 const int kMaxMovesPerGame = kNumColumns * kNumRows;
 const int kNumPlayers = 2;
 
-const common::seat_index_t kRed = 0;
-const common::seat_index_t kYellow = 1;
+const core::seat_index_t kRed = 0;
+const core::seat_index_t kYellow = 1;
 
 }  //namespace c4

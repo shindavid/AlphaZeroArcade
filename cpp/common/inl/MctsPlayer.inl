@@ -15,7 +15,7 @@
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
@@ -219,8 +219,8 @@ inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   printf("CPU pos eval:\n");
-  common::MctsResultsDumper<GameState>::dump(action_policy, mcts_results);
+  core::MctsResultsDumper<GameState>::dump(action_policy, mcts_results);
   std::cout << std::endl;
 }
 
-}  // namespace common
+}  // namespace core

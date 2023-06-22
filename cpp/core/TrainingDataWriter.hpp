@@ -16,7 +16,7 @@
 #include <util/BoostUtil.hpp>
 
 
-namespace common {
+namespace core {
 
 /*
  * A single TrainingDataWriter is intended to be shared by multiple MctsPlayer's playing in parallel.
@@ -32,9 +32,9 @@ public:
   };
 
   using GameState = GameState_;
-  using GameStateTypes = typename common::GameStateTypes<GameState>;
+  using GameStateTypes = typename core::GameStateTypes<GameState>;
   using Tensorizor = Tensorizor_;
-  using TensorizorTypes = typename common::TensorizorTypes<Tensorizor>;
+  using TensorizorTypes = typename core::TensorizorTypes<Tensorizor>;
 
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
@@ -181,6 +181,6 @@ protected:
   static TrainingDataWriter* instance_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/TrainingDataWriter.inl>

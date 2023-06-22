@@ -5,7 +5,7 @@
 
 #include <unistd.h>
 
-namespace common {
+namespace core {
 
 template <GameStateConcept GameState>
 void RemotePlayerProxyGenerator<GameState>::initialize(
@@ -34,4 +34,4 @@ int RemotePlayerProxyGenerator<GameState>::max_simultaneous_games() const {
 }
 
 
-}  // namespace common
+}  // namespace core

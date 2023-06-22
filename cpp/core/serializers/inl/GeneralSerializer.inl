@@ -4,7 +4,7 @@
 
 #include <util/Exception.hpp>
 
-namespace common {
+namespace core {
 
 template <GameStateConcept GameState>
 size_t GeneralSerializer<GameState>::serialize_action(char* buf, size_t buf_size, action_index_t action) const {
@@ -75,4 +75,4 @@ void GeneralSerializer<GameState>::deserialize_game_end(const char* buf, GameOut
   *outcome = reinterpret_cast<const GameOutcome&>(*buf);
 }
 
-}  // namespace common
+}  // namespace core

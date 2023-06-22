@@ -16,9 +16,9 @@
 
 namespace c4 {
 
-class CompetitiveMctsPlayerGenerator : public common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor> {
+class CompetitiveMctsPlayerGenerator : public core::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor> {
 public:
-  using base_t = common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
+  using base_t = core::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
 
   struct Params {
     bool grade_moves;
@@ -54,7 +54,7 @@ protected:
   OracleGrader* grader_ = nullptr;
 };
 
-using TrainingMctsPlayerGenerator = common::TrainingMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
+using TrainingMctsPlayerGenerator = core::TrainingMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
 
 }  // namespace c4
 

@@ -43,20 +43,20 @@ public:
   static constexpr int kMaxNumLocalActions = othello::kMaxNumLocalActions;
   static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
 
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
-  using MctsResults = common::MctsResults<GameState>;
+  using MctsResults = core::MctsResults<GameState>;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
 
-  common::seat_index_t get_current_player() const { return cur_player_; }
-  GameOutcome apply_move(common::action_index_t action);
+  core::seat_index_t get_current_player() const { return cur_player_; }
+  GameOutcome apply_move(core::action_index_t action);
   ActionMask get_valid_actions() const;
 
   template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
-  void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(core::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;
 
@@ -69,19 +69,19 @@ private:
 
   mask_t opponent_mask_ = kStartingWhiteMask;  // spaces occupied by either player
   mask_t cur_player_mask_ = kStartingBlackMask;  // spaces occupied by current player
-  common::seat_index_t cur_player_ = kStartingColor;
+  core::seat_index_t cur_player_ = kStartingColor;
   int8_t pass_count_ = 0;
 };
 
-static_assert(common::GameStateConcept<othello::GameState>);
+static_assert(core::GameStateConcept<othello::GameState>);
 
 extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 
-using Player = common::AbstractPlayer<GameState>;
+using Player = core::AbstractPlayer<GameState>;
 
 }  // namespace c4
 
-namespace common {
+namespace core {
 
 // template specialization
 template<> struct serializer<othello::GameState> {
@@ -90,11 +90,11 @@ template<> struct serializer<othello::GameState> {
 
 template<> struct MctsResultsDumper<othello::GameState> {
   using LocalPolicyArray = othello::GameState::LocalPolicyArray;
-  using MctsResults = common::MctsResults<othello::GameState>;
+  using MctsResults = core::MctsResults<othello::GameState>;
 
   static void dump(const LocalPolicyArray& action_policy, const MctsResults& results);
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <othello/inl/GameState.inl>

@@ -17,10 +17,10 @@ using GameState = c4::GameState;
 using PlayerFactory = c4::PlayerFactory;
 using Tensorizor = c4::Tensorizor;
 
-using GameServer = common::GameServer<GameState>;
-using GameServerProxy = common::GameServerProxy<GameState>;
-using Mcts = common::Mcts<GameState, Tensorizor>;
-using Player = common::AbstractPlayer<GameState>;
+using GameServer = core::GameServer<GameState>;
+using GameServerProxy = core::GameServerProxy<GameState>;
+using Mcts = core::Mcts<GameState, Tensorizor>;
+using Player = core::AbstractPlayer<GameState>;
 
 namespace po = boost::program_options;
 namespace po2 = boost_util::program_options;

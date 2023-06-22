@@ -11,14 +11,14 @@
 #include <core/Mcts.hpp>
 #include <core/TensorizorConcept.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class MctsPlayerGeneratorBase : public AbstractPlayerGenerator<GameState> {
 public:
-  using Mcts = common::Mcts<GameState, Tensorizor>;
+  using Mcts = core::Mcts<GameState, Tensorizor>;
   using MctsParams = typename Mcts::Params;
-  using BaseMctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
+  using BaseMctsPlayer = core::MctsPlayer<GameState, Tensorizor>;
 
   MctsPlayerGeneratorBase(Mcts::DefaultParamsType type) : mcts_params_(type) {}
 
@@ -49,8 +49,8 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState,
 public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
-  using Mcts = common::Mcts<GameState, Tensorizor>;
-  using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
+  using Mcts = core::Mcts<GameState, Tensorizor>;
+  using MctsPlayer = core::MctsPlayer<GameState, Tensorizor>;
   using MctsPlayerParams = typename MctsPlayer::Params;
 
   CompetitiveMctsPlayerGenerator();
@@ -75,8 +75,8 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
 public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
-  using Mcts = common::Mcts<GameState, Tensorizor>;
-  using MctsPlayer = common::DataExportingMctsPlayer<GameState, Tensorizor>;
+  using Mcts = core::Mcts<GameState, Tensorizor>;
+  using MctsPlayer = core::DataExportingMctsPlayer<GameState, Tensorizor>;
   using MctsPlayerParams = typename MctsPlayer::Params;
   using TrainingDataWriterParams = typename MctsPlayer::TrainingDataWriterParams;
 
@@ -100,7 +100,7 @@ protected:
   TrainingDataWriterParams writer_params_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <common/inl/MctsPlayerGenerator.inl>
 

@@ -7,7 +7,7 @@
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 class HumanTuiPlayerGenerator : public AbstractPlayerGenerator<GameState> {
@@ -19,4 +19,4 @@ public:
   int max_simultaneous_games() const override { return 1; }
 };
 
-}  // namespace common
+}  // namespace core

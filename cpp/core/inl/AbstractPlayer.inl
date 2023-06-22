@@ -1,6 +1,6 @@
 #include <core/AbstractPlayer.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 void AbstractPlayer<GameState>::init_game(
@@ -11,4 +11,4 @@ void AbstractPlayer<GameState>::init_game(
   my_seat_ = seat_assignment;
 }
 
-}  // namespace common
+}  // namespace core

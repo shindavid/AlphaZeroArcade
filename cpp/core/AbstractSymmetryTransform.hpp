@@ -4,7 +4,7 @@
 
 #include <core/DerivedTypes.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * SymmetryTransform's provide a mechanism to effectively apply a symmetry transform to a GameState. In the game of go,
@@ -29,4 +29,4 @@ public:
   virtual void transform_policy(PolicyTensor& policy) = 0;
 };
 
-}  // namespace common
+}  // namespace core

@@ -14,9 +14,9 @@
 using GameState = othello::GameState;
 using PlayerFactory = othello::PlayerFactory;
 
-using GameServer = common::GameServer<GameState>;
-using GameServerProxy = common::GameServerProxy<GameState>;
-using Player = common::AbstractPlayer<GameState>;
+using GameServer = core::GameServer<GameState>;
+using GameServerProxy = core::GameServerProxy<GameState>;
+using Player = core::AbstractPlayer<GameState>;
 
 namespace po = boost::program_options;
 namespace po2 = boost_util::program_options;

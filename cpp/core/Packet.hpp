@@ -23,7 +23,7 @@
  * using past versions of this file.
  */
 
-namespace common {
+namespace core {
 
 #pragma pack(push, 1)
 struct PacketHeader {
@@ -230,6 +230,6 @@ private:
   char payload_[kMaxPayloadSize];
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/Packet.inl>

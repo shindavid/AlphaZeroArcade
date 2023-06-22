@@ -17,7 +17,7 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 namespace othello {
 
 // copied from edax-reversi repo - board_next()
-inline common::GameStateTypes<GameState>::GameOutcome GameState::apply_move(common::action_index_t action) {
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_index_t action) {
   if (action == kPass) {
     std::swap(cur_player_mask_, opponent_mask_);
     cur_player_ = 1 - cur_player_;
@@ -69,7 +69,7 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
   }
 }
 
-inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(core::action_index_t last_action, const player_name_array_t* player_names) const {
   ActionMask valid_actions = get_valid_actions();
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
@@ -113,7 +113,7 @@ inline std::size_t GameState::hash() const {
 }
 
 inline void GameState::row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const {
-  common::seat_index_t current_player = get_current_player();
+  core::seat_index_t current_player = get_current_player();
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
 
@@ -218,7 +218,7 @@ inline mask_t GameState::get_some_moves(mask_t P, mask_t mask, int dir) {
 
 }  // namespace othello
 
-namespace common {
+namespace core {
 
 inline void MctsResultsDumper<othello::GameState>::dump(
     const LocalPolicyArray &action_policy, const MctsResults &results)
@@ -242,7 +242,7 @@ inline void MctsResultsDumper<othello::GameState>::dump(
   using tuple_array_t = std::array<tuple_t, othello::kNumGlobalActions>;
   tuple_array_t tuples;
   int i = 0;
-  for (common::action_index_t action : bitset_util::on_indices(valid_actions)) {
+  for (core::action_index_t action : bitset_util::on_indices(valid_actions)) {
     tuples[i] = std::make_tuple(mcts_counts.data()[action], action_policy(i), net_policy(i), action);
     i++;
   }
@@ -275,4 +275,4 @@ inline void MctsResultsDumper<othello::GameState>::dump(
 }
 
 
-}  // namespace common
+}  // namespace core

@@ -14,7 +14,7 @@
 
 namespace c4 {
 
-class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<c4::GameState> {
+class HumanTuiPlayerGenerator : public core::HumanTuiPlayerGenerator<c4::GameState> {
 public:
   struct Params {
     bool cheat_mode;
@@ -31,7 +31,7 @@ public:
     }
   };
 
-  common::AbstractPlayer<c4::GameState>* generate(common::game_thread_id_t) override;
+  core::AbstractPlayer<c4::GameState>* generate(core::game_thread_id_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 

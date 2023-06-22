@@ -48,21 +48,21 @@ public:
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
 
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
-  using MctsResults = common::MctsResults<GameState>;
+  using MctsResults = core::MctsResults<GameState>;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
 
-  common::seat_index_t get_current_player() const;
-  GameOutcome apply_move(common::action_index_t action);
+  core::seat_index_t get_current_player() const;
+  GameOutcome apply_move(core::action_index_t action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
 
   template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
-  void dump(common::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(core::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
@@ -81,13 +81,13 @@ private:
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
 };
 
-static_assert(common::GameStateConcept<c4::GameState>);
+static_assert(core::GameStateConcept<c4::GameState>);
 
-using Player = common::AbstractPlayer<GameState>;
+using Player = core::AbstractPlayer<GameState>;
 
 }  // namespace c4
 
-namespace common {
+namespace core {
 
 // template specialization
 template<> struct serializer<c4::GameState> {
@@ -96,11 +96,11 @@ template<> struct serializer<c4::GameState> {
 
 template<> struct MctsResultsDumper<c4::GameState> {
   using LocalPolicyArray = c4::GameState::LocalPolicyArray;
-  using MctsResults = common::MctsResults<c4::GameState>;
+  using MctsResults = core::MctsResults<c4::GameState>;
 
   static void dump(const LocalPolicyArray& action_policy, const MctsResults& results);
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <connect4/inl/GameState.inl>

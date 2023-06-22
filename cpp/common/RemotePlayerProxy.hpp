@@ -15,7 +15,7 @@
 #include <core/SerializerTypes.hpp>
 #include <util/SocketUtil.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * In a server-client setup, the server process will create a RemotePlayerProxy to act as a proxy for remote
@@ -25,13 +25,13 @@ template<GameStateConcept GameState>
 class RemotePlayerProxy : public AbstractPlayer<GameState> {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_thread_id_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;
-  using serializer_t = common::serializer_t<GameState>;
+  using serializer_t = core::serializer_t<GameState>;
 
   class PacketDispatcher {
   public:
@@ -80,7 +80,7 @@ private:
   const game_thread_id_t game_thread_id_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <common/inl/RemotePlayerProxy.inl>
 

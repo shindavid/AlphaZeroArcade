@@ -1,6 +1,6 @@
 #include <core/DerivedTypes.hpp>
 
-namespace common {
+namespace core {
 
 template<typename GameState>
 typename GameStateTypes<GameState>::LocalPolicyArray
@@ -55,4 +55,4 @@ math::var_bindings_map_t GameStateTypes<GameState>::get_var_bindings() {
   return bindings;
 }
 
-}  // namespace common
+}  // namespace core

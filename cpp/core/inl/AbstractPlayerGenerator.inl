@@ -5,7 +5,7 @@
 #include <core/Constants.hpp>
 #include <util/Exception.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 void AbstractPlayerGenerator<GameState>::set_name(const std::string& name) {
@@ -31,4 +31,4 @@ AbstractPlayer<GameState>* AbstractPlayerGenerator<GameState>::generate_with_nam
   return player;
 }
 
-}  // namespace common
+}  // namespace core

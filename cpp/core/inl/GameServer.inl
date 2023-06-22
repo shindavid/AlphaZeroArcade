@@ -18,7 +18,7 @@
 #include <util/SocketUtil.hpp>
 #include <util/StringUtil.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 auto GameServer<GameState>::Params::make_options_description() {
@@ -447,4 +447,4 @@ std::string GameServer<GameState>::get_results_str(const results_map_t& map) {
   return util::create_string("W%d L%d D%d [%.16g]", win, loss, draw, score);
 }
 
-}  // namespace common
+}  // namespace core

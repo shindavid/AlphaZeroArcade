@@ -15,14 +15,14 @@ inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& sta
 
 namespace c4 {
 
-inline common::seat_index_t GameState::get_current_player() const {
+inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline common::GameStateTypes<GameState>::GameOutcome GameState::apply_move(common::action_index_t action) {
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_index_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
-  common::seat_index_t current_player = get_current_player();
+  core::seat_index_t current_player = get_current_player();
 
   cur_player_mask_ ^= full_mask_;
   full_mask_ |= piece_mask;
@@ -103,7 +103,7 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
   }
 }
 
-inline void GameState::dump(common::action_index_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(core::action_index_t last_action, const player_name_array_t* player_names) const {
   if (!util::tty_mode() && last_action > -1) {
     std::string s(2*last_action+1, ' ');
     printf("%sx\n", s.c_str());
@@ -126,7 +126,7 @@ inline void GameState::dump(common::action_index_t last_action, const player_nam
 }
 
 inline void GameState::row_dump(row_t row, column_t blink_column) const {
-  common::seat_index_t current_player = get_current_player();
+  core::seat_index_t current_player = get_current_player();
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
 
@@ -166,7 +166,7 @@ inline constexpr mask_t GameState::_full_bottom_mask() {
 
 }  // namespace c4
 
-namespace common {
+namespace core {
 
 inline void MctsResultsDumper<c4::GameState>::dump(const LocalPolicyArray& action_policy, const MctsResults& results) {
   const auto& valid_actions = results.valid_actions;
@@ -194,4 +194,4 @@ inline void MctsResultsDumper<c4::GameState>::dump(const LocalPolicyArray& actio
   }
 }
 
-}  // namespace common
+}  // namespace core

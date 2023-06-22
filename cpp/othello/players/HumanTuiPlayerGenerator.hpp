@@ -14,9 +14,9 @@
 
 namespace othello {
 
-class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<othello::GameState> {
+class HumanTuiPlayerGenerator : public core::HumanTuiPlayerGenerator<othello::GameState> {
 public:
-  common::AbstractPlayer<othello::GameState>* generate(common::game_thread_id_t) override {
+  core::AbstractPlayer<othello::GameState>* generate(core::game_thread_id_t) override {
     return new HumanTuiPlayer();
   }
 };

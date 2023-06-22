@@ -8,7 +8,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 class RandomPlayerGenerator : public AbstractPlayerGenerator<GameState> {
@@ -18,4 +18,4 @@ public:
   AbstractPlayer<GameState>* generate(game_thread_id_t) override { return new RandomPlayer<GameState>(); }
 };
 
-}  // namespace common
+}  // namespace core

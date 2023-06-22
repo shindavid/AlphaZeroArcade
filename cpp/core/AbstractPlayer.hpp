@@ -8,7 +8,7 @@
 #include <core/GameStateConcept.hpp>
 #include <util/Exception.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * Base class for all players.
@@ -35,7 +35,7 @@ namespace common {
 template<GameStateConcept GameState>
 class AbstractPlayer {
 public:
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
   using player_array_t = std::array<AbstractPlayer*, GameState::kNumPlayers>;
@@ -84,6 +84,6 @@ private:
   seat_index_t my_seat_ = -1;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/AbstractPlayer.inl>

@@ -6,7 +6,7 @@
 
 #include <util/Exception.hpp>
 
-namespace common {
+namespace core {
 
 template<typename PacketT, size_t N>
 void StartGame::load_player_names(PacketT& packet, const std::array<std::string, N>& player_names) {
@@ -122,4 +122,4 @@ inline bool GeneralPacket::read_from(io::Socket* socket) {
   return true;
 }
 
-}  // namespace common
+}  // namespace core

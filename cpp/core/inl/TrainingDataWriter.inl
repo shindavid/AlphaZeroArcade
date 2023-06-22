@@ -8,7 +8,7 @@
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>* TrainingDataWriter<GameState_, Tensorizor_>::instance_ = nullptr;
@@ -229,4 +229,4 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
 }
 
-}  // namespace common
+}  // namespace core

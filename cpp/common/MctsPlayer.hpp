@@ -16,7 +16,7 @@
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * The MctsPlayer uses MCTS to select actions.
@@ -58,12 +58,12 @@ public:
     bool verbose = false;
   };
 
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
 
   using dtype = typename GameStateTypes::dtype;
-  using Mcts = common::Mcts<GameState, Tensorizor>;
+  using Mcts = core::Mcts<GameState, Tensorizor>;
   using MctsSearchParams = typename Mcts::SearchParams;
-  using MctsResults = common::MctsResults<GameState>;
+  using MctsResults = core::MctsResults<GameState>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -112,7 +112,7 @@ protected:
   int move_count_ = 0;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <common/inl/MctsPlayer.inl>
 

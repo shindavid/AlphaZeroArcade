@@ -2,11 +2,11 @@
 
 #include <core/DerivedTypes.hpp>
 
-namespace common {
+namespace core {
 
 template<typename GameState>
 struct MctsResults {
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
@@ -20,4 +20,4 @@ struct MctsResults {
   ValueArray value_prior;
 };
 
-}  // namespace common
+}  // namespace core

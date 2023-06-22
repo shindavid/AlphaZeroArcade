@@ -13,12 +13,12 @@
 
 namespace othello {
 
-class EdaxPlayerGenerator : public common::AbstractPlayerGenerator<othello::GameState> {
+class EdaxPlayerGenerator : public core::AbstractPlayerGenerator<othello::GameState> {
 public:
-  using Player = common::AbstractPlayer<othello::GameState>;
+  using Player = core::AbstractPlayer<othello::GameState>;
   std::vector<std::string> get_types() const override { return {"edax"}; }
   std::string get_description() const override { return "edax player"; }
-  Player* generate(common::game_thread_id_t) override { return new EdaxPlayer(params_); }
+  Player* generate(core::game_thread_id_t) override { return new EdaxPlayer(params_); }
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) {
     namespace po = boost::program_options;

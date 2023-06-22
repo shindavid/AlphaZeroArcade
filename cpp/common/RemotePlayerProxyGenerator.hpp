@@ -9,7 +9,7 @@
 #include <core/GameStateConcept.hpp>
 #include <util/SocketUtil.hpp>
 
-namespace common {
+namespace core {
 
 template <GameStateConcept GameState>
 class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
@@ -32,6 +32,6 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
   player_id_t player_id_ = -1;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <common/inl/RemotePlayerProxyGenerator.inl>

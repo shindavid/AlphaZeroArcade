@@ -3,7 +3,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/serializers/GeneralSerializer.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * serializer_t is a metafunction that maps a GameState to the appropriate serializer type. By default, this is
@@ -15,4 +15,4 @@ struct serializer {
 };
 template <GameStateConcept GameState> using serializer_t = typename serializer<GameState>::type;
 
-}  // namespace common
+}  // namespace core

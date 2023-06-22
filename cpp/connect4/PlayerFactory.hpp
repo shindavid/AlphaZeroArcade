@@ -12,9 +12,9 @@
 
 namespace c4 {
 
-class PlayerFactory : public common::PlayerFactory<GameState> {
+class PlayerFactory : public core::PlayerFactory<GameState> {
 public:
-  using base_t = common::PlayerFactory<GameState>;
+  using base_t = core::PlayerFactory<GameState>;
   using player_generator_creator_vec_t = base_t::player_generator_creator_vec_t;
 
   PlayerFactory() : base_t(make_generators()) {}
@@ -22,12 +22,12 @@ public:
 private:
   static player_generator_creator_vec_t make_generators() {
     return {
-      new common::PlayerGeneratorCreator<c4::HumanTuiPlayerGenerator>(),
-      new common::PlayerGeneratorCreator<c4::CompetitiveMctsPlayerGenerator>(),
-      new common::PlayerGeneratorCreator<c4::TrainingMctsPlayerGenerator>(),
-      new common::PlayerGeneratorCreator<c4::PerfectPlayerGenerator>(),
-      new common::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
-      new common::PlayerGeneratorCreator<common::RemotePlayerProxyGenerator<GameState>>()
+      new core::PlayerGeneratorCreator<c4::HumanTuiPlayerGenerator>(),
+      new core::PlayerGeneratorCreator<c4::CompetitiveMctsPlayerGenerator>(),
+      new core::PlayerGeneratorCreator<c4::TrainingMctsPlayerGenerator>(),
+      new core::PlayerGeneratorCreator<c4::PerfectPlayerGenerator>(),
+      new core::PlayerGeneratorCreator<core::RandomPlayerGenerator<GameState>>(),
+      new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()
     };
   }
 };

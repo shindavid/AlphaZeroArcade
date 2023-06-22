@@ -4,7 +4,7 @@
 
 #include <core/Packet.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 typename RemotePlayerProxy<GameState>::PacketDispatcher::dispatcher_map_t
@@ -169,4 +169,4 @@ void RemotePlayerProxy<GameState>::end_game(const GameState& state, const GameOu
   packet.send_to(socket_);
 }
 
-}  // namespace common
+}  // namespace core

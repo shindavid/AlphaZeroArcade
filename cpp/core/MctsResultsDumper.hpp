@@ -6,20 +6,20 @@
 #include <core/GameStateConcept.hpp>
 #include <core/MctsResults.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * This class can be template-specialized to dump the results of MCTS.
  */
 template<GameStateConcept GameState>
 struct MctsResultsDumper {
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using MctsResults = common::MctsResults<GameState>;
+  using MctsResults = core::MctsResults<GameState>;
 
   static void dump(const LocalPolicyArray& action_policy, const MctsResults& results) {
     printf("TODO: Specialize MctsResultsDumper<%s>\n", util::get_typename<GameState>().c_str());
   }
 };
 
-}  // namespace common
+}  // namespace core

@@ -10,7 +10,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * All Tensorizor classes must satisfy the TensorizorConcept concept.
@@ -54,4 +54,4 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
   { tensorizor.get_symmetry(symmetry_index_t{}) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
 };
 
-}  // namespace common
+}  // namespace core

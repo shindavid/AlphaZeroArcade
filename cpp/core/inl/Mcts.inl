@@ -15,7 +15,7 @@
 #include <util/StringUtil.hpp>
 #include <util/ThreadSafePrinter.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int Mcts<GameState, Tensorizor>::next_instance_id_ = 0;
@@ -1738,4 +1738,4 @@ void Mcts<GameState, Tensorizor>::init_profiling_dir(const std::string& profilin
   bf::create_directories(path);
 }
 
-}  // namespace common
+}  // namespace core

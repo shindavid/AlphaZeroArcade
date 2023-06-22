@@ -2,7 +2,7 @@
 
 #include <core/AbstractSymmetryTransform.hpp>
 
-namespace common {
+namespace core {
 
 template<typename GameState, typename Tensorizor>
 class IdentityTransform : public AbstractSymmetryTransform<GameState, Tensorizor> {

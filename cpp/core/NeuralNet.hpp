@@ -5,7 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <torch/script.h>
 
-namespace common {
+namespace core {
 
 /*
  * A thin wrapper around a PyTorch model.
@@ -21,6 +21,6 @@ private:
   mutable torch::jit::script::Module module_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/NeuralNet.inl>

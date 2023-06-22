@@ -13,8 +13,8 @@
  * comments in cpp/othello/Tensorizor.hpp
  */
 
-using GameStateTypes = common::GameStateTypes<othello::GameState>;
-using TensorizorTypes = common::TensorizorTypes<othello::Tensorizor>;
+using GameStateTypes = core::GameStateTypes<othello::GameState>;
+using TensorizorTypes = core::TensorizorTypes<othello::Tensorizor>;
 using PolicyTensor = GameStateTypes::PolicyTensor;
 using InputTensor = Eigen::TensorFixedSize<int, TensorizorTypes::InputShape, Eigen::RowMajor>;
 using InputScalar = InputTensor::Scalar;

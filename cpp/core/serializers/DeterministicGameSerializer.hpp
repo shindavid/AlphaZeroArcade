@@ -3,7 +3,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/serializers/GeneralSerializer.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * The DeterministicGameSerializer is identical to the GeneralSerializer, except that it assumes that the underlying
@@ -14,7 +14,7 @@ namespace common {
 template <GameStateConcept GameState>
 class DeterministicGameSerializer : public GeneralSerializer<GameState> {
 public:
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
@@ -22,6 +22,6 @@ public:
   void deserialize_state_change(const char* buf, GameState* state, seat_index_t* seat, action_index_t* action) const override;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/serializers/inl/DeterministicGameSerializer.inl>

@@ -31,12 +31,12 @@ public:
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
   template<typename Scalar> using InputTensorX = Eigen::TensorFixedSize<Scalar, InputShape, Eigen::RowMajor>;
 
-  using GameStateTypes = common::GameStateTypes<GameState>;
-  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
+  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using PolicyTensor = GameStateTypes::PolicyTensor;
-  using SymmetryTransform = common::AbstractSymmetryTransform<GameState, Tensorizor>;
-  using IdentityTransform = common::IdentityTransform<GameState, Tensorizor>;
+  using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
+  using IdentityTransform = core::IdentityTransform<GameState, Tensorizor>;
   using transform_array_t = std::array<SymmetryTransform*, kMaxNumSymmetries>;
 
   using InputScalar = typename InputTensor::Scalar;
@@ -101,11 +101,11 @@ public:
   };
 
   void clear() {}
-  void receive_state_change(const GameState& state, common::action_index_t action_index) {}
+  void receive_state_change(const GameState& state, core::action_index_t action_index) {}
   void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
   SymmetryIndexSet get_symmetry_indices(const GameState&) const;
-  SymmetryTransform* get_symmetry(common::symmetry_index_t index) const;
+  SymmetryTransform* get_symmetry(core::symmetry_index_t index) const;
 
 private:
   static transform_array_t transforms();
@@ -126,6 +126,6 @@ private:
 
 }  // namespace othello
 
-static_assert(common::TensorizorConcept<othello::Tensorizor, othello::GameState>);
+static_assert(core::TensorizorConcept<othello::Tensorizor, othello::GameState>);
 
 #include <othello/inl/Tensorizor.inl>

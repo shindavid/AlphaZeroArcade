@@ -6,7 +6,7 @@
 #include <util/Exception.hpp>
 #include <util/StringUtil.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 auto PlayerFactory<GameState>::Params::make_options_description() {
@@ -191,4 +191,4 @@ PlayerFactory<GameState>::parse_helper(
   throw util::CleanException("Unknown type in --player \"%s\"", player_str.c_str());
 }
 
-}  // namespace common
+}  // namespace core

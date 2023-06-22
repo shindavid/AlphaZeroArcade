@@ -9,7 +9,7 @@
 
 #include <vector>
 
-namespace common {
+namespace core {
 
 /*
  * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
@@ -27,12 +27,12 @@ public:
 
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
-  using GameStateTypes = common::GameStateTypes<GameState>;
-  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
+  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using dtype = typename GameStateTypes::dtype;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
+  using TrainingDataWriter = core::TrainingDataWriter<GameState, Tensorizor>;
   using TrainingDataWriterParams = typename TrainingDataWriter::Params;
   using InputTensor = typename TensorizorTypes::InputTensor;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
@@ -59,7 +59,7 @@ protected:
   TrainingDataWriter::GameData_sptr game_data_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <common/inl/DataExportingMctsPlayer.inl>
 

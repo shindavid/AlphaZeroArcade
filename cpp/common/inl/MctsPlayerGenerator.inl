@@ -1,6 +1,6 @@
 #include <common/MctsPlayerGenerator.hpp>
 
-namespace common {
+namespace core {
 
 // MctsPlayerGeneratorBase
 
@@ -80,4 +80,4 @@ void TrainingMctsPlayerGenerator<GameState, Tensorizor>::parse_args(const std::v
   this->parse_args_helper(make_options_description(), args);
 }
 
-}  // namespace common
+}  // namespace core

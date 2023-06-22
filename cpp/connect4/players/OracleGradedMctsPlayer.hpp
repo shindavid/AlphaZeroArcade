@@ -44,10 +44,10 @@ protected:
   mistake_tracker_t overall_tracker_;
 };
 
-class OracleGradedMctsPlayer : public common::MctsPlayer<GameState, Tensorizor> {
+class OracleGradedMctsPlayer : public core::MctsPlayer<GameState, Tensorizor> {
 public:
-  using base_t = common::MctsPlayer<GameState, Tensorizor>;
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using base_t = core::MctsPlayer<GameState, Tensorizor>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
   template<typename... BaseArgs>
@@ -55,8 +55,8 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      common::seat_index_t, const GameState&, common::action_index_t) override;
-  common::action_index_t get_action(const GameState&, const ActionMask&) override;
+      core::seat_index_t, const GameState&, core::action_index_t) override;
+  core::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 protected:
   void update_mistake_stats(const PerfectOracle::QueryResult& result, const PolicyArray& net_policy,

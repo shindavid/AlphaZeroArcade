@@ -9,7 +9,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * All GameState classes must satisfy the GameStateConcept concept.
@@ -79,4 +79,4 @@ concept GameStateConcept = requires(S state) {
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
 };
 
-}  // namespace common
+}  // namespace core

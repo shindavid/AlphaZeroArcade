@@ -5,7 +5,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * A Serializer is responsible for the serialization and deserialization of GameState changes, actions, and outcomes.
@@ -18,7 +18,7 @@ namespace common {
 template <GameStateConcept GameState>
 class AbstractSerializer {
 public:
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
@@ -39,4 +39,4 @@ public:
   virtual void deserialize_game_end(const char* buffer, GameOutcome* outcome) const = 0;
 };
 
-}  // namespace common
+}  // namespace core

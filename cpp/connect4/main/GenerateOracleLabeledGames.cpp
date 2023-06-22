@@ -24,21 +24,21 @@
 
 namespace bf = boost::filesystem;
 
-using seat_index_t = common::seat_index_t;
-using action_index_t = common::action_index_t;
+using seat_index_t = core::seat_index_t;
+using action_index_t = core::action_index_t;
 
 using GameState = c4::GameState;
 using Tensorizor = c4::Tensorizor;
-using Player = common::AbstractPlayer<GameState>;
-using TrainingDataWriter = common::TrainingDataWriter<GameState, Tensorizor>;
-using ParallelGameRunner = common::ParallelGameRunner<GameState>;
+using Player = core::AbstractPlayer<GameState>;
+using TrainingDataWriter = core::TrainingDataWriter<GameState, Tensorizor>;
+using ParallelGameRunner = core::ParallelGameRunner<GameState>;
 using player_array_t = Player::player_array_t;
 
-using GameStateTypes = common::GameStateTypes<GameState>;
+using GameStateTypes = core::GameStateTypes<GameState>;
 using GameOutcome = GameStateTypes::GameOutcome;
 using ActionMask = GameStateTypes::ActionMask;
 
-using RandomPlayer = common::RandomPlayer<GameState>;
+using RandomPlayer = core::RandomPlayer<GameState>;
 
 class OracleSupervisor {
 public:
@@ -46,7 +46,7 @@ public:
   : oracle_(perfect_play_params)
   , writer_(writer) {}
 
-  TrainingDataWriter::GameData_sptr start_game(common::game_id_t game_id) {
+  TrainingDataWriter::GameData_sptr start_game(core::game_id_t game_id) {
     tensorizor_.clear();
     move_history_.reset();
     return writer_->get_data(game_id);
@@ -117,7 +117,7 @@ public:
       const GameOutcome& outcome) override
   {
     BasePlayer::receive_state_change(p, state, action, outcome);
-    if (common::is_terminal_outcome(outcome)) {
+    if (core::is_terminal_outcome(outcome)) {
       supervisor_->close(game_data_);
     } else if (p == BasePlayer::get_my_seat()) {
       supervisor_->receive_move(state, action);

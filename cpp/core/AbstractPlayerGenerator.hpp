@@ -10,7 +10,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * An AbstractPlayerGenerator is a class that can create AbstractPlayer instances via its generate() method.
@@ -137,6 +137,6 @@ public:
   GeneratorT* create() const override { return new GeneratorT(); }
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/AbstractPlayerGenerator.inl>

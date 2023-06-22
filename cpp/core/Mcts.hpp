@@ -29,15 +29,15 @@
 #include <util/Math.hpp>
 #include <util/Profiler.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * TODO: move the various inner-classes of Mcts into separate files as standalone-classes. Proposed class-renaming:
  *
- * common::Mcts<GameState, Tensorizor> -> mcts::Tree<GameState, Tensorizor>
- * common::Mcts<GameState, Tensorizor>::Params -> mcts::Params<GameState, Tensorizor>
- * common::Mcts<GameState, Tensorizor>::SearchThread -> mcts::SearchThread<GameState, Tensorizor>
- * common::Mcts<GameState, Tensorizor>::Node -> mcts::Node<GameState, Tensorizor>
+ * core::Mcts<GameState, Tensorizor> -> mcts::Tree<GameState, Tensorizor>
+ * core::Mcts<GameState, Tensorizor>::Params -> mcts::Params<GameState, Tensorizor>
+ * core::Mcts<GameState, Tensorizor>::SearchThread -> mcts::SearchThread<GameState, Tensorizor>
+ * core::Mcts<GameState, Tensorizor>::Node -> mcts::Node<GameState, Tensorizor>
  *
  * etc.
  *
@@ -49,8 +49,8 @@ private:
   class SearchThread;
 
 public:
-  using TensorizorTypes = common::TensorizorTypes<Tensorizor>;
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
 
   static constexpr bool kEnableProfiling = IS_MACRO_ENABLED(PROFILE_MCTS);
   static constexpr bool kEnableVerboseProfiling = IS_MACRO_ENABLED(PROFILE_MCTS_VERBOSE);
@@ -63,7 +63,7 @@ public:
   using dtype = typename GameStateTypes::dtype;
   using child_index_t = int;
 
-  using MctsResults = common::MctsResults<GameState>;
+  using MctsResults = core::MctsResults<GameState>;
   using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -666,7 +666,7 @@ private:
     };
     batch_data_t batch_data_;
 
-    common::NeuralNet::input_vec_t input_vec_;
+    core::NeuralNet::input_vec_t input_vec_;
     torch::Tensor torch_input_gpu_;
     torch::Tensor torch_policy_;
     torch::Tensor torch_value_;
@@ -797,6 +797,6 @@ private:
   bool connected_ = false;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/Mcts.inl>

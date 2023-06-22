@@ -3,7 +3,7 @@
 #include <core/AbstractSerializer.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * The GeneralSerializer relies on memcpy to serialize and deserialize. This is simple and does the job. However,
@@ -19,7 +19,7 @@ namespace common {
 template <GameStateConcept GameState>
 class GeneralSerializer : public AbstractSerializer<GameState> {
 public:
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
@@ -36,6 +36,6 @@ public:
   void deserialize_game_end(const char* buf, GameOutcome* outcome) const override;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/serializers/inl/GeneralSerializer.inl>

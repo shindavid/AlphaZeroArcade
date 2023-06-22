@@ -19,7 +19,7 @@
  *
  * See cpp/connect4/PlayerFactory.hpp for an example of how to use this class.
  */
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState_>
 class PlayerFactory {
@@ -27,7 +27,7 @@ public:
   using GameState = GameState_;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
-  using PlayerGeneratorCreatorBase = common::PlayerGeneratorCreatorBase<GameState>;
+  using PlayerGeneratorCreatorBase = core::PlayerGeneratorCreatorBase<GameState>;
 
   struct player_generator_seat_t {
     PlayerGenerator* generator = nullptr;
@@ -68,6 +68,6 @@ private:
   std::map<std::string, std::vector<std::string>> name_map_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/PlayerFactory.inl>

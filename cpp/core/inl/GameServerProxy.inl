@@ -17,7 +17,7 @@
 #include <util/Exception.hpp>
 #include <util/ThreadSafePrinter.hpp>
 
-namespace common {
+namespace core {
 
 template <GameStateConcept GameState>
 auto GameServerProxy<GameState>::Params::make_options_description() {
@@ -321,4 +321,4 @@ void GameServerProxy<GameState>::handle_end_game(const GeneralPacket& packet) {
   thread_vec_[payload.game_thread_id][payload.player_id]->handle_end_game(payload);
 }
 
-}  // namespace common
+}  // namespace core

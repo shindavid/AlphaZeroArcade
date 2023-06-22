@@ -4,7 +4,7 @@
 
 #include <util/BitSet.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 template<typename... BaseArgs>
@@ -101,4 +101,4 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   }
 }
 
-}  // namespace common
+}  // namespace core

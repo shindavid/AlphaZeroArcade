@@ -11,9 +11,9 @@
 
 namespace othello {
 
-class PlayerFactory : public common::PlayerFactory<GameState> {
+class PlayerFactory : public core::PlayerFactory<GameState> {
 public:
-  using base_t = common::PlayerFactory<GameState>;
+  using base_t = core::PlayerFactory<GameState>;
   using player_generator_creator_vec_t = base_t::player_generator_creator_vec_t;
 
   PlayerFactory() : base_t(make_generators()) {}
@@ -21,12 +21,12 @@ public:
 private:
   static player_generator_creator_vec_t make_generators() {
     return {
-        new common::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
-        new common::PlayerGeneratorCreator<othello::EdaxPlayerGenerator>(),
-      new common::PlayerGeneratorCreator<common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
-      new common::PlayerGeneratorCreator<common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
-      new common::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
-      new common::PlayerGeneratorCreator<common::RemotePlayerProxyGenerator<GameState>>()
+        new core::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
+        new core::PlayerGeneratorCreator<othello::EdaxPlayerGenerator>(),
+      new core::PlayerGeneratorCreator<core::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
+      new core::PlayerGeneratorCreator<core::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
+      new core::PlayerGeneratorCreator<core::RandomPlayerGenerator<GameState>>(),
+      new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()
     };
   }
 };

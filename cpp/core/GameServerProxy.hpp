@@ -13,7 +13,7 @@
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
 
-namespace common {
+namespace core {
 
 template <GameStateConcept GameState>
 class GameServerProxy {
@@ -29,7 +29,7 @@ public:
   using player_name_array_t = typename Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
-  using serializer_t = common::serializer_t<GameState>;
+  using serializer_t = core::serializer_t<GameState>;
 
   struct seat_generator_t {
     seat_index_t seat;
@@ -126,6 +126,6 @@ private:
   thread_vec_t thread_vec_;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/GameServerProxy.inl>

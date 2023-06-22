@@ -167,7 +167,7 @@ inline Tensorizor::SymmetryIndexSet Tensorizor::get_symmetry_indices(const GameS
   return set;
 }
 
-inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(common::symmetry_index_t index) const {
+inline Tensorizor::SymmetryTransform* Tensorizor::get_symmetry(core::symmetry_index_t index) const {
   return *(transforms().begin() + index);
 }
 

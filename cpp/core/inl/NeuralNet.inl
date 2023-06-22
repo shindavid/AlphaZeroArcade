@@ -1,6 +1,6 @@
 #include <core/NeuralNet.hpp>
 
-namespace common {
+namespace core {
 
 inline NeuralNet::NeuralNet(const boost::filesystem::path& path, const std::string& cuda_device)
     : module_(torch::jit::load(path.c_str()))
@@ -14,4 +14,4 @@ inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy, 
   value.copy_(outputs->elements()[1].toTensor().detach());
 }
 
-}  // namespace common
+}  // namespace core

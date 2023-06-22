@@ -6,19 +6,19 @@
 
 namespace c4 {
 
-class HumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
+class HumanTuiPlayer : public core::HumanTuiPlayer<GameState> {
 public:
-  using base_t = common::HumanTuiPlayer<GameState>;
+  using base_t = core::HumanTuiPlayer<GameState>;
 
   HumanTuiPlayer(bool cheat_mode);
   ~HumanTuiPlayer();
 
   void start_game() override;
   void receive_state_change(
-      common::seat_index_t, const GameState&, common::action_index_t) override;
+      core::seat_index_t, const GameState&, core::action_index_t) override;
 
 private:
-  common::action_index_t prompt_for_action(const GameState&, const ActionMask&) override;
+  core::action_index_t prompt_for_action(const GameState&, const ActionMask&) override;
   void print_state(const GameState&, bool terminal) override;
 
   PerfectOracle* oracle_ = nullptr;

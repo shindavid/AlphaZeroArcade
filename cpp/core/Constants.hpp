@@ -1,6 +1,6 @@
 #pragma once
 
-namespace common {
+namespace core {
 
 const int kMaxNameLength = 32;  // excluding null terminator
 
@@ -15,4 +15,4 @@ const int kMaxNameLength = 32;  // excluding null terminator
  */
 const int kSerializationLimit = 1024;
 
-}  // namespace common
+}  // namespace core

@@ -13,19 +13,19 @@
 #include <common/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState>
 class GameServer {
 public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
 
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
-  using RemotePlayerProxyGenerator = common::RemotePlayerProxyGenerator<GameState>;
+  using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<GameState>;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
   using results_map_t = std::map<float, int>;
@@ -170,6 +170,6 @@ private:
   std::thread* kill_thread_ = nullptr;
 };
 
-}  // namespace common
+}  // namespace core
 
 #include <core/inl/GameServer.inl>

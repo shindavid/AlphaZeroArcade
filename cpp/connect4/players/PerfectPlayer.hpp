@@ -17,7 +17,7 @@ namespace c4 {
 
 class PerfectOracle {
 public:
-  using GameStateTypes = common::GameStateTypes<c4::GameState>;
+  using GameStateTypes = core::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
@@ -27,7 +27,7 @@ public:
     MoveHistory(const MoveHistory&);
 
     void reset();
-    void append(common::action_index_t move);
+    void append(core::action_index_t move);
     std::string to_string() const;
     int length() const { return char_pointer_ - chars_; }
 
@@ -111,8 +111,8 @@ public:
   PerfectPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(common::seat_index_t, const GameState&, common::action_index_t) override;
-  common::action_index_t get_action(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t) override;
+  core::action_index_t get_action(const GameState&, const ActionMask&) override;
 
 private:
   const Params params_;

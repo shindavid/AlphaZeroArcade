@@ -14,7 +14,7 @@
 #include <util/Math.hpp>
 #include <util/TorchUtil.hpp>
 
-namespace common {
+namespace core {
 
 /*
  * Represents the outcome of a game, as a length-t array of non-negative floats, where t is the number of players in
@@ -41,7 +41,7 @@ struct GameStateTypes {
   static constexpr int kNumGlobalActions = PolicyShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using GameOutcome = common::GameOutcome<kNumPlayers>;
+  using GameOutcome = core::GameOutcome<kNumPlayers>;
 
   using PolicyTensor = Eigen::TensorFixedSize<dtype, PolicyShape, Eigen::RowMajor>;
   using ValueTensor = Eigen::TensorFixedSize<dtype, ValueShape, Eigen::RowMajor>;
@@ -94,11 +94,11 @@ struct StateEvaluationKey {
   }
 };
 
-}  // namespace common
+}  // namespace core
 
 template <typename GameState>
-struct std::hash<common::StateEvaluationKey<GameState>> {
-  std::size_t operator()(const common::StateEvaluationKey<GameState> ssi) const {
+struct std::hash<core::StateEvaluationKey<GameState>> {
+  std::size_t operator()(const core::StateEvaluationKey<GameState> ssi) const {
     return util::tuple_hash(std::make_tuple(ssi.state, ssi.sym_index));
   }
 };

@@ -6,7 +6,7 @@
 #include <core/DerivedTypes.hpp>
 #include <util/ScreenUtil.hpp>
 
-namespace common {
+namespace core {
 
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::start_game() {
@@ -20,13 +20,13 @@ inline void HumanTuiPlayer<GameState_>::start_game() {
 
 template<GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::receive_state_change(
-    common::seat_index_t, const GameState&, common::action_index_t action)
+    core::seat_index_t, const GameState&, core::action_index_t action)
 {
   last_action_ = action;
 }
 
 template<GameStateConcept GameState_>
-inline common::action_index_t HumanTuiPlayer<GameState_>::get_action(
+inline core::action_index_t HumanTuiPlayer<GameState_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   util::ScreenClearer::clear_once();
@@ -68,4 +68,4 @@ inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state, bool
   state.dump(last_action_, &this->get_player_names());
 }
 
-}  // namespace common
+}  // namespace core
