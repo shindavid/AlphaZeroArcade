@@ -9,12 +9,12 @@
 
 #include <vector>
 
-namespace core {
+namespace common {
 
 /*
  * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
  */
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
 public:
   /*
@@ -47,8 +47,8 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      seat_index_t seat, const GameState& state, action_index_t action) override;
-  action_index_t get_action(const GameState&, const ActionMask&) override;
+      core::seat_index_t seat, const GameState& state, core::action_index_t action) override;
+  core::action_index_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
 protected:
@@ -59,7 +59,7 @@ protected:
   TrainingDataWriter::GameData_sptr game_data_;
 };
 
-}  // namespace core
+}  // namespace common
 
 #include <common/inl/DataExportingMctsPlayer.inl>
 

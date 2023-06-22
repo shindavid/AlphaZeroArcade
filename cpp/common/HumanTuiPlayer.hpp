@@ -5,15 +5,15 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace core {
+namespace common {
 
 /*
  * Abstract class. Derived classes must implement the prompt_for_action() method.
  */
-template<GameStateConcept GameState_>
-class HumanTuiPlayer : public AbstractPlayer<GameState_> {
+template<core::GameStateConcept GameState_>
+class HumanTuiPlayer : public core::AbstractPlayer<GameState_> {
 public:
-  using base_t = AbstractPlayer<GameState_>;
+  using base_t = core::AbstractPlayer<GameState_>;
   using GameState = GameState_;
   using GameStateTypes = core::GameStateTypes<GameState>;
 
@@ -36,7 +36,7 @@ protected:
    *
    * Derived classes must override this method.
    */
-  virtual action_index_t prompt_for_action(const GameState&, const ActionMask&) = 0;
+  virtual core::action_index_t prompt_for_action(const GameState&, const ActionMask&) = 0;
 
   /*
    * By default, dispatches to GameState::dump(). Can be overridden by derived classes.
@@ -46,7 +46,7 @@ protected:
   core::action_index_t last_action_ = -1;
 };
 
-}  // namespace core
+}  // namespace common
 
 #include <common/inl/HumanTuiPlayer.inl>
 

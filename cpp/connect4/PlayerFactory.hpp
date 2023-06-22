@@ -1,9 +1,9 @@
 #pragma once
 
 #include <core/PlayerFactory.hpp>
+#include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <common/MctsPlayerGenerator.hpp>
 #include <common/RandomPlayerGenerator.hpp>
-#include <common/RemotePlayerProxyGenerator.hpp>
 #include <connect4/GameState.hpp>
 #include <connect4/Tensorizor.hpp>
 #include <connect4/players/HumanTuiPlayerGenerator.hpp>
@@ -26,7 +26,7 @@ private:
       new core::PlayerGeneratorCreator<c4::CompetitiveMctsPlayerGenerator>(),
       new core::PlayerGeneratorCreator<c4::TrainingMctsPlayerGenerator>(),
       new core::PlayerGeneratorCreator<c4::PerfectPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<core::RandomPlayerGenerator<GameState>>(),
+      new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
       new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()
     };
   }

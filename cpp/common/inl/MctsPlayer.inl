@@ -15,9 +15,9 @@
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
-namespace core {
+namespace common {
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
 {
   if (type == kCompetitive) {
@@ -36,7 +36,7 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
 }
 
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
   if (full_pct == 0) {
     util::ParamDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
@@ -48,7 +48,7 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
   }
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
 {
   namespace po = boost::program_options;
@@ -70,7 +70,7 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
       ;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mcts* mcts)
 : params_(params)
 , mcts_(mcts)
@@ -87,7 +87,7 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
   }
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 template<typename... Ts>
 MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
 : MctsPlayer(params, new Mcts(std::forward<Ts>(mcts_params_args)...))
@@ -95,7 +95,7 @@ MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Ts&&... mc
   owns_mcts_ = true;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
@@ -103,7 +103,7 @@ inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
   if (owns_mcts_) delete mcts_;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 {
   move_count_ = 0;
@@ -114,9 +114,9 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
   }
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    seat_index_t seat, const GameState& state, action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_index_t action)
 {
   move_count_++;
   move_temperature_.step();
@@ -135,8 +135,8 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
   }
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   SearchMode search_mode = choose_search_mode();
@@ -144,28 +144,28 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
   return get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
   mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchMode search_mode) const {
   return mcts_->search(tensorizor_, state, search_params_[search_mode]);
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline typename MctsPlayer<GameState_, Tensorizor_>::SearchMode
 MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
   bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
   return use_raw_policy ? kRawPolicy : get_random_search_mode();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     SearchMode search_mode, const MctsResults* mcts_results, const ActionMask& valid_actions) const
 {
   PolicyTensor policy_tensor;
@@ -188,7 +188,7 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
   if (policy.sum() == 0) {
     // This happens if eliminations are enabled and if MCTS proves that the position is losing.
     // In this case we just choose a random valid action.
-    for (action_index_t action : bitset_util::on_indices(valid_actions)) {
+    for (core::action_index_t action : bitset_util::on_indices(valid_actions)) {
       policy[action] = 1;
     }
   }
@@ -199,19 +199,19 @@ inline action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
+  core::action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
   assert(valid_actions[action]);
   return action;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 MctsPlayer<GameState_, Tensorizor_>::SearchMode
 MctsPlayer<GameState_, Tensorizor_>::get_random_search_mode() const {
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? kFull : kFast;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
@@ -223,4 +223,4 @@ inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   std::cout << std::endl;
 }
 
-}  // namespace core
+}  // namespace common

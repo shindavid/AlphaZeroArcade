@@ -14,7 +14,7 @@
 
 namespace c4 {
 
-class HumanTuiPlayerGenerator : public core::HumanTuiPlayerGenerator<c4::GameState> {
+class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<c4::GameState> {
 public:
   struct Params {
     bool cheat_mode;

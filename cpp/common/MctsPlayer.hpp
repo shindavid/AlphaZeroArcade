@@ -16,7 +16,7 @@
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
 
-namespace core {
+namespace common {
 
 /*
  * The MctsPlayer uses MCTS to select actions.
@@ -24,10 +24,10 @@ namespace core {
  * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they can share the same
  * MCTS tree, as an optimization. This implementation supports this optimization.
  */
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-class MctsPlayer : public AbstractPlayer<GameState_> {
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+class MctsPlayer : public core::AbstractPlayer<GameState_> {
 public:
-  using base_t = AbstractPlayer<GameState_>;
+  using base_t = core::AbstractPlayer<GameState_>;
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
 
@@ -80,15 +80,15 @@ public:
 
   Mcts* get_mcts() { return mcts_; }
   void start_game() override;
-  void receive_state_change(seat_index_t, const GameState&, action_index_t) override;
-  action_index_t get_action(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t) override;
+  core::action_index_t get_action(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   void set_facing_human_tui_player() override { facing_human_tui_player_ = true; }  // affects printing
 
 protected:
   const MctsResults* mcts_search(const GameState& state, SearchMode search_mode) const;
   SearchMode choose_search_mode() const;
-  action_index_t get_action_helper(SearchMode, const MctsResults*, const ActionMask& valid_actions) const;
+  core::action_index_t get_action_helper(SearchMode, const MctsResults*, const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     LocalPolicyArray action_policy;
@@ -112,7 +112,7 @@ protected:
   int move_count_ = 0;
 };
 
-}  // namespace core
+}  // namespace common
 
 #include <common/inl/MctsPlayer.inl>
 

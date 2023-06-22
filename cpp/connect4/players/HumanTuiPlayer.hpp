@@ -6,9 +6,9 @@
 
 namespace c4 {
 
-class HumanTuiPlayer : public core::HumanTuiPlayer<GameState> {
+class HumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
 public:
-  using base_t = core::HumanTuiPlayer<GameState>;
+  using base_t = common::HumanTuiPlayer<GameState>;
 
   HumanTuiPlayer(bool cheat_mode);
   ~HumanTuiPlayer();

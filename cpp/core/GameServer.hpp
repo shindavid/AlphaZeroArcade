@@ -10,7 +10,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <common/RemotePlayerProxyGenerator.hpp>
+#include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
 
 namespace core {

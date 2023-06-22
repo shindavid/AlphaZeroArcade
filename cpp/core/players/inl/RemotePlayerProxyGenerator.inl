@@ -1,4 +1,4 @@
-#include <common/RemotePlayerProxyGenerator.hpp>
+#include <core/players/RemotePlayerProxyGenerator.hpp>
 
 #include <core/Packet.hpp>
 #include <util/Exception.hpp>
@@ -17,7 +17,8 @@ void RemotePlayerProxyGenerator<GameState>::initialize(
 }
 
 template <GameStateConcept GameState>
-AbstractPlayer<GameState>* RemotePlayerProxyGenerator<GameState>::generate(game_thread_id_t game_thread_id) {
+AbstractPlayer<GameState>* RemotePlayerProxyGenerator<GameState>::generate(game_thread_id_t game_thread_id)
+{
   util::clean_assert(initialized(), "RemotePlayerProxyGenerator::generate() called before initialized");
   return new RemotePlayerProxy<GameState>(socket_, player_id_, game_thread_id);
 }
@@ -32,6 +33,5 @@ int RemotePlayerProxyGenerator<GameState>::max_simultaneous_games() const {
   util::clean_assert(max_simultaneous_games_ >= 0, "RemotePlayerProxyGenerator::%s() called before initialized", __func__);
   return max_simultaneous_games_;
 }
-
 
 }  // namespace core

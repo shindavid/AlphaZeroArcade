@@ -82,5 +82,5 @@ private:
 
 }  // namespace core
 
-#include <common/inl/RemotePlayerProxy.inl>
+#include <core/players/inl/RemotePlayerProxy.inl>
 

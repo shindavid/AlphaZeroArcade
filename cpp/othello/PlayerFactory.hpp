@@ -1,9 +1,9 @@
 #pragma once
 
 #include <core/PlayerFactory.hpp>
+#include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <common/MctsPlayerGenerator.hpp>
 #include <common/RandomPlayerGenerator.hpp>
-#include <common/RemotePlayerProxyGenerator.hpp>
 #include <othello/GameState.hpp>
 #include <othello/Tensorizor.hpp>
 #include <othello/players/EdaxPlayerGenerator.hpp>
@@ -23,9 +23,9 @@ private:
     return {
         new core::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
         new core::PlayerGeneratorCreator<othello::EdaxPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<core::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
-      new core::PlayerGeneratorCreator<core::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
-      new core::PlayerGeneratorCreator<core::RandomPlayerGenerator<GameState>>(),
+      new core::PlayerGeneratorCreator<common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
+      new core::PlayerGeneratorCreator<common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
+      new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
       new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()
     };
   }

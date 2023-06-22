@@ -7,16 +7,16 @@
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace core {
+namespace common {
 
-template<GameStateConcept GameState>
-class HumanTuiPlayerGenerator : public AbstractPlayerGenerator<GameState> {
+template<core::GameStateConcept GameState>
+class HumanTuiPlayerGenerator : public core::AbstractPlayerGenerator<GameState> {
 public:
   virtual ~HumanTuiPlayerGenerator() = default;
   std::vector<std::string> get_types() const override { return {"TUI"}; }
   std::string get_description() const override { return "Human player"; }
-  virtual AbstractPlayer<GameState>* generate(game_thread_id_t) = 0;
+  virtual core::AbstractPlayer<GameState>* generate(core::game_thread_id_t) = 0;
   int max_simultaneous_games() const override { return 1; }
 };
 
-}  // namespace core
+}  // namespace common

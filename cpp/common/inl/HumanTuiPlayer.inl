@@ -6,9 +6,9 @@
 #include <core/DerivedTypes.hpp>
 #include <util/ScreenUtil.hpp>
 
-namespace core {
+namespace common {
 
-template<GameStateConcept GameState_>
+template<core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::start_game() {
   last_action_ = -1;
   std::cout << "Press any key to start game" << std::endl;
@@ -18,14 +18,14 @@ inline void HumanTuiPlayer<GameState_>::start_game() {
   util::clearscreen();
 }
 
-template<GameStateConcept GameState_>
+template<core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::receive_state_change(
     core::seat_index_t, const GameState&, core::action_index_t action)
 {
   last_action_ = action;
 }
 
-template<GameStateConcept GameState_>
+template<core::GameStateConcept GameState_>
 inline core::action_index_t HumanTuiPlayer<GameState_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
@@ -48,7 +48,7 @@ inline core::action_index_t HumanTuiPlayer<GameState_>::get_action(
   return my_action;
 }
 
-template<GameStateConcept GameState_>
+template<core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::end_game(const GameState& state, const GameOutcome& outcome) {
   util::ScreenClearer::clear_once();
   print_state(state, true);
@@ -63,9 +63,9 @@ inline void HumanTuiPlayer<GameState_>::end_game(const GameState& state, const G
   }
 }
 
-template<GameStateConcept GameState_>
+template<core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state, bool terminal) {
   state.dump(last_action_, &this->get_player_names());
 }
 
-}  // namespace core
+}  // namespace common

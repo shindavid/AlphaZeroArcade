@@ -44,9 +44,9 @@ protected:
   mistake_tracker_t overall_tracker_;
 };
 
-class OracleGradedMctsPlayer : public core::MctsPlayer<GameState, Tensorizor> {
+class OracleGradedMctsPlayer : public common::MctsPlayer<GameState, Tensorizor> {
 public:
-  using base_t = core::MctsPlayer<GameState, Tensorizor>;
+  using base_t = common::MctsPlayer<GameState, Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 

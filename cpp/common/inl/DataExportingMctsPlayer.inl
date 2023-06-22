@@ -4,31 +4,31 @@
 
 #include <util/BitSet.hpp>
 
-namespace core {
+namespace common {
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 template<typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
     const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
 : base_t(std::forward<BaseArgs>(base_args)...)
 , writer_(TrainingDataWriter::instantiate(writer_params)) {}
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
 {
   base_t::start_game();
   game_data_ = writer_->get_data(base_t::get_game_id());
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    seat_index_t seat, const GameState& state, action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_index_t action)
 {
   base_t::receive_state_change(seat, state, action);
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+core::action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
@@ -55,14 +55,14 @@ action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
   return base_t::get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&, const GameOutcome& outcome) {
   game_data_->record_for_all(outcome);
   writer_->close(game_data_);
   game_data_ = nullptr;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::PolicyTensor
 DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsResults* mcts_results) {
   auto policy = mcts_results->counts;
@@ -77,7 +77,7 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsResul
   return policy;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
     const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy)
 {
@@ -85,7 +85,7 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   this->tensorizor_.tensorize(input, state);
 
   auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
-  for (symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
+  for (core::symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
     auto& group = game_data_->get_next_group();
 
     group.input = input;
@@ -101,4 +101,4 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   }
 }
 
-}  // namespace core
+}  // namespace common
