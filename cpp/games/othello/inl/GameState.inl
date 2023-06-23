@@ -218,10 +218,10 @@ inline mask_t GameState::get_some_moves(mask_t P, mask_t mask, int dir) {
 
 }  // namespace othello
 
-namespace core {
+namespace mcts {
 
-inline void MctsResultsDumper<othello::GameState>::dump(
-    const LocalPolicyArray &action_policy, const MctsResults &results)
+inline void SearchResultsDumper<othello::GameState>::dump(
+    const LocalPolicyArray &action_policy, const SearchResults &results)
 {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -274,5 +274,4 @@ inline void MctsResultsDumper<othello::GameState>::dump(
   }
 }
 
-
-}  // namespace core
+}  // namespace mcts

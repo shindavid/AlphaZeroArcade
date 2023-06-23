@@ -1,16 +1,17 @@
 #pragma once
 
 #include <core/DerivedTypes.hpp>
+#include <core/GameStateConcept.hpp>
 
-namespace core {
+namespace mcts {
 
-template<typename GameState>
-struct MctsResults {
+template<core::GameStateConcept GameState>
+struct SearchResults {
   using GameStateTypes = core::GameStateTypes<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
+  using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using ValueArray = typename GameStateTypes::ValueArray;
 
   ActionMask valid_actions;
@@ -20,4 +21,4 @@ struct MctsResults {
   ValueArray value_prior;
 };
 
-}  // namespace core
+}  // namespace mcts

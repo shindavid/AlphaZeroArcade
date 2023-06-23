@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 
-#include <core/MctsResultsDumper.hpp>
+#include <mcts/SearchResultsDumper.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
@@ -140,7 +140,7 @@ inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   SearchMode search_mode = choose_search_mode();
-  const MctsResults* mcts_results = mcts_search(state, search_mode);
+  const MctsSearchResults* mcts_results = mcts_search(state, search_mode);
   return get_action_helper(search_mode, mcts_results, valid_actions);
 }
 
@@ -152,7 +152,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsResults*
+inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsSearchResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchMode search_mode) const {
   return mcts_manager_->search(tensorizor_, state, search_params_[search_mode]);
 }
@@ -166,7 +166,7 @@ MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
-    SearchMode search_mode, const MctsResults* mcts_results, const ActionMask& valid_actions) const
+    SearchMode search_mode, const MctsSearchResults* mcts_results, const ActionMask& valid_actions) const
 {
   PolicyTensor policy_tensor;
   if (search_mode == kRawPolicy) {
@@ -219,7 +219,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   printf("CPU pos eval:\n");
-  core::MctsResultsDumper<GameState>::dump(action_policy, mcts_results);
+  mcts::SearchResultsDumper<GameState>::dump(action_policy, mcts_results);
   std::cout << std::endl;
 }
 

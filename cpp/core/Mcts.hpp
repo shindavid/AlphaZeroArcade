@@ -18,7 +18,6 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/MctsResults.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
@@ -28,6 +27,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
+#include <mcts/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 #include <util/AtomicSharedPtr.hpp>
@@ -59,7 +59,7 @@ public:
   static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using MctsResults = core::MctsResults<GameState>;
+  using SearchResults = mcts::SearchResults<GameState>;
   using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -139,7 +139,7 @@ public:
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t);
-  const MctsResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
+  const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
 
   void start_search_threads(const SearchParams* search_params);
   void wait_for_search_threads();
@@ -161,7 +161,7 @@ private:
   NNEvaluationService* nn_eval_service_ = nullptr;
 
   Node* root_ = nullptr;
-  MctsResults results_;
+  SearchResults results_;
 
   std::mutex search_mutex_;
   std::condition_variable cv_search_;

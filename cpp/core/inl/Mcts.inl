@@ -160,7 +160,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline const typename Manager<GameState, Tensorizor>::MctsResults* Manager<GameState, Tensorizor>::search(
+inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<GameState, Tensorizor>::search(
     const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params)
 {
   stop_search_threads();

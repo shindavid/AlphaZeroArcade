@@ -39,10 +39,10 @@ core::action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_actio
     search_mode = base_t::kFull;
   }
 
-  const MctsResults* mcts_results = this->mcts_search(state, search_mode);
+  const MctsSearchResults* mcts_search_results = this->mcts_search(state, search_mode);
 
   if (record_reply || record) {
-    auto policy = extract_policy(mcts_results);
+    auto policy = extract_policy(mcts_search_results);
     if (record_reply) {
       game_data_->commit_opp_reply_to_pending_groups(policy);
     }
@@ -52,7 +52,7 @@ core::action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_actio
     }
   }
 
-  return base_t::get_action_helper(search_mode, mcts_results, valid_actions);
+  return base_t::get_action_helper(search_mode, mcts_search_results, valid_actions);
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
@@ -64,7 +64,7 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::PolicyTensor
-DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsResults* mcts_results) {
+DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsSearchResults* mcts_results) {
   auto policy = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   float sum = policy_array.sum();

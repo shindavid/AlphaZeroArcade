@@ -11,11 +11,11 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/MctsResults.hpp>
-#include <core/MctsResultsDumper.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
 #include <games/connect4/Constants.hpp>
+#include <mcts/SearchResults.hpp>
+#include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
 
 namespace c4 { class GameState; }
@@ -52,7 +52,6 @@ public:
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
-  using MctsResults = core::MctsResults<GameState>;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
 
@@ -65,9 +64,6 @@ public:
   void dump(core::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
-
-  static void dump_mcts_output(const ValueArray& mcts_value, const LocalPolicyArray& mcts_policy,
-                                const MctsResults& results);
 
 private:
   void row_dump(row_t row, column_t blink_column) const;
@@ -94,13 +90,17 @@ template<> struct serializer<c4::GameState> {
   using type = DeterministicGameSerializer<c4::GameState>;
 };
 
-template<> struct MctsResultsDumper<c4::GameState> {
-  using LocalPolicyArray = c4::GameState::LocalPolicyArray;
-  using MctsResults = core::MctsResults<c4::GameState>;
+}  // namespace core
 
-  static void dump(const LocalPolicyArray& action_policy, const MctsResults& results);
+namespace mcts {
+
+template<> struct SearchResultsDumper<c4::GameState> {
+  using LocalPolicyArray = c4::GameState::LocalPolicyArray;
+  using SearchResults = mcts::SearchResults<c4::GameState>;
+
+  static void dump(const LocalPolicyArray& action_policy, const SearchResults& results);
 };
 
-}  // namespace core
+}  // namespace mcts
 
 #include <games/connect4/inl/GameState.inl>

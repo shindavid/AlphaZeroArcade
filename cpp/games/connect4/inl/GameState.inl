@@ -166,9 +166,11 @@ inline constexpr mask_t GameState::_full_bottom_mask() {
 
 }  // namespace c4
 
-namespace core {
+namespace mcts {
 
-inline void MctsResultsDumper<c4::GameState>::dump(const LocalPolicyArray& action_policy, const MctsResults& results) {
+inline void SearchResultsDumper<c4::GameState>::dump(
+    const LocalPolicyArray& action_policy, const SearchResults& results)
+{
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
@@ -194,4 +196,4 @@ inline void MctsResultsDumper<c4::GameState>::dump(const LocalPolicyArray& actio
   }
 }
 
-}  // namespace core
+}  // namespace mcts

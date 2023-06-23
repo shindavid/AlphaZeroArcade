@@ -2,7 +2,6 @@
 
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/MctsResults.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>

@@ -10,10 +10,10 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/Mcts.hpp>
-#include <core/MctsResults.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/SearchParams.hpp>
+#include <mcts/SearchResults.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
@@ -60,7 +60,7 @@ public:
   using dtype = typename GameStateTypes::dtype;
   using MctsManager = mcts::Manager<GameState, Tensorizor>;
   using MctsSearchParams = mcts::SearchParams;
-  using MctsResults = core::MctsResults<GameState>;
+  using MctsSearchResults = mcts::SearchResults<GameState>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -83,13 +83,13 @@ public:
   void set_facing_human_tui_player() override { facing_human_tui_player_ = true; }  // affects printing
 
 protected:
-  const MctsResults* mcts_search(const GameState& state, SearchMode search_mode) const;
+  const MctsSearchResults* mcts_search(const GameState& state, SearchMode search_mode) const;
   SearchMode choose_search_mode() const;
-  core::action_index_t get_action_helper(SearchMode, const MctsResults*, const ActionMask& valid_actions) const;
+  core::action_index_t get_action_helper(SearchMode, const MctsSearchResults*, const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     LocalPolicyArray action_policy;
-    MctsResults mcts_results;
+    MctsSearchResults mcts_results;
 
     bool initialized = false;
   };

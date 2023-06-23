@@ -6,6 +6,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <core/TrainingDataWriter.hpp>
+#include <mcts/SearchResults.hpp>
 
 #include <vector>
 
@@ -40,7 +41,7 @@ public:
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;
-  using MctsResults = base_t::MctsResults;
+  using MctsSearchResults = base_t::MctsSearchResults;
 
   template<typename... BaseArgs>
   DataExportingMctsPlayer(const TrainingDataWriterParams& writer_params, BaseArgs&&...);
@@ -52,7 +53,7 @@ public:
   void end_game(const GameState&, const GameOutcome&) override;
 
 protected:
-  static PolicyTensor extract_policy(const MctsResults* results);
+  static PolicyTensor extract_policy(const MctsSearchResults* results);
   void record_position(const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy);
 
   TrainingDataWriter* writer_;

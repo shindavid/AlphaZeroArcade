@@ -12,11 +12,11 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/MctsResults.hpp>
-#include <core/MctsResultsDumper.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
 #include <games/othello/Constants.hpp>
+#include <mcts/SearchResults.hpp>
+#include <mcts/SearchResultsDumper.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -47,7 +47,6 @@ public:
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
-  using MctsResults = core::MctsResults<GameState>;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
 
@@ -88,13 +87,17 @@ template<> struct serializer<othello::GameState> {
   using type = DeterministicGameSerializer<othello::GameState>;
 };
 
-template<> struct MctsResultsDumper<othello::GameState> {
-  using LocalPolicyArray = othello::GameState::LocalPolicyArray;
-  using MctsResults = core::MctsResults<othello::GameState>;
+}  // namespace core
 
-  static void dump(const LocalPolicyArray& action_policy, const MctsResults& results);
+namespace mcts {
+
+template<> struct SearchResultsDumper<othello::GameState> {
+  using LocalPolicyArray = othello::GameState::LocalPolicyArray;
+  using SearchResults = mcts::SearchResults<othello::GameState>;
+
+  static void dump(const LocalPolicyArray& action_policy, const SearchResults& results);
 };
 
-}  // namespace core
+}
 
 #include <games/othello/inl/GameState.inl>
