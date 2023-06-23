@@ -1,19 +1,8 @@
 #include <mcts/Manager.hpp>
 
-#include <cmath>
-#include <thread>
-#include <utility>
-#include <vector>
+#include <boost/filesystem.hpp>
 
-#include <boost/algorithm/string/join.hpp>
-#include <EigenRand/EigenRand>
-
-#include <util/BoostUtil.hpp>
-#include <util/Config.hpp>
 #include <util/Exception.hpp>
-#include <util/RepoUtil.hpp>
-#include <util/StringUtil.hpp>
-#include <util/ThreadSafePrinter.hpp>
 
 namespace mcts {
 
@@ -134,7 +123,7 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
   const auto& evaluation_data = root_->evaluation_data();
   const auto& stable_data = root_->stable_data();
 
-  NNEvaluation_sptr evaluation = evaluation_data.ptr.load();
+  auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
   results_.counts = root_->get_counts();
   if (params_.forced_playouts && add_noise) {

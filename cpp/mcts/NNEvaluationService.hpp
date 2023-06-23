@@ -82,7 +82,6 @@ public:
   using PolicyShape = typename GameStateTypes::PolicyShape;
   using ValueShape = typename GameStateTypes::ValueShape;
 
-  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
   using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
   using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 

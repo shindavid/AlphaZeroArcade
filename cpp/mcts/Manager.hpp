@@ -2,27 +2,16 @@
 
 #include <condition_variable>
 #include <cstdint>
-#include <cstdio>
-#include <map>
 #include <memory>
 #include <mutex>
-#include <thread>
-#include <unordered_map>
+#include <vector>
 
-#include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-#include <Eigen/Core>
-#include <EigenRand/EigenRand>
-
-#include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/NeuralNet.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
-#include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/NodeReleaseService.hpp>
@@ -31,13 +20,6 @@
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
-#include <util/AtomicSharedPtr.hpp>
-#include <util/BitSet.hpp>
-#include <util/BoostUtil.hpp>
-#include <util/CppUtil.hpp>
-#include <util/LRUCache.hpp>
-#include <util/Math.hpp>
-#include <util/Profiler.hpp>
 
 namespace mcts {
 
@@ -50,66 +32,31 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 class Manager {
 public:
   using dtype = torch_util::dtype;
-  using NNEvaluation = mcts::NNEvaluation<GameState>;
-  using NNEvaluation_asptr = typename NNEvaluation::asptr;
-  using NNEvaluation_sptr = typename NNEvaluation::sptr;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
   using NodeReleaseService = mcts::NodeReleaseService<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
+  using SearchResults = mcts::SearchResults<GameState>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
-  using SearchResults = mcts::SearchResults<GameState>;
-  using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
   using ActionMask = typename GameStateTypes::ActionMask;
-
-  using PolicyArray = typename GameStateTypes::PolicyArray;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-
+  using GameOutcome = typename GameStateTypes::GameOutcome;
   using InputTensor = typename TensorizorTypes::InputTensor;
+  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
-
-  using InputShape = typename TensorizorTypes::InputShape;
-  using PolicyShape = typename GameStateTypes::PolicyShape;
-  using ValueShape = typename GameStateTypes::ValueShape;
-
-  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
-  using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
-  using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
-
-  using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
-  using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
-
-private:
-  using search_thread_vec_t = std::vector<SearchThread*>;
-
-public:
-  /*
-   * In multi-threaded mode, the search threads can continue running outside of the main search() method. For example,
-   * when playing against a human player, we can continue growing the MCTS tree while the human player thinks.
-   */
-  static constexpr int kDefaultMaxTreeSize =  4096;
-
-  static int next_instance_id_;  // for naming debug/profiling output files
+  using ValueArray = typename GameStateTypes::ValueArray;
 
   Manager(const ManagerParams& params);
   ~Manager();
 
-  int instance_id() const { return shared_data_.manager_id; }
   const ManagerParams& params() const { return params_; }
   int num_search_threads() const { return params().num_search_threads; }
-  bool search_active() const { return shared_data_.search_active; }
-  NNEvaluationService* nn_eval_service() const { return nn_eval_service_; }
 
   void start();
   void clear();
@@ -122,12 +69,14 @@ public:
   void run_search(SearchThread* thread, int tree_size_limit);
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
-  static float pct_virtual_loss_influenced_puct_calcs() { return NNEvaluationService::pct_virtual_loss_influenced_puct_calcs(); }
   static void end_session() { NNEvaluationService::end_session(); }
 
 private:
+  using search_thread_vec_t = std::vector<SearchThread*>;
   void prune_counts(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
+
+  static int next_instance_id_;  // for naming debug/profiling output files
 
   const ManagerParams params_;
   SharedData shared_data_;

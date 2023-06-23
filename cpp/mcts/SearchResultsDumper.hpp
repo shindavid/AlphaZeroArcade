@@ -5,6 +5,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <mcts/SearchResults.hpp>
+#include <util/CppUtil.hpp>
 
 namespace mcts {
 
