@@ -8,6 +8,7 @@
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
+#include <mcts/TypeDefs.hpp>
 
 namespace mcts {
 
@@ -37,7 +38,6 @@ public:
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using ValueArray = typename GameStateTypes::ValueArray;
 
-  using child_index_t = int;
   using player_bitset_t = std::bitset<kNumPlayers>;
 
   enum evaluation_state_t : int8_t {

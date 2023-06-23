@@ -14,7 +14,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
-#include <util/Profiler.hpp>
+#include <mcts/TypeDefs.hpp>
 
 namespace mcts {
 

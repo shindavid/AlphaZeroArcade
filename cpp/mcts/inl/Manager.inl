@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <mcts/TypeDefs.hpp>
 #include <util/Exception.hpp>
 
 namespace mcts {

@@ -9,6 +9,7 @@
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
+#include <mcts/TypeDefs.hpp>
 #include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
