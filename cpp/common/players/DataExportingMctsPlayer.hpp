@@ -39,7 +39,7 @@ public:
 
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;
-  using Mcts = base_t::Mcts;
+  using MctsManager = base_t::MctsManager;
   using MctsResults = base_t::MctsResults;
 
   template<typename... BaseArgs>

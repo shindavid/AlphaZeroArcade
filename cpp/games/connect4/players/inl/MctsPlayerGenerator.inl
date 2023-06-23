@@ -9,17 +9,18 @@ inline CompetitiveMctsPlayerGenerator::~CompetitiveMctsPlayerGenerator() {
 
 inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer* CompetitiveMctsPlayerGenerator::generate_from_scratch() {
   if (params_.grade_moves) {
-    return new OracleGradedMctsPlayer(grader_, mcts_player_params_, mcts_params_);
+    return new OracleGradedMctsPlayer(grader_, mcts_player_params_, manager_params_);
   } else {
-    return new BaseMctsPlayer(mcts_player_params_, mcts_params_);
+    return new BaseMctsPlayer(mcts_player_params_, manager_params_);
   }
 }
 
-inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer* CompetitiveMctsPlayerGenerator::generate_from_mcts(Mcts* mcts) {
+inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer* CompetitiveMctsPlayerGenerator::generate_from_manager(
+    MctsManager* manager) {
   if (params_.grade_moves) {
-    return new OracleGradedMctsPlayer(grader_, mcts_player_params_, mcts);
+    return new OracleGradedMctsPlayer(grader_, mcts_player_params_, manager);
   } else {
-    return new BaseMctsPlayer(mcts_player_params_, mcts);
+    return new BaseMctsPlayer(mcts_player_params_, manager);
   }
 }
 

@@ -19,7 +19,6 @@ using Tensorizor = c4::Tensorizor;
 
 using GameServer = core::GameServer<GameState>;
 using GameServerProxy = core::GameServerProxy<GameState>;
-using Mcts = core::Mcts<GameState, Tensorizor>;
 using Player = core::AbstractPlayer<GameState>;
 
 namespace po = boost::program_options;

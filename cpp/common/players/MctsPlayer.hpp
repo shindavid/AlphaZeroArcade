@@ -12,6 +12,8 @@
 #include <core/Mcts.hpp>
 #include <core/MctsResults.hpp>
 #include <core/TensorizorConcept.hpp>
+#include <mcts/Constants.hpp>
+#include <mcts/SearchParams.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
@@ -39,13 +41,8 @@ public:
     kNumSearchModes
   };
 
-  enum DefaultParamsType {
-    kCompetitive,
-    kTraining
-  };
-
   struct Params {
-    Params(DefaultParamsType);
+    Params(mcts::Mode);
     void dump() const;
 
     auto make_options_description();
@@ -61,24 +58,24 @@ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
 
   using dtype = typename GameStateTypes::dtype;
-  using Mcts = core::Mcts<GameState, Tensorizor>;
-  using MctsSearchParams = typename Mcts::SearchParams;
+  using MctsManager = mcts::Manager<GameState, Tensorizor>;
+  using MctsSearchParams = mcts::SearchParams;
   using MctsResults = core::MctsResults<GameState>;
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ValueArray = typename Mcts::ValueArray;
-  using LocalPolicyArray = typename Mcts::LocalPolicyArray;
+  using ValueArray = typename GameStateTypes::ValueArray;
+  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using PolicyShape = typename GameStateTypes::PolicyShape;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
-  MctsPlayer(const Params&, Mcts* mcts);  // uses this constructor when sharing an MCTS tree
+  MctsPlayer(const Params&, MctsManager* mcts_manager);  // uses this constructor when sharing an MCTS manager
   template <typename... Ts> MctsPlayer(const Params&, Ts&&... mcts_params_args);
   ~MctsPlayer();
 
-  Mcts* get_mcts() { return mcts_; }
+  MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t) override;
   core::action_index_t get_action(const GameState&, const ActionMask&) override;
@@ -103,11 +100,11 @@ protected:
   const Params params_;
   Tensorizor tensorizor_;
 
-  Mcts* mcts_;
+  MctsManager* mcts_manager_;
   const MctsSearchParams search_params_[kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   VerboseInfo* verbose_info_ = nullptr;
-  bool owns_mcts_;
+  bool owns_manager_;
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;
 };

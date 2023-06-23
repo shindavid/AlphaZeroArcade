@@ -47,7 +47,7 @@ protected:
   }
 
   BaseMctsPlayer* generate_from_scratch() override;
-  BaseMctsPlayer* generate_from_mcts(Mcts* mcts) override;
+  BaseMctsPlayer* generate_from_manager(MctsManager* manager) override;
 
   Params params_;
   PerfectOracle* oracle_ = nullptr;

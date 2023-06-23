@@ -10,21 +10,22 @@
 #include <core/GameStateConcept.hpp>
 #include <core/Mcts.hpp>
 #include <core/TensorizorConcept.hpp>
+#include <mcts/Constants.hpp>
+#include <mcts/ManagerParams.hpp>
 
 namespace common {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<GameState> {
 public:
-  using Mcts = core::Mcts<GameState, Tensorizor>;
-  using MctsParams = typename Mcts::Params;
+  using MctsManager = mcts::Manager<GameState, Tensorizor>;
   using BaseMctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
 
-  MctsPlayerGeneratorBase(Mcts::DefaultParamsType type) : mcts_params_(type) {}
+  MctsPlayerGeneratorBase(mcts::Mode mode) : manager_params_(mode) {}
 
   /*
-   * If this generator already generated a player for the given game_thread_id, dispatches to generate_from_mcts(),
-   * passing in the Mcts* of that previous player. Otherwise, dispatches to generate_from_scratch().
+   * If this generator already generated a player for the given game_thread_id, dispatches to generate_from_manager(),
+   * passing in the mcts::Manager* of that previous player. Otherwise, dispatches to generate_from_scratch().
    */
   core::AbstractPlayer<GameState>* generate(core::game_thread_id_t game_thread_id) override;
 
@@ -32,16 +33,16 @@ public:
 
 protected:
   virtual BaseMctsPlayer* generate_from_scratch() = 0;
-  virtual BaseMctsPlayer* generate_from_mcts(Mcts* mcts) = 0;
+  virtual BaseMctsPlayer* generate_from_manager(MctsManager* manager) = 0;
 
   void validate_params();
 
-  using mcts_vec_t = std::vector<Mcts*>;
-  using mcts_map_t = std::map<core::game_thread_id_t, mcts_vec_t>;
+  using manager_vec_t = std::vector<MctsManager*>;
+  using manager_map_t = std::map<core::game_thread_id_t, manager_vec_t>;
 
-  static mcts_map_t mcts_cache_;
+  static manager_map_t manager_cache_;
 
-  MctsParams mcts_params_;
+  mcts::ManagerParams manager_params_;
 };
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -49,7 +50,7 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState,
 public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
-  using Mcts = core::Mcts<GameState, Tensorizor>;
+  using MctsManager = typename base_t::MctsManager;
   using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
   using MctsPlayerParams = typename MctsPlayer::Params;
 
@@ -61,11 +62,11 @@ public:
 
 protected:
   auto make_options_description() {
-    return this->mcts_params_.make_options_description().add(mcts_player_params_.make_options_description());
+    return this->manager_params_.make_options_description().add(mcts_player_params_.make_options_description());
   }
 
   BaseMctsPlayer* generate_from_scratch() override;
-  BaseMctsPlayer* generate_from_mcts(Mcts* mcts) override;
+  BaseMctsPlayer* generate_from_manager(MctsManager* manager) override;
 
   MctsPlayerParams mcts_player_params_;
 };
@@ -75,7 +76,7 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
 public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
-  using Mcts = core::Mcts<GameState, Tensorizor>;
+  using MctsManager = typename base_t::MctsManager;
   using MctsPlayer = common::DataExportingMctsPlayer<GameState, Tensorizor>;
   using MctsPlayerParams = typename MctsPlayer::Params;
   using TrainingDataWriterParams = typename MctsPlayer::TrainingDataWriterParams;
@@ -88,13 +89,13 @@ public:
 
 protected:
   auto make_options_description() {
-    return this->mcts_params_.make_options_description()
+    return this->manager_params_.make_options_description()
       .add(mcts_player_params_.make_options_description())
       .add(writer_params_.make_options_description());
   }
 
   BaseMctsPlayer* generate_from_scratch() override;
-  BaseMctsPlayer* generate_from_mcts(Mcts* mcts) override;
+  BaseMctsPlayer* generate_from_manager(MctsManager* manager) override;
 
   MctsPlayerParams mcts_player_params_;
   TrainingDataWriterParams writer_params_;

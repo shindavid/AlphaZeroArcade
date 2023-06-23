@@ -18,20 +18,20 @@
 namespace common {
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::Params::Params(DefaultParamsType type)
+MctsPlayer<GameState_, Tensorizor_>::Params::Params(mcts::Mode mode)
 {
-  if (type == kCompetitive) {
+  if (mode == mcts::kCompetitive) {
     num_fast_iters = 1600;
     num_full_iters = 0;
     full_pct = 0.0;
     move_temperature_str = "0.5->0.2:2*sqrt(b)";
-  } else if (type == kTraining) {
+  } else if (mode == mcts::kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
     move_temperature_str = "0.8->0.2:2*sqrt(b)";
   } else {
-    throw util::Exception("Unknown type: %d", (int)type);
+    throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
   }
 }
 
@@ -71,16 +71,16 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description()
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mcts* mcts)
+inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
 : params_(params)
-, mcts_(mcts)
+, mcts_manager_(mcts_manager)
 , search_params_{
         {params.num_fast_iters, true},  // kFast
         {params.num_full_iters},  // kFull
         {1, true}  // kRawPolicy
   }
 , move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str, GameStateTypes::get_var_bindings()))
-, owns_mcts_(mcts==nullptr)
+, owns_manager_(mcts_manager==nullptr)
 {
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
@@ -90,9 +90,9 @@ inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Mct
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 template<typename... Ts>
 MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
-: MctsPlayer(params, new Mcts(std::forward<Ts>(mcts_params_args)...))
+: MctsPlayer(params, new MctsManager(std::forward<Ts>(mcts_params_args)...))
 {
-  owns_mcts_ = true;
+  owns_manager_ = true;
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
@@ -100,7 +100,7 @@ inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
-  if (owns_mcts_) delete mcts_;
+  if (owns_manager_) delete mcts_manager_;
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
@@ -109,8 +109,8 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
   move_count_ = 0;
   move_temperature_.reset();
   tensorizor_.clear();
-  if (owns_mcts_) {
-    mcts_->start();
+  if (owns_manager_) {
+    mcts_manager_->start();
   }
 }
 
@@ -121,8 +121,8 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
   move_count_++;
   move_temperature_.step();
   tensorizor_.receive_state_change(state, action);
-  if (owns_mcts_) {
-    mcts_->receive_state_change(seat, state, action);
+  if (owns_manager_) {
+    mcts_manager_->receive_state_change(seat, state, action);
   }
   if (base_t::get_my_seat() == seat && params_.verbose) {
     if (facing_human_tui_player_) {
@@ -148,13 +148,13 @@ template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> 
 inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(
     int& hits, int& misses, int& size, float& hash_balance_factor) const
 {
-  mcts_->get_cache_stats(hits, misses, size, hash_balance_factor);
+  mcts_manager_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state, SearchMode search_mode) const {
-  return mcts_->search(tensorizor_, state, search_params_[search_mode]);
+  return mcts_manager_->search(tensorizor_, state, search_params_[search_mode]);
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
