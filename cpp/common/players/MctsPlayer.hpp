@@ -9,9 +9,9 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/Mcts.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
+#include <mcts/Manager.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
 #include <util/BoostUtil.hpp>

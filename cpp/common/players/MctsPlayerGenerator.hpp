@@ -8,9 +8,9 @@
 #include <common/players/MctsPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/Mcts.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
+#include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 
 namespace common {

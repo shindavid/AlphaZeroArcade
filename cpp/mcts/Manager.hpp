@@ -146,4 +146,4 @@ private:
 
 }  // namespace mcts
 
-#include <core/inl/Mcts.inl>
+#include <mcts/inl/Manager.inl>

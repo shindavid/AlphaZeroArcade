@@ -1,4 +1,4 @@
-#include <core/Mcts.hpp>
+#include <mcts/Manager.hpp>
 
 #include <cmath>
 #include <thread>
