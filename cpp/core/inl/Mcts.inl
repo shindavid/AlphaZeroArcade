@@ -21,52 +21,6 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 int Manager<GameState, Tensorizor>::next_instance_id_ = 0;
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename Manager<GameState, Tensorizor>::NodeReleaseService Manager<GameState, Tensorizor>::NodeReleaseService::instance_;
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-Manager<GameState, Tensorizor>::NodeReleaseService::NodeReleaseService()
-: thread_([&] { loop();})
-{
-  struct sched_param param;
-  param.sched_priority = 0;
-  pthread_setschedparam(thread_.native_handle(), SCHED_IDLE, &param);
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-Manager<GameState, Tensorizor>::NodeReleaseService::~NodeReleaseService() {
-  destructing_ = true;
-  cv_.notify_one();
-  if (thread_.joinable()) thread_.join();
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::NodeReleaseService::loop() {
-  while (!destructing_) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    work_queue_t& queue = work_queue_[queue_index_];
-    cv_.wait(lock, [&]{ return !queue.empty() || destructing_;});
-    if (destructing_) return;
-    queue_index_ = 1 - queue_index_;
-    lock.unlock();
-    for (auto& unit : queue) {
-      unit.node->release(unit.arg);
-    }
-    queue.clear();
-  }
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::NodeReleaseService::release_helper(Node* node, Node* arg) {
-  std::unique_lock<std::mutex> lock(mutex_);
-  work_queue_t& queue = work_queue_[queue_index_];
-  queue.emplace_back(node, arg);
-  max_queue_size_ = std::max(max_queue_size_, int(queue.size()));
-  lock.unlock();
-  cv_.notify_one();
-  release_count_++;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
 : params_(params)
 , pondering_search_params_(SearchParams::make_pondering_params(params.pondering_tree_size_limit))

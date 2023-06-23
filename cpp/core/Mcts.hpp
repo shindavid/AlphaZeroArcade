@@ -25,6 +25,7 @@
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/NodeReleaseService.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
@@ -40,6 +41,11 @@
 
 namespace mcts {
 
+/*
+ * The Manager class is the main entry point for doing MCTS searches.
+ *
+ * It maintains the search-tree and manages the threads and services that perform the search.
+ */
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class Manager {
 public:
@@ -49,6 +55,7 @@ public:
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
+  using NodeReleaseService = mcts::NodeReleaseService<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
 
@@ -85,38 +92,6 @@ public:
 
 private:
   using search_thread_vec_t = std::vector<SearchThread*>;
-
-  class NodeReleaseService {
-  public:
-    struct work_unit_t {
-      work_unit_t(Node* n, Node* a) : node(n), arg(a) {}
-
-      Node* node;
-      Node* arg;
-    };
-
-    static void release(Node* node, Node* arg=nullptr) { instance_.release_helper(node, arg); }
-
-  private:
-    NodeReleaseService();
-    ~NodeReleaseService();
-
-    void loop();
-    void release_helper(Node* node, Node* arg);
-
-    static NodeReleaseService instance_;
-
-    using work_queue_t = std::vector<work_unit_t>;
-
-    std::mutex mutex_;
-    std::condition_variable cv_;
-    std::thread thread_;
-    work_queue_t work_queue_[2];
-    int queue_index_ = 0;
-    int release_count_ = 0;
-    int max_queue_size_ = 0;
-    bool destructing_ = false;
-  };
 
 public:
   /*
