@@ -1,8 +1,8 @@
 #pragma once
 
-#include <common/AbstractPlayer.hpp>
-#include <common/BasicTypes.hpp>
-#include <common/GameStateConcept.hpp>
+#include <core/AbstractPlayer.hpp>
+#include <core/BasicTypes.hpp>
+#include <core/GameStateConcept.hpp>
 #include <util/BitSet.hpp>
 
 namespace common {
@@ -10,15 +10,15 @@ namespace common {
 /*
  * RandomPlayer always chooses uniformly at random among the set of legal moves.
  */
-template<GameStateConcept GameState>
-class RandomPlayer : public AbstractPlayer<GameState> {
+template<core::GameStateConcept GameState>
+class RandomPlayer : public core::AbstractPlayer<GameState> {
 public:
-  using base_t = AbstractPlayer<GameState>;
-  using GameStateTypes = common::GameStateTypes<GameState>;
+  using base_t = core::AbstractPlayer<GameState>;
+  using GameStateTypes = core::GameStateTypes<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
-  action_index_t get_action(const GameState&, const ActionMask& mask) override {
+  core::action_index_t get_action(const GameState&, const ActionMask& mask) override {
     return bitset_util::choose_random_on_index(mask);
   }
 };

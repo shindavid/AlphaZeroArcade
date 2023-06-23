@@ -1,0 +1,80 @@
+#include <mcts/ManagerParams.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <util/BoostUtil.hpp>
+#include <util/Config.hpp>
+#include <util/Exception.hpp>
+#include <util/RepoUtil.hpp>
+
+namespace mcts {
+
+inline ManagerParams::ManagerParams(mcts::Mode mode) {
+  if (mode == mcts::kCompetitive) {
+    dirichlet_mult = 0;
+    dirichlet_alpha_sum = 0;
+    forced_playouts = false;
+    root_softmax_temperature_str = "1";
+  } else if (mode == mcts::kTraining) {
+    root_softmax_temperature_str = "1.4->1.1:2*sqrt(b)";
+  } else {
+    throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
+  }
+}
+
+inline auto ManagerParams::make_options_description() {
+  namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
+
+  boost::filesystem::path default_profiling_dir_path = util::Repo::root() / "output" / "mcts_profiling";
+  std::string default_profiling_dir = util::Config::instance()->get(
+      "mcts_profiling_dir", default_profiling_dir_path.string());
+
+  po2::options_description desc("Manager options");
+
+  return desc
+      .template add_option<"model-filename", 'm'>
+          (po::value<std::string>(&model_filename),
+           "model filename. If not specified, a uniform model is implicitly used")
+      .template add_option<"cuda-device">
+          (po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device")
+      .template add_option<"num-search-threads", 'n'>(
+          po::value<int>(&num_search_threads)->default_value(num_search_threads),
+          "num search threads")
+      .template add_option<"batch-size-limit", 'b'>(
+          po::value<int>(&batch_size_limit)->default_value(batch_size_limit),
+          "batch size limit")
+      .template add_bool_switches<"enable-pondering", "disable-pondering">(
+          &enable_pondering, "enable pondering (search during opponent's turn)",
+          "disable pondering (search during opponent's turn)")
+      .template add_option<"pondering-tree-size-limit">(
+          po::value<int>(&pondering_tree_size_limit)->default_value(pondering_tree_size_limit),
+          "max tree size to grow to when pondering (only respected in --enable-pondering mode)")
+      .template add_option<"nn-eval-timeout-ns">(
+          po::value<int64_t>(&nn_eval_timeout_ns)->default_value(
+              nn_eval_timeout_ns), "nn eval thread timeout in ns")
+      .template add_option<"cache-size">(
+          po::value<size_t>(&cache_size)->default_value(cache_size),
+          "nn eval thread cache size")
+      .template add_option<"root-softmax-temp">(
+          po::value<std::string>(&root_softmax_temperature_str)->default_value(root_softmax_temperature_str),
+          "root softmax temperature")
+      .template add_option<"cpuct", 'c'>(po2::float_value("%.2f", &cPUCT), "cPUCT value")
+      .template add_option<"dirichlet-mult", 'd'>(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
+      .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
+      .template add_bool_switches<"disable-eliminations", "enable-eliminations">(
+          &disable_eliminations, "disable eliminations", "enable eliminations")
+      .template add_bool_switches<"speculative-evals", "no-speculative-evals">(
+          &speculative_evals, "enable speculation", "disable speculation")
+      .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
+          &forced_playouts, "enable forced playouts", "disable forced playouts")
+      .template add_bool_switches<"enable-first-play-urgency", "disable-first-play-urgency">(
+          &enable_first_play_urgency, "enable first play urgency", "disable first play urgency")
+#ifdef PROFILE_MCTS
+    .template add_option<"profiling-dir">(po::value<std::string>(&profiling_dir_str)->default_value(default_profiling_dir),
+          "directory in which to dump mcts profiling stats")
+#endif  // PROFILE_MCTS
+      ;
+}
+
+}  // namespace mcts

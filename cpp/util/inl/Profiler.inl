@@ -5,11 +5,11 @@
 namespace util {
 
 template<int NumRegions, bool Verbose>
-void Profiler<NumRegions, Verbose>::record(int region, const char* name) {
+void Profiler<NumRegions, Verbose>::record(int region) {
   time_point_t now = clock_t::now();
   if (Verbose) {
     int64_t ns = util::ns_since_epoch(now);
-    printf("%lu.%09lu %s %d\n", ns / 1000000000, ns % 1000000000, name, (int) region);
+    printf("%lu.%09lu %s %d\n", ns / 1000000000, ns % 1000000000, name_.c_str(), (int) region);
   }
 
   if (cur_region_ != kNumRegions) {
@@ -30,10 +30,10 @@ void Profiler<NumRegions, Verbose>::clear() {
 }
 
 template<int NumRegions, bool Verbose>
-void Profiler<NumRegions, Verbose>::dump(FILE* file, int count, const char* name) {
+void Profiler<NumRegions, Verbose>::dump(int count) {
   if (--skip_count_ >= 0) return clear();
   if (++count_ < count) return;
-  fprintf(file, "%s dump n=%d\n", name, count_);
+  fprintf(file_, "%s dump n=%d\n", name_.c_str(), count_);
   double inv_count = 1.0 / count_;
   int64_t ns_total = 0;
   for (int r = 0; r < kNumRegions; ++r) {
@@ -46,7 +46,7 @@ void Profiler<NumRegions, Verbose>::dump(FILE* file, int count, const char* name
     if (!ns) continue;
     double avg_ns = ns * inv_count;
     double pct = 100.0 * ns * inv_ns_total;
-    fprintf(file, "%2d %9.f %7.2f%%\n", r, avg_ns, pct);
+    fprintf(file_, "%2d %9.f %7.2f%%\n", r, avg_ns, pct);
   }
   clear();
 }
