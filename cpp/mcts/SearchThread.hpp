@@ -64,10 +64,9 @@ private:
   void backprop_outcome(Node* tree, const ValueArray& outcome);
   void perform_eliminations(Node* tree, const ValueArray& outcome);
   void mark_as_fully_analyzed(Node* tree);
-  evaluate_and_expand_result_t evaluate_and_expand(Node* tree, bool speculative);
+  evaluate_and_expand_result_t evaluate_and_expand(Node* tree);
   void evaluate_and_expand_unset(
-      Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative);
-  void evaluate_and_expand_pending(Node* tree, std::unique_lock<std::mutex>* lock);
+      Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data);
 
   /*
    * Used in visit().

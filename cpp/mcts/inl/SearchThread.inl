@@ -70,7 +70,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, int depth) {
 
   if (!search_active()) return;  // short-circuit
 
-  evaluate_and_expand_result_t data = evaluate_and_expand(tree, false);
+  evaluate_and_expand_result_t data = evaluate_and_expand(tree);
   NNEvaluation* evaluation = data.evaluation.get();
   assert(evaluation);
 
@@ -142,7 +142,7 @@ inline void SearchThread<GameState, Tensorizor>::mark_as_fully_analyzed(Node* tr
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename SearchThread<GameState, Tensorizor>::evaluate_and_expand_result_t
-SearchThread<GameState, Tensorizor>::evaluate_and_expand(Node* tree, bool speculative) {
+SearchThread<GameState, Tensorizor>::evaluate_and_expand(Node* tree) {
   profiler_.record(SearchThreadRegion::kEvaluateAndExpand);
 
   std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
@@ -153,24 +153,8 @@ SearchThread<GameState, Tensorizor>::evaluate_and_expand(Node* tree, bool specul
   switch (state) {
     case Node::kUnset:
     {
-      evaluate_and_expand_unset(tree, &lock, &data, speculative);
+      evaluate_and_expand_unset(tree, &lock, &data);
       tree->cv_evaluate_and_expand().notify_all();
-      break;
-    }
-    case Node::kPending:
-    {
-      assert(manager_params_->speculative_evals);
-      evaluate_and_expand_pending(tree, &lock);
-      assert(!lock.owns_lock());
-      if (!speculative) {
-        lock.lock();
-        if (evaluation_data.state != Node::kSet) {
-          tree->cv_evaluate_and_expand().wait(lock);
-          assert(evaluation_data.state == Node::kSet);
-        }
-        data.evaluation = evaluation_data.ptr.load();
-        assert(data.evaluation.get());
-      }
       break;
     }
     default: break;
@@ -180,7 +164,7 @@ SearchThread<GameState, Tensorizor>::evaluate_and_expand(Node* tree, bool specul
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
-    Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative)
+    Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data)
 {
   profiler_.record(SearchThreadRegion::kEvaluateAndExpandUnset);
 
@@ -196,24 +180,16 @@ void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
 
   auto& evaluation_data = tree->evaluation_data();
 
-  if (manager_params_->speculative_evals) {
-    evaluation_data.state = Node::kPending;
-    lock->unlock();
+  profiler_.record(SearchThreadRegion::kVirtualBackprop);
+  if (mcts::kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << "virtual_backprop " << tree->genealogy_str();
+    printer.endl();
   }
 
-  if (!speculative) {
-    profiler_.record(SearchThreadRegion::kVirtualBackprop);
-    if (mcts::kEnableThreadingDebug) {
-      util::ThreadSafePrinter printer(thread_id_);
-      printer << "virtual_backprop " << tree->genealogy_str();
-      printer.endl();
-    }
-
-    tree->virtual_backprop();
-  }
+  tree->virtual_backprop();
 
   const auto& stable_data = tree->stable_data();
-  bool used_cache = false;
   if (!nn_eval_service_) {
     // no-model mode
     ValueTensor uniform_value;
@@ -225,18 +201,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
     core::symmetry_index_t sym_index = stable_data.sym_index;
     typename NNEvaluationService::Request request{tree, &profiler_, thread_id_, sym_index};
     auto response = nn_eval_service_->evaluate(request);
-    used_cache = response.used_cache;
     data->evaluation = response.ptr;
-  }
-
-  if (manager_params_->speculative_evals) {
-    if (speculative && used_cache) {
-      // without this, when we hit cache, we fail to saturate nn service batch
-      lock->lock();
-      evaluate_and_expand_pending(tree, lock);
-    }
-
-    lock->lock();
   }
 
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
@@ -252,37 +217,6 @@ void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
   evaluation_data.local_policy_prob_distr = P;
   evaluation_data.ptr.store(data->evaluation);
   evaluation_data.state = Node::kSet;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void SearchThread<GameState, Tensorizor>::evaluate_and_expand_pending(
-    Node* tree, std::unique_lock<std::mutex>* lock)
-{
-  // Another search thread is working on this. Might as well speculatively eval another position while we wait
-  profiler_.record(SearchThreadRegion::kEvaluateAndExpandPending);
-
-  assert(tree->has_children());
-  Node* child;
-  auto& evaluation_data = tree->evaluation_data();
-  if (evaluation_data.fully_analyzed_actions.all()) {
-    child = tree->get_child(0);
-    assert(child);
-    lock->unlock();
-  } else {
-    core::action_index_t action = bitset_util::choose_random_off_index(evaluation_data.fully_analyzed_actions);
-    lock->unlock();
-    child = tree->lookup_child_by_action(action);
-    assert(child);
-  }
-
-  const auto& stable_data = child->stable_data();
-  const auto& outcome = stable_data.outcome;
-  if (core::is_terminal_outcome(outcome)) {
-    perform_eliminations(child, outcome);  // why not?
-    mark_as_fully_analyzed(child);
-  } else {
-    evaluate_and_expand(child, true);
-  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
