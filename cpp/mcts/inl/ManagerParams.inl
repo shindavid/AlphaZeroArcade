@@ -62,8 +62,6 @@ inline auto ManagerParams::make_options_description() {
       .template add_option<"cpuct", 'c'>(po2::float_value("%.2f", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult", 'd'>(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
       .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
-      .template add_bool_switches<"disable-eliminations", "enable-eliminations">(
-          &disable_eliminations, "disable eliminations", "enable eliminations")
       .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
           &forced_playouts, "enable forced playouts", "disable forced playouts")
       .template add_bool_switches<"enable-first-play-urgency", "disable-first-play-urgency">(

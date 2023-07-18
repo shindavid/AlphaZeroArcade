@@ -186,8 +186,7 @@ inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_help
   }
 
   if (policy.sum() == 0) {
-    // This happens if eliminations are enabled and if MCTS proves that the position is losing.
-    // In this case we just choose a random valid action.
+    // This happens if MCTS proves that the position is losing. In this case we just choose a random valid action.
     for (core::action_index_t action : bitset_util::on_indices(valid_actions)) {
       policy[action] = 1;
     }

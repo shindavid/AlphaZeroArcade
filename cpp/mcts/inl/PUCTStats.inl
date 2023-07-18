@@ -7,18 +7,16 @@ namespace mcts {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline PUCTStats<GameState, Tensorizor>::PUCTStats(
     const ManagerParams& params, const SearchParams& search_params, const Node* tree)
-    : cp(tree->stable_data().current_player)
-      , P(tree->evaluation_data().local_policy_prob_distr)
-      , V(P.rows())
-      , N(P.rows())
-      , VN(P.rows())
-      , E(P.rows())
-      , PUCT(P.rows())
+: cp(tree->stable_data().current_player)
+, P(tree->evaluation_data().local_policy_prob_distr)
+, V(P.rows())
+, N(P.rows())
+, VN(P.rows())
+, PUCT(P.rows())
 {
   V.setZero();
   N.setZero();
   VN.setZero();
-  E.setZero();
 
   std::bitset<kMaxNumLocalActions> fpu_bits;
 
@@ -37,7 +35,6 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
     V(c) = child_stats.value_avg(cp);
     N(c) = child_stats.count;
     VN(c) = child_stats.virtual_count;
-    E(c) = child->eliminated(child_stats);
 
     fpu_bits[c] = (N(c) == 0);
   }

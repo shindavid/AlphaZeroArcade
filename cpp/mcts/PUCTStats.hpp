@@ -28,7 +28,6 @@ struct PUCTStats {
   LocalPolicyArray V;
   LocalPolicyArray N;
   LocalPolicyArray VN;
-  LocalPolicyArray E;
   LocalPolicyArray PUCT;
 };
 

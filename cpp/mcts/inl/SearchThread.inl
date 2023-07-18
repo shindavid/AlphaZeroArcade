@@ -48,7 +48,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree_size_limit) {
   profiler_.record(SearchThreadRegion::kCheckVisitReady);
   const auto& stats = root->stats();
-  return search_active() && stats.count <= tree_size_limit && !root->eliminated();
+  return search_active() && stats.count <= tree_size_limit;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -63,8 +63,6 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, int depth) {
   const auto& outcome = stable_data.outcome;
   if (core::is_terminal_outcome(outcome)) {
     backprop_outcome(tree, outcome);
-    perform_eliminations(tree, outcome);
-    mark_as_fully_analyzed(tree);
     return;
   }
 
@@ -110,34 +108,6 @@ inline void SearchThread<GameState, Tensorizor>::backprop_outcome(Node* tree, co
   }
 
   tree->backprop(outcome);
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::perform_eliminations(Node* tree, const ValueArray& outcome) {
-  if (manager_params_->disable_eliminations) return;
-  player_bitset_t forcibly_winning;
-  player_bitset_t forcibly_losing;
-  for (int p = 0; p < kNumPlayers; ++p) {
-    forcibly_winning.set(p, outcome(p) == 1);
-    forcibly_losing.set(p, outcome(p) == 0);
-  }
-  int cp = tree->stable_data().current_player;
-  bool winning = outcome(cp) == 1;
-  bool losing = outcome(cp) == 0;
-  if (!winning && !losing) return;  // drawn position, no elimination possible
-
-  ValueArray accumulated_value;
-  accumulated_value.setZero();
-  int accumulated_count = 0;
-
-  profiler_.record(SearchThreadRegion::kPerformEliminations);
-  tree->eliminate(thread_id_, forcibly_winning, forcibly_losing, accumulated_value, accumulated_count);
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::mark_as_fully_analyzed(Node* tree) {
-  profiler_.record(SearchThreadRegion::kMarkFullyAnalyzed);
-  tree->mark_as_fully_analyzed();
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -230,7 +200,6 @@ child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tr
   const PVec& P = stats.P;
   const PVec& N = stats.N;
   const PVec& VN = stats.VN;
-  const PVec& E = stats.E;
   PVec& PUCT = stats.PUCT;
 
   bool add_noise = !search_params_->disable_exploration && manager_params_->dirichlet_mult > 0;
@@ -241,8 +210,6 @@ child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tr
     auto F = F1 * F2;
     PUCT = PUCT * (1 - F) + F * 1e+6;
   }
-
-  PUCT -= E * (100 + PUCT.maxCoeff() - PUCT.minCoeff());  // zero-out where E==1
 
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
@@ -274,8 +241,6 @@ child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tr
     printer << "V: " << stats.V.transpose();
     printer.endl();
     printer << "VN: " << stats.VN.transpose();
-    printer.endl();
-    printer << "E: " << E.transpose();
     printer.endl();
     printer << "PUCT: " << PUCT.transpose();
     printer.endl();

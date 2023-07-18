@@ -91,12 +91,9 @@ public:
   };
 
   struct evaluation_data_t {
-    evaluation_data_t(const ActionMask& valid_actions);
-
     NNEvaluation::asptr ptr;
     LocalPolicyArray local_policy_prob_distr;
     evaluation_state_t state = kUnset;
-    ActionMask fully_analyzed_actions;  // means that every leaf descendent is a terminal game state
   };
 
   /*
@@ -119,8 +116,6 @@ public:
     ValueArray value_avg;
     int count = 0;
     int virtual_count = 0;  // only used for debugging
-    player_bitset_t forcibly_winning;  // used for eliminations
-    player_bitset_t forcibly_losing;  // used for eliminations
   };
 
   Node(Node* parent, core::action_index_t action);
@@ -159,20 +154,8 @@ public:
   void backprop(const ValueArray& value);
   void backprop_with_virtual_undo(const ValueArray& value);
   void virtual_backprop();
-  void eliminate(int thread_id, player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing,
-                 ValueArray& accumulated_value, int& accumulated_count);
-  void compute_forced_lines(player_bitset_t& forcibly_winning, player_bitset_t& forcibly_losing) const;
-
-  bool forcibly_winning(const stats_t& stats) const { return stats.forcibly_winning[stable_data_.current_player]; }
-  bool forcibly_losing(const stats_t& stats) const { return stats.forcibly_losing[stable_data_.current_player]; }
-  bool eliminated(const stats_t& stats) const { return forcibly_winning(stats) || forcibly_losing(stats); }
-
-  bool forcibly_winning() const { return forcibly_winning(stats_); }
-  bool forcibly_losing() const { return forcibly_losing(stats_); }
-  bool eliminated() const { return eliminated(stats_); }
 
   ValueArray make_virtual_loss() const;
-  void mark_as_fully_analyzed();
 
   const stable_data_t& stable_data() const { return stable_data_; }
   core::action_index_t action() const { return stable_data_.action; }
