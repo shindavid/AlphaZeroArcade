@@ -137,9 +137,8 @@ NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
   const Node* tree = request.tree;
 
   if (mcts::kEnableThreadingDebug) {
-    std::string genealogy = tree->genealogy_str();
     util::ThreadSafePrinter printer(request.thread_id);
-    printer.printf("evaluate() %s\n", genealogy.c_str());
+    printer.printf("evaluate()\n");
   }
 
   const auto& stable_data = tree->stable_data();

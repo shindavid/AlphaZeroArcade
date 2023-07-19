@@ -69,11 +69,10 @@ inline void Manager<GameState, Tensorizor>::start() {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
   stop_search_threads();
-  if (!root_) return;
+  if (!shared_data_.root_node) return;
 
-  assert(root_->parent()==nullptr);
-  NodeReleaseService::release(root_);
-  root_ = nullptr;
+  NodeReleaseService::release(shared_data_.root_node);
+  shared_data_.root_node = nullptr;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -82,21 +81,17 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(
 {
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
-  if (!root_) return;
+  if (!shared_data_.root_node) return;
 
-  assert(root_->parent()==nullptr);
-
-  Node* new_root = root_->lookup_child_by_action(action);
+  Node* new_root = shared_data_.root_node->lookup_child_by_action(action);
   if (!new_root) {
-    NodeReleaseService::release(root_);
-    root_ = nullptr;
+    NodeReleaseService::release(shared_data_.root_node);
+    shared_data_.root_node = nullptr;
     return;
   }
 
-  Node* new_root_copy = new Node(*new_root, true);
-  NodeReleaseService::release(root_, new_root);
-  root_ = new_root_copy;
-  root_->adopt_children();
+  NodeReleaseService::release(shared_data_.root_node, new_root);
+  shared_data_.root_node = new_root;
 
   if (params_.enable_pondering) {
     start_search_threads(&pondering_search_params_);
@@ -110,28 +105,28 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
   stop_search_threads();
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
-  if (!root_ || add_noise) {
-    if (root_) {
-      NodeReleaseService::release(root_);
+  if (!shared_data_.root_node || add_noise) {
+    if (shared_data_.root_node) {
+      NodeReleaseService::release(shared_data_.root_node);
     }
     auto outcome = core::make_non_terminal_outcome<kNumPlayers>();
-    root_ = new Node(tensorizor, game_state, outcome);  // TODO: use memory pool
+    shared_data_.root_node = new Node(tensorizor, game_state, outcome);  // TODO: use memory pool
   }
 
   start_search_threads(&params);
   wait_for_search_threads();
 
-  const auto& evaluation_data = root_->evaluation_data();
-  const auto& stable_data = root_->stable_data();
+  const auto& evaluation_data = shared_data_.root_node->evaluation_data();
+  const auto& stable_data = shared_data_.root_node->stable_data();
 
   auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
-  results_.counts = root_->get_counts();
+  results_.counts = shared_data_.root_node->get_counts();
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }
   results_.policy_prior = evaluation_data.local_policy_prob_distr;
-  results_.win_rates = root_->stats().value_avg;
+  results_.win_rates = shared_data_.root_node->stats().value_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
 }
@@ -166,13 +161,11 @@ inline void Manager<GameState, Tensorizor>::stop_search_threads() {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int tree_size_limit) {
-  thread->visit(root_, 1);
-  thread->dump_profiling_stats();
+  thread->run();
 
-  if (!thread->is_pondering() && root_->stable_data().num_valid_actions() > 1) {
-    while (thread->needs_more_visits(root_, tree_size_limit)) {
-      thread->visit(root_, 1);
-      thread->dump_profiling_stats();
+  if (!thread->is_pondering() && shared_data_.root_node->stable_data().num_valid_actions() > 1) {
+    while (thread->needs_more_visits(shared_data_.root_node, tree_size_limit)) {
+      thread->run();
     }
   }
 
@@ -196,7 +189,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
   if (params_.model_filename.empty()) return;
 
-  PUCTStats stats(params_, search_params, root_);
+  PUCTStats stats(params_, search_params, shared_data_.root_node, true);
 
   auto orig_counts = results_.counts;
   const auto& P = stats.P;
@@ -213,7 +206,7 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
   auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
 
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
-  for (child_index_t c = 0; c < root_->stable_data().num_valid_actions(); ++c) {
+  for (child_index_t c = 0; c < shared_data_.root_node->stable_data().num_valid_actions(); ++c) {
     if (N(c) == N_max) continue;
     if (!isfinite(N_floor(c))) continue;
     auto n = std::max(N_floor(c), N(c) - n_forced(c));
@@ -221,7 +214,7 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
       n = 0;
     }
 
-    Node* child = root_->get_child(c);
+    Node* child = shared_data_.root_node->get_child(c);
     if (child) {
       results_.counts(child->action()) = n;
     }

@@ -38,6 +38,7 @@ public:
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchResults = mcts::SearchResults<GameState>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
+  using SharedData = mcts::SharedData<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -84,7 +85,6 @@ private:
   search_thread_vec_t search_threads_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 
-  Node* root_ = nullptr;
   SearchResults results_;
 
   std::mutex search_mutex_;

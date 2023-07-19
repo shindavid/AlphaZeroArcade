@@ -6,7 +6,7 @@ namespace mcts {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline PUCTStats<GameState, Tensorizor>::PUCTStats(
-    const ManagerParams& params, const SearchParams& search_params, const Node* tree)
+    const ManagerParams& params, const SearchParams& search_params, const Node* tree, bool is_root)
 : cp(tree->stable_data().current_player)
 , P(tree->evaluation_data().local_policy_prob_distr)
 , V(P.rows())
@@ -46,7 +46,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
     const auto& stats = tree->stats();  // no struct copy, not needed here
     dtype PV = stats.value_avg(cp);
 
-    bool disableFPU = tree->is_root() && params.dirichlet_mult > 0 && !search_params.disable_exploration;
+    bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
     dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
     for (int c : bitset_util::on_indices(fpu_bits)) {

@@ -5,12 +5,11 @@
 namespace mcts {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(Node* p, core::action_index_t a)
-    : parent(p)
-      , tensorizor(p->stable_data().tensorizor)
-      , state(p->stable_data().state)
-      , outcome(state.apply_move(a))
-      , action(a)
+inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(const Node* parent, core::action_index_t a)
+: tensorizor(parent->stable_data().tensorizor)
+, state(parent->stable_data().state)
+, outcome(state.apply_move(a))
+, action(a)
 {
   tensorizor.receive_state_change(state, action);
   aux_init();
@@ -18,21 +17,13 @@ inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(Node* p, core::
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(
-    Node* p, core::action_index_t a, const Tensorizor& t, const GameState& s, const GameOutcome& o)
-    : parent(p)
-      , tensorizor(t)
-      , state(s)
-      , outcome(o)
-      , action(a)
+    core::action_index_t a, const Tensorizor& t, const GameState& s, const GameOutcome& o)
+: tensorizor(t)
+, state(s)
+, outcome(o)
+, action(a)
 {
   aux_init();
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(const stable_data_t& data, bool prune_parent)
-{
-  *this = data;
-  if (prune_parent) parent = nullptr;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -65,34 +56,13 @@ void Node<GameState, Tensorizor>::stats_t::remove(const ValueArray& rm_sum, int 
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::Node(Node* parent, core::action_index_t action)
+inline Node<GameState, Tensorizor>::Node(const Node* parent, core::action_index_t action)
 : stable_data_(parent, action) {}
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::Node(
     const Tensorizor& tensorizor, const GameState& state, const GameOutcome& outcome)
-: stable_data_(nullptr, -1, tensorizor, state, outcome) {}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::Node(const Node& node, bool prune_parent)
-: stable_data_(node.stable_data_, prune_parent)
-, children_data_(node.children_data_)
-, evaluation_data_(node.evaluation_data_)
-, stats_(node.stats_) {}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline std::string Node<GameState, Tensorizor>::genealogy_str() const {
-  const char* delim = kNumGlobalActions < 10 ? "" : ":";
-  std::vector<std::string> vec;
-  const Node* n = this;
-  while (n->parent()) {
-    vec.push_back(std::to_string(n->action()));
-    n = n->parent();
-  }
-
-  std::reverse(vec.begin(), vec.end());
-  return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
-}
+: stable_data_(-1, tensorizor, state, outcome) {}
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Node<GameState, Tensorizor>::debug_dump() const {
@@ -111,16 +81,6 @@ inline void Node<GameState, Tensorizor>::release(Node* protected_child) {
   }
 
   delete this;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::adopt_children() {
-  // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
-  // thread-safety
-  for (child_index_t c = 0; c < stable_data_.num_valid_actions(); ++c) {
-    Node* child = get_child(c);
-    if (child) child->stable_data_.parent = this;
-  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -162,9 +122,6 @@ inline void Node<GameState, Tensorizor>::backprop(const ValueArray& outcome) {
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg = (stats_.value_avg * stats_.count + outcome) / (stats_.count + 1);
   stats_.count++;
-  lock.unlock();
-
-  if (parent()) parent()->backprop(outcome);
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -172,9 +129,6 @@ inline void Node<GameState, Tensorizor>::backprop_with_virtual_undo(const ValueA
   std::unique_lock<std::mutex> lock(stats_mutex_);
   stats_.value_avg += (value - make_virtual_loss()) / stats_.count;
   stats_.virtual_count--;
-  lock.unlock();
-
-  if (parent()) parent()->backprop_with_virtual_undo(value);
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -184,9 +138,6 @@ inline void Node<GameState, Tensorizor>::virtual_backprop() {
   stats_.value_avg = (stats_.value_avg * stats_.count + loss) / (stats_.count + 1);
   stats_.count++;
   stats_.virtual_count++;
-  lock.unlock();
-
-  if (parent()) parent()->virtual_backprop();
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

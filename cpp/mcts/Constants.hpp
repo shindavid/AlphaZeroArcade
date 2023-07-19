@@ -15,7 +15,7 @@ struct SearchThreadRegion {
     kAcquiringLazilyInitializedDataMutex = 1,
     kLazyInit = 2,
     kBackpropOutcome = 3,
-    kPerformEliminations = 4,
+    kBackpropWithVirtualUndo = 4,
     kMisc = 5,
     kCheckingCache = 6,
     kAcquiringBatchMutex = 7,

@@ -47,13 +47,11 @@ public:
   };
 
   struct stable_data_t {
-    stable_data_t(Node* p, core::action_index_t a);
-    stable_data_t(Node* p, core::action_index_t a, const Tensorizor&, const GameState&, const GameOutcome&);
-    stable_data_t(const stable_data_t& data, bool prune_parent);
+    stable_data_t(const Node* parent, core::action_index_t a);
+    stable_data_t(core::action_index_t a, const Tensorizor&, const GameState&, const GameOutcome&);
 
     int num_valid_actions() const { return valid_action_mask.count(); }  // consider saving in member variable
 
-    Node* parent;
     Tensorizor tensorizor;
     GameState state;
     GameOutcome outcome;
@@ -118,11 +116,9 @@ public:
     int virtual_count = 0;  // only used for debugging
   };
 
-  Node(Node* parent, core::action_index_t action);
+  Node(const Node* parent, core::action_index_t action);
   Node(const Tensorizor&, const GameState&, const GameOutcome&);
-  Node(const Node& node, bool prune_parent=false);
 
-  std::string genealogy_str() const;  // slow, for debugging
   void debug_dump() const;
 
   /*
@@ -139,13 +135,6 @@ public:
    */
   void release(Node* protected_child= nullptr);
 
-  /*
-   * Set child->parent = this for all children of this.
-   *
-   * This is the only reason that stable_data_ is not const.
-   */
-  void adopt_children();
-
   std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
   std::mutex& stats_mutex() const { return stats_mutex_; }
@@ -159,8 +148,6 @@ public:
 
   const stable_data_t& stable_data() const { return stable_data_; }
   core::action_index_t action() const { return stable_data_.action; }
-  Node* parent() const { return stable_data_.parent; }
-  bool is_root() const { return !stable_data_.parent; }
 
   bool has_children() const { return children_data_.num_children(); }
   int num_children() const { return children_data_.num_children(); }

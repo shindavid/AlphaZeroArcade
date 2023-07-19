@@ -3,6 +3,7 @@
 #include <bitset>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -26,6 +27,7 @@ public:
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
+  using SharedData = mcts::SharedData<GameState, Tensorizor>;
 
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
@@ -34,10 +36,11 @@ public:
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
 
   using dtype = torch_util::dtype;
-  using player_bitset_t = std::bitset<kNumPlayers>;
   using profiler_t = search_thread_profiler_t;
+  using node_vector_t = std::vector<Node*>;
 
   SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service, const ManagerParams* manager_params,
                int thread_id);
@@ -49,7 +52,7 @@ public:
   void kill();
   void launch(const SearchParams* search_params, std::function<void()> f);
   bool needs_more_visits(Node* root, int tree_size_limit);
-  void visit(Node* tree, int depth);
+  void run();
   bool is_pondering() const { return search_params_->ponder; }
 
   void dump_profiling_stats() { profiler_.dump(64); }
@@ -60,11 +63,14 @@ private:
     bool backpropagated_virtual_loss;
   };
 
+  void visit(Node* tree, int depth);
   void add_dirichlet_noise(LocalPolicyArray& P);
-  void backprop_outcome(Node* tree, const ValueArray& outcome);
+  void virtual_backprop();
+  void backprop_outcome(const ValueArray& outcome);
+  void backprop_with_virtual_undo(const ValueArray& value);
   evaluate_and_expand_result_t evaluate_and_expand(Node* tree);
-  void evaluate_and_expand_unset(
-      Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data);
+  void evaluate_and_expand_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data);
+  std::string search_path_str() const;  // slow, for debugging
 
   /*
    * Used in visit().
@@ -87,6 +93,7 @@ private:
   const ManagerParams* manager_params_;
   const SearchParams* search_params_ = nullptr;
   std::thread* thread_ = nullptr;
+  node_vector_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
 };
