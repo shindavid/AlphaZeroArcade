@@ -525,6 +525,7 @@ def main():
         arena.prepare()
 
     while True:
+        [arena.dump_x_var_data() for arena in arenas]
         queue = [arena.get_next_work_item() for arena in arenas]
         queue = [item for item in queue if item is not None]
         if not queue:
