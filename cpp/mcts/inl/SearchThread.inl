@@ -182,7 +182,6 @@ void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
     printer.endl();
   }
 
-  assert(!tree->has_children());
   data->backpropagated_virtual_loss = true;
   assert(data->evaluation.get() == nullptr);
 

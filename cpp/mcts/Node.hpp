@@ -38,11 +38,8 @@ public:
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using ValueArray = typename GameStateTypes::ValueArray;
 
-  using player_bitset_t = std::bitset<kNumPlayers>;
-
   enum evaluation_state_t : int8_t {
     kUnset,
-    kPending,
     kSet,
   };
 
@@ -77,15 +74,13 @@ public:
   struct children_data_t {
     using array_t = std::array<Node*, kMaxNumLocalActions>;
 
-    children_data_t() : array_(), num_children_(0) {}
+    children_data_t() : array_() {}
     Node* operator[](child_index_t c) const { return array_[c]; }
     void set(child_index_t c, Node* child) { array_[c] = child; }
     void clear(child_index_t c) { array_[c] = nullptr; }
-    int num_children() const { return num_children_; }
 
   private:
     array_t array_;
-    int num_children_;
   };
 
   struct evaluation_data_t {
@@ -108,8 +103,6 @@ public:
    */
   struct stats_t {
     stats_t();
-    void zero_out();
-    void remove(const ValueArray& rm_sum, int rm_count);
 
     ValueArray value_avg;
     int count = 0;
@@ -137,7 +130,6 @@ public:
 
   std::condition_variable& cv_evaluate_and_expand() { return cv_evaluate_and_expand_; }
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
-  std::mutex& stats_mutex() const { return stats_mutex_; }
 
   PolicyTensor get_counts() const;
   void backprop(const ValueArray& value);
@@ -149,8 +141,6 @@ public:
   const stable_data_t& stable_data() const { return stable_data_; }
   core::action_index_t action() const { return stable_data_.action; }
 
-  bool has_children() const { return children_data_.num_children(); }
-  int num_children() const { return children_data_.num_children(); }
   Node* get_child(child_index_t c) const { return children_data_[c]; }
   void clear_child(child_index_t c) { children_data_.clear(c); }
   Node* init_child(child_index_t c);

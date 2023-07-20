@@ -39,23 +39,6 @@ inline Node<GameState, Tensorizor>::stats_t::stats_t() {
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Node<GameState, Tensorizor>::stats_t::zero_out()
-{
-  value_avg.setZero();
-  count = 0;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Node<GameState, Tensorizor>::stats_t::remove(const ValueArray& rm_sum, int rm_count) {
-  if (count <= rm_count) {
-    zero_out();
-  } else {
-    value_avg = (value_avg * count - rm_sum) / (count - rm_count);
-    count -= rm_count;
-  }
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::Node(const Node* parent, core::action_index_t action)
 : stable_data_(parent, action) {}
 
