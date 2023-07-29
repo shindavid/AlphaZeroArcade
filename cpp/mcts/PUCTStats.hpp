@@ -26,6 +26,7 @@ struct PUCTStats {
   core::seat_index_t cp;
   const LocalPolicyArray& P;
   LocalPolicyArray V;
+  LocalPolicyArray E;
   LocalPolicyArray N;
   LocalPolicyArray VN;
   LocalPolicyArray PUCT;

@@ -14,7 +14,6 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/NodeReleaseService.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
@@ -34,7 +33,6 @@ public:
   using dtype = torch_util::dtype;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
-  using NodeReleaseService = mcts::NodeReleaseService<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchResults = mcts::SearchResults<GameState>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;

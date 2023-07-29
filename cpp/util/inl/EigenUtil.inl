@@ -175,6 +175,10 @@ template<typename TensorT> auto sum(const TensorT& tensor) {
   return out;
 }
 
+template<typename TensorT> auto positive_sum(const TensorT& tensor) {
+  return tensor.cwiseMax(0).sum();
+}
+
 template<typename TensorT> auto max(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;
   Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.maximum();
@@ -185,6 +189,10 @@ template<typename TensorT> auto min(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;
   Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.minimum();
   return out;
+}
+
+template<typename Scalar, int N> void positive_scale(Eigen::Array<Scalar, N, 1>& array, Scalar s) {
+  array = (array > 0).select(array * s, array);
 }
 
 template<typename Scalar, int N> void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n) {

@@ -14,7 +14,7 @@ struct SearchThreadRegion {
     kCheckVisitReady = 0,
     kAcquiringLazilyInitializedDataMutex = 1,
     kLazyInit = 2,
-    kBackpropOutcome = 3,
+    kBackprop = 3,
     kBackpropWithVirtualUndo = 4,
     kMisc = 5,
     kCheckingCache = 6,
@@ -29,9 +29,9 @@ struct SearchThreadRegion {
     kAcquiringStatsMutex = 15,
     kBackpropEvaluation = 16,
     kMarkFullyAnalyzed = 17,
-    kEvaluateAndExpand = 18,
-    kEvaluateAndExpandUnset = 19,
-    kEvaluateAndExpandPending = 20,
+    kEvaluate = 18,
+    kEvaluateUnset = 19,
+    kEvaluatePending = 20,
     kNumRegions = 21
   };
 };

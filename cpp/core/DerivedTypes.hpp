@@ -84,23 +84,6 @@ struct TensorizorTypes {
   using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 };
 
-template<typename GameState>
-struct StateEvaluationKey {
-  GameState state;
-  symmetry_index_t sym_index;
-
-  bool operator==(const StateEvaluationKey& other) const {
-    return state == other.state && sym_index == other.sym_index;
-  }
-};
-
 }  // namespace core
-
-template <typename GameState>
-struct std::hash<core::StateEvaluationKey<GameState>> {
-  std::size_t operator()(const core::StateEvaluationKey<GameState> ssi) const {
-    return util::tuple_hash(std::make_tuple(ssi.state, ssi.sym_index));
-  }
-};
 
 #include <core/inl/DerivedTypes.inl>

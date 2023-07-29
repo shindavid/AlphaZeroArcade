@@ -142,7 +142,7 @@ NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
   }
 
   const auto& stable_data = tree->stable_data();
-  cache_key_t cache_key{stable_data.state, request.sym_index};
+  cache_key_t cache_key(stable_data.state, request.sym_index);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
 
@@ -379,7 +379,7 @@ void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
   const GameState& state = stable_data.state;
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
-  core::symmetry_index_t sym_index = cache_key.sym_index;
+  core::symmetry_index_t sym_index = cache_key.second;
 
   request.thread_profiler->record(SearchThreadRegion::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);

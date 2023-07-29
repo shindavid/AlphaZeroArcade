@@ -56,7 +56,9 @@ inline Manager<GameState, Tensorizor>::~Manager() {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::start() {
   clear();
+  shared_data_.move_number = 0;
   shared_data_.root_softmax_temperature.reset();
+  shared_data_.node_cache.clear();
 
   if (!connected_) {
     if (nn_eval_service_) {
@@ -69,9 +71,6 @@ inline void Manager<GameState, Tensorizor>::start() {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
   stop_search_threads();
-  if (!shared_data_.root_node) return;
-
-  NodeReleaseService::release(shared_data_.root_node);
   shared_data_.root_node = nullptr;
 }
 
@@ -79,18 +78,19 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 inline void Manager<GameState, Tensorizor>::receive_state_change(
     core::seat_index_t seat, const GameState& state, core::action_index_t action)
 {
+  shared_data_.move_number++;
+  shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
-  if (!shared_data_.root_node) return;
+  Node* root_node = (Node*)shared_data_.root_node;
+  if (!root_node) return;
 
-  Node* new_root = shared_data_.root_node->lookup_child_by_action(action);
+  typename Node::asptr new_root = root_node->lookup_child_by_action(action);
   if (!new_root) {
-    NodeReleaseService::release(shared_data_.root_node);
     shared_data_.root_node = nullptr;
     return;
   }
 
-  NodeReleaseService::release(shared_data_.root_node, new_root);
   shared_data_.root_node = new_root;
 
   if (params_.enable_pondering) {
@@ -106,11 +106,8 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
-    if (shared_data_.root_node) {
-      NodeReleaseService::release(shared_data_.root_node);
-    }
     auto outcome = core::make_non_terminal_outcome<kNumPlayers>();
-    shared_data_.root_node = new Node(tensorizor, game_state, outcome);  // TODO: use memory pool
+    shared_data_.root_node = std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
   }
 
   start_search_threads(&params);
@@ -216,6 +213,7 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
 
     Node* child = shared_data_.root_node->get_child(c);
     if (child) {
+      core::action_index_t action = shared_data_.root_node->lookup_action_by_child_index(c);
       results_.counts(child->action()) = n;
     }
   }

@@ -10,29 +10,30 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
 : cp(tree->stable_data().current_player)
 , P(tree->evaluation_data().local_policy_prob_distr)
 , V(P.rows())
+, E(P.rows())
 , N(P.rows())
 , VN(P.rows())
 , PUCT(P.rows())
 {
   V.setZero();
+  E.setZero();
   N.setZero();
   VN.setZero();
 
   std::bitset<kMaxNumLocalActions> fpu_bits;
+  fpu_bits.set();
 
-  for (child_index_t c = 0; c < tree->stable_data().num_valid_actions(); ++c) {
+  for (auto it : tree->children_data()) {
     /*
-     * NOTE: we do NOT grab the child stats_mutex here! This means that child_stats can contain
+     * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
-    Node* child = tree->get_child(c);
-    if (!child) {
-      fpu_bits[c] = true;
-      continue;
-    }
-    auto child_stats = child->stats();  // struct copy to simplify reasoning about race conditions
+    core::action_index_t action = it->action;
+    auto edge_stats = it->stats;  // struct copy to simplify reasoning about race conditions
+    auto child_stats = it->child->stats();  // struct copy to simplify reasoning about race conditions
 
     V(c) = child_stats.value_avg(cp);
+    E(c) = edge_stats.value_avg(cp);
     N(c) = child_stats.count;
     VN(c) = child_stats.virtual_count;
 

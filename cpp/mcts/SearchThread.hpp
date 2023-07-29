@@ -13,6 +13,7 @@
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/NodeCache.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -26,6 +27,7 @@ public:
   using NNEvaluation = mcts::NNEvaluation<GameState>;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
+  using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
 
@@ -40,7 +42,6 @@ public:
 
   using dtype = torch_util::dtype;
   using profiler_t = search_thread_profiler_t;
-  using node_vector_t = std::vector<Node*>;
 
   SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service, const ManagerParams* manager_params,
                int thread_id);
@@ -58,18 +59,32 @@ public:
   void dump_profiling_stats() { profiler_.dump(64); }
 
 private:
-  struct evaluate_and_expand_result_t {
+  struct evaluation_result_t {
     NNEvaluation_sptr evaluation;
     bool backpropagated_virtual_loss;
   };
 
-  void visit(Node* tree, int depth);
+  struct traverse_request_t {
+    NodeCache* node_cache;
+    child_index_t child_index;
+    move_number_t move_number;
+    float value_delta_threshold;
+  };
+
+  struct visitation_t {
+    visitation_t(Node* n, child_index_t c) : node(n), child_index(c) {}
+    Node* node;
+    child_index_t child_index;
+  };
+  using search_path_t = std::vector<visitation_t>;
+
+  void visit(Node* tree, child_index_t child_index, move_number_t move_number);
   void add_dirichlet_noise(LocalPolicyArray& P);
   void virtual_backprop();
-  void backprop_outcome(const ValueArray& outcome);
+  void backprop(const ValueArray& value);
   void backprop_with_virtual_undo(const ValueArray& value);
-  evaluate_and_expand_result_t evaluate_and_expand(Node* tree);
-  void evaluate_and_expand_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data);
+  evaluation_result_t evaluate(Node* tree);
+  void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
   std::string search_path_str() const;  // slow, for debugging
 
   /*
@@ -93,7 +108,7 @@ private:
   const ManagerParams* manager_params_;
   const SearchParams* search_params_ = nullptr;
   std::thread* thread_ = nullptr;
-  node_vector_t search_path_;
+  search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
 };
