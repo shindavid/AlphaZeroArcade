@@ -1,5 +1,11 @@
 #include <mcts/SearchThread.hpp>
 
+#include <boost/algorithm/string.hpp>
+
+#include <sstream>
+#include <string>
+#include <vector>
+
 namespace mcts {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -315,25 +321,38 @@ core::local_action_index_t SearchThread<GameState, Tensorizor>::get_best_local_a
     printer.endl();
     printer << __func__ << "() " << search_path_str();
     printer.endl();
-    printer << "valid:";
-    for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
-      printer << " " << v;
-    }
-    printer.endl();
     printer << "value_avg: " << tree->stats().value_avg.transpose();
     printer.endl();
-    printer << "P: " << P.transpose();
-    printer.endl();
-    printer << "N: " << N.transpose();
-    printer.endl();
-    printer << "V: " << stats.V.transpose();
-    printer.endl();
-    printer << "E: " << stats.E.transpose();
-    printer.endl();
-    printer << "VN: " << stats.VN.transpose();
-    printer.endl();
-    printer << "PUCT: " << PUCT.transpose();
-    printer.endl();
+    PVec valid_action_mask(P.rows());
+    int i = 0;
+    for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
+      valid_action_mask[i++] = v;
+    }
+
+    Eigen::Array<typename PVec::Scalar, Eigen::Dynamic, 7, 0, PVec::MaxRowsAtCompileTime> M(P.rows(), 7);
+    M.col(0) = valid_action_mask;
+    M.col(1) = P;
+    M.col(2) = N;
+    M.col(3) = stats.V;
+    M.col(4) = stats.E;
+    M.col(5) = stats.VN;
+    M.col(6) = PUCT;
+
+    std::ostringstream ss;
+    ss << M.transpose();
+    std::string s = ss.str();
+
+    std::vector<std::string> s_lines;
+    boost::split(s_lines, s, boost::is_any_of("\n"));
+
+    printer << "valid: " << s_lines[0]; printer.endl();
+    printer << "P:     " << s_lines[1]; printer.endl();
+    printer << "N:     " << s_lines[2]; printer.endl();
+    printer << "V:     " << s_lines[3]; printer.endl();
+    printer << "E:     " << s_lines[4]; printer.endl();
+    printer << "VN:    " << s_lines[5]; printer.endl();
+    printer << "PUCT:  " << s_lines[6]; printer.endl();
+
     printer << "argmax: " << argmax_index;
     printer.endl();
     printer << "*************";
