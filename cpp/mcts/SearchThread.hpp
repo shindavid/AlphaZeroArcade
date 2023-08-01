@@ -30,6 +30,7 @@ public:
   using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using edge_data_t = typename Node::edge_data_t;
 
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
@@ -64,21 +65,14 @@ private:
     bool backpropagated_virtual_loss;
   };
 
-  struct traverse_request_t {
-    NodeCache* node_cache;
-    child_index_t child_index;
-    move_number_t move_number;
-    float value_delta_threshold;
-  };
-
   struct visitation_t {
-    visitation_t(Node* n, child_index_t c) : node(n), child_index(c) {}
+    visitation_t(Node* n, edge_data_t* e) : node(n), edge_data(e) {}
     Node* node;
-    child_index_t child_index;
+    edge_data_t* edge_data;
   };
   using search_path_t = std::vector<visitation_t>;
 
-  void visit(Node* tree, child_index_t child_index, move_number_t move_number);
+  void visit(Node* tree, edge_data_t* edge_data, move_number_t move_number);
   void add_dirichlet_noise(LocalPolicyArray& P);
   void virtual_backprop();
   void backprop(const ValueArray& value);
@@ -96,7 +90,7 @@ private:
    * evolve. It probably makes sense to have the behavior as part of the Tensorizor, since there is coupling with NN
    * architecture (in the form of output heads).
    */
-  mcts::child_index_t get_best_child_index(Node* tree, NNEvaluation* evaluation);
+  core::local_action_index_t get_best_local_action_index(Node* tree, NNEvaluation* evaluation);
 
   bool search_active() const { return shared_data_->search_active; }
   auto& dirichlet_gen() { return shared_data_->dirichlet_gen; }

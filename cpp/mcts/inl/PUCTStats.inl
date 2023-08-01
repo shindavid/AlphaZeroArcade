@@ -23,14 +23,14 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
   std::bitset<kMaxNumLocalActions> fpu_bits;
   fpu_bits.set();
 
-  for (auto it : tree->children_data()) {
+  for (const auto& edge_data : tree->children_data()) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
-    core::action_index_t action = it->action;
-    auto edge_stats = it->stats;  // struct copy to simplify reasoning about race conditions
-    auto child_stats = it->child->stats();  // struct copy to simplify reasoning about race conditions
+    core::local_action_index_t c = edge_data.local_action();
+    auto edge_stats = edge_data.stats();  // struct copy to simplify reasoning about race conditions
+    auto child_stats = edge_data.child()->stats();  // struct copy to simplify reasoning about race conditions
 
     V(c) = child_stats.value_avg(cp);
     E(c) = edge_stats.value_avg(cp);

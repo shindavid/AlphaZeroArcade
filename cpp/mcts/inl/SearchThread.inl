@@ -59,17 +59,20 @@ bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::run() {
   search_path_.clear();
-  visit(shared_data_->root_node, -1, shared_data_->move_number);
+  visit(shared_data_->root_node, nullptr, shared_data_->move_number);
   dump_profiling_stats();
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, child_index_t child_index, move_number_t move_number) {
-  search_path_.emplace_back(tree, child_index);
+inline void SearchThread<GameState, Tensorizor>::visit(
+    Node* tree, edge_data_t* edge_data, move_number_t move_number)
+{
+  search_path_.emplace_back(tree, edge_data);
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << "(" << child_index << ") " << search_path_str() << " cp=" << (int)tree->stable_data().current_player;
+    printer << __func__ << "(" << (edge_data ? edge_data->action() : -1) << ") ";
+    printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player;
     printer.endl();
   }
 
@@ -94,15 +97,27 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, child_index_t
     }
     backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
-    child_index_t best_child_index = get_best_child_index(tree, evaluation);
+    auto& children_data = tree->children_data();
+    core::local_action_index_t local_action = get_best_local_action_index(tree, evaluation);
 
-    traverse_request_t request{&shared_data_->node_cache, best_child_index, shared_data_->move_number, .01};
-    ValueArray backprop_value = tree->traverse(request);
-    Node* child = tree->get_child(best_child_index);
+    edge_data_t* edge_data = children_data.find(local_action);
+    if (!edge_data) {
+      core::action_index_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask, local_action);
+      auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
+
+      std::unique_lock lock(tree->children_mutex());
+      edge_data = children_data.insert(action, local_action, child);
+    }
+
+    Node* child = edge_data->child();
+    auto edge_stats = edge_data->stats();
+    auto child_stats = child->stats();
+    ValueArray backprop_value = child_stats.compute_clipped_update_value(edge_stats, .01);
+
     if (backprop_value.sum() == 0) {
-      visit(child, best_child_index, move_number + 1);
+      visit(child, edge_data, move_number + 1);
     } else {
-      search_path_.emplace_back(child, best_child_index);
+      search_path_.emplace_back(child, edge_data);
       if (mcts::kEnableThreadingDebug) {
         util::ThreadSafePrinter printer(thread_id());
         printer << "hit transposition node with big delta: " << backprop_value.transpose();
@@ -134,8 +149,8 @@ inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
   for (int i = search_path_.size() - 1; i >= 1; --i) {
     Node* child = search_path_[i].node;
     Node* parent = search_path_[i-1].node;
-    child_index_t child_index = search_path_[i].child_index;
-    child->virtual_backprop(parent, child_index);
+    edge_data_t* edge_data = search_path_[i].edge_data;
+    child->virtual_backprop(parent, edge_data);
   }
   search_path_[0].node->virtual_backprop();
 }
@@ -154,8 +169,8 @@ inline void SearchThread<GameState, Tensorizor>::backprop(const ValueArray& valu
   for (int i = search_path_.size() - 1; i >= 1; --i) {
     Node* child = search_path_[i].node;
     Node* parent = search_path_[i-1].node;
-    child_index_t child_index = search_path_[i].child_index;
-    child->backprop(value_copy, parent, child_index);
+    edge_data_t* edge_data = search_path_[i].edge_data;
+    child->backprop(value_copy, parent, edge_data);
   }
   search_path_[0].node->backprop(value_copy);
 }
@@ -174,8 +189,8 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
   for (int i = search_path_.size() - 1; i >= 1; --i) {
     Node* child = search_path_[i].node;
     Node* parent = search_path_[i-1].node;
-    child_index_t child_index = search_path_[i].child_index;
-    child->backprop_with_virtual_undo(value_copy, parent, child_index);
+    edge_data_t* edge_data = search_path_[i].edge_data;
+    child->backprop_with_virtual_undo(value_copy, parent, edge_data);
   }
   search_path_[0].node->backprop_with_virtual_undo(value_copy);
 }
@@ -256,16 +271,16 @@ std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
   const char* delim = kNumGlobalActions < 10 ? "" : ":";
   std::vector<std::string> vec;
   for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    Node* parent = search_path_[n-1].node;
-    child_index_t c = search_path_[n].child_index;
-    core::action_index_t action = parent->lookup_action_by_child_index(c);
+    core::action_index_t action = search_path_[n].edge_data->action();
     vec.push_back(std::to_string(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tree, NNEvaluation* evaluation) {
+core::local_action_index_t SearchThread<GameState, Tensorizor>::get_best_local_action_index(
+    Node* tree, NNEvaluation* evaluation)
+{
   profiler_.record(SearchThreadRegion::kPUCT);
 
   PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node);

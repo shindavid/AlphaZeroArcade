@@ -17,7 +17,7 @@ namespace mcts {
 /*
  * A Node consists of n=3 main groups of non-const member variables:
  *
- * edge_data_array_: edges to children nodes, needed for tree traversal
+ * children_data_: edges to children nodes, needed for tree traversal
  * evaluation_data_: policy/value vectors that come from neural net evaluation
  * stats_: values that get updated throughout MCTS via backpropagation
  *
@@ -74,7 +74,7 @@ public:
    * Despite the above caveats, we can still read without a mutex, since all usages are ok with arbitrarily-partially
    * written data.
    */
-  struct __attribute__((__packed__)) stats_t {
+  struct stats_t {
     stats_t();
     void add(const ValueArray& value);
     void add_virtual_loss(const ValueArray& loss);
@@ -91,18 +91,24 @@ public:
    * action is expanded. It stores both a (smart) pointer to the child node and the stats for the edge. Edge stats
    * are used to support MCTS mechanics.
    *
-   * When instantiating an edge_data_t, we assign child first and action second. This ensures that the instantiated()
-   * method works properly in lockfree contexts. We use the volatile keyword to ensure that the compiler does not
-   * reorder the writes to these members.
+   * When instantiating an edge_data_t, we assign the members in the order child_, local_action_, action_. The
+   * instantiated() check looks at the last of these (action_). This discipline ensures that lockfree usages work
+   * properly. Write ordering is enforced via the volatile keyword.
    */
   struct edge_data_t {
-    edge_data_t* instantiate(core::action_index_t a, core::local_action_index_t l, Node* c);
-    bool instantiated() const { return action >= 0; }
+    edge_data_t* instantiate(core::action_index_t a, core::local_action_index_t l, asptr c);
+    bool instantiated() const { return action_ >= 0; }
+    core::action_index_t action() const { return action_; }
+    core::local_action_index_t local_action() const { return local_action_; }
+    asptr child() const { return const_cast<asptr&>(child_); }
+    stats_t& stats() { return stats_; }
+    const stats_t& stats() const { return stats_; }
 
-    volatile core::action_index_t action = -1;
-    volatile core::local_action_index_t local_action = -1;
-    volatile asptr child;
-    stats_t stats;
+  private:
+    volatile core::action_index_t action_ = -1;
+    volatile core::local_action_index_t local_action_ = -1;
+    volatile asptr child_;
+    stats_t stats_;
   };
 
   /*
@@ -112,8 +118,8 @@ public:
    */
   struct edge_data_chunk_t {
     ~edge_data_chunk_t() { delete next; }
-    edge_data_t* find(core::action_index_t a);
-    edge_data_t* insert(core::action_index_t a, core::local_action_index_t l, Node* child);
+    edge_data_t* find(core::local_action_index_t l);
+    edge_data_t* insert(core::action_index_t a, core::local_action_index_t l, asptr child);
 
     edge_data_t data[kEdgeDataChunkSize];
     edge_data_chunk_t* next = nullptr;
@@ -132,32 +138,55 @@ public:
    */
   struct children_data_t {
 
-    struct iterator {
+    template<bool is_const>
+    struct iterator_base_t {
+      using chunk_t = std::conditional_t<is_const, const edge_data_chunk_t, edge_data_chunk_t>;
+
+      iterator_base_t(chunk_t* chunk=nullptr, int index=0);
+
+    protected:
+      bool equals(const iterator_base_t& other) const { return chunk == other.chunk && index == other.index; }
+      void increment();
+      void nullify_if_at_end();
+
+      chunk_t* chunk;
+      int index;
+    };
+
+    struct iterator : public iterator_base_t<false> {
+      using base_t = iterator_base_t<false>;
+
       using iterator_category = std::forward_iterator_tag;
       using difference_type   = std::ptrdiff_t;
       using value_type        = edge_data_t;
       using pointer           = value_type*;
       using reference         = value_type&;
 
-      iterator(edge_data_chunk_t* chunk, int index);
-      iterator& operator++();
-      iterator operator++(int) { iterator tmp = *this; ++(*this); return tmp; }
-      bool operator==(const iterator& other) const { return chunk == other.chunk && index == other.index; }
+      using base_t::base_t;
+      iterator& operator++() { this->increment(); return *this; }
+      iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+      bool operator==(const iterator& other) const { return this->equals(other); }
       bool operator!=(const iterator& other) const { return !(*this == other); }
-      edge_data_t& operator*() const { return chunk->data[index]; }
-      edge_data_t* operator->() const { return &chunk->data[index]; }
-
-    protected:
-      void nullify_if_at_end();
-
-      edge_data_chunk_t* chunk;
-      int index;
+      edge_data_t& operator*() const { return this->chunk->data[this->index]; }
+      edge_data_t* operator->() const { return &this->chunk->data[this->index]; }
     };
 
-    struct const_iterator : public iterator {
-      using iterator::iterator;
-      const edge_data_t& operator*() const { return this->chunk->data[index]; }
-      const edge_data_t* operator->() const { return &this->chunk->data[index]; }
+    struct const_iterator : public iterator_base_t<true> {
+      using base_t = iterator_base_t<true>;
+
+      using iterator_category = std::forward_iterator_tag;
+      using difference_type   = std::ptrdiff_t;
+      using value_type        = edge_data_t;
+      using pointer           = value_type*;
+      using reference         = value_type&;
+
+      using base_t::base_t;
+      const_iterator& operator++() { this->increment(); return *this; }
+      const_iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+      bool operator==(const const_iterator& other) const { return this->equals(other); }
+      bool operator!=(const const_iterator& other) const { return !(*this == other); }
+      const edge_data_t& operator*() const { return this->chunk->data[this->index]; }
+      const edge_data_t* operator->() const { return &this->chunk->data[this->index]; }
     };
 
     static_assert(std::forward_iterator<iterator>);
@@ -174,7 +203,7 @@ public:
      * and call insert(). Note that there is a race-condition possible; insert() deals with this possibility
      * appropriately.
      */
-    edge_data_t* find(core::action_index_t a) { return first_chunk_.find(a); }
+    edge_data_t* find(core::local_action_index_t l) { return first_chunk_.find(l); }
 
     /*
      * Inserts a new edge_data_t into the chunked linked list with the given action/Node, and returns a pointer to it.
@@ -182,12 +211,14 @@ public:
      * It is possible that an edge_data_t already exists for this action due to a race condition. In this case, returns
      * a pointer to the existing entry.
      */
-    edge_data_t* insert(core::action_index_t a, Node* child) { return first_chunk_.insert(a, child); }
+    edge_data_t* insert(core::action_index_t a, core::local_action_index_t l, asptr child) {
+      return first_chunk_.insert(a, l, child);
+    }
 
     iterator begin() { return iterator(&first_chunk_, 0); }
     iterator end() { return iterator(nullptr, 0); }
-    const_iterator cbegin() const { return const_iterator(&first_chunk_, 0); }
-    const_iterator cend() const { return const_iterator(nullptr, 0); }
+    const_iterator begin() const { return const_iterator(&first_chunk_, 0); }
+    const_iterator end() const { return const_iterator(nullptr, 0); }
 
   private:
     edge_data_chunk_t first_chunk_;
@@ -207,40 +238,19 @@ public:
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
 
   PolicyTensor get_counts() const;
-  void backprop(ValueArray& value, Node* parent=nullptr, core::action_index_t action=-1);
-  void backprop_with_virtual_undo(ValueArray& value, Node* parent=nullptr, core::action_index_t action=-1);
-  void virtual_backprop(Node* parent=nullptr, core::action_index_t action=-1);
+  void backprop(ValueArray& value, Node* parent=nullptr, edge_data_t* edge_data=nullptr);
+  void backprop_with_virtual_undo(ValueArray& value, Node* parent=nullptr, edge_data_t* edge_data=nullptr);
+  void virtual_backprop(Node* parent=nullptr, edge_data_t* edge_data=nullptr);
 
   ValueArray make_virtual_loss() const;
 
+  asptr lookup_child_by_action(core::action_index_t action) const;
+
   const stable_data_t& stable_data() const { return stable_data_; }
-
-//  asptr get_child(core::action_index_t a) const { return edge_data_map_[a].child; }
-//  const edge_data_t& get_edge_data(core::action_index_t a) const { return edge_data_map_[a]; }
-//  const edge_data_map_t& edge_data_map() const { return edge_data_map_; }
-
-  /*
-   * Request should be of type SearchThread::traverse_request_t. We use a template type here to avoid circular
-   * dependencies.
-   *
-   * During each MCTS iteration, we traverse the search tree and call traverse() on each node in the search path. If
-   * the traversal should be terminated because of MCGS mechanics, then this returns the delta between the stored
-   * value of the node and of the store value of the edge leading to the node. Otherwise, this returns a zero-filled
-   * array.
-   */
-  template<typename Request> ValueArray traverse(const Request&);
-
-//  asptr lookup_child_by_action(core::action_index_t action) const {
-//    return get_child(bitset_util::count_on_indices_before(stable_data().valid_action_mask, action));
-//  }
-//
-//  core::action_index_t lookup_action_by_child_index(child_index_t c) const {
-//    return bitset_util::get_nth_on_index(stable_data_.valid_action_mask, c);
-//  }
-
   const children_data_t& children_data() const { return children_data_; }
+  children_data_t& children_data() { return children_data_; }
+  std::mutex& children_mutex() { return children_mutex_; }
   const stats_t& stats() const { return stats_; }
-
   const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
@@ -249,7 +259,7 @@ private:
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;
   mutable std::mutex stats_mutex_;
-  stable_data_t stable_data_;  // effectively const
+  const stable_data_t stable_data_;
   children_data_t children_data_;
   evaluation_data_t evaluation_data_;
   stats_t stats_;

@@ -85,7 +85,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(
   Node* root_node = (Node*)shared_data_.root_node;
   if (!root_node) return;
 
-  typename Node::asptr new_root = root_node->lookup_child_by_action(action);
+  auto new_root = root_node->lookup_child_by_action(action);
   if (!new_root) {
     shared_data_.root_node = nullptr;
     return;
@@ -203,7 +203,9 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
   auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
 
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
-  for (child_index_t c = 0; c < shared_data_.root_node->stable_data().num_valid_actions(); ++c) {
+
+  for (auto& it : shared_data_.root_node->children_data()) {
+    core::local_action_index_t c = it.local_action();
     if (N(c) == N_max) continue;
     if (!isfinite(N_floor(c))) continue;
     auto n = std::max(N_floor(c), N(c) - n_forced(c));
@@ -211,11 +213,8 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
       n = 0;
     }
 
-    Node* child = shared_data_.root_node->get_child(c);
-    if (child) {
-      core::action_index_t action = shared_data_.root_node->lookup_action_by_child_index(c);
-      results_.counts(child->action()) = n;
-    }
+    core::action_index_t a = it.action();
+    results_.counts(a) = n;
   }
 
   const auto& counts_array = eigen_util::reinterpret_as_array(results_.counts);

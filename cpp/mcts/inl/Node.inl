@@ -90,47 +90,62 @@ Node<GameState, Tensorizor>::ValueArray Node<GameState, Tensorizor>::stats_t::co
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_data_t*
 Node<GameState, Tensorizor>::edge_data_t::instantiate(
-    core::action_index_t a, core::local_action_index_t l, Node<GameState, Tensorizor>* c)
+    core::action_index_t a, core::local_action_index_t l, asptr c)
 {
-  child = c;
-  local_action = l;
-  action = a;
+  const_cast<asptr&>(child_).store(c.load());
+  local_action_ = l;
+  action_ = a;
   return this;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_data_t*
-Node<GameState, Tensorizor>::edge_data_chunk_t::insert(
-    core::action_index_t a, core::local_action_index_t l, Node* child)
+Node<GameState, Tensorizor>::edge_data_chunk_t::find(core::local_action_index_t l)
 {
   for (edge_data_t& edge_data : data) {
-    if (edge_data.action == a) return &edge_data;
-    if (edge_data.action == -1) return edge_data.instantiate(a, l, child);
+    if (!edge_data.instantiated()) return nullptr;
+    if (edge_data.local_action() == l) return &edge_data;
+  }
+  return next ? next->find(l) : nullptr;
+}
+
+template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline Node<GameState, Tensorizor>::edge_data_t*
+Node<GameState, Tensorizor>::edge_data_chunk_t::insert(
+    core::action_index_t a, core::local_action_index_t l, asptr child)
+{
+  for (edge_data_t& edge_data : data) {
+    if (edge_data.action() == a) return &edge_data;
+    if (edge_data.action() == -1) return edge_data.instantiate(a, l, child);
   }
   if (!next) next = new edge_data_chunk_t();
   return next->insert(a, l, child);
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-Node<GameState, Tensorizor>::children_data_t::iterator::iterator(edge_data_chunk_t* chunk, int index)
-: chunk(chunk), index(index) {
+template<bool is_const>
+Node<GameState, Tensorizor>::children_data_t::template iterator_base_t<is_const>::iterator_base_t(
+    chunk_t* chunk, int index)
+: chunk(chunk)
+, index(index)
+{
   nullify_if_at_end();
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-Node<GameState, Tensorizor>::children_data_t::iterator&
-Node<GameState, Tensorizor>::children_data_t::iterator::operator++() {
+template<bool is_const>
+void Node<GameState, Tensorizor>::children_data_t::template iterator_base_t<is_const>::increment() {
   index++;
   if (index >= kEdgeDataChunkSize) {
     chunk = chunk->next;
     index = 0;
   }
   nullify_if_at_end();
-  return *this;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Node<GameState, Tensorizor>::children_data_t::iterator::nullify_if_at_end() {
+template<bool is_const>
+void Node<GameState, Tensorizor>::children_data_t::template iterator_base_t<is_const>::nullify_if_at_end() {
   if (chunk && !chunk->data[index].instantiated()) {
     chunk = nullptr;
     index = 0;
@@ -163,9 +178,9 @@ Node<GameState, Tensorizor>::get_counts() const {
   PolicyTensor counts;
   counts.setZero();
 
-  for (auto it : children_data_) {
-    core::action_index_t action = it.action;
-    int count = it.child->stats().count;
+  for (auto& it : children_data_) {
+    core::action_index_t action = it.action();
+    int count = it.child()->stats().count;
     if (kEnableThreadingDebug) {
       std::cout << "  " << action << ": " << count << std::endl;
     }
@@ -176,17 +191,16 @@ Node<GameState, Tensorizor>::get_counts() const {
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::backprop(ValueArray& value, Node* parent, core::action_index_t action) {
+inline void Node<GameState, Tensorizor>::backprop(ValueArray& value, Node* parent,edge_data_t* edge_data) {
   if (parent) {
     std::unique_lock parent_lock(parent->children_mutex_);
-    edge_data_t& edge_data = parent->edge_data_array_[action];
 
     std::unique_lock child_lock(stats_mutex_);
-    bool transposition = edge_data.stats.count != stats_.count;
+    bool transposition = edge_data->stats().count != stats_.count;
     if (transposition) {
-      value = stats_.compute_clipped_update_value(edge_data.stats, 0.0);
+      value = stats_.compute_clipped_update_value(edge_data->stats(), 0.0);
     }
-    edge_data.stats.add(value);
+    edge_data->stats().add(value);
     stats_.add(value);
     return;
   }
@@ -197,19 +211,18 @@ inline void Node<GameState, Tensorizor>::backprop(ValueArray& value, Node* paren
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Node<GameState, Tensorizor>::backprop_with_virtual_undo(
-    ValueArray& value, Node* parent, core::action_index_t action)
+    ValueArray& value, Node* parent, edge_data_t* edge_data)
 {
   if (parent) {
     std::unique_lock parent_lock(parent->children_mutex_);
-    edge_data_t& edge_data = parent->edge_data_array_[action];
 
     std::unique_lock child_lock(stats_mutex_);
-    bool transposition = edge_data.stats.count != stats_.count;
+    bool transposition = edge_data->stats().count != stats_.count;
     if (transposition) {
-      value = stats_.compute_clipped_update_value(edge_data.stats, 0.0);
+      value = stats_.compute_clipped_update_value(edge_data->stats(), 0.0);
     }
     ValueArray correction = value - make_virtual_loss();
-    edge_data.stats.correct_virtual_loss(correction);
+    edge_data->stats().correct_virtual_loss(correction);
     stats_.correct_virtual_loss(correction);
     return;
   }
@@ -219,14 +232,13 @@ inline void Node<GameState, Tensorizor>::backprop_with_virtual_undo(
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::virtual_backprop(Node* parent, core::action_index_t action) {
+inline void Node<GameState, Tensorizor>::virtual_backprop(Node* parent, edge_data_t* edge_data) {
   if (parent) {
     std::unique_lock parent_lock(parent->children_mutex_);
-    edge_data_t& edge_data = parent->edge_data_array_[action];
 
     ValueArray loss = make_virtual_loss();
     std::unique_lock child_lock(stats_mutex_);
-    edge_data.stats.add_virtual_loss(loss);
+    edge_data->stats().add_virtual_loss(loss);
     stats_.add_virtual_loss(loss);
     return;
   }
@@ -246,25 +258,14 @@ Node<GameState, Tensorizor>::make_virtual_loss() const {
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-template<typename Request>
-inline Node<GameState, Tensorizor>::ValueArray
-Node<GameState, Tensorizor>::traverse(const Request& request) {
-  auto node_cache = request.node_cache;
-  core::action_index_t action = request.action;
-  move_number_t m = request.move_number;
-  float eps = request.value_delta_threshold;
-
-  edge_data_t* edge_data = children_data_.find(action);
-  if (edge_data == nullptr) {
-    Node* child = node_cache->fetch_or_create(m, this, action);
-    std::unique_lock lock(children_mutex_);
-    edge_data = children_data_.insert(action, child);
+typename Node<GameState, Tensorizor>::asptr
+Node<GameState, Tensorizor>::lookup_child_by_action(core::action_index_t action) const {
+  for (const edge_data_t& edge_data : children_data_) {
+    if (edge_data.action() == action) {
+      return edge_data.child();
+    }
   }
-
-  stats_t edge_stats = edge_data->stats;
-  stats_t child_stats = edge_data->child->stats_;
-
-  return child_stats.compute_clipped_update_value(edge_stats, eps);
+  return asptr();
 }
 
 }  // namespace mcts
