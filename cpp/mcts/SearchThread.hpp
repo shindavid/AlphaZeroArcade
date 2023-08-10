@@ -30,7 +30,7 @@ public:
   using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
-  using edge_data_t = typename Node::edge_data_t;
+  using edge_t = typename Node::edge_t;
 
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
@@ -90,13 +90,13 @@ private:
   };
 
   struct visitation_t {
-    visitation_t(Node* n, edge_data_t* e) : node(n), edge_data(e) {}
+    visitation_t(Node* n, edge_t* e) : node(n), edge(e) {}
     Node* node;
-    edge_data_t* edge_data;
+    edge_t* edge;
   };
   using search_path_t = std::vector<visitation_t>;
 
-  void visit(Node* tree, edge_data_t* edge_data, move_number_t move_number);
+  void visit(Node* tree, edge_t* edge, move_number_t move_number);
   void add_dirichlet_noise(LocalPolicyArray& P);
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);

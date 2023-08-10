@@ -71,13 +71,13 @@ inline void SearchThread<GameState, Tensorizor>::run() {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::visit(
-    Node* tree, edge_data_t* edge_data, move_number_t move_number)
+    Node* tree, edge_t* edge, move_number_t move_number)
 {
-  search_path_.emplace_back(tree, edge_data);
+  search_path_.emplace_back(tree, edge);
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << "(" << (edge_data ? edge_data->action() : -1) << ") ";
+    printer << __func__ << "(" << (edge ? edge->action() : -1) << ") ";
     printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player;
     printer.endl();
   }
@@ -106,17 +106,17 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     auto& children_data = tree->children_data();
     core::local_action_index_t local_action = get_best_local_action_index(tree, evaluation);
 
-    edge_data_t* edge_data = children_data.find(local_action);
-    if (!edge_data) {
+    edge_t* edge = children_data.find(local_action);
+    if (!edge) {
       core::action_index_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask, local_action);
       auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
 
       std::unique_lock lock(tree->children_mutex());
-      edge_data = children_data.insert(action, local_action, child);
+      edge = children_data.insert(action, local_action, child);
     }
 
-    // TODO: if edge_data's child has (much?) more visits than edge_data, then short-circuit
-    visit(edge_data->child(), edge_data, move_number + 1);
+    // TODO: if edge's child has (much?) more visits than edge, then short-circuit
+    visit(edge->child(), edge, move_number + 1);
   }
 }
 
@@ -155,15 +155,15 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
   }
 
   Node* last_node = search_path_.back().node;
-  edge_data_t* last_edge_data = search_path_.back().edge_data;
+  edge_t* last_edge = search_path_.back().edge;
   last_node->update_stats(SetEval(value));
-  last_edge_data->increment_count();
+  last_edge->increment_count();
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     Node* child = search_path_[i].node;
-    edge_data_t* edge_data = search_path_[i].edge_data;
+    edge_t* edge = search_path_[i].edge;
     child->update_stats(RealIncrement{});
-    edge_data->increment_count();
+    edge->increment_count();
   }
 }
 
@@ -178,15 +178,15 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
   }
 
   Node* last_node = search_path_.back().node;
-  edge_data_t* last_edge_data = search_path_.back().edge_data;
+  edge_t* last_edge = search_path_.back().edge;
   last_node->update_stats(SetEvalWithVirtualUndo(value));
-  last_edge_data->increment_count();
+  last_edge->increment_count();
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     Node* child = search_path_[i].node;
-    edge_data_t* edge_data = search_path_[i].edge_data;
+    edge_t* edge = search_path_[i].edge;
     child->update_stats(IncrementTransfer{});
-    edge_data->increment_count();
+    edge->increment_count();
   }
 }
 
@@ -266,7 +266,7 @@ std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
   const char* delim = kNumGlobalActions < 10 ? "" : ":";
   std::vector<std::string> vec;
   for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    core::action_index_t action = search_path_[n].edge_data->action();
+    core::action_index_t action = search_path_[n].edge->action();
     vec.push_back(std::to_string(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());

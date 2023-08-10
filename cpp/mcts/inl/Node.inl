@@ -22,8 +22,8 @@ inline Node<GameState, Tensorizor>::stats_t::stats_t() {
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_data_t*
-Node<GameState, Tensorizor>::edge_data_t::instantiate(
+inline Node<GameState, Tensorizor>::edge_t*
+Node<GameState, Tensorizor>::edge_t::instantiate(
     core::action_index_t a, core::local_action_index_t l, asptr c)
 {
   const_cast<asptr&>(child_).store(c.load());
@@ -33,26 +33,26 @@ Node<GameState, Tensorizor>::edge_data_t::instantiate(
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_data_t*
-Node<GameState, Tensorizor>::edge_data_chunk_t::find(core::local_action_index_t l)
+inline Node<GameState, Tensorizor>::edge_t*
+Node<GameState, Tensorizor>::edge_chunk_t::find(core::local_action_index_t l)
 {
-  for (edge_data_t& edge_data : data) {
-    if (!edge_data.instantiated()) return nullptr;
-    if (edge_data.local_action() == l) return &edge_data;
+  for (edge_t& edge : data) {
+    if (!edge.instantiated()) return nullptr;
+    if (edge.local_action() == l) return &edge;
   }
   return next ? next->find(l) : nullptr;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_data_t*
-Node<GameState, Tensorizor>::edge_data_chunk_t::insert(
+inline Node<GameState, Tensorizor>::edge_t*
+Node<GameState, Tensorizor>::edge_chunk_t::insert(
     core::action_index_t a, core::local_action_index_t l, asptr child)
 {
-  for (edge_data_t& edge_data : data) {
-    if (edge_data.action() == a) return &edge_data;
-    if (edge_data.action() == -1) return edge_data.instantiate(a, l, child);
+  for (edge_t& edge : data) {
+    if (edge.action() == a) return &edge;
+    if (edge.action() == -1) return edge.instantiate(a, l, child);
   }
-  if (!next) next = new edge_data_chunk_t();
+  if (!next) next = new edge_chunk_t();
   return next->insert(a, l, child);
 }
 
@@ -140,9 +140,9 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   ValueArray real_sum;
   real_sum.setZero();
   int real_count = 0;
-  for (const edge_data_t& edge_data : children_data_) {
-    int count = edge_data.count();
-    real_sum += edge_data.child()->stats().real_avg * count;
+  for (const edge_t& edge : children_data_) {
+    int count = edge.count();
+    real_sum += edge.child()->stats().real_avg * count;
     real_count += count;
   }
 
@@ -168,9 +168,9 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename Node<GameState, Tensorizor>::asptr
 Node<GameState, Tensorizor>::lookup_child_by_action(core::action_index_t action) const {
-  for (const edge_data_t& edge_data : children_data_) {
-    if (edge_data.action() == action) {
-      return edge_data.child();
+  for (const edge_t& edge : children_data_) {
+    if (edge.action() == action) {
+      return edge.child();
     }
   }
   return asptr();
