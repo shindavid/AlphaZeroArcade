@@ -4,7 +4,7 @@
 A generic AlphaZero framework.
 
 There are many AlphaZero implementations out there, but most of them are for a specific game. Some implementations are 
-more generic but at a serious performance cost. This implementation is designed to be maximally generic at zero
+more generic but at a serious performance cost. This implementation is designed to be maximally generic at minimal
 overhead.
 
 ## C++ Overview
