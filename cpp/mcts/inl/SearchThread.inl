@@ -77,7 +77,11 @@ inline void SearchThread<GameState, Tensorizor>::visit(
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << "(" << (edge ? edge->action() : -1) << ") ";
+    if (edge) {
+      printer << __func__ << "(" << edge->action() << ") ";
+    } else {
+      printer << __func__ << "() ";
+    }
     printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player;
     printer.endl();
   }
@@ -187,7 +191,7 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
   last_node->update_stats(SetEvalWithVirtualUndo(value));
-  last_edge->increment_count();
+  if (last_edge) last_edge->increment_count();
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     Node* child = search_path_[i].node;
@@ -337,6 +341,7 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     printer << __func__ << "() " << search_path_str();
     printer.endl();
     printer << "real_avg: " << tree->stats().real_avg.transpose();
+    printer.endl();
     printer << "virt_avg: " << tree->stats().virtualized_avg.transpose();
     printer.endl();
     PVec valid_action_mask(P.rows());
@@ -348,9 +353,9 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     Eigen::Array<typename PVec::Scalar, Eigen::Dynamic, 7, 0, PVec::MaxRowsAtCompileTime> M(P.rows(), 7);
     M.col(0) = valid_action_mask;
     M.col(1) = P;
-    M.col(2) = N;
-    M.col(3) = stats.V;
-    M.col(4) = stats.E;
+    M.col(2) = stats.V;
+    M.col(3) = stats.E;
+    M.col(4) = N;
     M.col(5) = stats.VN;
     M.col(6) = PUCT;
 
@@ -363,9 +368,9 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
 
     printer << "valid: " << s_lines[0]; printer.endl();
     printer << "P:     " << s_lines[1]; printer.endl();
-    printer << "N:     " << s_lines[2]; printer.endl();
-    printer << "V:     " << s_lines[3]; printer.endl();
-    printer << "E:     " << s_lines[4]; printer.endl();
+    printer << "V:     " << s_lines[2]; printer.endl();
+    printer << "E:     " << s_lines[3]; printer.endl();
+    printer << "N:     " << s_lines[4]; printer.endl();
     printer << "VN:    " << s_lines[5]; printer.endl();
     printer << "PUCT:  " << s_lines[6]; printer.endl();
 
