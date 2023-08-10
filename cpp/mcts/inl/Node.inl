@@ -16,75 +16,9 @@ inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stats_t::stats_t() {
-  value_avg.setZero();
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::stats_t::add(const ValueArray& value) {
-  value_avg = (value_avg * count + value) / (count + 1);
-  count++;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::stats_t::add_virtual_loss(const ValueArray& loss) {
-  value_avg = (value_avg * count + loss) / (count + 1);
-  count++;
-  virtual_count++;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::stats_t::correct_virtual_loss(const ValueArray& correction) {
-  value_avg += correction / count;
-  virtual_count--;
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-Node<GameState, Tensorizor>::ValueArray Node<GameState, Tensorizor>::stats_t::compute_clipped_update_value(
-    const stats_t& edge_stats, float eps) const
-{
-  ValueArray value_delta = this->value_avg - edge_stats.value_avg;
-  if (value_delta.abs().maxCoeff() < eps) {
-    ValueArray zero_delta;
-    zero_delta.setZero();
-    return zero_delta;
-  }
-
-  value_delta *= edge_stats.count;
-  value_delta += this->value_avg;
-
-  if (abs(value_delta.sum() - 1) > 1e-3) {
-    std::ostringstream ss;
-    ss << __func__ << " - unexpected value_delta" << std::endl;
-    ss << "  this->value_avg: " << this->value_avg.transpose() << std::endl;
-    ss << "  edge_stats.value_avg: " << edge_stats.value_avg.transpose() << std::endl;
-    ss << "  value_delta: " << value_delta.transpose() << std::endl;
-    ss << "  value_delta.sum(): " << value_delta.sum() << std::endl;
-    throw util::Exception("%s", ss.str().c_str());
-  }
-
-  // clip operation - TODO: change this if we ever remove the sum(value)==1.0 && value>=0 constraint.
-  ValueArray clipped_delta = value_delta;
-  for (int i = 0; i < kNumPlayers; ++i) {
-    if (clipped_delta(i) >= 0) continue;
-    dtype pos_sum = eigen_util::positive_sum(clipped_delta);
-    dtype factor = (pos_sum + clipped_delta(i)) / pos_sum;
-    clipped_delta(i) = 0;
-    eigen_util::positive_scale(clipped_delta, factor);
-  }
-
-  if (clipped_delta.minCoeff() < 0 || clipped_delta.maxCoeff() > 1.0 + 1e-3 || abs(clipped_delta.sum() - 1) > 1e-3) {
-    std::ostringstream ss;
-    ss << __func__ << " - unexpected clipped_delta" << std::endl;
-    ss << "  value_delta: " << value_delta.transpose() << std::endl;
-    ss << "  clipped_delta: " << clipped_delta.transpose() << std::endl;
-    ss << "  clipped_delta.sum(): " << clipped_delta.sum() << std::endl;
-    ss << "  clipped_delta.minCoeff() < 0: " << (clipped_delta.minCoeff() < 0) << std::endl;
-    ss << "  clipped_delta.maxCoeff() > 1.0 + 1e-6: " << (clipped_delta.maxCoeff() > 1.0 + 1e-3) << std::endl;
-    ss << "  abs(clipped_delta.sum() - 1) > 1e-3: " << (abs(clipped_delta.sum() - 1) > 1e-3) << std::endl;
-    throw util::Exception("%s", ss.str().c_str());
-  }
-
-  return clipped_delta;
+  eval.setZero();
+  real_avg.setZero();
+  virtualized_avg.setZero();
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -180,7 +114,7 @@ Node<GameState, Tensorizor>::get_counts() const {
 
   for (auto& it : children_data_) {
     core::action_index_t action = it.action();
-    int count = it.child()->stats().count;
+    int count = it.child()->stats().real_count;
     if (kEnableThreadingDebug) {
       std::cout << "  " << action << ": " << count << std::endl;
     }
@@ -191,63 +125,6 @@ Node<GameState, Tensorizor>::get_counts() const {
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::backprop(ValueArray& value, Node* parent,edge_data_t* edge_data) {
-  if (parent) {
-    std::unique_lock parent_lock(parent->children_mutex_);
-
-    std::unique_lock child_lock(stats_mutex_);
-    bool transposition = edge_data->stats().count != stats_.count;
-    if (transposition) {
-      value = stats_.compute_clipped_update_value(edge_data->stats(), 0.0);
-    }
-    edge_data->stats().add(value);
-    stats_.add(value);
-    return;
-  }
-
-  std::unique_lock child_lock(stats_mutex_);
-  stats_.add(value);
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::backprop_with_virtual_undo(
-    ValueArray& value, Node* parent, edge_data_t* edge_data)
-{
-  if (parent) {
-    std::unique_lock parent_lock(parent->children_mutex_);
-
-    std::unique_lock child_lock(stats_mutex_);
-    bool transposition = edge_data->stats().count != stats_.count;
-    if (transposition) {
-      value = stats_.compute_clipped_update_value(edge_data->stats(), 0.0);
-    }
-    ValueArray correction = value - make_virtual_loss();
-    edge_data->stats().correct_virtual_loss(correction);
-    stats_.correct_virtual_loss(correction);
-    return;
-  }
-
-  std::unique_lock child_lock(stats_mutex_);
-  stats_.correct_virtual_loss(value - make_virtual_loss());
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::virtual_backprop(Node* parent, edge_data_t* edge_data) {
-  if (parent) {
-    std::unique_lock parent_lock(parent->children_mutex_);
-
-    ValueArray loss = make_virtual_loss();
-    std::unique_lock child_lock(stats_mutex_);
-    edge_data->stats().add_virtual_loss(loss);
-    stats_.add_virtual_loss(loss);
-    return;
-  }
-
-  std::unique_lock child_lock(stats_mutex_);
-  stats_.add_virtual_loss(make_virtual_loss());
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename Node<GameState, Tensorizor>::ValueArray
 Node<GameState, Tensorizor>::make_virtual_loss() const {
   constexpr float x = 1.0 / (kNumPlayers - 1);
@@ -255,6 +132,37 @@ Node<GameState, Tensorizor>::make_virtual_loss() const {
   virtual_loss.setZero();
   virtual_loss(stable_data().current_player) = x;
   return virtual_loss;
+}
+
+template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template<typename UpdateT>
+void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction) {
+  ValueArray real_sum;
+  real_sum.setZero();
+  int real_count = 0;
+  for (const edge_data_t& edge_data : children_data_) {
+    int count = edge_data.count();
+    real_sum += edge_data.child()->stats().real_avg * count;
+    real_count += count;
+  }
+
+  if (stats_.real_count) {
+    real_sum += stats_.eval;
+    real_count++;
+  }
+
+  ValueArray real_avg = real_count ? (real_sum / real_count) : real_sum;
+
+  std::unique_lock lock(stats_mutex_);
+  update_instruction(this);
+  stats_.real_avg = real_avg;
+  if (stats_.virtual_count) {
+    ValueArray virtualized_num = real_sum + make_virtual_loss() * stats_.virtual_count;
+    int virtualized_den = real_count + stats_.virtual_count;
+    stats_.virtualized_avg = virtualized_num / virtualized_den;
+  } else {
+    stats_.virtualized_avg = real_avg;
+  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

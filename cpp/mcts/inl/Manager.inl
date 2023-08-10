@@ -123,7 +123,7 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
     prune_counts(params);
   }
   results_.policy_prior = evaluation_data.local_policy_prob_distr;
-  results_.win_rates = shared_data_.root_node->stats().value_avg;
+  results_.win_rates = shared_data_.root_node->stats().real_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
 }

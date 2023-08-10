@@ -21,8 +21,8 @@ namespace mcts {
  * evaluation_data_: policy/value vectors that come from neural net evaluation
  * stats_: values that get updated throughout MCTS via backpropagation
  *
- * During MCTS, multiple search threads will try to read and write these values. Thread-safety is achieved in a
- * high-performance manner through mutexes and condition variables.
+ * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
+ * achieved in a high-performance manner through mutexes and condition variables.
  */
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class Node {
@@ -52,7 +52,7 @@ public:
   struct stable_data_t {
     stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
 
-    int num_valid_actions() const { return valid_action_mask.count(); }  // consider saving in member variable
+    int num_valid_actions() const { return valid_action_mask.count(); }  // consider caching
 
     Tensorizor tensorizor;
     GameState state;
@@ -63,27 +63,31 @@ public:
   };
 
   /*
-   * Thread-safety policy: mutex on writes, not on reads. On reads, we simply do a copy of the entire struct, in
-   * order to simplify the reasoning about race-conditions.
+   * Thread-safety policy: mutex on writes, not on reads.
    *
-   * Note that for the non-primitive members, the writes are not guaranteed to be atomic. A non-mutex-protected-read
-   * may encounter partially-updated arrays when reading such members. Furthermore, there are no guarantees in this
-   * implementation of the order of member-updates when writing, meaning that non-mutex-protected-reads might
-   * encounter states where some of the members have been updated while other have not.
+   * Note that for the non-primitive members (i.e., the members of type ValueArray), the writes are
+   * not guaranteed to be atomic. A non-mutex-protected-read may encounter partially-updated arrays
+   * when reading such members. Furthermore, there are no guarantees in this implementation of the
+   * order of member-updates when writing, meaning that non-mutex-protected-reads might encounter
+   * states where some of the members have been updated while other have not.
    *
-   * Despite the above caveats, we can still read without a mutex, since all usages are ok with arbitrarily-partially
-   * written data.
+   * Despite the above caveats, we can still read without a mutex, since all usages are ok with
+   * arbitrarily-partially written data.
    */
   struct stats_t {
     stats_t();
-    void add(const ValueArray& value);
-    void add_virtual_loss(const ValueArray& loss);
-    void correct_virtual_loss(const ValueArray& correction);
-    ValueArray compute_clipped_update_value(const stats_t& edge_stats, float eps) const;
+    int total_count() const { return real_count + virtual_count; }
+    void virtual_increment() { virtual_count++; }
+    void real_increment() { real_count++; }
+    void increment_transfer() { real_count++; virtual_count--; }
+    void set_eval(const ValueArray& value) { eval = value; real_increment(); }
+    void set_eval_with_virtual_undo(const ValueArray& value) { eval = value; increment_transfer(); }
 
-    ValueArray value_avg;
-    int count = 0;
-    int virtual_count = 0;  // only used for debugging
+    ValueArray eval;
+    ValueArray real_avg;  // excludes virtual loss
+    ValueArray virtualized_avg;  // includes virtual loss
+    int real_count = 0;
+    int virtual_count = 0;
   };
 
   /*
@@ -101,14 +105,14 @@ public:
     core::action_index_t action() const { return action_; }
     core::local_action_index_t local_action() const { return local_action_; }
     asptr child() const { return const_cast<asptr&>(child_); }
-    stats_t& stats() { return stats_; }
-    const stats_t& stats() const { return stats_; }
+    void increment_count() { count_++; }
+    int count() const { return count_.load(); }
 
   private:
-    volatile core::action_index_t action_ = -1;
-    volatile core::local_action_index_t local_action_ = -1;
     volatile asptr child_;
-    stats_t stats_;
+    volatile core::local_action_index_t local_action_ = -1;
+    volatile core::action_index_t action_ = -1;
+    std::atomic<int> count_ = 0;  //real only
   };
 
   /*
@@ -236,14 +240,11 @@ public:
 
   std::condition_variable& cv_evaluate() { return cv_evaluate_; }
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
+  std::mutex& stats_mutex() const { return stats_mutex_; }
 
   PolicyTensor get_counts() const;
-  void backprop(ValueArray& value, Node* parent=nullptr, edge_data_t* edge_data=nullptr);
-  void backprop_with_virtual_undo(ValueArray& value, Node* parent=nullptr, edge_data_t* edge_data=nullptr);
-  void virtual_backprop(Node* parent=nullptr, edge_data_t* edge_data=nullptr);
-
   ValueArray make_virtual_loss() const;
-
+  template<typename UpdateT> void update_stats(const UpdateT& update_instruction);
   asptr lookup_child_by_action(core::action_index_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
@@ -251,6 +252,7 @@ public:
   children_data_t& children_data() { return children_data_; }
   std::mutex& children_mutex() { return children_mutex_; }
   const stats_t& stats() const { return stats_; }
+  stats_t& stats() { return stats_; }
   const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 

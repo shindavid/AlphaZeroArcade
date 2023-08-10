@@ -60,6 +60,30 @@ public:
   void dump_profiling_stats() { profiler_.dump(64); }
 
 private:
+  struct VirtualIncrement {
+    void operator()(Node* node) const { node->stats().virtual_increment(); }
+  };
+
+  struct RealIncrement {
+    void operator()(Node* node) const { node->stats().real_increment(); }
+  };
+
+  struct IncrementTransfer {
+    void operator()(Node* node) const { node->stats().increment_transfer(); }
+  };
+
+  struct SetEval {
+    SetEval(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().set_eval(value); }
+    const ValueArray& value;
+  };
+
+  struct SetEvalWithVirtualUndo {
+    SetEvalWithVirtualUndo(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().set_eval_with_virtual_undo(value); }
+    const ValueArray& value;
+  };
+
   struct evaluation_result_t {
     NNEvaluation_sptr evaluation;
     bool backpropagated_virtual_loss;
@@ -75,7 +99,7 @@ private:
   void visit(Node* tree, edge_data_t* edge_data, move_number_t move_number);
   void add_dirichlet_noise(LocalPolicyArray& P);
   void virtual_backprop();
-  void backprop(const ValueArray& value);
+  void pure_backprop(const ValueArray& value);
   void backprop_with_virtual_undo(const ValueArray& value);
   evaluation_result_t evaluate(Node* tree);
   void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);

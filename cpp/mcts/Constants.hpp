@@ -14,7 +14,7 @@ struct SearchThreadRegion {
     kCheckVisitReady = 0,
     kAcquiringLazilyInitializedDataMutex = 1,
     kLazyInit = 2,
-    kBackprop = 3,
+    kPureBackprop = 3,
     kBackpropWithVirtualUndo = 4,
     kMisc = 5,
     kCheckingCache = 6,

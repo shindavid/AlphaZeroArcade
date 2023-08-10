@@ -29,12 +29,11 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
      * arbitrarily-partially-written data.
      */
     core::local_action_index_t c = edge_data.local_action();
-    auto edge_stats = edge_data.stats();  // struct copy to simplify reasoning about race conditions
     auto child_stats = edge_data.child()->stats();  // struct copy to simplify reasoning about race conditions
 
-    V(c) = child_stats.value_avg(cp);
-    E(c) = edge_stats.value_avg(cp);
-    N(c) = child_stats.count;
+    V(c) = child_stats.virtualized_avg(cp);
+    E(c) = edge_data.count();
+    N(c) = child_stats.total_count();
     VN(c) = child_stats.virtual_count;
 
     fpu_bits[c] = (N(c) == 0);
@@ -45,7 +44,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto& stats = tree->stats();  // no struct copy, not needed here
-    dtype PV = stats.value_avg(cp);
+    dtype PV = stats.virtualized_avg(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
