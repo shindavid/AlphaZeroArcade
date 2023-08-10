@@ -143,7 +143,7 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchPar
   num_active_search_threads_ = num_search_threads();
 
   for (auto* thread : search_threads_) {
-    thread->launch(search_params, [&] { this->run_search(thread, search_params->tree_size_limit); });
+    thread->launch(search_params, [=, this] { this->run_search(thread, search_params->tree_size_limit); });
   }
 }
 
