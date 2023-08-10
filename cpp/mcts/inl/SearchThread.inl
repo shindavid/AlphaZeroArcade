@@ -116,7 +116,14 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     }
 
     // TODO: if edge's child has (much?) more visits than edge, then short-circuit
-    visit(edge->child(), edge, move_number + 1);
+
+    int edge_count = edge->count();
+    int child_count = edge->child()->stats().total_count();
+    if (edge_count < child_count) {
+      short_circuit_backprop(edge);
+    } else {
+      visit(edge->child(), edge, move_number + 1);
+    }
   }
 }
 
@@ -163,7 +170,7 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
     Node* child = search_path_[i].node;
     edge_t* edge = search_path_[i].edge;
     child->update_stats(RealIncrement{});
-    edge->increment_count();
+    if (i) edge->increment_count();
   }
 }
 
@@ -186,7 +193,26 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
     Node* child = search_path_[i].node;
     edge_t* edge = search_path_[i].edge;
     child->update_stats(IncrementTransfer{});
-    edge->increment_count();
+    if (i) edge->increment_count();
+  }
+}
+
+template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_edge) {
+  // short-circuit
+  if (mcts::kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << search_path_str();
+    printer.endl();
+  }
+
+  last_edge->increment_count();
+
+  for (int i = search_path_.size() - 1; i >= 0; --i) {
+    Node* child = search_path_[i].node;
+    edge_t* edge = search_path_[i].edge;
+    child->update_stats(RealIncrement{});
+    if (i) edge->increment_count();
   }
 }
 

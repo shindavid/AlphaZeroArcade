@@ -101,6 +101,7 @@ private:
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);
   void backprop_with_virtual_undo(const ValueArray& value);
+  void short_circuit_backprop(edge_t* last_edge);
   evaluation_result_t evaluate(Node* tree);
   void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
   std::string search_path_str() const;  // slow, for debugging
