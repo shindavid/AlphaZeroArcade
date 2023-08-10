@@ -57,13 +57,13 @@ inline void OracleGradedMctsPlayer::start_game()
 }
 
 inline void OracleGradedMctsPlayer::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_t action)
 {
   move_history_.append(action);
   base_t::receive_state_change(seat, state, action);
 }
 
-inline core::action_index_t OracleGradedMctsPlayer::get_action(
+inline core::action_t OracleGradedMctsPlayer::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();

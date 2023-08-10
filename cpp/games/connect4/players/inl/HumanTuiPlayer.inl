@@ -23,12 +23,12 @@ inline void HumanTuiPlayer::start_game() {
 }
 
 inline void HumanTuiPlayer::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_index_t action) {
+    core::seat_index_t seat, const GameState& state, core::action_t action) {
   if (move_history_) move_history_->append(action);
   base_t::receive_state_change(seat, state, action);
 }
 
-inline core::action_index_t HumanTuiPlayer::prompt_for_action(const GameState&, const ActionMask&) {
+inline core::action_t HumanTuiPlayer::prompt_for_action(const GameState&, const ActionMask&) {
   std::cout << "Enter move [1-7]: ";
   std::cout.flush();
   std::string input;

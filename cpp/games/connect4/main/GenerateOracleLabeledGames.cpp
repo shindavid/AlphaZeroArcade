@@ -25,7 +25,7 @@
 namespace bf = boost::filesystem;
 
 using seat_index_t = core::seat_index_t;
-using action_index_t = core::action_index_t;
+using action_t = core::action_t;
 
 using GameState = c4::GameState;
 using Tensorizor = c4::Tensorizor;
@@ -78,7 +78,7 @@ public:
     writer_->close(game_data);
   }
 
-  void receive_move(const GameState& state, action_index_t action) {
+  void receive_move(const GameState& state, action_t action) {
     tensorizor_.receive_state_change(state, action);
     move_history_.append(action);
   }
@@ -113,7 +113,7 @@ public:
   }
 
   void receive_state_change(
-      seat_index_t p, const GameState& state, action_index_t action,
+      seat_index_t p, const GameState& state, action_t action,
       const GameOutcome& outcome) override
   {
     BasePlayer::receive_state_change(p, state, action, outcome);
@@ -124,7 +124,7 @@ public:
     }
   }
 
-  action_index_t get_action(const GameState& state, const ActionMask& mask) override {
+  action_t get_action(const GameState& state, const ActionMask& mask) override {
     supervisor_->write(game_data_, state);
     return BasePlayer::get_action(state, mask);
   }

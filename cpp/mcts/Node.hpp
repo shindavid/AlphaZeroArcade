@@ -95,24 +95,24 @@ public:
    * only when the action is expanded. It stores both a (smart) pointer to the child node and an
    * edge count. The edge count is used to support MCTS mechanics.
    *
-   * When instantiating an edge_t, we assign the members in the order child_, local_action_,
+   * When instantiating an edge_t, we assign the members in the order child_, action_index_,
    * action_. The instantiated() check looks at the last of these (action_). This discipline
    * ensures that lock-free usages work properly. Write ordering is enforced via the volatile
    * keyword.
    */
   struct edge_t {
-    edge_t* instantiate(core::action_index_t a, core::local_action_index_t l, asptr c);
+    edge_t* instantiate(core::action_t a, core::action_index_t i, asptr c);
     bool instantiated() const { return action_ >= 0; }
-    core::action_index_t action() const { return action_; }
-    core::local_action_index_t local_action() const { return local_action_; }
+    core::action_t action() const { return action_; }
+    core::action_index_t action_index() const { return action_index_; }
     asptr child() const { return const_cast<asptr&>(child_); }
     void increment_count() { count_++; }
     int count() const { return count_.load(); }
 
   private:
     volatile asptr child_;
-    volatile core::local_action_index_t local_action_ = -1;
-    volatile core::action_index_t action_ = -1;
+    volatile core::action_index_t action_index_ = -1;
+    volatile core::action_t action_ = -1;
     std::atomic<int> count_ = 0;  //real only
   };
 
@@ -123,8 +123,8 @@ public:
    */
   struct edge_chunk_t {
     ~edge_chunk_t() { delete next; }
-    edge_t* find(core::local_action_index_t l);
-    edge_t* insert(core::action_index_t a, core::local_action_index_t l, asptr child);
+    edge_t* find(core::action_index_t i);
+    edge_t* insert(core::action_t a, core::action_index_t i, asptr child);
 
     edge_t data[kEdgeDataChunkSize];
     edge_chunk_t* next = nullptr;
@@ -214,7 +214,7 @@ public:
      * expanded, then we grab children_mutex_ and call insert(). Note that there is a race-condition
      * possible; insert() deals with this possibility appropriately.
      */
-    edge_t* find(core::local_action_index_t l) { return first_chunk_.find(l); }
+    edge_t* find(core::action_index_t i) { return first_chunk_.find(i); }
 
     /*
      * Inserts a new edge_t into the chunked linked list with the given action/Node, and
@@ -223,8 +223,8 @@ public:
      * It is possible that an edge_t already exists for this action due to a race condition.
      * In this case, returns a pointer to the existing entry.
      */
-    edge_t* insert(core::action_index_t a, core::local_action_index_t l, asptr child) {
-      return first_chunk_.insert(a, l, child);
+    edge_t* insert(core::action_t a, core::action_index_t i, asptr child) {
+      return first_chunk_.insert(a, i, child);
     }
 
     iterator begin() { return iterator(&first_chunk_, 0); }
@@ -253,7 +253,7 @@ public:
   PolicyTensor get_counts() const;
   ValueArray make_virtual_loss() const;
   template<typename UpdateT> void update_stats(const UpdateT& update_instruction);
-  asptr lookup_child_by_action(core::action_index_t action) const;
+  asptr lookup_child_by_action(core::action_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
   const children_data_t& children_data() const { return children_data_; }

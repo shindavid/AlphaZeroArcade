@@ -24,7 +24,7 @@ void NodeCache<GameState, Tensorizor>::clear_before(move_number_t move_number) {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename NodeCache<GameState, Tensorizor>::Node_asptr NodeCache<GameState, Tensorizor>::fetch_or_create(
-    move_number_t move_number, Node* parent, core::action_index_t action)
+    move_number_t move_number, Node* parent, core::action_t action)
 {
   GameState state = parent->stable_data().state;
   auto outcome = state.apply_move(action);

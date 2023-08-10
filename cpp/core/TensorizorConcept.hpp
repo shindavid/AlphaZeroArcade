@@ -42,7 +42,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
   /*
    * Receive broadcast of a game state change.
    */
-  { tensorizor.receive_state_change(GameState{}, action_index_t{}) };
+  { tensorizor.receive_state_change(GameState{}, action_t{}) };
 
   /*
    * Takes an eigen Tensor reference and writes to it.

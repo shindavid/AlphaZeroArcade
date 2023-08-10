@@ -76,7 +76,7 @@ inline void Manager<GameState, Tensorizor>::clear() {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_t action)
 {
   shared_data_.move_number++;
   shared_data_.node_cache.clear_before(shared_data_.move_number);
@@ -205,15 +205,15 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
 
   for (auto& it : shared_data_.root_node->children_data()) {
-    core::local_action_index_t c = it.local_action();
-    if (N(c) == N_max) continue;
-    if (!isfinite(N_floor(c))) continue;
-    auto n = std::max(N_floor(c), N(c) - n_forced(c));
+    core::action_index_t i = it.action_index();
+    if (N(i) == N_max) continue;
+    if (!isfinite(N_floor(i))) continue;
+    auto n = std::max(N_floor(i), N(i) - n_forced(i));
     if (n <= 1.0) {
       n = 0;
     }
 
-    core::action_index_t a = it.action();
+    core::action_t a = it.action();
     results_.counts(a) = n;
   }
 

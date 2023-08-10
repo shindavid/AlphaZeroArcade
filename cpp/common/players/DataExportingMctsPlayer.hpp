@@ -48,8 +48,8 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      core::seat_index_t seat, const GameState& state, core::action_index_t action) override;
-  core::action_index_t get_action(const GameState&, const ActionMask&) override;
+      core::seat_index_t seat, const GameState& state, core::action_t action) override;
+  core::action_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
 protected:

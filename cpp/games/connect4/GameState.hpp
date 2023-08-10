@@ -56,12 +56,12 @@ public:
   using GameOutcome = GameStateTypes::GameOutcome;
 
   core::seat_index_t get_current_player() const;
-  GameOutcome apply_move(core::action_index_t action);
+  GameOutcome apply_move(core::action_t action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
 
   template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
-  void dump(core::action_index_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 

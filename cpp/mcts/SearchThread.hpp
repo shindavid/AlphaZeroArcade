@@ -114,7 +114,7 @@ private:
    * evolve. It probably makes sense to have the behavior as part of the Tensorizor, since there is coupling with NN
    * architecture (in the form of output heads).
    */
-  core::local_action_index_t get_best_local_action_index(Node* tree, NNEvaluation* evaluation);
+  core::action_index_t get_best_action_index(Node* tree, NNEvaluation* evaluation);
 
   bool search_active() const { return shared_data_->search_active; }
   auto& dirichlet_gen() { return shared_data_->dirichlet_gen; }

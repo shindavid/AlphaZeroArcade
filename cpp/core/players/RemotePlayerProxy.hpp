@@ -63,8 +63,8 @@ public:
   RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id);
 
   void start_game() override;
-  void receive_state_change(seat_index_t, const GameState&, action_index_t) override;
-  action_index_t get_action(const GameState&, const ActionMask&) override;
+  void receive_state_change(seat_index_t, const GameState&, action_t) override;
+  action_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
 private:
@@ -73,7 +73,7 @@ private:
 
   serializer_t serializer_;
   const GameState* state_ = nullptr;
-  action_index_t action_ = -1;
+  action_t action_ = -1;
 
   io::Socket* socket_;
   const player_id_t player_id_;

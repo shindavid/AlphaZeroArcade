@@ -24,36 +24,36 @@ inline Node<GameState, Tensorizor>::stats_t::stats_t() {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_t*
 Node<GameState, Tensorizor>::edge_t::instantiate(
-    core::action_index_t a, core::local_action_index_t l, asptr c)
+    core::action_t a, core::action_index_t i, asptr c)
 {
   const_cast<asptr&>(child_).store(c.load());
-  local_action_ = l;
+  action_index_ = i;
   action_ = a;
   return this;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_t*
-Node<GameState, Tensorizor>::edge_chunk_t::find(core::local_action_index_t l)
+Node<GameState, Tensorizor>::edge_chunk_t::find(core::action_index_t i)
 {
   for (edge_t& edge : data) {
     if (!edge.instantiated()) return nullptr;
-    if (edge.local_action() == l) return &edge;
+    if (edge.action_index() == i) return &edge;
   }
-  return next ? next->find(l) : nullptr;
+  return next ? next->find(i) : nullptr;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_t*
 Node<GameState, Tensorizor>::edge_chunk_t::insert(
-    core::action_index_t a, core::local_action_index_t l, asptr child)
+    core::action_t a, core::action_index_t i, asptr child)
 {
   for (edge_t& edge : data) {
     if (edge.action() == a) return &edge;
-    if (edge.action() == -1) return edge.instantiate(a, l, child);
+    if (edge.action() == -1) return edge.instantiate(a, i, child);
   }
   if (!next) next = new edge_chunk_t();
-  return next->insert(a, l, child);
+  return next->insert(a, i, child);
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -113,7 +113,7 @@ Node<GameState, Tensorizor>::get_counts() const {
   counts.setZero();
 
   for (auto& it : children_data_) {
-    core::action_index_t action = it.action();
+    core::action_t action = it.action();
     int count = it.child()->stats().real_count;
     if (kEnableThreadingDebug) {
       std::cout << "  " << action << ": " << count << std::endl;
@@ -167,7 +167,7 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename Node<GameState, Tensorizor>::asptr
-Node<GameState, Tensorizor>::lookup_child_by_action(core::action_index_t action) const {
+Node<GameState, Tensorizor>::lookup_child_by_action(core::action_t action) const {
   for (const edge_t& edge : children_data_) {
     if (edge.action() == action) {
       return edge.child();

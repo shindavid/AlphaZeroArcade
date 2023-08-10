@@ -28,15 +28,15 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
-    core::local_action_index_t c = edge.local_action();
+    core::action_index_t i = edge.action_index();
     auto child_stats = edge.child()->stats();  // struct copy to simplify reasoning about race conditions
 
-    V(c) = child_stats.virtualized_avg(cp);
-    E(c) = edge.count();
-    N(c) = child_stats.total_count();
-    VN(c) = child_stats.virtual_count;
+    V(i) = child_stats.virtualized_avg(cp);
+    E(i) = edge.count();
+    N(i) = child_stats.total_count();
+    VN(i) = child_stats.virtual_count;
 
-    fpu_bits[c] = (N(c) == 0);
+    fpu_bits[i] = (N(i) == 0);
   }
 
   if (params.enable_first_play_urgency && fpu_bits.any()) {
@@ -49,8 +49,8 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
     dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
-    for (int c : bitset_util::on_indices(fpu_bits)) {
-      V(c) = v;
+    for (int i : bitset_util::on_indices(fpu_bits)) {
+      V(i) = v;
     }
   }
 

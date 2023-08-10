@@ -104,15 +104,15 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
     auto& children_data = tree->children_data();
-    core::local_action_index_t local_action = get_best_local_action_index(tree, evaluation);
+    core::action_index_t action_index = get_best_action_index(tree, evaluation);
 
-    edge_t* edge = children_data.find(local_action);
+    edge_t* edge = children_data.find(action_index);
     if (!edge) {
-      core::action_index_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask, local_action);
+      core::action_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask, action_index);
       auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
 
       std::unique_lock lock(tree->children_mutex());
-      edge = children_data.insert(action, local_action, child);
+      edge = children_data.insert(action, action_index, child);
     }
 
     // TODO: if edge's child has (much?) more visits than edge, then short-circuit
@@ -266,14 +266,14 @@ std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
   const char* delim = kNumGlobalActions < 10 ? "" : ":";
   std::vector<std::string> vec;
   for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    core::action_index_t action = search_path_[n].edge->action();
+    core::action_t action = search_path_[n].edge->action();
     vec.push_back(std::to_string(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-core::local_action_index_t SearchThread<GameState, Tensorizor>::get_best_local_action_index(
+core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     Node* tree, NNEvaluation* evaluation)
 {
   profiler_.record(SearchThreadRegion::kPUCT);

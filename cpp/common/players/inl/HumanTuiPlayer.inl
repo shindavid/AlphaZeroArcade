@@ -20,13 +20,13 @@ inline void HumanTuiPlayer<GameState_>::start_game() {
 
 template<core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::receive_state_change(
-    core::seat_index_t, const GameState&, core::action_index_t action)
+    core::seat_index_t, const GameState&, core::action_t action)
 {
   last_action_ = action;
 }
 
 template<core::GameStateConcept GameState_>
-inline core::action_index_t HumanTuiPlayer<GameState_>::get_action(
+inline core::action_t HumanTuiPlayer<GameState_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   util::ScreenClearer::clear_once();

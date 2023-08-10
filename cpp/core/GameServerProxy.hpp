@@ -77,7 +77,7 @@ public:
     void stop();
 
   private:
-    void send_action_packet(action_index_t action);
+    void send_action_packet(action_t a);
     void run();
 
     std::condition_variable cv_;

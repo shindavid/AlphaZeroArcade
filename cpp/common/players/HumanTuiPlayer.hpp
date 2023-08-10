@@ -24,8 +24,8 @@ public:
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t) override;
-  core::action_index_t get_action(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_t) override;
+  core::action_t get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
   bool is_human_tui_player() const override { return true; }
@@ -36,14 +36,14 @@ protected:
    *
    * Derived classes must override this method.
    */
-  virtual core::action_index_t prompt_for_action(const GameState&, const ActionMask&) = 0;
+  virtual core::action_t prompt_for_action(const GameState&, const ActionMask&) = 0;
 
   /*
    * By default, dispatches to GameState::dump(). Can be overridden by derived classes.
    */
   virtual void print_state(const GameState&, bool terminal);
 
-  core::action_index_t last_action_ = -1;
+  core::action_t last_action_ = -1;
 };
 
 }  // namespace common

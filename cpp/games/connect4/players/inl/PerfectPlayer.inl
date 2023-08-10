@@ -21,7 +21,7 @@ inline void PerfectOracle::MoveHistory::reset() {
   *char_pointer_ = 0;
 }
 
-inline void PerfectOracle::MoveHistory::append(core::action_index_t move) {
+inline void PerfectOracle::MoveHistory::append(core::action_t move) {
   *(char_pointer_++) = char(int('1') + move);  // connect4 program uses 1-indexing
 }
 
@@ -152,12 +152,12 @@ inline void PerfectPlayer::start_game() {
 }
 
 inline void PerfectPlayer::receive_state_change(
-    core::seat_index_t, const GameState&, core::action_index_t action)
+    core::seat_index_t, const GameState&, core::action_t action)
 {
   move_history_.append(action);
 }
 
-inline core::action_index_t PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline core::action_t PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
 
   ActionMask candidates;

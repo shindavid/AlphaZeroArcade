@@ -22,7 +22,7 @@ public:
 
   void clear();
   void clear_before(move_number_t move_number);
-  Node_asptr fetch_or_create(move_number_t move_number, Node* parent, core::action_index_t action);
+  Node_asptr fetch_or_create(move_number_t move_number, Node* parent, core::action_t action);
 
 private:
   using submap_t = std::unordered_map<GameState, Node_asptr>;

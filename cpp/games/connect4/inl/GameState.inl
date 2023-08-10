@@ -19,7 +19,7 @@ inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_index_t action) {
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_t action) {
   column_t col = action;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   core::seat_index_t current_player = get_current_player();
@@ -103,7 +103,7 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
   }
 }
 
-inline void GameState::dump(core::action_index_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
   if (!util::tty_mode() && last_action > -1) {
     std::string s(2*last_action+1, ' ');
     printf("%sx\n", s.c_str());

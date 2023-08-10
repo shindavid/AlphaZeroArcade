@@ -59,7 +59,7 @@ public:
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t);
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_t);
   const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
 
   void start_search_threads(const SearchParams* search_params);

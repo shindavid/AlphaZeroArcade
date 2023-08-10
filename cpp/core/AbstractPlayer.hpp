@@ -50,13 +50,13 @@ public:
   void init_game(game_id_t game_id, const player_name_array_t& player_names, seat_index_t seat_assignment);
 
   virtual void start_game() {}
-  virtual void receive_state_change(seat_index_t, const GameState&, action_index_t) {}
+  virtual void receive_state_change(seat_index_t, const GameState&, action_t) {}
 
   /*
    * The GameState passed in here is guaranteed to be identical to the GameState last received via
    * receive_state_change().
    */
-  virtual action_index_t get_action(const GameState&, const ActionMask&) = 0;
+  virtual action_t get_action(const GameState&, const ActionMask&) = 0;
 
   /*
    * The GameState passed in here is guaranteed to be identical to the GameState last received via

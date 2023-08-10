@@ -22,13 +22,13 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_t action)
 {
   base_t::receive_state_change(seat, state, action);
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-core::action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
+core::action_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
