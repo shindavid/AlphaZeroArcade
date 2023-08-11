@@ -82,8 +82,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     } else {
       printer << __func__ << "() ";
     }
-    printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player;
-    printer.endl();
+    printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player << std::endl;
   }
 
   const auto& stable_data = tree->stable_data();
@@ -102,8 +101,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
   if (data.backpropagated_virtual_loss) {
     if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread_id());
-      printer << "hit leaf node";
-      printer.endl();
+      printer << "hit leaf node" << std::endl;
     }
     backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
@@ -145,8 +143,7 @@ inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << std::endl;
   }
 
   for (int i = search_path_.size() - 1; i >= 0; --i) {
@@ -161,8 +158,7 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << " " << value.transpose();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
   }
 
   Node* last_node = search_path_.back().node;
@@ -184,8 +180,7 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << " " << value.transpose();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
   }
 
   Node* last_node = search_path_.back().node;
@@ -206,8 +201,7 @@ void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_ed
   // short-circuit
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << std::endl;
   }
 
   last_edge->increment_count();
@@ -250,8 +244,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << std::endl;
   }
 
   data->backpropagated_virtual_loss = true;
@@ -336,14 +329,10 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
 
-    printer << "*************";
-    printer.endl();
-    printer << __func__ << "() " << search_path_str();
-    printer.endl();
-    printer << "real_avg: " << tree->stats().real_avg.transpose();
-    printer.endl();
-    printer << "virt_avg: " << tree->stats().virtualized_avg.transpose();
-    printer.endl();
+    printer << "*************" << std::endl;
+    printer << __func__ << "() " << search_path_str() << std::endl;
+    printer << "real_avg: " << tree->stats().real_avg.transpose() << std::endl;
+    printer << "virt_avg: " << tree->stats().virtualized_avg.transpose() << std::endl;
     PVec valid_action_mask(P.rows());
     int i = 0;
     for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
@@ -366,18 +355,16 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     std::vector<std::string> s_lines;
     boost::split(s_lines, s, boost::is_any_of("\n"));
 
-    printer << "valid: " << s_lines[0]; printer.endl();
-    printer << "P:     " << s_lines[1]; printer.endl();
-    printer << "V:     " << s_lines[2]; printer.endl();
-    printer << "E:     " << s_lines[3]; printer.endl();
-    printer << "N:     " << s_lines[4]; printer.endl();
-    printer << "VN:    " << s_lines[5]; printer.endl();
-    printer << "PUCT:  " << s_lines[6]; printer.endl();
+    printer << "valid: " << s_lines[0] << std::endl;
+    printer << "P:     " << s_lines[1] << std::endl;
+    printer << "V:     " << s_lines[2] << std::endl;
+    printer << "E:     " << s_lines[3] << std::endl;
+    printer << "N:     " << s_lines[4] << std::endl;
+    printer << "VN:    " << s_lines[5] << std::endl;
+    printer << "PUCT:  " << s_lines[6] << std::endl;
 
-    printer << "argmax: " << argmax_index;
-    printer.endl();
-    printer << "*************";
-    printer.endl();
+    printer << "argmax: " << argmax_index << std::endl;
+    printer << "*************" << std::endl;
   }
   return argmax_index;
 }

@@ -1,33 +1,36 @@
 #pragma once
 
+#include <iostream>
 #include <mutex>
 #include <string>
 
 namespace util {
 
 /*
- * Allows for std::cout << and printf() style printing, but in a thread-safe manner. Directly using std::cout
- * can lead to interleaved output from different threads. Directly using printf() is safe from this concern, but
- * using multiple printf() calls in a row can lead to interleaved output from different threads.
+ * Allows for std::cout << and printf() style printing, but in a thread-safe manner. Directly using
+ * std::cout can lead to interleaved output from different threads. Directly using printf() is safe
+ * from this concern, but using multiple printf() calls in a row can lead to interleaved output from
+ * different threads.
  *
  * Usage:
  *
  * util::ThreadSafePrinter p(my_thread_id);
  * p.printf("foo %d\n", 3);
- * p << "bar " << 4;
- * p.endl();  // ghetto std::endl, supporting << std::endl is a pain
- * p.release();
+ * p << "bar " << 4 << std::endl;
+ * p.release();  // optional, called in destructor if not invoked explicitly
  *
- * Under the hood, the ThreadSafePrinter constructor grabs a singleton mutex, ensuring thread-safety. The mutex is
- * released via the release() method, or in the destructor if release() is never invoked explicitly.
+ * Under the hood, the ThreadSafePrinter constructor grabs a singleton mutex, ensuring
+ * thread-safety. The mutex is released via the release() method, or in the destructor if release()
+ * is never invoked explicitly.
  *
- * An int thread-id can be passed as an optional constructor argument. All printed output lines will be prefixed with
- * whitespace whose length is proportional to the thread-id.
+ * An int thread-id can be passed as an optional constructor argument. All printed output lines will
+ * be prefixed with whitespace whose length is proportional to the thread-id.
  *
- * Finally, each line is optionally prefixed with a timestamp (before the thread whitespace). This is enabled by
- * default, but can be disabled by passing false as the second constructor argument.
+ * Finally, each line is optionally prefixed with a timestamp (before the thread whitespace). This
+ * is enabled by default, but can be disabled by passing false as the second constructor argument.
  *
- * TODO: once the std::format library is implemented in gcc, use that instead of printf-style formatting.
+ * TODO: once the std::format library is implemented in gcc, use that instead of printf-style
+ * formatting.
  */
 
 class ThreadSafePrinter {
@@ -37,9 +40,12 @@ public:
   ~ThreadSafePrinter();
 
   void release();
-  int printf(const char* fmt, ...) __attribute__((format(printf, 2, 3)));  // assumes fmt ends with '\n'
+  int printf(const char* fmt, ...) __attribute__((format(printf, 2, 3)));
   template<typename T> ThreadSafePrinter& operator<<(const T& t);
-  void endl();
+
+  // std::endl support
+  using std_endl_t = std::ostream& (*)(std::ostream&);
+  ThreadSafePrinter& operator<<(std_endl_t);
 
 private:
   void validate_lock() const;
