@@ -29,11 +29,11 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
      * arbitrarily-partially-written data.
      */
     core::action_index_t i = edge.action_index();
-    auto child_stats = edge.child()->stats();  // struct copy to simplify reasoning about race conditions
+    const auto& child_stats = edge.child()->stats();
 
     V(i) = child_stats.virtualized_avg(cp);
     E(i) = edge.count();
-    N(i) = child_stats.total_count();
+    N(i) = child_stats.real_count;
     VN(i) = child_stats.virtual_count;
 
     fpu_bits[i] = (N(i) == 0);

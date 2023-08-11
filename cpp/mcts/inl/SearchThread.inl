@@ -122,7 +122,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     // TODO: if edge's child has (much?) more visits than edge, then short-circuit
 
     int edge_count = edge->count();
-    int child_count = edge->child()->stats().total_count();
+    int child_count = edge->child()->stats().real_count;
     if (edge_count < child_count) {
       short_circuit_backprop(edge);
     } else {
