@@ -146,22 +146,21 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
     real_count += count;
   }
 
+  std::unique_lock lock(stats_mutex_);
+  update_instruction(this);
+
   if (stats_.real_count) {
     real_sum += stats_.eval;
     real_count++;
   }
 
-  ValueArray real_avg = real_count ? (real_sum / real_count) : real_sum;
-
-  std::unique_lock lock(stats_mutex_);
-  update_instruction(this);
-  stats_.real_avg = real_avg;
+  stats_.real_avg = real_count ? (real_sum / real_count) : real_sum;
   if (stats_.virtual_count) {
     ValueArray virtualized_num = real_sum + make_virtual_loss() * stats_.virtual_count;
     int virtualized_den = real_count + stats_.virtual_count;
     stats_.virtualized_avg = virtualized_num / virtualized_den;
   } else {
-    stats_.virtualized_avg = real_avg;
+    stats_.virtualized_avg = stats_.real_avg;
   }
 }
 
