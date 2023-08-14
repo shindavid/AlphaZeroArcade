@@ -65,7 +65,7 @@ bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::run() {
   search_path_.clear();
-  visit(shared_data_->root_node, nullptr, shared_data_->move_number);
+  visit(shared_data_->root_node.get(), nullptr, shared_data_->move_number);
   dump_profiling_stats();
 }
 
@@ -124,7 +124,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     if (edge_count < child_count) {
       short_circuit_backprop(edge);
     } else {
-      visit(edge->child(), edge, move_number + 1);
+      visit(edge->child().get(), edge, move_number + 1);
     }
   }
 }
@@ -270,7 +270,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
   }
 
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree == shared_data_->root_node) {
+  if (tree == shared_data_->root_node.get()) {
     if (!search_params_->disable_exploration) {
       if (manager_params_->dirichlet_mult) {
         add_dirichlet_noise(P);
@@ -301,7 +301,7 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
 {
   profiler_.record(SearchThreadRegion::kPUCT);
 
-  PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node);
+  PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node.get());
 
   using PVec = LocalPolicyArray;
 

@@ -24,9 +24,9 @@ inline Node<GameState, Tensorizor>::stats_t::stats_t() {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_t*
 Node<GameState, Tensorizor>::edge_t::instantiate(
-    core::action_t a, core::action_index_t i, asptr c)
+    core::action_t a, core::action_index_t i, sptr c)
 {
-  const_cast<asptr&>(child_).store(c.load());
+  const_cast<sptr&>(child_) = c;
   action_index_ = i;
   action_ = a;
   return this;
@@ -46,7 +46,7 @@ Node<GameState, Tensorizor>::edge_chunk_t::find(core::action_index_t i)
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::edge_t*
 Node<GameState, Tensorizor>::edge_chunk_t::insert(
-    core::action_t a, core::action_index_t i, asptr child)
+    core::action_t a, core::action_index_t i, sptr child)
 {
   for (edge_t& edge : data) {
     if (edge.action() == a) return &edge;
@@ -165,14 +165,14 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename Node<GameState, Tensorizor>::asptr
+typename Node<GameState, Tensorizor>::sptr
 Node<GameState, Tensorizor>::lookup_child_by_action(core::action_t action) const {
   for (const edge_t& edge : children_data_) {
     if (edge.action() == action) {
       return edge.child();
     }
   }
-  return asptr();
+  return nullptr;
 }
 
 }  // namespace mcts

@@ -82,11 +82,11 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
-  Node* root_node = (Node*)shared_data_.root_node;
-  if (!root_node) return;
+  auto root_node = shared_data_.root_node;
+  if (!root_node.get()) return;
 
   auto new_root = root_node->lookup_child_by_action(action);
-  if (!new_root) {
+  if (!new_root.get()) {
     shared_data_.root_node = nullptr;
     return;
   }
@@ -161,7 +161,7 @@ inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int
   thread->run();
 
   if (!thread->is_pondering() && shared_data_.root_node->stable_data().num_valid_actions() > 1) {
-    while (thread->needs_more_visits(shared_data_.root_node, tree_size_limit)) {
+    while (thread->needs_more_visits(shared_data_.root_node.get(), tree_size_limit)) {
       thread->run();
     }
   }
@@ -186,7 +186,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
   if (params_.model_filename.empty()) return;
 
-  PUCTStats stats(params_, search_params, shared_data_.root_node, true);
+  PUCTStats stats(params_, search_params, shared_data_.root_node.get(), true);
 
   auto orig_counts = results_.counts;
   const auto& P = stats.P;

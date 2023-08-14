@@ -18,14 +18,14 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 class NodeCache {
 public:
   using Node = mcts::Node<GameState, Tensorizor>;
-  using Node_asptr = typename Node::asptr;
+  using Node_sptr = typename Node::sptr;
 
   void clear();
   void clear_before(move_number_t move_number);
-  Node_asptr fetch_or_create(move_number_t move_number, Node* parent, core::action_t action);
+  Node_sptr fetch_or_create(move_number_t move_number, Node* parent, core::action_t action);
 
 private:
-  using submap_t = std::unordered_map<GameState, Node_asptr>;
+  using submap_t = std::unordered_map<GameState, Node_sptr>;
   using map_t = std::map<move_number_t, submap_t*>;
 
   map_t map_;

@@ -25,7 +25,7 @@ struct SharedData {
   Eigen::Rand::P8_mt19937_64 rng;
 
   NodeCache node_cache;
-  Node::asptr root_node;
+  Node::sptr root_node;
   int manager_id = -1;
   move_number_t move_number = 0;
   bool search_active = false;

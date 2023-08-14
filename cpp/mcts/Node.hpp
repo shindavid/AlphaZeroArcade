@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <iterator>
+#include <memory>
 #include <mutex>
 
 #include <core/DerivedTypes.hpp>
@@ -10,7 +11,6 @@
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/TypeDefs.hpp>
-#include <util/AtomicSharedPtr.hpp>
 
 namespace mcts {
 
@@ -27,7 +27,7 @@ namespace mcts {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class Node {
 public:
-  using asptr = util::AtomicSharedPtr<Node>;
+  using sptr = std::shared_ptr<Node>;
 
   using NNEvaluation = mcts::NNEvaluation<GameState>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -101,16 +101,16 @@ public:
    * keyword.
    */
   struct edge_t {
-    edge_t* instantiate(core::action_t a, core::action_index_t i, asptr c);
+    edge_t* instantiate(core::action_t a, core::action_index_t i, sptr c);
     bool instantiated() const { return action_ >= 0; }
     core::action_t action() const { return action_; }
     core::action_index_t action_index() const { return action_index_; }
-    asptr child() const { return const_cast<asptr&>(child_); }
+    sptr child() const { return const_cast<sptr&>(child_); }
     void increment_count() { count_++; }
     int count() const { return count_.load(); }
 
   private:
-    volatile asptr child_;
+    volatile sptr child_;
     volatile core::action_index_t action_index_ = -1;
     volatile core::action_t action_ = -1;
     std::atomic<int> count_ = 0;  //real only
@@ -124,7 +124,7 @@ public:
   struct edge_chunk_t {
     ~edge_chunk_t() { delete next; }
     edge_t* find(core::action_index_t i);
-    edge_t* insert(core::action_t a, core::action_index_t i, asptr child);
+    edge_t* insert(core::action_t a, core::action_index_t i, sptr child);
 
     edge_t data[kEdgeDataChunkSize];
     edge_chunk_t* next = nullptr;
@@ -221,7 +221,7 @@ public:
      * It is possible that an edge_t already exists for this action due to a race condition.
      * In this case, returns a pointer to the existing entry.
      */
-    edge_t* insert(core::action_t a, core::action_index_t i, asptr child) {
+    edge_t* insert(core::action_t a, core::action_index_t i, sptr child) {
       return first_chunk_.insert(a, i, child);
     }
 
@@ -251,7 +251,7 @@ public:
   PolicyTensor get_counts() const;
   ValueArray make_virtual_loss() const;
   template<typename UpdateT> void update_stats(const UpdateT& update_instruction);
-  asptr lookup_child_by_action(core::action_t action) const;
+  sptr lookup_child_by_action(core::action_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
   const children_data_t& children_data() const { return children_data_; }
