@@ -202,8 +202,6 @@ public:
     };
     static_assert(std::forward_iterator<const_iterator>);
 
-    ~children_data_t() { delete first_chunk_.next; }
-
     /*
      * Traverses the chunked linked list and attempts to find an edge_t corresponding to the
      * given action. If it finds it, then it returns a pointer to the edge_t. Otherwise, it
