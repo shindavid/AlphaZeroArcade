@@ -52,8 +52,14 @@ Node<GameState, Tensorizor>::edge_chunk_t::insert(
     if (edge.action() == a) return &edge;
     if (edge.action() == -1) return edge.instantiate(a, i, child);
   }
-  if (!next) next = new edge_chunk_t();
-  return next->insert(a, i, child);
+  if (!next) {
+    edge_chunk_t* chunk = new edge_chunk_t();
+    edge_t* edge = chunk->insert(a, i, child);
+    next = chunk;
+    return edge;
+  } else {
+    return next->insert(a, i, child);
+  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
