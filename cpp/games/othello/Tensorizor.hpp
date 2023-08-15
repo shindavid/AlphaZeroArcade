@@ -101,7 +101,7 @@ public:
   };
 
   void clear() {}
-  void receive_state_change(const GameState& state, core::action_index_t action_index) {}
+  void receive_state_change(const GameState& state, core::action_t action) {}
   void tensorize(InputTensor& tensor, const GameState& state) const { state.tensorize(tensor); }
 
   SymmetryIndexSet get_symmetry_indices(const GameState&) const;

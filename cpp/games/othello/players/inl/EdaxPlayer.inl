@@ -57,14 +57,14 @@ inline void EdaxPlayer::start_game() {
   in_.flush();
 }
 
-inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&, core::action_index_t action) {
+inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&, core::action_t action) {
   if (seat == this->get_my_seat()) return;
   submit_action(action);
 }
 
-inline core::action_index_t EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
+inline core::action_t EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
   if (valid_actions.count() == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    for (core::action_index_t action : bitset_util::on_indices(valid_actions)) {
+    for (core::action_t action : bitset_util::on_indices(valid_actions)) {
       submit_action(action);
       return action;
     }
@@ -72,7 +72,7 @@ inline core::action_index_t EdaxPlayer::get_action(const GameState&, const Actio
   in_.write("go\n", 3);
   in_.flush();
 
-  core::action_index_t action = -1;
+  core::action_t action = -1;
   size_t n = 0;
   for (; std::getline(out_, line_buffer_[n]); ++n) {
     const std::string& line = line_buffer_[n];
@@ -100,7 +100,7 @@ inline core::action_index_t EdaxPlayer::get_action(const GameState&, const Actio
   return action;
 }
 
-inline void EdaxPlayer::submit_action(core::action_index_t action) {
+inline void EdaxPlayer::submit_action(core::action_t action) {
   if (action == kPass) {
     in_.write("PS\n", 3);
     in_.flush();

@@ -64,7 +64,7 @@ concept GameStateConcept = requires(S state) {
   /*
    * Apply a given action to the state, and return a GameOutcome.
    */
-  { state.apply_move(action_index_t()) } -> std::same_as<typename GameStateTypes<S>::GameOutcome>;
+  { state.apply_move(action_t()) } -> std::same_as<typename GameStateTypes<S>::GameOutcome>;
 
   /*
    * Get the valid actions, as a std::bitset

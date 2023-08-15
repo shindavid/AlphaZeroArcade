@@ -1,5 +1,11 @@
 #include <mcts/SearchThread.hpp>
 
+#include <boost/algorithm/string.hpp>
+
+#include <sstream>
+#include <string>
+#include <vector>
+
 namespace mcts {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -28,13 +34,18 @@ inline SearchThread<GameState, Tensorizor>::~SearchThread() {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::join() {
-  if (thread_ && thread_->joinable()) thread_->join();
+  if (thread_ && thread_->joinable()) {
+    thread_->join();
+  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::kill() {
   join();
-  if (thread_) delete thread_;
+  if (thread_) {
+    delete thread_;
+    thread_ = nullptr;
+  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -48,47 +59,73 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree_size_limit) {
   profiler_.record(SearchThreadRegion::kCheckVisitReady);
   const auto& stats = root->stats();
-  return search_active() && stats.count <= tree_size_limit && !root->eliminated();
+  return search_active() && stats.total_count() <= tree_size_limit;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, int depth) {
+inline void SearchThread<GameState, Tensorizor>::run() {
+  search_path_.clear();
+  visit(shared_data_->root_node.get(), nullptr, shared_data_->move_number);
+  dump_profiling_stats();
+}
+
+template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void SearchThread<GameState, Tensorizor>::visit(
+    Node* tree, edge_t* edge, move_number_t move_number)
+{
+  search_path_.emplace_back(tree, edge);
+
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id());
-    printer << __func__ << " " << tree->genealogy_str() << " cp=" << (int)tree->stable_data().current_player;
-    printer.endl();
+    if (edge) {
+      printer << __func__ << "(" << edge->action() << ") ";
+    } else {
+      printer << __func__ << "() ";
+    }
+    printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player << std::endl;
   }
 
   const auto& stable_data = tree->stable_data();
   const auto& outcome = stable_data.outcome;
   if (core::is_terminal_outcome(outcome)) {
-    backprop_outcome(tree, outcome);
-    perform_eliminations(tree, outcome);
-    mark_as_fully_analyzed(tree);
+    pure_backprop(outcome);
     return;
   }
 
   if (!search_active()) return;  // short-circuit
 
-  evaluate_and_expand_result_t data = evaluate_and_expand(tree, false);
+  evaluation_result_t data = evaluate(tree);
   NNEvaluation* evaluation = data.evaluation.get();
   assert(evaluation);
 
   if (data.backpropagated_virtual_loss) {
-    profiler_.record(SearchThreadRegion::kBackpropEvaluation);
-
     if (mcts::kEnableThreadingDebug) {
       util::ThreadSafePrinter printer(thread_id());
-      printer << "backprop_with_virtual_undo " << tree->genealogy_str();
-      printer << " " << evaluation->value_prob_distr().transpose();
-      printer.endl();
+      printer << "hit leaf node" << std::endl;
+    }
+    backprop_with_virtual_undo(evaluation->value_prob_distr());
+  } else {
+    auto& children_data = tree->children_data();
+    core::action_index_t action_index = get_best_action_index(tree, evaluation);
+
+    edge_t* edge = children_data.find(action_index);
+    if (!edge) {
+      core::action_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask, action_index);
+      auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
+
+      std::unique_lock lock(tree->children_mutex());
+      edge = children_data.insert(action, action_index, child);
     }
 
-    tree->backprop_with_virtual_undo(evaluation->value_prob_distr());
-  } else {
-    child_index_t best_child_index = get_best_child_index(tree, evaluation);
-    Node* child = tree->init_child(best_child_index);
-    visit(child, depth + 1);
+    // TODO: if edge's child has (much?) more visits than edge, then short-circuit
+
+    int edge_count = edge->count();
+    int child_count = edge->child()->stats().real_count;
+    if (edge_count < child_count) {
+      short_circuit_backprop(edge);
+    } else {
+      visit(edge->child().get(), edge, move_number + 1);
+    }
   }
 }
 
@@ -101,76 +138,97 @@ inline void SearchThread<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicy
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::backprop_outcome(Node* tree, const ValueArray& outcome) {
-  profiler_.record(SearchThreadRegion::kBackpropOutcome);
+inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
+  profiler_.record(SearchThreadRegion::kVirtualBackprop);
+
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << tree->genealogy_str() << " " << outcome.transpose();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << std::endl;
   }
 
-  tree->backprop(outcome);
-}
-
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::perform_eliminations(Node* tree, const ValueArray& outcome) {
-  if (manager_params_->disable_eliminations) return;
-  player_bitset_t forcibly_winning;
-  player_bitset_t forcibly_losing;
-  for (int p = 0; p < kNumPlayers; ++p) {
-    forcibly_winning.set(p, outcome(p) == 1);
-    forcibly_losing.set(p, outcome(p) == 0);
+  for (int i = search_path_.size() - 1; i >= 0; --i) {
+    Node* node = search_path_[i].node;
+    node->update_stats(VirtualIncrement{});
   }
-  int cp = tree->stable_data().current_player;
-  bool winning = outcome(cp) == 1;
-  bool losing = outcome(cp) == 0;
-  if (!winning && !losing) return;  // drawn position, no elimination possible
-
-  ValueArray accumulated_value;
-  accumulated_value.setZero();
-  int accumulated_count = 0;
-
-  profiler_.record(SearchThreadRegion::kPerformEliminations);
-  tree->eliminate(thread_id_, forcibly_winning, forcibly_losing, accumulated_value, accumulated_count);
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::mark_as_fully_analyzed(Node* tree) {
-  profiler_.record(SearchThreadRegion::kMarkFullyAnalyzed);
-  tree->mark_as_fully_analyzed();
+inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray& value) {
+  profiler_.record(SearchThreadRegion::kPureBackprop);
+
+  if (mcts::kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
+  }
+
+  Node* last_node = search_path_.back().node;
+  edge_t* last_edge = search_path_.back().edge;
+  last_node->update_stats(SetEval(value));
+  last_edge->increment_count();
+
+  for (int i = search_path_.size() - 2; i >= 0; --i) {
+    Node* child = search_path_[i].node;
+    edge_t* edge = search_path_[i].edge;
+    child->update_stats(RealIncrement{});
+    if (i) edge->increment_count();
+  }
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename SearchThread<GameState, Tensorizor>::evaluate_and_expand_result_t
-SearchThread<GameState, Tensorizor>::evaluate_and_expand(Node* tree, bool speculative) {
-  profiler_.record(SearchThreadRegion::kEvaluateAndExpand);
+void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const ValueArray& value) {
+  profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
+
+  if (mcts::kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
+  }
+
+  Node* last_node = search_path_.back().node;
+  edge_t* last_edge = search_path_.back().edge;
+  last_node->update_stats(SetEvalWithVirtualUndo(value));
+  if (last_edge) last_edge->increment_count();
+
+  for (int i = search_path_.size() - 2; i >= 0; --i) {
+    Node* child = search_path_[i].node;
+    edge_t* edge = search_path_[i].edge;
+    child->update_stats(IncrementTransfer{});
+    if (i) edge->increment_count();
+  }
+}
+
+template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_edge) {
+  // short-circuit
+  if (mcts::kEnableThreadingDebug) {
+    util::ThreadSafePrinter printer(thread_id_);
+    printer << __func__ << " " << search_path_str() << std::endl;
+  }
+
+  last_edge->increment_count();
+
+  for (int i = search_path_.size() - 1; i >= 0; --i) {
+    Node* child = search_path_[i].node;
+    edge_t* edge = search_path_[i].edge;
+    child->update_stats(RealIncrement{});
+    if (i) edge->increment_count();
+  }
+}
+
+template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+typename SearchThread<GameState, Tensorizor>::evaluation_result_t
+SearchThread<GameState, Tensorizor>::evaluate(Node* tree) {
+  profiler_.record(SearchThreadRegion::kEvaluate);
 
   std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
   typename Node::evaluation_data_t& evaluation_data = tree->evaluation_data();
-  evaluate_and_expand_result_t data{evaluation_data.ptr.load(), false};
+  evaluation_result_t data{evaluation_data.ptr.load(), false};
   auto state = evaluation_data.state;
 
   switch (state) {
     case Node::kUnset:
     {
-      evaluate_and_expand_unset(tree, &lock, &data, speculative);
-      tree->cv_evaluate_and_expand().notify_all();
-      break;
-    }
-    case Node::kPending:
-    {
-      assert(manager_params_->speculative_evals);
-      evaluate_and_expand_pending(tree, &lock);
-      assert(!lock.owns_lock());
-      if (!speculative) {
-        lock.lock();
-        if (evaluation_data.state != Node::kSet) {
-          tree->cv_evaluate_and_expand().wait(lock);
-          assert(evaluation_data.state == Node::kSet);
-        }
-        data.evaluation = evaluation_data.ptr.load();
-        assert(data.evaluation.get());
-      }
+      evaluate_unset(tree, &lock, &data);
+      tree->cv_evaluate().notify_all();
       break;
     }
     default: break;
@@ -179,41 +237,24 @@ SearchThread<GameState, Tensorizor>::evaluate_and_expand(Node* tree, bool specul
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
-    Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative)
+void SearchThread<GameState, Tensorizor>::evaluate_unset(
+    Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data)
 {
-  profiler_.record(SearchThreadRegion::kEvaluateAndExpandUnset);
+  profiler_.record(SearchThreadRegion::kEvaluateUnset);
 
   if (mcts::kEnableThreadingDebug) {
     util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << tree->genealogy_str();
-    printer.endl();
+    printer << __func__ << " " << search_path_str() << std::endl;
   }
 
-  assert(!tree->has_children());
   data->backpropagated_virtual_loss = true;
   assert(data->evaluation.get() == nullptr);
 
   auto& evaluation_data = tree->evaluation_data();
 
-  if (manager_params_->speculative_evals) {
-    evaluation_data.state = Node::kPending;
-    lock->unlock();
-  }
-
-  if (!speculative) {
-    profiler_.record(SearchThreadRegion::kVirtualBackprop);
-    if (mcts::kEnableThreadingDebug) {
-      util::ThreadSafePrinter printer(thread_id_);
-      printer << "virtual_backprop " << tree->genealogy_str();
-      printer.endl();
-    }
-
-    tree->virtual_backprop();
-  }
+  virtual_backprop();
 
   const auto& stable_data = tree->stable_data();
-  bool used_cache = false;
   if (!nn_eval_service_) {
     // no-model mode
     ValueTensor uniform_value;
@@ -225,22 +266,11 @@ void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
     core::symmetry_index_t sym_index = stable_data.sym_index;
     typename NNEvaluationService::Request request{tree, &profiler_, thread_id_, sym_index};
     auto response = nn_eval_service_->evaluate(request);
-    used_cache = response.used_cache;
     data->evaluation = response.ptr;
   }
 
-  if (manager_params_->speculative_evals) {
-    if (speculative && used_cache) {
-      // without this, when we hit cache, we fail to saturate nn service batch
-      lock->lock();
-      evaluate_and_expand_pending(tree, lock);
-    }
-
-    lock->lock();
-  }
-
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree->is_root()) {
+  if (tree == shared_data_->root_node.get()) {
     if (!search_params_->disable_exploration) {
       if (manager_params_->dirichlet_mult) {
         add_dirichlet_noise(P);
@@ -255,48 +285,29 @@ void SearchThread<GameState, Tensorizor>::evaluate_and_expand_unset(
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void SearchThread<GameState, Tensorizor>::evaluate_and_expand_pending(
-    Node* tree, std::unique_lock<std::mutex>* lock)
-{
-  // Another search thread is working on this. Might as well speculatively eval another position while we wait
-  profiler_.record(SearchThreadRegion::kEvaluateAndExpandPending);
-
-  assert(tree->has_children());
-  Node* child;
-  auto& evaluation_data = tree->evaluation_data();
-  if (evaluation_data.fully_analyzed_actions.all()) {
-    child = tree->get_child(0);
-    assert(child);
-    lock->unlock();
-  } else {
-    core::action_index_t action = bitset_util::choose_random_off_index(evaluation_data.fully_analyzed_actions);
-    lock->unlock();
-    child = tree->lookup_child_by_action(action);
-    assert(child);
+std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
+  const char* delim = kNumGlobalActions < 10 ? "" : ":";
+  std::vector<std::string> vec;
+  for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
+    core::action_t action = search_path_[n].edge->action();
+    vec.push_back(std::to_string(action));
   }
-
-  const auto& stable_data = child->stable_data();
-  const auto& outcome = stable_data.outcome;
-  if (core::is_terminal_outcome(outcome)) {
-    perform_eliminations(child, outcome);  // why not?
-    mark_as_fully_analyzed(child);
-  } else {
-    evaluate_and_expand(child, true);
-  }
+  return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tree, NNEvaluation* evaluation) {
+core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
+    Node* tree, NNEvaluation* evaluation)
+{
   profiler_.record(SearchThreadRegion::kPUCT);
 
-  PUCTStats stats(*manager_params_, *search_params_, tree);
+  PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node.get());
 
   using PVec = LocalPolicyArray;
 
   const PVec& P = stats.P;
   const PVec& N = stats.N;
   const PVec& VN = stats.VN;
-  const PVec& E = stats.E;
   PVec& PUCT = stats.PUCT;
 
   bool add_noise = !search_params_->disable_exploration && manager_params_->dirichlet_mult > 0;
@@ -308,8 +319,6 @@ child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tr
     PUCT = PUCT * (1 - F) + F * 1e+6;
   }
 
-  PUCT -= E * (100 + PUCT.maxCoeff() - PUCT.minCoeff());  // zero-out where E==1
-
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
 
@@ -318,37 +327,44 @@ child_index_t SearchThread<GameState, Tensorizor>::get_best_child_index(Node* tr
   }
 
   if (mcts::kEnableThreadingDebug) {
-    std::string genealogy = tree->genealogy_str();
-
     util::ThreadSafePrinter printer(thread_id());
 
-    printer << "*************";
-    printer.endl();
-    printer << __func__ << "() " << genealogy;
-    printer.endl();
-    printer << "valid:";
+    printer << "*************" << std::endl;
+    printer << __func__ << "() " << search_path_str() << std::endl;
+    printer << "real_avg: " << tree->stats().real_avg.transpose() << std::endl;
+    printer << "virt_avg: " << tree->stats().virtualized_avg.transpose() << std::endl;
+    PVec valid_action_mask(P.rows());
+    int i = 0;
     for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
-      printer << " " << v;
+      valid_action_mask[i++] = v;
     }
-    printer.endl();
-    printer << "value_avg: " << tree->stats().value_avg.transpose();
-    printer.endl();
-    printer << "P: " << P.transpose();
-    printer.endl();
-    printer << "N: " << N.transpose();
-    printer.endl();
-    printer << "V: " << stats.V.transpose();
-    printer.endl();
-    printer << "VN: " << stats.VN.transpose();
-    printer.endl();
-    printer << "E: " << E.transpose();
-    printer.endl();
-    printer << "PUCT: " << PUCT.transpose();
-    printer.endl();
-    printer << "argmax: " << argmax_index;
-    printer.endl();
-    printer << "*************";
-    printer.endl();
+
+    Eigen::Array<typename PVec::Scalar, Eigen::Dynamic, 7, 0, PVec::MaxRowsAtCompileTime> M(P.rows(), 7);
+    M.col(0) = valid_action_mask;
+    M.col(1) = P;
+    M.col(2) = stats.V;
+    M.col(3) = stats.E;
+    M.col(4) = N;
+    M.col(5) = stats.VN;
+    M.col(6) = PUCT;
+
+    std::ostringstream ss;
+    ss << M.transpose();
+    std::string s = ss.str();
+
+    std::vector<std::string> s_lines;
+    boost::split(s_lines, s, boost::is_any_of("\n"));
+
+    printer << "valid: " << s_lines[0] << std::endl;
+    printer << "P:     " << s_lines[1] << std::endl;
+    printer << "V:     " << s_lines[2] << std::endl;
+    printer << "E:     " << s_lines[3] << std::endl;
+    printer << "N:     " << s_lines[4] << std::endl;
+    printer << "VN:    " << s_lines[5] << std::endl;
+    printer << "PUCT:  " << s_lines[6] << std::endl;
+
+    printer << "argmax: " << argmax_index << std::endl;
+    printer << "*************" << std::endl;
   }
   return argmax_index;
 }

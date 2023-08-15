@@ -22,13 +22,13 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_t action)
 {
   base_t::receive_state_change(seat, state, action);
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-core::action_index_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
+core::action_t DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
@@ -69,8 +69,8 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsSearc
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   float sum = policy_array.sum();
   if (sum == 0) {
-    // Happens if eliminations is enabled and MCTS proves that the position is losing. No need to do anything in this
-    // case; the python training code will ignore these rows for policy training.
+    // This can happen if MCTS proves that the position is losing. No need to do anything in this case; the python
+    // training code will ignore these rows for policy training.
   } else {
     policy_array /= sum;
   }

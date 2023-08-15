@@ -116,7 +116,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_index_t action)
+    core::seat_index_t seat, const GameState& state, core::action_t action)
 {
   move_count_++;
   move_temperature_.step();
@@ -136,7 +136,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action(
+inline core::action_t MctsPlayer<GameState_, Tensorizor_>::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   SearchMode search_mode = choose_search_mode();
@@ -165,7 +165,7 @@ MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
+inline core::action_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     SearchMode search_mode, const MctsSearchResults* mcts_results, const ActionMask& valid_actions) const
 {
   PolicyTensor policy_tensor;
@@ -186,9 +186,8 @@ inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_help
   }
 
   if (policy.sum() == 0) {
-    // This happens if eliminations are enabled and if MCTS proves that the position is losing.
-    // In this case we just choose a random valid action.
-    for (core::action_index_t action : bitset_util::on_indices(valid_actions)) {
+    // This happens if MCTS proves that the position is losing. In this case we just choose a random valid action.
+    for (core::action_t action : bitset_util::on_indices(valid_actions)) {
       policy[action] = 1;
     }
   }
@@ -199,7 +198,7 @@ inline core::action_index_t MctsPlayer<GameState_, Tensorizor_>::get_action_help
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  core::action_index_t action = util::Random::weighted_sample(policy.begin(), policy.end());
+  core::action_t action = util::Random::weighted_sample(policy.begin(), policy.end());
   assert(valid_actions[action]);
   return action;
 }

@@ -37,11 +37,11 @@ public:
   EdaxPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t) override;
-  core::action_index_t get_action(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_t) override;
+  core::action_t get_action(const GameState&, const ActionMask&) override;
 
 private:
-  void submit_action(core::action_index_t action);
+  void submit_action(core::action_t action);
 
   const Params params_;
   std::vector<std::string> line_buffer_;

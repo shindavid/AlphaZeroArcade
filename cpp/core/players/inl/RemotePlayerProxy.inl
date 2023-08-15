@@ -129,7 +129,7 @@ void RemotePlayerProxy<GameState>::start_game() {
 
 template<GameStateConcept GameState>
 void RemotePlayerProxy<GameState>::receive_state_change(
-    seat_index_t seat, const GameState& state, action_index_t action)
+    seat_index_t seat, const GameState& state, action_t action)
 {
   Packet<StateChange> packet;
   packet.payload().game_thread_id = game_thread_id_;
@@ -141,7 +141,7 @@ void RemotePlayerProxy<GameState>::receive_state_change(
 }
 
 template<GameStateConcept GameState>
-action_index_t RemotePlayerProxy<GameState>::get_action(const GameState& state, const ActionMask& valid_actions) {
+action_t RemotePlayerProxy<GameState>::get_action(const GameState& state, const ActionMask& valid_actions) {
   state_ = &state;
   action_ = -1;
 

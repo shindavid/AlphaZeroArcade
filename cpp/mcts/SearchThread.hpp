@@ -3,6 +3,7 @@
 #include <bitset>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -12,6 +13,7 @@
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/NodeCache.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -25,7 +27,10 @@ public:
   using NNEvaluation = mcts::NNEvaluation<GameState>;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
+  using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
+  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using edge_t = typename Node::edge_t;
 
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
@@ -34,9 +39,9 @@ public:
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
 
   using dtype = torch_util::dtype;
-  using player_bitset_t = std::bitset<kNumPlayers>;
   using profiler_t = search_thread_profiler_t;
 
   SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service, const ManagerParams* manager_params,
@@ -49,25 +54,57 @@ public:
   void kill();
   void launch(const SearchParams* search_params, std::function<void()> f);
   bool needs_more_visits(Node* root, int tree_size_limit);
-  void visit(Node* tree, int depth);
+  void run();
   bool is_pondering() const { return search_params_->ponder; }
 
   void dump_profiling_stats() { profiler_.dump(64); }
 
 private:
-  struct evaluate_and_expand_result_t {
+  struct VirtualIncrement {
+    void operator()(Node* node) const { node->stats().virtual_increment(); }
+  };
+
+  struct RealIncrement {
+    void operator()(Node* node) const { node->stats().real_increment(); }
+  };
+
+  struct IncrementTransfer {
+    void operator()(Node* node) const { node->stats().increment_transfer(); }
+  };
+
+  struct SetEval {
+    SetEval(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().set_eval(value); }
+    const ValueArray& value;
+  };
+
+  struct SetEvalWithVirtualUndo {
+    SetEvalWithVirtualUndo(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().set_eval_with_virtual_undo(value); }
+    const ValueArray& value;
+  };
+
+  struct evaluation_result_t {
     NNEvaluation_sptr evaluation;
     bool backpropagated_virtual_loss;
   };
 
+  struct visitation_t {
+    visitation_t(Node* n, edge_t* e) : node(n), edge(e) {}
+    Node* node;
+    edge_t* edge;
+  };
+  using search_path_t = std::vector<visitation_t>;
+
+  void visit(Node* tree, edge_t* edge, move_number_t move_number);
   void add_dirichlet_noise(LocalPolicyArray& P);
-  void backprop_outcome(Node* tree, const ValueArray& outcome);
-  void perform_eliminations(Node* tree, const ValueArray& outcome);
-  void mark_as_fully_analyzed(Node* tree);
-  evaluate_and_expand_result_t evaluate_and_expand(Node* tree, bool speculative);
-  void evaluate_and_expand_unset(
-      Node* tree, std::unique_lock<std::mutex>* lock, evaluate_and_expand_result_t* data, bool speculative);
-  void evaluate_and_expand_pending(Node* tree, std::unique_lock<std::mutex>* lock);
+  void virtual_backprop();
+  void pure_backprop(const ValueArray& value);
+  void backprop_with_virtual_undo(const ValueArray& value);
+  void short_circuit_backprop(edge_t* last_edge);
+  evaluation_result_t evaluate(Node* tree);
+  void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
+  std::string search_path_str() const;  // slow, for debugging
 
   /*
    * Used in visit().
@@ -78,7 +115,7 @@ private:
    * evolve. It probably makes sense to have the behavior as part of the Tensorizor, since there is coupling with NN
    * architecture (in the form of output heads).
    */
-  mcts::child_index_t get_best_child_index(Node* tree, NNEvaluation* evaluation);
+  core::action_index_t get_best_action_index(Node* tree, NNEvaluation* evaluation);
 
   bool search_active() const { return shared_data_->search_active; }
   auto& dirichlet_gen() { return shared_data_->dirichlet_gen; }
@@ -90,6 +127,7 @@ private:
   const ManagerParams* manager_params_;
   const SearchParams* search_params_ = nullptr;
   std::thread* thread_ = nullptr;
+  search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
 };

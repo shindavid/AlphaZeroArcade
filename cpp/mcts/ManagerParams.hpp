@@ -41,8 +41,6 @@ struct ManagerParams {
   float cFPU = 0.2;
   float dirichlet_mult = 0.25;
   float dirichlet_alpha_sum = 0.03 * 361;
-  bool disable_eliminations = true;
-  bool speculative_evals = false;
   bool forced_playouts = true;
   bool enable_first_play_urgency = true;
   float k_forced = 2.0;

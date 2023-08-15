@@ -77,15 +77,15 @@ public:
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t) override;
-  core::action_index_t get_action(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_t) override;
+  core::action_t get_action(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   void set_facing_human_tui_player() override { facing_human_tui_player_ = true; }  // affects printing
 
 protected:
   const MctsSearchResults* mcts_search(const GameState& state, SearchMode search_mode) const;
   SearchMode choose_search_mode() const;
-  core::action_index_t get_action_helper(SearchMode, const MctsSearchResults*, const ActionMask& valid_actions) const;
+  core::action_t get_action_helper(SearchMode, const MctsSearchResults*, const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     LocalPolicyArray action_policy;

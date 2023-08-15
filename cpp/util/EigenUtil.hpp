@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include <Eigen/Core>
 #include <EigenRand/EigenRand>
 #include <boost/mp11.hpp>
 #include <torch/torch.h>
@@ -267,10 +268,19 @@ MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& t
 
 /*
  * sum(), max(), and min() return a 1-element Eigen::TensorFixedSize. To convert to a scalar, access via (0)
+ *
+ * positve_sum() returns the sum of the positive elements, as a scalar.
  */
 template<typename TensorT> auto sum(const TensorT& tensor);
 template<typename TensorT> auto max(const TensorT& tensor);
 template<typename TensorT> auto min(const TensorT& tensor);
+template<typename TensorT> auto positive_sum(const TensorT& tensor);
+
+/*
+ * Multiplies the positive elements of array by s.
+ */
+template<typename Scalar, int N> void positive_scale(Eigen::Array<Scalar, N, 1>& array, Scalar s);
+
 
 /*
  * left_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]

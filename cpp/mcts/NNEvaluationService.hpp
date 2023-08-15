@@ -10,6 +10,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/HashablePair.hpp>
 #include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
@@ -142,7 +143,7 @@ public:
 
 private:
   using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
-  using cache_key_t = core::StateEvaluationKey<GameState>;
+  using cache_key_t = util::HashablePair<GameState, core::symmetry_index_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 

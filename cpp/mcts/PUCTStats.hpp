@@ -21,14 +21,14 @@ struct PUCTStats {
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
-  PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params, const Node* tree);
+  PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params, const Node* tree, bool is_root);
 
   core::seat_index_t cp;
   const LocalPolicyArray& P;
   LocalPolicyArray V;
+  LocalPolicyArray E;
   LocalPolicyArray N;
   LocalPolicyArray VN;
-  LocalPolicyArray E;
   LocalPolicyArray PUCT;
 };
 

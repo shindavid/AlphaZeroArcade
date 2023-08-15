@@ -44,10 +44,11 @@ inline ThreadSafePrinter& ThreadSafePrinter::operator<<(const T& t) {
   return *this;
 }
 
-inline void ThreadSafePrinter::endl() {
+inline ThreadSafePrinter& ThreadSafePrinter::operator<<(std_endl_t f) {
   validate_lock();
-  std::cout << std::endl;
+  f(std::cout);
   line_start_ = true;
+  return *this;
 }
 
 inline void ThreadSafePrinter::validate_lock() const {

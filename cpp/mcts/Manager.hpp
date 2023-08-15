@@ -14,7 +14,6 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/NodeReleaseService.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
@@ -34,10 +33,10 @@ public:
   using dtype = torch_util::dtype;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
-  using NodeReleaseService = mcts::NodeReleaseService<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchResults = mcts::SearchResults<GameState>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
+  using SharedData = mcts::SharedData<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -60,7 +59,7 @@ public:
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const GameState&, core::action_index_t);
+  void receive_state_change(core::seat_index_t, const GameState&, core::action_t);
   const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
 
   void start_search_threads(const SearchParams* search_params);
@@ -84,7 +83,6 @@ private:
   search_thread_vec_t search_threads_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 
-  Node* root_ = nullptr;
   SearchResults results_;
 
   std::mutex search_mutex_;

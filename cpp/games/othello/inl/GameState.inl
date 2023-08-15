@@ -17,7 +17,7 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 namespace othello {
 
 // copied from edax-reversi repo - board_next()
-inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_index_t action) {
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_t action) {
   if (action == kPass) {
     std::swap(cur_player_mask_, opponent_mask_);
     cur_player_ = 1 - cur_player_;
@@ -69,7 +69,7 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
   }
 }
 
-inline void GameState::dump(core::action_index_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
   ActionMask valid_actions = get_valid_actions();
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
@@ -242,7 +242,7 @@ inline void SearchResultsDumper<othello::GameState>::dump(
   using tuple_array_t = std::array<tuple_t, othello::kNumGlobalActions>;
   tuple_array_t tuples;
   int i = 0;
-  for (core::action_index_t action : bitset_util::on_indices(valid_actions)) {
+  for (core::action_t action : bitset_util::on_indices(valid_actions)) {
     tuples[i] = std::make_tuple(mcts_counts.data()[action], action_policy(i), net_policy(i), action);
     i++;
   }
