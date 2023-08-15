@@ -23,23 +23,24 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
 add_executable(c4 cpp/games/connect4/main/Connect4.cpp)
-#add_executable(dshin_scratch cpp/games/connect4/main/DshinScratch.cpp)
 add_executable(othello cpp/games/othello/main/Othello.cpp)
 add_executable(unit_tests_othello cpp/games/othello/main/UnitTests.cpp)
+add_executable(tictactoe cpp/games/tictactoe/main/TicTacToe.cpp)
 
 set(executables
         c4
-#        dshin_scratch
         othello
         unit_tests_othello
+        tictactoe
         )
 
 add_subdirectory("cpp/util")
 add_subdirectory("cpp/games/connect4")
 add_subdirectory("cpp/games/othello")
+add_subdirectory("cpp/games/tictactoe")
 
 set(common-libs util)
-set(other-libs connect4-lib othello-lib)
+set(other-libs connect4-lib othello-lib tictactoe-lib)
 
 foreach(tgt ${executables} ${common-libs} ${other-libs})
     target_link_libraries(${tgt} ${TORCH_LIBRARIES})
@@ -53,6 +54,8 @@ foreach(tgt ${executables})
         target_link_libraries(${tgt} connect4-lib)
     elseif (${tgt} STREQUAL "othello")
         target_link_libraries(${tgt} othello-lib)
+    elseif (${tgt} STREQUAL "tictactoe")
+        target_link_libraries(${tgt} tictactoe-lib)
     elseif (${tgt} STREQUAL "unit_tests_othello")
         target_link_libraries(${tgt} othello-lib)
     endif()
