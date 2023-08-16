@@ -117,8 +117,6 @@ inline void SearchThread<GameState, Tensorizor>::visit(
       edge = children_data.insert(action, action_index, child);
     }
 
-    // TODO: if edge's child has (much?) more visits than edge, then short-circuit
-
     int edge_count = edge->count();
     int child_count = edge->child()->stats().real_count;
     if (edge_count < child_count) {

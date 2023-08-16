@@ -73,8 +73,6 @@ concept GameStateConcept = requires(S state) {
 
   /*
    * Must be hashable (for use in MCGS).
-   *
-   * Currently, we still use MCTS, not MCGS, so this is a forward-looking requirement.
    */
   { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
 };
