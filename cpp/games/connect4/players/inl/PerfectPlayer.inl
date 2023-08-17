@@ -139,7 +139,7 @@ inline auto PerfectPlayer::Params::make_options_description() {
           (po::value<int>(&strength)->default_value(strength),
            "strength (0-21). The last s moves are played perfectly, the others randomly. 0 is random, 21 is perfect.")
       .template add_option<"verbose", 'v'>(
-          po::bool_switch(&verbose)->default_value(verbose), "mcts player verbose mode")
+          po::bool_switch(&verbose)->default_value(verbose), "verbose mode")
       ;
 }
 

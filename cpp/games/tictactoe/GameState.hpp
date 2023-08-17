@@ -27,6 +27,10 @@ struct std::hash<tictactoe::GameState> {
 
 namespace tictactoe {
 
+constexpr mask_t make_mask(int a, int b, int c) {
+  return (mask_t(1) << a) + (mask_t(1) << b) + (mask_t(1) << c);
+}
+
 /*
  * Bit order encoding for the board:
  *
@@ -52,17 +56,26 @@ public:
   GameOutcome apply_move(core::action_t action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
+  mask_t get_current_player_mask() const { return cur_player_mask_; }
+  mask_t get_opponent_mask() const { return full_mask_ ^ cur_player_mask_; }
 
   template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
   void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
-private:
-  static constexpr mask_t make_mask(int a, int b, int c) {
-    return (mask_t(1) << a) + (mask_t(1) << b) + (mask_t(1) << c);
-  }
+  static constexpr mask_t kThreeInARowMasks[] = {
+    make_mask(0, 1, 2),
+    make_mask(3, 4, 5),
+    make_mask(6, 7, 8),
+    make_mask(0, 3, 6),
+    make_mask(1, 4, 7),
+    make_mask(2, 5, 8),
+    make_mask(0, 4, 8),
+    make_mask(2, 4, 6)
+  };
 
+private:
   mask_t full_mask_ = 0;  // spaces occupied by either player
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
 };

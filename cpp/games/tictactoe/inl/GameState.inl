@@ -19,19 +19,8 @@ inline GameState::GameOutcome GameState::apply_move(core::action_t action) {
 
   bool win = false;
 
-  mask_t masks[] = {
-    make_mask(0, 1, 2),
-    make_mask(3, 4, 5),
-    make_mask(6, 7, 8),
-    make_mask(0, 3, 6),
-    make_mask(1, 4, 7),
-    make_mask(2, 5, 8),
-    make_mask(0, 4, 8),
-    make_mask(2, 4, 6)
-  };
-
   mask_t updated_mask = full_mask_ ^ cur_player_mask_;
-  for (mask_t mask : masks) {
+  for (mask_t mask : kThreeInARowMasks) {
     if ((mask & updated_mask) == mask) {
       win = true;
       break;
@@ -57,7 +46,7 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
 }
 
 template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {
-  mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
+  mask_t opp_player_mask = get_opponent_mask();
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       int index = row * kBoardDimension + col;
@@ -76,7 +65,7 @@ template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(I
 
 inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
   auto cp = get_current_player();
-  mask_t opp_player_mask = full_mask_ ^ cur_player_mask_;
+  mask_t opp_player_mask = get_opponent_mask();
   mask_t o_mask = (cp == kO) ? cur_player_mask_ : opp_player_mask;
   mask_t x_mask = (cp == kX) ? cur_player_mask_ : opp_player_mask;
 
