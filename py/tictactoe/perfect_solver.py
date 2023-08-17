@@ -128,7 +128,7 @@ class Node:
 
     The first int64 contains the x_mask in the high 32 bits and the o_mask in the low 32 bits.
 
-    The second int64 contains the move probability, multiplied by 256 and rounded down to the
+    The second int64 contains the move probability, multiplied by 255 and rounded down to the
     nearest int, for moves 1-8, one byte per move, with move 1 in the high byte and move 8 in the
     low byte. The move probability for move 0 is 1 minus the sum of the other move probabilities.
     """
@@ -141,7 +141,7 @@ class Node:
     second = 0
     for p in self.move_probs[1:]:
       second <<= 8
-      second += int(p * 256)
+      second += int(p * 255)
 
     return (first, second)
 
@@ -326,10 +326,8 @@ def main():
   root.random_expand()
   table.extend(crawl(root, Player.O))
 
-  print('const std::pair<uint64_t, uint64_t> kPerfectPlayTable[] = {')
   for first, second in table:
-    print('  {{0x{:016x}ULL, 0x{:016x}ULL}},'.format(first, second))
-  print('};')
+    print('    lookup_map[0x{:016x}ULL] = policy_t(0x{:016x}ULL);'.format(first, second))
 
 
 if __name__ == '__main__':
