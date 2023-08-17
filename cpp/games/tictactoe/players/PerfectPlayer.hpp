@@ -7,6 +7,8 @@
 #include <games/tictactoe/GameState.hpp>
 #include <util/BoostUtil.hpp>
 
+#include <map>
+
 namespace tictactoe {
 
 class PerfectPlayer : public Player {
@@ -19,6 +21,7 @@ public:
      * 1 (perfect).
      */
     int strength = 1;
+    bool verbose = false;
     auto make_options_description();
   };
 
@@ -27,7 +30,19 @@ public:
   core::action_t get_action(const GameState&, const ActionMask&) override;
 
 private:
+  struct policy_t {
+    policy_t(uint64_t u=0);
+    core::action_t select() const;
+    float p[kNumCells];
+  };
+
+  using lookup_map_t = std::map<uint64_t, policy_t>;
+
+  static lookup_map_t make_lookup_map();
+  static uint64_t make_lookup(mask_t x_mask, mask_t o_mask);
+
   const Params params_;
+  const lookup_map_t lookup_map_;
 };
 
 }  // namespace tictactoe

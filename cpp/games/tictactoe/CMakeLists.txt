@@ -1,3 +1,4 @@
 add_library(tictactoe-lib
-        StaticVars.cpp
-        )
+  PerfectStrategyLookupTable.cpp
+  StaticVars.cpp
+)
