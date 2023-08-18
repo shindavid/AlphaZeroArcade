@@ -3,6 +3,7 @@ from typing import Type, Optional
 from connect4.connect4_net import C4Net
 from neural_net import NeuralNet
 from othello.othello_net import OthelloNet
+from tictactoe.tictactoe_net import TicTacToeNet
 
 
 class ReferencePlayerFamily:
@@ -25,9 +26,10 @@ class GameType:
 
 Connect4 = GameType('c4', C4Net, ReferencePlayerFamily('Perfect', '--strength', 0, 21))
 Othello = GameType('othello', OthelloNet, ReferencePlayerFamily('edax', '--depth', 0, 21))
+TicTacToe = GameType('tictactoe', TicTacToeNet, ReferencePlayerFamily('Perfect', '--strength', 0, 1))
 
 
-ALL_GAME_TYPES = [Connect4, Othello]
+ALL_GAME_TYPES = [Connect4, Othello, TicTacToe]
 GAME_TYPES_BY_NAME = {game.name: game for game in ALL_GAME_TYPES}
 assert len(ALL_GAME_TYPES) == len(GAME_TYPES_BY_NAME)
 
