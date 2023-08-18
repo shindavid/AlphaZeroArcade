@@ -38,6 +38,8 @@ auto GameServer<GameState>::Params::make_options_description() {
           "max num games to play simultaneously. Participating players can request lower values and the server will respect their requests")
       .template add_bool_switches<"display-progress-bar", "hide-progress-bar">(
           &display_progress_bar, "display progress bar (only in tty-mode without TUI player)", "hide progress bar")
+      .template add_bool_switches<"announce", "no-announce">(
+          &announce_game_results, "announce each game result", "do not announce each game result")
       ;
 }
 
@@ -285,6 +287,13 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
     if (is_terminal_outcome(outcome)) {
       for (auto player2 : players) {
         player2->end_game(state, outcome);
+      }
+      if (shared_data_.params().announce_game_results) {
+        printf("Game %ld complete.\n", game_id);
+        for (player_id_t p = 0; p < kNumPlayers; ++p) {
+          printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(), outcome[p]);
+        }
+        std::cout << std::endl;
       }
       return outcome;
     }

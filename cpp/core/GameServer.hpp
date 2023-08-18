@@ -70,6 +70,7 @@ public:
     int parallelism = 100;  // number of games to run simultaneously
     int port = 0;
     bool display_progress_bar = false;
+    bool announce_game_results = false;  // print outcome of each individual match
   };
 
 protected:
