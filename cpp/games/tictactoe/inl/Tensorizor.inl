@@ -119,13 +119,13 @@ inline void Tensorizor::ReflectionOverHorizontalWithRotation270Transform::transf
 inline Tensorizor::transform_array_t Tensorizor::transforms() {
   transform_array_t arr{
       &transforms_struct_.identity_transform_,
-      &transforms_struct_.rotation90_transform_,
-      &transforms_struct_.rotation180_transform_,
-      &transforms_struct_.rotation270_transform_,
-      &transforms_struct_.reflection_over_horizontal_transform_,
-      &transforms_struct_.reflection_over_horizontal_with_rotation90_transform_,
-      &transforms_struct_.reflection_over_horizontal_with_rotation180_transform_,
-      &transforms_struct_.reflection_over_horizontal_with_rotation270_transform_,
+      // &transforms_struct_.rotation90_transform_,
+      // &transforms_struct_.rotation180_transform_,
+      // &transforms_struct_.rotation270_transform_,
+      // &transforms_struct_.reflection_over_horizontal_transform_,
+      // &transforms_struct_.reflection_over_horizontal_with_rotation90_transform_,
+      // &transforms_struct_.reflection_over_horizontal_with_rotation180_transform_,
+      // &transforms_struct_.reflection_over_horizontal_with_rotation270_transform_,
   };
   return arr;
 }
