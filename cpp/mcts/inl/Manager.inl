@@ -134,6 +134,11 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchPar
   shared_data_.search_active = true;
   num_active_search_threads_ = num_search_threads();
 
+  if (mcts::kEnableThreadingDebug) {
+    const GameState& state = shared_data_.root_node->stable_data().state;
+    state.dump();
+  }
+
   for (auto* thread : search_threads_) {
     thread->launch(search_params, [=, this] { this->run_search(thread, search_params->tree_size_limit); });
   }
