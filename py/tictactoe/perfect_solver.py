@@ -28,9 +28,9 @@ np.set_printoptions(precision=3)
 """
 Bit mask representation:
 
-6 7 8
-3 4 5
 0 1 2
+3 4 5
+6 7 8
 """
 BitMask = int
 FULL_BOARD: BitMask = 511
@@ -87,13 +87,13 @@ class Node:
     return bin(self.full_mask).count('1')
 
   def dump(self):
-    text = ("6 7 8  | | | |\n" +
+    text = ("0 1 2  | | | |\n" +
             "3 4 5  | | | |\n" +
-            "0 1 2  | | | |")
+            "6 7 8  | | | |")
 
     text = list(text)
 
-    offset_table = (38, 40, 42, 23, 25, 27, 8, 10, 12)
+    offset_table = (8, 10, 12, 23, 25, 27, 38, 40, 42)
     for i, offset in enumerate(offset_table):
       submask = 1 << i
       if self.o_mask & submask:

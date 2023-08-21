@@ -69,11 +69,11 @@ inline void GameState::dump(core::action_t last_action, const player_name_array_
   mask_t o_mask = (cp == kO) ? cur_player_mask_ : opp_player_mask;
   mask_t x_mask = (cp == kX) ? cur_player_mask_ : opp_player_mask;
 
-  char text[] =  "6 7 8  | | | |\n"
+  char text[] =  "0 1 2  | | | |\n"
                  "3 4 5  | | | |\n"
-                 "0 1 2  | | | |\n";
+                 "6 7 8  | | | |\n";
 
-  int offset_table[] = {38, 40, 42, 23, 25, 27, 8, 10, 12};
+  int offset_table[] = { 8, 10, 12, 23, 25, 27, 38, 40, 42 };
   for (int i = 0; i < kNumCells; ++i) {
     int offset = offset_table[i];
     if (o_mask & (mask_t(1) << i)) {

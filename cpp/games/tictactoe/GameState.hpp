@@ -34,9 +34,9 @@ constexpr mask_t make_mask(int a, int b, int c) {
 /*
  * Bit order encoding for the board:
  *
- * 6 7 8
- * 3 4 5
  * 0 1 2
+ * 3 4 5
+ * 6 7 8
  */
 class GameState {
 public:
