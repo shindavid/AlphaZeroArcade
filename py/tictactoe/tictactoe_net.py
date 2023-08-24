@@ -16,7 +16,7 @@ NUM_PLAYERS = 2
 class TicTacToeNet(NeuralNet):
     VALID_TARGET_NAMES = ['policy', 'value', 'opp_policy']
 
-    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=8, n_res_blocks=4):
+    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64, n_res_blocks=9):
         for name in target_names:
             assert name in TicTacToeNet.VALID_TARGET_NAMES, name
 
