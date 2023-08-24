@@ -400,15 +400,15 @@ class Arena:
 
         graded_gen_gaps = [graded_gens[i] - graded_gens[i - 1] for i in range(1, len(graded_gens))]
         gap_index_pairs = [(gap, i) for i, gap in enumerate(graded_gen_gaps)]
-        assert gap_index_pairs
-        largest_gap, largest_gap_index = max(gap_index_pairs)
-        if largest_gap > 1:
-            prev_gen = graded_gens[largest_gap_index]
-            next_gen = graded_gens[largest_gap_index + 1]
-            gen = prev_gen + largest_gap // 2
-            assert gen not in self.ratings, gen
-            rating = 0.5 * (self.ratings[prev_gen] + self.ratings[next_gen])
-            return WorkItem(gen, rating, largest_gap, False, self)
+        if gap_index_pairs:
+            largest_gap, largest_gap_index = max(gap_index_pairs)
+            if largest_gap > 1:
+                prev_gen = graded_gens[largest_gap_index]
+                next_gen = graded_gens[largest_gap_index + 1]
+                gen = prev_gen + largest_gap // 2
+                assert gen not in self.ratings, gen
+                rating = 0.5 * (self.ratings[prev_gen] + self.ratings[next_gen])
+                return WorkItem(gen, rating, largest_gap, False, self)
 
         if latest_gen != max_graded_gen:
             return WorkItem(latest_gen, self.ratings[max_graded_gen], latest_gen - max_graded_gen, True, self)
