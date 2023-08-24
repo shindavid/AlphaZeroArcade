@@ -23,9 +23,10 @@ namespace tictactoe {
  */
 class Tensorizor {
 public:
-  static constexpr int kMaxNumSymmetries = 1;
+  static constexpr int kMaxNumSymmetries = 8;
   static constexpr int kNumPlayers = tictactoe::kNumPlayers;
   static constexpr int kBoardDimension = tictactoe::kBoardDimension;
+  static constexpr int kNumCells = tictactoe::kNumCells;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
   template<typename Scalar> using InputTensorX = Eigen::TensorFixedSize<Scalar, InputShape, Eigen::RowMajor>;
@@ -41,11 +42,12 @@ public:
   using InputScalar = typename InputTensor::Scalar;
   using PolicyScalar = typename PolicyTensor::Scalar;
 
-  template<typename Scalar>
-  using MatrixT = Eigen::Matrix<Scalar, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
+  template <typename Scalar>
+  using MatrixSliceX =
+      Eigen::Map<Eigen::Matrix<Scalar, kBoardDimension, kBoardDimension,
+                               Eigen::RowMajor | Eigen::DontAlign>>;
 
-  template<typename Scalar> static auto& slice_as_matrix(InputTensorX<Scalar>& input, int row);
-  static MatrixT<PolicyScalar>& as_matrix(PolicyTensor& policy);
+  using PolicyMatrixSlice = MatrixSliceX<PolicyScalar>;
 
   struct Rotation90Transform : public SymmetryTransform {
     template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);
@@ -101,13 +103,13 @@ private:
 
   struct transforms_struct_t {
     IdentityTransform identity_transform_;
-    // Rotation90Transform rotation90_transform_;
-    // Rotation180Transform rotation180_transform_;
-    // Rotation270Transform rotation270_transform_;
-    // ReflectionOverHorizontalTransform reflection_over_horizontal_transform_;
-    // ReflectionOverHorizontalWithRotation90Transform reflection_over_horizontal_with_rotation90_transform_;
-    // ReflectionOverHorizontalWithRotation180Transform reflection_over_horizontal_with_rotation180_transform_;
-    // ReflectionOverHorizontalWithRotation270Transform reflection_over_horizontal_with_rotation270_transform_;
+    Rotation90Transform rotation90_transform_;
+    Rotation180Transform rotation180_transform_;
+    Rotation270Transform rotation270_transform_;
+    ReflectionOverHorizontalTransform reflection_over_horizontal_transform_;
+    ReflectionOverHorizontalWithRotation90Transform reflection_over_horizontal_with_rotation90_transform_;
+    ReflectionOverHorizontalWithRotation180Transform reflection_over_horizontal_with_rotation180_transform_;
+    ReflectionOverHorizontalWithRotation270Transform reflection_over_horizontal_with_rotation270_transform_;
   };
 
   static transforms_struct_t transforms_struct_;
