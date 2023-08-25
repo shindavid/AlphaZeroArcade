@@ -9,7 +9,7 @@ from res_net_modules import ConvBlock, ResBlock, PolicyHead, ValueHead
 from util.torch_util import Shape
 
 
-POLICY_SHAPE = (8, 8)
+NUM_ACTIONS = 65  # 8*8+1
 NUM_PLAYERS = 2
 
 
@@ -27,10 +27,10 @@ class OthelloNet(NeuralNet):
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
 
-        self.add_head(PolicyHead(board_size, POLICY_SHAPE, n_conv_filters), PolicyTarget('policy', 1.0))
+        self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('policy', 1.0))
         self.add_head(ValueHead(board_size, NUM_PLAYERS, n_conv_filters), ValueTarget('value', 1.5))
         if 'opp_policy' in target_names:
-            self.add_head(PolicyHead(board_size, POLICY_SHAPE, n_conv_filters), PolicyTarget('opp_policy', 0.15))
+            self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('opp_policy', 0.15))
 
     def forward(self, x):
         x = self.conv_block(x)
