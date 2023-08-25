@@ -179,6 +179,8 @@ class Arena:
             '--name': name,
             '-i': Args.mcts_iters,
         }
+        if Args.mcts_iters < 8:
+            kwargs['-n'] = Args.mcts_iters
         return inject_args(player_str, kwargs)
 
     @staticmethod
