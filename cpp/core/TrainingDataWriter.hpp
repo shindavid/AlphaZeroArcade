@@ -50,7 +50,7 @@ public:
   using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
   using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 
-  using SymmetryTransform = AbstractSymmetryTransform<GameState, Tensorizor>;
+  using SymmetryTransform = AbstractSymmetryTransform<InputTensor, PolicyTensor>;
 
   static constexpr int kRowsPerChunk = 64;
 

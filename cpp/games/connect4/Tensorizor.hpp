@@ -26,8 +26,8 @@ public:
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using PolicyTensor = GameStateTypes::PolicyTensor;
-  using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
-  using IdentityTransform = core::IdentityTransform<GameState, Tensorizor>;
+  using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
+  using IdentityTransform = core::IdentityTransform<InputTensor, PolicyTensor>;
   using transform_array_t = std::array<SymmetryTransform*, 2>;
 
   class ReflectionTransform : public SymmetryTransform {

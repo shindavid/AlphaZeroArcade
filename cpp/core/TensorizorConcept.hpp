@@ -51,7 +51,7 @@ concept TensorizorConcept = requires(Tensorizor tensorizor, typename Tensorizor:
 
   { tensorizor.get_symmetry_indices(GameState{}) } -> std::same_as<std::bitset<Tensorizor::kMaxNumSymmetries>>;
 
-  { tensorizor.get_symmetry(symmetry_index_t{}) } -> util::is_pointer_derived_from<AbstractSymmetryTransform<GameState, Tensorizor>>;
+  { tensorizor.get_symmetry(symmetry_index_t{}) };
 };
 
 }  // namespace core

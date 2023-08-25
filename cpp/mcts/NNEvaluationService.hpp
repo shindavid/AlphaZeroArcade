@@ -70,7 +70,6 @@ public:
 
   using Node = mcts::Node<GameState, Tensorizor>;
   using NNEvaluation = mcts::NNEvaluation<GameState>;
-  using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
   using ActionMask = typename GameStateTypes::ActionMask;
 
   using NNEvaluation_asptr = typename NNEvaluation::asptr;
@@ -89,6 +88,8 @@ public:
 
   using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
   using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
+
+  using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
 
   struct Request {
     Node* tree;
