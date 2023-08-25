@@ -24,9 +24,6 @@ namespace tictactoe {
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
-  static constexpr int kNumPlayers = tictactoe::kNumPlayers;
-  static constexpr int kBoardDimension = tictactoe::kBoardDimension;
-  static constexpr int kNumCells = tictactoe::kNumCells;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
   template<typename Scalar> using InputTensorX = Eigen::TensorFixedSize<Scalar, InputShape, Eigen::RowMajor>;

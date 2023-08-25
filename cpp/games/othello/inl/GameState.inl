@@ -46,10 +46,9 @@ inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::
 
 inline GameState::ActionMask GameState::get_valid_actions() const {
   mask_t mask = get_moves(cur_player_mask_, opponent_mask_);
-  if (mask == 0) {
-    mask = 1ULL << kPass;
-  }
-  return reinterpret_cast<ActionMask&>(mask);
+  ActionMask valid_actions(mask);
+  valid_actions.set(kPass, mask == 0);
+  return valid_actions;
 }
 
 template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {

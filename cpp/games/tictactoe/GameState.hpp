@@ -40,8 +40,8 @@ constexpr mask_t make_mask(int a, int b, int c) {
  */
 class GameState {
 public:
-  using PolicyShape = eigen_util::Shape<kBoardDimension, kBoardDimension>;
   static constexpr int kNumPlayers = tictactoe::kNumPlayers;
+  static constexpr int kNumGlobalActions = kNumCells;
   static constexpr int kMaxNumLocalActions = kNumCells;
   static constexpr int kTypicalNumMovesPerGame = kNumCells;
 

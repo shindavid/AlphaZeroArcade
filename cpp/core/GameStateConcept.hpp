@@ -20,21 +20,6 @@ namespace core {
  */
 template <class S>
 concept GameStateConcept = requires(S state) {
-  /*
-   * The shape of the tensor representation of an action policy.
-   *
-   * For go, this is simply (362) - the possibility of a pass move makes it awkward to use a (19, 19) tensor, so we
-   * simply flatten the action space into a single dimension (19 * 19 + 1 = 362).
-   *
-   * For chess, a better representation is possible: (8, 8, 73). See the AlphaZero paper for details.
-   *
-   * In principle, this belongs to the Tensorizor, not the GameState. However, we represent each action as an int that
-   * corresponds to an index in the flattened (row-major) policy tensor, and the GameState interface is tied to a
-   * specific action->int mapping. That warrants putting this here. A true separation would demand an Action class,
-   * with the action->int specified by the Tensorizor. This separation entails a performance cost, which is not
-   * justified.
-   */
-  { typename S::PolicyShape{} } -> eigen_util::ShapeConcept;
 
   /*
    * The number of players in the game.
@@ -42,17 +27,31 @@ concept GameStateConcept = requires(S state) {
   { util::decay_copy(S::kNumPlayers) } -> std::same_as<int>;
 
   /*
+   * The total number of actions in the game.
+   *
+   * In go, this is 362 = 19 * 19 + 1 (+1 for pass move)
+   * Similarly, in othello, this is 65 = 8 * 8 + 1 (+1 for pass move)
+   * In connect4, this is 7.
+   *
+   * Policy heads of neural networks will output arrays of this size.
+   */
+  { util::decay_copy(S::kNumGlobalActions) } -> std::same_as<int>;
+
+  /*
    * For a given state s, let A(s) be the set of valid actions.
    *
    * kMaxNumLocalActions is an upper bound on the size of A(s) for all s.
    *
-   * It is not necessary to set this as tight as possible, but tighter is better. Setting it to a smaller value allows
-   * for more compact data structures, which should reduce overall memory footprint and improve performance.
+   * The main usage of this constant is that various parameters are by default set to some
+   * formula based on this number. In such usages, this constant can be used as a proxy for the
+   * branching factor of the game tree.
+   *
+   * The other usage is that a couple spots in the mcts code declare fixed-size data structures
+   * based on this value. Declaring this value to be too small could thus lead to various
+   * run-time errors. Too big could theoretically lead to performance inefficiencies, but this is
+   * really minor; the bigger penalty for setting it too big is the aforementioned formula usage.
    *
    * In chess, this value can be as small as 218 (see: https://chess.stackexchange.com/a/8392).
-   *
-   * In the current implementation, each MCTS node contains an array of pointers of length kMaxNumLocalActions, which
-   * corresponds to 64*kMaxNumLocalActions bits. It is worthwhile to keep this number small to reduce memory footprint.
    */
   { util::decay_copy(S::kMaxNumLocalActions) } -> std::same_as<int>;
 

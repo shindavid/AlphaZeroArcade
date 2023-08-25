@@ -38,8 +38,8 @@ namespace othello {
  */
 class GameState {
 public:
-  using PolicyShape = eigen_util::Shape<kBoardDimension, kBoardDimension>;
   static constexpr int kNumPlayers = othello::kNumPlayers;
+  static constexpr int kNumGlobalActions = othello::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = othello::kMaxNumLocalActions;
   static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
 

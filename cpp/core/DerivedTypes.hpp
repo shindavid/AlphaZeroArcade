@@ -34,19 +34,18 @@ template<typename GameState>
 struct GameStateTypes {
   using dtype = torch_util::dtype;
 
-  using PolicyShape = typename GameState::PolicyShape;
-  using ValueShape = eigen_util::Shape<GameState::kNumPlayers>;
-
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActions = PolicyShape::total_size;
+  static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
   using GameOutcome = core::GameOutcome<kNumPlayers>;
 
+  using PolicyShape = eigen_util::Shape<kNumGlobalActions>;
+  using ValueShape = eigen_util::Shape<kNumPlayers>;
+
   using PolicyTensor = Eigen::TensorFixedSize<dtype, PolicyShape, Eigen::RowMajor>;
   using ValueTensor = Eigen::TensorFixedSize<dtype, ValueShape, Eigen::RowMajor>;
 
-  // flattened versions of PolicyTensor and ValueTensor
   using PolicyArray = Eigen::Array<dtype, kNumGlobalActions, 1>;
   using ValueArray = Eigen::Array<dtype, kNumPlayers, 1>;
 

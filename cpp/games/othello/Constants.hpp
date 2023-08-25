@@ -38,7 +38,7 @@ using mask_t = uint64_t;
 
 const int kNumPlayers = 2;
 const int kBoardDimension = 8;
-const int kBoardSize = kBoardDimension * kBoardDimension;
+const int kNumCells = kBoardDimension * kBoardDimension;
 const int kNumStartingPieces = 4;
 const mask_t kCompleteBoardMask = ~0ULL;
 
@@ -106,6 +106,7 @@ const int kE8 = 60;
 const int kF8 = 61;
 const int kG8 = 62;
 const int kH8 = 63;
+const int kPass = 64;
 
 const int kStartingWhite1 = kD4;
 const int kStartingWhite2 = kE5;
@@ -116,17 +117,12 @@ const mask_t kStartingWhiteMask = 1ULL << kStartingWhite1 | 1ULL << kStartingWhi
 const mask_t kStartingBlackMask = 1ULL << kStartingBlack1 | 1ULL << kStartingBlack2;
 
 /*
- * Because the starting squares can never be played on, we can hijack one of them to represent the pass move.
- * This helps keep the number of legal moves at 64, which is nice because it fits in a single machine word.
- */
-const int kPass = kStartingWhite1;
-
-/*
- * Technically, there are 61 legal moves: 64 squares - 4 starting squares + pass.
+ * +1 for the pass move.
  *
- * A tight mapping to 61, though, would be inelegant, so we just use 64.
+ * Technically, the 4 central squares are not legal in a standard game of othello, but this slightly
+ * slack representation simplifies the code.
  */
-const int kNumGlobalActions = kBoardSize;
+const int kNumGlobalActions = kNumCells + 1;
 
 /*
  * This can probably be shrunk, maybe down to the 22-34 range. But I haven't found any proof of an upper bound, so
@@ -136,7 +132,7 @@ const int kNumGlobalActions = kBoardSize;
  */
 const int kMaxNumLocalActions = 40;
 
-const int kTypicalNumMovesPerGame = kBoardSize - kNumStartingPieces;
+const int kTypicalNumMovesPerGame = kNumCells - kNumStartingPieces;
 
 const core::seat_index_t kBlack = 0;
 const core::seat_index_t kWhite = 1;
