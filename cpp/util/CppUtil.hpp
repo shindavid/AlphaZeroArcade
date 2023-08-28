@@ -134,6 +134,13 @@ template<typename T, T I, T... Is> struct integer_sequence_product<std::integer_
 };
 template<typename T> static constexpr auto integer_sequence_product_v = integer_sequence_product<T>::value;
 
+template <typename T, T... values>
+constexpr T get_value(const std::integer_sequence<T, values...>&,
+                      const size_t idx) {
+  constexpr T vals[] = {values...};
+  return vals[idx];
+}
+
 /*
  * true: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 1>
  * true: util::int_sequence_contains_v<util::int_sequence<1, 3, 5>, 5>

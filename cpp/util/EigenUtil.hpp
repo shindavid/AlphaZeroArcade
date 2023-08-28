@@ -28,10 +28,21 @@ template<int64_t... Is> struct is_eigen_shape<Eigen::Sizes<Is...>> { static cons
 template<typename T> inline constexpr bool is_eigen_shape_v = is_eigen_shape<T>::value;
 template <typename T> concept ShapeConcept = is_eigen_shape_v<T>;
 
+template <int N, typename T>
+struct extract_dim {};
+
+template <int N, int64_t... Is>
+struct extract_dim<N, Eigen::Sizes<Is...>> {
+  static constexpr int64_t value = util::get_value(std::integer_sequence<int64_t, Is...>{}, N);
+};
+template <int N, typename T>
+constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
+
 /*
  * prepend_dim_t<10, Eigen::Sizes<1, 2, 3>> is Eigen::Sizes<10, 1, 2, 3>
  */
-template<int64_t N, ShapeConcept Shape> struct prepend_dim {};
+template <int64_t N, ShapeConcept Shape>
+struct prepend_dim {};
 template<int64_t N, int64_t... Is> struct prepend_dim<N, Eigen::Sizes<Is...>> {
   using type = Eigen::Sizes<N, Is...>;
 };

@@ -109,7 +109,7 @@ void test_symmetry_policy(TransformT& transform, const std::string& expected_rep
 }
 
 void test_identity() {
-  othello::Tensorizor::IdentityTransform transform;
+  othello::Tensorizor::Identity transform;
 
   std::string expected_input_slice0 = " 0  1  2  3  4  5  6  7\n"
                                       " 8  9 10 11 12 13 14 15\n"
@@ -142,8 +142,8 @@ void test_identity() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_rotation90() {
-  othello::Tensorizor::Rotation90Transform transform;
+void test_rot90() {
+  othello::Tensorizor::Rot90 transform;
 
   std::string expected_input_slice0 = "56 48 40 32 24 16  8  0\n"
                                       "57 49 41 33 25 17  9  1\n"
@@ -176,8 +176,8 @@ void test_rotation90() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_rotation180() {
-  othello::Tensorizor::Rotation180Transform transform;
+void test_rot180() {
+  othello::Tensorizor::Rot180 transform;
 
   std::string expected_input_slice0 = "63 62 61 60 59 58 57 56\n"
                                       "55 54 53 52 51 50 49 48\n"
@@ -210,8 +210,8 @@ void test_rotation180() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_rotation270() {
-  othello::Tensorizor::Rotation270Transform transform;
+void test_rot270() {
+  othello::Tensorizor::Rot270 transform;
 
   std::string expected_input_slice0 = " 7 15 23 31 39 47 55 63\n"
                                       " 6 14 22 30 38 46 54 62\n"
@@ -244,8 +244,8 @@ void test_rotation270() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_reflection_over_horizontal() {
-  othello::Tensorizor::ReflectionOverHorizontalTransform transform;
+void test_refl() {
+  othello::Tensorizor::Refl transform;
 
   std::string expected_input_slice0 = "56 57 58 59 60 61 62 63\n"
                                       "48 49 50 51 52 53 54 55\n"
@@ -278,8 +278,8 @@ void test_reflection_over_horizontal() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_reflection_over_horizontal_with_rotation90() {
-  othello::Tensorizor::ReflectionOverHorizontalWithRotation90Transform transform;
+void test_refl_rot90() {
+  othello::Tensorizor::ReflRot90 transform;
 
   std::string expected_input_slice0 = " 0  8 16 24 32 40 48 56\n"
                                       " 1  9 17 25 33 41 49 57\n"
@@ -312,8 +312,8 @@ void test_reflection_over_horizontal_with_rotation90() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_reflection_over_horizontal_with_rotation180() {
-  othello::Tensorizor::ReflectionOverHorizontalWithRotation180Transform transform;
+void test_refl_rot180() {
+  othello::Tensorizor::ReflRot180 transform;
 
   std::string expected_input_slice0 = " 7  6  5  4  3  2  1  0\n"
                                       "15 14 13 12 11 10  9  8\n"
@@ -346,8 +346,8 @@ void test_reflection_over_horizontal_with_rotation180() {
   test_symmetry_policy(transform, expected_policy);
 }
 
-void test_reflection_over_horizontal_with_rotation270() {
-  othello::Tensorizor::ReflectionOverHorizontalWithRotation270Transform transform;
+void test_refl_rot270() {
+  othello::Tensorizor::ReflRot270 transform;
 
   std::string expected_input_slice0 = "63 55 47 39 31 23 15  7\n"
                                       "62 54 46 38 30 22 14  6\n"
@@ -382,13 +382,13 @@ void test_reflection_over_horizontal_with_rotation270() {
 
 void test_symmetries() {
   test_identity();
-  test_rotation90();
-  test_rotation180();
-  test_rotation270();
-  test_reflection_over_horizontal();
-  test_reflection_over_horizontal_with_rotation90();
-  test_reflection_over_horizontal_with_rotation180();
-  test_reflection_over_horizontal_with_rotation270();
+  test_rot90();
+  test_rot180();
+  test_rot270();
+  test_refl();
+  test_refl_rot90();
+  test_refl_rot180();
+  test_refl_rot270();
 }
 
 int main() {
