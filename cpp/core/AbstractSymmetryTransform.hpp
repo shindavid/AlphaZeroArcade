@@ -1,21 +1,14 @@
 #pragma once
 
-#include <torch/torch.h>
-
-#include <core/DerivedTypes.hpp>
-
 namespace core {
 
 /*
  * SymmetryTransform's provide a mechanism to effectively apply a symmetry transform to a GameState. In the game of go,
  * there are 8 transforms: 4 rotations and 4 reflections. See AlphaGo papers for more details.
  */
-template<typename GameState, typename Tensorizor>
+template<typename InputTensor, typename PolicyTensor>
 class AbstractSymmetryTransform {
 public:
-  using InputTensor = typename TensorizorTypes<Tensorizor>::InputTensor;
-  using PolicyTensor = typename GameStateTypes<GameState>::PolicyTensor;
-
   virtual ~AbstractSymmetryTransform() {}
 
   /*

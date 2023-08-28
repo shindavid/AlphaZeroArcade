@@ -68,7 +68,6 @@ public:
   using ValueArray = typename GameStateTypes::ValueArray;
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using PolicyShape = typename GameStateTypes::PolicyShape;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
   MctsPlayer(const Params&, MctsManager* mcts_manager);  // uses this constructor when sharing an MCTS manager

@@ -1,6 +1,7 @@
 #include <sstream>
 
 #include <core/DerivedTypes.hpp>
+#include <games/othello/Constants.hpp>
 #include <games/othello/GameState.hpp>
 #include <games/othello/Tensorizor.hpp>
 #include <util/CppUtil.hpp>
@@ -8,14 +9,12 @@
 
 /*
  * Tests othello symmetry classes.
- *
- * Note that the policy transforms do not act the way you might expect on the central 4 squares of the board. See
- * comments in cpp/othello/Tensorizor.hpp
  */
 
 using GameStateTypes = core::GameStateTypes<othello::GameState>;
 using TensorizorTypes = core::TensorizorTypes<othello::Tensorizor>;
 using PolicyTensor = GameStateTypes::PolicyTensor;
+using PolicyScalar = PolicyTensor::Scalar;
 using InputTensor = Eigen::TensorFixedSize<int, TensorizorTypes::InputShape, Eigen::RowMajor>;
 using InputScalar = InputTensor::Scalar;
 
@@ -82,8 +81,16 @@ void test_symmetry_policy(TransformT& transform, const std::string& expected_rep
     global_fail_count++;
     return;
   }
+
+  using PolicyMatrix =
+      Eigen::Map<Eigen::Matrix<
+      PolicyScalar, othello::kBoardDimension, othello::kBoardDimension,
+      Eigen::RowMajor | Eigen::DontAlign>>;
+
+  PolicyMatrix matrix(policy.data());
+
   std::ostringstream ss;
-  ss << policy;
+  ss << matrix;
   std::string repr = ss.str();
 
   if (repr != expected_repr) {
@@ -159,8 +166,8 @@ void test_rotation90() {
   std::string expected_policy = " 7 15 23 31 39 47 55 63\n"
                                 " 6 14 22 30 38 46 54 62\n"
                                 " 5 13 21 29 37 45 53 61\n"
-                                " 4 12 20 27 28 44 52 60\n"
-                                " 3 11 19 35 36 43 51 59\n"
+                                " 4 12 20 28 36 44 52 60\n"
+                                " 3 11 19 27 35 43 51 59\n"
                                 " 2 10 18 26 34 42 50 58\n"
                                 " 1  9 17 25 33 41 49 57\n"
                                 " 0  8 16 24 32 40 48 56";
@@ -193,8 +200,8 @@ void test_rotation180() {
   std::string expected_policy = "63 62 61 60 59 58 57 56\n"
                                 "55 54 53 52 51 50 49 48\n"
                                 "47 46 45 44 43 42 41 40\n"
-                                "39 38 37 27 28 34 33 32\n"
-                                "31 30 29 35 36 26 25 24\n"
+                                "39 38 37 36 35 34 33 32\n"
+                                "31 30 29 28 27 26 25 24\n"
                                 "23 22 21 20 19 18 17 16\n"
                                 "15 14 13 12 11 10  9  8\n"
                                 " 7  6  5  4  3  2  1  0";
@@ -227,8 +234,8 @@ void test_rotation270() {
   std::string expected_policy = "56 48 40 32 24 16  8  0\n"
                                 "57 49 41 33 25 17  9  1\n"
                                 "58 50 42 34 26 18 10  2\n"
-                                "59 51 43 27 28 19 11  3\n"
-                                "60 52 44 35 36 20 12  4\n"
+                                "59 51 43 35 27 19 11  3\n"
+                                "60 52 44 36 28 20 12  4\n"
                                 "61 53 45 37 29 21 13  5\n"
                                 "62 54 46 38 30 22 14  6\n"
                                 "63 55 47 39 31 23 15  7";
@@ -261,8 +268,8 @@ void test_reflection_over_horizontal() {
   std::string expected_policy = "56 57 58 59 60 61 62 63\n"
                                 "48 49 50 51 52 53 54 55\n"
                                 "40 41 42 43 44 45 46 47\n"
-                                "32 33 34 27 28 37 38 39\n"
-                                "24 25 26 35 36 29 30 31\n"
+                                "32 33 34 35 36 37 38 39\n"
+                                "24 25 26 27 28 29 30 31\n"
                                 "16 17 18 19 20 21 22 23\n"
                                 " 8  9 10 11 12 13 14 15\n"
                                 " 0  1  2  3  4  5  6  7";
@@ -295,8 +302,8 @@ void test_reflection_over_horizontal_with_rotation90() {
   std::string expected_policy = " 0  8 16 24 32 40 48 56\n"
                                 " 1  9 17 25 33 41 49 57\n"
                                 " 2 10 18 26 34 42 50 58\n"
-                                " 3 11 19 27 28 43 51 59\n"
-                                " 4 12 20 35 36 44 52 60\n"
+                                " 3 11 19 27 35 43 51 59\n"
+                                " 4 12 20 28 36 44 52 60\n"
                                 " 5 13 21 29 37 45 53 61\n"
                                 " 6 14 22 30 38 46 54 62\n"
                                 " 7 15 23 31 39 47 55 63";
@@ -329,8 +336,8 @@ void test_reflection_over_horizontal_with_rotation180() {
   std::string expected_policy = " 7  6  5  4  3  2  1  0\n"
                                 "15 14 13 12 11 10  9  8\n"
                                 "23 22 21 20 19 18 17 16\n"
-                                "31 30 29 27 28 26 25 24\n"
-                                "39 38 37 35 36 34 33 32\n"
+                                "31 30 29 28 27 26 25 24\n"
+                                "39 38 37 36 35 34 33 32\n"
                                 "47 46 45 44 43 42 41 40\n"
                                 "55 54 53 52 51 50 49 48\n"
                                 "63 62 61 60 59 58 57 56";
@@ -363,8 +370,8 @@ void test_reflection_over_horizontal_with_rotation270() {
   std::string expected_policy = "63 55 47 39 31 23 15  7\n"
                                 "62 54 46 38 30 22 14  6\n"
                                 "61 53 45 37 29 21 13  5\n"
-                                "60 52 44 27 28 20 12  4\n"
-                                "59 51 43 35 36 19 11  3\n"
+                                "60 52 44 36 28 20 12  4\n"
+                                "59 51 43 35 27 19 11  3\n"
                                 "58 50 42 34 26 18 10  2\n"
                                 "57 49 41 33 25 17  9  1\n"
                                 "56 48 40 32 24 16  8  0";

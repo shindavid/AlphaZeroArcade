@@ -18,11 +18,8 @@
 namespace othello {
 
 /*
- * Note: all the transforms leave the center 4 squares of the board untouched. This is done because of the
- * (questionable?) decision to encode the "pass" move as the center D4 square.
- *
- * All transforms have a templated transform_input() method. This generality exists to support unit tests, which
- * use non-bool input tensors.
+ * All transforms have a templated transform_input() method. This generality exists to support unit
+ * tests, which use non-bool input tensors.
  */
 class Tensorizor {
 public:
@@ -35,28 +32,19 @@ public:
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using PolicyTensor = GameStateTypes::PolicyTensor;
-  using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
-  using IdentityTransform = core::IdentityTransform<GameState, Tensorizor>;
+  using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
+  using IdentityTransform = core::IdentityTransform<InputTensor, PolicyTensor>;
   using transform_array_t = std::array<SymmetryTransform*, kMaxNumSymmetries>;
 
   using InputScalar = typename InputTensor::Scalar;
   using PolicyScalar = typename PolicyTensor::Scalar;
 
-  template<typename Scalar>
-  using MatrixT = Eigen::Matrix<Scalar, kBoardDimension, kBoardDimension, Eigen::RowMajor>;
+  template <typename Scalar>
+  using MatrixSliceX =
+      Eigen::Map<Eigen::Matrix<Scalar, kBoardDimension, kBoardDimension,
+                               Eigen::RowMajor | Eigen::DontAlign>>;
 
-  struct CenterFourSquares {
-    PolicyScalar starting_white1;
-    PolicyScalar starting_white2;
-    PolicyScalar starting_black1;
-    PolicyScalar starting_black2;
-  };
-
-  static CenterFourSquares get_center_four_squares(const PolicyTensor& policy);
-  static void set_center_four_squares(PolicyTensor& policy, const CenterFourSquares& center_four_squares);
-
-  template<typename Scalar> static auto& slice_as_matrix(InputTensorX<Scalar>& input, int row);
-  static MatrixT<PolicyScalar>& as_matrix(PolicyTensor& policy);
+  using PolicyMatrixSlice = MatrixSliceX<PolicyScalar>;
 
   struct Rotation90Transform : public SymmetryTransform {
     template<typename Scalar> void transform_input(InputTensorX<Scalar>& input);

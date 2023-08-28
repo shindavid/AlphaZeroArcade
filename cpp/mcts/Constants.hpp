@@ -11,43 +11,43 @@ enum Mode {
 
 struct SearchThreadRegion {
   enum region_t {
-    kCheckVisitReady = 0,
-    kAcquiringLazilyInitializedDataMutex = 1,
-    kLazyInit = 2,
-    kPureBackprop = 3,
-    kBackpropWithVirtualUndo = 4,
-    kMisc = 5,
-    kCheckingCache = 6,
-    kAcquiringBatchMutex = 7,
-    kWaitingUntilBatchReservable = 8,
-    kTensorizing = 9,
-    kIncrementingCommitCount = 10,
-    kWaitingForReservationProcessing = 11,
-    kVirtualBackprop = 12,
-    kConstructingChildren = 13,
-    kPUCT = 14,
-    kAcquiringStatsMutex = 15,
-    kBackpropEvaluation = 16,
-    kMarkFullyAnalyzed = 17,
-    kEvaluate = 18,
-    kEvaluateUnset = 19,
-    kEvaluatePending = 20,
-    kNumRegions = 21
+    kCheckVisitReady,
+    kAcquiringLazilyInitializedDataMutex,
+    kLazyInit,
+    kPureBackprop,
+    kBackpropWithVirtualUndo,
+    kMisc,
+    kCheckingCache,
+    kAcquiringBatchMutex,
+    kWaitingUntilBatchReservable,
+    kTensorizing,
+    kIncrementingCommitCount,
+    kWaitingForReservationProcessing,
+    kVirtualBackprop,
+    kConstructingChildren,
+    kPUCT,
+    kAcquiringStatsMutex,
+    kBackpropEvaluation,
+    kMarkFullyAnalyzed,
+    kEvaluate,
+    kEvaluateUnset,
+    kEvaluatePending,
+    kNumRegions
   };
 };
 
 struct NNEvaluationServiceRegion {
   enum region_t {
-    kWaitingUntilBatchReady = 0,
-    kWaitingForFirstReservation = 1,
-    kWaitingForLastReservation = 2,
-    kWaitingForCommits = 3,
-    kCopyingCpuToGpu = 4,
-    kEvaluatingNeuralNet = 5,
-    kCopyingToPool = 6,
-    kAcquiringCacheMutex = 7,
-    kFinishingUp = 8,
-    kNumRegions = 9
+    kWaitingUntilBatchReady,
+    kWaitingForFirstReservation,
+    kWaitingForLastReservation,
+    kWaitingForCommits,
+    kCopyingCpuToGpu,
+    kEvaluatingNeuralNet,
+    kCopyingToPool,
+    kAcquiringCacheMutex,
+    kFinishingUp,
+    kNumRegions
   };
 };
 

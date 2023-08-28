@@ -24,9 +24,6 @@ namespace tictactoe {
 class Tensorizor {
 public:
   static constexpr int kMaxNumSymmetries = 8;
-  static constexpr int kNumPlayers = tictactoe::kNumPlayers;
-  static constexpr int kBoardDimension = tictactoe::kBoardDimension;
-  static constexpr int kNumCells = tictactoe::kNumCells;
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
   template<typename Scalar> using InputTensorX = Eigen::TensorFixedSize<Scalar, InputShape, Eigen::RowMajor>;
@@ -35,8 +32,8 @@ public:
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using PolicyTensor = GameStateTypes::PolicyTensor;
-  using SymmetryTransform = core::AbstractSymmetryTransform<GameState, Tensorizor>;
-  using IdentityTransform = core::IdentityTransform<GameState, Tensorizor>;
+  using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
+  using IdentityTransform = core::IdentityTransform<InputTensor, PolicyTensor>;
   using transform_array_t = std::array<SymmetryTransform*, kMaxNumSymmetries>;
 
   using InputScalar = typename InputTensor::Scalar;
