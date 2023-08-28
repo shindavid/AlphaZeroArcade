@@ -84,19 +84,35 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   InputTensor input;
   this->tensorizor_.tensorize(input, state);
 
+  using hash_array_t = std::array<uint64_t, Tensorizor::kMaxNumSymmetries>;
+  hash_array_t hashes = {};
+
   auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
   for (core::symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
+    auto transform = this->tensorizor_.get_symmetry(sym_index);
+
+    InputTensor sym_input = input;
+    transform->transform_input(sym_input);
+    uint64_t hash = eigen_util::hash(sym_input);
+    hashes[sym_index] = hash;
+    bool clash = false;
+    for (int s = 0; s < sym_index; ++s) {
+      if (hashes[s] == hash) {
+        clash = true;
+        break;
+      }
+    }
+
+    if (clash) continue;
+
     auto& group = game_data_->get_next_group();
 
-    group.input = input;
+    group.input = sym_input;
     group.policy = policy;
     group.opp_policy.setZero();
     group.current_player = this->get_my_seat();
 
-    auto transform = this->tensorizor_.get_symmetry(sym_index);
-    transform->transform_input(group.input);
     transform->transform_policy(group.policy);
-
     game_data_->add_pending_group(transform, &group);
   }
 }

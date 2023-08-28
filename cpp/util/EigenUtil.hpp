@@ -307,6 +307,8 @@ template<typename Scalar, int N> void positive_scale(Eigen::Array<Scalar, N, 1>&
 template<typename Scalar, int N> void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
 template<typename Scalar, int N> void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
 
+template <FixedTensorConcept TensorT> uint64_t hash(const TensorT& tensor);
+
 }  // namespace eigen_util
 
 #include <util/inl/EigenUtil.inl>

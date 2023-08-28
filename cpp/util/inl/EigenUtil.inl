@@ -205,4 +205,11 @@ template<typename Scalar, int N> void right_rotate(Eigen::Array<Scalar, N, 1>& a
   std::rotate(data, data + N - n, data + N);
 }
 
+template <FixedTensorConcept TensorT>
+uint64_t hash(const TensorT& tensor) {
+  using Scalar = typename TensorT::Scalar;
+  constexpr int N = extract_shape_t<TensorT>::total_size;
+  return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
+}
+
 }  // namespace eigen_util

@@ -78,4 +78,27 @@ template<typename... T> size_t tuple_hash(const std::tuple<T...>& tup) {
   return detail::TupleHasher{}(tup);
 }
 
+template <size_t size>
+uint64_t hash_memory(const void* ptr) {
+  const uint64_t* data = reinterpret_cast<const uint64_t*>(ptr);
+  constexpr size_t num_blocks = size / 8;
+  constexpr size_t remaining_bytes = size % 8;
+  const uint8_t* remaining_data =
+      reinterpret_cast<const uint8_t*>(data + num_blocks);
+
+  uint64_t hash = 0xcbf29ce484222325;  // FNV offset basis
+
+  // Process 8 bytes at a time
+  for (size_t i = 0; i < num_blocks; ++i) {
+    hash = (hash * 1099511628211) ^ data[i];  // FNV prime
+  }
+
+  // Process remaining bytes
+  for (size_t i = 0; i < remaining_bytes; ++i) {
+    hash = (hash * 1099511628211) ^ remaining_data[i];
+  }
+
+  return hash;
+}
+
 }  // namespace util

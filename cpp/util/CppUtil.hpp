@@ -285,6 +285,8 @@ template<typename T, typename U, size_t N> std::array<T, N> array_cast(const std
 
 template<typename... T> size_t tuple_hash(const std::tuple<T...>& arg);
 
+template<size_t size> uint64_t hash_memory(const void* ptr);
+
 }  // namespace util
 
 #include <util/inl/CppUtil.inl>
