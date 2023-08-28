@@ -20,10 +20,15 @@ class Tensorizor : public TensorizorBase {
  public:
   using InputTensor = TensorizorBase::InputTensor;
 
-  void clear() {}
-  void receive_state_change(const GameState& state, core::action_t action) {}
   void tensorize(InputTensor& tensor, const GameState& state) const {
-    state.tensorize(tensor);
+    core::seat_index_t cp = state.get_current_player();
+    for (int row = 0; row < kBoardDimension; ++row) {
+      for (int col = 0; col < kBoardDimension; ++col) {
+        core::seat_index_t p = state.get_player_at(row, col);
+        tensor(0, row, col) = (p == cp);
+        tensor(1, row, col) = (p == 1 - cp);
+      }
+    }
   }
 };
 

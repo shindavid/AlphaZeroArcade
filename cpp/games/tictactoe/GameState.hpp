@@ -59,7 +59,7 @@ public:
   mask_t get_current_player_mask() const { return cur_player_mask_; }
   mask_t get_opponent_mask() const { return full_mask_ ^ cur_player_mask_; }
 
-  template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
+  core::seat_index_t get_player_at(int row, int col) const;
   void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }

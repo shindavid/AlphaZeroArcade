@@ -54,7 +54,7 @@ public:
   GameOutcome apply_move(core::action_t action);
   ActionMask get_valid_actions() const;
 
-  template<eigen_util::FixedTensorConcept InputTensor> void tensorize(InputTensor&) const;
+  core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
   void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;

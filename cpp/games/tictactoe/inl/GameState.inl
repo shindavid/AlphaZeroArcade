@@ -45,22 +45,12 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
   return ~mask;
 }
 
-template<eigen_util::FixedTensorConcept InputTensor> void GameState::tensorize(InputTensor& tensor) const {
-  mask_t opp_player_mask = get_opponent_mask();
-  for (int row = 0; row < kBoardDimension; ++row) {
-    for (int col = 0; col < kBoardDimension; ++col) {
-      int index = row * kBoardDimension + col;
-      bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask_;
-      tensor(0, row, col) = occupied_by_cur_player;
-    }
-  }
-  for (int row = 0; row < kBoardDimension; ++row) {
-    for (int col = 0; col < kBoardDimension; ++col) {
-      int index = row * kBoardDimension + col;
-      bool occupied_by_opp_player = (mask_t(1) << index) & opp_player_mask;
-      tensor(1, row, col) = occupied_by_opp_player;
-    }
-  }
+inline core::seat_index_t GameState::get_player_at(int row, int col) const {
+  int cp = get_current_player();
+  int index = row * kBoardDimension + col;
+  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask_;
+  bool occupied_by_any_player = (mask_t(1) << index) & full_mask_;
+  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1-cp)) : -1;
 }
 
 inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {

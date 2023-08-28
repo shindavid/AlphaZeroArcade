@@ -199,7 +199,10 @@ public:
     return *(transforms().begin() + index);
   }
 
-protected:
+  void clear() {}
+  void receive_state_change(const GameState& state, core::action_t action) {}
+
+ protected:
   static transform_array_t transforms() {
     transform_array_t arr {
       &transforms_struct_.identity_,
