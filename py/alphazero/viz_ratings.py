@@ -133,6 +133,8 @@ class ProgressVisualizer:
         self.max_y = None
         for rating_data in data_list:
             data = rating_data.gen_df
+            if not len(data):
+                continue
 
             for col in data:
                 x = data[col]
@@ -161,8 +163,12 @@ class ProgressVisualizer:
         radio_group = RadioGroup(labels=x_vars, active=default_x_var_index)
 
         data_list = self.data_list
-        x_range = [0, self.max_x_dict[default_x_var_column]]
-        y_range = [0, self.max_y+1]
+        if self.max_y is None:
+            x_range = [0, 1]
+            y_range = [0, 1]
+        else:
+            x_range = [0, self.max_x_dict[default_x_var_column]]
+            y_range = [0, self.max_y+1]
 
         title = f'{Args.game} Alphazero Ratings'
         plot = figure(height=600, width=800, title=title, x_range=x_range, y_range=y_range,
