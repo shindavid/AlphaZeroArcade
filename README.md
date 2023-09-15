@@ -11,16 +11,17 @@ overhead.
 
 ### Directory Structure
 
-In the below list of modules, no module has any dependencies on a module that appears later in the list.
+In the below list of modules in the `cpp/` directory, no module has any dependencies on a module that appears later in
+the list.
 
-* `cpp/third_party`: third-party code that was simply copy-pasted because it was not available as a package
-* `cpp/util`: utility code that is not specific to AlphaZero
-* `cpp/core`: generic code for games (nothing MCTS-specific). Some key classes provided here:
+* `third_party`: third-party code that was simply copy-pasted because it was not available as a package
+* `util`: utility code that is not specific to AlphaZero
+* `core`: generic code for games (nothing MCTS-specific). Some key classes provided here:
   * `AbstractPlayer`: abstract class for a player that can play a game
   * `GameServer`: runs a series of games between players (which can optionally join from other processes)
-* `cpp/mcts`: generic MCTS implementation
-* `cpp/common`: provides `AbstractPlayer` derived classes that work for any game type
-* `cpp/games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
+* `mcts`: generic MCTS implementation
+* `common`: provides `AbstractPlayer` derived classes that work for any game type
+* `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
 
 ### Game Types as C++ Template Parameters
 
