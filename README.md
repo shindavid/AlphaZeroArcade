@@ -24,18 +24,18 @@ In the below list of modules, no module has any dependencies on a module that ap
 
 ### Game Types as C++ Template Parameters
 
-The MCTS code is entirely templated based on the game type. This can make the code a bit daunting at first. Was this
-design decision necessary? Yes, and here's why:
+The MCTS code is entirely templated based on the game type. This can make the code a bit daunting at first. What drove 
+this decision?
 
 A high-performance MCTS implementation should aim to saturate both GPU and CPU resources via parallelism. When CPU
 resources are fully saturated, it is common for the PUCT calculation that powers MCTS to become a bottleneck. In order
 to optimize this calculation, it is important for the various tensors involved to have sizes and types known at compile
-time. If the sizes and types are specified at runtime, then the tensor calculations will have a lot of dynamic memory
-allocation/deallocation under the hood.
+time. If the sizes and types are specified at runtime, then the tensor calculations can hide a lot of inefficient
+dynamic memory allocation/deallocation under the hood.
 
-Fundamentally, this consideration drives the design of this framework to specify the game type as a template parameter.
-The simpler alternative would be to use an abstract game-type base class and inheritance, but this would incur the
-performance penalty described above.
+Fundamentally, this consideration drove the design of this framework to specify the game type as a template parameter.
+The simpler alternative would have been to use an abstract game-type base class and inheritance, but this would incur
+the performance penalty described above.
 
 Note: most MCTS implementations are for 1-player games or 2-player zero-sum games. In such games, the value of a state
 can be represented as a scalar. This implementation, however, supports n-player games for arbitrary n, and so the value
