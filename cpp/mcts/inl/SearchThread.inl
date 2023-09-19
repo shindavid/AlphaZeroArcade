@@ -337,14 +337,17 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
       valid_action_mask[i++] = v;
     }
 
-    Eigen::Array<typename PVec::Scalar, Eigen::Dynamic, 7, 0, PVec::MaxRowsAtCompileTime> M(P.rows(), 7);
+    Eigen::Array<typename PVec::Scalar, Eigen::Dynamic, 10, 0, PVec::MaxRowsAtCompileTime> M(P.rows(), 10);
     M.col(0) = valid_action_mask;
     M.col(1) = P;
     M.col(2) = stats.V;
-    M.col(3) = stats.E;
-    M.col(4) = N;
-    M.col(5) = stats.VN;
-    M.col(6) = PUCT;
+    M.col(3) = stats.Vmin;
+    M.col(4) = stats.Vmax;
+    M.col(5) = stats.D;
+    M.col(6) = stats.E;
+    M.col(7) = N;
+    M.col(8) = stats.VN;
+    M.col(9) = PUCT;
 
     std::ostringstream ss;
     ss << M.transpose();
@@ -356,10 +359,13 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     printer << "valid: " << s_lines[0] << std::endl;
     printer << "P:     " << s_lines[1] << std::endl;
     printer << "V:     " << s_lines[2] << std::endl;
-    printer << "E:     " << s_lines[3] << std::endl;
-    printer << "N:     " << s_lines[4] << std::endl;
-    printer << "VN:    " << s_lines[5] << std::endl;
-    printer << "PUCT:  " << s_lines[6] << std::endl;
+    printer << "Vmin:  " << s_lines[3] << std::endl;
+    printer << "Vmax:  " << s_lines[4] << std::endl;
+    printer << "D:     " << s_lines[5] << std::endl;
+    printer << "E:     " << s_lines[6] << std::endl;
+    printer << "N:     " << s_lines[7] << std::endl;
+    printer << "VN:    " << s_lines[8] << std::endl;
+    printer << "PUCT:  " << s_lines[9] << std::endl;
 
     printer << "argmax: " << argmax_index << std::endl;
     printer << "*************" << std::endl;

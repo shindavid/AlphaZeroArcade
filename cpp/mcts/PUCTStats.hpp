@@ -25,10 +25,13 @@ struct PUCTStats {
 
   core::seat_index_t cp;
   const LocalPolicyArray& P;
-  LocalPolicyArray V;
-  LocalPolicyArray E;
-  LocalPolicyArray N;
-  LocalPolicyArray VN;
+  LocalPolicyArray V;  // (virtualized) value
+  LocalPolicyArray Vmin;  // value lower bound
+  LocalPolicyArray Vmax;  // value upper bound
+  LocalPolicyArray D;  // dominated
+  LocalPolicyArray E;  // edge count
+  LocalPolicyArray N;  // real count
+  LocalPolicyArray VN;  // virtual count
   LocalPolicyArray PUCT;
 };
 

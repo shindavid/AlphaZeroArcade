@@ -80,12 +80,19 @@ public:
     void virtual_increment() { virtual_count++; }
     void real_increment() { real_count++; }
     void increment_transfer() { real_count++; virtual_count--; }
-    void set_eval(const ValueArray& value) { eval = value; real_increment(); }
+    void set_eval_exact(const ValueArray& value) {
+      eval = value;
+      eval_lower_bound = value;
+      eval_upper_bound = value;
+      real_increment();
+    }
     void set_eval_with_virtual_undo(const ValueArray& value) { eval = value; increment_transfer(); }
 
     ValueArray eval;  // game-outcome for terminal nodes, nn-eval for non-terminal nodes
     ValueArray real_avg;  // excludes virtual loss
     ValueArray virtualized_avg;  // includes virtual loss
+    ValueArray eval_lower_bound;
+    ValueArray eval_upper_bound;
     int real_count = 0;
     int virtual_count = 0;
   };
