@@ -101,15 +101,16 @@ inline void SearchResultsDumper<tictactoe::GameState>::dump(
   printf("O: %6.3f%% -> %6.3f%%\n", 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kX));
   printf("\n");
 
-  int num_actions = valid_actions.count();
   printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
+  int i = 0;
   for (core::action_t action : bitset_util::on_indices(valid_actions)) {
     float count = mcts_counts.data()[action];
-    auto action_p = action_policy(action);
-    auto net_p = net_policy(action);
+    auto action_p = action_policy(i);
+    auto net_p = net_policy(i);
     printf("   %d %8.3f %8.3f %8.3f\n", action, net_p, count, action_p);
+    ++i;
   }
-  for (int i = num_actions; i < tictactoe::kNumCells; ++i) {
+  for (; i < tictactoe::kNumCells; ++i) {
     printf("\n");
   }
 }
