@@ -256,7 +256,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
-    edata.transform->transform_policy(group.policy);
+    edata.transform->get_reverse()->transform_policy(group.policy);
     edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
   }
 

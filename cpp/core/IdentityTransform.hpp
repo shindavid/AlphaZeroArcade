@@ -9,6 +9,8 @@ class IdentityTransform : public AbstractSymmetryTransform<InputTensor, PolicyTe
  public:
   using base_t = AbstractSymmetryTransform<InputTensor, PolicyTensor>;
 
+  IdentityTransform() { this->set_reverse(this); }
+
   template<typename InputTensorT> void transform_input(InputTensorT&) {}  // unit tests need general scalar type
   void transform_input(InputTensor&) override {}
   void transform_policy(PolicyTensor&) override {}

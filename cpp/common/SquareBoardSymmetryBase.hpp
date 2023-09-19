@@ -62,8 +62,8 @@ public:
 
     void transform_policy(PolicyTensor& policy) override {
       PolicyMatrixSlice slice(policy.data());
-      slice.rowwise().reverseInPlace();
       slice.transposeInPlace();
+      slice.rowwise().reverseInPlace();
     }
   };
 
@@ -104,8 +104,8 @@ public:
 
     void transform_policy(PolicyTensor& policy) override {
       PolicyMatrixSlice slice(policy.data());
-      slice.colwise().reverseInPlace();
       slice.transposeInPlace();
+      slice.colwise().reverseInPlace();
     }
   };
 
@@ -218,6 +218,17 @@ public:
   }
 
   struct transforms_struct_t {
+    transforms_struct_t() {
+      identity_.set_reverse(&identity_);
+      rot90_.set_reverse(&rot270_);
+      rot180_.set_reverse(&rot180_);
+      rot270_.set_reverse(&rot90_);
+      refl.set_reverse(&refl);
+      refl_rot90_.set_reverse(&refl_rot90_);
+      refl_rot180_.set_reverse(&refl_rot180_);
+      refl_rot270_.set_reverse(&refl_rot270_);
+    }
+
     Identity identity_;
     Rot90 rot90_;
     Rot180 rot180_;

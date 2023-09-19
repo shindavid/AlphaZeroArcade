@@ -163,14 +163,14 @@ void test_rot90() {
                                       "126 118 110 102  94  86  78  70\n"
                                       "127 119 111 103  95  87  79  71";
 
-  std::string expected_policy = " 7 15 23 31 39 47 55 63\n"
-                                " 6 14 22 30 38 46 54 62\n"
-                                " 5 13 21 29 37 45 53 61\n"
-                                " 4 12 20 28 36 44 52 60\n"
-                                " 3 11 19 27 35 43 51 59\n"
-                                " 2 10 18 26 34 42 50 58\n"
-                                " 1  9 17 25 33 41 49 57\n"
-                                " 0  8 16 24 32 40 48 56";
+  std::string expected_policy = "56 48 40 32 24 16  8  0\n"
+                                "57 49 41 33 25 17  9  1\n"
+                                "58 50 42 34 26 18 10  2\n"
+                                "59 51 43 35 27 19 11  3\n"
+                                "60 52 44 36 28 20 12  4\n"
+                                "61 53 45 37 29 21 13  5\n"
+                                "62 54 46 38 30 22 14  6\n"
+                                "63 55 47 39 31 23 15  7";
 
   test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
   test_symmetry_policy(transform, expected_policy);
@@ -231,14 +231,14 @@ void test_rot270() {
                                       " 65  73  81  89  97 105 113 121\n"
                                       " 64  72  80  88  96 104 112 120";
 
-  std::string expected_policy = "56 48 40 32 24 16  8  0\n"
-                                "57 49 41 33 25 17  9  1\n"
-                                "58 50 42 34 26 18 10  2\n"
-                                "59 51 43 35 27 19 11  3\n"
-                                "60 52 44 36 28 20 12  4\n"
-                                "61 53 45 37 29 21 13  5\n"
-                                "62 54 46 38 30 22 14  6\n"
-                                "63 55 47 39 31 23 15  7";
+  std::string expected_policy = " 7 15 23 31 39 47 55 63\n"
+                                " 6 14 22 30 38 46 54 62\n"
+                                " 5 13 21 29 37 45 53 61\n"
+                                " 4 12 20 28 36 44 52 60\n"
+                                " 3 11 19 27 35 43 51 59\n"
+                                " 2 10 18 26 34 42 50 58\n"
+                                " 1  9 17 25 33 41 49 57\n"
+                                " 0  8 16 24 32 40 48 56";
 
   test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
   test_symmetry_policy(transform, expected_policy);

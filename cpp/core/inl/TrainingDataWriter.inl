@@ -91,7 +91,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_
     auto* group = transform_group.group;
 
     group->opp_policy = opp_policy;
-    transform->transform_policy(group->opp_policy);
+    transform->get_reverse()->transform_policy(group->opp_policy);
   }
   pending_groups_.clear();
 }

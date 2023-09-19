@@ -32,6 +32,8 @@ public:
 
   class ReflectionTransform : public SymmetryTransform {
   public:
+    ReflectionTransform() { this->set_reverse(this); }
+
     void transform_input(InputTensor& input) override;
     void transform_policy(PolicyTensor& policy) override;
   };
