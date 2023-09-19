@@ -110,7 +110,7 @@ Node<GameState, Tensorizor>::get_counts() const {
 
   core::seat_index_t cp = stable_data().current_player;
 
-  if (kEnableThreadingDebug) {
+  if (kEnableDebug) {
     std::cout << "get_counts()" << std::endl;
     std::cout << "  cp: " << int(cp) << std::endl;
   }
@@ -121,7 +121,7 @@ Node<GameState, Tensorizor>::get_counts() const {
   for (auto& it : children_data_) {
     core::action_t action = it.action();
     int count = it.child()->stats().real_count;
-    if (kEnableThreadingDebug) {
+    if (kEnableDebug) {
       std::cout << "  " << action << ": " << count << std::endl;
     }
     counts.data()[action] = count;

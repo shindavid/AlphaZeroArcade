@@ -136,7 +136,7 @@ typename NNEvaluationService<GameState, Tensorizor>::Response
 NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
   const Node* tree = request.tree;
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("evaluate()\n");
   }
@@ -161,7 +161,7 @@ NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
 
   cv_evaluate_.notify_all();
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  evaluated!\n");
   }
@@ -230,7 +230,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   assert(batch_metadata_.reserve_index > 0);
   assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- NNEvaluationService::%s(%s) ---------------------->\n",
                    __func__, batch_metadata_.repr().c_str());
@@ -296,7 +296,7 @@ NNEvaluationService<GameState, Tensorizor>::Response
 NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request, const cache_key_t& cache_key) {
   request.thread_profiler->record(SearchThreadRegion::kCheckingCache);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  waiting for cache lock...\n");
   }
@@ -304,7 +304,7 @@ NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request, 
   std::unique_lock<std::mutex> cache_lock(cache_mutex_);
   auto cached = cache_.get(cache_key);
   if (cached.has_value()) {
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer(request.thread_id);
       printer.printf("  hit cache\n");
     }
@@ -322,13 +322,13 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_reservable(
   request.thread_profiler->record(SearchThreadRegion::kWaitingUntilBatchReservable);
 
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.unread_count == 0 && batch_metadata_.reserve_index < batch_size_limit_ && batch_metadata_.accepting_reservations) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer(request.thread_id);
       printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
     }
@@ -351,7 +351,7 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
   assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
 
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  %s(%s) allocation complete\n", func, batch_metadata_.repr().c_str());
   }
@@ -402,7 +402,7 @@ void NNEvaluationService<GameState, Tensorizor>::increment_commit_count(const Re
   request.thread_profiler->record(SearchThreadRegion::kIncrementingCommitCount);
 
   batch_metadata_.commit_count++;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  %s(%s)...\n", __func__, batch_metadata_.repr().c_str());
   }
@@ -416,13 +416,13 @@ NNEvaluationService<GameState, Tensorizor>::get_eval(
 {
   const char* func = __func__;
   request.thread_profiler->record(SearchThreadRegion::kWaitingForReservationProcessing);
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.reserve_index == 0) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer(request.thread_id);
       printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
     }
@@ -440,13 +440,13 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
   batch_metadata_.unread_count--;
 
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer(request.thread_id);
       printer.printf("  %s(%s) still waiting...\n", func, batch_metadata_.repr().c_str());
     }
@@ -461,14 +461,14 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_ready()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.unread_count == 0) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -484,14 +484,14 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_first_reservation()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.reserve_index > 0) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -507,14 +507,14 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_last_reservation()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait_until(lock, deadline_, [&]{
     if (batch_metadata_.reserve_index == batch_size_limit_) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());
@@ -531,14 +531,14 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_commits()
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("<---------------------- %s %s(%s) ---------------------->\n",
                    cls, func, batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait(lock, [&]{
     if (batch_metadata_.reserve_index == batch_metadata_.commit_count) return true;
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",
                      cls, func, batch_metadata_.repr().c_str());

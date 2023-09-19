@@ -134,7 +134,7 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchPar
   shared_data_.search_active = true;
   num_active_search_threads_ = num_search_threads();
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     const GameState& state = shared_data_.root_node->stable_data().state;
     state.dump();
   }

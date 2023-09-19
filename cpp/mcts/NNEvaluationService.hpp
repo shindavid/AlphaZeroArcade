@@ -58,7 +58,7 @@ namespace mcts {
  * The loop() and evaluate() methods of NNEvaluationService have been carefully written to ensure that the reads
  * and writes of these data structures are thread-safe.
  *
- * Compiling with -DMCTS_THREADING_DEBUG will enable a bunch of prints that allow you to watch the sequence of
+ * Compiling with -DMCTS_DEBUG will enable a bunch of prints that allow you to watch the sequence of
  * operations in the interleaving threads.
  */
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

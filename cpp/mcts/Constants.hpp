@@ -53,6 +53,6 @@ struct NNEvaluationServiceRegion {
 
 constexpr bool kEnableProfiling = IS_MACRO_ENABLED(PROFILE_MCTS);
 constexpr bool kEnableVerboseProfiling = IS_MACRO_ENABLED(PROFILE_MCTS_VERBOSE);
-constexpr bool kEnableThreadingDebug = IS_MACRO_ENABLED(MCTS_THREADING_DEBUG);
+constexpr bool kEnableDebug = IS_MACRO_ENABLED(MCTS_DEBUG);
 
 }  // namespace mcts

@@ -75,7 +75,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
 {
   search_path_.emplace_back(tree, edge);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id());
     if (edge) {
       printer << __func__ << "(" << edge->action() << ") ";
@@ -99,7 +99,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
   assert(evaluation);
 
   if (data.backpropagated_virtual_loss) {
-    if (mcts::kEnableThreadingDebug) {
+    if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer(thread_id());
       printer << "hit leaf node" << std::endl;
     }
@@ -139,7 +139,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
   profiler_.record(SearchThreadRegion::kVirtualBackprop);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << search_path_str() << std::endl;
   }
@@ -154,14 +154,14 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
   }
 
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(SetEval(value));
+  last_node->update_stats(SetEvalExact(value));
   last_edge->increment_count();
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -176,7 +176,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
   }
@@ -197,7 +197,7 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_edge) {
   // short-circuit
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << search_path_str() << std::endl;
   }
@@ -240,7 +240,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
 {
   profiler_.record(SearchThreadRegion::kEvaluateUnset);
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id_);
     printer << __func__ << " " << search_path_str() << std::endl;
   }
@@ -324,7 +324,7 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     nn_eval_service_->record_puct_calc(VN.sum() > 0);
   }
 
-  if (mcts::kEnableThreadingDebug) {
+  if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id());
 
     printer << "*************" << std::endl;
