@@ -161,7 +161,7 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
 
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(SetEvalExact(value));
+  last_node->update_stats(SetEval(value));
   last_edge->increment_count();
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
