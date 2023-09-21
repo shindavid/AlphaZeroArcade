@@ -178,7 +178,10 @@ class ProgressVisualizer:
         plot.add_layout(hline)
 
         n = len(data_list)
-        colors = Category10[n]
+        if n <= 2:
+            colors = Category10[3][:n]
+        else:
+            colors = Category10[n]
         for rating_data, color in zip(data_list, colors):
             source = self.sources[rating_data.tag]
             source.data['x'] = rating_data.gen_df[default_x_var_column]
