@@ -46,8 +46,8 @@ public:
     for (int row = 0; row < kNumRows; ++row) {
       for (int col = 0; col < kNumColumns; ++col) {
         core::seat_index_t p = state.get_player_at(row, col);
-        tensor(0, row, col) = (p == cp);
-        tensor(1, row, col) = (p == 1 - cp);
+        tensor(0, col, row) = (p == cp);
+        tensor(1, col, row) = (p == 1 - cp);
       }
     }
   }
