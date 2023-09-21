@@ -291,7 +291,6 @@ class Arena:
 
         missing_mcts_gen_set = full_mcts_gen_set - mcts_gen_set
         if not missing_mcts_gen_set:
-            timed_print(f'[{self.tag}] Skipping x var data dump - fully dumped.')
             return
 
         values = []
@@ -393,9 +392,11 @@ class Arena:
             return WorkItem(latest_gen, None, latest_gen, False, self)
 
         max_graded_gen = graded_gens[-1]
+        max_graded_gen_rating = self.ratings.get(max_graded_gen, None)
         assert latest_gen >= max_graded_gen
-        if latest_gen - max_graded_gen >= 10:
-            return WorkItem(latest_gen, self.ratings.get(max_graded_gen, None), latest_gen - max_graded_gen, True, self)
+        latest_gap = latest_gen - max_graded_gen
+        if latest_gap >= 10:
+            return WorkItem(latest_gen, max_graded_gen_rating, latest_gap, True, self)
 
         if 1 not in self.ratings:
             return WorkItem(1, 0.5, max_graded_gen, False, self)
@@ -405,6 +406,8 @@ class Arena:
         if gap_index_pairs:
             largest_gap, largest_gap_index = max(gap_index_pairs)
             if largest_gap > 1:
+                if largest_gap <= latest_gap:
+                    return WorkItem(latest_gen, max_graded_gen_rating, latest_gap, True, self)
                 prev_gen = graded_gens[largest_gap_index]
                 next_gen = graded_gens[largest_gap_index + 1]
                 gen = prev_gen + largest_gap // 2
