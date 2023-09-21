@@ -172,7 +172,8 @@ class ProgressVisualizer:
 
         title = f'{Args.game} Alphazero Ratings'
         plot = figure(height=600, width=800, title=title, x_range=x_range, y_range=y_range,
-                      y_axis_label='Rating', x_axis_label=default_x_var)
+                      y_axis_label='Rating', x_axis_label=default_x_var,
+                      active_scroll='wheel_zoom')
         hline = Span(location=self.y_limit, dimension='width', line_color='gray', line_dash='dashed', line_width=1)
         plot.add_layout(hline)
 
