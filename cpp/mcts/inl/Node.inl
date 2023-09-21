@@ -19,8 +19,6 @@ inline Node<GameState, Tensorizor>::stats_t::stats_t() {
   eval.setZero();
   real_avg.setZero();
   virtualized_avg.setZero();
-  eval_lower_bound.setConstant(0);
-  eval_upper_bound.setConstant(1);
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -120,11 +118,38 @@ Node<GameState, Tensorizor>::get_counts() const {
   PolicyTensor counts;
   counts.setZero();
 
+  bool provably_winning = false;
+  for (auto& it : children_data_) {
+    const auto& stats = it.child()->stats();
+    if (stats.provably_winning[cp]) {
+      provably_winning = true;
+      break;
+    }
+  }
+
   for (auto& it : children_data_) {
     core::action_t action = it.action();
-    int count = it.child()->stats().real_count;
+    const auto& stats = it.child()->stats();
+    int count = stats.real_count;
+
+    if (stats.provably_losing[cp]) {
+      if (kEnableDebug) {
+        std::cout << "  " << action << ": " << count << " -> 0 (losing)" << std::endl;
+      }
+      continue;
+    } else if (provably_winning && !stats.provably_winning[cp]) {
+      if (kEnableDebug) {
+        std::cout << "  " << action << ": " << count << " -> 0 (!winning)" << std::endl;
+      }
+      continue;
+    }
+
     if (kEnableDebug) {
-      std::cout << "  " << action << ": " << count << std::endl;
+      std::cout << "  " << action << ": " << count;
+      if (provably_winning) {
+        std::cout << " (winning)";
+      }
+      std::cout << std::endl;
     }
     counts.data()[action] = count;
   }
@@ -152,24 +177,14 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   int real_count = 0;
 
   /*
-   * bounds tracking details, assuming it is currently black's turn:
+   * provably winning/losing calculation
    *
-   * Black should not make a move that is provably dominated by some other move. For example, if
-   * move A has a eval bound of [0, 0.5] and move B has an eval bound of [0.6, 0.8], then it should
-   * not make move A. The my_eval_*_bound variables are used to track black's combined eval bounds
-   * accordingly.
-   *
-   * For non-black players, their eval bound is the range-union of the bounds of all moves.
-   * The eval_* variables are used to track this.
+   * TODO: generalize this by computing lower/upper utility bounds, for multiplayer games with
+   * unbounded/non-zero-sum utilities.
    */
-  dtype cp_eval_lower_bound = 0;
-  dtype cp_eval_upper_bound = 0;
+  bool cp_has_winning_move = false;
+  bool cp_has_non_losing_move = false;
   int num_children = 0;
-
-  ValueArray eval_lower_bounds;  // the cp'th value is tracked separately by cp_eval_lower_bound
-  ValueArray eval_upper_bounds;  // the cp'th value is tracked separately by cp_eval_upper_bound
-  eval_lower_bounds.setConstant(1);
-  eval_upper_bounds.setConstant(0);
 
   for (const edge_t& edge : children_data_) {
     const auto& child_stats = edge.child()->stats();
@@ -177,31 +192,9 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
     real_sum += child_stats.real_avg * count;
     real_count += count;
 
+    cp_has_winning_move |= child_stats.provably_winning[cp];
+    cp_has_non_losing_move |= !child_stats.provably_losing[cp];
     num_children++;
-
-    cp_eval_lower_bound = std::max(cp_eval_lower_bound, child_stats.eval_lower_bound(cp));
-    cp_eval_upper_bound = std::max(cp_eval_upper_bound, child_stats.eval_upper_bound(cp));
-
-    // range-union
-    eval_lower_bounds = eval_lower_bounds.cwiseMin(child_stats.eval_lower_bound);
-    eval_upper_bounds = eval_upper_bounds.cwiseMax(child_stats.eval_upper_bound);
-  }
-
-  if (stable_data_.num_valid_actions() == 0) {
-    // terminal state, clear out bounds
-    eval_lower_bounds.setConstant(0);
-    eval_upper_bounds.setConstant(1);
-  } else {
-    // Widen bounds if there are still unexplored actions
-    if (num_children < stable_data_.num_valid_actions()) {
-      cp_eval_upper_bound = 1;
-      eval_lower_bounds.setConstant(0);
-      eval_upper_bounds.setConstant(1);
-    }
-
-    // Fill in black's bounds
-    eval_lower_bounds(cp) = cp_eval_lower_bound;
-    eval_upper_bounds(cp) = cp_eval_upper_bound;
   }
 
   std::unique_lock lock(stats_mutex_);
@@ -213,8 +206,23 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   }
 
   // incorporate bounds from children
-  stats_.eval_lower_bound = stats_.eval_lower_bound.cwiseMax(eval_lower_bounds);
-  stats_.eval_upper_bound = stats_.eval_upper_bound.cwiseMin(eval_upper_bounds);
+  int num_valid_actions = stable_data_.num_valid_actions();
+  if (num_valid_actions == 0) {
+    // terminal state, provably_winning/losing are already set by instruction
+  } else if (cp_has_winning_move) {
+    stats_.provably_winning[cp] = true;
+    stats_.provably_losing.set();
+    stats_.provably_losing[cp] = false;
+  } else {
+    bool fully_expanded = num_children == num_valid_actions;
+    bool cp_is_losing = fully_expanded && !cp_has_non_losing_move;
+    if (cp_is_losing) {
+      stats_.provably_losing.set(cp);
+      if (kNumPlayers == 2) {
+        stats_.provably_winning[1-cp] = true;
+      }
+    }
+  }
 
   stats_.real_avg = real_count ? (real_sum / real_count) : real_sum;
   if (stats_.virtual_count) {

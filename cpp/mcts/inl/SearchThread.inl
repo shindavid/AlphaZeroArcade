@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <cmath>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -161,7 +162,7 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
 
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(SetEval(value));
+  last_node->update_stats(SetEvalExact(value));
   last_edge->increment_count();
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -337,17 +338,20 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
       valid_action_mask[i++] = v;
     }
 
-    Eigen::Array<typename PVec::Scalar, Eigen::Dynamic, 10, 0, PVec::MaxRowsAtCompileTime> M(P.rows(), 10);
+    constexpr int kNumCols = 9;
+    using ScalarT = typename PVec::Scalar;
+    using ArrayT = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols, 0, PVec::MaxRowsAtCompileTime>;
+    ArrayT M(P.rows(), kNumCols);
+
     M.col(0) = valid_action_mask;
     M.col(1) = P;
     M.col(2) = stats.V;
-    M.col(3) = stats.Vmin;
-    M.col(4) = stats.Vmax;
-    M.col(5) = stats.D;
-    M.col(6) = stats.E;
-    M.col(7) = N;
-    M.col(8) = stats.VN;
-    M.col(9) = PUCT;
+    M.col(3) = stats.PW;
+    M.col(4) = stats.PL;
+    M.col(5) = stats.E;
+    M.col(6) = N;
+    M.col(7) = stats.VN;
+    M.col(8) = PUCT;
 
     std::ostringstream ss;
     ss << M.transpose();
@@ -359,13 +363,12 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     printer << "valid: " << s_lines[0] << std::endl;
     printer << "P:     " << s_lines[1] << std::endl;
     printer << "V:     " << s_lines[2] << std::endl;
-    printer << "Vmin:  " << s_lines[3] << std::endl;
-    printer << "Vmax:  " << s_lines[4] << std::endl;
-    printer << "D:     " << s_lines[5] << std::endl;
-    printer << "E:     " << s_lines[6] << std::endl;
-    printer << "N:     " << s_lines[7] << std::endl;
-    printer << "VN:    " << s_lines[8] << std::endl;
-    printer << "PUCT:  " << s_lines[9] << std::endl;
+    printer << "PW:    " << s_lines[3] << std::endl;
+    printer << "PL:    " << s_lines[4] << std::endl;
+    printer << "E:     " << s_lines[5] << std::endl;
+    printer << "N:     " << s_lines[6] << std::endl;
+    printer << "VN:    " << s_lines[7] << std::endl;
+    printer << "PUCT:  " << s_lines[8] << std::endl;
 
     printer << "argmax: " << argmax_index << std::endl;
     printer << "*************" << std::endl;

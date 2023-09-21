@@ -44,6 +44,8 @@ public:
   using ValueArray = typename GameStateTypes::ValueArray;
   using dtype = typename GameStateTypes::dtype;
 
+  using player_bitset_t = std::bitset<kNumPlayers>;
+
   enum evaluation_state_t : int8_t {
     kUnset,
     kSet,
@@ -82,8 +84,10 @@ public:
     void increment_transfer() { real_count++; virtual_count--; }
     void set_eval_exact(const ValueArray& value) {
       eval = value;
-      eval_lower_bound = value;
-      eval_upper_bound = value;
+      for (int p = 0; p < kNumPlayers; ++p) {
+        provably_winning[p] = value(p) == 1;
+        provably_losing[p] = value(p) == 0;
+      }
       real_increment();
     }
     void set_eval_with_virtual_undo(const ValueArray& value) { eval = value; increment_transfer(); }
@@ -91,8 +95,11 @@ public:
     ValueArray eval;  // game-outcome for terminal nodes, nn-eval for non-terminal nodes
     ValueArray real_avg;  // excludes virtual loss
     ValueArray virtualized_avg;  // includes virtual loss
-    ValueArray eval_lower_bound;
-    ValueArray eval_upper_bound;
+
+    // TODO: generalize these fields to utility lower/upper bounds
+    player_bitset_t provably_winning;
+    player_bitset_t provably_losing;
+
     int real_count = 0;
     int virtual_count = 0;
   };
