@@ -118,11 +118,38 @@ Node<GameState, Tensorizor>::get_counts() const {
   PolicyTensor counts;
   counts.setZero();
 
+  bool provably_winning = false;
+  for (auto& it : children_data_) {
+    const auto& stats = it.child()->stats();
+    if (stats.provably_winning[cp]) {
+      provably_winning = true;
+      break;
+    }
+  }
+
   for (auto& it : children_data_) {
     core::action_t action = it.action();
-    int count = it.child()->stats().real_count;
+    const auto& stats = it.child()->stats();
+    int count = stats.real_count;
+
+    if (stats.provably_losing[cp]) {
+      if (kEnableDebug) {
+        std::cout << "  " << action << ": " << count << " -> 0 (losing)" << std::endl;
+      }
+      continue;
+    } else if (provably_winning && !stats.provably_winning[cp]) {
+      if (kEnableDebug) {
+        std::cout << "  " << action << ": " << count << " -> 0 (!winning)" << std::endl;
+      }
+      continue;
+    }
+
     if (kEnableDebug) {
-      std::cout << "  " << action << ": " << count << std::endl;
+      std::cout << "  " << action << ": " << count;
+      if (provably_winning) {
+        std::cout << " (winning)";
+      }
+      std::cout << std::endl;
     }
     counts.data()[action] = count;
   }
@@ -143,13 +170,35 @@ Node<GameState, Tensorizor>::make_virtual_loss() const {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 template<typename UpdateT>
 void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction) {
+  core::seat_index_t cp = stable_data().current_player;
+
   ValueArray real_sum;
   real_sum.setZero();
   int real_count = 0;
+
+  /*
+   * provably winning/losing calculation
+   *
+   * TODO: generalize this by computing lower/upper utility in games with unbounded/non-zero-sum
+   * utilities.
+   */
+  bool cp_has_winning_move = false;
+  int num_children = 0;
+
+  player_bitset_t all_provably_winning;
+  player_bitset_t all_provably_losing;
+  all_provably_winning.set();
+  all_provably_losing.set();
   for (const edge_t& edge : children_data_) {
+    const auto& child_stats = edge.child()->stats();
     int count = edge.count();
-    real_sum += edge.child()->stats().real_avg * count;
+    real_sum += child_stats.real_avg * count;
     real_count += count;
+
+    cp_has_winning_move |= child_stats.provably_winning[cp];
+    all_provably_winning &= child_stats.provably_winning;
+    all_provably_losing &= child_stats.provably_losing;
+    num_children++;
   }
 
   std::unique_lock lock(stats_mutex_);
@@ -158,6 +207,19 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   if (stats_.real_count) {
     real_sum += stats_.eval;
     real_count++;
+  }
+
+  // incorporate bounds from children
+  int num_valid_actions = stable_data_.num_valid_actions();
+  if (num_valid_actions == 0) {
+    // terminal state, provably_winning/losing are already set by instruction
+  } else if (cp_has_winning_move) {
+    stats_.provably_winning[cp] = true;
+    stats_.provably_losing.set();
+    stats_.provably_losing[cp] = false;
+  } else if (num_children == num_valid_actions) {
+    stats_.provably_winning = all_provably_winning;
+    stats_.provably_losing = all_provably_losing;
   }
 
   stats_.real_avg = real_count ? (real_sum / real_count) : real_sum;

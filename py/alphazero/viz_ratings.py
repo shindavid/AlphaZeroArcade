@@ -38,7 +38,7 @@ from typing import List
 import pandas as pd
 from bokeh.layouts import column
 from bokeh.models import ColumnDataSource, Span, RadioGroup
-from bokeh.palettes import viridis
+from bokeh.palettes import Category10
 from bokeh.plotting import figure, curdoc
 
 import games
@@ -178,7 +178,7 @@ class ProgressVisualizer:
         plot.add_layout(hline)
 
         n = len(data_list)
-        colors = viridis(n)
+        colors = Category10[n]
         for rating_data, color in zip(data_list, colors):
             source = self.sources[rating_data.tag]
             source.data['x'] = rating_data.gen_df[default_x_var_column]

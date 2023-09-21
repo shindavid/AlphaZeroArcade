@@ -72,9 +72,9 @@ private:
     void operator()(Node* node) const { node->stats().increment_transfer(); }
   };
 
-  struct SetEval {
-    SetEval(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().set_eval(value); }
+  struct SetEvalExact {
+    SetEvalExact(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().set_eval_exact(value); }
     const ValueArray& value;
   };
 

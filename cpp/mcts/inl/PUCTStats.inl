@@ -10,12 +10,16 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
 : cp(tree->stable_data().current_player)
 , P(tree->evaluation_data().local_policy_prob_distr)
 , V(P.rows())
+, PW(P.rows())
+, PL(P.rows())
 , E(P.rows())
 , N(P.rows())
 , VN(P.rows())
 , PUCT(P.rows())
 {
   V.setZero();
+  PW.setZero();
+  PL.setZero();
   E.setZero();
   N.setZero();
   VN.setZero();
@@ -32,6 +36,8 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
     const auto& child_stats = edge.child()->stats();
 
     V(i) = child_stats.virtualized_avg(cp);
+    PW(i) = child_stats.provably_winning[cp];
+    PL(i) = child_stats.provably_losing[cp];
     E(i) = edge.count();
     N(i) = child_stats.real_count;
     VN(i) = child_stats.virtual_count;
@@ -63,6 +69,10 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
    * consistency with the AlphaZero/KataGo approach.
    */
   PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  PUCT *= (1 - PL);  // zero out provably-losing actions
+  if (PW.any()) {
+    PUCT *= PW;  // only use provably-winning actions
+  }
 }
 
 }  // namespace mcts
