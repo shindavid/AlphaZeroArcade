@@ -12,7 +12,7 @@ namespace mcts {
 inline ManagerParams::ManagerParams(mcts::Mode mode) {
   if (mode == mcts::kCompetitive) {
     dirichlet_mult = 0;
-    dirichlet_alpha_sum = 0;
+    dirichlet_alpha_factor = 0;
     forced_playouts = false;
     root_softmax_temperature_str = "1";
   } else if (mode == mcts::kTraining) {
@@ -61,7 +61,7 @@ inline auto ManagerParams::make_options_description() {
           "root softmax temperature")
       .template add_option<"cpuct", 'c'>(po2::float_value("%.2f", &cPUCT), "cPUCT value")
       .template add_option<"dirichlet-mult", 'd'>(po2::float_value("%.2f", &dirichlet_mult), "dirichlet mult")
-      .template add_option<"dirichlet-alpha-sum">(po2::float_value("%.2f", &dirichlet_alpha_sum), "dirichlet alpha sum")
+      .template add_option<"dirichlet-alpha-factor">(po2::float_value("%.2f", &dirichlet_alpha_factor), "dirichlet alpha factor")
       .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
           &forced_playouts, "enable forced playouts", "disable forced playouts")
       .template add_bool_switches<"enable-first-play-urgency", "disable-first-play-urgency">(
