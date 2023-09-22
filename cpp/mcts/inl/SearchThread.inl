@@ -131,7 +131,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyArray& P) {
   int rows = P.rows();
-  double alpha = manager_params_->dirichlet_alpha_sum / rows;
+  double alpha = manager_params_->dirichlet_alpha_factor / sqrt(rows);
   LocalPolicyArray noise = dirichlet_gen().template generate<LocalPolicyArray>(rng(), alpha, rows);
   P = (1.0 - manager_params_->dirichlet_mult) * P + manager_params_->dirichlet_mult * noise;
 }

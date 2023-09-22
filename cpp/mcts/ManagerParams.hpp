@@ -40,7 +40,11 @@ struct ManagerParams {
   float cPUCT = 1.1;
   float cFPU = 0.2;
   float dirichlet_mult = 0.25;
-  float dirichlet_alpha_sum = 0.03 * 361;
+
+  /*
+   * For dirichlet noise, we use a uniform alpha = dirichlet_alpha_factor / sqrt(num_actions).
+   */
+  float dirichlet_alpha_factor = 0.57;  // ~= .03 * sqrt(361) to match AlphaGo
   bool forced_playouts = true;
   bool enable_first_play_urgency = true;
   float k_forced = 2.0;
