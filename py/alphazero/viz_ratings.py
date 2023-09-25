@@ -149,7 +149,7 @@ class ProgressVisualizer:
             y = data['rating']
             my = max(y)
             self.max_y = my if self.max_y is None else max(self.max_y, my)
-            self.sources[rating_data.tag].data = {'y': y}
+            self.sources[rating_data.label].data = {'y': y}
 
     def plot(self):
         x_var_dict = {
@@ -188,7 +188,7 @@ class ProgressVisualizer:
         else:
             colors = Category10[n]
         for rating_data, color in zip(data_list, colors):
-            source = self.sources[rating_data.tag]
+            source = self.sources[rating_data.label]
             source.data['x'] = rating_data.gen_df[default_x_var_column]
             label = rating_data.label
             plot.line('x', 'y', source=source, line_color=color, legend_label=label)
@@ -200,7 +200,7 @@ class ProgressVisualizer:
             x_var_column = x_var_columns[x_var_index]
 
             for rating_data in self.data_list:
-                source = self.sources[rating_data.tag]
+                source = self.sources[rating_data.label]
                 source.data['x'] = rating_data.gen_df[x_var_column]
 
             plot.x_range.end = self.max_x_dict[x_var_column]
