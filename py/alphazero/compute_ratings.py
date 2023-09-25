@@ -231,15 +231,6 @@ class Arena:
             self._conn = sqlite3.connect(self.db_filename)
         return self._conn
 
-    def dump_metadata(self):
-        metadata_filename = os.path.join(self.base_dir, 'metadata.json')
-        with open(metadata_filename, 'w') as f:
-            json.dump({
-                'n_games': Args.n_games,
-                'mcts_iters': Args.mcts_iters,
-            }, f, indent=4)
-        timed_print(f'[{self.tag}] Dumped metadata to {metadata_filename}')
-
     def init_db(self):
         if os.path.isfile(self.db_filename):
             if Args.clear_db:
@@ -510,7 +501,6 @@ class Arena:
             self.run_matches_helper(gen, None, mid_strength, min_right_strength)
 
     def prepare(self):
-        self.dump_metadata()
         self.init_db()
         self.dump_x_var_data()
         self.load_past_data()

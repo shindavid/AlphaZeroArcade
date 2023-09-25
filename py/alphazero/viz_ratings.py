@@ -79,21 +79,15 @@ def load_args():
 
 
 class RatingData:
-    def __init__(self, tag: str):
+    def __init__(self, tag: str, mcts_iters: int):
         base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
-
-        metadata_filename = os.path.join(base_dir, 'metadata.json')
-        with open(metadata_filename, 'r') as f:
-            metadata = json.load(f)
-
-        n_games = metadata['n_games']
-        mcts_iters = metadata['mcts_iters']
 
         db_filename = os.path.join(base_dir, 'ratings.db')
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
-        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? AND n_games >= ? ORDER BY mcts_gen',
-                             (mcts_iters, n_games))
+
+        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? ORDER BY mcts_gen',
+                             (mcts_iters,))
 
         gen_ratings = res.fetchall()
 
@@ -115,10 +109,21 @@ class RatingData:
         timed_print(f'Loaded {n} rows of data from {db_filename}')
 
         self.tag = tag
-        self.n_games = n_games
         self.mcts_iters = mcts_iters
         self.gen_df = gen_df
-        self.label = f'{tag} (i={mcts_iters}, G={n_games})'
+        self.label = f'{tag} (i={mcts_iters})'
+
+
+def make_rating_data_list(tag: str) -> List[RatingData]:
+    base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
+
+    db_filename = os.path.join(base_dir, 'ratings.db')
+    conn = sqlite3.connect(db_filename)
+    cursor = conn.cursor()
+    # find all distinct mcts_iters values from ratings table:
+    res = cursor.execute('SELECT DISTINCT mcts_iters FROM ratings')
+    mcts_iters_list = [r[0] for r in res.fetchall()]
+    return [RatingData(tag, mcts_iters) for mcts_iters in mcts_iters_list]
 
 
 class ProgressVisualizer:
@@ -218,7 +223,9 @@ def main():
         cmd = f'bokeh serve --port {Args.port} --show {script} --args {args}'
         sys.exit(os.system(cmd))
     else:
-        data_list = [RatingData(tag) for tag in Args.tags]
+        data_list = []
+        for tag in Args.tags:
+            data_list.extend(make_rating_data_list(tag))
         viz = ProgressVisualizer(data_list)
         curdoc().add_root(viz.plot())
 
