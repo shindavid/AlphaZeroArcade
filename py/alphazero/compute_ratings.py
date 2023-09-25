@@ -166,7 +166,7 @@ class Arena:
     def get_binary(self, gen: int):
         if Args.binary:
             return Args.binary
-        cmd = self.manager.get_player_cmd(gen)
+        cmd = self.manager.get_player_cmd(gen, rewrite_binary_path=True)
         assert cmd is not None, gen
         return cmd.split()[0]
 
