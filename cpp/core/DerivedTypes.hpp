@@ -35,26 +35,26 @@ struct GameStateTypes {
   using dtype = torch_util::dtype;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActions = GameState::kNumGlobalActions;
+  static constexpr int kNumGlobalActionsBound = GameState::ActionShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
 
   using GameOutcome = core::GameOutcome<kNumPlayers>;
 
-  using PolicyShape = eigen_util::Shape<kNumGlobalActions>;
+  using PolicyShape = typename GameState::ActionShape;
   using ValueShape = eigen_util::Shape<kNumPlayers>;
 
   using PolicyTensor = Eigen::TensorFixedSize<dtype, PolicyShape, Eigen::RowMajor>;
   using ValueTensor = Eigen::TensorFixedSize<dtype, ValueShape, Eigen::RowMajor>;
 
-  using PolicyArray = Eigen::Array<dtype, kNumGlobalActions, 1>;
+  using PolicyArray = Eigen::Array<dtype, kNumGlobalActionsBound, 1>;
   using ValueArray = Eigen::Array<dtype, kNumPlayers, 1>;
-
   using LocalPolicyArray = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using DynamicPolicyTensor = Eigen::Tensor<dtype, PolicyShape::count + 1, Eigen::RowMajor>;
   using DynamicValueTensor = Eigen::Tensor<dtype, ValueShape::count + 1, Eigen::RowMajor>;
 
-  using ActionMask = std::bitset<kNumGlobalActions>;
+  using Action = std::array<int64_t, size_t(PolicyShape::count)>;
+  using ActionMask = Eigen::TensorFixedSize<bool, PolicyShape, Eigen::RowMajor>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 
   static LocalPolicyArray global_to_local(const PolicyTensor& policy, const ActionMask& mask);
@@ -62,6 +62,30 @@ struct GameStateTypes {
 
   static PolicyTensor local_to_global(const LocalPolicyArray& policy, const ActionMask& mask);
   static void local_to_global(const LocalPolicyArray& policy, const ActionMask& mask, PolicyTensor& out);
+
+  static Action get_nth_valid_action(const ActionMask& valid_actions, int n);
+
+  static void nullify_action(Action& action);
+  static bool is_nullified(const Action& action);
+
+  /*
+   * is_valid_action() validates that 0 <= action[i] <= PolicyShape::dimension(i) for all i.
+   *
+   * If valid_actions is passed in, then validates further that valid_actions[action] is true.
+   *
+   * The validate_action() functions are similar, but throw an exception if the action is invalid.
+   */
+  static bool is_valid_action(const Action& action);
+  static bool is_valid_action(const Action& action, const ActionMask& valid_actions);
+  static void validate_action(const Action& action);
+  static void validate_action(const Action& action, const ActionMask& valid_actions);
+
+  /*
+   * Rescales policy to sum to 1.
+   *
+   * If policy is all zeros, then policy is altered to be uniformly positive where mask is true.
+   */
+  static void normalize(const ActionMask& mask, PolicyTensor& policy);
 
   /*
    * Provides variable bindings, so that we can specify certain config variables as expressions of game parameters.

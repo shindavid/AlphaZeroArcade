@@ -277,6 +277,10 @@ constexpr size_t array_size(const std::array<T, N>&) { return N; }
  */
 template<typename A, typename... Ts> constexpr auto to_std_array(const Ts&... ts);
 
+template<typename T, size_t N>
+std::string std_array_to_string(const std::array<T, N>& arr,
+  const std::string& left, const std::string& delim, const std::string& right);
+
 /*
  * std::array<int, 3> a{1, 2, 3};
  * std::array<int64_t, 3> b = util::array_cast<int64_t>(a);

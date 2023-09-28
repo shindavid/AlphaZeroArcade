@@ -1,5 +1,7 @@
 #include <util/EigenUtil.hpp>
 
+#include <util/Random.hpp>
+
 #include <array>
 #include <cstdint>
 
@@ -87,6 +89,21 @@ template<ShapeConcept Shape, typename TensorT> auto& slice(TensorT& tensor, int 
   return *reinterpret_cast<SliceType*>(data);
 }
 
+template<FixedTensorConcept Tensor>
+size_t serialize(char* buf, size_t buf_size, const Tensor& tensor) {
+  size_t n_bytes = sizeof(typename Tensor::Scalar) * tensor.size();
+  if (n_bytes > buf_size) {
+    throw util::Exception("Buffer too small (%ld > %ld)", n_bytes, buf_size);
+  }
+  memcpy(buf, tensor.data(), n_bytes);
+  return n_bytes;
+}
+
+template<FixedTensorConcept Tensor>
+void deserialize(const char* buf, Tensor* tensor) {
+  memcpy(tensor->data(), buf, sizeof(typename Tensor::Scalar) * tensor->size());
+}
+
 template<typename Array> auto softmax(const Array& array) {
   auto normalized_array = array - array.maxCoeff();
   auto z = normalized_array.exp();
@@ -122,6 +139,45 @@ auto std_bitset_to_fixed_bool_tensor(const std::bitset<N>& bitset) {
   }
   return tensor;
 }
+
+template<FixedTensorConcept Tensor>
+auto sample(const Tensor& tensor) {
+  using Shape = extract_shape_t<Tensor>;
+  constexpr size_t N = Shape::total_size;
+
+  const auto* data = tensor.data();
+  int flat_index = util::Random::weighted_sample(data, data + N);
+  return unflatten_index(tensor, flat_index);
+}
+
+template<FixedTensorConcept Tensor>
+auto unflatten_index(const Tensor& tensor, int flat_index) {
+  // Convert the 1D index back to a K-dimensional index
+  static_assert(Tensor::Options & Eigen::RowMajorBit, "Tensor must be row-major");
+  using Shape = extract_shape_t<Tensor>;
+  constexpr size_t K = Shape::count;
+
+  std::array<int64_t, K> index;
+  int residual = flat_index;
+  for (size_t k = 0; k < K - 1; ++k) {
+    index[k] = residual % tensor.dimension(k);
+    residual /= tensor.dimension(k);
+  }
+  index[K - 1] = residual;
+
+  return index;
+}
+
+// template<typename Scalar, ShapeConcept Shape, int Options>
+// auto from_1d_tensor_to_std_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
+//   static_assert(Shape::count == 1);
+//   constexpr int N = Shape::total_size;
+//   std::array<Scalar, N> array;
+//   for (int i = 0; i < N; ++i) {
+//     array[i] = tensor.data()[i];
+//   }
+//   return array;
+// }
 
 template<typename Scalar, ShapeConcept Shape, int Options>
 const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
@@ -169,26 +225,43 @@ MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& t
   return reinterpret_cast<MatrixT&>(tensor);
 }
 
-template<typename TensorT> auto sum(const TensorT& tensor) {
+template<typename TensorT>
+typename TensorT::Scalar sum(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;
-  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.sum();
-  return out;
+  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.sum();
+  return out(0);
 }
 
-template<typename TensorT> auto positive_sum(const TensorT& tensor) {
-  return tensor.cwiseMax(0).sum();
+template<typename TensorT>
+typename TensorT::Scalar max(const TensorT& tensor) {
+  using Scalar = typename TensorT::Scalar;
+  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.maximum();
+  return out(0);
 }
 
-template<typename TensorT> auto max(const TensorT& tensor) {
+template<typename TensorT>
+typename TensorT::Scalar min(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;
-  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.maximum();
-  return out;
+  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.minimum();
+  return out(0);
 }
 
-template<typename TensorT> auto min(const TensorT& tensor) {
-  using Scalar = typename TensorT::Scalar;
-  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>> out = tensor.minimum();
-  return out;
+template<typename TensorT>
+bool any(const TensorT& tensor) {
+  const auto* data = tensor.data();
+  for (int i = 0; i < tensor.size(); ++i) {
+    if (data[i]) return true;
+  }
+  return false;
+}
+
+template<typename TensorT>
+int count(const TensorT& tensor) {
+  int c = 0;
+  for (int i = 0; i < tensor.size(); ++i) {
+    c += bool(tensor.data()[i]);
+  }
+  return c;
 }
 
 template<typename Scalar, int N> void positive_scale(Eigen::Array<Scalar, N, 1>& array, Scalar s) {

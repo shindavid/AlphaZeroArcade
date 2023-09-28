@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Node.hpp>
@@ -17,12 +18,14 @@ namespace mcts {
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class NodeCache {
 public:
+  using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = typename GameStateTypes::Action;
   using Node = mcts::Node<GameState, Tensorizor>;
   using Node_sptr = typename Node::sptr;
 
   void clear();
   void clear_before(move_number_t move_number);
-  Node_sptr fetch_or_create(move_number_t move_number, Node* parent, core::action_t action);
+  Node_sptr fetch_or_create(move_number_t move_number, Node* parent, const Action& action);
 
 private:
   using submap_t = std::unordered_map<GameState, Node_sptr>;

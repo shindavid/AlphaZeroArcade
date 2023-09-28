@@ -7,42 +7,62 @@
 namespace core {
 
 template <GameStateConcept GameState>
-size_t GeneralSerializer<GameState>::serialize_action(char* buf, size_t buf_size, action_t action) const {
-  size_t n = snprintf(buf, buf_size, "%d", action);
-  if (n >= buf_size) {
-    throw util::Exception("Buffer too small (%ld >= %ld)", n, buf_size);
+size_t GeneralSerializer<GameState>::serialize_action(char* buf, size_t buf_size, const Action& action) const {
+  if (sizeof(action) > buf_size) {
+    throw util::Exception("Buffer too small (%ld > %ld)", sizeof(action), buf_size);
   }
-  return n;
+  memcpy(buf, &action, sizeof(action));
+  return sizeof(action);
+
+  // size_t n = 0;
+
+  // for (size_t i = 0; i < action.size(); ++i) {
+  //   buf[n] = '.';
+  //   n += i > 0;
+  //   n += snprintf(buf + n, buf_size - n, "%d", action[i]);
+  // }
+
+  // if (n >= buf_size) {
+  //   throw util::Exception("Buffer too small (%ld >= %ld)", n, buf_size);
+  // }
+  // return n;
 }
 
 template <GameStateConcept GameState>
-void GeneralSerializer<GameState>::deserialize_action(const char* buf, action_t* action) const {
-  *action = boost::lexical_cast<action_t>(buf);
+void GeneralSerializer<GameState>::deserialize_action(const char* buf, Action* action) const {
+  memcpy(action, buf, sizeof(*action));
+  GameStateTypes::validate_action(*action);
 
-  if (*action < 0 || *action >= GameStateTypes::kNumGlobalActions) {
-    throw util::Exception("Invalid action \"%s\" (action=%d)", buf, *action);
-  }
+  // const char* p = buf;
+  // for (int i = 0; i < action->size(); ++i) {
+  //   int a = boost::lexical_cast<int>(p);
+  //   int max_a = Action::dimension(i);
+  //   if (a < 0 || a >= max_a) {
+  //     throw util::Exception("Invalid action \"%s\" (action[%d]=%d, max=%d)", buf, i, a, max_a);
+  //   }
+  //   (*action)[i] = a;
+
+  //   // find next period:
+  //   while (*p != '.') ++p;
+  //   ++p;
+  // }
 }
 
 template <GameStateConcept GameState>
 size_t GeneralSerializer<GameState>::serialize_action_prompt(
-    char* buf, size_t buf_size, const ActionMask& valid_actions) const {
-  if (sizeof(valid_actions) > buf_size) {
-    throw util::Exception("Buffer too small (%ld > %ld)", sizeof(valid_actions), buf_size);
-  }
-  memcpy(buf, &valid_actions, sizeof(valid_actions));
-  return sizeof(valid_actions);
+  char* buf, size_t buf_size, const ActionMask& valid_actions) const {
+  return eigen_util::serialize(buf, buf_size, valid_actions);
 }
 
 template <GameStateConcept GameState>
 void GeneralSerializer<GameState>::deserialize_action_prompt(
     const char* buf, ActionMask* valid_actions) const {
-  memcpy(valid_actions, buf, sizeof(*valid_actions));
+  eigen_util::deserialize(buf, valid_actions);
 }
 
 template <GameStateConcept GameState>
 size_t GeneralSerializer<GameState>::serialize_state_change(
-    char* buf, size_t buf_size, const GameState& state, seat_index_t seat, action_t action) const {
+    char* buf, size_t buf_size, const GameState& state, seat_index_t seat, const Action& action) const {
   if (sizeof(state) + sizeof(seat) + sizeof(action) > buf_size) {
     throw util::Exception("Buffer too small (%ld + %ld + %ld > %ld)",
                           sizeof(state), sizeof(seat), sizeof(action), buf_size);
@@ -55,10 +75,11 @@ size_t GeneralSerializer<GameState>::serialize_state_change(
 
 template <GameStateConcept GameState>
 void GeneralSerializer<GameState>::deserialize_state_change(
-    const char* buf, GameState* state, seat_index_t* seat, action_t* action) const {
+    const char* buf, GameState* state, seat_index_t* seat, Action* action) const {
   memcpy(state, buf, sizeof(*state));
   memcpy(seat, buf + sizeof(*state), sizeof(*seat));
   memcpy(action, buf + sizeof(*state) + sizeof(*seat), sizeof(*action));
+  GameStateTypes::validate_action(*action);
 }
 
 template <GameStateConcept GameState>

@@ -15,10 +15,11 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      core::seat_index_t, const GameState&, core::action_t) override;
+      core::seat_index_t, const GameState&, const Action&) override;
 
 private:
-  core::action_t prompt_for_action(const GameState&, const ActionMask&) override;
+  Action prompt_for_action(const GameState&, const ActionMask&) override;
+  int prompt_for_action_helper(const GameState&, const ActionMask&);
   void print_state(const GameState&, bool terminal) override;
 
   PerfectOracle* oracle_ = nullptr;

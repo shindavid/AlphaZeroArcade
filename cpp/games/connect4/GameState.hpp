@@ -47,8 +47,12 @@ public:
   static constexpr int kNumGlobalActions = kNumColumns;
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
+  using ActionShape = Eigen::Sizes<kNumColumns>;
+
+  static std::string action_delimiter() { return ""; }
 
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = GameStateTypes::Action;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
@@ -56,12 +60,13 @@ public:
   using GameOutcome = GameStateTypes::GameOutcome;
 
   core::seat_index_t get_current_player() const;
-  GameOutcome apply_move(core::action_t action);
+  GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
+  std::string action_to_str(const Action& action) const { return std::to_string(action[0]); }
 
   core::seat_index_t get_player_at(int row, int col) const;
-  void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(const Action* last_action=nullptr, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 

@@ -19,8 +19,9 @@ inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_t action) {
-  column_t col = action;
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
+  int action_index = action[0];
+  column_t col = action_index;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   core::seat_index_t current_player = get_current_player();
 
@@ -93,13 +94,14 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
-inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
-  if (!util::tty_mode() && last_action > -1) {
-    std::string s(2*last_action+1, ' ');
+inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
+  int action_index = last_action ? (*last_action)[0] : -1;
+  if (!util::tty_mode() && action_index > -1) {
+    std::string s(2 * action_index + 1, ' ');
     printf("%sx\n", s.c_str());
   }
 
-  column_t blink_column = last_action;
+  column_t blink_column = action_index;
   row_t blink_row = -1;
   if (blink_column >= 0) {
     blink_row = std::countr_one(full_mask_ >> (blink_column * 8)) - 1;

@@ -30,6 +30,7 @@ public:
   template<typename Scalar> using InputTensorX = Eigen::TensorFixedSize<Scalar, InputShape, Eigen::RowMajor>;
 
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = typename GameStateTypes::Action;
   using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
   using PolicyTensor = GameStateTypes::PolicyTensor;
   using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
@@ -200,7 +201,7 @@ public:
   }
 
   void clear() {}
-  void receive_state_change(const GameState& state, core::action_t action) {}
+  void receive_state_change(const GameState& state, const Action& action) {}
 
  protected:
   static transform_array_t transforms() {

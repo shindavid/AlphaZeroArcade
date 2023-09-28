@@ -147,7 +147,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateCh
   const char* buf = payload.dynamic_size_section.buf;
 
   seat_index_t seat;
-  action_t action;
+  Action action;
 
   shared_data_.serializer().deserialize_state_change(buf, &state_, &seat, &action);
   player_->receive_state_change(seat, state_, action);
@@ -191,13 +191,13 @@ void GameServerProxy<GameState>::PlayerThread::stop() {
 }
 
 template<GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::send_action_packet(action_t a) {
-  Packet<Action> packet;
-  Action& action = packet.payload();
-  char* buf = action.dynamic_size_section.buf;
-  action.game_thread_id = game_thread_id_;
-  action.player_id = player_id_;
-  packet.set_dynamic_section_size(shared_data_.serializer().serialize_action(buf, sizeof(buf), a));
+void GameServerProxy<GameState>::PlayerThread::send_action_packet(const Action& action) {
+  Packet<ActionDecision> packet;
+  ActionDecision& decision = packet.payload();
+  char* buf = decision.dynamic_size_section.buf;
+  decision.game_thread_id = game_thread_id_;
+  decision.player_id = player_id_;
+  packet.set_dynamic_section_size(shared_data_.serializer().serialize_action(buf, sizeof(buf), action));
   packet.send_to(shared_data_.socket());
 }
 

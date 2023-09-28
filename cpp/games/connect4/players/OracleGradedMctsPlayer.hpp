@@ -55,8 +55,8 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      core::seat_index_t, const GameState&, core::action_t) override;
-  core::action_t get_action(const GameState&, const ActionMask&) override;
+      core::seat_index_t, const GameState&, const Action&) override;
+  Action get_action(const GameState&, const ActionMask&) override;
 
 protected:
   void update_mistake_stats(const PerfectOracle::QueryResult& result, const PolicyArray& net_policy,

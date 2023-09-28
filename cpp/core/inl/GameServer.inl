@@ -275,11 +275,11 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
     seat_index_t seat = state.get_current_player();
     Player* player = players[seat];
     auto valid_actions = state.get_valid_actions();
-    action_t action = player->get_action(state, valid_actions);
-    if (action < 0 || action >= (int)valid_actions.size() || !valid_actions[action]) {
-      // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash the server.
-      throw util::Exception("Player %d (%s) attempted an illegal action (%d)", seat, player->get_name().c_str(), action);
-    }
+    Action action = player->get_action(state, valid_actions);
+
+    // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash the server.
+    GameStateTypes::validate_action(action, valid_actions);
+
     auto outcome = state.apply_move(action);
     for (auto player2 : players) {
       player2->receive_state_change(seat, state, action);
