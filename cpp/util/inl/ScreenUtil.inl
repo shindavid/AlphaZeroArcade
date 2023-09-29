@@ -10,9 +10,9 @@ namespace util {
  * See: https://cplusplus.com/articles/4z18T05o/
  */
 inline void clearscreen() {
-  // if (system("clear")) {
-  //   throw std::exception();
-  // }
+  if (system("clear")) {
+    throw std::exception();
+  }
 }
 
 inline void ScreenClearer::clear_once() {

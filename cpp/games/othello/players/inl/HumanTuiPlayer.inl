@@ -33,7 +33,7 @@ inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&, const Acti
   }
   int col = input[0] - 'A';
   if (col < 0 || col >= 8) {
-    col = input[0] = 'a';  // accept lower-case
+    col = input[0] - 'a';  // accept lower-case
   }
   int row;
   try {
