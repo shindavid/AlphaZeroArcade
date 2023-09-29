@@ -10,10 +10,11 @@ inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline GameState::GameOutcome GameState::apply_move(core::action_t action) {
+inline GameState::GameOutcome GameState::apply_move(const Action& action) {
+  int action_index = action[0];
   core::seat_index_t current_player = get_current_player();
 
-  mask_t piece_mask = mask_t(1) << action;
+  mask_t piece_mask = mask_t(1) << action_index;
   cur_player_mask_ ^= full_mask_;
   full_mask_ |= piece_mask;
 
@@ -40,9 +41,15 @@ inline GameState::GameOutcome GameState::apply_move(core::action_t action) {
 }
 
 inline GameState::ActionMask GameState::get_valid_actions() const {
+  ActionMask mask;
+  mask.setConstant(1);
   uint64_t u = full_mask_;
-  ActionMask& mask = reinterpret_cast<ActionMask&>(u);
-  return ~mask;
+  while (u) {
+    int index = std::countr_zero(u);
+    mask(index) = false;
+    u &= u - 1;
+  }
+  return mask;
 }
 
 inline core::seat_index_t GameState::get_player_at(int row, int col) const {
@@ -53,7 +60,7 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1-cp)) : -1;
 }
 
-inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
   auto cp = get_current_player();
   mask_t opp_player_mask = get_opponent_mask();
   mask_t o_mask = (cp == kO) ? cur_player_mask_ : opp_player_mask;
@@ -102,15 +109,17 @@ inline void SearchResultsDumper<tictactoe::GameState>::dump(
   printf("\n");
 
   printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
-  int i = 0;
-  for (core::action_t action : bitset_util::on_indices(valid_actions)) {
-    float count = mcts_counts.data()[action];
-    auto action_p = action_policy(i);
-    auto net_p = net_policy(i);
-    printf("   %d %8.3f %8.3f %8.3f\n", action, net_p, count, action_p);
-    ++i;
+  int j = 0;
+  for (int i = 0; i < tictactoe::kNumCells; ++i) {
+    if (valid_actions(j)) {
+      float count = mcts_counts(i);
+      auto action_p = action_policy(j);
+      auto net_p = net_policy(j);
+      printf("   %d %8.3f %8.3f %8.3f\n", i, net_p, count, action_p);
+      ++j;
+    }
   }
-  for (; i < tictactoe::kNumCells; ++i) {
+  for (; j < tictactoe::kNumCells; ++j) {
     printf("\n");
   }
 }

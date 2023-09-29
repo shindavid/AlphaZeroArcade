@@ -27,12 +27,12 @@ public:
 
   PerfectPlayer(const Params&);
 
-  core::action_t get_action(const GameState&, const ActionMask&) override;
+  Action get_action(const GameState&, const ActionMask&) override;
 
 private:
   struct policy_t {
     policy_t(uint64_t u=0);
-    core::action_t select() const;
+    int select() const;
     float p[kNumCells];
   };
 

@@ -11,7 +11,8 @@ public:
   using base_t = common::HumanTuiPlayer<GameState>;
 
 private:
-  core::action_t prompt_for_action(const GameState&, const ActionMask&) override;
+  Action prompt_for_action(const GameState&, const ActionMask&) override;
+  int prompt_for_action_helper(const GameState&, const ActionMask&);
   void print_state(const GameState&, bool terminal) override;
 };
 

@@ -21,10 +21,7 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
   Action get_action(const GameState&, const ActionMask& mask) override {
-    const bool* start = mask.data();
-    const bool* end = start + GameStateTypes::kNumGlobalActionsBound;
-    int flat_index = util::Random::weighted_sample(start, end);
-    return eigen_util::unflatten_index(mask, flat_index);
+    return eigen_util::sample(mask);
   }
 };
 

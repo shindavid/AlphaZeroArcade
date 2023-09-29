@@ -181,7 +181,8 @@ inline void SearchResultsDumper<c4::GameState>::dump(
   int j = 0;
   for (int i = 0; i < c4::kNumColumns; ++i) {
     if (valid_actions[i]) {
-      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), action_policy(j++));
+      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(j), mcts_counts(i), action_policy(j));
+      ++j;
     } else {
       printf("%3d\n", i + 1);
     }

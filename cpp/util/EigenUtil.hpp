@@ -276,8 +276,10 @@ template<ShapeConcept Shape, size_t N>
 auto std_bitset_to_fixed_bool_tensor(const std::bitset<N>& bitset);
 
 /*
- * Accepts a D-dimensional tensor of probabilities summing to 1. Randomly samples an index from
- * the tensor, according to the probabilities. Returns the index as a std::array<int64_t, D>
+ * Accepts a D-dimensional tensor. Randomly samples an index from the tensor, with each index
+ * picked proportionally to the value of the tensor at that index.
+ *
+ * Returns the index as a std::array<int64_t, D>
  */
 template<FixedTensorConcept Tensor> auto sample(const Tensor& tensor);
 

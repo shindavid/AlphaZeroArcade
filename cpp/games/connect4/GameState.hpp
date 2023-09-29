@@ -44,7 +44,6 @@ namespace c4 {
 class GameState {
 public:
   static constexpr int kNumPlayers = c4::kNumPlayers;
-  static constexpr int kNumGlobalActions = kNumColumns;
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
   using ActionShape = Eigen::Sizes<kNumColumns>;

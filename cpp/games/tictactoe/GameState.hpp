@@ -41,11 +41,14 @@ constexpr mask_t make_mask(int a, int b, int c) {
 class GameState {
 public:
   static constexpr int kNumPlayers = tictactoe::kNumPlayers;
-  static constexpr int kNumGlobalActions = kNumCells;
   static constexpr int kMaxNumLocalActions = kNumCells;
   static constexpr int kTypicalNumMovesPerGame = kNumCells;
+  using ActionShape = Eigen::Sizes<kNumCells>;
+
+  static std::string action_delimiter() { return ""; }
 
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = GameStateTypes::Action;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
@@ -53,14 +56,15 @@ public:
   using GameOutcome = GameStateTypes::GameOutcome;
 
   core::seat_index_t get_current_player() const;
-  GameOutcome apply_move(core::action_t action);
+  GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
   mask_t get_current_player_mask() const { return cur_player_mask_; }
   mask_t get_opponent_mask() const { return full_mask_ ^ cur_player_mask_; }
+  std::string action_to_str(const Action& action) const { return std::to_string(action[0]); }
 
   core::seat_index_t get_player_at(int row, int col) const;
-  void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(const Action* last_action=nullptr, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
