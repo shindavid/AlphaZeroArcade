@@ -39,11 +39,14 @@ namespace othello {
 class GameState {
 public:
   static constexpr int kNumPlayers = othello::kNumPlayers;
-  static constexpr int kNumGlobalActions = othello::kNumGlobalActions;
   static constexpr int kMaxNumLocalActions = othello::kMaxNumLocalActions;
   static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
+  using ActionShape = Eigen::Sizes<othello::kNumGlobalActions>;
+
+  static std::string action_delimiter() { return "-"; }
 
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = GameStateTypes::Action;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
@@ -51,11 +54,12 @@ public:
   using GameOutcome = GameStateTypes::GameOutcome;
 
   core::seat_index_t get_current_player() const { return cur_player_; }
-  GameOutcome apply_move(core::action_t action);
+  GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
+  std::string action_to_str(const Action& action) const;
 
   core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
-  void dump(core::action_t last_action=-1, const player_name_array_t* player_names=nullptr) const;
+  void dump(const Action* last_action=nullptr, const player_name_array_t* player_names=nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;
 

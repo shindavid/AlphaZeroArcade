@@ -7,7 +7,15 @@
 
 namespace othello {
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const GameState&, const ActionMask& valid_actions) {
+inline HumanTuiPlayer::Action HumanTuiPlayer::prompt_for_action(
+  const GameState& state, const ActionMask& valid_actions)
+{
+  Action action;
+  action[0] = prompt_for_action_helper(state, valid_actions);
+  return action;
+}
+
+inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&, const ActionMask& valid_actions) {
   if (valid_actions[kPass]) {
     std::cout << "Press Enter to pass: ";
     std::cout.flush();
@@ -24,6 +32,9 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const GameState&, const 
     return -1;
   }
   int col = input[0] - 'A';
+  if (col < 0 || col >= 8) {
+    col = input[0] = 'a';  // accept lower-case
+  }
   int row;
   try {
     row = std::stoi(input.substr(1)) - 1;
