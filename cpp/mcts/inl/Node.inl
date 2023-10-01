@@ -104,7 +104,7 @@ inline void Node<GameState, Tensorizor>::debug_dump() const {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline typename Node<GameState, Tensorizor>::PolicyTensor
-Node<GameState, Tensorizor>::get_counts() const {
+Node<GameState, Tensorizor>::get_counts(const ManagerParams& params) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need to worry about
   // thread-safety
 
@@ -118,38 +118,23 @@ Node<GameState, Tensorizor>::get_counts() const {
   PolicyTensor counts;
   counts.setZero();
 
-  bool provably_winning = false;
-  for (auto& it : children_data_) {
-    const auto& stats = it.child()->stats();
-    if (stats.provably_winning[cp]) {
-      provably_winning = true;
-      break;
-    }
-  }
+  bool provably_winning = stats_.provably_winning[cp];
+  bool provably_losing = stats_.provably_losing[cp];
 
   for (auto& it : children_data_) {
     core::action_t action = it.action();
     const auto& stats = it.child()->stats();
     int count = stats.real_count;
 
-    if (stats.provably_losing[cp]) {
-      if (kEnableDebug) {
-        std::cout << "  " << action << ": " << count << " -> 0 (losing)" << std::endl;
-      }
+    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
       continue;
-    } else if (provably_winning && !stats.provably_winning[cp]) {
-      if (kEnableDebug) {
-        std::cout << "  " << action << ": " << count << " -> 0 (!winning)" << std::endl;
-      }
+    }
+    if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
       continue;
     }
 
     if (kEnableDebug) {
-      std::cout << "  " << action << ": " << count;
-      if (provably_winning) {
-        std::cout << " (winning)";
-      }
-      std::cout << std::endl;
+      std::cout << "  " << action << ": " << count << std::endl;
     }
     counts.data()[action] = count;
   }

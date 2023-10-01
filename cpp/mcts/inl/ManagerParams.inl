@@ -17,6 +17,7 @@ inline ManagerParams::ManagerParams(mcts::Mode mode) {
     root_softmax_temperature_str = "1";
   } else if (mode == mcts::kTraining) {
     root_softmax_temperature_str = "1.4->1.1:2*sqrt(b)";
+    exploit_proven_winners = false;
   } else {
     throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
   }

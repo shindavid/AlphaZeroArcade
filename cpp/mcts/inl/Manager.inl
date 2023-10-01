@@ -118,7 +118,7 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
 
   auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
-  results_.counts = shared_data_.root_node->get_counts();
+  results_.counts = shared_data_.root_node->get_counts(params_);
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }

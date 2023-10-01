@@ -69,9 +69,12 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
    * consistency with the AlphaZero/KataGo approach.
    */
   PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
-  PUCT *= (1 - PL);  // zero out provably-losing actions
-  if (PW.any()) {
-    PUCT *= PW;  // only use provably-winning actions
+
+  if (params.avoid_proven_losers && !PL.all()) {
+    PUCT *= (1 - PL);  // zero out provably-losing actions
+  }
+  if (params.exploit_proven_winners && PW.any()) {
+    PUCT *= PW;
   }
 }
 
