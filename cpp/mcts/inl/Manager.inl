@@ -113,17 +113,20 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
   start_search_threads(&params);
   wait_for_search_threads();
 
-  const auto& evaluation_data = shared_data_.root_node->evaluation_data();
-  const auto& stable_data = shared_data_.root_node->stable_data();
+  const auto& root = shared_data_.root_node;
+  const auto& evaluation_data = root->evaluation_data();
+  const auto& stable_data = root->stable_data();
+  const auto& stats = root->stats();
 
   auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
-  results_.counts = shared_data_.root_node->get_counts(params_);
+  results_.counts = root->get_counts(params_);
+  results_.provably_lost = stats.provably_losing[stable_data.current_player];
   if (params_.forced_playouts && add_noise) {
     prune_counts(params);
   }
   results_.policy_prior = evaluation_data.local_policy_prob_distr;
-  results_.win_rates = shared_data_.root_node->stats().real_avg;
+  results_.win_rates = stats.real_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
 }

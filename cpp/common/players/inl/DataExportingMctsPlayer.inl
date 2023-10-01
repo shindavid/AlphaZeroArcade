@@ -68,9 +68,9 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsSearc
   auto policy = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   float sum = policy_array.sum();
-  if (sum == 0) {
-    // This can happen if MCTS proves that the position is losing. No need to do anything in this case; the python
-    // training code will ignore these rows for policy training.
+  if (mcts_results->provably_lost || sum == 0) {
+    // python training code will ignore these rows for policy training.
+    policy.setZero();
   } else {
     policy_array /= sum;
   }
