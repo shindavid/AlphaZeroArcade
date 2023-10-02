@@ -99,7 +99,13 @@ class RatingData:
         gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
         x_df = pd.DataFrame(x_values, columns=x_values_columns).set_index('mcts_gen')
 
-        gen_df['rating_smoothed'] = savgol_filter(gen_df['rating'], window_length=17, polyorder=2)
+        window_length = 17
+        y = gen_df['rating']
+        if len(gen_df) > window_length:
+            y2 = savgol_filter(y, window_length=window_length, polyorder=2)
+            gen_df['rating_smoothed'] = y2
+        else:
+            gen_df['rating_smoothed'] = y
 
         for col in x_df:
             x_df[col] = x_df[col].cumsum()
