@@ -199,15 +199,17 @@ class NeuralNet(nn.Module):
 
     @staticmethod
     @abc.abstractmethod
-    def load_checkpoint(filename: str) -> 'NeuralNet':
+    def load_from_checkpoint(checkpoint) -> 'NeuralNet':
         """
-        Inverse of save_checkpoint(). Load a neural net from disk, so that it can be used for inference.
+        Inverse of save_to_checkpoint(). Load a neural net from a checkpoint loaded from disk, so
+        that it can be used for inference.
         """
         pass
 
     @abc.abstractmethod
-    def save_checkpoint(self, filename: str):
+    def save_to_checkpoint(self, checkpoint: dict):
         """
-        Serialize the current state of this neural net to disk, so that it can be loaded later via load_checkpoint().
+        Serialize the current state of this neural net to disk, so that it can be loaded later via
+        load_from_checkpoint().
         """
         pass
