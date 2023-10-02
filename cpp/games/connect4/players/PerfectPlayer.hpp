@@ -81,26 +81,10 @@ public:
 
   struct Params {
     /*
-     * The strength parameter controls how well the player plays. It effectively acts as a look-ahead depth. More
-     * specifically, the agent will choose randomly among all moves that can force a win within <strength> moves, if
-     * such moves exist; otherwise, it will choose randomly among all moves that can avoid a loss within <strength>
-     * moves, if such moves exist.
-     *
-     * if it can
-     * force a win within <strength> moves, or avoid a loss within <strength> moves, it will do so. Ote
-     *
-     * Plays best-moves in mate/draw-in-N situations for N <= strength.
-     *
-     * In mate/draw-in-N situations for N > strength, randomly mixes in a second-best-move.
-     *
-     * In mate
-     *
-     * Randomly picks (21 - strength) integers among the 21 integers {1, 2, ..., 21}. The moves corresponding to
-     * these integers are played weakly, by adding a non-best move to the set of candidate moves. The other moves
-     * are played perfectly.
-     *
-     * A weak move is played by adding a single second-best move (as judged by the oracle) to the set of candidate
-     * moves.
+     * The strength parameter controls how well the player plays. It effectively acts as a
+     * look-ahead depth. More specifically, the agent will choose randomly among all moves that can
+     * force a win within <strength> moves, if such moves exist; otherwise, it will choose randomly
+     * among all moves that can avoid a loss within <strength> moves, if such moves exist.
      */
     int strength = 21;
     bool verbose = false;
