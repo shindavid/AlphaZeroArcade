@@ -27,7 +27,6 @@ The visualizer will show a graph based on the rating data generated so-far by co
 browser window will cause the visualizer to update the graph with the latest data.
 """
 import argparse
-import json
 import os
 import pipes
 import sqlite3
@@ -36,14 +35,16 @@ from collections import defaultdict
 from typing import List
 
 import pandas as pd
-from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Span, RadioGroup
+from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup
 from bokeh.palettes import Category10
 from bokeh.plotting import figure, curdoc
 
 import games
 from config import Config
 from util.py_util import timed_print
+
+from scipy.signal import savgol_filter
 
 
 class Args:
@@ -98,6 +99,8 @@ class RatingData:
         gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
         x_df = pd.DataFrame(x_values, columns=x_values_columns).set_index('mcts_gen')
 
+        gen_df['rating_smoothed'] = savgol_filter(gen_df['rating'], window_length=17, polyorder=2)
+
         for col in x_df:
             x_df[col] = x_df[col].cumsum()
 
@@ -146,10 +149,11 @@ class ProgressVisualizer:
                 mx = max(x)
                 self.max_x_dict[col] = mx if col not in self.max_x_dict else max(self.max_x_dict[col], mx)
 
-            y = data['rating']
+            y = data['rating_smoothed']
+
             my = max(y)
             self.max_y = my if self.max_y is None else max(self.max_y, my)
-            self.sources[rating_data.label].data = {'y': y}
+            self.sources[rating_data.label].data = { 'y': y }
 
     def plot(self):
         x_var_dict = {
@@ -166,6 +170,7 @@ class ProgressVisualizer:
         default_x_var_column = x_var_columns[default_x_var_index]
 
         radio_group = RadioGroup(labels=x_vars, active=default_x_var_index)
+        checkbox_group = CheckboxGroup(labels=['Smoothed'], active=[0])
 
         data_list = self.data_list
         if self.max_y is None:
@@ -197,20 +202,23 @@ class ProgressVisualizer:
 
         def update_data(attr, old, new):
             x_var_index = radio_group.active
+            smoothed = 0 in checkbox_group.active
             x_var_column = x_var_columns[x_var_index]
+            y_var_column = 'rating_smoothed' if smoothed else 'rating'
 
             for rating_data in self.data_list:
                 source = self.sources[rating_data.label]
                 source.data['x'] = rating_data.gen_df[x_var_column]
+                source.data['y'] = rating_data.gen_df[y_var_column]
 
             plot.x_range.end = self.max_x_dict[x_var_column]
             plot.xaxis.axis_label = x_vars[x_var_index]
 
-        widgets = [radio_group]
+        widgets = [radio_group, checkbox_group]
         for widget in widgets:
             widget.on_change('active', update_data)
 
-        inputs = column(plot, radio_group)
+        inputs = column(plot, row(checkbox_group, radio_group))
         return inputs
 
 
