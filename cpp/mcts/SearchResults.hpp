@@ -19,6 +19,7 @@ struct SearchResults {
   LocalPolicyArray policy_prior;
   ValueArray win_rates;
   ValueArray value_prior;
+  bool provably_lost = false;
 };
 
 }  // namespace mcts

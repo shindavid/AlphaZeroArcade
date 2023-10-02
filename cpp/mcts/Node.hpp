@@ -262,7 +262,7 @@ public:
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
   std::mutex& stats_mutex() const { return stats_mutex_; }
 
-  PolicyTensor get_counts() const;
+  PolicyTensor get_counts(const ManagerParams& params) const;
   ValueArray make_virtual_loss() const;
   template<typename UpdateT> void update_stats(const UpdateT& update_instruction);
   sptr lookup_child_by_action(core::action_t action) const;
