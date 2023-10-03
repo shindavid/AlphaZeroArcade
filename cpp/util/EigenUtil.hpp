@@ -142,6 +142,32 @@ struct is_fixed_matrix<Eigen::Matrix<Scalar, Rows, Cols, Options>> {
 template<typename T> inline constexpr bool is_fixed_matrix_v = is_fixed_matrix<T>::value;
 template<typename T> concept FixedMatrixConcept = is_fixed_matrix_v<T>;
 
+// /*
+//  * ShapeIndexConcept<T, Shape> is a concept that means that T is a 1D-tensor of dtype int and
+//  * of length Shape::count. This means that it can be used to index to a position in a tensor of
+//  * shape Shape.
+//  */
+// template<typename T, typename U> struct is_shape_index { static const bool value = false; };
+// template<ShapeConcept Shape1, ShapeConcept Shape2>
+// struct is_shape_index<fixed_tensor_t<int, Shape1>, Shape2> {
+//   static const bool value = std::is_same_v<Shape1, fixed_tensor_t<int, Shape<Shape2::count>>;
+// };
+// template<typename T, typename U> inline constexpr bool is_shape_index_v = is_shape_index<T, U>::value;
+// template <typename T, typename U> concept ShapeIndexConcept = is_shape_index_v<T, U>;
+
+/*
+ * ShapeMaskConcept<T, Shape> is a concept that means that T is a tensor of dtype bool and
+ * of shape Shape. This means that it can be used to represent a mask of shape Shape.
+ */
+template<typename T, typename U> struct is_shape_mask { static const bool value = false; };
+template<ShapeConcept Shape>
+struct is_shape_mask<fixed_tensor_t<bool, Shape>, Shape> {
+  static const bool value = true;
+};
+template<typename T, typename U> inline constexpr bool is_shape_mask_v = is_shape_mask<T, U>::value;
+template <typename T, typename U> concept ShapeMaskConcept = is_shape_mask_v<T, U>;
+
+
 template<FixedTensorConcept FixedTensorT>
 struct packed_fixed_tensor_size {
   static constexpr int value = sizeof(typename FixedTensorT::Scalar) * FixedTensorT::Dimensions::total_size;
@@ -213,6 +239,14 @@ template<FixedTensorConcept TensorT> auto& slice(TensorT& tensor, int row);
 template<ShapeConcept Shape, typename TensorT> const auto& slice(const TensorT& tensor, int row);
 template<ShapeConcept Shape, typename TensorT> auto& slice(TensorT& tensor, int row);
 
+/*
+ * serialize() copies the bytes from tensor.data() to buf, checking to make sure it won't overflow
+ * past buf_size. Returns the number of bytes written.
+ *
+ * deserialize() is the inverse operation.
+ */
+template<FixedTensorConcept Tensor> size_t serialize(char* buf, size_t buf_size, const Tensor& tensor);
+template<FixedTensorConcept Tensor> void deserialize(const char* buf, Tensor* tensor);
 
 /*
  * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
@@ -240,6 +274,21 @@ auto fixed_bool_tensor_to_std_bitset(const Eigen::TensorFixedSize<bool, Shape, E
  */
 template<ShapeConcept Shape, size_t N>
 auto std_bitset_to_fixed_bool_tensor(const std::bitset<N>& bitset);
+
+/*
+ * Accepts a D-dimensional tensor. Randomly samples an index from the tensor, with each index
+ * picked proportionally to the value of the tensor at that index.
+ *
+ * Returns the index as a std::array<int64_t, D>
+ */
+template<FixedTensorConcept Tensor> auto sample(const Tensor& tensor);
+
+/*
+ * Returns the std::array that fills in the blank in this analogy problem:
+ *
+ * tensor.data() is to flat_index as tensor is to _____
+ */
+template<FixedTensorConcept Tensor> auto unflatten_index(const Tensor& tensor, int flat_index);
 
 /*
  * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>
@@ -278,14 +327,13 @@ MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& t
 
 
 /*
- * sum(), max(), and min() return a 1-element Eigen::TensorFixedSize. To convert to a scalar, access via (0)
- *
- * positve_sum() returns the sum of the positive elements, as a scalar.
+ * Convenience methods that return scalars.
  */
-template<typename TensorT> auto sum(const TensorT& tensor);
-template<typename TensorT> auto max(const TensorT& tensor);
-template<typename TensorT> auto min(const TensorT& tensor);
-template<typename TensorT> auto positive_sum(const TensorT& tensor);
+template<typename TensorT> typename TensorT::Scalar sum(const TensorT& tensor);
+template<typename TensorT> typename TensorT::Scalar max(const TensorT& tensor);
+template<typename TensorT> typename TensorT::Scalar min(const TensorT& tensor);
+template<typename TensorT> bool any(const TensorT& tensor);
+template<typename TensorT> int count(const TensorT& tensor);
 
 /*
  * Multiplies the positive elements of array by s.

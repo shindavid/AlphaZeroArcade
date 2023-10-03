@@ -57,32 +57,29 @@ inline void EdaxPlayer::start_game() {
   in_.flush();
 }
 
-inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&, core::action_t action) {
+inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&, const Action& action) {
   if (seat == this->get_my_seat()) return;
   submit_action(action);
 }
 
-inline core::action_t EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
-  if (valid_actions.count() == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    for (core::action_t action : bitset_util::on_indices(valid_actions)) {
-      submit_action(action);
-      return action;
-    }
+inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
+  if (eigen_util::sum(valid_actions) == 1) {  // only 1 possible move, no need to incur edax/IO overhead
+    return eigen_util::sample(valid_actions);
   }
   in_.write("go\n", 3);
   in_.flush();
 
-  core::action_t action = -1;
+  int a = -1;
   size_t n = 0;
   for (; std::getline(out_, line_buffer_[n]); ++n) {
     const std::string& line = line_buffer_[n];
     if (line.starts_with("Edax plays ")) {
       std::string move_str = line.substr(11, 2);
       if (move_str.starts_with("PS")) {  // "PS" is edax notation for pass
-        action = kPass;
+        a = kPass;
         break;
       } else {
-        action = (move_str[0] - 'A') + 8 * (move_str[1] - '1');
+        a = (move_str[0] - 'A') + 8 * (move_str[1] - '1');
         break;
       }
     }
@@ -91,23 +88,27 @@ inline core::action_t EdaxPlayer::get_action(const GameState&, const ActionMask&
     }
   }
 
-  if (action < 0 || action >= kNumGlobalActions || !valid_actions[action]) {
+  if (a < 0 || a >= kNumGlobalActions || !valid_actions(a)) {
     for (size_t i = 0; i < n; ++i) {
       std::cerr << line_buffer_[i] << std::endl;
     }
-    throw util::Exception("EdaxPlayer::get_action: invalid action: %d", action);
+    throw util::Exception("EdaxPlayer::get_action: invalid action: %d", a);
   }
+
+  Action action;
+  action[0] = a;
   return action;
 }
 
-inline void EdaxPlayer::submit_action(core::action_t action) {
-  if (action == kPass) {
+inline void EdaxPlayer::submit_action(const Action& action) {
+  int a = action[0];
+  if (a == kPass) {
     in_.write("PS\n", 3);
     in_.flush();
   } else {
     char move_str[3];
-    move_str[0] = char('A' + action % 8);
-    move_str[1] = char('1' + action / 8);
+    move_str[0] = char('A' + a % 8);
+    move_str[1] = char('1' + a / 8);
     move_str[2] = '\n';
     in_.write(move_str, 3);
     in_.flush();

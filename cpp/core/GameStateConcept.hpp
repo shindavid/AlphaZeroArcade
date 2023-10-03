@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <string>
 
 #include <Eigen/Core>
 
@@ -18,24 +19,32 @@ namespace core {
  * memory allocations and virtual method overhead. The dynamic memory aspect would be particularly painful in the
  * MCTS context, as variable-sized tensor calculations can be quite a bit costlier than fixed-sized ones.
  */
-template <class S>
-concept GameStateConcept = requires(S state) {
+template <class State>
+concept GameStateConcept = requires(State state) {
 
   /*
    * The number of players in the game.
    */
-  { util::decay_copy(S::kNumPlayers) } -> std::same_as<int>;
+  { util::decay_copy(State::kNumPlayers) } -> std::same_as<int>;
 
   /*
-   * The total number of actions in the game.
-   *
-   * In go, this is 362 = 19 * 19 + 1 (+1 for pass move)
-   * Similarly, in othello, this is 65 = 8 * 8 + 1 (+1 for pass move)
-   * In connect4, this is 7.
-   *
-   * Policy heads of neural networks will output arrays of this size.
+   * The string that will be used as a delimiter to separate a sequence of action strings,
+   * as returned by state.action_to_str().
    */
-  { util::decay_copy(S::kNumGlobalActions) } -> std::same_as<int>;
+  { State::action_delimiter() } -> std::same_as<std::string>;
+
+  /*
+   * The shape of the tensor used to represent an action.
+   *
+   * For many games, the best choice is a 1D tensor, whose single dimension corresponds to the
+   * number of valid actions in the game.
+   *
+   * In some games, it is more convenient to use a multidimensional tensor. For example, in chess,
+   * AlphaZero represents an action as an (8, 8, 73) tensor. The (8, 8) corresponds to the
+   * starting position of the piece and the 73 corresponds to various move-types (including
+   * pawn promotions).
+   */
+  { typename State::ActionShape{} } -> eigen_util::ShapeConcept;
 
   /*
    * For a given state s, let A(s) be the set of valid actions.
@@ -52,8 +61,11 @@ concept GameStateConcept = requires(S state) {
    * really minor; the bigger penalty for setting it too big is the aforementioned formula usage.
    *
    * In chess, this value can be as small as 218 (see: https://chess.stackexchange.com/a/8392).
+   *
+   * TODO: decouple the formula usage (which probably wants instead kTypicalBranchingFactor) from
+   * the structure sizing usage (which needs kMax*).
    */
-  { util::decay_copy(S::kMaxNumLocalActions) } -> std::same_as<int>;
+  { util::decay_copy(State::kMaxNumLocalActions) } -> std::same_as<int>;
 
   /*
    * Return the current player.
@@ -63,17 +75,22 @@ concept GameStateConcept = requires(S state) {
   /*
    * Apply a given action to the state, and return a GameOutcome.
    */
-  { state.apply_move(action_t()) } -> std::same_as<typename GameStateTypes<S>::GameOutcome>;
+  { state.apply_move(typename GameStateTypes<State>::Action{}) } -> std::same_as<typename GameStateTypes<State>::GameOutcome>;
 
   /*
-   * Get the valid actions, as a std::bitset
+   * Get the valid actions, as a bool tensor
    */
-  { state.get_valid_actions() } -> util::BitSetConcept;
+  { state.get_valid_actions() } -> std::same_as<typename GameStateTypes<State>::ActionMask>;
+
+  /*
+   * A string representation of an action.
+   */
+  { state.action_to_str(typename GameStateTypes<State>::Action{}) } -> std::same_as<std::string>;
 
   /*
    * Must be hashable (for use in MCGS).
    */
-  { std::hash<S>{}(state) } -> std::convertible_to<std::size_t>;
+  { std::hash<State>{}(state) } -> std::convertible_to<std::size_t>;
 };
 
 }  // namespace core

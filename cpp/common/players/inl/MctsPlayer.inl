@@ -116,7 +116,7 @@ inline void MctsPlayer<GameState_, Tensorizor_>::start_game()
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_t action)
+    core::seat_index_t seat, const GameState& state, const Action& action)
 {
   move_count_++;
   move_temperature_.step();
@@ -130,14 +130,15 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(
     }
     verbose_dump();
     if (!facing_human_tui_player_) {
-      state.dump(action, &this->get_player_names());
+      state.dump(&action, &this->get_player_names());
     }
   }
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline core::action_t MctsPlayer<GameState_, Tensorizor_>::get_action(
-    const GameState& state, const ActionMask& valid_actions)
+typename MctsPlayer<GameState_, Tensorizor_>::Action
+MctsPlayer<GameState_, Tensorizor_>::get_action(
+  const GameState& state, const ActionMask& valid_actions)
 {
   SearchMode search_mode = choose_search_mode();
   const MctsSearchResults* mcts_results = mcts_search(state, search_mode);
@@ -165,41 +166,40 @@ MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline core::action_t MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
-    SearchMode search_mode, const MctsSearchResults* mcts_results, const ActionMask& valid_actions) const
+typename MctsPlayer<GameState_, Tensorizor_>::Action
+MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
+  SearchMode search_mode, const MctsSearchResults* mcts_results, const ActionMask& valid_actions) const
 {
-  PolicyTensor policy_tensor;
+  PolicyTensor policy;
   if (search_mode == kRawPolicy) {
-    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy_tensor);
+    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
+    GameStateTypes::normalize(valid_actions, policy);
   } else {
-    policy_tensor = mcts_results->counts;
+    policy = mcts_results->counts;
   }
 
-  PolicyArray& policy = eigen_util::reinterpret_as_array(policy_tensor);
   if (search_mode != kRawPolicy) {
     float temp = move_temperature_.value();
     if (temp != 0) {
       policy = policy.pow(1.0 / temp);
     } else {
-      policy = (policy == policy.maxCoeff()).template cast<torch_util::dtype>();
+      policy = (policy == policy.maximum()).template cast<torch_util::dtype>();
     }
   }
 
-  if (policy.sum() == 0) {
+  if (eigen_util::sum(policy) == 0) {
     // This happens if MCTS proves that the position is losing. In this case we just choose a random valid action.
-    for (core::action_t action : bitset_util::on_indices(valid_actions)) {
-      policy[action] = 1;
-    }
+    policy = valid_actions.template cast<torch_util::dtype>();
   }
 
   if (verbose_info_) {
-    policy /= policy.sum();
-    GameStateTypes::global_to_local(policy_tensor, valid_actions, verbose_info_->action_policy);
+    policy = policy / eigen_util::sum(policy);
+    GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->action_policy);
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  core::action_t action = util::Random::weighted_sample(policy.begin(), policy.end());
-  assert(valid_actions[action]);
+  Action action = eigen_util::sample(policy);
+  assert(valid_actions(action));
   return action;
 }
 

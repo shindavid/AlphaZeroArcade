@@ -37,6 +37,7 @@ public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kEdgeDataChunkSize = std::min(8, kMaxNumLocalActions);
 
+  using Action = typename GameStateTypes::Action;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
@@ -54,12 +55,11 @@ public:
   struct stable_data_t {
     stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
 
-    int num_valid_actions() const { return valid_action_mask.count(); }  // consider caching
-
     Tensorizor tensorizor;
     GameState state;
     GameOutcome outcome;
     ActionMask valid_action_mask;
+    int num_valid_actions;
     core::seat_index_t current_player;
     core::symmetry_index_t sym_index;
   };
@@ -109,15 +109,16 @@ public:
    * only when the action is expanded. It stores both a (smart) pointer to the child node and an
    * edge count. The edge count is used to support MCTS mechanics.
    *
-   * When instantiating an edge_t, we assign the members in the order child_, action_index_,
-   * action_. The instantiated() check looks at the last of these (action_). This discipline
-   * ensures that lock-free usages work properly. Write ordering is enforced via the volatile
-   * keyword.
+   * When instantiating an edge_t, we assign the members in the order child_, action_,
+   * action_index_. The instantiated() check looks at the last of these (action_index_). This
+   * discipline ensures that lock-free usages work properly. Write ordering is enforced via the
+   * volatile keyword.
    */
   struct edge_t {
-    edge_t* instantiate(core::action_t a, core::action_index_t i, sptr c);
-    bool instantiated() const { return action_ >= 0; }
-    core::action_t action() const { return action_; }
+    edge_t();
+    edge_t* instantiate(const Action& a, core::action_index_t i, sptr c);
+    bool instantiated() const { return action_index_ >= 0; }
+    Action action() const { return const_cast<Action&>(action_); }
     core::action_index_t action_index() const { return action_index_; }
     sptr child() const { return const_cast<sptr&>(child_); }
     void increment_count() { count_++; }
@@ -125,9 +126,9 @@ public:
 
   private:
     volatile sptr child_;
+    volatile Action action_;
     volatile core::action_index_t action_index_ = -1;
-    volatile core::action_t action_ = -1;
-    std::atomic<int> count_ = 0;  //real only
+    std::atomic<int> count_ = 0;  // real only
   };
 
   /*
@@ -138,7 +139,7 @@ public:
   struct edge_chunk_t {
     ~edge_chunk_t() { delete next; }
     edge_t* find(core::action_index_t i);
-    edge_t* insert(core::action_t a, core::action_index_t i, sptr child);
+    edge_t* insert(const Action& a, core::action_index_t i, sptr child);
 
     edge_t data[kEdgeDataChunkSize];
     edge_chunk_t* next = nullptr;
@@ -235,7 +236,7 @@ public:
      * It is possible that an edge_t already exists for this action due to a race condition.
      * In this case, returns a pointer to the existing entry.
      */
-    edge_t* insert(core::action_t a, core::action_index_t i, sptr child) {
+    edge_t* insert(const Action& a, core::action_index_t i, sptr child) {
       return first_chunk_.insert(a, i, child);
     }
 
@@ -265,7 +266,7 @@ public:
   PolicyTensor get_counts(const ManagerParams& params) const;
   ValueArray make_virtual_loss() const;
   template<typename UpdateT> void update_stats(const UpdateT& update_instruction);
-  sptr lookup_child_by_action(core::action_t action) const;
+  sptr lookup_child_by_action(const Action& action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
   const children_data_t& children_data() const { return children_data_; }

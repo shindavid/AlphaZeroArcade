@@ -76,7 +76,7 @@ inline void Manager<GameState, Tensorizor>::clear() {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_t action)
+    core::seat_index_t seat, const GameState& state, const Action& action)
 {
   shared_data_.move_number++;
   shared_data_.node_cache.clear_before(shared_data_.move_number);
@@ -168,7 +168,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int tree_size_limit) {
   thread->run();
 
-  if (!thread->is_pondering() && shared_data_.root_node->stable_data().num_valid_actions() > 1) {
+  if (!thread->is_pondering() && shared_data_.root_node->stable_data().num_valid_actions > 1) {
     while (thread->needs_more_visits(shared_data_.root_node.get(), tree_size_limit)) {
       thread->run();
     }
@@ -221,8 +221,7 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
       n = 0;
     }
 
-    core::action_t a = it.action();
-    results_.counts(a) = n;
+    results_.counts(it.action()) = n;
   }
 
   const auto& counts_array = eigen_util::reinterpret_as_array(results_.counts);

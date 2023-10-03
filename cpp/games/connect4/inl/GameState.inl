@@ -19,8 +19,9 @@ inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
 
-inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_t action) {
-  column_t col = action;
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
+  int action_index = action[0];
+  column_t col = action_index;
   mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
   core::seat_index_t current_player = get_current_player();
 
@@ -93,13 +94,14 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
-inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
-  if (!util::tty_mode() && last_action > -1) {
-    std::string s(2*last_action+1, ' ');
+inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
+  int action_index = last_action ? (*last_action)[0] : -1;
+  if (!util::tty_mode() && action_index > -1) {
+    std::string s(2 * action_index + 1, ' ');
     printf("%sx\n", s.c_str());
   }
 
-  column_t blink_column = last_action;
+  column_t blink_column = action_index;
   row_t blink_row = -1;
   if (blink_column >= 0) {
     blink_row = std::countr_one(full_mask_ >> (blink_column * 8)) - 1;
@@ -167,8 +169,6 @@ inline void SearchResultsDumper<c4::GameState>::dump(
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  assert(net_policy.size() == (int)valid_actions.count());
-
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
          100 * net_value(c4::kRed), 100 * win_rates(c4::kRed));
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
@@ -179,7 +179,8 @@ inline void SearchResultsDumper<c4::GameState>::dump(
   int j = 0;
   for (int i = 0; i < c4::kNumColumns; ++i) {
     if (valid_actions[i]) {
-      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), action_policy(j++));
+      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(j), mcts_counts(i), action_policy(j));
+      ++j;
     } else {
       printf("%3d\n", i + 1);
     }

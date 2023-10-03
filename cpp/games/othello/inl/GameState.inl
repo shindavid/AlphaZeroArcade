@@ -17,8 +17,9 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 namespace othello {
 
 // copied from edax-reversi repo - board_next()
-inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::action_t action) {
-  if (action == kPass) {
+inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
+  int action_index = action[0];
+  if (action_index == kPass) {
     std::swap(cur_player_mask_, opponent_mask_);
     cur_player_ = 1 - cur_player_;
     pass_count_++;
@@ -26,10 +27,10 @@ inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::
       return compute_outcome();
     }
   } else {
-    mask_t flipped = flip[action](cur_player_mask_, opponent_mask_);
+    mask_t flipped = flip[action_index](cur_player_mask_, opponent_mask_);
     mask_t cur_player_mask = opponent_mask_ ^ flipped;
 
-    opponent_mask_ = cur_player_mask_ ^ (flipped | (1ULL << action));
+    opponent_mask_ = cur_player_mask_ ^ (flipped | (1ULL << action_index));
     cur_player_mask_ = cur_player_mask;
     cur_player_ = 1 - cur_player_;
     pass_count_ = 0;
@@ -45,10 +46,29 @@ inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(core::
 }
 
 inline GameState::ActionMask GameState::get_valid_actions() const {
-  mask_t mask = get_moves(cur_player_mask_, opponent_mask_);
-  ActionMask valid_actions(mask);
-  valid_actions.set(kPass, mask == 0);
+  uint64_t mask = get_moves(cur_player_mask_, opponent_mask_);
+  ActionMask valid_actions;
+  valid_actions.setConstant(0);
+  uint64_t u = mask;
+  while (u) {
+    int index = std::countr_zero(u);
+    valid_actions(index) = true;
+    u &= u - 1;
+  }
+  valid_actions(kPass) = mask == 0;
   return valid_actions;
+}
+
+inline std::string GameState::action_to_str(const Action& action) const {
+  int a = action[0];
+  if (a == kPass) {
+    return "PA";
+  }
+  char s[3];
+  s[0] = 'A' + (a % 8);
+  s[1] = '1' + (a / 8);
+  s[2] = 0;
+  return s;
 }
 
 inline core::seat_index_t GameState::get_player_at(int row, int col) const {
@@ -59,14 +79,15 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   return occupied_by_opponent ? (1 - cp) : (occupied_by_cur_player ? cp : -1);
 }
 
-inline void GameState::dump(core::action_t last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
   ActionMask valid_actions = get_valid_actions();
-  bool display_last_action = last_action >= 0;
+  int last_action_index = last_action ? (*last_action)[0] : -1;
+  bool display_last_action = last_action_index >= 0;
   int blink_row = -1;
   int blink_col = -1;
-  if (display_last_action && last_action != kPass) {
-    blink_row = last_action / kBoardDimension;
-    blink_col = last_action % kBoardDimension;
+  if (display_last_action && last_action_index != kPass) {
+    blink_row = last_action_index / kBoardDimension;
+    blink_col = last_action_index % kBoardDimension;
   }
   if (!util::tty_mode() && display_last_action) {
     std::string s(2*blink_col+3, ' ');
@@ -219,8 +240,6 @@ inline void SearchResultsDumper<othello::GameState>::dump(
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  assert(net_policy.size() == (int)valid_actions.count());
-
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""),
          100 * net_value(othello::kBlack), 100 * win_rates(othello::kBlack));
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""),
@@ -232,9 +251,11 @@ inline void SearchResultsDumper<othello::GameState>::dump(
   using tuple_array_t = std::array<tuple_t, othello::kNumGlobalActions>;
   tuple_array_t tuples;
   int i = 0;
-  for (core::action_t action : bitset_util::on_indices(valid_actions)) {
-    tuples[i] = std::make_tuple(mcts_counts.data()[action], action_policy(i), net_policy(i), action);
-    i++;
+  for (int a = 0; a < othello::kNumGlobalActions; ++a) {
+    if (valid_actions(a)) {
+      tuples[i] = std::make_tuple(mcts_counts(a), action_policy(i), net_policy(i), a);
+      i++;
+    }
   }
 
   std::sort(tuples.begin(), tuples.end());

@@ -18,22 +18,23 @@ namespace core {
 template <GameStateConcept GameState>
 class AbstractSerializer {
 public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using ActionMask = typename GameStateTypes::ActionMask;
+using GameStateTypes = core::GameStateTypes<GameState>;
+using Action = typename GameStateTypes::Action;
+using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
   virtual ~AbstractSerializer() = default;
 
-  virtual size_t serialize_action(char* buf, size_t buf_size, action_t action) const = 0;
-  virtual void deserialize_action(const char* buf, action_t* action) const = 0;
+  virtual size_t serialize_action(char* buf, size_t buf_size, const Action& action) const = 0;
+  virtual void deserialize_action(const char* buf, Action* action) const = 0;
 
   virtual size_t serialize_action_prompt(char* buffer, size_t buffer_size, const ActionMask& valid_actions) const = 0;
   virtual void deserialize_action_prompt(const char* buffer, ActionMask* valid_actions) const = 0;
 
   virtual size_t serialize_state_change(char* buf, size_t buf_size, const GameState& state, seat_index_t seat,
-                                        action_t action) const = 0;
+                                        const Action& action) const = 0;
   virtual void deserialize_state_change(const char* buf, GameState* state, seat_index_t* seat,
-                                        action_t* action) const = 0;
+                                        Action* action) const = 0;
 
   virtual size_t serialize_game_end(char* buffer, size_t buffer_size, const GameOutcome& outcome) const = 0;
   virtual void deserialize_game_end(const char* buffer, GameOutcome* outcome) const = 0;

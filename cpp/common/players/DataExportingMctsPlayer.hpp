@@ -31,6 +31,7 @@ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using dtype = typename GameStateTypes::dtype;
+  using Action = typename GameStateTypes::Action;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using TrainingDataWriter = core::TrainingDataWriter<GameState, Tensorizor>;
@@ -48,8 +49,8 @@ public:
 
   void start_game() override;
   void receive_state_change(
-      core::seat_index_t seat, const GameState& state, core::action_t action) override;
-  core::action_t get_action(const GameState&, const ActionMask&) override;
+      core::seat_index_t seat, const GameState& state, const Action& action) override;
+  Action get_action(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
 protected:

@@ -78,7 +78,7 @@ void RemotePlayerProxy<GameState>::PacketDispatcher::loop() {
 
     auto type = packet.header().type;
     switch (type) {
-      case PacketHeader::kAction:
+      case PacketHeader::kActionDecision:
         handle_action(packet);
         break;
       default:
@@ -92,7 +92,7 @@ RemotePlayerProxy<GameState>::PacketDispatcher::PacketDispatcher(io::Socket* soc
 
 template<GameStateConcept GameState>
 void RemotePlayerProxy<GameState>::PacketDispatcher::handle_action(const GeneralPacket& packet) {
-  const Action& payload = packet.payload_as<Action>();
+  const ActionDecision& payload = packet.payload_as<ActionDecision>();
 
   game_thread_id_t game_thread_id = payload.game_thread_id;
   player_id_t player_id = payload.player_id;
@@ -111,6 +111,7 @@ RemotePlayerProxy<GameState>::RemotePlayerProxy(
 , player_id_(player_id)
 , game_thread_id_(game_thread_id)
 {
+  GameStateTypes::nullify_action(action_);
   auto dispatcher = PacketDispatcher::create(socket);
   dispatcher->add_player(this);
 }
@@ -129,7 +130,7 @@ void RemotePlayerProxy<GameState>::start_game() {
 
 template<GameStateConcept GameState>
 void RemotePlayerProxy<GameState>::receive_state_change(
-    seat_index_t seat, const GameState& state, action_t action)
+    seat_index_t seat, const GameState& state, const Action& action)
 {
   Packet<StateChange> packet;
   packet.payload().game_thread_id = game_thread_id_;
@@ -141,9 +142,11 @@ void RemotePlayerProxy<GameState>::receive_state_change(
 }
 
 template<GameStateConcept GameState>
-action_t RemotePlayerProxy<GameState>::get_action(const GameState& state, const ActionMask& valid_actions) {
+typename RemotePlayerProxy<GameState>::Action
+RemotePlayerProxy<GameState>::get_action(const GameState& state, const ActionMask& valid_actions) {
   state_ = &state;
-  action_ = -1;
+
+  GameStateTypes::nullify_action(action_);
 
   Packet<ActionPrompt> packet;
   packet.payload().game_thread_id = game_thread_id_;
@@ -154,7 +157,7 @@ action_t RemotePlayerProxy<GameState>::get_action(const GameState& state, const 
   packet.send_to(socket_);
 
   std::unique_lock lock(mutex_);
-  cv_.wait(lock, [&] { return action_ != -1; });
+  cv_.wait(lock, [&] { return *action_.data() != -1; });
   return action_;
 }
 

@@ -79,11 +79,11 @@ inline void SearchThread<GameState, Tensorizor>::visit(
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id());
     if (edge) {
-      printer << __func__ << "(" << edge->action() << ") ";
+      printer << __func__ << util::std_array_to_string(edge->action(), "(", ",", ")");
     } else {
-      printer << __func__ << "() ";
+      printer << __func__ << "()";
     }
-    printer << search_path_str() << " cp=" << (int)tree->stable_data().current_player << std::endl;
+    printer << " " << search_path_str() << " cp=" << (int)tree->stable_data().current_player << std::endl;
   }
 
   const auto& stable_data = tree->stable_data();
@@ -111,7 +111,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
 
     edge_t* edge = children_data.find(action_index);
     if (!edge) {
-      core::action_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask, action_index);
+      Action action = GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
       auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
 
       std::unique_lock lock(tree->children_mutex());
@@ -285,11 +285,12 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
-  const char* delim = kNumGlobalActions < 10 ? "" : ":";
+  std::string delim = GameState::action_delimiter();
   std::vector<std::string> vec;
   for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    core::action_t action = search_path_[n].edge->action();
-    vec.push_back(std::to_string(action));
+    const GameState& prev_state = search_path_[n-1].node->stable_data().state;
+    Action action = search_path_[n].edge->action();
+    vec.push_back(prev_state.action_to_str(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
@@ -332,43 +333,63 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     printer << __func__ << "() " << search_path_str() << std::endl;
     printer << "real_avg: " << tree->stats().real_avg.transpose() << std::endl;
     printer << "virt_avg: " << tree->stats().virtualized_avg.transpose() << std::endl;
-    PVec valid_action_mask(P.rows());
-    int i = 0;
-    for (int v : bitset_util::on_indices(tree->stable_data().valid_action_mask)) {
-      valid_action_mask[i++] = v;
+
+    using ScalarT = typename PVec::Scalar;
+    constexpr int kNumCols1 = PolicyShape::count;
+    constexpr int kNumCols2 = 8;
+    using ArrayT1 = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols1, 0, PVec::MaxRowsAtCompileTime>;
+    using ArrayT2 = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols2, 0, PVec::MaxRowsAtCompileTime>;
+
+    ArrayT1 A(P.rows(), kNumCols1);
+    const ActionMask& valid_actions = tree->stable_data().valid_action_mask;
+    const bool* data = valid_actions.data();
+    int c = 0;
+    for (int i = 0; i < kNumGlobalActionsBound; ++i) {
+      if (!data[i]) continue;
+      Action action = eigen_util::unflatten_index(valid_actions, i);
+      for (int j = 0; j < kNumCols1; ++j) {
+        A(c, j) = action[j];
+      }
     }
 
-    constexpr int kNumCols = 9;
-    using ScalarT = typename PVec::Scalar;
-    using ArrayT = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols, 0, PVec::MaxRowsAtCompileTime>;
-    ArrayT M(P.rows(), kNumCols);
+    std::ostringstream ss1;
+    ss1 << A.transpose();
+    std::string s1 = ss1.str();
 
-    M.col(0) = valid_action_mask;
-    M.col(1) = P;
-    M.col(2) = stats.V;
-    M.col(3) = stats.PW;
-    M.col(4) = stats.PL;
-    M.col(5) = stats.E;
-    M.col(6) = N;
-    M.col(7) = stats.VN;
-    M.col(8) = PUCT;
+    std::vector<std::string> s1_lines;
+    boost::split(s1_lines, s1, boost::is_any_of("\n"));
 
-    std::ostringstream ss;
-    ss << M.transpose();
-    std::string s = ss.str();
+    printer << "valid: " << s1_lines[0] << std::endl;
+    for (int i = 1; i < kNumCols1; ++i) {
+      printer << "       " << s1_lines[i] << std::endl;
+    }
 
-    std::vector<std::string> s_lines;
-    boost::split(s_lines, s, boost::is_any_of("\n"));
+    ArrayT2 M(P.rows(), kNumCols2);
 
-    printer << "valid: " << s_lines[0] << std::endl;
-    printer << "P:     " << s_lines[1] << std::endl;
-    printer << "V:     " << s_lines[2] << std::endl;
-    printer << "PW:    " << s_lines[3] << std::endl;
-    printer << "PL:    " << s_lines[4] << std::endl;
-    printer << "E:     " << s_lines[5] << std::endl;
-    printer << "N:     " << s_lines[6] << std::endl;
-    printer << "VN:    " << s_lines[7] << std::endl;
-    printer << "PUCT:  " << s_lines[8] << std::endl;
+    M.col(0) = P;
+    M.col(1) = stats.V;
+    M.col(2) = stats.PW;
+    M.col(3) = stats.PL;
+    M.col(4) = stats.E;
+    M.col(5) = N;
+    M.col(6) = stats.VN;
+    M.col(7) = PUCT;
+
+    std::ostringstream ss2;
+    ss2 << M.transpose();
+    std::string s2 = ss2.str();
+
+    std::vector<std::string> s2_lines;
+    boost::split(s2_lines, s2, boost::is_any_of("\n"));
+
+    printer << "P:     " << s2_lines[0] << std::endl;
+    printer << "V:     " << s2_lines[1] << std::endl;
+    printer << "PW:    " << s2_lines[2] << std::endl;
+    printer << "PL:    " << s2_lines[3] << std::endl;
+    printer << "E:     " << s2_lines[4] << std::endl;
+    printer << "N:     " << s2_lines[5] << std::endl;
+    printer << "VN:    " << s2_lines[6] << std::endl;
+    printer << "PUCT:  " << s2_lines[7] << std::endl;
 
     printer << "argmax: " << argmax_index << std::endl;
     printer << "*************" << std::endl;

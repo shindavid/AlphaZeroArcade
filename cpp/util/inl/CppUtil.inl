@@ -56,6 +56,20 @@ template<typename A>
    return r;
  }
 
+template<typename T, size_t N>
+std::string std_array_to_string(const std::array<T, N>& arr,
+  const std::string& left, const std::string& delim, const std::string& right)
+{
+  std::stringstream ss;
+  ss << left;
+  for (size_t i = 0; i < N; ++i) {
+    if (i > 0) ss << delim;
+    ss << arr[i];
+  }
+  ss << right;
+  return ss.str();
+}
+
  template<typename A, typename T, typename... Ts>
  constexpr auto to_std_array(const T& t, const Ts&... ts) {
    auto a = to_std_array<A>(t);

@@ -23,6 +23,7 @@ public:
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
 
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = GameStateTypes::Action;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
   using PolicyTensor = GameStateTypes::PolicyTensor;
@@ -39,7 +40,7 @@ public:
   };
 
   void clear() {}
-  void receive_state_change(const GameState& state, core::action_t action) {}
+  void receive_state_change(const GameState& state, const Action& action) {}
 
   void tensorize(InputTensor& tensor, const GameState& state) const {
     core::seat_index_t cp = state.get_current_player();

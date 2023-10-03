@@ -57,13 +57,13 @@ inline void OracleGradedMctsPlayer::start_game()
 }
 
 inline void OracleGradedMctsPlayer::receive_state_change(
-    core::seat_index_t seat, const GameState& state, core::action_t action)
+    core::seat_index_t seat, const GameState& state, const Action& action)
 {
-  move_history_.append(action);
+  move_history_.append(action[0]);
   base_t::receive_state_change(seat, state, action);
 }
 
-inline core::action_t OracleGradedMctsPlayer::get_action(
+inline OracleGradedMctsPlayer::Action OracleGradedMctsPlayer::get_action(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
@@ -74,6 +74,7 @@ inline core::action_t OracleGradedMctsPlayer::get_action(
     if (result.best_score >= 0) {  // winning or drawn position
       assert(search_mode != base_t::kRawPolicy);
       auto policy_prior = GameStateTypes::local_to_global(mcts_search_results->policy_prior, valid_actions);
+      GameStateTypes::normalize(valid_actions, policy_prior);
       PolicyArray& policy_prior_array = eigen_util::reinterpret_as_array(policy_prior);
 
       const PolicyArray& visit_counts = eigen_util::reinterpret_as_array(mcts_search_results->counts);
@@ -96,7 +97,7 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
 
   ActionMask correct_moves;
   for (int i = 0; i < kNumColumns; ++i) {
-    correct_moves.set(i, result.scores[i] >= result.best_score);
+    correct_moves(i) = result.scores[i] >= result.best_score;
   }
 
   float mistake_prior_t0_num = 0;
@@ -115,7 +116,7 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
   int baseline_den = 0;
 
   for (int i = 0; i < kNumColumns; ++i) {
-    if (!valid_actions[i]) {
+    if (!valid_actions(i)) {
       continue;
     }
 
@@ -130,7 +131,7 @@ inline void OracleGradedMctsPlayer::update_mistake_stats(
     mistake_prior_t1_den += prior_t1;
     mistake_posterior_t1_den += posterior_t1;
     baseline_den++;
-    if (!correct_moves[i]) {
+    if (!correct_moves(i)) {
       mistake_prior_t0_num += prior_t0;
       mistake_posterior_t0_num += posterior_t0;
       mistake_prior_t1_num += prior_t1;

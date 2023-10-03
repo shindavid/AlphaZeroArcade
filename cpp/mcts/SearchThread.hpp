@@ -32,14 +32,17 @@ public:
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
   using edge_t = typename Node::edge_t;
 
+  using Action = typename GameStateTypes::Action;
+  using ActionMask = typename GameStateTypes::ActionMask;
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
+  using PolicyShape = typename GameStateTypes::PolicyShape;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using ValueArray = typename GameStateTypes::ValueArray;
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
+  static constexpr int kNumGlobalActionsBound = GameStateTypes::kNumGlobalActionsBound;
 
   using dtype = torch_util::dtype;
   using profiler_t = search_thread_profiler_t;

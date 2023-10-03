@@ -21,7 +21,7 @@ inline void PerfectOracle::MoveHistory::reset() {
   *char_pointer_ = 0;
 }
 
-inline void PerfectOracle::MoveHistory::append(core::action_t move) {
+inline void PerfectOracle::MoveHistory::append(int move) {
   *(char_pointer_++) = char(int('1') + move);  // connect4 program uses 1-indexing
 }
 
@@ -152,39 +152,41 @@ inline void PerfectPlayer::start_game() {
 }
 
 inline void PerfectPlayer::receive_state_change(
-    core::seat_index_t, const GameState&, core::action_t action)
+    core::seat_index_t, const GameState&, const Action& action)
 {
-  move_history_.append(action);
+  move_history_.append(action[0]);
 }
 
-inline core::action_t PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline PerfectPlayer::Action
+PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
 
   ActionMask candidates;
+  candidates.setZero();
 
   // first add clearly winning moves
   for (int j = 0; j < kNumColumns; ++j) {
     if (result.scores[j] > 0 && result.scores[j] <= params_.strength) {
-      candidates.set(j);
+      candidates(j) = 1;
     }
   }
 
   // if no known winning moves, then add all draws/uncertain moves
-  bool known_win = candidates.any();
+  bool known_win = eigen_util::any(candidates);
   if (!known_win) {
     for (int j = 0; j < kNumColumns; ++j) {
       int score = result.scores[j];
       if (score == PerfectOracle::QueryResult::kIllegalMoveScore) {
         continue;
       }
-      candidates.set(j, abs(score) > params_.strength || score == 0);
+      candidates(j) = abs(score) > params_.strength || score == 0;
     }
   }
 
   // if no candidates, then everything is a certain loss. Choose randomly among slowest losses.
-  if (!candidates.any()) {
+  if (!eigen_util::any(candidates)) {
     for (int j = 0; j < kNumColumns; ++j) {
-      candidates.set(j, result.scores[j] == result.best_score);
+      candidates(j) = result.scores[j] == result.best_score;
     }
   }
 
@@ -194,10 +196,16 @@ inline core::action_t PerfectPlayer::get_action(const GameState& state, const Ac
     std::cout << "scores: " << result.scores.transpose() << std::endl;
     std::cout << "best_score: " << result.best_score << std::endl;
     std::cout << "my_strength: " << params_.strength << std::endl;
-    std::cout << "candidates: " << bitset_util::to_string(candidates) << std::endl;
+    std::cout << "candidates:";
+    for (int j = 0; j < kNumColumns; ++j) {
+      if (candidates(j)) {
+        std::cout << " " << (j + 1);
+      }
+    }
+    std::cout << std::endl;
   }
 
-  return bitset_util::choose_random_on_index(candidates);
+  return eigen_util::sample(candidates);
 }
 
 }  // namespace c4

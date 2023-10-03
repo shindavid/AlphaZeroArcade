@@ -31,15 +31,17 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
   util::clean_assert(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline core::action_t PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline PerfectPlayer::Action PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
   if (params_.strength == 0) {
-    return bitset_util::choose_random_on_index(valid_actions);
+    return eigen_util::sample(valid_actions);
   }
 
   // if only one legal move, make it
-  if (valid_actions.count() == 1) {
-    return bitset_util::choose_random_on_index(valid_actions);
+  if (eigen_util::sum(valid_actions) == 1) {
+    return eigen_util::sample(valid_actions);
   }
+
+  Action action;
 
   core::seat_index_t cp = state.get_current_player();
   mask_t my_mask = state.get_current_player_mask();
@@ -62,24 +64,26 @@ inline core::action_t PerfectPlayer::get_action(const GameState& state, const Ac
   // check for winning move
   for (mask_t mask : GameState::kThreeInARowMasks) {
     if ((std::popcount(uint32_t(mask & my_mask))) == 2 && ((mask & opp_mask) == 0)) {
-      core::action_t a = std::countr_zero(uint32_t(mask & ~full_mask));
+      int a = std::countr_zero(uint32_t(mask & ~full_mask));
       if (params_.verbose) {
         std::cout << "    winning along:  " << std::bitset<16>(mask) << std::endl;
         std::cout << "    winning move:   " << a << std::endl;
       }
-      return a;
+      action[0] = a;
+      return action;
     }
   }
 
   // block opponent's winning move
   for (mask_t mask : GameState::kThreeInARowMasks) {
     if ((std::popcount(uint32_t(mask & opp_mask))) == 2 && ((mask & my_mask) == 0)) {
-      core::action_t a = std::countr_zero(uint32_t(mask & ~full_mask));
+      int a = std::countr_zero(uint32_t(mask & ~full_mask));
       if (params_.verbose) {
         std::cout << "    blocking along: " << std::bitset<16>(mask) << std::endl;
         std::cout << "    blocking move:  " << a << std::endl;
       }
-      return a;
+      action[0] = a;
+      return action;
     }
   }
 
@@ -90,9 +94,10 @@ inline core::action_t PerfectPlayer::get_action(const GameState& state, const Ac
   }
 
   try {
-    // TODO: rotate me
-    return lookup_map_.at(key).select();
-  } catch (const std::out_of_range&) {
+    action[0] = lookup_map_.at(key).select();
+    return action;
+  }
+  catch (const std::out_of_range&) {
     throw util::Exception("lookup failed (%08ux|%08ux)", uint32_t(x_mask), uint32_t(o_mask));
   }
 }
@@ -115,7 +120,7 @@ inline PerfectPlayer::policy_t::policy_t(uint64_t u) {
   }
 }
 
-inline core::action_t PerfectPlayer::policy_t::select() const {
+inline int PerfectPlayer::policy_t::select() const {
   return util::Random::weighted_sample(p, p + kNumCells);
 }
 
