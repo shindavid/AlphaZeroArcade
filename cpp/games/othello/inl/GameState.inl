@@ -16,7 +16,15 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 
 namespace othello {
 
-// copied from edax-reversi repo - board_next()
+inline int GameState::get_count(core::seat_index_t seat) const {
+  if (seat == cur_player_) {
+    return std::popcount(cur_player_mask_);
+  } else {
+    return std::popcount(opponent_mask_);
+  }
+}
+
+  // copied from edax-reversi repo - board_next()
 inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
   int action_index = action[0];
   if (action_index == kPass) {

@@ -53,6 +53,7 @@ public:
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
 
+  int get_count(core::seat_index_t seat) const;
   core::seat_index_t get_current_player() const { return cur_player_; }
   GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
