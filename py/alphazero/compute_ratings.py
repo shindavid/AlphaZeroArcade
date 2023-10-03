@@ -512,21 +512,31 @@ def main():
     for arena in arenas:
         arena.prepare()
 
+    retry_count = 5
     while True:
-        [arena.dump_x_var_data() for arena in arenas]
-        queue = [arena.get_next_work_item() for arena in arenas]
-        queue = [item for item in queue if item is not None]
-        if not queue:
-            if Args.daemon_mode:
-                time.sleep(5)
-                continue
-            else:
-                return
+        try:
+            [arena.dump_x_var_data() for arena in arenas]
+            queue = [arena.get_next_work_item() for arena in arenas]
+            queue = [item for item in queue if item is not None]
+            if not queue:
+                if Args.daemon_mode:
+                    time.sleep(5)
+                    continue
+                else:
+                    return
 
-        queue.sort(key=lambda item: (item.recency_boost, item.rating_gap))
-        for item in reversed(queue):
-            item.arena.process(item)
-            break
+            queue.sort(key=lambda item: (item.recency_boost, item.rating_gap))
+            for item in reversed(queue):
+                item.arena.process(item)
+                break
+        except sqlite3.OperationalError as e:
+            timed_print(f'Caught sqlite3.OperationalError: {e}')
+            retry_count -= 1
+            if retry_count > 0:
+                timed_print(f'Retrying in 2 seconds...')
+                time.sleep(2)
+            else:
+                raise
 
 
 if __name__ == '__main__':
