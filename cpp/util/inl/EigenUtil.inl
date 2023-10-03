@@ -168,17 +168,6 @@ auto unflatten_index(const Tensor& tensor, int flat_index) {
   return index;
 }
 
-// template<typename Scalar, ShapeConcept Shape, int Options>
-// auto from_1d_tensor_to_std_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
-//   static_assert(Shape::count == 1);
-//   constexpr int N = Shape::total_size;
-//   std::array<Scalar, N> array;
-//   for (int i = 0; i < N; ++i) {
-//     array[i] = tensor.data()[i];
-//   }
-//   return array;
-// }
-
 template<typename Scalar, ShapeConcept Shape, int Options>
 const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
   constexpr int N = Shape::total_size;

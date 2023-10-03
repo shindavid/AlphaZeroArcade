@@ -13,39 +13,12 @@ size_t GeneralSerializer<GameState>::serialize_action(char* buf, size_t buf_size
   }
   memcpy(buf, &action, sizeof(action));
   return sizeof(action);
-
-  // size_t n = 0;
-
-  // for (size_t i = 0; i < action.size(); ++i) {
-  //   buf[n] = '.';
-  //   n += i > 0;
-  //   n += snprintf(buf + n, buf_size - n, "%d", action[i]);
-  // }
-
-  // if (n >= buf_size) {
-  //   throw util::Exception("Buffer too small (%ld >= %ld)", n, buf_size);
-  // }
-  // return n;
 }
 
 template <GameStateConcept GameState>
 void GeneralSerializer<GameState>::deserialize_action(const char* buf, Action* action) const {
   memcpy(action, buf, sizeof(*action));
   GameStateTypes::validate_action(*action);
-
-  // const char* p = buf;
-  // for (int i = 0; i < action->size(); ++i) {
-  //   int a = boost::lexical_cast<int>(p);
-  //   int max_a = Action::dimension(i);
-  //   if (a < 0 || a >= max_a) {
-  //     throw util::Exception("Invalid action \"%s\" (action[%d]=%d, max=%d)", buf, i, a, max_a);
-  //   }
-  //   (*action)[i] = a;
-
-  //   // find next period:
-  //   while (*p != '.') ++p;
-  //   ++p;
-  // }
 }
 
 template <GameStateConcept GameState>

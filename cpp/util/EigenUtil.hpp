@@ -290,9 +290,6 @@ template<FixedTensorConcept Tensor> auto sample(const Tensor& tensor);
  */
 template<FixedTensorConcept Tensor> auto unflatten_index(const Tensor& tensor, int flat_index);
 
-// template<typename Scalar, ShapeConcept Shape, int Options>
-// auto from_1d_tensor_to_std_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
-
 /*
  * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>
  *
