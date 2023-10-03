@@ -35,6 +35,7 @@ BASE_DIR/
              gen-2.ptc
              ...
 """
+import copy
 import os
 import shutil
 import signal
@@ -44,9 +45,11 @@ import time
 import traceback
 from typing import Optional, List, Tuple, Callable
 
-import torch
 from natsort import natsorted
+import torch
+from torch import nn as nn
 from torch import optim
+from torch.optim.swa_utils import AveragedModel, update_bn
 from torch.utils.data import DataLoader
 
 from alphazero.custom_types import Generation
@@ -57,7 +60,7 @@ from neural_net import NeuralNet, LearningTarget
 from util import subprocess_util
 from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo
-from util.torch_util import apply_mask
+from util.torch_util import apply_mask, Shape
 
 
 class PathInfo:
@@ -144,11 +147,13 @@ class AlphaZeroManager:
         self.log_file = None
         self.self_play_proc_data: Optional[SelfPlayProcData] = None
 
+        self.swa_start_gen = 0
         self.n_gen0_games = 4000
         self.n_sync_games = 1000
         self.base_dir: str = base_dir
 
         self._net = None
+        self._swa = None
         self._opt = None
 
         self.stdout_filename = os.path.join(self.base_dir, 'stdout.txt')
@@ -197,10 +202,11 @@ class AlphaZeroManager:
                 break
             g += 1
 
-    def get_net_and_optimizer(self, loader: 'DataLoader') -> Tuple[NeuralNet, optim.Optimizer]:
+    def get_training_parts(self, loader: 'DataLoader') -> Tuple[NeuralNet, AveragedModel, optim.Optimizer]:
         if self._net is not None:
-            return self._net, self._opt
+            return self._net, self._swa, self._opt
 
+        checkpoint = None
         checkpoint_info = self.get_latest_checkpoint_info()
         if checkpoint_info is None:
             input_shape = loader.dataset.get_input_shape()
@@ -221,15 +227,22 @@ class AlphaZeroManager:
 
         self._net.cuda(device=self.py_cuda_device)
         self._net.train()
+        self._opt = optim.SGD(self._net.parameters(),
+                              lr=ModelingArgs.learning_rate,
+                              momentum=ModelingArgs.momentum,
+                              weight_decay=ModelingArgs.weight_decay)
 
-        learning_rate = ModelingArgs.learning_rate
-        momentum = ModelingArgs.momentum
-        weight_decay = ModelingArgs.weight_decay
-        self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+        ema_decay = 0.5  # 0-1 range, dictates how quickly to decay previous average
+        ema_avg = lambda prev_avg, x, n: (1 - ema_decay) * prev_avg + ema_decay * x
+        self._swa = AveragedModel(self._net, avg_fn=ema_avg)
+        self._swa.cuda(device=self.py_cuda_device)
+        self._swa.train()
 
-        # TODO: SWA, cyclic learning rate
+        if checkpoint:
+            self._opt.load_state_dict(checkpoint['opt_state_dict'])
+            self._swa.load_state_dict(checkpoint['swa_state_dict'])
 
-        return self._net, self._opt
+        return self._net, self._swa, self._opt
 
     def init_logging(self, filename: str):
         self.log_file = open(filename, 'a')
@@ -395,6 +408,7 @@ class AlphaZeroManager:
         for_loop_time = 0
         t0 = time.time()
         steps = 0
+        loader = None
         while True:
             games_dataset = GamesDataset(self.self_play_data_dir)
             loader = torch.utils.data.DataLoader(
@@ -405,7 +419,7 @@ class AlphaZeroManager:
                 shuffle=True)
             assert games_dataset.n_total_games >= self.n_gen0_games
 
-            net, optimizer = self.get_net_and_optimizer(loader)
+            net, swa, optimizer = self.get_training_parts(loader)
             games_dataset.set_key_order(net.target_names())
 
             loss_fns = [target.loss_fn() for target in net.learning_targets]
@@ -454,33 +468,94 @@ class AlphaZeroManager:
                 for_loop_time += t2 - t1
                 if steps == ModelingArgs.snapshot_steps:
                     break
+
             stats.dump()
             if steps >= ModelingArgs.snapshot_steps:
                 break
 
         t3 = time.time()
-        total_time = t3 - t0
-        data_loading_time = total_time - for_loop_time
+
+        # wrapper needed to conform to update_bn() API
+        def loader_wrapper():
+            for data in loader:
+                inputs = data[0]
+                inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
+                yield inputs
+
+        do_swa_update = gen >= self.swa_start_gen
+        if do_swa_update:
+            swa.update_parameters(net)
+            if False:
+                # This gets too expensive in later generations, so I'm disabling it for now.
+                # In principle, can do the batch norm calculation explicitly inside our main loop,
+                # rather than via the update_bn() function, which should be more efficient.
+                #
+                # In the limit, update_bn() should not be needed, since the individual nets that
+                # are averaged in the swa model are individually batch-normalized, so it's sort of
+                # justifiable to disable this.
+                update_bn(loader_wrapper(), swa)
+
+        t4 = time.time()
+        swa_update_time = t4 - t3
+        total_time = t4 - t0
+        data_loading_time = total_time - for_loop_time - swa_update_time
 
         timed_print(f'Gen {gen} training complete ({steps} minibatch updates)')
-        timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
-        timed_print(f'Training time:     {for_loop_time:10.3f} seconds')
+        timed_print(f'Data loading time:  {data_loading_time:10.3f} seconds')
+        timed_print(f'Training time:      {for_loop_time:10.3f} seconds')
+        timed_print(f'SWA bn update time: {swa_update_time:10.3f} seconds')
 
         if pre_commit_func:
             pre_commit_func()
 
+        # save checkpoint
         checkpoint_filename = self.get_checkpoint_filename(gen)
-        model_filename = self.get_model_filename(gen)
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
-        tmp_model_filename = make_hidden_filename(model_filename)
         checkpoint = {}
         net.save_to_checkpoint(checkpoint)
+        checkpoint['opt_state_dict'] = optimizer.state_dict()
+        checkpoint['swa_state_dict'] = swa.state_dict()
         torch.save(checkpoint, tmp_checkpoint_filename)
-        net.save_model(tmp_model_filename)
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
-        os.rename(tmp_model_filename, model_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
+
+        # save model
+        model_filename = self.get_model_filename(gen)
+        tmp_model_filename = make_hidden_filename(model_filename)
+        if do_swa_update:
+            AlphaZeroManager.save_model(swa, net.input_shape, tmp_model_filename)
+        else:
+            AlphaZeroManager.save_model(net, net.input_shape, tmp_model_filename)
+        os.rename(tmp_model_filename, model_filename)
         timed_print(f'Model saved: {model_filename}')
+
+    @staticmethod
+    def save_model(model: nn.Module, input_shape: Shape, filename: str):
+        """
+        Saves model to disk, from which it can be loaded either by c++ or by python. Uses the
+        torch.jit.trace() function to accomplish this.
+
+        Note that prior to saving, we "freeze" the model, by switching it to eval mode and disabling
+        gradient. The documentation seems to imply that this is an important step:
+
+        "...In the returned :class:`ScriptModule`, operations that have different behaviors in
+        ``training`` and ``eval`` modes will always behave as if it is in the mode it was in during
+        tracing, no matter which mode the `ScriptModule` is in..."
+
+        In order to avoid modifying model during the save() call, we actually deepcopy model and
+        then do the freeze and trace on the copy.
+        """
+        output_dir = os.path.split(filename)[0]
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        clone = copy.deepcopy(model)
+        clone.to('cpu')
+        clone.eval()
+        forward_shape = tuple([1] + list(input_shape))
+        example_input = torch.zeros(forward_shape)
+        mod = torch.jit.trace(clone, example_input)
+        mod.save(filename)
 
     @staticmethod
     def finalize_games_dir(games_dir: str, results: SelfPlayResults):
