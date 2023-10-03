@@ -1,6 +1,5 @@
 #pragma once
 
-#include <common/SquareBoardSymmetryBase.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <games/tictactoe/Constants.hpp>
 #include <games/tictactoe/GameState.hpp>
@@ -8,18 +7,17 @@
 
 namespace tictactoe {
 
-using TensorizorBase = common::SquareBoardSymmetryBase<
-          GameState,
-          eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>>;
-
 /*
  * All transforms have a templated transform_input() method. This generality exists to support unit tests, which
  * use non-bool input tensors.
  */
-class Tensorizor : public TensorizorBase
-{
+class Tensorizor {
  public:
-  using InputTensor = TensorizorBase::InputTensor;
+  using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;
+  using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
+
+  void clear() {}
+  void receive_state_change(const GameState&, const GameState::Action&) {}
 
   void tensorize(InputTensor& tensor, const GameState& state) const {
     core::seat_index_t cp = state.get_current_player();

@@ -4,15 +4,11 @@
 
 namespace core {
 
-template <typename InputTensor, typename PolicyTensor>
-class IdentityTransform : public AbstractSymmetryTransform<InputTensor, PolicyTensor> {
+template <eigen_util::FixedTensorConcept Tensor>
+class IdentityTransform : public AbstractSymmetryTransform<Tensor> {
  public:
-  using base_t = AbstractSymmetryTransform<InputTensor, PolicyTensor>;
-
-  IdentityTransform() { this->set_reverse(this); }
-
-  template<typename InputTensorT> void transform_input(InputTensorT&) {}  // unit tests need general scalar type
-  void transform_input(InputTensor&) override {}
-  void transform_policy(PolicyTensor&) override {}
+  void apply(Tensor& t) override {}
+  void undo(Tensor& t) override {}
 };
-}
+
+}  // namespace core

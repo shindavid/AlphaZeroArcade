@@ -28,6 +28,20 @@ template<int64_t... Is> struct is_eigen_shape<Eigen::Sizes<Is...>> { static cons
 template<typename T> inline constexpr bool is_eigen_shape_v = is_eigen_shape<T>::value;
 template <typename T> concept ShapeConcept = is_eigen_shape_v<T>;
 
+/*
+ * rank_v<Eigen::Sizes<...>> is the rank of the Eigen::Sizes.
+ */
+template<typename T> struct rank {};
+template<int64_t... Is> struct rank<Eigen::Sizes<Is...>> {
+  static constexpr int value = sizeof...(Is);
+};
+template<typename T> inline constexpr int rank_v = rank<T>::value;
+
+/*
+ * 10 == extract_dim_v<0, Eigen::Sizes<10, 20, 30>>
+ * 20 == extract_dim_v<1, Eigen::Sizes<10, 20, 30>>
+ * 30 == extract_dim_v<2, Eigen::Sizes<10, 20, 30>>
+ */
 template <int N, typename T>
 struct extract_dim {};
 

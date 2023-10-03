@@ -37,6 +37,9 @@ struct GameStateTypes {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActionsBound = GameState::ActionShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
+  static constexpr int kMaxNumSymmetries = GameState::kMaxNumSymmetries;
+
+  using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 
   using GameOutcome = core::GameOutcome<kNumPlayers>;
 
@@ -100,11 +103,9 @@ struct GameStateTypes {
 
 template<typename Tensorizor>
 struct TensorizorTypes {
-  static constexpr int kMaxNumSymmetries = Tensorizor::kMaxNumSymmetries;
   using InputTensor = typename Tensorizor::InputTensor;
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
   using InputScalar = typename InputTensor::Scalar;
-  using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 };
 
 }  // namespace core

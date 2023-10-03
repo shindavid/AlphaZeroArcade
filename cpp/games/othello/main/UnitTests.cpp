@@ -21,21 +21,25 @@ using InputScalar = InputTensor::Scalar;
 int global_pass_count = 0;
 int global_fail_count = 0;
 
-template<typename TransformT>
 void test_symmetry_input(
-    TransformT& transform,
+    const char* func,
+    core::symmetry_index_t sym_index,
     const std::string& expected_repr0,
     const std::string& expected_repr1)
 {
+  othello::GameState state;
+  using Tensor = Eigen::TensorFixedSize<int, othello::Tensorizor::InputShape, Eigen::RowMajor>;
+  auto transform = state.get_symmetry<Tensor>(sym_index);
+
   InputTensor input;
-  for (int i = 0; i < eigen_util::extract_shape_t<InputTensor>::total_size; ++i) {
+  for (int i = 0; i < othello::Tensorizor::InputShape::total_size; ++i) {
     input.data()[i] = i;
   }
 
   try {
-    transform.transform_input(input);
+    transform->apply(input);
   } catch (...) {
-    printf("%s() %s failure (caught exception)!\n", __func__, util::get_typename(transform).c_str());
+    printf("%s(%s) failure (caught exception)!\n", __func__, func);
     global_fail_count++;
     return;
   }
@@ -46,14 +50,13 @@ void test_symmetry_input(
   for (int slice = 0; slice < 2; ++slice) {
     const std::string &expected_repr = slice == 0 ? expected_repr0 : expected_repr1;
 
-    InputTensorSlice input_slice;
-    eigen_util::packed_fixed_tensor_cp(input_slice, eigen_util::slice(input, slice));
+    InputTensorSlice input_slice = input.chip<0>(slice);
     std::ostringstream ss;
     ss << input_slice;
     std::string repr = ss.str();
 
     if (repr != expected_repr) {
-      printf("%s() %s failure!\n", __func__, util::get_typename(transform).c_str());
+      printf("%s(%s) failure!\n", __func__, func);
       printf("Expected (slice %d):\n", slice);
       std::cout << expected_repr << std::endl;
       std::cout << "But got:" << std::endl;
@@ -62,12 +65,14 @@ void test_symmetry_input(
       return;
     }
   }
-  printf("%s() %s success!\n", __func__, util::get_typename(transform).c_str());
+  printf("%s(%s) success!\n", __func__, func);
   global_pass_count++;
 }
 
-template<typename TransformT>
-void test_symmetry_policy(TransformT& transform, const std::string& expected_repr) {
+void test_symmetry_policy(const char* func, core::symmetry_index_t sym_index, const std::string& expected_repr) {
+  othello::GameState state;
+  auto transform = state.get_symmetry<PolicyTensor>(sym_index);
+
   PolicyTensor policy;
 
   for (int i = 0; i < eigen_util::extract_shape_t<PolicyTensor>::total_size; ++i) {
@@ -75,9 +80,9 @@ void test_symmetry_policy(TransformT& transform, const std::string& expected_rep
   }
 
   try {
-    transform.transform_policy(policy);
+    transform->undo(policy);
   } catch (...) {
-    printf("%s() %s failure (caught exception)!\n", __func__, util::get_typename(transform).c_str());
+    printf("%s(%s) failure (caught exception)!\n", __func__, func);
     global_fail_count++;
     return;
   }
@@ -94,7 +99,7 @@ void test_symmetry_policy(TransformT& transform, const std::string& expected_rep
   std::string repr = ss.str();
 
   if (repr != expected_repr) {
-    printf("%s() %s failure!\n", __func__, util::get_typename(transform).c_str());
+    printf("%s(%s) failure!\n", __func__, func);
     std::cout << "Expected:" << std::endl;
     std::cout << expected_repr << std::endl;
     std::cout << "But got:" << std::endl;
@@ -102,15 +107,13 @@ void test_symmetry_policy(TransformT& transform, const std::string& expected_rep
     global_fail_count++;
     return;
   } else {
-    printf("%s() %s success!\n", __func__, util::get_typename(transform).c_str());
+    printf("%s(%s) success!\n", __func__, func);
     global_pass_count++;
     return;
   }
 }
 
 void test_identity() {
-  othello::Tensorizor::Identity transform;
-
   std::string expected_input_slice0 = " 0  1  2  3  4  5  6  7\n"
                                       " 8  9 10 11 12 13 14 15\n"
                                       "16 17 18 19 20 21 22 23\n"
@@ -138,13 +141,11 @@ void test_identity() {
                                 "48 49 50 51 52 53 54 55\n"
                                 "56 57 58 59 60 61 62 63";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 0, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 0, expected_policy);
 }
 
 void test_rot90() {
-  othello::Tensorizor::Rot90 transform;
-
   std::string expected_input_slice0 = "56 48 40 32 24 16  8  0\n"
                                       "57 49 41 33 25 17  9  1\n"
                                       "58 50 42 34 26 18 10  2\n"
@@ -163,22 +164,20 @@ void test_rot90() {
                                       "126 118 110 102  94  86  78  70\n"
                                       "127 119 111 103  95  87  79  71";
 
-  std::string expected_policy = "56 48 40 32 24 16  8  0\n"
-                                "57 49 41 33 25 17  9  1\n"
-                                "58 50 42 34 26 18 10  2\n"
-                                "59 51 43 35 27 19 11  3\n"
-                                "60 52 44 36 28 20 12  4\n"
-                                "61 53 45 37 29 21 13  5\n"
-                                "62 54 46 38 30 22 14  6\n"
-                                "63 55 47 39 31 23 15  7";
+  std::string expected_policy = " 7 15 23 31 39 47 55 63\n"
+                                " 6 14 22 30 38 46 54 62\n"
+                                " 5 13 21 29 37 45 53 61\n"
+                                " 4 12 20 28 36 44 52 60\n"
+                                " 3 11 19 27 35 43 51 59\n"
+                                " 2 10 18 26 34 42 50 58\n"
+                                " 1  9 17 25 33 41 49 57\n"
+                                " 0  8 16 24 32 40 48 56";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 1, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 1, expected_policy);
 }
 
 void test_rot180() {
-  othello::Tensorizor::Rot180 transform;
-
   std::string expected_input_slice0 = "63 62 61 60 59 58 57 56\n"
                                       "55 54 53 52 51 50 49 48\n"
                                       "47 46 45 44 43 42 41 40\n"
@@ -206,13 +205,11 @@ void test_rot180() {
                                 "15 14 13 12 11 10  9  8\n"
                                 " 7  6  5  4  3  2  1  0";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 2, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 2, expected_policy);
 }
 
 void test_rot270() {
-  othello::Tensorizor::Rot270 transform;
-
   std::string expected_input_slice0 = " 7 15 23 31 39 47 55 63\n"
                                       " 6 14 22 30 38 46 54 62\n"
                                       " 5 13 21 29 37 45 53 61\n"
@@ -231,22 +228,20 @@ void test_rot270() {
                                       " 65  73  81  89  97 105 113 121\n"
                                       " 64  72  80  88  96 104 112 120";
 
-  std::string expected_policy = " 7 15 23 31 39 47 55 63\n"
-                                " 6 14 22 30 38 46 54 62\n"
-                                " 5 13 21 29 37 45 53 61\n"
-                                " 4 12 20 28 36 44 52 60\n"
-                                " 3 11 19 27 35 43 51 59\n"
-                                " 2 10 18 26 34 42 50 58\n"
-                                " 1  9 17 25 33 41 49 57\n"
-                                " 0  8 16 24 32 40 48 56";
+  std::string expected_policy = "56 48 40 32 24 16  8  0\n"
+                                "57 49 41 33 25 17  9  1\n"
+                                "58 50 42 34 26 18 10  2\n"
+                                "59 51 43 35 27 19 11  3\n"
+                                "60 52 44 36 28 20 12  4\n"
+                                "61 53 45 37 29 21 13  5\n"
+                                "62 54 46 38 30 22 14  6\n"
+                                "63 55 47 39 31 23 15  7";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 3, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 3, expected_policy);
 }
 
 void test_refl() {
-  othello::Tensorizor::Refl transform;
-
   std::string expected_input_slice0 = "56 57 58 59 60 61 62 63\n"
                                       "48 49 50 51 52 53 54 55\n"
                                       "40 41 42 43 44 45 46 47\n"
@@ -274,13 +269,11 @@ void test_refl() {
                                 " 8  9 10 11 12 13 14 15\n"
                                 " 0  1  2  3  4  5  6  7";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 4, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 4, expected_policy);
 }
 
 void test_refl_rot90() {
-  othello::Tensorizor::ReflRot90 transform;
-
   std::string expected_input_slice0 = " 0  8 16 24 32 40 48 56\n"
                                       " 1  9 17 25 33 41 49 57\n"
                                       " 2 10 18 26 34 42 50 58\n"
@@ -308,13 +301,11 @@ void test_refl_rot90() {
                                 " 6 14 22 30 38 46 54 62\n"
                                 " 7 15 23 31 39 47 55 63";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 5, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 5, expected_policy);
 }
 
 void test_refl_rot180() {
-  othello::Tensorizor::ReflRot180 transform;
-
   std::string expected_input_slice0 = " 7  6  5  4  3  2  1  0\n"
                                       "15 14 13 12 11 10  9  8\n"
                                       "23 22 21 20 19 18 17 16\n"
@@ -342,13 +333,11 @@ void test_refl_rot180() {
                                 "55 54 53 52 51 50 49 48\n"
                                 "63 62 61 60 59 58 57 56";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 6, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 6, expected_policy);
 }
 
 void test_refl_rot270() {
-  othello::Tensorizor::ReflRot270 transform;
-
   std::string expected_input_slice0 = "63 55 47 39 31 23 15  7\n"
                                       "62 54 46 38 30 22 14  6\n"
                                       "61 53 45 37 29 21 13  5\n"
@@ -376,8 +365,8 @@ void test_refl_rot270() {
                                 "57 49 41 33 25 17  9  1\n"
                                 "56 48 40 32 24 16  8  0";
 
-  test_symmetry_input(transform, expected_input_slice0, expected_input_slice1);
-  test_symmetry_policy(transform, expected_policy);
+  test_symmetry_input(__func__, 7, expected_input_slice0, expected_input_slice1);
+  test_symmetry_policy(__func__, 7, expected_policy);
 }
 
 void test_symmetries() {

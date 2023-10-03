@@ -83,13 +83,14 @@ public:
   using PolicyShape = typename GameStateTypes::PolicyShape;
   using ValueShape = typename GameStateTypes::ValueShape;
 
+  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
   using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
   using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 
   using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
   using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
 
-  using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
+  using PolicyTransform = core::AbstractSymmetryTransform<PolicyTensor>;
 
   struct Request {
     Node* tree;
@@ -174,7 +175,7 @@ private:
 
     cache_key_t cache_key;
     ActionMask valid_actions;
-    SymmetryTransform* transform;
+    PolicyTransform* policy_transform;
   };
 
   static instance_map_t instance_map_;

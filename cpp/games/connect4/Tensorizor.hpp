@@ -1,13 +1,8 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-
 #include <torch/torch.h>
 
-#include <core/AbstractSymmetryTransform.hpp>
 #include <core/DerivedTypes.hpp>
-#include <core/IdentityTransform.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/GameState.hpp>
@@ -18,26 +13,11 @@ namespace c4 {
 
 class Tensorizor {
 public:
-  static constexpr int kMaxNumSymmetries = 2;
   using InputShape = eigen_util::Shape<kNumPlayers, kNumColumns, kNumRows>;
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
 
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = GameStateTypes::Action;
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using SymmetryIndexSet = TensorizorTypes::SymmetryIndexSet;
-  using PolicyTensor = GameStateTypes::PolicyTensor;
-  using SymmetryTransform = core::AbstractSymmetryTransform<InputTensor, PolicyTensor>;
-  using IdentityTransform = core::IdentityTransform<InputTensor, PolicyTensor>;
-  using transform_array_t = std::array<SymmetryTransform*, 2>;
-
-  class ReflectionTransform : public SymmetryTransform {
-  public:
-    ReflectionTransform() { this->set_reverse(this); }
-
-    void transform_input(InputTensor& input) override;
-    void transform_policy(PolicyTensor& policy) override;
-  };
 
   void clear() {}
   void receive_state_change(const GameState& state, const Action& action) {}
@@ -52,19 +32,8 @@ public:
       }
     }
   }
-
-  SymmetryIndexSet get_symmetry_indices(const GameState&) const;
-  SymmetryTransform* get_symmetry(core::symmetry_index_t index) const;
-
-private:
-  static transform_array_t transforms();
-
-  static IdentityTransform identity_transform_;
-  static ReflectionTransform reflection_transform_;
 };
 
 }  // namespace c4
 
 static_assert(core::TensorizorConcept<c4::Tensorizor, c4::GameState>);
-
-#include <games/connect4/inl/Tensorizor.inl>

@@ -256,7 +256,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
-    edata.transform->get_reverse()->transform_policy(group.policy);
+    edata.policy_transform->undo(group.policy);
     edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
   }
 
@@ -386,14 +386,15 @@ void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
   tensorizor.tensorize(group.input, state);
-  auto transform = tensorizor.get_symmetry(sym_index);
-  transform->transform_input(group.input);
+  auto input_transform = state.template get_symmetry<InputTensor>(sym_index);
+  auto policy_transform = state.template get_symmetry<PolicyTensor>(sym_index);
+  input_transform->apply(group.input);
 
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;
   group.eval_ptr_data.valid_actions = valid_action_mask;
-  group.eval_ptr_data.transform = transform;
+  group.eval_ptr_data.policy_transform = policy_transform;
 }
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

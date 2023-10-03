@@ -16,6 +16,12 @@ inline std::size_t std::hash<othello::GameState>::operator()(const othello::Game
 
 namespace othello {
 
+inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
+  SymmetryIndexSet set;
+  set.set();
+  return set;
+}
+
 inline int GameState::get_count(core::seat_index_t seat) const {
   if (seat == cur_player_) {
     return std::popcount(cur_player_mask_);

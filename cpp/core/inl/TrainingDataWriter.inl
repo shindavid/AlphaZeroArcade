@@ -78,7 +78,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::GameData::add_pending_group(
-    SymmetryTransform* transform, TensorGroup* group) {
+    PolicyTransform* transform, TensorGroup* group) {
   pending_groups_.emplace_back(transform, group);
 }
 
@@ -87,11 +87,11 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_
     const PolicyTensor& opp_policy)
 {
   for (auto& transform_group : pending_groups_) {
-    auto* transform = transform_group.transform;
+    auto* policy_transform = transform_group.policy_transform;
     auto* group = transform_group.group;
 
     group->opp_policy = opp_policy;
-    transform->transform_policy(group->opp_policy);
+    policy_transform->apply(group->opp_policy);
   }
   pending_groups_.clear();
 }

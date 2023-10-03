@@ -15,6 +15,12 @@ inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& sta
 
 namespace c4 {
 
+inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
+  SymmetryIndexSet set;
+  set.set();
+  return set;
+}
+
 inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }

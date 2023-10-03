@@ -50,7 +50,7 @@ public:
   using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
   using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 
-  using SymmetryTransform = AbstractSymmetryTransform<InputTensor, PolicyTensor>;
+  using PolicyTransform = AbstractSymmetryTransform<PolicyTensor>;
 
   static constexpr int kRowsPerChunk = 64;
 
@@ -77,9 +77,9 @@ public:
    * loss for the opponent reply.
    */
   struct transform_group_t {
-    transform_group_t(SymmetryTransform* t, TensorGroup* g) : transform(t), group(g) {}
+    transform_group_t(PolicyTransform* p, TensorGroup* g) : policy_transform(p), group(g) {}
 
-    SymmetryTransform* transform;
+    PolicyTransform* policy_transform;
     TensorGroup* group;
   };
   using transform_group_vec_t = std::vector<transform_group_t>;
@@ -117,7 +117,7 @@ public:
   public:
     TensorGroup& get_next_group();
     void record_for_all(const GameOutcome& value);
-    void add_pending_group(SymmetryTransform* transform, TensorGroup* group);
+    void add_pending_group(PolicyTransform* transform, TensorGroup* group);
     bool contains_pending_groups() const { return !pending_groups_.empty(); }
     void commit_opp_reply_to_pending_groups(const PolicyTensor& opp_policy);
 

@@ -78,22 +78,21 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsSearc
   return policy;
 }
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
-    const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy)
-{
+    const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy) {
   InputTensor input;
   this->tensorizor_.tensorize(input, state);
 
-  using hash_array_t = std::array<uint64_t, Tensorizor::kMaxNumSymmetries>;
+  using hash_array_t = std::array<uint64_t, GameState::kMaxNumSymmetries>;
   hash_array_t hashes = {};
 
-  auto sym_indices = this->tensorizor_.get_symmetry_indices(state);
+  auto sym_indices = state.get_symmetry_indices();
   for (core::symmetry_index_t sym_index : bitset_util::on_indices(sym_indices)) {
-    auto transform = this->tensorizor_.get_symmetry(sym_index);
+    auto input_transform = state.template get_symmetry<InputTensor>(sym_index);
 
     InputTensor sym_input = input;
-    transform->transform_input(sym_input);
+    input_transform->apply(sym_input);
     uint64_t hash = eigen_util::hash(sym_input);
     hashes[sym_index] = hash;
     bool clash = false;
@@ -113,8 +112,9 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
     group.opp_policy.setZero();
     group.current_player = this->get_my_seat();
 
-    transform->transform_policy(group.policy);
-    game_data_->add_pending_group(transform, &group);
+    auto policy_transform = state.template get_symmetry<PolicyTensor>(sym_index);
+    policy_transform->apply(group.policy);
+    game_data_->add_pending_group(policy_transform, &group);
   }
 }
 
