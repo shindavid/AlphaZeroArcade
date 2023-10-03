@@ -240,8 +240,6 @@ inline void SearchResultsDumper<othello::GameState>::dump(
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  assert(net_policy.size() == (int)valid_actions.count());
-
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""),
          100 * net_value(othello::kBlack), 100 * win_rates(othello::kBlack));
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""),

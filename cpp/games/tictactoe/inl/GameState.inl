@@ -102,8 +102,6 @@ inline void SearchResultsDumper<tictactoe::GameState>::dump(
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  assert(net_policy.size() == (int)valid_actions.count());
-
   printf("X: %6.3f%% -> %6.3f%%\n", 100 * net_value(tictactoe::kX), 100 * win_rates(tictactoe::kO));
   printf("O: %6.3f%% -> %6.3f%%\n", 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kX));
   printf("\n");

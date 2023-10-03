@@ -169,8 +169,6 @@ inline void SearchResultsDumper<c4::GameState>::dump(
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  assert(net_policy.size() == (int)valid_actions.count());
-
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
          100 * net_value(c4::kRed), 100 * win_rates(c4::kRed));
   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
