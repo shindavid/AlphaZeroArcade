@@ -7,10 +7,6 @@
 
 namespace tictactoe {
 
-/*
- * All transforms have a templated transform_input() method. This generality exists to support unit tests, which
- * use non-bool input tensors.
- */
 class Tensorizor {
  public:
   using InputShape = eigen_util::Shape<kNumPlayers, kBoardDimension, kBoardDimension>;

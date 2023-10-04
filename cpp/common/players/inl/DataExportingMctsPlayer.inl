@@ -57,8 +57,8 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&, const GameOutcome& outcome) {
-  game_data_->record_for_all(outcome);
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState& state, const GameOutcome& outcome) {
+  game_data_->record_for_all(state, outcome);
   writer_->close(game_data_);
   game_data_ = nullptr;
 }
@@ -107,14 +107,16 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
 
     auto& group = game_data_->get_next_group();
 
+    group.state = state;
     group.input = sym_input;
     group.policy = policy;
     group.opp_policy.setZero();
     group.current_player = this->get_my_seat();
+    group.sym_index = sym_index;
 
     auto policy_transform = state.template get_symmetry<PolicyTensor>(sym_index);
     policy_transform->apply(group.policy);
-    game_data_->add_pending_group(policy_transform, &group);
+    game_data_->add_pending_group(&group);
   }
 }
 

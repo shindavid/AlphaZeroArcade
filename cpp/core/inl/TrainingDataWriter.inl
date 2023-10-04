@@ -42,12 +42,22 @@ TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_group() {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(const GameOutcome& value) {
+void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(
+  const GameState& state, const GameOutcome& value)
+{
   for (int i = 0; i < rows_; ++i) {
     TensorGroup& group = tensors_[i];
     GameOutcome shifted_value = value;
     eigen_util::left_rotate(shifted_value, group.current_player);
     group.value = eigen_util::reinterpret_as_tensor<ValueTensor>(shifted_value);
+
+    constexpr int kNumAuxTargets = mp::Length_v<AuxTargetList>;
+    mp::constexpr_for<0, kNumAuxTargets, 1>([&](auto i) {
+      using AuxTarget = mp::TypeAt_t<AuxTargetList, i>;
+      AuxTarget::tensorize(std::get<i>(group.aux_targets), state);
+
+      // TODO: conditionally apply symmetry transform
+    });
   }
 }
 
@@ -68,27 +78,22 @@ TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const GameOutcome& value) {
+void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const GameState& state, const GameOutcome& value) {
   std::unique_lock<std::mutex> lock(mutex_);
   for (DataChunk& chunk : chunks_) {
-    chunk.record_for_all(value);
+    chunk.record_for_all(state, value);
   }
   pending_groups_.clear();
-}
-
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::GameData::add_pending_group(
-    PolicyTransform* transform, TensorGroup* group) {
-  pending_groups_.emplace_back(transform, group);
 }
 
 template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_pending_groups(
     const PolicyTensor& opp_policy)
 {
-  for (auto& transform_group : pending_groups_) {
-    auto* policy_transform = transform_group.policy_transform;
-    auto* group = transform_group.group;
+  for (auto& group : pending_groups_) {
+    const GameState& state = group->state;
+    symmetry_index_t sym_index = group->sym_index;
+    auto* policy_transform = state.template get_symmetry<PolicyTensor>(sym_index);
 
     group->opp_policy = opp_policy;
     policy_transform->apply(group->opp_policy);

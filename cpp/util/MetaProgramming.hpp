@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <tuple>
 #include <utility>
 
 /*
@@ -18,6 +19,47 @@ struct TypeList<Head, Tails...> {
   using head = Head;
   using tails = TypeList<Tails...>;
 };
+
+// TransformTypeList_t<Transform, TypeList<A, B>>
+//
+// is equivalent to:
+//
+// TypeList<Transform<A>::type, Transform<B>::type>
+
+template <template <typename> class Transformer, typename TypeList>
+struct TransformTypeList;
+
+template <template <typename> class Transformer, typename... Ts>
+struct TransformTypeList<Transformer, TypeList<Ts...>> {
+  using type = TypeList<typename Transformer<Ts>::type...>;
+};
+
+template <template <typename> class Transformer, typename TypeList>
+using TransformTypeList_t = typename TransformTypeList<Transformer, TypeList>::type;
+
+// TypeListToTuple_t<TypeList<A, B>>
+//
+// is equivalent to:
+//
+// std::tuple<A, B>
+
+template <typename TypeList> struct TypeListToTuple;
+
+template <>
+struct TypeListToTuple<TypeList<>> {
+    using type = std::tuple<>;
+};
+
+template <typename Head, typename... Tails>
+struct TypeListToTuple<TypeList<Head, Tails...>> {
+    using type = decltype(std::tuple_cat(
+        std::tuple<Head>{},
+        typename TypeListToTuple<TypeList<Tails...>>::type{}
+    ));
+};
+
+template <typename TypeList>
+using TypeListToTuple_t = typename TypeListToTuple<TypeList>::type;
 
 // length of a typelist
 
@@ -108,4 +150,25 @@ struct MaxSizeOf<TypeList<Head, Tails...>> {
 template <typename TList>
 inline constexpr std::size_t MaxSizeOf_v = MaxSizeOf<TList>::value;
 
+// static for loop
+//
+// Usage:
+//
+// template<int i> func() {}
+//
+// constexpr_for<0, 10, 1>([](auto i) { func<i>(); }
+//
+// The above is equivalent to the following (which is not c++ legal):
+//
+// for (int i = 0; i < 10; i += 1) { func<i>(); }
+//
+// See: https://artificial-mind.net/blog/2020/10/31/constexpr-for
+
+template <auto Start, auto End, auto Inc, class F>
+constexpr void constexpr_for(F&& f) {
+  if constexpr (Start < End) {
+    f(std::integral_constant<decltype(Start), Start>());
+    constexpr_for<Start + Inc, End, Inc>(f);
+  }
+}
 }  // namespace mp

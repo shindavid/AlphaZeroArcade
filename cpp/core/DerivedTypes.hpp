@@ -12,6 +12,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
+#include <util/MetaProgramming.hpp>
 #include <util/TorchUtil.hpp>
 
 namespace core {
@@ -101,11 +102,20 @@ struct GameStateTypes {
   static math::var_bindings_map_t get_var_bindings();
 };
 
+template<typename T>
+struct ExtractAuxTargetTensor {
+  using type = typename T::Tensor;
+};
+
 template<typename Tensorizor>
 struct TensorizorTypes {
   using InputTensor = typename Tensorizor::InputTensor;
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
   using InputScalar = typename InputTensor::Scalar;
+  using AuxTargetList = typename Tensorizor::AuxTargetList;
+
+  using AuxTargetTensorList = mp::TransformTypeList_t<ExtractAuxTargetTensor, AuxTargetList>;
+  using AuxTargetTensorTuple = mp::TypeListToTuple_t<AuxTargetTensorList>;
 };
 
 }  // namespace core
