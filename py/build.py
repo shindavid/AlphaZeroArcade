@@ -129,6 +129,12 @@ def get_tinyexpr_dir():
     assert os.path.isdir(tinyexpr_dir)
     return tinyexpr_dir
 
+
+def get_conda_prefix():
+    # detect if there is an active anaconda env, and if so, return a path to it
+    return os.environ.get('CONDA_PREFIX', None)
+
+
 def main():
     cwd = os.getcwd()
     args = get_args()
@@ -172,6 +178,9 @@ def main():
         f'-DMY_TINYEXPR_DIR={tinyexpr_dir}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
+    conda_prefix = get_conda_prefix()
+    if conda_prefix:
+        cmake_cmd_tokens.append(f'-DCONDA_PREFIX={conda_prefix}')
     if debug:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
 
