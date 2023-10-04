@@ -138,7 +138,7 @@ class SelfPlayProcData:
 
 
 class AlphaZeroManager:
-    def __init__(self, game_type: GameType, base_dir: str):
+    def __init__(self, game_type: GameType, base_dir: str, binary_path: Optional[str] = None):
         self.game_type = game_type
         self.py_cuda_device: int = 0
         self.log_file = None
@@ -158,12 +158,49 @@ class AlphaZeroManager:
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
 
+        self._binary_path_set = False
+        self._binary_path = binary_path
+
     def makedirs(self):
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.bins_dir, exist_ok=True)
         os.makedirs(self.players_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
+
+    def copy_binary(self, bin_src):
+        bin_md5 = str(sha256sum(bin_src))
+        bin_tgt = os.path.join(self.bins_dir, bin_md5)
+        rsync_cmd = ['rsync', '-t', bin_src, bin_tgt]
+        subprocess_util.run(rsync_cmd)
+        return bin_tgt
+
+    @property
+    def binary_path(self):
+        if self._binary_path_set:
+            return self._binary_path
+
+        self._binary_path_set = True
+        if self._binary_path:
+            bin_tgt = self.copy_binary(self._binary_path)
+            timed_print(f'Using cmdline-specified binary {self._binary_path} (copied to {bin_tgt})')
+            self._binary_path = bin_tgt
+            return self._binary_path
+
+        candidates = os.listdir(self.bins_dir)
+        if len(candidates) == 0:
+            bin_name = self.game_type.binary_name
+            bin_src = os.path.join(Repo.root(), f'target/Release/bin/{bin_name}')
+            bin_tgt = self.copy_binary(bin_src)
+            self._binary_path = bin_tgt
+            timed_print(f'Using binary {bin_src} (copied to {bin_tgt})')
+        elif len(candidates) == 1:
+            self._binary_path = os.path.join(self.bins_dir, candidates[0])
+            timed_print(f'Reusing previously copied binary {self._binary_path}')
+        else:
+            raise Exception(f'Multiple binaries found in {self.bins_dir}. Please specify one with --binary-path')
+
+        return self._binary_path
 
     @property
     def py_cuda_device_str(self) -> str:
@@ -324,12 +361,6 @@ class AlphaZeroManager:
         gen = self.get_latest_model_generation()
 
         games_dir = self.get_self_play_data_subdir(gen)
-        bin_name = self.game_type.binary_name
-        bin_src = os.path.join(Repo.root(), f'target/Release/bin/{bin_name}')
-        bin_md5 = str(sha256sum(bin_src))
-        bin_tgt = os.path.join(self.bins_dir, bin_md5)
-        rsync_cmd = ['rsync', '-t', bin_src, bin_tgt]
-        subprocess_util.run(rsync_cmd)
 
         if gen == 0:
             n_games = self.n_gen0_games
@@ -354,6 +385,7 @@ class AlphaZeroManager:
             '--copy-from=MCTS',
         ]
 
+        bin_tgt = self.binary_path
         self_play_cmd = [
             bin_tgt,
             '-G', n_games,
