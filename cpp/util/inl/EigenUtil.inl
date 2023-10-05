@@ -217,6 +217,7 @@ MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& t
 template<typename TensorT>
 typename TensorT::Scalar sum(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;
+  static_assert(!std::is_same_v<Scalar, bool>, "use eigen_util::count() for bool tensors");
   Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.sum();
   return out(0);
 }

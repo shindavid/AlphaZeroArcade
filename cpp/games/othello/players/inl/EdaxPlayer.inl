@@ -15,9 +15,10 @@ inline auto EdaxPlayer::Params::make_options_description() {
 
   po2::options_description desc("othello::EdaxPlayer options");
   return desc
-      .template add_option<"depth", 'd'>
-          (po::value<int>(&depth)->default_value(depth), "Search depth")
-      ;
+      .template add_option<"depth", 'd'>(po::value<int>(&depth)->default_value(depth),
+                                         "Search depth")
+      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                           "edax player verbose mode");
 }
 
 inline EdaxPlayer::EdaxPlayer(const Params& params) : params_(params) {
@@ -63,7 +64,11 @@ inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const Game
 }
 
 inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
-  if (eigen_util::sum(valid_actions) == 1) {  // only 1 possible move, no need to incur edax/IO overhead
+  int num_valid_actions = eigen_util::count(valid_actions);
+  if (params_.verbose) {
+    std::cout << "EdaxPlayer::get_action() - num_valid_actions=" << num_valid_actions << std::endl;
+  }
+  if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
     Action action = eigen_util::sample(valid_actions);
     submit_action(action);
     return action;
@@ -76,6 +81,9 @@ inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionM
   for (; std::getline(out_, line_buffer_[n]); ++n) {
     const std::string& line = line_buffer_[n];
     if (line.starts_with("Edax plays ")) {
+      if (params_.verbose) {
+        std::cout << line << std::endl;
+      }
       std::string move_str = line.substr(11, 2);
       if (move_str.starts_with("PS")) {  // "PS" is edax notation for pass
         a = kPass;
@@ -105,6 +113,10 @@ inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionM
 inline void EdaxPlayer::submit_action(const Action& action) {
   int a = action[0];
   if (a == kPass) {
+    if (params_.verbose) {
+      std::cout << "EdaxPlayer::submit_action() - PS" << std::endl;
+    }
+
     in_.write("PS\n", 3);
     in_.flush();
   } else {
@@ -114,6 +126,9 @@ inline void EdaxPlayer::submit_action(const Action& action) {
     move_str[2] = '\n';
     in_.write(move_str, 3);
     in_.flush();
+    if (params_.verbose) {
+      std::cout << "EdaxPlayer::submit_action() - " << move_str[0] << move_str[1] << std::endl;
+    }
   }
 }
 

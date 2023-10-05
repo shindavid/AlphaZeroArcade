@@ -37,7 +37,7 @@ inline PerfectPlayer::Action PerfectPlayer::get_action(const GameState& state, c
   }
 
   // if only one legal move, make it
-  if (eigen_util::sum(valid_actions) == 1) {
+  if (eigen_util::count(valid_actions) == 1) {
     return eigen_util::sample(valid_actions);
   }
 

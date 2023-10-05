@@ -30,6 +30,7 @@ public:
 
   struct Params {
     int depth = 21;  // matches edax default
+    bool verbose = false;
 
     auto make_options_description();
   };
