@@ -8,51 +8,31 @@
 
 namespace othello {
 
-class ScoreMarginPdfTarget {
+class ScoreMarginTarget {
  public:
-  static constexpr const char* kName = "score_margin_pdf";
+  static constexpr const char* kName = "score_margin";
   static constexpr bool kApplySymmetry = false;
-  using Shape = eigen_util::Shape<kNumCells * 2 + 1>;
-  using Tensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
+  using Shape = eigen_util::Shape<1>;
+  using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
 
   static void tensorize(Tensor& tensor, const GameState& state) {
-    int score_margin = state.get_count(kBlack) - state.get_count(kWhite);
-    tensor.setZero();
-    tensor(score_margin + kNumCells) = 1.0f;
+    tensor(0) = state.get_count(kBlack) - state.get_count(kWhite);
   }
-
-  static void transform(Tensor& tensor, core::symmetry_index_t sym) {}
-};
-
-class ScoreMarginCdfTarget {
- public:
-  static constexpr const char* kName = "score_margin_cdf";
-  static constexpr bool kApplySymmetry = false;
-  using Shape = eigen_util::Shape<kNumCells * 2 + 1>;
-  using Tensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
-
-  static void tensorize(Tensor& tensor, const GameState& state) {
-    int score_margin = state.get_count(kBlack) - state.get_count(kWhite);
-    tensor.setZero();
-    for (int i = 0; i <= score_margin + kNumCells; ++i) {
-      tensor(i) = 1.0f;
-    }
-  }
-
-  static void transform(Tensor& tensor, core::symmetry_index_t sym) {}
 };
 
 class OwnershipTarget {
  public:
   static constexpr const char* kName = "ownership";
   static constexpr bool kApplySymmetry = true;
-  using Shape = eigen_util::Shape<kBoardDimension, kBoardDimension>;
-  using Tensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
+  using Shape = eigen_util::Shape<kNumPlayers+1, kBoardDimension, kBoardDimension>;
+  using Tensor = Eigen::TensorFixedSize<bool, Shape, Eigen::RowMajor>;
 
   static void tensorize(Tensor& tensor, const GameState& state) {
+    tensor.setZero();
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
-        tensor(row, col) = state.get_player_at(row, col);
+        int k = 1 + state.get_player_at(row, col);
+        tensor(k, row, col) = 1;
       }
     }
   }
@@ -70,8 +50,7 @@ class Tensorizor {
   void receive_state_change(const GameState& state, const Action& action) {}
 
   using AuxTargetList = mp::TypeList <
-    ScoreMarginPdfTarget,
-    ScoreMarginCdfTarget,
+    ScoreMarginTarget,
     OwnershipTarget
   >;
 

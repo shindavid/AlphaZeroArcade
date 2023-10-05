@@ -454,14 +454,15 @@ class AlphaZeroManager:
                 labels_list = data[1:]
                 inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
 
+                labels_list = [target.convert_labels(labels) for labels, target in zip(labels_list, net.learning_targets)]
                 labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
 
                 optimizer.zero_grad()
                 outputs_list = net(inputs)
                 assert len(outputs_list) == len(labels_list)
 
-                labels_list = [labels.reshape((labels.shape[0], -1)) for labels in labels_list]
-                outputs_list = [outputs.reshape((outputs.shape[0], -1)) for outputs in outputs_list]
+                # labels_list = [labels.reshape((labels.shape[0], -1)) for labels in labels_list]
+                # outputs_list = [outputs.reshape((outputs.shape[0], -1)) for outputs in outputs_list]
 
                 masks = [target.get_mask(labels) for labels, target in zip(labels_list, net.learning_targets)]
 
