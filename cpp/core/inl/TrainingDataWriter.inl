@@ -213,7 +213,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     using AuxTarget = mp::TypeAt_t<AuxTargetList, i>;
     using AuxTensor = typename AuxTarget::Tensor;
     using AuxShape = typename AuxTarget::Shape;
-    using AuxScalar = typename AuxTensor::Scalar;
+    using AuxScalar = torch_util::convert_type_t<typename AuxTensor::Scalar>;
     auto& aux_tgt = std::get<i>(aux_targets);
     auto aux_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<AuxShape>);
     aux_tgt = torch::empty(aux_shape, torch_util::to_dtype_v<AuxScalar>);
@@ -242,7 +242,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
         using AuxTarget = mp::TypeAt_t<AuxTargetList, i>;
         using AuxTensor = typename AuxTarget::Tensor;
         using AuxShape = typename AuxTarget::Shape;
-        using AuxScalar = typename AuxTensor::Scalar;
+        using AuxScalar = torch_util::convert_type_t<typename AuxTensor::Scalar>;
         constexpr size_t aux_size = AuxShape::total_size;
 
         const auto& aux_src = std::get<i>(group.aux_targets);
