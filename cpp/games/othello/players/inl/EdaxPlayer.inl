@@ -64,7 +64,9 @@ inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const Game
 
 inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
   if (eigen_util::sum(valid_actions) == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    return eigen_util::sample(valid_actions);
+    Action action = eigen_util::sample(valid_actions);
+    submit_action(action);
+    return action;
   }
   in_.write("go\n", 3);
   in_.flush();
