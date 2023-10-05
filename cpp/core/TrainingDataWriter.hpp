@@ -39,6 +39,7 @@ public:
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using AuxTargetList = typename TensorizorTypes::AuxTargetList;
   using AuxTargetTensorTuple = typename TensorizorTypes::AuxTargetTensorTuple;
+  using AuxTargetTorchTensorTuple = typename TensorizorTypes::AuxTargetTorchTensorTuple;
 
   using InputShape = typename TensorizorTypes::InputShape;
   using PolicyShape = typename GameStateTypes::PolicyShape;
@@ -55,6 +56,7 @@ public:
   using PolicyTransform = AbstractSymmetryTransform<PolicyTensor>;
 
   static constexpr int kRowsPerChunk = 64;
+  static constexpr int kNumAuxTargets = mp::Length_v<AuxTargetList>;
 
   struct TensorGroup {
     GameState state;

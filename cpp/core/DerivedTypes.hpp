@@ -107,6 +107,11 @@ struct ExtractAuxTargetTensor {
   using type = typename T::Tensor;
 };
 
+template<typename T>
+struct ToTorchTensor {
+  using type = torch::Tensor;
+};
+
 template<typename Tensorizor>
 struct TensorizorTypes {
   using InputTensor = typename Tensorizor::InputTensor;
@@ -116,6 +121,9 @@ struct TensorizorTypes {
 
   using AuxTargetTensorList = mp::TransformTypeList_t<ExtractAuxTargetTensor, AuxTargetList>;
   using AuxTargetTensorTuple = mp::TypeListToTuple_t<AuxTargetTensorList>;
+
+  using AuxTargetTorchTensorList = mp::TransformTypeList_t<ToTorchTensor, AuxTargetList>;
+  using AuxTargetTorchTensorTuple = mp::TypeListToTuple_t<AuxTargetTorchTensorList>;
 };
 
 }  // namespace core
