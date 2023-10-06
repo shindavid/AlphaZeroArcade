@@ -28,7 +28,6 @@ class OwnershipTarget {
   using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
 
   static void tensorize(Tensor& tensor, const GameState& state) {
-    tensor.setZero();
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
         tensor(row, col) = 1 + state.get_player_at(row, col);

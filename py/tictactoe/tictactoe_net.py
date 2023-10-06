@@ -4,17 +4,19 @@ from typing import List
 import torch
 from torch import nn as nn
 
-from neural_net import NeuralNet, PolicyTarget, ValueTarget
-from res_net_modules import ConvBlock, ResBlock, PolicyHead, ValueHead
+from neural_net import NeuralNet, PolicyTarget, ValueTarget, OwnershipTarget
+from res_net_modules import ConvBlock, ResBlock, PolicyHead, ValueHead, OwnershipHead
 from util.torch_util import Shape
 
 
-NUM_ACTIONS = 9
+BOARD_LENGTH = 3
+NUM_ACTIONS = BOARD_LENGTH * BOARD_LENGTH
 NUM_PLAYERS = 2
+NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
 class TicTacToeNet(NeuralNet):
-    VALID_TARGET_NAMES = ['policy', 'value', 'opp_policy']
+    VALID_TARGET_NAMES = ['policy', 'value', 'opp_policy', 'ownership']
 
     def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64, n_res_blocks=9):
         for name in target_names:
@@ -31,6 +33,10 @@ class TicTacToeNet(NeuralNet):
         self.add_head(ValueHead(board_size, NUM_PLAYERS, n_conv_filters), ValueTarget('value', 1.5))
         if 'opp_policy' in target_names:
             self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('opp_policy', 0.15))
+        if 'ownership' in target_names:
+            shape = (NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES, BOARD_LENGTH, BOARD_LENGTH)
+            self.add_head(OwnershipHead(board_size, shape, n_conv_filters),
+                          OwnershipTarget('ownership', 0.15))
 
     def forward(self, x):
         x = self.conv_block(x)

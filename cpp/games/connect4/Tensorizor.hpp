@@ -8,8 +8,25 @@
 #include <games/connect4/GameState.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/MetaProgramming.hpp>
 
 namespace c4 {
+
+class OwnershipTarget {
+ public:
+  static constexpr const char* kName = "ownership";
+  static constexpr bool kApplySymmetry = true;
+  using Shape = eigen_util::Shape<kNumColumns, kNumRows>;
+  using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
+
+  static void tensorize(Tensor& tensor, const GameState& state) {
+    for (int row = 0; row < kNumRows; ++row) {
+      for (int col = 0; col < kNumColumns; ++col) {
+        tensor(row, col) = 1 + state.get_player_at(row, col);
+      }
+    }
+  }
+};
 
 class Tensorizor {
 public:
@@ -18,6 +35,8 @@ public:
 
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = GameStateTypes::Action;
+
+  using AuxTargetList = mp::TypeList<OwnershipTarget>;
 
   void clear() {}
   void receive_state_change(const GameState& state, const Action& action) {}
