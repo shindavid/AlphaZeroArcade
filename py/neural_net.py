@@ -142,12 +142,13 @@ class ScoreMarginTarget(LearningTarget):
         pdf_loss = nn.CrossEntropyLoss()
         cdf_loss = nn.MSELoss()
 
-        def loss(pdf_outputs: torch.Tensor, pdf_labels: torch.Tensor):
-            cdf_outputs = torch.cumsum(pdf_outputs, dim=1)
-            cdf_labels = torch.cumsum(pdf_labels, dim=1)
+        def loss(predicted_logits: torch.Tensor, actual_one_hot: torch.Tensor):
+            predicted_probs = predicted_logits.softmax(dim=1)
+            predicted_cdf = torch.cumsum(predicted_probs, dim=1)
+            actual_cdf = torch.cumsum(actual_one_hot, dim=1)
 
-            pdf_loss_val = pdf_loss(pdf_outputs, pdf_labels)
-            cdf_loss_val = cdf_loss(cdf_outputs, cdf_labels)
+            pdf_loss_val = pdf_loss(predicted_logits, actual_one_hot)
+            cdf_loss_val = cdf_loss(predicted_cdf, actual_cdf)
 
             return pdf_loss_val + cdf_loss_val
 
