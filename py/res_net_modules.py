@@ -83,7 +83,6 @@ class PolicyHead(nn.Module):
         self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
         self.batch = nn.BatchNorm2d(2)
         self.linear = nn.Linear(2 * board_size, self.policy_size)
-        self.do_print = True
 
     def forward(self, x):
         x = self.conv(x)
@@ -127,4 +126,42 @@ class ValueHead(nn.Module):
         x = x.view(-1, self.board_size)
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
+        return x
+
+
+class ScoreMarginHead(nn.Module):
+    def __init__(self, board_size: int, n_possible_score_margins: int, n_input_channels: int):
+        super(ScoreMarginHead, self).__init__()
+        self.board_size = board_size
+        self.conv = nn.Conv2d(n_input_channels, 1, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(1)
+        self.linear1 = nn.Linear(board_size, 256)
+        self.linear2 = nn.Linear(256, n_possible_score_margins)
+
+    def forward(self, x):
+        x = F.relu(self.batch(self.conv(x)))
+        x = x.view(-1, self.board_size)
+        x = F.relu(self.linear1(x))
+        x = self.linear2(x)
+        return x
+
+
+class OwnershipHead(nn.Module):
+    def __init__(self, board_size: int, output_shape: Shape, n_input_channels: int):
+        super(OwnershipHead, self).__init__()
+        self.board_size = board_size
+        self.output_shape = output_shape
+        self.output_size = math.prod(output_shape)
+
+        self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(2)
+        self.linear = nn.Linear(2 * board_size, self.output_size)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.batch(x)
+        x = F.relu(x)
+        x = x.view(-1, 2 * self.board_size)
+        x = self.linear(x)
+        x = x.view(-1, *self.output_shape)
         return x

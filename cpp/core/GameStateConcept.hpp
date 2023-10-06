@@ -28,6 +28,13 @@ concept GameStateConcept = requires(State state) {
   { util::decay_copy(State::kNumPlayers) } -> std::same_as<int>;
 
   /*
+   * The maximum number of symmetries.
+   */
+  { util::decay_copy(State::kMaxNumSymmetries) } -> std::same_as<int>;
+
+  { state.get_symmetry_indices() } -> std::same_as<std::bitset<State::kMaxNumSymmetries>>;
+
+  /*
    * The string that will be used as a delimiter to separate a sequence of action strings,
    * as returned by state.action_to_str().
    */

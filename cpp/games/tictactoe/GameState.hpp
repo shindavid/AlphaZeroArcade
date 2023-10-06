@@ -7,7 +7,9 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
+#include <common/SquareBoardSymmetryBase.hpp>
 #include <core/AbstractPlayer.hpp>
+#include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -43,17 +45,28 @@ public:
   static constexpr int kNumPlayers = tictactoe::kNumPlayers;
   static constexpr int kMaxNumLocalActions = kNumCells;
   static constexpr int kTypicalNumMovesPerGame = kNumCells;
+  static constexpr int kMaxNumSymmetries = 8;
+
   using ActionShape = Eigen::Sizes<kNumCells>;
+  using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
 
   static std::string action_delimiter() { return ""; }
 
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
   using Action = GameStateTypes::Action;
   using ActionMask = GameStateTypes::ActionMask;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
+
+  template <eigen_util::FixedTensorConcept Tensor>
+  core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
+    return common::SquareBoardSymmetries<Tensor, BoardShape>::get_symmetry(index);
+  }
+
+  SymmetryIndexSet get_symmetry_indices() const;
 
   core::seat_index_t get_current_player() const;
   GameOutcome apply_move(const Action& action);

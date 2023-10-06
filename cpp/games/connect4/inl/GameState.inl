@@ -15,6 +15,12 @@ inline std::size_t std::hash<c4::GameState>::operator()(const c4::GameState& sta
 
 namespace c4 {
 
+inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
+  SymmetryIndexSet set;
+  set.set();
+  return set;
+}
+
 inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
 }
@@ -88,7 +94,7 @@ inline int GameState::get_move_number() const {
 
 inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   int cp = get_current_player();
-  int index = _to_bit_index(col, row);
+  int index = _to_bit_index(row, col);
   bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask_;
   bool occupied_by_any_player = (mask_t(1) << index) & full_mask_;
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
@@ -123,7 +129,7 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
 
   for (int col = 0; col < kNumColumns; ++col) {
-    int index = _to_bit_index(col, row);
+    int index = _to_bit_index(row, col);
     bool occupied = (1UL << index) & full_mask_;
     bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
 
@@ -136,7 +142,7 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
   printf("|\n");
 }
 
-inline constexpr int GameState::_to_bit_index(column_t col, row_t row) {
+inline constexpr int GameState::_to_bit_index(row_t row, column_t col) {
   return 8 * col + row;
 }
 

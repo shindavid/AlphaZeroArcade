@@ -12,6 +12,7 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
+#include <util/MetaProgramming.hpp>
 #include <util/TorchUtil.hpp>
 
 namespace core {
@@ -37,6 +38,9 @@ struct GameStateTypes {
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActionsBound = GameState::ActionShape::total_size;
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
+  static constexpr int kMaxNumSymmetries = GameState::kMaxNumSymmetries;
+
+  using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 
   using GameOutcome = core::GameOutcome<kNumPlayers>;
 
@@ -98,13 +102,28 @@ struct GameStateTypes {
   static math::var_bindings_map_t get_var_bindings();
 };
 
+template<typename T>
+struct ExtractAuxTargetTensor {
+  using type = typename T::Tensor;
+};
+
+template<typename T>
+struct ToTorchTensor {
+  using type = torch::Tensor;
+};
+
 template<typename Tensorizor>
 struct TensorizorTypes {
-  static constexpr int kMaxNumSymmetries = Tensorizor::kMaxNumSymmetries;
   using InputTensor = typename Tensorizor::InputTensor;
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
   using InputScalar = typename InputTensor::Scalar;
-  using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
+  using AuxTargetList = typename Tensorizor::AuxTargetList;
+
+  using AuxTargetTensorList = mp::TransformTypeList_t<ExtractAuxTargetTensor, AuxTargetList>;
+  using AuxTargetTensorTuple = mp::TypeListToTuple_t<AuxTargetTensorList>;
+
+  using AuxTargetTorchTensorList = mp::TransformTypeList_t<ToTorchTensor, AuxTargetList>;
+  using AuxTargetTorchTensorTuple = mp::TypeListToTuple_t<AuxTargetTorchTensorList>;
 };
 
 }  // namespace core

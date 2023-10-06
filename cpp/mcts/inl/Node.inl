@@ -14,7 +14,7 @@ inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(
 , valid_action_mask(s.get_valid_actions())
 , num_valid_actions(eigen_util::count(valid_action_mask))
 , current_player(s.get_current_player())
-, sym_index(bitset_util::choose_random_on_index(tensorizor.get_symmetry_indices(s))) {}
+, sym_index(bitset_util::choose_random_on_index(state.get_symmetry_indices())) {}
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stats_t::stats_t() {

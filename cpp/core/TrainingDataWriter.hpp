@@ -37,6 +37,9 @@ public:
   using TensorizorTypes = typename core::TensorizorTypes<Tensorizor>;
 
   using GameOutcome = typename GameStateTypes::GameOutcome;
+  using AuxTargetList = typename TensorizorTypes::AuxTargetList;
+  using AuxTargetTensorTuple = typename TensorizorTypes::AuxTargetTensorTuple;
+  using AuxTargetTorchTensorTuple = typename TensorizorTypes::AuxTargetTorchTensorTuple;
 
   using InputShape = typename TensorizorTypes::InputShape;
   using PolicyShape = typename GameStateTypes::PolicyShape;
@@ -50,39 +53,22 @@ public:
   using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
   using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
 
-  using SymmetryTransform = AbstractSymmetryTransform<InputTensor, PolicyTensor>;
+  using PolicyTransform = AbstractSymmetryTransform<PolicyTensor>;
 
   static constexpr int kRowsPerChunk = 64;
+  static constexpr int kNumAuxTargets = mp::Length_v<AuxTargetList>;
 
   struct TensorGroup {
+    GameState state;
     InputTensor input;
     PolicyTensor policy;
     PolicyTensor opp_policy;
     ValueTensor value;
+    AuxTargetTensorTuple aux_targets;
     seat_index_t current_player;
+    symmetry_index_t sym_index;
   };
-
-  /*
-   * In order to support the opponent-reply auxiliary policy target (see Section 3.4 of the KataGo paper), we need to
-   * temporarily store the partially-written TensorGroup(s), to be completed after the opponent's reply. This demands
-   * sharing of per-game data across distinct MctsPlayer instances, which makes the GameData class the natural home
-   * for this data. This assumes that the MctsPlayer instances live in the same process, asn assumption that is enforced
-   * with a check in GameServerProxy.
-   *
-   * We store a vector of pending groups as opposed to a single group because we have data augmentation via symmetry
-   * transforms, and all the augmented data need to be updated with the opponent's reply.
-   *
-   * The last move of the game will not have a corresponding opponent reply. We deal with this by writing all zeros
-   * for the opponent reply policy in this case. The python training code masks out these rows when computing the
-   * loss for the opponent reply.
-   */
-  struct transform_group_t {
-    transform_group_t(SymmetryTransform* t, TensorGroup* g) : transform(t), group(g) {}
-
-    SymmetryTransform* transform;
-    TensorGroup* group;
-  };
-  using transform_group_vec_t = std::vector<transform_group_t>;
+  using group_vec_t = std::vector<TensorGroup*>;
 
   /*
    * A single game is recorded onto one or more DataChunk's.
@@ -93,15 +79,15 @@ public:
     ~DataChunk();
 
     TensorGroup& get_next_group();
-    void record_for_all(const GameOutcome& value);
+    void record_for_all(const GameState& state, const GameOutcome& value);
     int rows() const { return rows_; }
     bool full() const { return rows_ >= kRowsPerChunk; }
 
     const TensorGroup& get_group(int i) const { return tensors_[i]; }
 
   private:
-    TensorGroup* tensors_;
-    int rows_ = 0;
+   TensorGroup* tensors_;
+   int rows_ = 0;
   };
 
   using data_chunk_list_t = std::list<DataChunk>;
@@ -116,8 +102,8 @@ public:
   class GameData {
   public:
     TensorGroup& get_next_group();
-    void record_for_all(const GameOutcome& value);
-    void add_pending_group(SymmetryTransform* transform, TensorGroup* group);
+    void record_for_all(const GameState& state, const GameOutcome& value);
+    void add_pending_group(TensorGroup* group) { pending_groups_.push_back(group);  }
     bool contains_pending_groups() const { return !pending_groups_.empty(); }
     void commit_opp_reply_to_pending_groups(const PolicyTensor& opp_policy);
 
@@ -137,7 +123,7 @@ public:
 
     std::mutex mutex_;
     data_chunk_list_t chunks_;
-    transform_group_vec_t pending_groups_;  // for opponent-reply auxiliary policy target
+    group_vec_t pending_groups_;  // for opponent-reply auxiliary policy target
     const game_id_t id_;
     bool closed_ = false;
   };

@@ -39,6 +39,12 @@ public:
   using InputTensor = typename TensorizorTypes::InputTensor;
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
 
+  using InputShape = typename TensorizorTypes::InputShape;
+  using PolicyShape = typename GameStateTypes::PolicyShape;
+
+  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
+  using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
+
   using base_t = MctsPlayer<GameState, Tensorizor>;
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;

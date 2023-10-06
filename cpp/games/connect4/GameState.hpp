@@ -8,9 +8,11 @@
 #include <torch/torch.h>
 
 #include <core/AbstractPlayer.hpp>
+#include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
+#include <core/IdentityTransform.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
 #include <games/connect4/Constants.hpp>
@@ -27,6 +29,43 @@ struct std::hash<c4::GameState> {
 
 namespace c4 {
 
+template <eigen_util::FixedTensorConcept Tensor>
+struct Symmetries {
+  static constexpr int kNumSymmetries = 2;
+  using Transform = core::AbstractSymmetryTransform<Tensor>;
+  using Identity = core::IdentityTransform<Tensor>;
+  using transform_array_t = std::array<Transform*, kNumSymmetries>;
+
+  struct Refl : public Transform {
+    // last dimension will always be columns, which we want to reverse along
+    void apply(Tensor& t) override {
+      Tensor u = eigen_util::reverse(t, t.rank() - 1);
+      t = u;
+    }
+    void undo(Tensor& t) override { apply(t); }  // refl is its own inverse
+  };
+
+  static Transform* get_symmetry(core::symmetry_index_t index) {
+    return *(transforms().begin() + index);
+  }
+
+protected:
+  static transform_array_t transforms() {
+    transform_array_t arr { &transforms_struct_.identity_, &transforms_struct_.refl_ };
+    return arr;
+  }
+
+  struct transforms_struct_t {
+    Identity identity_;
+    Refl refl_;
+  };
+
+  static transforms_struct_t transforms_struct_;
+};
+
+template <eigen_util::FixedTensorConcept Tensor>
+Symmetries<Tensor>::transforms_struct_t Symmetries<Tensor>::transforms_struct_;
+
 /*
  * Bit order encoding for the board:
  *
@@ -42,7 +81,8 @@ namespace c4 {
  * Unlike the PascalPons package, we use 0-indexing for column indices.
  */
 class GameState {
-public:
+ public:
+  static constexpr int kMaxNumSymmetries = 2;
   static constexpr int kNumPlayers = c4::kNumPlayers;
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
@@ -53,10 +93,18 @@ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = GameStateTypes::Action;
   using ActionMask = GameStateTypes::ActionMask;
+  using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
   using player_name_array_t = GameStateTypes::player_name_array_t;
   using ValueArray = GameStateTypes::ValueArray;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
+
+  template <eigen_util::FixedTensorConcept Tensor>
+  core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
+    return Symmetries<Tensor>::get_symmetry(index);
+  }
+
+  SymmetryIndexSet get_symmetry_indices() const;
 
   core::seat_index_t get_current_player() const;
   GameOutcome apply_move(const Action& action);
@@ -65,14 +113,15 @@ public:
   std::string action_to_str(const Action& action) const { return std::to_string(action[0]); }
 
   core::seat_index_t get_player_at(int row, int col) const;
-  void dump(const Action* last_action=nullptr, const player_name_array_t* player_names=nullptr) const;
+  void dump(const Action* last_action = nullptr,
+            const player_name_array_t* player_names = nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
-private:
+ private:
   void row_dump(row_t row, column_t blink_column) const;
 
-  static constexpr int _to_bit_index(column_t col, row_t row);
+  static constexpr int _to_bit_index(row_t row, column_t col);
   static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
   static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell

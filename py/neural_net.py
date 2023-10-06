@@ -7,6 +7,7 @@ import os
 from typing import Dict, List, Optional
 
 import torch
+import torch.nn.functional as F
 from torch import nn as nn
 
 from util.torch_util import Shape
@@ -29,6 +30,13 @@ class LearningTarget:
         self.name = name
         self.loss_weight = loss_weight
 
+    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
+        """
+        Converts the labels produced by the c++ code into the format expected by the loss function.
+        By default, this is a no-op; derived classes can override this.
+        """
+        return labels
+
     @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
         pass
@@ -42,7 +50,7 @@ class LearningTarget:
         return None
 
     @abc.abstractmethod
-    def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> int:
+    def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
         pass
 
 
@@ -65,8 +73,8 @@ class PolicyTarget(LearningTarget):
         mask = label_sums != 0
         return mask
 
-    def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> int:
-        selected_moves = torch.argmax(outputs, dim=1)
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor, labels: torch.Tensor) -> float:
+        selected_moves = torch.argmax(predicted_logits, dim=1)
         correct_policy_preds = labels.gather(1, selected_moves.view(-1, 1))
         return int(sum(correct_policy_preds))
 
@@ -87,7 +95,7 @@ class ValueTarget(LearningTarget):
         """
         return nn.CrossEntropyLoss()
 
-    def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> int:
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor, labels: torch.Tensor) -> float:
         """
         Naively using the same implementation as PolicyTarget.get_num_correct_predictions() doesn't work for games that
         have draws. For example, in TicTacToe, if the true value is [0.5, 0.5], and the network outputs [0.4, 0.6], then
@@ -96,9 +104,87 @@ class ValueTarget(LearningTarget):
         Instead, in this example, we consider the output of [0.4, 0.6] to be correct, by virtue of the fact that
         abs([0.4, 0.6] - [0.5, 0.5]) = [0.1, 0.1] is "close enough" to [0, 0].
         """
-        value_output_probs = outputs.softmax(dim=1)
-        deltas = abs(value_output_probs - labels)
+        predicted_probs = predicted_logits.softmax(dim=1)
+        deltas = abs(predicted_probs - labels)
         return int(sum((deltas < 0.25).all(dim=1)))
+
+
+class ScoreMarginTarget(LearningTarget):
+    def __init__(self, name: str, loss_weight: float, max_score_margin: int,
+                 min_score_margin: Optional[int]=None):
+        """
+        min_score_margin defaults to -max_score_margin
+        """
+        super(ScoreMarginTarget, self).__init__(name, loss_weight)
+        self.max_score_margin = max_score_margin
+        self.min_score_margin = min_score_margin if min_score_margin is not None else -max_score_margin
+
+    def convert_labels(self, categories: torch.Tensor) -> torch.Tensor:
+        # categories -> one-hot
+        assert len(categories.shape) == 2 and categories.shape[1]==1, categories.shape
+        n = categories.shape[0]
+        one_hot = torch.zeros((n, self.max_score_margin - self.min_score_margin + 1))
+        index = categories[:, 0] - self.min_score_margin
+        one_hot[torch.arange(n), index.type(torch.int64)] = 1
+        return one_hot
+
+    def loss_fn(self) -> nn.Module:
+        """
+        For the loss, we have a pdf component and a cdf component.
+
+        For the pdf component, we use cross-entropy loss.
+
+        For the cdf component, we use MSE loss.
+
+        The arguments to the loss function are in pdf form, so the loss function has to do the work
+        of producting the cdf from the pdf.
+        """
+        pdf_loss = nn.CrossEntropyLoss()
+        cdf_loss = nn.MSELoss()
+
+        def loss(predicted_logits: torch.Tensor, actual_one_hot: torch.Tensor):
+            predicted_probs = predicted_logits.softmax(dim=1)
+            predicted_cdf = torch.cumsum(predicted_probs, dim=1)
+            actual_cdf = torch.cumsum(actual_one_hot, dim=1)
+
+            pdf_loss_val = pdf_loss(predicted_logits, actual_one_hot)
+            cdf_loss_val = cdf_loss(predicted_cdf, actual_cdf)
+
+            return pdf_loss_val + cdf_loss_val
+
+        return loss
+
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor, actual_one_hot: torch.Tensor) -> float:
+        return torch.sum(predicted_logits.softmax(dim=1) * actual_one_hot).item()
+
+
+class OwnershipTarget(LearningTarget):
+    def __init__(self, name: str, loss_weight: float):
+        super(OwnershipTarget, self).__init__(name, loss_weight)
+
+    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
+        return labels.type(torch.int64)  # needed for cross-entropy loss
+
+    def loss_fn(self) -> nn.Module:
+        """
+        The tensors passed into this loss function are expected to be of shape (N, K, *board),
+        where:
+
+        N = batch size
+        K = number of possible owners
+        *board = the shape of the board
+
+        For our loss function, we do a cross-entropy loss for each square, and then sum them up.
+
+        nn.CrossEntropyLoss nicely handles this exact type of input!
+        """
+        return nn.CrossEntropyLoss()
+
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor, actual_categories: torch.Tensor) -> float:
+        n = predicted_logits.shape[0]
+        predicted_categories = torch.argmax(predicted_logits, dim=1)
+        matches = (predicted_categories == actual_categories).float()
+        return matches.mean().item() * n
 
 
 class NeuralNet(nn.Module):

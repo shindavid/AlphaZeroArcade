@@ -28,6 +28,20 @@ template<int64_t... Is> struct is_eigen_shape<Eigen::Sizes<Is...>> { static cons
 template<typename T> inline constexpr bool is_eigen_shape_v = is_eigen_shape<T>::value;
 template <typename T> concept ShapeConcept = is_eigen_shape_v<T>;
 
+/*
+ * rank_v<Eigen::Sizes<...>> is the rank of the Eigen::Sizes.
+ */
+template<typename T> struct rank {};
+template<int64_t... Is> struct rank<Eigen::Sizes<Is...>> {
+  static constexpr int value = sizeof...(Is);
+};
+template<typename T> inline constexpr int rank_v = rank<T>::value;
+
+/*
+ * 10 == extract_dim_v<0, Eigen::Sizes<10, 20, 30>>
+ * 20 == extract_dim_v<1, Eigen::Sizes<10, 20, 30>>
+ * 30 == extract_dim_v<2, Eigen::Sizes<10, 20, 30>>
+ */
 template <int N, typename T>
 struct extract_dim {};
 
@@ -180,35 +194,6 @@ struct alignment_safe {
 };
 template<FixedTensorConcept FixedTensorT> constexpr bool alignment_safe_v = alignment_safe<FixedTensorT>::value;
 
-
-/*
- * The naive way to copy to a Eigen::TensorFixedSize is this:
- *
- * dst = src;
- *
- * However, this results in a segfault if dst is not aligned. See here for details:
- * https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
- *
- * The above documentation implies that using the Eigen::DontAlign flag when constructing the destination tensor type
- * should fix the problem. However, empirically this does not seem to work.
- *
- * packed_fixed_tensor_cp() is a workaround that avoids the segfault. Whether the destination is aligned or not is
- * by default determined by the size of the destination tensor, but can be overridden by the Aligned template parameter.
- * If Aligned is true, the function simply performs the naive assignment. Otherwise, it uses memcpy().
- *
- * The usage to replace the above line is:
- *
- * packed_fixed_tensor_cp(dst, src);
- *
- * Note that the standard warning about aliasing in Eigen applies: in some cases you should call:
- *
- * packed_fixed_tensor_cp(dst, src.eval());
- *
- * in order to avoid potential aliasing. See: https://eigen.tuxfamily.org/dox/group__TopicAliasing.html
- */
-template<FixedTensorConcept DstTensorT, typename SrcTensorT, bool Aligned=alignment_safe_v<DstTensorT>>
-void packed_fixed_tensor_cp(DstTensorT& dst, const SrcTensorT& src);
-
 /*
  * The following are equivalent:
  *
@@ -222,22 +207,6 @@ template<typename Scalar, ShapeConcept Shape> struct extract_shape<fixed_tensor_
   using type = Shape;
 };
 template<typename T> using extract_shape_t = typename extract_shape<T>::type;
-
-/*
- * Accepts an eigen Tensor and an int row.
- *
- * Reinterprets the tensor as being of shape (N, Shape...) and returns the row-th slice of the tensor, as an
- * Eigen::TensorFixedSize of shape Shape.
- *
- * If the input tensor is a TensorFixedSize, then the shape is inferred from the input tensor's shape. Otherwise, the
- * shape needs to be passed as a template parameter.
- *
- * Beware! Slices are not aligned, which breaks some assumptions made by Eigen. Use at your own risk!
- */
-template<FixedTensorConcept TensorT> const auto& slice(const TensorT& tensor, int row);
-template<FixedTensorConcept TensorT> auto& slice(TensorT& tensor, int row);
-template<ShapeConcept Shape, typename TensorT> const auto& slice(const TensorT& tensor, int row);
-template<ShapeConcept Shape, typename TensorT> auto& slice(TensorT& tensor, int row);
 
 /*
  * serialize() copies the bytes from tensor.data() to buf, checking to make sure it won't overflow
@@ -261,19 +230,6 @@ template<typename Array> auto softmax(const Array& arr);
  * Note that this returns a tensor *operator*, not a tensor.
  */
 template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim);
-
-/*
- * Flattens a bool tensor and returns a std::bitset of the same size. This is useful for shrinking the memory
- * footprint of a bool tensor, which is 8x larger than a bitset.
- */
-template<ShapeConcept Shape>
-auto fixed_bool_tensor_to_std_bitset(const Eigen::TensorFixedSize<bool, Shape, Eigen::RowMajor>& tensor);
-
-/*
- * Inverse of fixed_bool_tensor_to_std_bitset().
- */
-template<ShapeConcept Shape, size_t N>
-auto std_bitset_to_fixed_bool_tensor(const std::bitset<N>& bitset);
 
 /*
  * Accepts a D-dimensional tensor. Randomly samples an index from the tensor, with each index
@@ -334,12 +290,6 @@ template<typename TensorT> typename TensorT::Scalar max(const TensorT& tensor);
 template<typename TensorT> typename TensorT::Scalar min(const TensorT& tensor);
 template<typename TensorT> bool any(const TensorT& tensor);
 template<typename TensorT> int count(const TensorT& tensor);
-
-/*
- * Multiplies the positive elements of array by s.
- */
-template<typename Scalar, int N> void positive_scale(Eigen::Array<Scalar, N, 1>& array, Scalar s);
-
 
 /*
  * left_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]

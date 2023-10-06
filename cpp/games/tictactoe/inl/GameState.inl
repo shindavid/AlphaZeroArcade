@@ -1,10 +1,18 @@
 #include <games/tictactoe/GameState.hpp>
 
+#include <common/SquareBoardSymmetryBase.hpp>
+
 inline std::size_t std::hash<tictactoe::GameState>::operator()(const tictactoe::GameState& state) const {
   return state.hash();
 }
 
 namespace tictactoe {
+
+inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
+  SymmetryIndexSet set;
+  set.set();
+  return set;
+}
 
 inline core::seat_index_t GameState::get_current_player() const {
   return std::popcount(full_mask_) % 2;
