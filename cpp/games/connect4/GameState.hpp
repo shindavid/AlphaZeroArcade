@@ -121,7 +121,7 @@ class GameState {
  private:
   void row_dump(row_t row, column_t blink_column) const;
 
-  static constexpr int _to_bit_index(column_t col, row_t row);
+  static constexpr int _to_bit_index(row_t row, column_t col);
   static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
   static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell

@@ -16,7 +16,7 @@ class OwnershipTarget {
  public:
   static constexpr const char* kName = "ownership";
   static constexpr bool kApplySymmetry = true;
-  using Shape = eigen_util::Shape<kNumColumns, kNumRows>;
+  using Shape = eigen_util::Shape<kNumRows, kNumColumns>;
   using Tensor = Eigen::TensorFixedSize<int8_t, Shape, Eigen::RowMajor>;
 
   static void tensorize(Tensor& tensor, const GameState& state, core::seat_index_t cp) {
@@ -24,15 +24,15 @@ class OwnershipTarget {
       for (int col = 0; col < kNumColumns; ++col) {
         core::seat_index_t p = state.get_player_at(row, col);
         int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
-        tensor(col, row) = val;
+        tensor(row, col) = val;
       }
     }
   }
 };
 
 class Tensorizor {
-public:
-  using InputShape = eigen_util::Shape<kNumPlayers, kNumColumns, kNumRows>;
+ public:
+  using InputShape = eigen_util::Shape<kNumPlayers, kNumRows, kNumColumns>;
   using InputTensor = Eigen::TensorFixedSize<bool, InputShape, Eigen::RowMajor>;
 
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -48,8 +48,8 @@ public:
     for (int row = 0; row < kNumRows; ++row) {
       for (int col = 0; col < kNumColumns; ++col) {
         core::seat_index_t p = state.get_player_at(row, col);
-        tensor(0, col, row) = (p == cp);
-        tensor(1, col, row) = (p == 1 - cp);
+        tensor(0, row, col) = (p == cp);
+        tensor(1, row, col) = (p == 1 - cp);
       }
     }
   }

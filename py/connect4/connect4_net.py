@@ -35,7 +35,7 @@ class C4Net(NeuralNet):
         if 'opp_policy' in target_names:
             self.add_head(PolicyHead(board_size, NUM_COLUMNS, n_conv_filters), PolicyTarget('opp_policy', 0.15))
         if 'ownership' in target_names:
-            shape = (NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES, NUM_COLUMNS, NUM_ROWS)
+            shape = (NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES, NUM_ROWS, NUM_COLUMNS)
             self.add_head(OwnershipHead(board_size, shape, n_conv_filters),
                           OwnershipTarget('ownership', 0.15))
 
