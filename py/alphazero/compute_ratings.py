@@ -512,7 +512,9 @@ def main():
     for arena in arenas:
         arena.prepare()
 
-    retry_count = 5
+    num_retries = 5  # because of sqlite3 race condition
+
+    retry_count = num_retries
     while True:
         try:
             [arena.dump_x_var_data() for arena in arenas]
@@ -521,6 +523,7 @@ def main():
             if not queue:
                 if Args.daemon_mode:
                     time.sleep(5)
+                    retry_count = num_retries
                     continue
                 else:
                     return
@@ -529,6 +532,7 @@ def main():
             for item in reversed(queue):
                 item.arena.process(item)
                 break
+            retry_count = num_retries
         except sqlite3.OperationalError as e:
             timed_print(f'Caught sqlite3.OperationalError: {e}')
             retry_count -= 1
