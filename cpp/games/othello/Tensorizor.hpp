@@ -15,8 +15,8 @@ class ScoreMarginTarget {
   using Shape = eigen_util::Shape<1>;
   using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
 
-  static void tensorize(Tensor& tensor, const GameState& state) {
-    tensor(0) = state.get_count(kBlack) - state.get_count(kWhite);
+  static void tensorize(Tensor& tensor, const GameState& state, core::seat_index_t cp) {
+    tensor(0) = state.get_count(cp) - state.get_count(1 - cp);
   }
 };
 
@@ -27,10 +27,12 @@ class OwnershipTarget {
   using Shape = eigen_util::Shape<kBoardDimension, kBoardDimension>;
   using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
 
-  static void tensorize(Tensor& tensor, const GameState& state) {
+  static void tensorize(Tensor& tensor, const GameState& state, core::seat_index_t cp) {
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
-        tensor(row, col) = 1 + state.get_player_at(row, col);
+        core::seat_index_t p = state.get_player_at(row, col);
+        int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
+        tensor(row, col) = val;
       }
     }
   }

@@ -71,7 +71,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(
     mp::constexpr_for<0, kNumAuxTargets, 1>([&](auto i) {
       using AuxTarget = mp::TypeAt_t<AuxTargetList, i>;
       auto& aux_tensor = std::get<i>(group.aux_targets);
-      AuxTarget::tensorize(aux_tensor, state);
+      AuxTarget::tensorize(aux_tensor, state, group.state.get_current_player());
       AuxTargetHelper<AuxTarget::kApplySymmetry>::apply(aux_tensor, group.state, group.sym_index);
     });
   }

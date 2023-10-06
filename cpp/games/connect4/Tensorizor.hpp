@@ -19,10 +19,12 @@ class OwnershipTarget {
   using Shape = eigen_util::Shape<kNumColumns, kNumRows>;
   using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
 
-  static void tensorize(Tensor& tensor, const GameState& state) {
+  static void tensorize(Tensor& tensor, const GameState& state, core::seat_index_t cp) {
     for (int row = 0; row < kNumRows; ++row) {
       for (int col = 0; col < kNumColumns; ++col) {
-        tensor(row, col) = 1 + state.get_player_at(row, col);
+        core::seat_index_t p = state.get_player_at(row, col);
+        int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
+        tensor(col, row) = val;
       }
     }
   }
