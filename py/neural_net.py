@@ -159,9 +159,6 @@ class ScoreMarginTarget(LearningTarget):
 
 class OwnershipTarget(LearningTarget):
     def __init__(self, name: str, loss_weight: float):
-        """
-        min_score_margin defaults to -max_score_margin
-        """
         super(OwnershipTarget, self).__init__(name, loss_weight)
 
     def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
@@ -183,8 +180,10 @@ class OwnershipTarget(LearningTarget):
         return nn.CrossEntropyLoss()
 
     def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
-        # TODO
-        return 0
+        n = outputs.shape[0]
+        predicted_owners = torch.argmax(outputs, dim=1)
+        matches = (predicted_owners == labels).float()
+        return matches.mean().item() * n
 
 
 class NeuralNet(nn.Module):
