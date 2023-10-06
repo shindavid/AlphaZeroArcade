@@ -17,7 +17,7 @@ class OwnershipTarget {
   static constexpr const char* kName = "ownership";
   static constexpr bool kApplySymmetry = true;
   using Shape = eigen_util::Shape<kNumColumns, kNumRows>;
-  using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
+  using Tensor = Eigen::TensorFixedSize<int8_t, Shape, Eigen::RowMajor>;
 
   static void tensorize(Tensor& tensor, const GameState& state, core::seat_index_t cp) {
     for (int row = 0; row < kNumRows; ++row) {
