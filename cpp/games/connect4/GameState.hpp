@@ -38,8 +38,11 @@ struct Symmetries {
 
   struct Refl : public Transform {
     // last dimension will always be columns, which we want to reverse along
-    void apply(Tensor& t) override { eigen_util::reverse(t, t.rank() - 1); }
-    void undo(Tensor& t) override { apply(t); }  // symmetric transform
+    void apply(Tensor& t) override {
+      Tensor u = eigen_util::reverse(t, t.rank() - 1);
+      t = u;
+    }
+    void undo(Tensor& t) override { apply(t); }  // refl is its own inverse
   };
 
   static Transform* get_symmetry(core::symmetry_index_t index) {
