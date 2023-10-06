@@ -434,7 +434,6 @@ class AlphaZeroManager:
                 num_workers=4,
                 pin_memory=True,
                 shuffle=True)
-            assert games_dataset.n_total_games >= self.n_gen0_games
 
             net, optimizer = self.get_net_and_optimizer(loader)
             games_dataset.set_key_order(net.target_names())
@@ -597,16 +596,25 @@ class TrainingSubStats:
     def loss(self):
         return self.loss_num / self.den if self.den else 0.0
 
-    def dump(self):
-        tuples = [
-            (' accuracy:', self.accuracy()),
-            (' loss:', self.loss()),
-        ]
-        max_str_len = max([len(t[0]) for t in tuples]) + TrainingSubStats.max_descr_len
-        for key, value in tuples:
-            full_key = self.descr + key
-            print(f'{full_key.ljust(max_str_len)} %8.6f' % value)
+    def dump(self, total_loss):
+        output = [self.descr.rjust(TrainingSubStats.max_descr_len)]
 
+        output.append('   | accuracy: %8.6f   ' % self.accuracy())
+
+        loss = self.loss()
+        weight = self.target.loss_weight
+        loss_pct = 100. * loss * weight / total_loss if total_loss else 0.0
+        output.append('loss: %8.6f * %5.3f = %8.6f [%6.3f%%]' % (
+            loss, weight, loss * weight, loss_pct))
+
+        print(''.join(output))
+
+    @staticmethod
+    def dump_total_loss(total_loss):
+        output = [''.rjust(TrainingSubStats.max_descr_len)]
+        output.append('                    ')  # accuracy - 6 for 'total_'
+        output.append('total_loss:                  = %8.6f' % total_loss)
+        print(''.join(output))
 
 class TrainingStats:
     def __init__(self, net: NeuralNet):
@@ -617,5 +625,11 @@ class TrainingStats:
             substats.update(results)
 
     def dump(self):
+        total_loss = 0
         for substats in self.substats_list:
-            substats.dump()
+            total_loss += substats.loss() * substats.target.loss_weight
+
+        for substats in self.substats_list:
+            substats.dump(total_loss)
+
+        TrainingSubStats.dump_total_loss(total_loss)

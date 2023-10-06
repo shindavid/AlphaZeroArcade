@@ -24,15 +24,14 @@ class OwnershipTarget {
  public:
   static constexpr const char* kName = "ownership";
   static constexpr bool kApplySymmetry = true;
-  using Shape = eigen_util::Shape<kNumPlayers+1, kBoardDimension, kBoardDimension>;
-  using Tensor = Eigen::TensorFixedSize<bool, Shape, Eigen::RowMajor>;
+  using Shape = eigen_util::Shape<kBoardDimension, kBoardDimension>;
+  using Tensor = Eigen::TensorFixedSize<int, Shape, Eigen::RowMajor>;
 
   static void tensorize(Tensor& tensor, const GameState& state) {
     tensor.setZero();
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
-        int k = 1 + state.get_player_at(row, col);
-        tensor(k, row, col) = 1;
+        tensor(row, col) = 1 + state.get_player_at(row, col);
       }
     }
   }

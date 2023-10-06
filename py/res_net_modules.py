@@ -148,7 +148,7 @@ class ScoreMarginHead(nn.Module):
 
 class OwnershipHead(nn.Module):
     def __init__(self, board_size: int, output_shape: Shape, n_input_channels: int):
-        super(PolicyHead, self).__init__()
+        super(OwnershipHead, self).__init__()
         self.board_size = board_size
         self.output_shape = output_shape
         self.output_size = math.prod(output_shape)

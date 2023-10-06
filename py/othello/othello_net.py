@@ -41,7 +41,7 @@ class OthelloNet(NeuralNet):
         if 'ownership' in target_names:
             shape = (NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES, BOARD_LENGTH, BOARD_LENGTH)
             self.add_head(OwnershipHead(board_size, shape, n_conv_filters),
-                          OwnershipTarget('ownership', 0.005))
+                          OwnershipTarget('ownership', 0.15))
 
     def forward(self, x):
         x = self.conv_block(x)

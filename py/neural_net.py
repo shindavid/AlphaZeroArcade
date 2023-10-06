@@ -30,16 +30,16 @@ class LearningTarget:
         self.name = name
         self.loss_weight = loss_weight
 
-    @abc.abstractmethod
-    def loss_fn(self) -> nn.Module:
-        pass
-
     def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
         """
         Converts the labels produced by the c++ code into the format expected by the loss function.
         By default, this is a no-op; derived classes can override this.
         """
         return labels
+
+    @abc.abstractmethod
+    def loss_fn(self) -> nn.Module:
+        pass
 
     def get_mask(self, labels: torch.Tensor) -> Optional[torch.Tensor]:
         """
@@ -115,9 +115,18 @@ class ScoreMarginTarget(LearningTarget):
         """
         min_score_margin defaults to -max_score_margin
         """
-        super(ValueTarget, self).__init__(name, loss_weight)
+        super(ScoreMarginTarget, self).__init__(name, loss_weight)
         self.max_score_margin = max_score_margin
         self.min_score_margin = min_score_margin if min_score_margin is not None else -max_score_margin
+
+    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
+        # converts label from (min, max) to a one-hot encoding
+        assert len(labels.shape) == 2 and labels.shape[1]==1, labels.shape
+        n = labels.shape[0]
+        output = torch.zeros((n, self.max_score_margin - self.min_score_margin + 1))
+        index = labels[:, 0] - self.min_score_margin
+        output[torch.arange(n), index.type(torch.int64)] = 1
+        return output
 
     def loss_fn(self) -> nn.Module:
         """
@@ -144,13 +153,6 @@ class ScoreMarginTarget(LearningTarget):
 
         return loss
 
-    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
-        assert len(labels.shape) == 2 and labels.shape[1]==1, labels.shape
-        n = labels.shape[0]
-        output = torch.zeros((n, self.max_score_margin - self.min_score_margin + 1))
-        output.scatter_(1, labels - self.min_score_margin, 1)
-        return output
-
     def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
         return torch.sum(outputs.softmax(dim=1) * labels).item()
 
@@ -160,7 +162,10 @@ class OwnershipTarget(LearningTarget):
         """
         min_score_margin defaults to -max_score_margin
         """
-        super(ValueTarget, self).__init__(name, loss_weight)
+        super(OwnershipTarget, self).__init__(name, loss_weight)
+
+    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
+        return labels.type(torch.int64)  # needed for cross-entropy loss
 
     def loss_fn(self) -> nn.Module:
         """
@@ -172,31 +177,10 @@ class OwnershipTarget(LearningTarget):
         *board = the shape of the board
 
         For our loss function, we do a cross-entropy loss for each square, and then sum them up.
+
+        nn.CrossEntropyLoss nicely handles this exact type of input!
         """
-        ce_loss = nn.CrossEntropyLoss()
-
-        def loss(outputs: torch.Tensor, labels: torch.Tensor):
-            extra_dims = outputs.shape[2:]
-
-            # Initializing total loss
-            total_loss = 0.0
-
-            # Iterating over all possible board positions
-            for index in torch.cartesian_prod(*[torch.arange(dim) for dim in extra_dims]):
-
-                # Slicing the tensor for the current combination
-                slice_outputs = outputs[(...,) + tuple(index)]
-                slice_labels = labels[(...,) + tuple(index)]
-
-                # Compute the CrossEntropyLoss for the slice
-                loss = ce_loss(slice_outputs, slice_labels)
-
-                # Accumulate the loss
-                total_loss += loss.item()
-
-            return total_loss
-
-        return loss
+        return nn.CrossEntropyLoss()
 
     def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
         # TODO
