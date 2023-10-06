@@ -1,6 +1,6 @@
-#pragma once
-
 #include <games/connect4/players/OracleGradedMctsPlayer.hpp>
+
+#include <util/Asserts.hpp>
 
 #include <iostream>
 
@@ -72,7 +72,7 @@ inline OracleGradedMctsPlayer::Action OracleGradedMctsPlayer::get_action(
     PerfectOracle *oracle = grader_->oracle();
     auto result = oracle->query(move_history_);
     if (result.best_score >= 0) {  // winning or drawn position
-      assert(search_mode != base_t::kRawPolicy);
+      util::release_assert(search_mode != base_t::kRawPolicy);
       auto policy_prior = GameStateTypes::local_to_global(mcts_search_results->policy_prior, valid_actions);
       GameStateTypes::normalize(valid_actions, policy_prior);
       PolicyArray& policy_prior_array = eigen_util::reinterpret_as_array(policy_prior);

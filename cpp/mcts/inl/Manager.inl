@@ -3,6 +3,7 @@
 #include <boost/filesystem.hpp>
 
 #include <mcts/TypeDefs.hpp>
+#include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 
 namespace mcts {
@@ -133,7 +134,7 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchParams* search_params) {
-  assert(!shared_data_.search_active);
+  util::release_assert(!shared_data_.search_active);
   shared_data_.search_active = true;
   num_active_search_threads_ = num_search_threads();
 
@@ -149,7 +150,7 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchPar
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::wait_for_search_threads() {
-  assert(shared_data_.search_active);
+  util::release_assert(shared_data_.search_active);
 
   for (auto* thread : search_threads_) {
     thread->join();

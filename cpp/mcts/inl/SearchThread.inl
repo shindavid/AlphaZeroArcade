@@ -1,5 +1,7 @@
 #include <mcts/SearchThread.hpp>
 
+#include <util/Asserts.hpp>
+
 #include <boost/algorithm/string.hpp>
 
 #include <cmath>
@@ -97,7 +99,6 @@ inline void SearchThread<GameState, Tensorizor>::visit(
 
   evaluation_result_t data = evaluate(tree);
   NNEvaluation* evaluation = data.evaluation.get();
-  assert(evaluation);
 
   if (data.backpropagated_virtual_loss) {
     if (mcts::kEnableDebug) {
@@ -247,7 +248,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
   }
 
   data->backpropagated_virtual_loss = true;
-  assert(data->evaluation.get() == nullptr);
+  util::debug_assert(data->evaluation.get() == nullptr);
 
   auto& evaluation_data = tree->evaluation_data();
 

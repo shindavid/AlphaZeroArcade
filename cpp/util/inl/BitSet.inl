@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
 
@@ -76,7 +77,7 @@ template<size_t N> int count_on_indices_before(const std::bitset<N>& bitset, int
  */
 template<size_t N> int choose_random_on_index(const std::bitset<N>& bitset) {
   int upper = bitset.count();
-  assert(upper > 0);
+  util::release_assert(upper > 0);
   int c = 1 + util::Random::uniform_sample(0, upper);
   int p = 0;
   for (; c; ++p) c -= bitset[p];
@@ -90,7 +91,7 @@ template<size_t N> int choose_random_on_index(const std::bitset<N>& bitset) {
  */
 template<size_t N> int choose_random_off_index(const std::bitset<N>& bitset) {
   int upper = N - bitset.count();
-  assert(upper > 0);
+  util::release_assert(upper > 0);
   int c = 1 + util::Random::uniform_sample(0, upper);
   int p = 0;
   for (; c; ++p) c -= not bitset[p];

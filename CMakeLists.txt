@@ -10,9 +10,9 @@ if(CONDA_PREFIX)
     link_directories(${CONDA_PREFIX}/lib)
 endif()
 
-if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
-    add_definitions(-DNDEBUG)
-endif()
+# We enabled NDEBUG even for debug builds because a gcc bug leads to a spurious assert() deep
+# in the eigen3 library
+add_definitions(-DNDEBUG)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})

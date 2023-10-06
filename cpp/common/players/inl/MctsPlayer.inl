@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <mcts/SearchResultsDumper.hpp>
+#include <util/Asserts.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
@@ -199,7 +200,7 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
     verbose_info_->initialized = true;
   }
   Action action = eigen_util::sample(policy);
-  assert(valid_actions(action));
+  util::debug_assert(valid_actions(action));
   return action;
 }
 

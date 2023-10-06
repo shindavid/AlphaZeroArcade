@@ -1,5 +1,7 @@
 #include <mcts/NNEvaluationService.hpp>
 
+#include <util/Asserts.hpp>
+
 namespace mcts {
 
 template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -227,8 +229,8 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   std::unique_lock batch_metadata_lock(batch_metadata_.mutex);
   std::unique_lock batch_data_lock(batch_data_.mutex);
 
-  assert(batch_metadata_.reserve_index > 0);
-  assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
+  util::debug_assert(batch_metadata_.reserve_index > 0);
+  util::debug_assert(batch_metadata_.reserve_index == batch_metadata_.commit_count);
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
@@ -343,12 +345,12 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
   request.thread_profiler->record(SearchThreadRegion::kMisc);
 
   int my_index = batch_metadata_.reserve_index;
-  assert(my_index < batch_size_limit_);
+  util::debug_assert(my_index < batch_size_limit_);
   batch_metadata_.reserve_index++;
   if (my_index == 0) {
     deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
   }
-  assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
+  util::debug_assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
 
   const char* func = __func__;
   if (mcts::kEnableDebug) {
@@ -437,7 +439,7 @@ template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Te
 void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock)
 {
-  assert(batch_metadata_.unread_count > 0);
+  util::debug_assert(batch_metadata_.unread_count > 0);
   batch_metadata_.unread_count--;
 
   const char* func = __func__;
