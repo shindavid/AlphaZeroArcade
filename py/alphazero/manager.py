@@ -194,11 +194,14 @@ class AlphaZeroManager:
             bin_tgt = self.copy_binary(bin_src)
             self._binary_path = bin_tgt
             timed_print(f'Using binary {bin_src} (copied to {bin_tgt})')
-        elif len(candidates) == 1:
-            self._binary_path = os.path.join(self.bins_dir, candidates[0])
-            timed_print(f'Reusing previously copied binary {self._binary_path}')
         else:
-            raise Exception(f'Multiple binaries found in {self.bins_dir}. Please specify one with --binary-path')
+            # get the candidate with the most recent mtime:
+            candidates = [os.path.join(self.bins_dir, c) for c in candidates]
+            candidates = [(os.path.getmtime(c), c) for c in candidates]
+            candidates.sort()
+            bin_tgt = candidates[-1][1]
+            self._binary_path = bin_tgt
+            timed_print(f'Using most-recently used binary: {bin_tgt}')
 
         return self._binary_path
 
