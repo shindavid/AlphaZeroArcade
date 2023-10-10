@@ -242,6 +242,8 @@ def main():
         for tag in Args.tags:
             data_list.extend(make_rating_data_list(tag))
         viz = ProgressVisualizer(data_list)
+
+        curdoc().title = Args.game
         curdoc().add_root(viz.plot())
 
 
