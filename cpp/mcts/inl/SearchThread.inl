@@ -338,10 +338,10 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     using ScalarT = typename PVec::Scalar;
     constexpr int kNumCols1 = PolicyShape::count;
     constexpr int kNumCols2 = 8;
-    using ArrayT1 = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols1, 0, PVec::MaxRowsAtCompileTime>;
-    using ArrayT2 = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols2, 0, PVec::MaxRowsAtCompileTime>;
+    using ArrayT = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols1 + kNumCols2, 0, PVec::MaxRowsAtCompileTime>;
 
-    ArrayT1 A(P.rows(), kNumCols1);
+    ArrayT A(P.rows(), kNumCols1 + kNumCols2);
+    A.setZero();
     const ActionMask& valid_actions = tree->stable_data().valid_action_mask;
     const bool* data = valid_actions.data();
     int c = 0;
@@ -351,46 +351,40 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
       for (int j = 0; j < kNumCols1; ++j) {
         A(c, j) = action[j];
       }
+      c++;
     }
 
-    std::ostringstream ss1;
-    ss1 << A.transpose();
-    std::string s1 = ss1.str();
+    int i = kNumCols1;
+    A.col(i++) = P;
+    A.col(i++) = stats.V;
+    A.col(i++) = stats.PW;
+    A.col(i++) = stats.PL;
+    A.col(i++) = stats.E;
+    A.col(i++) = stats.RN;
+    A.col(i++) = stats.VN;
+    A.col(i++) = stats.PUCT;
 
-    std::vector<std::string> s1_lines;
-    boost::split(s1_lines, s1, boost::is_any_of("\n"));
+    std::ostringstream ss;
+    ss << A.transpose();
+    std::string s = ss.str();
 
-    printer << "valid: " << s1_lines[0] << std::endl;
-    for (int i = 1; i < kNumCols1; ++i) {
-      printer << "       " << s1_lines[i] << std::endl;
+    std::vector<std::string> s_lines;
+    boost::split(s_lines, s, boost::is_any_of("\n"));
+
+    i = 0;
+    printer << "valid: " << s_lines[i++] << std::endl;
+    while (i < kNumCols1) {
+      printer << "       " << s_lines[i++] << std::endl;
     }
 
-    ArrayT2 M(P.rows(), kNumCols2);
-
-    M.col(0) = P;
-    M.col(1) = stats.V;
-    M.col(2) = stats.PW;
-    M.col(3) = stats.PL;
-    M.col(4) = stats.E;
-    M.col(5) = stats.RN;
-    M.col(6) = stats.VN;
-    M.col(7) = stats.PUCT;
-
-    std::ostringstream ss2;
-    ss2 << M.transpose();
-    std::string s2 = ss2.str();
-
-    std::vector<std::string> s2_lines;
-    boost::split(s2_lines, s2, boost::is_any_of("\n"));
-
-    printer << "P:     " << s2_lines[0] << std::endl;
-    printer << "V:     " << s2_lines[1] << std::endl;
-    printer << "PW:    " << s2_lines[2] << std::endl;
-    printer << "PL:    " << s2_lines[3] << std::endl;
-    printer << "E:     " << s2_lines[4] << std::endl;
-    printer << "RN:    " << s2_lines[5] << std::endl;
-    printer << "VN:    " << s2_lines[6] << std::endl;
-    printer << "PUCT:  " << s2_lines[7] << std::endl;
+    printer << "P:     " << s_lines[i++] << std::endl;
+    printer << "V:     " << s_lines[i++] << std::endl;
+    printer << "PW:    " << s_lines[i++] << std::endl;
+    printer << "PL:    " << s_lines[i++] << std::endl;
+    printer << "E:     " << s_lines[i++] << std::endl;
+    printer << "RN:    " << s_lines[i++] << std::endl;
+    printer << "VN:    " << s_lines[i++] << std::endl;
+    printer << "PUCT:  " << s_lines[i++] << std::endl;
 
     printer << "argmax: " << argmax_index << std::endl;
     printer << "*************" << std::endl;
