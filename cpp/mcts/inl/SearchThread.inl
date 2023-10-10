@@ -307,7 +307,7 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
   using PVec = LocalPolicyArray;
 
   const PVec& P = stats.P;
-  const PVec& N = stats.N;
+  const PVec& N = stats.E;  // we use local variable name "N" here to match KataGo description
   const PVec& VN = stats.VN;
   PVec& PUCT = stats.PUCT;
 
@@ -372,9 +372,9 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     M.col(2) = stats.PW;
     M.col(3) = stats.PL;
     M.col(4) = stats.E;
-    M.col(5) = N;
+    M.col(5) = stats.RN;
     M.col(6) = stats.VN;
-    M.col(7) = PUCT;
+    M.col(7) = stats.PUCT;
 
     std::ostringstream ss2;
     ss2 << M.transpose();
@@ -388,7 +388,7 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     printer << "PW:    " << s2_lines[2] << std::endl;
     printer << "PL:    " << s2_lines[3] << std::endl;
     printer << "E:     " << s2_lines[4] << std::endl;
-    printer << "N:     " << s2_lines[5] << std::endl;
+    printer << "RN:    " << s2_lines[5] << std::endl;
     printer << "VN:    " << s2_lines[6] << std::endl;
     printer << "PUCT:  " << s2_lines[7] << std::endl;
 

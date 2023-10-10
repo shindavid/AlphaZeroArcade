@@ -19,7 +19,7 @@ struct PUCTStats {
   using dtype = torch_util::dtype;
 
   static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
-  static constexpr float eps = 1e-6;  // needed when N == 0
+  static constexpr float eps = 1e-6;  // needed when RN == 0
 
   PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params, const Node* tree, bool is_root);
 
@@ -29,7 +29,7 @@ struct PUCTStats {
   LocalPolicyArray PW;  // provably-winning
   LocalPolicyArray PL;  // provably-losing
   LocalPolicyArray E;  // edge count
-  LocalPolicyArray N;  // real count
+  LocalPolicyArray RN;  // real count
   LocalPolicyArray VN;  // virtual count
   LocalPolicyArray PUCT;
 };

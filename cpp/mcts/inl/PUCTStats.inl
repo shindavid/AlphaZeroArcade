@@ -13,7 +13,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
 , PW(P.rows())
 , PL(P.rows())
 , E(P.rows())
-, N(P.rows())
+, RN(P.rows())
 , VN(P.rows())
 , PUCT(P.rows())
 {
@@ -21,7 +21,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
   PW.setZero();
   PL.setZero();
   E.setZero();
-  N.setZero();
+  RN.setZero();
   VN.setZero();
 
   std::bitset<kMaxNumLocalActions> fpu_bits;
@@ -39,10 +39,19 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
     PW(i) = child_stats.provably_winning[cp];
     PL(i) = child_stats.provably_losing[cp];
     E(i) = edge.count();
-    N(i) = child_stats.real_count;
+    RN(i) = child_stats.real_count;
     VN(i) = child_stats.virtual_count;
 
-    fpu_bits[i] = (N(i) == 0);
+    /*
+     * Using RN here means that we don't want to rely on the value estimate if there was no real
+     * value propagated.
+     *
+     * This seems a bit odd, though, as it partially nullifies the point of virtual loss. Virtual
+     * loss only really matters then if we have backpropagated both real AND virtual values.
+     *
+     * TODO: Should definitely try an experiment changing RN in the below line to E.
+     */
+    fpu_bits[i] = (RN(i) == 0);
   }
 
   if (params.enable_first_play_urgency && fpu_bits.any()) {
@@ -54,7 +63,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     dtype cFPU = disableFPU ? 0.0 : params.cFPU;
-    dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
+    dtype v = PV - cFPU * sqrt((P * (E > 0).template cast<dtype>()).sum());
     for (int i : bitset_util::on_indices(fpu_bits)) {
       V(i) = v;
     }
@@ -68,7 +77,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
    * This could have been accomplished also by multiplying cPUCT by 0.5, but this way maintains better
    * consistency with the AlphaZero/KataGo approach.
    */
-  PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  PUCT = 2 * V + params.cPUCT * P * sqrt(E.sum() + eps) / (E + 1);
 
   if (params.avoid_proven_losers && !PL.all()) {
     PUCT *= (1 - PL);  // zero out provably-losing actions
