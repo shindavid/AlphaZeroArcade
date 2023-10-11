@@ -105,7 +105,11 @@ class SelfPlayProcData:
             # In principle, we could make use of those games. However, that complicates the tracking of some stats, like
             # the total amount of time spent on self-play. Since not a lot of compute/time is spent on each generation,
             # we just blow away the directory to make our lives simpler
-            shutil.rmtree(games_dir)
+            if os.path.islink(games_dir):
+                # remove the sym link
+                os.remove(games_dir)
+            else:
+                shutil.rmtree(games_dir)
 
         self.proc_complete = False
         self.proc = subprocess_util.Popen(cmd)
@@ -167,6 +171,72 @@ class AlphaZeroManager:
         os.makedirs(self.players_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
+
+    def fork_from(self, manager: 'AlphaZeroManager'):
+        """
+        Forks an existing run. This is accomplished by creating a bunch of soft-links to a previous
+        run. Note that deleting the previous directory will break the fork.
+
+        Addtionally creates a local record of the fork action in a fork.txt file. This file is used
+        to short-circuit future fork operations (e.g., when the current run is restarted with the
+        same cmd). The fork.txt file can also be checked by clean-up scripts to determine if a
+        given base-dir is safe to remove.
+        """
+        fork_txt_path = os.path.join(self.base_dir, 'fork.txt')
+        if os.path.isfile(fork_txt_path):
+            with open(fork_txt_path, 'r') as f:
+                lines = f.readlines()
+
+            metadata = {}
+            for line in lines:
+                colon = line.find(':')
+                if colon == -1:
+                    continue
+                key = line[:colon].strip()
+                value = line[colon+1:].strip()
+                metadata[key] = value
+
+            g = int(metadata['Gen'])
+            timed_print(f'Skipping fork from {manager.base_dir} (fork.txt already exists, at gen {g})')
+            return
+
+        shutil.copy(manager.stdout_filename, self.stdout_filename)
+        for model_filename in os.listdir(manager.models_dir):
+            src = os.path.join(manager.models_dir, model_filename)
+            tgt = os.path.join(self.models_dir, model_filename)
+            os.symlink(src, tgt)
+
+        for bin_filename in os.listdir(manager.bins_dir):
+            src = os.path.join(manager.bins_dir, bin_filename)
+            tgt = os.path.join(self.bins_dir, bin_filename)
+            os.symlink(src, tgt)
+
+        for player_filename in os.listdir(manager.players_dir):
+            src = os.path.join(manager.players_dir, player_filename)
+            tgt = os.path.join(self.players_dir, player_filename)
+            os.symlink(src, tgt)
+
+        for checkpoint_filename in os.listdir(manager.checkpoints_dir):
+            src = os.path.join(manager.checkpoints_dir, checkpoint_filename)
+            tgt = os.path.join(self.checkpoints_dir, checkpoint_filename)
+            os.symlink(src, tgt)
+
+        for self_play_subdir in os.listdir(manager.self_play_data_dir):
+            src = os.path.join(manager.self_play_data_dir, self_play_subdir)
+            tgt = os.path.join(self.self_play_data_dir, self_play_subdir)
+            os.symlink(src, tgt)
+
+        # copy the ratings.db file if it exists
+        ratings_db_filename = os.path.join(manager.base_dir, 'ratings.db')
+        if os.path.isfile(ratings_db_filename):
+            shutil.copy(ratings_db_filename, self.base_dir)
+
+        with open(fork_txt_path, 'w') as f:
+            f.write(f'From: {manager.base_dir}\n')
+            f.write(f'Gen: {manager.get_latest_generation()}\n')
+
+        self.init_logging(self.stdout_filename)
+        timed_print(f'Forked from {manager.base_dir} (gen: {manager.get_latest_generation()})')
 
     def copy_binary(self, bin_src):
         bin_md5 = str(sha256sum(bin_src))
@@ -271,6 +341,8 @@ class AlphaZeroManager:
         return self._net, self._opt
 
     def init_logging(self, filename: str):
+        if self.log_file is not None:
+            return
         self.log_file = open(filename, 'a')
         sys.stdout = self
         sys.stderr = self
