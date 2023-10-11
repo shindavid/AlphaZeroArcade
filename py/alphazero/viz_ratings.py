@@ -158,6 +158,7 @@ class ProgressVisualizer:
         game = games.get_game_type(Args.game)
         self.y_limit = game.reference_player_family.max_strength
 
+        self.min_x_dict = {}
         self.max_x_dict = {}
         self.max_y = None
         self.load(data_list)
@@ -173,6 +174,8 @@ class ProgressVisualizer:
 
             for col in data:
                 x = data[col]
+                mx = min(x)
+                self.min_x_dict[col] = mx if col not in self.min_x_dict else min(self.min_x_dict[col], mx)
                 mx = max(x)
                 self.max_x_dict[col] = mx if col not in self.max_x_dict else max(self.max_x_dict[col], mx)
 
@@ -191,7 +194,8 @@ class ProgressVisualizer:
 
     def realign_plot(self):
         cls = ProgressVisualizer
-        x_range = [0, self.max_x_dict[cls.X_VAR_COLUMNS[self.x_var_index]]]
+        col = cls.X_VAR_COLUMNS[self.x_var_index]
+        x_range = [self.min_x_dict[col], self.max_x_dict[col]]
         y_range = [0, self.max_y+1]
         self.plot.x_range.start = x_range[0]
         self.plot.x_range.end = x_range[1]
@@ -213,7 +217,8 @@ class ProgressVisualizer:
             x_range = [0, 1]
             y_range = [0, 1]
         else:
-            x_range = [0, self.max_x_dict[cls.X_VAR_COLUMNS[self.x_var_index]]]
+            col = cls.X_VAR_COLUMNS[self.x_var_index]
+            x_range = [self.min_x_dict[col], self.max_x_dict[col]]
             y_range = [0, self.max_y+1]
 
         title = f'{Args.game} Alphazero Ratings'
@@ -256,13 +261,17 @@ class ProgressVisualizer:
                 prev_x_var_column = cls.X_VAR_COLUMNS[prev_x_var_index]
                 start = plot.x_range.start
                 end = plot.x_range.end
+                prev_x_min = self.min_x_dict[prev_x_var_column]
                 prev_x_max = self.max_x_dict[prev_x_var_column]
-                if prev_x_max > 0:
-                    start_pct = start / prev_x_max
-                    end_pct = end / prev_x_max
+                prev_x_width = prev_x_max - prev_x_min
+                if prev_x_width > 0:
+                    start_pct = (start - prev_x_min) / prev_x_width
+                    end_pct = (end - prev_x_min) / prev_x_width
+                    x_min = self.min_x_dict[x_var_column]
                     x_max = self.max_x_dict[x_var_column]
-                    plot.x_range.start = start_pct * x_max
-                    plot.x_range.end = end_pct * x_max
+                    x_width = x_max - x_min
+                    plot.x_range.start = x_min + start_pct * x_width
+                    plot.x_range.end = x_min + end_pct * x_width
 
         widgets = [radio_group, checkbox_group]
         for widget in widgets:
