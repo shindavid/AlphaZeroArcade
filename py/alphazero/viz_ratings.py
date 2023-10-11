@@ -36,7 +36,7 @@ from typing import List
 
 import pandas as pd
 from bokeh.layouts import column, row
-from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup
+from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup, Button
 from bokeh.palettes import Category10
 from bokeh.plotting import figure, curdoc
 
@@ -114,8 +114,6 @@ class RatingData:
         gen_df = gen_df.join(x_df).reset_index()
 
         conn.close()
-        n = len(gen_df)
-        timed_print(f'Loaded {n} rows of data from {db_filename}')
 
         self.tag = tag
         self.mcts_iters = mcts_iters
@@ -136,8 +134,20 @@ def make_rating_data_list(tag: str) -> List[RatingData]:
 
 
 class ProgressVisualizer:
+
+    X_VAR_DICT = {
+        'Generation': 'mcts_gen',
+        'Games': 'n_games',
+        'Self-Play Runtime (sec)': 'runtime',
+        'Num Evaluated Positions': 'n_evaluated_positions',
+        'Num Evaluated Batches': 'n_batches_evaluated',
+    }
+
+    X_VARS = list(X_VAR_DICT.keys())
+    X_VAR_COLUMNS = list(X_VAR_DICT.values())
+
     def __init__(self, data_list: List[RatingData]):
-        self.data_list = data_list
+        self.x_var_index = 0
         self.sources = defaultdict(ColumnDataSource)
 
         game = games.get_game_type(Args.game)
@@ -145,6 +155,12 @@ class ProgressVisualizer:
 
         self.max_x_dict = {}
         self.max_y = None
+        self.load(data_list)
+        self.plot, self.root = self.make_plot_and_root()
+
+    def load(self, data_list: List[RatingData]):
+        cls = ProgressVisualizer
+        self.data_list = data_list
         for rating_data in data_list:
             data = rating_data.gen_df
             if not len(data):
@@ -155,40 +171,49 @@ class ProgressVisualizer:
                 mx = max(x)
                 self.max_x_dict[col] = mx if col not in self.max_x_dict else max(self.max_x_dict[col], mx)
 
+            x = data[cls.X_VAR_COLUMNS[self.x_var_index]]
             y = data['rating_smoothed']
 
             my = max(y)
             self.max_y = my if self.max_y is None else max(self.max_y, my)
-            self.sources[rating_data.label].data = { 'y': y }
+            self.sources[rating_data.label].data = { 'x': x, 'y': y }
 
-    def plot(self):
-        x_var_dict = {
-            'Generation': 'mcts_gen',
-            'Games': 'n_games',
-            'Self-Play Runtime (sec)': 'runtime',
-            'Num Evaluated Positions': 'n_evaluated_positions',
-            'Num Evaluated Batches': 'n_batches_evaluated',
-        }
-        x_vars = list(x_var_dict.keys())
-        x_var_columns = list(x_var_dict.values())
-        default_x_var_index = 0
-        default_x_var = x_vars[default_x_var_index]
-        default_x_var_column = x_var_columns[default_x_var_index]
+    def reload_data(self):
+        data_list = []
+        for tag in Args.tags:
+            data_list.extend(make_rating_data_list(tag))
+        self.load(data_list)
 
-        radio_group = RadioGroup(labels=x_vars, active=default_x_var_index)
+    def realign_plot(self):
+        cls = ProgressVisualizer
+        x_range = [0, self.max_x_dict[cls.X_VAR_COLUMNS[self.x_var_index]]]
+        y_range = [0, self.max_y+1]
+        self.plot.x_range.start = x_range[0]
+        self.plot.x_range.end = x_range[1]
+        self.plot.y_range.start = y_range[0]
+        self.plot.y_range.end = y_range[1]
+
+    def make_plot_and_root(self):
+        cls = ProgressVisualizer
+
+        radio_group = RadioGroup(labels=cls.X_VARS, active=self.x_var_index)
         checkbox_group = CheckboxGroup(labels=['Smoothed'], active=[0])
+        reload_button = Button(label='Reload data', button_type='primary')
+        reload_button.on_click(self.reload_data)
+        realign_button = Button(label='Realign plot', button_type='success')
+        realign_button.on_click(self.realign_plot)
 
         data_list = self.data_list
         if self.max_y is None:
             x_range = [0, 1]
             y_range = [0, 1]
         else:
-            x_range = [0, self.max_x_dict[default_x_var_column]]
+            x_range = [0, self.max_x_dict[cls.X_VAR_COLUMNS[self.x_var_index]]]
             y_range = [0, self.max_y+1]
 
         title = f'{Args.game} Alphazero Ratings'
         plot = figure(height=600, width=800, title=title, x_range=x_range, y_range=y_range,
-                      y_axis_label='Rating', x_axis_label=default_x_var,
+                      y_axis_label='Rating', x_axis_label=cls.X_VARS[self.x_var_index],
                       active_scroll='xwheel_zoom',
                       tools='pan,box_zoom,xwheel_zoom,reset,save')
         hline = Span(location=self.y_limit, dimension='width', line_color='gray', line_dash='dashed', line_width=1)
@@ -201,16 +226,18 @@ class ProgressVisualizer:
             colors = Category10[n]
         for rating_data, color in zip(data_list, colors):
             source = self.sources[rating_data.label]
-            source.data['x'] = rating_data.gen_df[default_x_var_column]
+            source.data['x'] = rating_data.gen_df[cls.X_VAR_COLUMNS[self.x_var_index]]
             label = rating_data.label
             plot.line('x', 'y', source=source, line_color=color, legend_label=label)
 
         plot.legend.location = 'bottom_right'
+        plot.legend.click_policy = 'hide'
 
         def update_data(attr, old, new):
-            x_var_index = radio_group.active
+            prev_x_var_index = self.x_var_index
+            self.x_var_index = radio_group.active
             smoothed = 0 in checkbox_group.active
-            x_var_column = x_var_columns[x_var_index]
+            x_var_column = cls.X_VAR_COLUMNS[self.x_var_index]
             y_var_column = 'rating_smoothed' if smoothed else 'rating'
 
             for rating_data in self.data_list:
@@ -218,15 +245,26 @@ class ProgressVisualizer:
                 source.data['x'] = rating_data.gen_df[x_var_column]
                 source.data['y'] = rating_data.gen_df[y_var_column]
 
-            plot.x_range.end = self.max_x_dict[x_var_column]
-            plot.xaxis.axis_label = x_vars[x_var_index]
+            plot.xaxis.axis_label = cls.X_VARS[self.x_var_index]
+
+            if self.x_var_index != prev_x_var_index:
+                prev_x_var_column = cls.X_VAR_COLUMNS[prev_x_var_index]
+                start = plot.x_range.start
+                end = plot.x_range.end
+                prev_x_max = self.max_x_dict[prev_x_var_column]
+                if prev_x_max > 0:
+                    start_pct = start / prev_x_max
+                    end_pct = end / prev_x_max
+                    x_max = self.max_x_dict[x_var_column]
+                    plot.x_range.start = start_pct * x_max
+                    plot.x_range.end = end_pct * x_max
 
         widgets = [radio_group, checkbox_group]
         for widget in widgets:
             widget.on_change('active', update_data)
 
-        inputs = column(plot, row(checkbox_group, radio_group))
-        return inputs
+        inputs = column(plot, row(column(checkbox_group, reload_button, realign_button), radio_group))
+        return plot, inputs
 
 
 def main():
@@ -244,7 +282,7 @@ def main():
         viz = ProgressVisualizer(data_list)
 
         curdoc().title = Args.game
-        curdoc().add_root(viz.plot())
+        curdoc().add_root(viz.root)
 
 
 main()
