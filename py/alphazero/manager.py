@@ -38,6 +38,7 @@ BASE_DIR/
 import os
 import shutil
 import signal
+import sqlite3
 import sys
 import tempfile
 import time
@@ -172,10 +173,11 @@ class AlphaZeroManager:
         os.makedirs(self.checkpoints_dir, exist_ok=True)
         os.makedirs(self.self_play_data_dir, exist_ok=True)
 
-    def fork_from(self, manager: 'AlphaZeroManager'):
+    def fork_from(self, manager: 'AlphaZeroManager', gen: Optional[Generation] = None):
         """
         Forks an existing run. This is accomplished by creating a bunch of soft-links to a previous
-        run. Note that deleting the previous directory will break the fork.
+        run. Note that deleting the previous directory will break the fork. If gen is specified,
+        only forks contents up-to-and-including generation gen. Otherwise, forks all contents.
 
         Addtionally creates a local record of the fork action in a fork.txt file. This file is used
         to short-circuit future fork operations (e.g., when the current run is restarted with the
@@ -200,43 +202,82 @@ class AlphaZeroManager:
             timed_print(f'Skipping fork from {manager.base_dir} (fork.txt already exists, at gen {g})')
             return
 
+        def should_skip(filename, ext=None):
+            if ext is not None and filename.split('.')[-1] != ext:
+                return True
+            if gen is None:
+                return False
+            return PathInfo(filename).generation > gen
+
+        last_ts = 0
+
         shutil.copy(manager.stdout_filename, self.stdout_filename)
         for model_filename in os.listdir(manager.models_dir):
+            if should_skip(model_filename, 'ptj'):
+                continue
             src = os.path.join(manager.models_dir, model_filename)
             tgt = os.path.join(self.models_dir, model_filename)
             os.symlink(src, tgt)
-
-        for bin_filename in os.listdir(manager.bins_dir):
-            src = os.path.join(manager.bins_dir, bin_filename)
-            tgt = os.path.join(self.bins_dir, bin_filename)
-            os.symlink(src, tgt)
+            last_ts = max(last_ts, os.path.getmtime(src))
 
         for player_filename in os.listdir(manager.players_dir):
+            if should_skip(player_filename, 'txt'):
+                continue
             src = os.path.join(manager.players_dir, player_filename)
             tgt = os.path.join(self.players_dir, player_filename)
             os.symlink(src, tgt)
+            last_ts = max(last_ts, os.path.getmtime(src))
 
         for checkpoint_filename in os.listdir(manager.checkpoints_dir):
+            if should_skip(checkpoint_filename, 'ptc'):
+                continue
             src = os.path.join(manager.checkpoints_dir, checkpoint_filename)
             tgt = os.path.join(self.checkpoints_dir, checkpoint_filename)
             os.symlink(src, tgt)
+            last_ts = max(last_ts, os.path.getmtime(src))
 
         for self_play_subdir in os.listdir(manager.self_play_data_dir):
+            if should_skip(self_play_subdir):
+                continue
             src = os.path.join(manager.self_play_data_dir, self_play_subdir)
             tgt = os.path.join(self.self_play_data_dir, self_play_subdir)
             os.symlink(src, tgt)
+            last_ts = max(last_ts, os.path.getmtime(src))
+
+        # only copy bins that were modified after the last timestamp, to ensure that the forked
+        # run continue with the same binary that was used up to {gen} in the original run
+        for bin_filename in os.listdir(manager.bins_dir):
+            src = os.path.join(manager.bins_dir, bin_filename)
+            if os.path.getmtime(src) < last_ts:
+                continue
+            tgt = os.path.join(self.bins_dir, bin_filename)
+            os.symlink(src, tgt)
 
         # copy the ratings.db file if it exists
-        ratings_db_filename = os.path.join(manager.base_dir, 'ratings.db')
-        if os.path.isfile(ratings_db_filename):
-            shutil.copy(ratings_db_filename, self.base_dir)
+        original_ratings_db_filename = os.path.join(manager.base_dir, 'ratings.db')
+        if os.path.isfile(original_ratings_db_filename):
+            shutil.copy(original_ratings_db_filename, self.base_dir)
 
+            if gen is not None:
+                # erase db contents after gen.
+                #
+                # TODO: move this into a separate file along with the relevant parts of
+                # compute-ratings.py
+                ratings_db_filename = os.path.join(self.base_dir, 'ratings.db')
+                conn = sqlite3.connect(ratings_db_filename)
+                c = conn.cursor()
+                for table in ('matches', 'ratings', 'x_values'):
+                    c.execute(f'DELETE FROM {table} WHERE mcts_gen > ?', (gen,))
+                conn.commit()
+                conn.close()
+
+        forked_gen = gen if gen is not None else manager.get_latest_generation()
         with open(fork_txt_path, 'w') as f:
             f.write(f'From: {manager.base_dir}\n')
-            f.write(f'Gen: {manager.get_latest_generation()}\n')
+            f.write(f'Gen: {forked_gen}\n')
 
         self.init_logging(self.stdout_filename)
-        timed_print(f'Forked from {manager.base_dir} (gen: {manager.get_latest_generation()})')
+        timed_print(f'Forked from {manager.base_dir} (gen: {forked_gen})')
 
     def copy_binary(self, bin_src):
         bin_md5 = str(sha256sum(bin_src))

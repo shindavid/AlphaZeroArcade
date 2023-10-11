@@ -27,6 +27,7 @@ class Args:
         Args.restart_gen = args.restart_gen
         assert Args.game, 'Required option: --game/-g'
         assert Args.tag, 'Required option: --tag/-t'
+        assert Args.tag.find('@') == -1, 'Tag cannot contain @'
 
 
 def load_args():
@@ -41,7 +42,7 @@ def load_args():
                         'multiple binaries are found in the alphazero dir, then this option is '
                         'required.')
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
-    parser.add_argument('-f', '--fork-from', help='tag to fork off of')
+    parser.add_argument('-f', '--fork-from', help='tag to fork off of (e.g., "v1", or "v1@100" to fork off of gen 100))')
     parser.add_argument('--restart-gen', type=int, help='gen to resume at')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     ModelingArgs.add_args(parser)
@@ -58,9 +59,14 @@ def main():
     manager = AlphaZeroManager(game_type, base_dir, Args.binary_path)
     manager.makedirs()
     if Args.fork_from:
-        fork_base_dir = os.path.join(Args.alphazero_dir, Args.game, Args.fork_from)
+        fork_from = Args.fork_from
+        gen = None
+        if '@' in fork_from:
+            fork_from, gen = fork_from.split('@')
+            gen = int(gen)
+        fork_base_dir = os.path.join(Args.alphazero_dir, Args.game, fork_from)
         fork_manager = AlphaZeroManager(game_type, fork_base_dir)
-        manager.fork_from(fork_manager)
+        manager.fork_from(fork_manager, gen)
     if Args.restart_gen:
         manager.erase_data_after(Args.restart_gen)
     manager.run(async_mode=not ModelingArgs.synchronous_mode)
