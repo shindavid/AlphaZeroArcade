@@ -52,6 +52,7 @@ class Args:
     alphazero_dir: str
     game: str
     tags: List[str]
+    mcts_iters_list: List[int]
     port: int
 
     @staticmethod
@@ -61,6 +62,7 @@ class Args:
         Args.alphazero_dir = args.alphazero_dir
         Args.game = args.game
         Args.tags = [t for t in args.tag.split(',') if t]
+        Args.mcts_iters_list = [int(s) for s in args.mcts_iters.split(',') if s]
         Args.tag = args.tag
         Args.port = args.port
 
@@ -72,6 +74,7 @@ def load_args():
     parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
     parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1,v2")')
+    parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), comma-separated (e.g. "300,3000")')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     parser.add_argument('-p', '--port', type=int, default=5006, help='bokeh port (default: %(default)s)')
 
@@ -130,7 +133,9 @@ def make_rating_data_list(tag: str) -> List[RatingData]:
     # find all distinct mcts_iters values from ratings table:
     res = cursor.execute('SELECT DISTINCT mcts_iters FROM ratings')
     mcts_iters_list = [r[0] for r in res.fetchall()]
-    return [RatingData(tag, mcts_iters) for mcts_iters in mcts_iters_list]
+    if Args.mcts_iters_list:
+        mcts_iters_list = [m for m in mcts_iters_list if m in Args.mcts_iters_list]
+    return [RatingData(tag, m) for m in mcts_iters_list]
 
 
 class ProgressVisualizer:
