@@ -131,7 +131,7 @@ Node<GameState, Tensorizor>::get_counts(const ManagerParams& params) const {
   for (auto& it : children_data_) {
     Action action = it.action();
     const auto& stats = it.child()->stats();
-    int count = stats.real_count;
+    int count = it.count();  // edge count is more correct than node count
 
     int modified_count = count;
     const char* detail = "";

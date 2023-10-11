@@ -199,7 +199,7 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
 
   auto orig_counts = results_.counts;
   const auto& P = stats.P;
-  const auto& N = stats.N;
+  const auto& N = stats.E;  // using local variable "N" instead of "E" to match KataGo paper
   const auto& V = stats.V;
   const auto& PUCT = stats.PUCT;
 
