@@ -72,23 +72,29 @@ class PolicyHead(nn.Module):
     logit probabilities for all intersections and the pass move
 
     https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+
+    According to the Oracle blog post, both the Oracle dev team and the LeelaChess dev team found
+    that increasing the number of filters to 32 in the output head significantly sped up
+    training, so we do the same here.
     """
-    def __init__(self, board_size: int, policy_shape: Union[Shape, int], n_input_channels: int):
+    def __init__(self, board_size: int, policy_shape: Union[Shape, int], n_input_channels: int,
+                 n_filters=32):
         super(PolicyHead, self).__init__()
         policy_shape = tuple([policy_shape]) if isinstance(policy_shape, int) else policy_shape
         self.board_size = board_size
         self.policy_shape = policy_shape
         self.policy_size = math.prod(policy_shape)
+        self.n_filters = n_filters
 
-        self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(2)
-        self.linear = nn.Linear(2 * board_size, self.policy_size)
+        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(n_filters)
+        self.linear = nn.Linear(n_filters * board_size, self.policy_size)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.batch(x)
         x = F.relu(x)
-        x = x.view(-1, 2 * self.board_size)
+        x = x.view(-1, self.n_filters * self.board_size)
         x = self.linear(x)
         x = x.view(-1, *self.policy_shape)
         return x
@@ -112,56 +118,67 @@ class ValueHead(nn.Module):
 
     Here, we are choosing to replace the scalar with a length-p array to generalize for p-player games. The output
     will be interpreted as logit probabilities for the corresponding player's expected win shares.
+
+    According to the Oracle blog post, both the Oracle dev team and the LeelaChess dev team found
+    that increasing the number of filters to 32 in the output head significantly sped up
+    training, so we do the same here.
     """
-    def __init__(self, board_size: int, n_players: int, n_input_channels: int):
+    def __init__(self, board_size: int, n_players: int, n_input_channels: int,
+                 n_filters=32):
         super(ValueHead, self).__init__()
         self.board_size = board_size
-        self.conv = nn.Conv2d(n_input_channels, 1, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(1)
-        self.linear1 = nn.Linear(board_size, 256)
+        self.n_filters = n_filters
+
+        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(n_filters)
+        self.linear1 = nn.Linear(n_filters * board_size, 256)
         self.linear2 = nn.Linear(256, n_players)
 
     def forward(self, x):
         x = F.relu(self.batch(self.conv(x)))
-        x = x.view(-1, self.board_size)
+        x = x.view(-1, self.n_filters * self.board_size)
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
         return x
 
 
 class ScoreMarginHead(nn.Module):
-    def __init__(self, board_size: int, n_possible_score_margins: int, n_input_channels: int):
+    def __init__(self, board_size: int, n_possible_score_margins: int, n_input_channels: int,
+                 n_filters=32):
         super(ScoreMarginHead, self).__init__()
         self.board_size = board_size
-        self.conv = nn.Conv2d(n_input_channels, 1, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(1)
-        self.linear1 = nn.Linear(board_size, 256)
+        self.n_filters = n_filters
+        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(n_filters)
+        self.linear1 = nn.Linear(board_size * n_filters, 256)
         self.linear2 = nn.Linear(256, n_possible_score_margins)
 
     def forward(self, x):
         x = F.relu(self.batch(self.conv(x)))
-        x = x.view(-1, self.board_size)
+        x = x.view(-1, self.n_filters * self.board_size)
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
         return x
 
 
 class OwnershipHead(nn.Module):
-    def __init__(self, board_size: int, output_shape: Shape, n_input_channels: int):
+    def __init__(self, board_size: int, output_shape: Shape, n_input_channels: int,
+                 n_filters=32):
         super(OwnershipHead, self).__init__()
         self.board_size = board_size
+        self.n_filters = n_filters
         self.output_shape = output_shape
         self.output_size = math.prod(output_shape)
 
-        self.conv = nn.Conv2d(n_input_channels, 2, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(2)
-        self.linear = nn.Linear(2 * board_size, self.output_size)
+        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
+        self.batch = nn.BatchNorm2d(n_filters)
+        self.linear = nn.Linear(n_filters * board_size, self.output_size)
 
     def forward(self, x):
         x = self.conv(x)
         x = self.batch(x)
         x = F.relu(x)
-        x = x.view(-1, 2 * self.board_size)
+        x = x.view(-1, self.n_filters * self.board_size)
         x = self.linear(x)
         x = x.view(-1, *self.output_shape)
         return x
