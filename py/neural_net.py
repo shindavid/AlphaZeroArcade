@@ -248,6 +248,10 @@ class NeuralNet(nn.Module):
             os.makedirs(output_dir, exist_ok=True)
 
         clone = copy.deepcopy(self)
+
+        # strip all aux heads to avoid unnecessary c++ computation
+        clone.heads = clone.heads[:2]
+
         clone.to('cpu')
         clone.eval()
         forward_shape = tuple([1] + list(self.input_shape))
