@@ -62,7 +62,7 @@ class Args:
         Args.alphazero_dir = args.alphazero_dir
         Args.game = args.game
         Args.tags = [t for t in args.tag.split(',') if t]
-        Args.mcts_iters_list = [int(s) for s in args.mcts_iters.split(',') if s]
+        Args.mcts_iters_list = [] if not args.mcts_iters else [int(s) for s in args.mcts_iters.split(',')]
         Args.tag = args.tag
         Args.port = args.port
 
