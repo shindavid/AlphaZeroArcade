@@ -47,6 +47,36 @@ inline int Random::weighted_sample(InputIt begin, InputIt end) {
   return weighted_sample<int>(begin, end);
 }
 
+template <typename InputIt>
+void Random::zero_out(InputIt begin, InputIt end, size_t n) {
+  // reservoir sampling
+  std::vector<InputIt> reservoir;
+  reservoir.reserve(n);
+
+  size_t num_non_zero_entries_found = 0;
+  for (InputIt it = begin; it != end; ++it) {
+    if (!(*it)) continue;  // skip zero elements
+
+    ++num_non_zero_entries_found;
+    if (reservoir.size() < n) {
+      reservoir.push_back(it);
+    } else {
+      size_t j = uniform_sample(size_t(0), num_non_zero_entries_found);
+      if (j < n) {
+        reservoir[j] = it;
+      }
+    }
+  }
+
+  for (InputIt it : reservoir) {
+    *it = 0;
+  }
+}
+
+inline void Random::set_seed(int seed) {
+  instance()->prng_.seed(seed);
+}
+
 inline Random* Random::instance() {
   if (!instance_) {
     instance_ = new Random();

@@ -68,6 +68,15 @@ auto sample(const Tensor& tensor) {
   return unflatten_index(tensor, flat_index);
 }
 
+template <FixedTensorConcept Tensor>
+void randomly_zero_out(Tensor& tensor, int n) {
+  using Shape = extract_shape_t<Tensor>;
+  constexpr size_t N = Shape::total_size;
+
+  auto* data = tensor.data();
+  util::Random::zero_out(data, data + N, n);
+}
+
 template<FixedTensorConcept Tensor>
 auto unflatten_index(const Tensor& tensor, int flat_index) {
   // Convert the 1D index back to a K-dimensional index

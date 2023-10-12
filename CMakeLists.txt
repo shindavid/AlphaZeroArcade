@@ -31,14 +31,16 @@ include_directories(${MY_TINYEXPR_DIR})
 
 add_executable(c4 cpp/games/connect4/main/Connect4.cpp)
 add_executable(othello cpp/games/othello/main/Othello.cpp)
-add_executable(unit_tests_othello cpp/games/othello/main/UnitTests.cpp)
+add_executable(othello_unit_tests cpp/games/othello/main/UnitTests.cpp)
 add_executable(tictactoe cpp/games/tictactoe/main/TicTacToe.cpp)
+add_executable(util_unit_tests cpp/util/main/UnitTests.cpp)
 
 set(executables
         c4
         othello
-        unit_tests_othello
+        othello_unit_tests
         tictactoe
+        util_unit_tests
         )
 
 add_subdirectory("cpp/util")
@@ -63,7 +65,7 @@ foreach(tgt ${executables})
         target_link_libraries(${tgt} othello-lib)
     elseif (${tgt} STREQUAL "tictactoe")
         target_link_libraries(${tgt} tictactoe-lib)
-    elseif (${tgt} STREQUAL "unit_tests_othello")
+    elseif (${tgt} STREQUAL "othello_unit_tests")
         target_link_libraries(${tgt} othello-lib)
     endif()
     foreach(lib ${common-libs})

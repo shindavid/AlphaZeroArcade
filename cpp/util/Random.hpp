@@ -42,7 +42,16 @@ public:
   template<typename IntType, typename InputIt> static IntType weighted_sample(InputIt begin, InputIt end);
   template<typename InputIt> static int weighted_sample(InputIt begin, InputIt end);  // default IntType=int
 
-private:
+  /*
+   * Randomly zeroes out n nonzero elements in the range [begin, end).
+   *
+   * Requires that [begin, end) contains at least n nonzero elements.
+   */
+  template<typename InputIt> static void zero_out(InputIt begin, InputIt end, size_t n);
+
+  static void set_seed(int seed);
+
+ private:
   static Random* instance();
   Random();
 

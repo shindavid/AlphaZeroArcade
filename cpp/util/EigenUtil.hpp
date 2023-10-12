@@ -240,6 +240,14 @@ template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim);
 template<FixedTensorConcept Tensor> auto sample(const Tensor& tensor);
 
 /*
+ * Uniformly randomly picks n nonzero elements of tensor and sets them to zero.
+ *
+ * Requires that tensor contains at least n nonzero elements.
+ */
+template <FixedTensorConcept Tensor>
+void randomly_zero_out(Tensor& tensor, int n);
+
+/*
  * Returns the std::array that fills in the blank in this analogy problem:
  *
  * tensor.data() is to flat_index as tensor is to _____
