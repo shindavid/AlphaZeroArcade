@@ -128,13 +128,18 @@ def make_rating_data_list(tag: str) -> List[RatingData]:
     base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
 
     db_filename = os.path.join(base_dir, 'ratings.db')
+    if not os.path.exists(db_filename):
+        return []
     conn = sqlite3.connect(db_filename)
     cursor = conn.cursor()
     # find all distinct mcts_iters values from ratings table:
     res = cursor.execute('SELECT DISTINCT mcts_iters FROM ratings')
     mcts_iters_list = [r[0] for r in res.fetchall()]
+    conn.close()
+
     if Args.mcts_iters_list:
         mcts_iters_list = [m for m in mcts_iters_list if m in Args.mcts_iters_list]
+
     return [RatingData(tag, m) for m in mcts_iters_list]
 
 
@@ -158,6 +163,7 @@ class ProgressVisualizer:
         game = games.get_game_type(Args.game)
         self.y_limit = game.reference_player_family.max_strength
 
+        self.plotted_labels = set()
         self.min_x_dict = {}
         self.max_x_dict = {}
         self.max_y = None
@@ -191,6 +197,7 @@ class ProgressVisualizer:
         for tag in Args.tags:
             data_list.extend(make_rating_data_list(tag))
         self.load(data_list)
+        self.add_lines(self.plot)
 
     def realign_plot(self):
         cls = ProgressVisualizer
@@ -201,6 +208,23 @@ class ProgressVisualizer:
         self.plot.x_range.end = x_range[1]
         self.plot.y_range.start = y_range[0]
         self.plot.y_range.end = y_range[1]
+
+    def add_lines(self, plot):
+        cls = ProgressVisualizer
+        data_list = self.data_list
+        n = len(data_list)
+        if n <= 2:
+            colors = Category10[3][:n]
+        else:
+            colors = Category10[n]
+        for rating_data, color in zip(data_list, colors):
+            label = rating_data.label
+            if label in self.plotted_labels:
+                continue
+            self.plotted_labels.add(label)
+            source = self.sources[label]
+            source.data['x'] = rating_data.gen_df[cls.X_VAR_COLUMNS[self.x_var_index]]
+            plot.line('x', 'y', source=source, line_color=color, legend_label=label)
 
     def make_plot_and_root(self):
         cls = ProgressVisualizer
@@ -229,16 +253,7 @@ class ProgressVisualizer:
         hline = Span(location=self.y_limit, dimension='width', line_color='gray', line_dash='dashed', line_width=1)
         plot.add_layout(hline)
 
-        n = len(data_list)
-        if n <= 2:
-            colors = Category10[3][:n]
-        else:
-            colors = Category10[n]
-        for rating_data, color in zip(data_list, colors):
-            source = self.sources[rating_data.label]
-            source.data['x'] = rating_data.gen_df[cls.X_VAR_COLUMNS[self.x_var_index]]
-            label = rating_data.label
-            plot.line('x', 'y', source=source, line_color=color, legend_label=label)
+        self.add_lines(plot)
 
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'
