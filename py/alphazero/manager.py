@@ -452,25 +452,13 @@ class AlphaZeroManager:
     def get_latest_self_play_data_subdir(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.self_play_data_dir)
 
-    def get_player_cmd(self, gen: Generation, rewrite_binary_path: bool = False) -> Optional[str]:
-        """
-        If rewrite_binary_path is True, then reconstructs the binary path by joining the
-        base dir with the binary name. This helps in the case where the base dir has been
-        manually renamed.
-        """
+    def get_player_cmd(self, gen: Generation) -> Optional[str]:
         filename = os.path.join(self.players_dir, f'gen-{gen}.txt')
         if not os.path.exists(filename):
             return None
         with open(filename, 'r') as f:
             cmd = f.read().strip()
 
-        if rewrite_binary_path:
-            space = cmd.find(' ')
-            assert space > 0, (filename, cmd)
-            old_binary_path = cmd[:space]
-            binary_hash = os.path.split(old_binary_path)[1]
-            new_binary_path = os.path.join(self.bins_dir, binary_hash)
-            cmd = new_binary_path + cmd[space:]
         return cmd
 
     def get_self_play_proc(self, async_mode: bool) -> SelfPlayProcData:
