@@ -248,7 +248,7 @@ class AlphaZeroManager:
         # run continue with the same binary that was used up to {gen} in the original run
         for bin_filename in os.listdir(manager.bins_dir):
             src = os.path.join(manager.bins_dir, bin_filename)
-            if os.path.getmtime(src) < last_ts:
+            if os.path.getmtime(src) > last_ts:
                 continue
             tgt = os.path.join(self.bins_dir, bin_filename)
             os.symlink(src, tgt)
