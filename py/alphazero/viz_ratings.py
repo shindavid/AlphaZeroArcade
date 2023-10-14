@@ -32,12 +32,12 @@ import pipes
 import sqlite3
 import sys
 from collections import defaultdict
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup, Button
-from bokeh.palettes import Category10
+from bokeh.palettes import Category20
 from bokeh.plotting import figure, curdoc
 
 import games
@@ -51,17 +51,16 @@ class Args:
     launch: bool
     alphazero_dir: str
     game: str
-    tags: List[str]
+    tags: Optional[List[str]]
     mcts_iters_list: List[int]
     port: int
 
     @staticmethod
     def load(args):
-        assert args.tag, 'Required option: -t'
         Args.launch = bool(args.launch)
         Args.alphazero_dir = args.alphazero_dir
         Args.game = args.game
-        Args.tags = [t for t in args.tag.split(',') if t]
+        Args.tags = [t for t in args.tag.split(',') if t] if args.tag else None
         Args.mcts_iters_list = [] if not args.mcts_iters else [int(s) for s in args.mcts_iters.split(',')]
         Args.tag = args.tag
         Args.port = args.port
@@ -73,7 +72,7 @@ def load_args():
 
     parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
-    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1,v2")')
+    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1,v2"). If not specified, plots all tags')
     parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), comma-separated (e.g. "300,3000")')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     parser.add_argument('-p', '--port', type=int, default=5006, help='bokeh port (default: %(default)s)')
@@ -124,8 +123,18 @@ class RatingData:
         self.label = f'{tag} (i={mcts_iters})'
 
 
-def make_rating_data_list(tag: str) -> List[RatingData]:
-    base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
+def make_rating_data_list(tag: Optional[str]=None) -> List[RatingData]:
+    game_dir = os.path.join(Args.alphazero_dir, Args.game)
+    if not tag:
+        tags = os.listdir(game_dir)
+        # sort tags by mtime:
+        tags = sorted(tags, key=lambda t: os.stat(os.path.join(game_dir, t)).st_mtime)
+        data_list = []
+        for tag in tags:
+            data_list.extend(make_rating_data_list(tag))
+        return data_list
+
+    base_dir = os.path.join(game_dir, tag)
 
     db_filename = os.path.join(base_dir, 'ratings.db')
     if not os.path.exists(db_filename):
@@ -214,9 +223,9 @@ class ProgressVisualizer:
         data_list = self.data_list
         n = len(data_list)
         if n <= 2:
-            colors = Category10[3][:n]
+            colors = Category20[3][:n]
         else:
-            colors = Category10[n]
+            colors = Category20[n]
         for rating_data, color in zip(data_list, colors):
             label = rating_data.label
             if label in self.plotted_labels:
@@ -306,8 +315,11 @@ def main():
         sys.exit(os.system(cmd))
     else:
         data_list = []
-        for tag in Args.tags:
-            data_list.extend(make_rating_data_list(tag))
+        if Args.tags:
+            for tag in Args.tags:
+                data_list.extend(make_rating_data_list(tag))
+        else:
+            data_list = make_rating_data_list()
         viz = ProgressVisualizer(data_list)
 
         curdoc().title = Args.game
