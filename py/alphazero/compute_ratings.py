@@ -486,9 +486,16 @@ class Arena:
             strength = int(round(est_rating))
             counts = self.test_mcts_vs_ref(gen, strength)
             if counts.win_rate() < 0.5:  # mcts has losing record against ref
-                self.run_matches_helper(gen, None, max_left_strength, strength)
+                strength2 = strength - 1
+                counts2 = self.test_mcts_vs_ref(gen, strength2)
+                if counts2.win_rate() < 0.5:  # commence binary search
+                    self.run_matches_helper(gen, None, max_left_strength, strength2)
             else:
-                self.run_matches_helper(gen, None, strength, min_right_strength)
+                strength2 = strength + 1
+                if strength2 <= self.max_ref_strength:
+                    counts2 = self.test_mcts_vs_ref(gen, strength2)
+                    if counts2.win_rate() >= 0.5:  # commence binary search
+                        self.run_matches_helper(gen, None, strength2, min_right_strength)
             return
 
         # binary search for the critical strength
