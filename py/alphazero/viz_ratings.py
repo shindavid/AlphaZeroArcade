@@ -152,6 +152,16 @@ def make_rating_data_list(tag: Optional[str]=None) -> List[RatingData]:
     return [RatingData(tag, m) for m in mcts_iters_list]
 
 
+def get_rating_data_list():
+    data_list = []
+    if Args.tags:
+        for tag in Args.tags:
+            data_list.extend(make_rating_data_list(tag))
+    else:
+        data_list = make_rating_data_list()
+    return data_list
+
+
 class ProgressVisualizer:
 
     X_VAR_DICT = {
@@ -202,9 +212,7 @@ class ProgressVisualizer:
             self.sources[rating_data.label].data = { 'x': x, 'y': y }
 
     def reload_data(self):
-        data_list = []
-        for tag in Args.tags:
-            data_list.extend(make_rating_data_list(tag))
+        data_list = get_rating_data_list()
         self.load(data_list)
         self.add_lines(self.plot)
 
@@ -314,12 +322,7 @@ def main():
         cmd = f'bokeh serve --port {Args.port} --show {script} --args {args}'
         sys.exit(os.system(cmd))
     else:
-        data_list = []
-        if Args.tags:
-            for tag in Args.tags:
-                data_list.extend(make_rating_data_list(tag))
-        else:
-            data_list = make_rating_data_list()
+        data_list = get_rating_data_list()
         viz = ProgressVisualizer(data_list)
 
         curdoc().title = Args.game
