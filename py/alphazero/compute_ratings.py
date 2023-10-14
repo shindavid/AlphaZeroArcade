@@ -110,7 +110,7 @@ def load_args():
     parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
     parser.add_argument('-n', '--n-games', type=int, default=100,
                         help='number of games to play per matchup (default: %(default)s))')
-    parser.add_argument('-i', '--mcts-iters', type=int, default=300,
+    parser.add_argument('-i', '--mcts-iters', type=int, default=1600,
                         help='number of MCTS iterations per move (default: %(default)s)')
     parser.add_argument('-p', '--parallelism-factor', type=int, default=100,
                         help='parallelism factor (default: %(default)s)')
