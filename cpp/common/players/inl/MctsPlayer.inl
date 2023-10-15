@@ -173,8 +173,11 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_helper(
 {
   PolicyTensor policy;
   if (search_mode == kRawPolicy) {
-    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions, policy);
-    GameStateTypes::normalize(valid_actions, policy);
+    ActionMask valid_actions_subset = valid_actions;
+    eigen_util::randomly_zero_out(valid_actions_subset,
+                                  eigen_util::count(valid_actions_subset) / 2);
+    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions_subset, policy);
+    GameStateTypes::normalize(valid_actions_subset, policy);
   } else {
     policy = mcts_results->counts;
   }
