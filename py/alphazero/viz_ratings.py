@@ -176,6 +176,7 @@ class ProgressVisualizer:
     X_VAR_COLUMNS = list(X_VAR_DICT.values())
 
     def __init__(self, data_list: List[RatingData]):
+        self.y_variable = 'rating_smoothed'
         self.x_var_index = 0
         self.sources = defaultdict(ColumnDataSource)
 
@@ -205,7 +206,7 @@ class ProgressVisualizer:
                 self.max_x_dict[col] = mx if col not in self.max_x_dict else max(self.max_x_dict[col], mx)
 
             x = data[cls.X_VAR_COLUMNS[self.x_var_index]]
-            y = data['rating_smoothed']
+            y = data[self.y_variable]
 
             my = max(y)
             self.max_y = my if self.max_y is None else max(self.max_y, my)
@@ -253,7 +254,6 @@ class ProgressVisualizer:
         realign_button = Button(label='Realign plot', button_type='success')
         realign_button.on_click(self.realign_plot)
 
-        data_list = self.data_list
         if self.max_y is None:
             x_range = [0, 1]
             y_range = [0, 1]
@@ -279,8 +279,9 @@ class ProgressVisualizer:
             prev_x_var_index = self.x_var_index
             self.x_var_index = radio_group.active
             smoothed = 0 in checkbox_group.active
+            self.y_variable = 'rating_smoothed' if smoothed else 'rating'
             x_var_column = cls.X_VAR_COLUMNS[self.x_var_index]
-            y_var_column = 'rating_smoothed' if smoothed else 'rating'
+            y_var_column = self.y_variable
 
             for rating_data in self.data_list:
                 source = self.sources[rating_data.label]
