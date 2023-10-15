@@ -78,7 +78,7 @@ class PolicyHead(nn.Module):
     training, so we do the same here.
     """
     def __init__(self, board_size: int, policy_shape: Union[Shape, int], n_input_channels: int,
-                 n_filters=32):
+                 n_filters=2):
         super(PolicyHead, self).__init__()
         policy_shape = tuple([policy_shape]) if isinstance(policy_shape, int) else policy_shape
         self.board_size = board_size
@@ -124,7 +124,7 @@ class ValueHead(nn.Module):
     training, so we do the same here.
     """
     def __init__(self, board_size: int, n_players: int, n_input_channels: int,
-                 n_filters=32):
+                 n_filters=1):
         super(ValueHead, self).__init__()
         self.board_size = board_size
         self.n_filters = n_filters
@@ -144,7 +144,7 @@ class ValueHead(nn.Module):
 
 class ScoreMarginHead(nn.Module):
     def __init__(self, board_size: int, n_possible_score_margins: int, n_input_channels: int,
-                 n_filters=32):
+                 n_filters=1):
         super(ScoreMarginHead, self).__init__()
         self.board_size = board_size
         self.n_filters = n_filters
@@ -163,7 +163,7 @@ class ScoreMarginHead(nn.Module):
 
 class OwnershipHead(nn.Module):
     def __init__(self, board_size: int, output_shape: Shape, n_input_channels: int,
-                 n_filters=32):
+                 n_filters=2):
         super(OwnershipHead, self).__init__()
         self.board_size = board_size
         self.n_filters = n_filters
