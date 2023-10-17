@@ -63,7 +63,7 @@ inline void OracleGradedMctsPlayer::receive_state_change(
   base_t::receive_state_change(seat, state, action);
 }
 
-inline OracleGradedMctsPlayer::Action OracleGradedMctsPlayer::get_action(
+inline OracleGradedMctsPlayer::ActionResponse OracleGradedMctsPlayer::get_action_response(
     const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
@@ -82,7 +82,7 @@ inline OracleGradedMctsPlayer::Action OracleGradedMctsPlayer::get_action(
       update_mistake_stats(result, policy_prior_array, visit_distr, valid_actions, state.get_move_number());
     }
   }
-  return this->get_action_helper(search_mode, mcts_search_results, valid_actions);
+  return this->get_action_response_helper(search_mode, mcts_search_results, valid_actions);
 }
 
 inline void OracleGradedMctsPlayer::update_mistake_stats(

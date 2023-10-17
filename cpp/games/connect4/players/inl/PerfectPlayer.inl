@@ -157,8 +157,8 @@ inline void PerfectPlayer::receive_state_change(
   move_history_.append(action[0]);
 }
 
-inline PerfectPlayer::Action
-PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline PerfectPlayer::ActionResponse
+PerfectPlayer::get_action_response(const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
 
   ActionMask candidates;
@@ -191,7 +191,7 @@ PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_action
   }
 
   if (params_.verbose) {
-    std::cout << "get_action()" << std::endl;
+    std::cout << "get_action_response()" << std::endl;
     state.dump();
     std::cout << "scores: " << result.scores.transpose() << std::endl;
     std::cout << "best_score: " << result.best_score << std::endl;

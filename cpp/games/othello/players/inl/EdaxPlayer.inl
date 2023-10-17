@@ -63,10 +63,10 @@ inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const Game
   submit_action(action);
 }
 
-inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionMask& valid_actions) {
+inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const GameState&, const ActionMask& valid_actions) {
   int num_valid_actions = eigen_util::count(valid_actions);
   if (params_.verbose) {
-    std::cout << "EdaxPlayer::get_action() - num_valid_actions=" << num_valid_actions << std::endl;
+    std::cout << "EdaxPlayer::get_action_response() - num_valid_actions=" << num_valid_actions << std::endl;
   }
   if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
     Action action = eigen_util::sample(valid_actions);
@@ -102,7 +102,7 @@ inline EdaxPlayer::Action EdaxPlayer::get_action(const GameState&, const ActionM
     for (size_t i = 0; i < n; ++i) {
       std::cerr << line_buffer_[i] << std::endl;
     }
-    throw util::Exception("EdaxPlayer::get_action: invalid action: %d", a);
+    throw util::Exception("EdaxPlayer::get_action_response: invalid action: %d", a);
   }
 
   Action action;

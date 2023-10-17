@@ -28,8 +28,8 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-typename DataExportingMctsPlayer<GameState_, Tensorizor_>::Action
-DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
+typename DataExportingMctsPlayer<GameState_, Tensorizor_>::ActionResponse
+DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action_response(
   const GameState& state, const ActionMask& valid_actions)
 {
   auto search_mode = this->choose_search_mode();
@@ -53,7 +53,7 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action(
     }
   }
 
-  return base_t::get_action_helper(search_mode, mcts_search_results, valid_actions);
+  return base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
 }
 
 template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>

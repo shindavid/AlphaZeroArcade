@@ -23,6 +23,7 @@ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
   using ActionMask = typename GameStateTypes::ActionMask;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;

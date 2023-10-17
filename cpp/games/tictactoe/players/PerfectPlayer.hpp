@@ -27,7 +27,7 @@ public:
 
   PerfectPlayer(const Params&);
 
-  Action get_action(const GameState&, const ActionMask&) override;
+  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
 
 private:
   struct policy_t {

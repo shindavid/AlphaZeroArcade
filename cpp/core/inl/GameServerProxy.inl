@@ -190,14 +190,15 @@ void GameServerProxy<GameState>::PlayerThread::stop() {
   cv_.notify_one();
 }
 
-template<GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::send_action_packet(const Action& action) {
+template <GameStateConcept GameState>
+void GameServerProxy<GameState>::PlayerThread::send_action_packet(const ActionResponse& response) {
   Packet<ActionDecision> packet;
   ActionDecision& decision = packet.payload();
   char* buf = decision.dynamic_size_section.buf;
   decision.game_thread_id = game_thread_id_;
   decision.player_id = player_id_;
-  packet.set_dynamic_section_size(shared_data_.serializer().serialize_action(buf, sizeof(buf), action));
+  packet.set_dynamic_section_size(
+      shared_data_.serializer().serialize_action_response(buf, sizeof(buf), response));
   packet.send_to(shared_data_.socket());
 }
 
@@ -213,7 +214,7 @@ void GameServerProxy<GameState>::PlayerThread::run() {
     if (!active_) break;
 
     ready_to_get_action_ = false;
-    send_action_packet(player_->get_action(state_, valid_actions_));
+    send_action_packet(player_->get_action_response(state_, valid_actions_));
   }
 }
 

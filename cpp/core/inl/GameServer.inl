@@ -275,7 +275,8 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
     seat_index_t seat = state.get_current_player();
     Player* player = players[seat];
     auto valid_actions = state.get_valid_actions();
-    Action action = player->get_action(state, valid_actions);
+    ActionResponse response = player->get_action_response(state, valid_actions);
+    Action action = response.action;
 
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash the server.
     GameStateTypes::validate_action(action, valid_actions);
