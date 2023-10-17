@@ -40,6 +40,8 @@ class AbstractPlayerGenerator {
 
   virtual ~AbstractPlayerGenerator() = default;
 
+  virtual std::string get_default_name() const = 0;
+
   /*
    * Returns a list of strings that match against the --type argument.
    *

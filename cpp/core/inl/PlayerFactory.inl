@@ -16,9 +16,7 @@ auto PlayerFactory<GameState>::Params::make_options_description() {
   po2::options_description desc("PlayerFactory options, for each instance of --player \"...\"");
   return desc.template add_option<"type">(po::value<std::string>(&type), "required")
       .template add_option<"name">(po::value<std::string>(&name),
-                                   "if unspecified, then a name like \"P0\", \"P1\", etc. is "
-                                   "assigned, where the number after \"P\" "
-                                   "is the player index")
+                                   "if unspecified, then a default name is chosen")
       .template add_option<"copy-from">(
           po::value<std::string>(&copy_from),
           "copy everything but --name and --seat from the --player with this name")

@@ -16,6 +16,7 @@ namespace tictactoe {
 class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::GameState> {
  public:
   using Player = core::AbstractPlayer<tictactoe::GameState>;
+  std::string get_default_name() const override { return "Perfect"; }
   std::vector<std::string> get_types() const override { return {"Perfect"}; }
   std::string get_description() const override { return "Perfect player"; }
   Player* generate(core::game_thread_id_t) override { return new PerfectPlayer(params_); }

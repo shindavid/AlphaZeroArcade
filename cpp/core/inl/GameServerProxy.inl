@@ -68,7 +68,10 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     seat_index_t seat = seat_generator.seat;
     PlayerGenerator* gen = seat_generator.gen;
 
-    const std::string registered_name = gen->get_name();
+    std::string registered_name = gen->get_name();
+    if (registered_name.empty()) {
+      registered_name = gen->get_default_name();
+    }
 
     printf("Registering player \"%s\" at seat %d\n", registered_name.c_str(), seat);
     std::cout.flush();

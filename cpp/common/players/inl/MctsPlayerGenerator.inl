@@ -38,6 +38,11 @@ CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::CompetitiveMctsPlayerGene
     : base_t(mcts::kCompetitive), mcts_player_params_(mcts::kCompetitive) {}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+std::string CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::get_default_name() const {
+  return util::create_string("MCTS-C-%d", mcts_player_params_.num_fast_iters);
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::BaseMctsPlayer*
 CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::generate_from_scratch() {
   return new MctsPlayer(mcts_player_params_, this->manager_params_);
@@ -60,6 +65,11 @@ void CompetitiveMctsPlayerGenerator<GameState, Tensorizor>::parse_args(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 TrainingMctsPlayerGenerator<GameState, Tensorizor>::TrainingMctsPlayerGenerator()
     : base_t(mcts::kTraining), mcts_player_params_(mcts::kTraining) {}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+std::string TrainingMctsPlayerGenerator<GameState, Tensorizor>::get_default_name() const {
+  return util::create_string("MCTS-T-%d", mcts_player_params_.num_fast_iters);
+}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename TrainingMctsPlayerGenerator<GameState, Tensorizor>::BaseMctsPlayer*

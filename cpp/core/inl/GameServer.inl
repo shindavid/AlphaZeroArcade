@@ -154,8 +154,7 @@ void GameServer<GameState>::SharedData::register_player(seat_index_t seat, Playe
   util::clean_assert(player_id < kNumPlayers, "Too many players registered (max %d)", kNumPlayers);
   std::string name = gen->get_name();
   if (name.empty()) {
-    name = util::create_string("P%d", player_id);
-    gen->set_name(name);
+    gen->set_name(gen->get_default_name());
   }
   registrations_.emplace_back(gen, seat, player_id);
 }

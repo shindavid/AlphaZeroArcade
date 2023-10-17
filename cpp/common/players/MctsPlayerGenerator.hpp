@@ -56,6 +56,7 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState,
   using MctsPlayerParams = typename MctsPlayer::Params;
 
   CompetitiveMctsPlayerGenerator();
+  std::string get_default_name() const override;
   std::vector<std::string> get_types() const override { return {"MCTS-C", "MCTS-Competitive"}; }
   std::string get_description() const override { return "Competitive MCTS player"; }
   void print_help(std::ostream& s) override { make_options_description().print(s); }
@@ -84,6 +85,7 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
   using TrainingDataWriterParams = typename MctsPlayer::TrainingDataWriterParams;
 
   TrainingMctsPlayerGenerator();
+  std::string get_default_name() const override;
   std::vector<std::string> get_types() const override { return {"MCTS-T", "MCTS-Training"}; }
   std::string get_description() const override { return "Training MCTS player"; }
   void print_help(std::ostream& s) override { make_options_description().print(s); }
