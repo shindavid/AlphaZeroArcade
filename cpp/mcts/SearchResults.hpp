@@ -5,7 +5,7 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState>
+template <core::GameStateConcept GameState>
 struct SearchResults {
   using GameStateTypes = core::GameStateTypes<GameState>;
 

@@ -20,7 +20,9 @@
 #include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
 
-namespace c4 { class GameState; }
+namespace c4 {
+class GameState;
+}
 
 template <>
 struct std::hash<c4::GameState> {
@@ -49,9 +51,9 @@ struct Symmetries {
     return *(transforms().begin() + index);
   }
 
-protected:
+ protected:
   static transform_array_t transforms() {
-    transform_array_t arr { &transforms_struct_.identity_, &transforms_struct_.refl_ };
+    transform_array_t arr{&transforms_struct_.identity_, &transforms_struct_.refl_};
     return arr;
   }
 
@@ -122,11 +124,13 @@ class GameState {
   void row_dump(row_t row, column_t blink_column) const;
 
   static constexpr int _to_bit_index(row_t row, column_t col);
-  static constexpr mask_t _column_mask(column_t col);  // mask containing piece on all cells of given column
-  static constexpr mask_t _bottom_mask(column_t col);  // mask containing single piece at bottom cell
+  static constexpr mask_t _column_mask(
+      column_t col);  // mask containing piece on all cells of given column
+  static constexpr mask_t _bottom_mask(
+      column_t col);                            // mask containing single piece at bottom cell
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell
 
-  mask_t full_mask_ = 0;  // spaces occupied by either player
+  mask_t full_mask_ = 0;        // spaces occupied by either player
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
 };
 
@@ -139,7 +143,8 @@ using Player = core::AbstractPlayer<GameState>;
 namespace core {
 
 // template specialization
-template<> struct serializer<c4::GameState> {
+template <>
+struct serializer<c4::GameState> {
   using type = DeterministicGameSerializer<c4::GameState>;
 };
 
@@ -147,7 +152,8 @@ template<> struct serializer<c4::GameState> {
 
 namespace mcts {
 
-template<> struct SearchResultsDumper<c4::GameState> {
+template <>
+struct SearchResultsDumper<c4::GameState> {
   using LocalPolicyArray = c4::GameState::LocalPolicyArray;
   using SearchResults = mcts::SearchResults<c4::GameState>;
 

@@ -7,7 +7,7 @@
 namespace util {
 
 class ParamDumper {
-public:
+ public:
   /*
    * Adds a parameter to dump.
    *
@@ -24,14 +24,15 @@ public:
    * - The addition of colon and \n characters
    * - The right-alignment of the values
    */
-  static void add(const char* key, const char* value_fmt, ...) __attribute__((format(printf, 2, 3)));
+  static void add(const char* key, const char* value_fmt, ...)
+      __attribute__((format(printf, 2, 3)));
 
   /*
    * Dumps all add()'ed parameters to stdout.
    */
   static void flush();
 
-private:
+ private:
   static ParamDumper* instance();
 
   static ParamDumper* instance_;

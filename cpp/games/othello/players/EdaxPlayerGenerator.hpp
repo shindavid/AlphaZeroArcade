@@ -14,7 +14,7 @@
 namespace othello {
 
 class EdaxPlayerGenerator : public core::AbstractPlayerGenerator<othello::GameState> {
-public:
+ public:
   using Player = core::AbstractPlayer<othello::GameState>;
   std::vector<std::string> get_types() const override { return {"edax"}; }
   std::string get_description() const override { return "edax player"; }
@@ -27,7 +27,7 @@ public:
     po::notify(vm);
   }
 
-private:
+ private:
   EdaxPlayer::Params params_;
 };
 

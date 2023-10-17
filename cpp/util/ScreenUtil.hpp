@@ -13,11 +13,11 @@ void clearscreen();
  * ScreenClearer::clear_once();  // calls clearscreen()
  */
 class ScreenClearer {
-public:
+ public:
   static void clear_once();
   static void reset();
 
-private:
+ private:
   static ScreenClearer* instance();
 
   static ScreenClearer* instance_;

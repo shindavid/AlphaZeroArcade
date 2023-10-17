@@ -13,22 +13,20 @@
 namespace c4 {
 
 class PlayerFactory : public core::PlayerFactory<GameState> {
-public:
+ public:
   using base_t = core::PlayerFactory<GameState>;
   using player_generator_creator_vec_t = base_t::player_generator_creator_vec_t;
 
   PlayerFactory() : base_t(make_generators()) {}
 
-private:
+ private:
   static player_generator_creator_vec_t make_generators() {
-    return {
-      new core::PlayerGeneratorCreator<c4::HumanTuiPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<c4::CompetitiveMctsPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<c4::TrainingMctsPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<c4::PerfectPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
-      new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()
-    };
+    return {new core::PlayerGeneratorCreator<c4::HumanTuiPlayerGenerator>(),
+            new core::PlayerGeneratorCreator<c4::CompetitiveMctsPlayerGenerator>(),
+            new core::PlayerGeneratorCreator<c4::TrainingMctsPlayerGenerator>(),
+            new core::PlayerGeneratorCreator<c4::PerfectPlayerGenerator>(),
+            new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
+            new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()};
   }
 };
 

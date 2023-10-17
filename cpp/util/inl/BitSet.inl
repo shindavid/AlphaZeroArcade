@@ -11,26 +11,34 @@ namespace bitset_util {
 
 namespace detail {
 
-enum IterType {
-  kSet,
-  kUnset
-};
+enum IterType { kSet, kUnset };
 
 template <size_t N, IterType type>
 struct Wrapper {
   using bitset_t = std::bitset<N>;
 
   struct Iterator {
-  public:
+   public:
     Iterator(const bitset_t* bitset, int index) : bitset_(bitset), index_(index) { skip_to_next(); }
     bool operator==(Iterator other) const { return index_ == other.index_; }
     bool operator!=(Iterator other) const { return index_ != other.index_; }
-    int operator*() const { return index_;}
-    Iterator& operator++() { index_++; skip_to_next(); return *this; }
-    Iterator operator++(int) { Iterator tmp = *this; ++(*this); return tmp; }
-  private:
-    static constexpr bool use(bool b) { return (type==kUnset) ^ b; }
-    void skip_to_next() { while (index_ < N && !use((*bitset_)[index_])) index_++; }
+    int operator*() const { return index_; }
+    Iterator& operator++() {
+      index_++;
+      skip_to_next();
+      return *this;
+    }
+    Iterator operator++(int) {
+      Iterator tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+   private:
+    static constexpr bool use(bool b) { return (type == kUnset) ^ b; }
+    void skip_to_next() {
+      while (index_ < N && !use((*bitset_)[index_])) index_++;
+    }
     const bitset_t* bitset_;
     size_t index_;
   };
@@ -45,23 +53,28 @@ struct Wrapper {
 
 }  // namespace detail
 
-template<size_t N> auto on_indices(const std::bitset<N>& bitset) {
+template <size_t N>
+auto on_indices(const std::bitset<N>& bitset) {
   return detail::Wrapper<N, detail::kSet>(&bitset);
 }
 
-template<size_t N> auto off_indices(const std::bitset<N>& bitset) {
+template <size_t N>
+auto off_indices(const std::bitset<N>& bitset) {
   return detail::Wrapper<N, detail::kUnset>(&bitset);
 }
 
-template<size_t N> int get_nth_on_index(const std::bitset<N>& bitset, int n) {
+template <size_t N>
+int get_nth_on_index(const std::bitset<N>& bitset, int n) {
   for (int k : on_indices(bitset)) {
     if (n == 0) return k;
     n--;
   }
-  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d]", bitset.to_string().c_str(), n);
+  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d]",
+                        bitset.to_string().c_str(), n);
 }
 
-template<size_t N> int count_on_indices_before(const std::bitset<N>& bitset, int i) {
+template <size_t N>
+int count_on_indices_before(const std::bitset<N>& bitset, int i) {
   int count = 0;
   for (int k : on_indices(bitset)) {
     if (k >= i) break;
@@ -75,7 +88,8 @@ template<size_t N> int count_on_indices_before(const std::bitset<N>& bitset, int
  *
  * TODO: optimize by using custom implementation powered by c++20's <bits> module.
  */
-template<size_t N> int choose_random_on_index(const std::bitset<N>& bitset) {
+template <size_t N>
+int choose_random_on_index(const std::bitset<N>& bitset) {
   int upper = bitset.count();
   util::release_assert(upper > 0);
   int c = 1 + util::Random::uniform_sample(0, upper);
@@ -89,7 +103,8 @@ template<size_t N> int choose_random_on_index(const std::bitset<N>& bitset) {
  *
  * TODO: optimize by using custom implementation powered by c++20's <bits> module.
  */
-template<size_t N> int choose_random_off_index(const std::bitset<N>& bitset) {
+template <size_t N>
+int choose_random_off_index(const std::bitset<N>& bitset) {
   int upper = N - bitset.count();
   util::release_assert(upper > 0);
   int c = 1 + util::Random::uniform_sample(0, upper);
@@ -98,7 +113,8 @@ template<size_t N> int choose_random_off_index(const std::bitset<N>& bitset) {
   return p - 1;
 }
 
-template<size_t N> std::string to_string(const std::bitset<N>& bitset) {
+template <size_t N>
+std::string to_string(const std::bitset<N>& bitset) {
   std::string s = bitset.to_string();
   std::reverse(s.begin(), s.end());
   return s;

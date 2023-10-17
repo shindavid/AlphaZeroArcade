@@ -15,15 +15,16 @@
 #include <util/MetaProgramming.hpp>
 
 /*
- * The PlayerFactory is a template class that facilitates the creation of player objects from command line arguments.
+ * The PlayerFactory is a template class that facilitates the creation of player objects from
+ * command line arguments.
  *
  * See cpp/connect4/PlayerFactory.hpp for an example of how to use this class.
  */
 namespace core {
 
-template<GameStateConcept GameState_>
+template <GameStateConcept GameState_>
 class PlayerFactory {
-public:
+ public:
   using GameState = GameState_;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
@@ -47,18 +48,19 @@ public:
   };
 
   /*
-   * The constructor takes a vector of PlayerGenerator objects. Each PlayerGenerator provides a recipe for how to
-   * determine whether a set of cmdline tokens match that generator, and if so, how to create a player object.
+   * The constructor takes a vector of PlayerGenerator objects. Each PlayerGenerator provides a
+   * recipe for how to determine whether a set of cmdline tokens match that generator, and if so,
+   * how to create a player object.
    *
-   * From this, the PlayerFactory generates the appropriate help message, with player-specific details printed only if
-   * the associated type is passed via --player "--type=..."
+   * From this, the PlayerFactory generates the appropriate help message, with player-specific
+   * details printed only if the associated type is passed via --player "--type=..."
    */
   PlayerFactory(const player_generator_creator_vec_t& creators);
 
   player_generator_seat_vec_t parse(const std::vector<std::string>& player_strs);
   void print_help(const std::vector<std::string>& player_strs);
 
-private:
+ private:
   static std::string type_str(const PlayerGenerator* generator);
   static bool matches(const PlayerGenerator* generator, const std::string& type);
   PlayerGenerator* parse_helper(const std::string& player_str, const std::string& name,

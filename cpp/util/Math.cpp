@@ -25,7 +25,7 @@ double parse_expression(const char* expr, const var_bindings_map_t& bindings) {
     return result;
   } else {
     printf("%s\n", expr);
-    printf("\t%*s^\nError near here", err-1, "");
+    printf("\t%*s^\nError near here", err - 1, "");
     throw util::Exception("%s(\"%s\") failure", __func__, expr);
   }
 }

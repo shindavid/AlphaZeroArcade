@@ -8,29 +8,32 @@
 
 namespace core {
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 auto PlayerFactory<GameState>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
   po2::options_description desc("PlayerFactory options, for each instance of --player \"...\"");
-  return desc
-      .template add_option<"type">(po::value<std::string>(&type), "required")
+  return desc.template add_option<"type">(po::value<std::string>(&type), "required")
       .template add_option<"name">(po::value<std::string>(&name),
-          "if unspecified, then a name like \"P0\", \"P1\", etc. is assigned, where the number after \"P\" "
-          "is the player index")
-      .template add_option<"copy-from">(po::value<std::string>(&copy_from),
+                                   "if unspecified, then a name like \"P0\", \"P1\", etc. is "
+                                   "assigned, where the number after \"P\" "
+                                   "is the player index")
+      .template add_option<"copy-from">(
+          po::value<std::string>(&copy_from),
           "copy everything but --name and --seat from the --player with this name")
       .template add_option<"seat">(po::value<int>(&seat),
-          "zero-indexed seat (0=first-player, 1=second-player, etc.). If unspecified, then the seat is selected "
-          "randomly among the available seats for the first game. For subsequent games, we round-robin through the "
-          "set of N! possible seat assignments, where N is the number of players with unspecified seats.")
-      ;
+                                   "zero-indexed seat (0=first-player, 1=second-player, etc.). If "
+                                   "unspecified, then the seat is selected "
+                                   "randomly among the available seats for the first game. For "
+                                   "subsequent games, we round-robin through the "
+                                   "set of N! possible seat assignments, where N is the number of "
+                                   "players with unspecified seats.");
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 PlayerFactory<GameState>::PlayerFactory(const player_generator_creator_vec_t& creators)
-: creators_(creators) {
+    : creators_(creators) {
   // validate that the generator types don't overlap
   std::set<std::string> types;
   for (auto* creator : creators_) {
@@ -45,9 +48,9 @@ PlayerFactory<GameState>::PlayerFactory(const player_generator_creator_vec_t& cr
   }
 }
 
-template<GameStateConcept GameState>
-typename PlayerFactory<GameState>::player_generator_seat_vec_t
-PlayerFactory<GameState>::parse(const std::vector<std::string>& player_strs) {
+template <GameStateConcept GameState>
+typename PlayerFactory<GameState>::player_generator_seat_vec_t PlayerFactory<GameState>::parse(
+    const std::vector<std::string>& player_strs) {
   player_generator_seat_vec_t vec;
 
   for (const auto& player_str : player_strs) {
@@ -59,7 +62,8 @@ PlayerFactory<GameState>::parse(const std::vector<std::string>& player_strs) {
     int seat = -1;
     if (!seat_str.empty()) {
       seat = std::stoi(seat_str);
-      util::clean_assert(seat < GameState::kNumPlayers, "Invalid seat (%d) in --player \"%s\"", seat, player_str.c_str());
+      util::clean_assert(seat < GameState::kNumPlayers, "Invalid seat (%d) in --player \"%s\"",
+                         seat, player_str.c_str());
     }
 
     player_generator_seat_t player_generator_seat;
@@ -72,16 +76,18 @@ PlayerFactory<GameState>::parse(const std::vector<std::string>& player_strs) {
   return vec;
 }
 
-template<GameStateConcept GameState>
-void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player_strs)
-{
+template <GameStateConcept GameState>
+void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player_strs) {
   Params params;
   params.make_options_description().print(std::cout);
-  std::cout << "  --... ...             type-specific args, dependent on --type" << std::endl << std::endl;
+  std::cout << "  --... ...             type-specific args, dependent on --type" << std::endl
+            << std::endl;
 
   std::cout << "For each player, you must pass something like:" << std::endl << std::endl;
   std::cout << "  --player \"--type=MCTS-C --name=CPU <type-specific options...>\"" << std::endl;
-  std::cout << "  --player \"--type=TUI --name=Human --seat=1 <type-specific options...>\"" << std::endl << std::endl;
+  std::cout << "  --player \"--type=TUI --name=Human --seat=1 <type-specific options...>\""
+            << std::endl
+            << std::endl;
   std::cout << std::endl << std::endl;
 
   std::cout << "The set of legal --type values are:" << std::endl;
@@ -94,10 +100,11 @@ void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player
     std::cout << "  " << type_str(generator) << ": " << generator->get_description() << std::endl;
   }
   std::cout << std::endl;
-  std::cout << "To see the options for a specific --type, pass -h --player \"--type=<type>\"" << std::endl;
+  std::cout << "To see the options for a specific --type, pass -h --player \"--type=<type>\""
+            << std::endl;
 
   std::vector<bool> used_types(generators.size(), false);
-  for (const std::string &s: player_strs) {
+  for (const std::string& s : player_strs) {
     std::vector<std::string> tokens = util::split(s);
     std::string type = boost_util::get_option_value(tokens, "type");
     for (int g = 0; g < (int)generators.size(); ++g) {
@@ -117,7 +124,9 @@ void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player
     generator->print_help(ss);
     std::string s = ss.str();
     if (!s.empty()) {
-      std::cout << std::endl << "--type=" << type_str(generator) << " options:" << std::endl << std::endl;
+      std::cout << std::endl
+                << "--type=" << type_str(generator) << " options:" << std::endl
+                << std::endl;
 
       std::stringstream ss2(s);
       std::string line;
@@ -132,7 +141,7 @@ void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 std::string PlayerFactory<GameState>::type_str(const PlayerGenerator* generator) {
   std::vector<std::string> types = generator->get_types();
   std::ostringstream ss;
@@ -145,7 +154,7 @@ std::string PlayerFactory<GameState>::type_str(const PlayerGenerator* generator)
   return ss.str();
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 bool PlayerFactory<GameState>::matches(const PlayerGenerator* generator, const std::string& type) {
   for (const auto& t : generator->get_types()) {
     if (t == type) {
@@ -155,11 +164,10 @@ bool PlayerFactory<GameState>::matches(const PlayerGenerator* generator, const s
   return false;
 }
 
-template<GameStateConcept GameState>
-typename PlayerFactory<GameState>::PlayerGenerator*
-PlayerFactory<GameState>::parse_helper(
-    const std::string& player_str, const std::string& name, const std::vector<std::string>& orig_tokens)
-{
+template <GameStateConcept GameState>
+typename PlayerFactory<GameState>::PlayerGenerator* PlayerFactory<GameState>::parse_helper(
+    const std::string& player_str, const std::string& name,
+    const std::vector<std::string>& orig_tokens) {
   std::vector<std::string> tokens = orig_tokens;
 
   std::string type = boost_util::pop_option_value(tokens, "type");
@@ -167,13 +175,16 @@ PlayerFactory<GameState>::parse_helper(
 
   if (!copy_from.empty()) {
     if (!type.empty()) {
-      throw util::Exception("Invalid usage of --copy-from with --type in --player \"%s\"", player_str.c_str());
+      throw util::Exception("Invalid usage of --copy-from with --type in --player \"%s\"",
+                            player_str.c_str());
     }
-    util::clean_assert(name_map_.count(copy_from), "Invalid --copy-from in --player \"%s\"", player_str.c_str());
+    util::clean_assert(name_map_.count(copy_from), "Invalid --copy-from in --player \"%s\"",
+                       player_str.c_str());
     return parse_helper(player_str, name, name_map_.at(copy_from));
   }
 
-  util::clean_assert(!type.empty(), "Must specify --type or --copy-from in --player \"%s\"", player_str.c_str());
+  util::clean_assert(!type.empty(), "Must specify --type or --copy-from in --player \"%s\"",
+                     player_str.c_str());
   if (!name.empty()) {
     util::clean_assert(!name_map_.count(name), "Duplicate --name \"%s\"", name.c_str());
     name_map_[name] = orig_tokens;

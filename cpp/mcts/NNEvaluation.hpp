@@ -8,9 +8,9 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState>
+template <core::GameStateConcept GameState>
 class NNEvaluation {
-public:
+ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
 
   using ActionMask = typename GameStateTypes::ActionMask;
@@ -19,14 +19,15 @@ public:
   using ValueArray = typename GameStateTypes::ValueArray;
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
-  NNEvaluation(const ValueTensor& value, const PolicyTensor& policy, const ActionMask& valid_actions);
+  NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
+               const ActionMask& valid_actions);
   const ValueArray& value_prob_distr() const { return value_prob_distr_; }
   const LocalPolicyArray& local_policy_logit_distr() const { return local_policy_logit_distr_; }
 
   using sptr = std::shared_ptr<NNEvaluation>;
   using asptr = util::AtomicSharedPtr<NNEvaluation>;
 
-protected:
+ protected:
   ValueArray value_prob_distr_;
   LocalPolicyArray local_policy_logit_distr_;
 };

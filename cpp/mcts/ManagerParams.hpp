@@ -22,8 +22,10 @@ struct ManagerParams {
   bool operator==(const ManagerParams& other) const = default;
 
 #ifdef PROFILE_MCTS
-  boost::filesystem::path profiling_dir() const { return boost::filesystem::path(profiling_dir_str); }
-#else  // PROFILE_MCTS
+  boost::filesystem::path profiling_dir() const {
+    return boost::filesystem::path(profiling_dir_str);
+  }
+#else   // PROFILE_MCTS
   boost::filesystem::path profiling_dir() const { return {}; }
 #endif  // PROFILE_MCTS
 

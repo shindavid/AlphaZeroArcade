@@ -36,24 +36,24 @@ inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const 
 
   bool win = false;
 
-  constexpr mask_t horizontal_block = 1UL + (1UL<<8) + (1UL<<16) + (1UL<<24);
-  constexpr mask_t nw_se_diagonal_block = 1UL + (1UL<<7) + (1UL<<14) + (1UL<<21);
-  constexpr mask_t sw_ne_diagonal_block = 1UL + (1UL<<9) + (1UL<<18) + (1UL<<27);
+  constexpr mask_t horizontal_block = 1UL + (1UL << 8) + (1UL << 16) + (1UL << 24);
+  constexpr mask_t nw_se_diagonal_block = 1UL + (1UL << 7) + (1UL << 14) + (1UL << 21);
+  constexpr mask_t sw_ne_diagonal_block = 1UL + (1UL << 9) + (1UL << 18) + (1UL << 27);
 
   mask_t masks[] = {
-      (piece_mask << 1) - (piece_mask >> 3),  // vertical
-      piece_mask * horizontal_block,  // horizontal 1
-      (piece_mask >> 8) * horizontal_block,  // horizontal 2
-      (piece_mask >> 16) * horizontal_block,  // horizontal 3
-      (piece_mask >> 24) * horizontal_block,  // horizontal 4
-      piece_mask * nw_se_diagonal_block,  // nw-se diagonal 1
-      (piece_mask >> 7) * nw_se_diagonal_block,  // nw-se diagonal 2
+      (piece_mask << 1) - (piece_mask >> 3),      // vertical
+      piece_mask * horizontal_block,              // horizontal 1
+      (piece_mask >> 8) * horizontal_block,       // horizontal 2
+      (piece_mask >> 16) * horizontal_block,      // horizontal 3
+      (piece_mask >> 24) * horizontal_block,      // horizontal 4
+      piece_mask * nw_se_diagonal_block,          // nw-se diagonal 1
+      (piece_mask >> 7) * nw_se_diagonal_block,   // nw-se diagonal 2
       (piece_mask >> 14) * nw_se_diagonal_block,  // nw-se diagonal 3
       (piece_mask >> 21) * nw_se_diagonal_block,  // nw-se diagonal 4
-      piece_mask * sw_ne_diagonal_block,  // sw-ne diagonal 1
-      (piece_mask >> 9) * sw_ne_diagonal_block,  // sw-ne diagonal 2
+      piece_mask * sw_ne_diagonal_block,          // sw-ne diagonal 1
+      (piece_mask >> 9) * sw_ne_diagonal_block,   // sw-ne diagonal 2
       (piece_mask >> 18) * sw_ne_diagonal_block,  // sw-ne diagonal 3
-      (piece_mask >> 27) * sw_ne_diagonal_block  // sw-ne diagonal 4
+      (piece_mask >> 27) * sw_ne_diagonal_block   // sw-ne diagonal 4
   };
 
   mask_t updated_mask = full_mask_ ^ cur_player_mask_;
@@ -88,9 +88,7 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
   return mask;
 }
 
-inline int GameState::get_move_number() const {
-  return 1 + std::popcount(full_mask_);
-}
+inline int GameState::get_move_number() const { return 1 + std::popcount(full_mask_); }
 
 inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   int cp = get_current_player();
@@ -100,7 +98,8 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
-inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(const Action* last_action,
+                            const player_name_array_t* player_names) const {
   int action_index = last_action ? (*last_action)[0] : -1;
   if (!util::tty_mode() && action_index > -1) {
     std::string s(2 * action_index + 1, ' ');
@@ -117,8 +116,10 @@ inline void GameState::dump(const Action* last_action, const player_name_array_t
   }
   printf("|1|2|3|4|5|6|7|\n\n");
   if (player_names) {
-    printf("%s%s%s: %s\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""), (*player_names)[kRed].c_str());
-    printf("%s%s%s: %s\n\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""), (*player_names)[kYellow].c_str());
+    printf("%s%s%s: %s\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
+           (*player_names)[kRed].c_str());
+    printf("%s%s%s: %s\n\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
+           (*player_names)[kYellow].c_str());
   }
   std::cout.flush();
 }
@@ -136,23 +137,18 @@ inline void GameState::row_dump(row_t row, column_t blink_column) const {
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle("") : " ";
 
-    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c, occupied ? ansi::kReset("") : "");
+    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c,
+           occupied ? ansi::kReset("") : "");
   }
 
   printf("|\n");
 }
 
-inline constexpr int GameState::_to_bit_index(row_t row, column_t col) {
-  return 8 * col + row;
-}
+inline constexpr int GameState::_to_bit_index(row_t row, column_t col) { return 8 * col + row; }
 
-inline constexpr mask_t GameState::_column_mask(column_t col) {
-  return 63UL << (8 * col);
-}
+inline constexpr mask_t GameState::_column_mask(column_t col) { return 63UL << (8 * col); }
 
-inline constexpr mask_t GameState::_bottom_mask(column_t col) {
-  return 1UL << (8 * col);
-}
+inline constexpr mask_t GameState::_bottom_mask(column_t col) { return 1UL << (8 * col); }
 
 inline constexpr mask_t GameState::_full_bottom_mask() {
   mask_t mask = 0;
@@ -166,9 +162,8 @@ inline constexpr mask_t GameState::_full_bottom_mask() {
 
 namespace mcts {
 
-inline void SearchResultsDumper<c4::GameState>::dump(
-    const LocalPolicyArray& action_policy, const SearchResults& results)
-{
+inline void SearchResultsDumper<c4::GameState>::dump(const LocalPolicyArray& action_policy,
+                                                     const SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

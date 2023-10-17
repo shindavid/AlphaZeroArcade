@@ -18,20 +18,29 @@
 namespace core {
 
 /*
- * Represents the outcome of a game, as a length-t array of non-negative floats, where t is the number of players in
- * the game.
+ * Represents the outcome of a game, as a length-t array of non-negative floats, where t is the
+ * number of players in the game.
  *
- * If the outcome represents a terminal game state, the array will have sum 1. Normally, one slot in the array,
- * corresponding to the winner, will equal 1, and the other slots will equal 0. In the even of a draw, the tied
- * players will typically each equal the same fractional value.
+ * If the outcome represents a terminal game state, the array will have sum 1. Normally, one slot in
+ * the array, corresponding to the winner, will equal 1, and the other slots will equal 0. In the
+ * even of a draw, the tied players will typically each equal the same fractional value.
  *
  * If the game is not yet over, the outcome will have all zeros.
  */
-template<int NumPlayers> using GameOutcome = Eigen::Array<torch_util::dtype, NumPlayers, 1>;
-template<int NumPlayers> bool is_terminal_outcome(const GameOutcome<NumPlayers>& outcome) { return outcome.sum() > 0; }
-template<int NumPlayers> auto make_non_terminal_outcome() { GameOutcome<NumPlayers> o; o.setZero(); return o; }
+template <int NumPlayers>
+using GameOutcome = Eigen::Array<torch_util::dtype, NumPlayers, 1>;
+template <int NumPlayers>
+bool is_terminal_outcome(const GameOutcome<NumPlayers>& outcome) {
+  return outcome.sum() > 0;
+}
+template <int NumPlayers>
+auto make_non_terminal_outcome() {
+  GameOutcome<NumPlayers> o;
+  o.setZero();
+  return o;
+}
 
-template<typename GameState>
+template <typename GameState>
 struct GameStateTypes {
   using dtype = torch_util::dtype;
 
@@ -70,16 +79,18 @@ struct GameStateTypes {
    */
   struct ActionResponse {
     ActionResponse() : victory_guarantee(false) {}
-    ActionResponse(Action a, bool v=false) : action(a), victory_guarantee(v) {}
+    ActionResponse(Action a, bool v = false) : action(a), victory_guarantee(v) {}
     Action action;
     bool victory_guarantee;
   };
 
   static LocalPolicyArray global_to_local(const PolicyTensor& policy, const ActionMask& mask);
-  static void global_to_local(const PolicyTensor& policy, const ActionMask& mask, LocalPolicyArray& out);
+  static void global_to_local(const PolicyTensor& policy, const ActionMask& mask,
+                              LocalPolicyArray& out);
 
   static PolicyTensor local_to_global(const LocalPolicyArray& policy, const ActionMask& mask);
-  static void local_to_global(const LocalPolicyArray& policy, const ActionMask& mask, PolicyTensor& out);
+  static void local_to_global(const LocalPolicyArray& policy, const ActionMask& mask,
+                              PolicyTensor& out);
 
   static Action get_nth_valid_action(const ActionMask& valid_actions, int n);
 
@@ -106,8 +117,8 @@ struct GameStateTypes {
   static void normalize(const ActionMask& mask, PolicyTensor& policy);
 
   /*
-   * Provides variable bindings, so that we can specify certain config variables as expressions of game parameters.
-   * See util/Math.hpp
+   * Provides variable bindings, so that we can specify certain config variables as expressions of
+   * game parameters. See util/Math.hpp
    *
    * Bindings:
    *
@@ -116,17 +127,17 @@ struct GameStateTypes {
   static math::var_bindings_map_t get_var_bindings();
 };
 
-template<typename T>
+template <typename T>
 struct ExtractAuxTargetTensor {
   using type = typename T::Tensor;
 };
 
-template<typename T>
+template <typename T>
 struct ToTorchTensor {
   using type = torch::Tensor;
 };
 
-template<typename Tensorizor>
+template <typename Tensorizor>
 struct TensorizorTypes {
   using InputTensor = typename Tensorizor::InputTensor;
   using InputShape = eigen_util::extract_shape_t<InputTensor>;

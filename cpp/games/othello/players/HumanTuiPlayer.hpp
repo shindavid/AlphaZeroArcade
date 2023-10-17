@@ -6,7 +6,7 @@
 namespace othello {
 
 class HumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
-private:
+ private:
   Action prompt_for_action(const GameState&, const ActionMask&) override;
   int prompt_for_action_helper(const GameState&, const ActionMask&);
 };

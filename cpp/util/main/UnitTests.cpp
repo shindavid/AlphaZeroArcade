@@ -6,7 +6,7 @@
 int global_pass_count = 0;
 int global_fail_count = 0;
 
-template<typename T>
+template <typename T>
 void test_zero_out() {
   util::Random::set_seed(1);
   std::array<int, 10> counts = {};

@@ -27,8 +27,8 @@
  * A7 B7 C7 D7 E7 F7 G7 H7
  * A8 B8 C8 D8 E8 F8 G8 H8
  *
- * I wanted to have row 1 at the bottom and row 8 at the top like in chess. But every resource I look at on the web
- * appears to go with the above representation.
+ * I wanted to have row 1 at the bottom and row 8 at the top like in chess. But every resource I
+ * look at on the web appears to go with the above representation.
  */
 namespace othello {
 
@@ -125,8 +125,8 @@ const mask_t kStartingBlackMask = 1ULL << kStartingBlack1 | 1ULL << kStartingBla
 const int kNumGlobalActions = kNumCells + 1;
 
 /*
- * This can probably be shrunk, maybe down to the 22-34 range. But I haven't found any proof of an upper bound, so
- * being conservative for now.
+ * This can probably be shrunk, maybe down to the 22-34 range. But I haven't found any proof of an
+ * upper bound, so being conservative for now.
  *
  * https://puzzling.stackexchange.com/a/102017/18525
  */

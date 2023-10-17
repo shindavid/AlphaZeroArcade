@@ -34,20 +34,21 @@ namespace util {
  */
 
 class ThreadSafePrinter {
-public:
+ public:
   static const int kWhitespacePrefixLength = 50;
   ThreadSafePrinter(int thread_id = 0, bool print_timestamp = true);
   ~ThreadSafePrinter();
 
   void release();
   int printf(const char* fmt, ...) __attribute__((format(printf, 2, 3)));
-  template<typename T> ThreadSafePrinter& operator<<(const T& t);
+  template <typename T>
+  ThreadSafePrinter& operator<<(const T& t);
 
   // std::endl support
   using std_endl_t = std::ostream& (*)(std::ostream&);
   ThreadSafePrinter& operator<<(std_endl_t);
 
-private:
+ private:
   void validate_lock() const;
   int print_timestamp() const;
   static std::mutex mutex_;

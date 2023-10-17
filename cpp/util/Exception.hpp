@@ -14,11 +14,11 @@ namespace util {
  * formatting.
  */
 class Exception : public std::exception {
-public:
-  Exception(char const* fmt=nullptr, ...) __attribute__((format(printf, 2, 3)));
+ public:
+  Exception(char const* fmt = nullptr, ...) __attribute__((format(printf, 2, 3)));
   char const* what() const throw() { return text_; }
 
-private:
+ private:
   char text_[1024];
 };
 
@@ -36,11 +36,11 @@ private:
  * (-Wformat-security).
  */
 class CleanException : public std::exception {
-public:
- CleanException(char const* fmt = nullptr, ...) __attribute__((format(printf, 2, 3)));
- char const* what() const throw() { return text_; }
+ public:
+  CleanException(char const* fmt = nullptr, ...) __attribute__((format(printf, 2, 3)));
+  char const* what() const throw() { return text_; }
 
-private:
+ private:
   char text_[1024];
 };
 

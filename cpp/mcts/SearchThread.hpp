@@ -20,9 +20,9 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class SearchThread {
-public:
+ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using NNEvaluation = mcts::NNEvaluation<GameState>;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
@@ -47,8 +47,8 @@ public:
   using dtype = torch_util::dtype;
   using profiler_t = search_thread_profiler_t;
 
-  SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service, const ManagerParams* manager_params,
-               int thread_id);
+  SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service,
+               const ManagerParams* manager_params, int thread_id);
   ~SearchThread();
 
   int thread_id() const { return thread_id_; }
@@ -62,7 +62,7 @@ public:
 
   void dump_profiling_stats() { profiler_.dump(64); }
 
-private:
+ private:
   struct VirtualIncrement {
     void operator()(Node* node) const { node->stats().virtual_increment(); }
   };
@@ -114,9 +114,9 @@ private:
    *
    * Applies PUCT criterion to select the best child-index to visit from the given Node.
    *
-   * TODO: as we experiment with things like auxiliary NN output heads, dynamic cPUCT values, etc., this method will
-   * evolve. It probably makes sense to have the behavior as part of the Tensorizor, since there is coupling with NN
-   * architecture (in the form of output heads).
+   * TODO: as we experiment with things like auxiliary NN output heads, dynamic cPUCT values, etc.,
+   * this method will evolve. It probably makes sense to have the behavior as part of the
+   * Tensorizor, since there is coupling with NN architecture (in the form of output heads).
    */
   core::action_index_t get_best_action_index(Node* tree, NNEvaluation* evaluation);
 

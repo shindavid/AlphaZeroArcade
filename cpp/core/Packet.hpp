@@ -19,8 +19,8 @@
 /*
  * Unit of data sent between GameServer and remote players.
  *
- * Changes to this file must be backwards-compatible, since we will test against frozen binaries that were compiled
- * using past versions of this file.
+ * Changes to this file must be backwards-compatible, since we will test against frozen binaries
+ * that were compiled using past versions of this file.
  */
 
 namespace core {
@@ -44,7 +44,7 @@ struct PacketHeader {
   int8_t padding[3] = {};
   int payload_size;
 
-  PacketHeader(Type t=kNumTypes, int ps=0) : type(t), payload_size(ps) {}
+  PacketHeader(Type t = kNumTypes, int ps = 0) : type(t), payload_size(ps) {}
 };
 #pragma pack(pop)
 
@@ -62,8 +62,9 @@ struct Registration {
   };
 
   /*
-   * If the remote process is registering multiple players, the server needs to allocate them all to the same socket.
-   * Having this remaining_requests field allows the server to do this allocation properly.
+   * If the remote process is registering multiple players, the server needs to allocate them all to
+   * the same socket. Having this remaining_requests field allows the server to do this allocation
+   * properly.
    */
   int remaining_requests;
   int max_simultaneous_games;
@@ -97,13 +98,15 @@ struct StartGame {
     char player_names[kSerializationLimit];  // names separated by null terminators
   };
 
-  // Accepts an array of player names, and writes them to the dynamic_size_section.player_names buffer.
-  // Also accepts the parent Packet as an argument, so that it can set the payload_size field.
-  template<typename PacketT, size_t N> void load_player_names(
-      PacketT& packet, const std::array<std::string, N>& player_names);
+  // Accepts an array of player names, and writes them to the dynamic_size_section.player_names
+  // buffer. Also accepts the parent Packet as an argument, so that it can set the payload_size
+  // field.
+  template <typename PacketT, size_t N>
+  void load_player_names(PacketT& packet, const std::array<std::string, N>& player_names);
 
   // Inverse operation of load_player_names()
-  template<size_t N> void parse_player_names(std::array<std::string, N>& player_names) const;
+  template <size_t N>
+  void parse_player_names(std::array<std::string, N>& player_names) const;
 
   game_id_t game_id;
   game_thread_id_t game_thread_id;
@@ -156,31 +159,25 @@ struct EndGame {
   dynamic_size_section_t dynamic_size_section;
 };
 
-using PayloadTypeList = mp::TypeList<
-    Registration,
-    RegistrationResponse,
-    GameThreadInitialization,
-    GameThreadInitializationResponse,
-    StartGame,
-    StateChange,
-    ActionPrompt,
-    ActionDecision,
-    EndGame>;
+using PayloadTypeList = mp::TypeList<Registration, RegistrationResponse, GameThreadInitialization,
+                                     GameThreadInitializationResponse, StartGame, StateChange,
+                                     ActionPrompt, ActionDecision, EndGame>;
 static_assert(mp::Length_v<PayloadTypeList> == PacketHeader::kNumTypes);
 
 template <PacketPayloadConcept PacketPayload>
 class Packet {
-public:
+ public:
   /*
    * Constructor initializes header but not the payload. The payload must be initialized separately.
    */
   Packet() : header_(PacketPayload::kType, sizeof(PacketPayload)) {}
 
   /*
-   * Assumes that PakcetPayload has a member dynamic_size_section, which has a single char buf[] member player_name.
+   * Assumes that PakcetPayload has a member dynamic_size_section, which has a single char buf[]
+   * member player_name.
    *
-   * Does a size-check on the name, and then copies it to that char buf[], calling this->set_dynamic_section_size()
-   * properly.
+   * Does a size-check on the name, and then copies it to that char buf[], calling
+   * this->set_dynamic_section_size() properly.
    */
   void set_player_name(const std::string& name);
 
@@ -200,23 +197,24 @@ public:
    */
   bool read_from(io::Socket*);
 
-private:
+ private:
   PacketHeader header_;
   PacketPayload payload_;
 };
 
 class GeneralPacket {
-public:
+ public:
   // The +1 helps to detect buffer-overflow on read()'s
   static constexpr int kMaxPayloadSize = mp::MaxSizeOf_v<PayloadTypeList> + 1;
 
   const PacketHeader& header() const { return header_; }
 
   /*
-   * Checks that this packet is of the given type, and returns the payload reinterpreted to the given type. If the
-   * check fails, throws an exception.
+   * Checks that this packet is of the given type, and returns the payload reinterpreted to the
+   * given type. If the check fails, throws an exception.
    */
-  template<PacketPayloadConcept PacketPayload> const PacketPayload& payload_as() const;
+  template <PacketPayloadConcept PacketPayload>
+  const PacketPayload& payload_as() const;
 
   /*
    * Effectively a reinterpret_cast of the bytes on the socket to this.
@@ -225,7 +223,7 @@ public:
    */
   bool read_from(io::Socket*);
 
-private:
+ private:
   PacketHeader header_;
   char payload_[kMaxPayloadSize];
 };

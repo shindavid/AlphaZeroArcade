@@ -18,9 +18,12 @@
  */
 namespace util {
 
-void debug_assert(bool condition, char const* fmt=nullptr, ...) __attribute__((format(printf, 2, 3)));
-void release_assert(bool condition, char const* fmt=nullptr, ...) __attribute__((format(printf, 2, 3)));
-void clean_assert(bool condition, char const* fmt=nullptr, ...) __attribute__((format(printf, 2, 3)));
+void debug_assert(bool condition, char const* fmt = nullptr, ...)
+    __attribute__((format(printf, 2, 3)));
+void release_assert(bool condition, char const* fmt = nullptr, ...)
+    __attribute__((format(printf, 2, 3)));
+void clean_assert(bool condition, char const* fmt = nullptr, ...)
+    __attribute__((format(printf, 2, 3)));
 
 }  // namespace util
 

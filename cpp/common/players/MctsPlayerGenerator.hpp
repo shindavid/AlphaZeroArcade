@@ -15,23 +15,24 @@
 
 namespace common {
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<GameState> {
-public:
+ public:
   using MctsManager = mcts::Manager<GameState, Tensorizor>;
   using BaseMctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
 
   MctsPlayerGeneratorBase(mcts::Mode mode) : manager_params_(mode) {}
 
   /*
-   * If this generator already generated a player for the given game_thread_id, dispatches to generate_from_manager(),
-   * passing in the mcts::Manager* of that previous player. Otherwise, dispatches to generate_from_scratch().
+   * If this generator already generated a player for the given game_thread_id, dispatches to
+   * generate_from_manager(), passing in the mcts::Manager* of that previous player. Otherwise,
+   * dispatches to generate_from_scratch().
    */
   core::AbstractPlayer<GameState>* generate(core::game_thread_id_t game_thread_id) override;
 
   void end_session() override;
 
-protected:
+ protected:
   virtual BaseMctsPlayer* generate_from_scratch() = 0;
   virtual BaseMctsPlayer* generate_from_manager(MctsManager* manager) = 0;
 
@@ -45,9 +46,9 @@ protected:
   mcts::ManagerParams manager_params_;
 };
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Tensorizor> {
-public:
+ public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
   using MctsManager = typename base_t::MctsManager;
@@ -60,9 +61,10 @@ public:
   void print_help(std::ostream& s) override { make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 
-protected:
+ protected:
   auto make_options_description() {
-    return this->manager_params_.make_options_description().add(mcts_player_params_.make_options_description());
+    return this->manager_params_.make_options_description().add(
+        mcts_player_params_.make_options_description());
   }
 
   BaseMctsPlayer* generate_from_scratch() override;
@@ -71,9 +73,9 @@ protected:
   MctsPlayerParams mcts_player_params_;
 };
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Tensorizor> {
-public:
+ public:
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
   using MctsManager = typename base_t::MctsManager;
@@ -87,11 +89,11 @@ public:
   void print_help(std::ostream& s) override { make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 
-protected:
+ protected:
   auto make_options_description() {
     return this->manager_params_.make_options_description()
-      .add(mcts_player_params_.make_options_description())
-      .add(writer_params_.make_options_description());
+        .add(mcts_player_params_.make_options_description())
+        .add(writer_params_.make_options_description());
   }
 
   BaseMctsPlayer* generate_from_scratch() override;
@@ -104,4 +106,3 @@ protected:
 }  // namespace common
 
 #include <common/players/inl/MctsPlayerGenerator.inl>
-

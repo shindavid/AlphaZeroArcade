@@ -8,14 +8,14 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 int Manager<GameState, Tensorizor>::next_instance_id_ = 0;
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
-: params_(params)
-, pondering_search_params_(SearchParams::make_pondering_params(params.pondering_tree_size_limit))
-{
+    : params_(params),
+      pondering_search_params_(
+          SearchParams::make_pondering_params(params.pondering_tree_size_limit)) {
   shared_data_.manager_id = next_instance_id_++;
   new (&shared_data_.root_softmax_temperature) math::ExponentialDecay(math::ExponentialDecay::parse(
       params.root_softmax_temperature_str, GameStateTypes::get_var_bindings()));
@@ -24,7 +24,9 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (mcts::kEnableProfiling) {
     auto profiling_dir = params_.profiling_dir();
     if (profiling_dir.empty()) {
-      throw util::Exception("Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in config.txt");
+      throw util::Exception(
+          "Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in "
+          "config.txt");
     }
     init_profiling_dir(profiling_dir.string());
   }
@@ -43,7 +45,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::~Manager() {
   clear();
   if (nn_eval_service_) {
@@ -54,7 +56,7 @@ inline Manager<GameState, Tensorizor>::~Manager() {
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::start() {
   clear();
   shared_data_.move_number = 0;
@@ -69,16 +71,16 @@ inline void Manager<GameState, Tensorizor>::start() {
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
   stop_search_threads();
   shared_data_.root_node = nullptr;
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, const Action& action)
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_index_t seat,
+                                                                 const GameState& state,
+                                                                 const Action& action) {
   shared_data_.move_number++;
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
@@ -99,16 +101,17 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<GameState, Tensorizor>::search(
-    const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params)
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline const typename Manager<GameState, Tensorizor>::SearchResults*
+Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameState& game_state,
+                                       const SearchParams& params) {
   stop_search_threads();
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
     auto outcome = core::make_non_terminal_outcome<kNumPlayers>();
-    shared_data_.root_node = std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
+    shared_data_.root_node =
+        std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
   }
 
   start_search_threads(&params);
@@ -132,8 +135,9 @@ inline const typename Manager<GameState, Tensorizor>::SearchResults* Manager<Gam
   return &results_;
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchParams* search_params) {
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void Manager<GameState, Tensorizor>::start_search_threads(
+    const SearchParams* search_params) {
   util::release_assert(!shared_data_.search_active);
   shared_data_.search_active = true;
   num_active_search_threads_ = num_search_threads();
@@ -144,11 +148,12 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(const SearchPar
   }
 
   for (auto* thread : search_threads_) {
-    thread->launch(search_params, [=, this] { this->run_search(thread, search_params->tree_size_limit); });
+    thread->launch(search_params,
+                   [=, this] { this->run_search(thread, search_params->tree_size_limit); });
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::wait_for_search_threads() {
   util::release_assert(shared_data_.search_active);
 
@@ -157,15 +162,15 @@ inline void Manager<GameState, Tensorizor>::wait_for_search_threads() {
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::stop_search_threads() {
   shared_data_.search_active = false;
 
   std::unique_lock<std::mutex> lock(search_mutex_);
-  cv_search_.wait(lock, [&]{ return num_active_search_threads_ == 0; });
+  cv_search_.wait(lock, [&] { return num_active_search_threads_ == 0; });
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int tree_size_limit) {
   thread->run();
 
@@ -180,18 +185,18 @@ inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int
   cv_search_.notify_one();
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::get_cache_stats(
-    int& hits, int& misses, int& size, float& hash_balance_factor) const
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void Manager<GameState, Tensorizor>::get_cache_stats(int& hits, int& misses, int& size,
+                                                     float& hash_balance_factor) const {
   nn_eval_service_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 /*
- * The KataGo paper is a little vague in its description of the target pruning step, and examining the KataGo
- * source code was not very enlightening. The following is my best guess at what the target pruning step does.
+ * The KataGo paper is a little vague in its description of the target pruning step, and examining
+ * the KataGo source code was not very enlightening. The following is my best guess at what the
+ * target pruning step does.
  */
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
   if (params_.model_filename.empty()) return;
 
@@ -238,18 +243,20 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
     std::cout << "V: " << V.transpose() << std::endl;
     std::cout << "PUCT: " << PUCT.transpose() << std::endl;
     std::cout << "n_forced: " << n_forced.transpose() << std::endl;
-    std::cout << "orig_counts: " << eigen_util::reinterpret_as_array(orig_counts).transpose() << std::endl;
+    std::cout << "orig_counts: " << eigen_util::reinterpret_as_array(orig_counts).transpose()
+              << std::endl;
     std::cout << "results_.counts: " << counts_array.transpose() << std::endl;
     throw util::Exception("prune_counts: counts problem");
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void Manager<GameState, Tensorizor>::init_profiling_dir(const std::string& profiling_dir) {
   static std::string pdir;
   if (!pdir.empty()) {
     if (pdir == profiling_dir) return;
-    throw util::Exception("Two different mcts profiling dirs used: %s and %s", pdir.c_str(), profiling_dir.c_str());
+    throw util::Exception("Two different mcts profiling dirs used: %s and %s", pdir.c_str(),
+                          profiling_dir.c_str());
   }
   pdir = profiling_dir;
 

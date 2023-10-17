@@ -10,9 +10,9 @@ namespace common {
 /*
  * Abstract class. Derived classes must implement the prompt_for_action() method.
  */
-template<core::GameStateConcept GameState_>
+template <core::GameStateConcept GameState_>
 class HumanTuiPlayer : public core::AbstractPlayer<GameState_> {
-public:
+ public:
   using base_t = core::AbstractPlayer<GameState_>;
   using GameState = GameState_;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -32,9 +32,10 @@ public:
 
   bool is_human_tui_player() const override { return true; }
 
-protected:
+ protected:
   /*
-   * Use std::cout/std::cin to prompt the user for an action. If an invalid action is entered, must return -1.
+   * Use std::cout/std::cin to prompt the user for an action. If an invalid action is entered, must
+   * return -1.
    *
    * Derived classes must override this method.
    */
@@ -51,4 +52,3 @@ protected:
 }  // namespace common
 
 #include <common/players/inl/HumanTuiPlayer.inl>
-

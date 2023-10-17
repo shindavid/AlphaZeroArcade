@@ -18,24 +18,36 @@
 namespace eigen_util {
 
 // eigen_util::Shape<...> is a type alias for Eigen::Sizes<...>
-template<int64_t... Is> using Shape = Eigen::Sizes<Is...>;
+template <int64_t... Is>
+using Shape = Eigen::Sizes<Is...>;
 
 /*
  * ShapeConcept<T> is for concept requirements.
  */
-template<typename T> struct is_eigen_shape { static const bool value = false; };
-template<int64_t... Is> struct is_eigen_shape<Eigen::Sizes<Is...>> { static const bool value = true; };
-template<typename T> inline constexpr bool is_eigen_shape_v = is_eigen_shape<T>::value;
-template <typename T> concept ShapeConcept = is_eigen_shape_v<T>;
+template <typename T>
+struct is_eigen_shape {
+  static const bool value = false;
+};
+template <int64_t... Is>
+struct is_eigen_shape<Eigen::Sizes<Is...>> {
+  static const bool value = true;
+};
+template <typename T>
+inline constexpr bool is_eigen_shape_v = is_eigen_shape<T>::value;
+template <typename T>
+concept ShapeConcept = is_eigen_shape_v<T>;
 
 /*
  * rank_v<Eigen::Sizes<...>> is the rank of the Eigen::Sizes.
  */
-template<typename T> struct rank {};
-template<int64_t... Is> struct rank<Eigen::Sizes<Is...>> {
+template <typename T>
+struct rank {};
+template <int64_t... Is>
+struct rank<Eigen::Sizes<Is...>> {
   static constexpr int value = sizeof...(Is);
 };
-template<typename T> inline constexpr int rank_v = rank<T>::value;
+template <typename T>
+inline constexpr int rank_v = rank<T>::value;
 
 /*
  * 10 == extract_dim_v<0, Eigen::Sizes<10, 20, 30>>
@@ -57,28 +69,33 @@ constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
  */
 template <int64_t N, ShapeConcept Shape>
 struct prepend_dim {};
-template<int64_t N, int64_t... Is> struct prepend_dim<N, Eigen::Sizes<Is...>> {
+template <int64_t N, int64_t... Is>
+struct prepend_dim<N, Eigen::Sizes<Is...>> {
   using type = Eigen::Sizes<N, Is...>;
 };
-template<int64_t N, ShapeConcept Shape> using prepend_dim_t = typename prepend_dim<N, Shape>::type;
+template <int64_t N, ShapeConcept Shape>
+using prepend_dim_t = typename prepend_dim<N, Shape>::type;
 
 /*
  * subshape_t<Eigen::Sizes<10, 20, 30>> is Eigen::Sizes<20, 30>
  *
  * This undoes the effect of prepend_dim_t.
  */
-template<ShapeConcept Shape> struct subshape {};
-template<int64_t I, int64_t... Is> struct subshape<Eigen::Sizes<I, Is...>> {
+template <ShapeConcept Shape>
+struct subshape {};
+template <int64_t I, int64_t... Is>
+struct subshape<Eigen::Sizes<I, Is...>> {
   using type = Eigen::Sizes<Is...>;
 };
-template<ShapeConcept Shape> using subshape_t = typename subshape<Shape>::type;
+template <ShapeConcept Shape>
+using subshape_t = typename subshape<Shape>::type;
 
 /*
- * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not well-suited for
- * usages with: (1) fixed dimension Matrices, and (2) a uniform alpha distribution.
+ * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not
+ * well-suited for usages with: (1) fixed dimension Matrices, and (2) a uniform alpha distribution.
  *
- * This implementation supports only the uniform-alpha case. When fixed-size matrices are used, it avoids
- * unnecessary dynamic memory allocation.
+ * This implementation supports only the uniform-alpha case. When fixed-size matrices are used, it
+ * avoids unnecessary dynamic memory allocation.
  *
  * Usage:
  *
@@ -95,13 +112,13 @@ template<ShapeConcept Shape> using subshape_t = typename subshape<Shape>::type;
  * using Array = Eigen::Array<float>;
  * Array arr = gen.generate<Array>(rng, alpha, 4, 1);  // returns 4x1 dynamic matrix
  */
-template<typename Scalar>
+template <typename Scalar>
 class UniformDirichletGen {
-public:
-  template<typename Array, typename Urng, typename... DimTs>
+ public:
+  template <typename Array, typename Urng, typename... DimTs>
   Array generate(Urng&& urng, Scalar alpha, DimTs&&... dims);
 
-private:
+ private:
   using GammaGen = Eigen::Rand::GammaGen<Scalar>;
   GammaGen gamma_;
   Scalar alpha_ = 1.0;
@@ -117,11 +134,14 @@ private:
  * using S = Eigen::Sizes<5, 6>;
  * using T = to_int64_std_array_v<S>;
  */
-template<typename T> struct to_int64_std_array {};
-template<typename I, I... Ints> struct to_int64_std_array<Eigen::Sizes<Ints...>> {
+template <typename T>
+struct to_int64_std_array {};
+template <typename I, I... Ints>
+struct to_int64_std_array<Eigen::Sizes<Ints...>> {
   static constexpr auto value = std::array<int64_t, sizeof...(Ints)>{Ints...};
 };
-template<typename T> auto to_int64_std_array_v = to_int64_std_array<T>::value;
+template <typename T>
+auto to_int64_std_array_v = to_int64_std_array<T>::value;
 
 /*
  * The following are equivalent:
@@ -133,28 +153,40 @@ template<typename T> auto to_int64_std_array_v = to_int64_std_array<T>::value;
  * using S = Eigen::Sizes<1, 2, 3>;
  * using T = eigen_util::fixed_tensor_t<float, S>;
  *
- * The reason we default to RowMajor is for smooth interoperability with pytorch, which is row-major by default.
+ * The reason we default to RowMajor is for smooth interoperability with pytorch, which is row-major
+ * by default.
  */
-template<typename Scalar, ShapeConcept Shape>
+template <typename Scalar, ShapeConcept Shape>
 using fixed_tensor_t = Eigen::TensorFixedSize<Scalar, Shape, Eigen::RowMajor>;
 
 /*
  * FixedTensorConcept is a concept corresponding to fixed_tensor_t
  */
-template<typename T> struct is_fixed_tensor { static const bool value = false; };
-template<typename Scalar, typename Shape> struct is_fixed_tensor<fixed_tensor_t<Scalar, Shape>> {
+template <typename T>
+struct is_fixed_tensor {
+  static const bool value = false;
+};
+template <typename Scalar, typename Shape>
+struct is_fixed_tensor<fixed_tensor_t<Scalar, Shape>> {
   static const bool value = true;
 };
-template<typename T> inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T>::value;
-template<typename T> concept FixedTensorConcept = is_fixed_tensor_v<T>;
+template <typename T>
+inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T>::value;
+template <typename T>
+concept FixedTensorConcept = is_fixed_tensor_v<T>;
 
-template<typename T> struct is_fixed_matrix { static const bool value = false; };
-template<typename Scalar, int Rows, int Cols, int Options>
+template <typename T>
+struct is_fixed_matrix {
+  static const bool value = false;
+};
+template <typename Scalar, int Rows, int Cols, int Options>
 struct is_fixed_matrix<Eigen::Matrix<Scalar, Rows, Cols, Options>> {
   static constexpr bool value = Rows > 0 && Cols > 0;
 };
-template<typename T> inline constexpr bool is_fixed_matrix_v = is_fixed_matrix<T>::value;
-template<typename T> concept FixedMatrixConcept = is_fixed_matrix_v<T>;
+template <typename T>
+inline constexpr bool is_fixed_matrix_v = is_fixed_matrix<T>::value;
+template <typename T>
+concept FixedMatrixConcept = is_fixed_matrix_v<T>;
 
 // /*
 //  * ShapeIndexConcept<T, Shape> is a concept that means that T is a 1D-tensor of dtype int and
@@ -166,33 +198,40 @@ template<typename T> concept FixedMatrixConcept = is_fixed_matrix_v<T>;
 // struct is_shape_index<fixed_tensor_t<int, Shape1>, Shape2> {
 //   static const bool value = std::is_same_v<Shape1, fixed_tensor_t<int, Shape<Shape2::count>>;
 // };
-// template<typename T, typename U> inline constexpr bool is_shape_index_v = is_shape_index<T, U>::value;
-// template <typename T, typename U> concept ShapeIndexConcept = is_shape_index_v<T, U>;
+// template<typename T, typename U> inline constexpr bool is_shape_index_v = is_shape_index<T,
+// U>::value; template <typename T, typename U> concept ShapeIndexConcept = is_shape_index_v<T, U>;
 
 /*
  * ShapeMaskConcept<T, Shape> is a concept that means that T is a tensor of dtype bool and
  * of shape Shape. This means that it can be used to represent a mask of shape Shape.
  */
-template<typename T, typename U> struct is_shape_mask { static const bool value = false; };
-template<ShapeConcept Shape>
+template <typename T, typename U>
+struct is_shape_mask {
+  static const bool value = false;
+};
+template <ShapeConcept Shape>
 struct is_shape_mask<fixed_tensor_t<bool, Shape>, Shape> {
   static const bool value = true;
 };
-template<typename T, typename U> inline constexpr bool is_shape_mask_v = is_shape_mask<T, U>::value;
-template <typename T, typename U> concept ShapeMaskConcept = is_shape_mask_v<T, U>;
+template <typename T, typename U>
+inline constexpr bool is_shape_mask_v = is_shape_mask<T, U>::value;
+template <typename T, typename U>
+concept ShapeMaskConcept = is_shape_mask_v<T, U>;
 
-
-template<FixedTensorConcept FixedTensorT>
+template <FixedTensorConcept FixedTensorT>
 struct packed_fixed_tensor_size {
-  static constexpr int value = sizeof(typename FixedTensorT::Scalar) * FixedTensorT::Dimensions::total_size;
+  static constexpr int value =
+      sizeof(typename FixedTensorT::Scalar) * FixedTensorT::Dimensions::total_size;
 };
-template<FixedTensorConcept FixedTensorT> constexpr int packed_fixed_tensor_size_v = packed_fixed_tensor_size<FixedTensorT>::value;
+template <FixedTensorConcept FixedTensorT>
+constexpr int packed_fixed_tensor_size_v = packed_fixed_tensor_size<FixedTensorT>::value;
 
-template<FixedTensorConcept FixedTensorT>
+template <FixedTensorConcept FixedTensorT>
 struct alignment_safe {
   static constexpr bool value = packed_fixed_tensor_size_v<FixedTensorT> % 8 == 0;
 };
-template<FixedTensorConcept FixedTensorT> constexpr bool alignment_safe_v = alignment_safe<FixedTensorT>::value;
+template <FixedTensorConcept FixedTensorT>
+constexpr bool alignment_safe_v = alignment_safe<FixedTensorT>::value;
 
 /*
  * The following are equivalent:
@@ -202,11 +241,14 @@ template<FixedTensorConcept FixedTensorT> constexpr bool alignment_safe_v = alig
  * using T = eigen_util::fixed_tensor_t<float, Eigen::Sizes<1, 2, 3>>;
  * using S = extract_shape_t<T>;
  */
-template<typename T> struct extract_shape {};
-template<typename Scalar, ShapeConcept Shape> struct extract_shape<fixed_tensor_t<Scalar, Shape>> {
+template <typename T>
+struct extract_shape {};
+template <typename Scalar, ShapeConcept Shape>
+struct extract_shape<fixed_tensor_t<Scalar, Shape>> {
   using type = Shape;
 };
-template<typename T> using extract_shape_t = typename extract_shape<T>::type;
+template <typename T>
+using extract_shape_t = typename extract_shape<T>::type;
 
 /*
  * serialize() copies the bytes from tensor.data() to buf, checking to make sure it won't overflow
@@ -214,13 +256,16 @@ template<typename T> using extract_shape_t = typename extract_shape<T>::type;
  *
  * deserialize() is the inverse operation.
  */
-template<FixedTensorConcept Tensor> size_t serialize(char* buf, size_t buf_size, const Tensor& tensor);
-template<FixedTensorConcept Tensor> void deserialize(const char* buf, Tensor* tensor);
+template <FixedTensorConcept Tensor>
+size_t serialize(char* buf, size_t buf_size, const Tensor& tensor);
+template <FixedTensorConcept Tensor>
+void deserialize(const char* buf, Tensor* tensor);
 
 /*
  * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */
-template<typename Array> auto softmax(const Array& arr);
+template <typename Array>
+auto softmax(const Array& arr);
 
 /*
  * Reverses the elements of tensor along the given dimension.
@@ -229,7 +274,8 @@ template<typename Array> auto softmax(const Array& arr);
  *
  * Note that this returns a tensor *operator*, not a tensor.
  */
-template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim);
+template <FixedTensorConcept Tensor>
+auto reverse(const Tensor& tensor, int dim);
 
 /*
  * Accepts a D-dimensional tensor. Randomly samples an index from the tensor, with each index
@@ -237,7 +283,8 @@ template<FixedTensorConcept Tensor> auto reverse(const Tensor& tensor, int dim);
  *
  * Returns the index as a std::array<int64_t, D>
  */
-template<FixedTensorConcept Tensor> auto sample(const Tensor& tensor);
+template <FixedTensorConcept Tensor>
+auto sample(const Tensor& tensor);
 
 /*
  * Uniformly randomly picks n nonzero elements of tensor and sets them to zero.
@@ -252,17 +299,18 @@ void randomly_zero_out(Tensor& tensor, int n);
  *
  * tensor.data() is to flat_index as tensor is to _____
  */
-template<FixedTensorConcept Tensor> auto unflatten_index(const Tensor& tensor, int flat_index);
+template <FixedTensorConcept Tensor>
+auto unflatten_index(const Tensor& tensor, int flat_index);
 
 /*
  * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>
  *
  * auto& array = reinterpret_as_array(tensor);
  */
-template<typename Scalar, ShapeConcept Shape, int Options>
+template <typename Scalar, ShapeConcept Shape, int Options>
 const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
 
-template<typename Scalar, ShapeConcept Shape, int Options>
+template <typename Scalar, ShapeConcept Shape, int Options>
 auto& reinterpret_as_array(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
 
 /*
@@ -272,10 +320,10 @@ auto& reinterpret_as_array(Eigen::TensorFixedSize<Scalar, Shape, Options>& tenso
  *
  * or using c++
  */
-template<FixedTensorConcept TensorT, typename Scalar, int N>
+template <FixedTensorConcept TensorT, typename Scalar, int N>
 const TensorT& reinterpret_as_tensor(const Eigen::Array<Scalar, N, 1>& array);
 
-template<FixedTensorConcept TensorT, typename Scalar, int N>
+template <FixedTensorConcept TensorT, typename Scalar, int N>
 TensorT& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array);
 
 /*
@@ -283,21 +331,25 @@ TensorT& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array);
  *
  * auto& tensor = reinterpret_as_matrix<MatrixT>(tensor);
  */
-template<FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
+template <FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
 const MatrixT& reinterpret_as_matrix(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
 
-template<FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
+template <FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
 MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
-
 
 /*
  * Convenience methods that return scalars.
  */
-template<typename TensorT> typename TensorT::Scalar sum(const TensorT& tensor);
-template<typename TensorT> typename TensorT::Scalar max(const TensorT& tensor);
-template<typename TensorT> typename TensorT::Scalar min(const TensorT& tensor);
-template<typename TensorT> bool any(const TensorT& tensor);
-template<typename TensorT> int count(const TensorT& tensor);
+template <typename TensorT>
+typename TensorT::Scalar sum(const TensorT& tensor);
+template <typename TensorT>
+typename TensorT::Scalar max(const TensorT& tensor);
+template <typename TensorT>
+typename TensorT::Scalar min(const TensorT& tensor);
+template <typename TensorT>
+bool any(const TensorT& tensor);
+template <typename TensorT>
+int count(const TensorT& tensor);
 
 /*
  * left_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]
@@ -310,10 +362,13 @@ template<typename TensorT> int count(const TensorT& tensor);
  * right_rotate([0, 1, 2, 3], 2) -> [2, 3, 0, 1]
  * right_rotate([0, 1, 2, 3], 3) -> [1, 2, 3, 0]
  */
-template<typename Scalar, int N> void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
-template<typename Scalar, int N> void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
+template <typename Scalar, int N>
+void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
+template <typename Scalar, int N>
+void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
 
-template <FixedTensorConcept TensorT> uint64_t hash(const TensorT& tensor);
+template <FixedTensorConcept TensorT>
+uint64_t hash(const TensorT& tensor);
 
 }  // namespace eigen_util
 

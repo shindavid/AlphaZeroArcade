@@ -9,7 +9,8 @@
  */
 namespace mp {
 
-template <typename...> struct TypeList;
+template <typename...>
+struct TypeList;
 
 template <>
 struct TypeList<> {};
@@ -43,19 +44,18 @@ using TransformTypeList_t = typename TransformTypeList<Transformer, TypeList>::t
 //
 // std::tuple<A, B>
 
-template <typename TypeList> struct TypeListToTuple;
+template <typename TypeList>
+struct TypeListToTuple;
 
 template <>
 struct TypeListToTuple<TypeList<>> {
-    using type = std::tuple<>;
+  using type = std::tuple<>;
 };
 
 template <typename Head, typename... Tails>
 struct TypeListToTuple<TypeList<Head, Tails...>> {
-    using type = decltype(std::tuple_cat(
-        std::tuple<Head>{},
-        typename TypeListToTuple<TypeList<Tails...>>::type{}
-    ));
+  using type = decltype(std::tuple_cat(std::tuple<Head>{},
+                                       typename TypeListToTuple<TypeList<Tails...>>::type{}));
 };
 
 template <typename TypeList>
@@ -63,7 +63,8 @@ using TypeListToTuple_t = typename TypeListToTuple<TypeList>::type;
 
 // length of a typelist
 
-template <typename TList> struct Length;
+template <typename TList>
+struct Length;
 
 template <typename... Types>
 struct Length<TypeList<Types...>> {
@@ -75,7 +76,8 @@ inline constexpr std::size_t Length_v = Length<TList>::value;
 
 // indexed access
 
-template <typename TList, std::size_t index> struct TypeAt;
+template <typename TList, std::size_t index>
+struct TypeAt;
 
 template <typename Head, typename... Tails>
 struct TypeAt<TypeList<Head, Tails...>, 0> {
@@ -93,7 +95,8 @@ using TypeAt_t = typename TypeAt<TList, index>::type;
 
 // indexof
 
-template <typename TList, typename T> struct IndexOf;
+template <typename TList, typename T>
+struct IndexOf;
 
 template <typename T>
 struct IndexOf<TypeList<>, T> {
@@ -110,14 +113,16 @@ struct IndexOf<TypeList<T, Tails...>, T> {
 
 template <typename Head, typename... Tails, typename T>
 struct IndexOf<TypeList<Head, Tails...>, T> {
-  static constexpr std::size_t value = std::is_same_v<Head, T> ? 0 :
-                                       (IndexOf_v<TypeList<Tails...>, T> == -1 ? -1 :
-                                        IndexOf_v<TypeList<Tails...>, T> + 1);
+  static constexpr std::size_t value =
+      std::is_same_v<Head, T>
+          ? 0
+          : (IndexOf_v<TypeList<Tails...>, T> == -1 ? -1 : IndexOf_v<TypeList<Tails...>, T> + 1);
 };
 
 // apply
 
-template <typename TList, template <typename> typename F> struct Apply;
+template <typename TList, template <typename> typename F>
+struct Apply;
 
 template <template <typename> typename F>
 struct Apply<TypeList<>, F> {
@@ -134,7 +139,8 @@ using Apply_t = typename Apply<TList, F>::type;
 
 // maxsizeof
 
-template <typename TList> struct MaxSizeOf;
+template <typename TList>
+struct MaxSizeOf;
 
 template <typename T>
 struct MaxSizeOf<TypeList<T>> {
@@ -143,8 +149,9 @@ struct MaxSizeOf<TypeList<T>> {
 
 template <typename Head, typename... Tails>
 struct MaxSizeOf<TypeList<Head, Tails...>> {
-  static constexpr std::size_t value = sizeof(Head) > MaxSizeOf<TypeList<Tails...>>::value ?
-                                       sizeof(Head) : MaxSizeOf<TypeList<Tails...>>::value;
+  static constexpr std::size_t value = sizeof(Head) > MaxSizeOf<TypeList<Tails...>>::value
+                                           ? sizeof(Head)
+                                           : MaxSizeOf<TypeList<Tails...>>::value;
 };
 
 template <typename TList>

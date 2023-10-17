@@ -8,7 +8,7 @@
 
 namespace core {
 
-template<typename PacketT, size_t N>
+template <typename PacketT, size_t N>
 void StartGame::load_player_names(PacketT& packet, const std::array<std::string, N>& player_names) {
   constexpr int max_total_name_length = N * (kMaxNameLength + 1);  // + 1 for null terminator
   constexpr int buf_size = sizeof(dynamic_size_section.player_names);
@@ -16,7 +16,8 @@ void StartGame::load_player_names(PacketT& packet, const std::array<std::string,
 
   char* p = dynamic_size_section.player_names;
   for (const std::string& name : player_names) {
-    util::clean_assert(name.size() <= kMaxNameLength, "StartGame::load_player_names() name too long [\"%s\"] (%d > %d)",
+    util::clean_assert(name.size() <= kMaxNameLength,
+                       "StartGame::load_player_names() name too long [\"%s\"] (%d > %d)",
                        name.c_str(), (int)name.size(), kMaxNameLength);
     memcpy(p, name.c_str(), name.size() + 1);
     p += name.size() + 1;
@@ -25,7 +26,7 @@ void StartGame::load_player_names(PacketT& packet, const std::array<std::string,
   packet.set_dynamic_section_size(bytes_written);
 }
 
-template<size_t N>
+template <size_t N>
 void StartGame::parse_player_names(std::array<std::string, N>& player_names) const {
   constexpr int max_total_name_length = N * (kMaxNameLength + 1);  // + 1 for null terminator
   constexpr int buf_size = sizeof(dynamic_size_section.player_names);
@@ -37,7 +38,8 @@ void StartGame::parse_player_names(std::array<std::string, N>& player_names) con
     int n = player_names[i].size();
 
     util::clean_assert(n > 0, "StartGame::parse_player_names() empty name (i=%ld)", i);
-    util::clean_assert(n <= kMaxNameLength, "StartGame::parse_player_names() name too long [\"%s\"] (i=%ld) (%d > %d)",
+    util::clean_assert(n <= kMaxNameLength,
+                       "StartGame::parse_player_names() name too long [\"%s\"] (i=%ld) (%d > %d)",
                        p, i, n, kMaxNameLength);
     p += player_names[i].size() + 1;
   }
@@ -58,15 +60,16 @@ template <PacketPayloadConcept PacketPayload>
 void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
   constexpr int orig_size = sizeof(typename PacketPayload::dynamic_size_section_t);
   if (buf_size < 0 || buf_size > orig_size) {
-    throw util::Exception("Packet<%d>::set_dynamic_section_size() invalid buf_size (%d) orig_size=%d",
-                          (int)PacketPayload::kType, buf_size, orig_size);
+    throw util::Exception(
+        "Packet<%d>::set_dynamic_section_size() invalid buf_size (%d) orig_size=%d",
+        (int)PacketPayload::kType, buf_size, orig_size);
   }
   header_.payload_size = sizeof(PacketPayload) - orig_size + buf_size;
 }
 
 template <PacketPayloadConcept PacketPayload>
 void Packet<PacketPayload>::send_to(io::Socket* socket) const {
-  socket->write((const char*) this, size());
+  socket->write((const char*)this, size());
 }
 
 template <PacketPayloadConcept PacketPayload>
@@ -94,7 +97,8 @@ bool Packet<PacketPayload>::read_from(io::Socket* socket) {
   return true;
 }
 
-template<PacketPayloadConcept PacketPayload> const PacketPayload& GeneralPacket::payload_as() const {
+template <PacketPayloadConcept PacketPayload>
+const PacketPayload& GeneralPacket::payload_as() const {
   if (header_.type != PacketPayload::kType) {
     throw util::Exception("GeneralPacket::payload_as() invalid type (expected:%d, got:%d)",
                           (int)PacketPayload::kType, (int)header_.type);

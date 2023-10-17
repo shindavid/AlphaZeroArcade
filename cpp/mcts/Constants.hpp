@@ -4,10 +4,7 @@
 
 namespace mcts {
 
-enum Mode {
-  kCompetitive,
-  kTraining
-};
+enum Mode { kCompetitive, kTraining };
 
 struct SearchThreadRegion {
   enum region_t {

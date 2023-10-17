@@ -15,7 +15,7 @@
 namespace c4 {
 
 class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<c4::GameState> {
-public:
+ public:
   struct Params {
     bool cheat_mode;
 
@@ -24,10 +24,8 @@ public:
       namespace po2 = boost_util::program_options;
 
       po2::options_description desc("c4::HumanTUIPlayer options");
-      return desc
-          .template add_option<"cheat-mode", 'C'>(po::bool_switch(&cheat_mode)->default_value(false),
-                                                  "show winning moves")
-          ;
+      return desc.template add_option<"cheat-mode", 'C'>(
+          po::bool_switch(&cheat_mode)->default_value(false), "show winning moves");
     }
   };
 
@@ -35,7 +33,7 @@ public:
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 
-private:
+ private:
   Params params_;
 };
 

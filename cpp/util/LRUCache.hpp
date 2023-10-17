@@ -3,8 +3,8 @@
 /*
  * This is adapted from boost's lru_cache.
  *
- * The main difference is that this implementation is powered by a std::unordered_map, while boost's is powered by
- * a std::map.
+ * The main difference is that this implementation is powered by a std::unordered_map, while boost's
+ * is powered by a std::map.
  *
  * See: https://www.boost.org/doc/libs/1_67_0/boost/compute/detail/lru_cache.hpp
  */
@@ -18,9 +18,9 @@
 namespace util {
 
 // a cache which evicts the least recently used item when it is full
-template<class Key_, class Value_>
+template <class Key_, class Value_>
 class LRUCache {
-public:
+ public:
   using Key = Key_;
   using Value = Value_;
   using KeyList = std::list<Key>;
@@ -36,9 +36,10 @@ public:
   void insert(const Key& key, const Value& value);
   boost::optional<Value> get(const Key& key);
   void clear();
-  float get_hash_balance_factor() const;  // (1 + size(largest_bucket)) / (1 + size(smallest_bucket))
+  float get_hash_balance_factor()
+      const;  // (1 + size(largest_bucket)) / (1 + size(smallest_bucket))
 
-private:
+ private:
   void evict();
 
   Map map_;

@@ -27,9 +27,9 @@ namespace mcts {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class Manager {
-public:
+ public:
   using dtype = torch_util::dtype;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
@@ -61,7 +61,8 @@ public:
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const GameState&, const Action&);
-  const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state, const SearchParams& params);
+  const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state,
+                              const SearchParams& params);
 
   void start_search_threads(const SearchParams* search_params);
   void wait_for_search_threads();
@@ -71,7 +72,7 @@ public:
 
   static void end_session() { NNEvaluationService::end_session(); }
 
-private:
+ private:
   using search_thread_vec_t = std::vector<SearchThread*>;
   void prune_counts(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);

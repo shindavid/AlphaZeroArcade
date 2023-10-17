@@ -11,11 +11,12 @@
 
 namespace core {
 
-template <bool ApplySymmetry> struct AuxTargetHelper {};
+template <bool ApplySymmetry>
+struct AuxTargetHelper {};
 
 template <>
 struct AuxTargetHelper<false> {
-  template<eigen_util::FixedTensorConcept Tensor, core::GameStateConcept GameState>
+  template <eigen_util::FixedTensorConcept Tensor, core::GameStateConcept GameState>
   static void apply(Tensor&, const GameState&, symmetry_index_t) {}
 };
 
@@ -27,41 +28,39 @@ struct AuxTargetHelper<true> {
   }
 };
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>* TrainingDataWriter<GameState_, Tensorizor_>::instance_ = nullptr;
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+TrainingDataWriter<GameState_, Tensorizor_>*
+    TrainingDataWriter<GameState_, Tensorizor_>::instance_ = nullptr;
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
   po2::options_description desc("TrainingDataWriter options");
-  return desc
-      .template add_option<"games-dir", 'g'>(
-          po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games")
-      ;
+  return desc.template add_option<"games-dir", 'g'>(
+      po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games");
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::DataChunk() {
   tensors_ = new TensorGroup[kRowsPerChunk];
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::~DataChunk() {
   delete[] tensors_;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::TensorGroup&
 TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::get_next_group() {
   return tensors_[rows_++];
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(
-  const GameState& state, const GameOutcome& value)
-{
+    const GameState& state, const GameOutcome& value) {
   for (int i = 0; i < rows_; ++i) {
     TensorGroup& group = tensors_[i];
     GameOutcome shifted_value = value;
@@ -77,14 +76,14 @@ void TrainingDataWriter<GameState_, Tensorizor_>::DataChunk::record_for_all(
   }
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::TensorGroup&
 TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_group() {
   std::unique_lock<std::mutex> lock(mutex_);
   return get_next_chunk()->get_next_group();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::DataChunk*
 TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
   if (chunks_.empty() || chunks_.back().full()) {
@@ -93,8 +92,9 @@ TrainingDataWriter<GameState_, Tensorizor_>::GameData::get_next_chunk() {
   return &chunks_.back();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const GameState& state, const GameOutcome& value) {
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(
+    const GameState& state, const GameOutcome& value) {
   std::unique_lock<std::mutex> lock(mutex_);
   for (DataChunk& chunk : chunks_) {
     chunk.record_for_all(state, value);
@@ -102,10 +102,9 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::record_for_all(const
   pending_groups_.clear();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_pending_groups(
-    const PolicyTensor& opp_policy)
-{
+    const PolicyTensor& opp_policy) {
   for (auto& group : pending_groups_) {
     const GameState& state = group->state;
     symmetry_index_t sym_index = group->sym_index;
@@ -117,7 +116,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_
   pending_groups_.clear();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>*
 TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params) {
   if (!instance_) {
@@ -130,7 +129,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params) {
   return instance_;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 typename TrainingDataWriter<GameState_, Tensorizor_>::GameData_sptr
 TrainingDataWriter<GameState_, Tensorizor_>::get_data(game_id_t id) {
   std::unique_lock<std::mutex> lock(mutex_);
@@ -143,7 +142,7 @@ TrainingDataWriter<GameState_, Tensorizor_>::get_data(game_id_t id) {
   return it->second;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::close(GameData_sptr data) {
   if (data->closed()) return;
   data->close();
@@ -155,7 +154,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::close(GameData_sptr data) {
   cv_.notify_one();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
   closed_ = true;
   cv_.notify_one();
@@ -163,26 +162,25 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
   delete thread_;
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
-: params_(params)
-{
+    : params_(params) {
   namespace bf = boost::filesystem;
   bf::create_directories(games_dir());
   thread_ = new std::thread([&] { loop(); });
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
   shut_down();
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   while (!closed_) {
     std::unique_lock<std::mutex> lock(mutex_);
     game_queue_t& queue = game_queue_[queue_index_];
-    cv_.wait(lock, [&]{ return !queue.empty() || closed_;});
+    cv_.wait(lock, [&] { return !queue.empty() || closed_; });
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
@@ -192,16 +190,19 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   }
 }
 
-template<GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* data) {
   int total_rows = 0;
   for (const DataChunk& chunk : data->chunks()) {
     total_rows += chunk.rows();
   }
 
-  auto input_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<InputShape>);
-  auto policy_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<PolicyShape>);
-  auto value_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<ValueShape>);
+  auto input_shape =
+      util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<InputShape>);
+  auto policy_shape =
+      util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<PolicyShape>);
+  auto value_shape =
+      util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<ValueShape>);
 
   torch::Tensor input = torch::empty(input_shape, torch_util::to_dtype_v<InputScalar>);
   torch::Tensor policy = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
@@ -215,7 +216,8 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     using AuxShape = typename AuxTarget::Shape;
     using AuxScalar = torch_util::convert_type_t<typename AuxTensor::Scalar>;
     auto& aux_tgt = std::get<i>(aux_targets);
-    auto aux_shape = util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<AuxShape>);
+    auto aux_shape =
+        util::to_std_array<int64_t>(total_rows, eigen_util::to_int64_std_array_v<AuxShape>);
     aux_tgt = torch::empty(aux_shape, torch_util::to_dtype_v<AuxScalar>);
   });
 
@@ -234,8 +236,10 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
       const TensorGroup& group = chunk.get_group(r);
 
       memcpy(input_data + input_size * rows, group.input.data(), input_size * sizeof(InputScalar));
-      memcpy(policy_data + policy_size * rows, group.policy.data(), policy_size * sizeof(PolicyScalar));
-      memcpy(opp_policy_data + policy_size * rows, group.opp_policy.data(), policy_size * sizeof(PolicyScalar));
+      memcpy(policy_data + policy_size * rows, group.policy.data(),
+             policy_size * sizeof(PolicyScalar));
+      memcpy(opp_policy_data + policy_size * rows, group.opp_policy.data(),
+             policy_size * sizeof(PolicyScalar));
       memcpy(value_data + value_size * rows, group.value.data(), value_size * sizeof(ValueScalar));
 
       mp::constexpr_for<0, kNumAuxTargets, 1>([&](auto i) {

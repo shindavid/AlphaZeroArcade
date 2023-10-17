@@ -12,22 +12,22 @@
 namespace tictactoe {
 
 class PlayerFactory : public core::PlayerFactory<GameState> {
-public:
+ public:
   using base_t = core::PlayerFactory<GameState>;
   using player_generator_creator_vec_t = base_t::player_generator_creator_vec_t;
 
   PlayerFactory() : base_t(make_generators()) {}
 
-private:
+ private:
   static player_generator_creator_vec_t make_generators() {
-    return {
-      new core::PlayerGeneratorCreator<tictactoe::HumanTuiPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<tictactoe::PerfectPlayerGenerator>(),
-      new core::PlayerGeneratorCreator<common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
-      new core::PlayerGeneratorCreator<common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
-      new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
-      new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()
-    };
+    return {new core::PlayerGeneratorCreator<tictactoe::HumanTuiPlayerGenerator>(),
+            new core::PlayerGeneratorCreator<tictactoe::PerfectPlayerGenerator>(),
+            new core::PlayerGeneratorCreator<
+                common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
+            new core::PlayerGeneratorCreator<
+                common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
+            new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
+            new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()};
   }
 };
 

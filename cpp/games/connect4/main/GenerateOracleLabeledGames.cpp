@@ -1,10 +1,11 @@
 /*
- * In the past, we used this to generate perfectly-labeled training data for testing purposes. Conceivably, this
- * could still be useful, but it's no longer used now that the AlphaZero complete loop works.
+ * In the past, we used this to generate perfectly-labeled training data for testing purposes.
+ * Conceivably, this could still be useful, but it's no longer used now that the AlphaZero complete
+ * loop works.
  *
- * After some refactoring (the introduction of GameServer to replace GameRunner/ParallelGameRunner), this no longer
- * compiles. Because it's no longer used, I'm not going to bother fixing it. But I will leave it around in case we want
- * to revive it for whatever reason.
+ * After some refactoring (the introduction of GameServer to replace GameRunner/ParallelGameRunner),
+ * this no longer compiles. Because it's no longer used, I'm not going to bother fixing it. But I
+ * will leave it around in case we want to revive it for whatever reason.
  */
 #include <iostream>
 #include <string>
@@ -41,10 +42,9 @@ using ActionMask = GameStateTypes::ActionMask;
 using RandomPlayer = core::RandomPlayer<GameState>;
 
 class OracleSupervisor {
-public:
+ public:
   OracleSupervisor(TrainingDataWriter* writer, const c4::PerfectPlayParams& perfect_play_params)
-  : oracle_(perfect_play_params)
-  , writer_(writer) {}
+      : oracle_(perfect_play_params), writer_(writer) {}
 
   TrainingDataWriter::GameData_sptr start_game(core::game_id_t game_id) {
     tensorizor_.clear();
@@ -74,32 +74,29 @@ public:
     tensorizor_.tensorize(input, state);
   }
 
-  void close(TrainingDataWriter::GameData_sptr game_data) {
-    writer_->close(game_data);
-  }
+  void close(TrainingDataWriter::GameData_sptr game_data) { writer_->close(game_data); }
 
   void receive_move(const GameState& state, const Action& action) {
     tensorizor_.receive_state_change(state, action);
     move_history_.append(action[0]);
   }
 
-private:
+ private:
   c4::PerfectOracle oracle_;
   TrainingDataWriter* writer_;
   Tensorizor tensorizor_;
   c4::PerfectOracle::MoveHistory move_history_;
 };
 
-template<class BasePlayer>
+template <class BasePlayer>
 class OracleSupervisedPlayer : public BasePlayer {
-public:
-  OracleSupervisedPlayer(TrainingDataWriter* writer, const c4::PerfectPlayParams& perfect_play_params)
-  : supervisor_(new OracleSupervisor(writer, perfect_play_params))
-  , owns_supervisor_(true) {}
+ public:
+  OracleSupervisedPlayer(TrainingDataWriter* writer,
+                         const c4::PerfectPlayParams& perfect_play_params)
+      : supervisor_(new OracleSupervisor(writer, perfect_play_params)), owns_supervisor_(true) {}
 
   OracleSupervisedPlayer(OracleSupervisor* supervisor)
-  : supervisor_(supervisor)
-  , owns_supervisor_(false) {}
+      : supervisor_(supervisor), owns_supervisor_(false) {}
 
   ~OracleSupervisedPlayer() {
     if (owns_supervisor_) delete supervisor_;
@@ -112,10 +109,8 @@ public:
     game_data_ = supervisor_->start_game(BasePlayer::get_game_id());
   }
 
-  void receive_state_change(
-      seat_index_t p, const GameState& state, const Action& action,
-      const GameOutcome& outcome) override
-  {
+  void receive_state_change(seat_index_t p, const GameState& state, const Action& action,
+                            const GameOutcome& outcome) override {
     BasePlayer::receive_state_change(p, state, action, outcome);
     if (core::is_terminal_outcome(outcome)) {
       supervisor_->close(game_data_);
@@ -129,17 +124,19 @@ public:
     return BasePlayer::get_action_response(state, mask);
   }
 
-private:
+ private:
   OracleSupervisor* supervisor_;
   TrainingDataWriter::GameData_sptr game_data_;
   bool owns_supervisor_;
 };
 
-player_array_t create_players(TrainingDataWriter* writer, const c4::PerfectPlayParams& perfect_play_params) {
+player_array_t create_players(TrainingDataWriter* writer,
+                              const c4::PerfectPlayParams& perfect_play_params) {
   using player_t = OracleSupervisedPlayer<RandomPlayer>;
   player_t* p1 = new player_t(writer, perfect_play_params);
   player_t* p2 = new player_t(p1->supervisor());
-  return player_array_t{p1, p2};;
+  return player_array_t{p1, p2};
+  ;
 }
 
 ParallelGameRunner::Params get_default_parallel_game_runner_params() {
@@ -156,14 +153,15 @@ int main(int ac, char* av[]) {
 
   c4::PerfectPlayParams perfect_play_params;
   ParallelGameRunner::register_signal(SIGTERM);
-  ParallelGameRunner::Params parallel_game_runner_params = get_default_parallel_game_runner_params();
+  ParallelGameRunner::Params parallel_game_runner_params =
+      get_default_parallel_game_runner_params();
   TrainingDataWriter::Params training_data_writer_params;
 
   po2::options_description raw_desc("General options");
   auto desc = raw_desc.template add_option<"help", 'h'>("help")
-      .add(perfect_play_params.make_options_description())
-      .add(parallel_game_runner_params.make_options_description())
-      .add(training_data_writer_params.make_options_description());
+                  .add(perfect_play_params.make_options_description())
+                  .add(parallel_game_runner_params.make_options_description())
+                  .add(training_data_writer_params.make_options_description());
 
   po::variables_map vm;
   po::store(po::command_line_parser(ac, av).options(desc).run(), vm);

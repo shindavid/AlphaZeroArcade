@@ -8,7 +8,7 @@
 
 namespace common {
 
-template<core::GameStateConcept GameState_>
+template <core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::start_game() {
   GameStateTypes::nullify_action(last_action_);
   std::cout << "Press any key to start game" << std::endl;
@@ -18,18 +18,15 @@ inline void HumanTuiPlayer<GameState_>::start_game() {
   util::clearscreen();
 }
 
-template<core::GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::receive_state_change(
-    core::seat_index_t, const GameState&, const Action& action)
-{
+template <core::GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::receive_state_change(core::seat_index_t, const GameState&,
+                                                             const Action& action) {
   last_action_ = action;
 }
 
-template<core::GameStateConcept GameState_>
-typename HumanTuiPlayer<GameState_>::ActionResponse
-HumanTuiPlayer<GameState_>::get_action_response(
-  const GameState& state, const ActionMask& valid_actions)
-{
+template <core::GameStateConcept GameState_>
+typename HumanTuiPlayer<GameState_>::ActionResponse HumanTuiPlayer<GameState_>::get_action_response(
+    const GameState& state, const ActionMask& valid_actions) {
   util::ScreenClearer::clear_once();
   print_state(state, false);
   bool complain = false;
@@ -50,22 +47,23 @@ HumanTuiPlayer<GameState_>::get_action_response(
   return my_action;
 }
 
-template<core::GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::end_game(const GameState& state, const GameOutcome& outcome) {
+template <core::GameStateConcept GameState_>
+inline void HumanTuiPlayer<GameState_>::end_game(const GameState& state,
+                                                 const GameOutcome& outcome) {
   util::ScreenClearer::clear_once();
   print_state(state, true);
 
   auto seat = this->get_my_seat();
   if (outcome[seat] == 1) {
     std::cout << "Congratulations, you win!" << std::endl;
-  } else if (outcome[1-seat] == 1) {
+  } else if (outcome[1 - seat] == 1) {
     std::cout << "Sorry, you lose." << std::endl;
   } else {
     std::cout << "The game has ended in a draw." << std::endl;
   }
 }
 
-template<core::GameStateConcept GameState_>
+template <core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state, bool terminal) {
   state.dump(&last_action_, &this->get_player_names());
 }

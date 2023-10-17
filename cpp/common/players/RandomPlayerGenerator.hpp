@@ -10,12 +10,14 @@
 
 namespace common {
 
-template<core::GameStateConcept GameState>
+template <core::GameStateConcept GameState>
 class RandomPlayerGenerator : public core::AbstractPlayerGenerator<GameState> {
-public:
+ public:
   std::vector<std::string> get_types() const override { return {"Random"}; }
   std::string get_description() const override { return "Random player"; }
-  core::AbstractPlayer<GameState>* generate(core::game_thread_id_t) override { return new RandomPlayer<GameState>(); }
+  core::AbstractPlayer<GameState>* generate(core::game_thread_id_t) override {
+    return new RandomPlayer<GameState>();
+  }
 };
 
 }  // namespace common

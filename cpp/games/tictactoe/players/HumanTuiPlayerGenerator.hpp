@@ -15,7 +15,7 @@
 namespace tictactoe {
 
 class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<tictactoe::GameState> {
-public:
+ public:
   core::AbstractPlayer<tictactoe::GameState>* generate(core::game_thread_id_t) override {
     return new tictactoe::HumanTuiPlayer();
   }

@@ -16,14 +16,13 @@ inline Config* Config::instance() {
   return instance_;
 }
 
-inline bool Config::contains(const std::string& key) const {
-  return map_.contains(key);
-}
+inline bool Config::contains(const std::string& key) const { return map_.contains(key); }
 
 inline std::string Config::get(const std::string& key) const {
   auto it = map_.find(key);
   if (it == map_.end()) {
-    throw Exception("Mapping for key \"%s\" required in config file %s", key.c_str(), config_path_.c_str());
+    throw Exception("Mapping for key \"%s\" required in config file %s", key.c_str(),
+                    config_path_.c_str());
   }
   return it->second;
 }

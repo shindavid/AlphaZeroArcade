@@ -16,4 +16,4 @@ const int kNumPlayers = 2;
 const core::seat_index_t kRed = 0;
 const core::seat_index_t kYellow = 1;
 
-}  //namespace c4
+}  // namespace c4

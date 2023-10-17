@@ -6,7 +6,7 @@
 
 namespace util {
 
-template<typename FirstT, typename SecondT>
+template <typename FirstT, typename SecondT>
 struct HashablePair {
   FirstT first;
   SecondT second;
@@ -23,7 +23,7 @@ struct HashablePair {
 
 template <typename FirstT, typename SecondT>
 struct std::hash<util::HashablePair<FirstT, SecondT>> {
-std::size_t operator()(const util::HashablePair<FirstT, SecondT>& pair) const {
-  return util::tuple_hash(std::make_tuple(pair.first, pair.second));
-}
+  std::size_t operator()(const util::HashablePair<FirstT, SecondT>& pair) const {
+    return util::tuple_hash(std::make_tuple(pair.first, pair.second));
+  }
 };

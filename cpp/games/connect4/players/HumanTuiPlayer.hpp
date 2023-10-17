@@ -7,17 +7,16 @@
 namespace c4 {
 
 class HumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
-public:
+ public:
   using base_t = common::HumanTuiPlayer<GameState>;
 
   HumanTuiPlayer(bool cheat_mode);
   ~HumanTuiPlayer();
 
   void start_game() override;
-  void receive_state_change(
-      core::seat_index_t, const GameState&, const Action&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
 
-private:
+ private:
   Action prompt_for_action(const GameState&, const ActionMask&) override;
   int prompt_for_action_helper(const GameState&, const ActionMask&);
   void print_state(const GameState&, bool terminal) override;
