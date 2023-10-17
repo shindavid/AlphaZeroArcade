@@ -25,22 +25,24 @@ void GeneralSerializer<GameState>::deserialize_action_response(const char* buf,
 
 template <GameStateConcept GameState>
 size_t GeneralSerializer<GameState>::serialize_action_prompt(
-  char* buf, size_t buf_size, const ActionMask& valid_actions) const {
+    char* buf, size_t buf_size, const ActionMask& valid_actions) const {
   return eigen_util::serialize(buf, buf_size, valid_actions);
 }
 
 template <GameStateConcept GameState>
-void GeneralSerializer<GameState>::deserialize_action_prompt(
-    const char* buf, ActionMask* valid_actions) const {
+void GeneralSerializer<GameState>::deserialize_action_prompt(const char* buf,
+                                                             ActionMask* valid_actions) const {
   eigen_util::deserialize(buf, valid_actions);
 }
 
 template <GameStateConcept GameState>
-size_t GeneralSerializer<GameState>::serialize_state_change(
-    char* buf, size_t buf_size, const GameState& state, seat_index_t seat, const Action& action) const {
+size_t GeneralSerializer<GameState>::serialize_state_change(char* buf, size_t buf_size,
+                                                            const GameState& state,
+                                                            seat_index_t seat,
+                                                            const Action& action) const {
   if (sizeof(state) + sizeof(seat) + sizeof(action) > buf_size) {
-    throw util::Exception("Buffer too small (%ld + %ld + %ld > %ld)",
-                          sizeof(state), sizeof(seat), sizeof(action), buf_size);
+    throw util::Exception("Buffer too small (%ld + %ld + %ld > %ld)", sizeof(state), sizeof(seat),
+                          sizeof(action), buf_size);
   }
   memcpy(buf, &state, sizeof(state));
   memcpy(buf + sizeof(state), &seat, sizeof(seat));
@@ -49,8 +51,9 @@ size_t GeneralSerializer<GameState>::serialize_state_change(
 }
 
 template <GameStateConcept GameState>
-void GeneralSerializer<GameState>::deserialize_state_change(
-    const char* buf, GameState* state, seat_index_t* seat, Action* action) const {
+void GeneralSerializer<GameState>::deserialize_state_change(const char* buf, GameState* state,
+                                                            seat_index_t* seat,
+                                                            Action* action) const {
   memcpy(state, buf, sizeof(*state));
   memcpy(seat, buf + sizeof(*state), sizeof(*seat));
   memcpy(action, buf + sizeof(*state) + sizeof(*seat), sizeof(*action));
@@ -58,7 +61,8 @@ void GeneralSerializer<GameState>::deserialize_state_change(
 }
 
 template <GameStateConcept GameState>
-size_t GeneralSerializer<GameState>::serialize_game_end(char* buf, size_t buf_size, const GameOutcome& outcome) const {
+size_t GeneralSerializer<GameState>::serialize_game_end(char* buf, size_t buf_size,
+                                                        const GameOutcome& outcome) const {
   if (sizeof(outcome) > buf_size) {
     throw util::Exception("Buffer too small (%ld > %ld)", sizeof(outcome), buf_size);
   }
@@ -67,7 +71,8 @@ size_t GeneralSerializer<GameState>::serialize_game_end(char* buf, size_t buf_si
 }
 
 template <GameStateConcept GameState>
-void GeneralSerializer<GameState>::deserialize_game_end(const char* buf, GameOutcome* outcome) const {
+void GeneralSerializer<GameState>::deserialize_game_end(const char* buf,
+                                                        GameOutcome* outcome) const {
   *outcome = reinterpret_cast<const GameOutcome&>(*buf);
 }
 

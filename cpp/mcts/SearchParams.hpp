@@ -3,9 +3,10 @@
 namespace mcts {
 
 /*
- * SearchParams pertain to a single call to mcts::Manager::search(). Even given a single mcts::Manager instance,
- * different search() calls can have different SearchParams. For instance, for KataGo, there are "fast" searches and
- * "full" searches, which differ in their tree_size_limit and dirchlet settings.
+ * SearchParams pertain to a single call to mcts::Manager::search(). Even given a single
+ * mcts::Manager instance, different search() calls can have different SearchParams. For instance,
+ * for KataGo, there are "fast" searches and "full" searches, which differ in their tree_size_limit
+ * and dirchlet settings.
  *
  * By contrast, mcts::Manager::Params pertains to a single mcts::Manager instance.
  */

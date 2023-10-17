@@ -15,13 +15,13 @@ namespace core {
 /*
  * All GameState classes must satisfy the GameStateConcept concept.
  *
- * We use concepts rather than abstract classes primarily for efficiency reasons. Abstract classes would require dynamic
- * memory allocations and virtual method overhead. The dynamic memory aspect would be particularly painful in the
- * MCTS context, as variable-sized tensor calculations can be quite a bit costlier than fixed-sized ones.
+ * We use concepts rather than abstract classes primarily for efficiency reasons. Abstract classes
+ * would require dynamic memory allocations and virtual method overhead. The dynamic memory aspect
+ * would be particularly painful in the MCTS context, as variable-sized tensor calculations can be
+ * quite a bit costlier than fixed-sized ones.
  */
 template <class State>
 concept GameStateConcept = requires(State state) {
-
   /*
    * The number of players in the game.
    */
@@ -82,7 +82,9 @@ concept GameStateConcept = requires(State state) {
   /*
    * Apply a given action to the state, and return a GameOutcome.
    */
-  { state.apply_move(typename GameStateTypes<State>::Action{}) } -> std::same_as<typename GameStateTypes<State>::GameOutcome>;
+  {
+    state.apply_move(typename GameStateTypes<State>::Action{})
+  } -> std::same_as<typename GameStateTypes<State>::GameOutcome>;
 
   /*
    * Get the valid actions, as a bool tensor

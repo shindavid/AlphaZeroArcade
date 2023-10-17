@@ -12,7 +12,7 @@
 namespace tictactoe {
 
 class PerfectPlayer : public Player {
-public:
+ public:
   using base_t = Player;
 
   struct Params {
@@ -29,9 +29,9 @@ public:
 
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
 
-private:
+ private:
   struct policy_t {
-    policy_t(uint64_t u=0);
+    policy_t(uint64_t u = 0);
     int select() const;
     float p[kNumCells];
   };

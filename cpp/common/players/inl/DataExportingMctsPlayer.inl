@@ -6,32 +6,30 @@
 
 namespace common {
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-template<typename... BaseArgs>
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+template <typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
     const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
-: base_t(std::forward<BaseArgs>(base_args)...)
-, writer_(TrainingDataWriter::instantiate(writer_params)) {}
+    : base_t(std::forward<BaseArgs>(base_args)...),
+      writer_(TrainingDataWriter::instantiate(writer_params)) {}
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game()
-{
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game() {
   base_t::start_game();
   game_data_ = writer_->get_data(base_t::get_game_id());
 }
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(
-    core::seat_index_t seat, const GameState& state, const Action& action)
-{
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::receive_state_change(core::seat_index_t seat,
+                                                                            const GameState& state,
+                                                                            const Action& action) {
   base_t::receive_state_change(seat, state, action);
 }
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 typename DataExportingMctsPlayer<GameState_, Tensorizor_>::ActionResponse
 DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action_response(
-  const GameState& state, const ActionMask& valid_actions)
-{
+    const GameState& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
   bool record = search_mode == base_t::kFull;
   bool record_reply = game_data_->contains_pending_groups();
@@ -56,16 +54,18 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action_response(
   return base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
 }
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState& state, const GameOutcome& outcome) {
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState& state,
+                                                                const GameOutcome& outcome) {
   game_data_->record_for_all(state, outcome);
   writer_->close(game_data_);
   game_data_ = nullptr;
 }
 
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::PolicyTensor
-DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(const MctsSearchResults* mcts_results) {
+DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(
+    const MctsSearchResults* mcts_results) {
   auto policy = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   float sum = policy_array.sum();

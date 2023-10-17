@@ -20,7 +20,7 @@
 
 namespace core {
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 auto GameServer<GameState>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -51,7 +51,7 @@ auto GameServer<GameState>::Params::make_options_description() {
           "ignore imminent victory claims from players");
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 GameServer<GameState>::SharedData::~SharedData() {
   if (bar_) delete bar_;
 
@@ -60,18 +60,18 @@ GameServer<GameState>::SharedData::~SharedData() {
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::SharedData::init_progress_bar() {
   std::lock_guard<std::mutex> guard(mutex_);
   if (bar_) return;
 
   if (params_.display_progress_bar && params_.num_games > 0 && util::tty_mode()) {
     bar_ = new progressbar(params_.num_games + 1);  // + 1 for first update
-    bar_->update();  // so that progress-bar displays immediately
+    bar_->update();                                 // so that progress-bar displays immediately
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 bool GameServer<GameState>::SharedData::request_game(int num_games) {
   std::lock_guard<std::mutex> guard(mutex_);
   if (num_games > 0 && num_games_started_ >= num_games) return false;
@@ -79,7 +79,7 @@ bool GameServer<GameState>::SharedData::request_game(int num_games) {
   return true;
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::SharedData::update(const GameOutcome& outcome, int64_t ns) {
   std::lock_guard<std::mutex> guard(mutex_);
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
@@ -92,20 +92,20 @@ void GameServer<GameState>::SharedData::update(const GameOutcome& outcome, int64
   if (bar_) bar_->update();
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 auto GameServer<GameState>::SharedData::get_results() const {
   std::lock_guard<std::mutex> guard(mutex_);
   return results_array_;
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::SharedData::end_session() {
   for (auto& reg : registrations_) {
     reg.gen->end_session();
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 bool GameServer<GameState>::SharedData::ready_to_start() const {
   for (const auto& reg : registrations_) {
     auto* remote_gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg.gen);
@@ -114,7 +114,7 @@ bool GameServer<GameState>::SharedData::ready_to_start() const {
   return true;
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 int GameServer<GameState>::SharedData::compute_parallelism_factor() const {
   int parallelism = params_.parallelism;
   if (params_.num_games > 0) {
@@ -128,16 +128,17 @@ int GameServer<GameState>::SharedData::compute_parallelism_factor() const {
   return parallelism;
 }
 
-template<GameStateConcept GameState>
-void GameServer<GameState>::SharedData::register_player(
-    seat_index_t seat, PlayerGenerator* gen, bool implicit_remote) {
+template <GameStateConcept GameState>
+void GameServer<GameState>::SharedData::register_player(seat_index_t seat, PlayerGenerator* gen,
+                                                        bool implicit_remote) {
   util::clean_assert(seat < kNumPlayers, "Invalid seat number %d", seat);
   if (dynamic_cast<RemotePlayerProxyGenerator*>(gen)) {
     if (implicit_remote) {
-      util::clean_assert(params_.port > 0,
-                         "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
-                         "players. In this case, --port must be specified, so that the remote players can connect",
-                         kNumPlayers);
+      util::clean_assert(
+          params_.port > 0,
+          "If specifying fewer than %d --player's, the remaining players are assumed to be remote "
+          "players. In this case, --port must be specified, so that the remote players can connect",
+          kNumPlayers);
     } else {
       util::clean_assert(params_.port > 0, "Cannot use remote players without setting --port");
     }
@@ -159,7 +160,7 @@ void GameServer<GameState>::SharedData::register_player(
   registrations_.emplace_back(gen, seat, player_id);
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::SharedData::init_random_seat_indices() {
   std::bitset<kNumPlayers> fixed_seat_indices;
   for (registration_t& reg : registrations_) {
@@ -174,11 +175,13 @@ void GameServer<GameState>::SharedData::init_random_seat_indices() {
   util::Random::shuffle(&random_seat_indices_[0], &random_seat_indices_[num_random_seats_]);
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 typename GameServer<GameState>::player_instantiation_array_t
-GameServer<GameState>::SharedData::generate_player_order(const player_instantiation_array_t &instantiations) {
+GameServer<GameState>::SharedData::generate_player_order(
+    const player_instantiation_array_t& instantiations) {
   std::unique_lock lock(mutex_);
-  std::next_permutation(random_seat_indices_.begin(), random_seat_indices_.begin() + num_random_seats_);
+  std::next_permutation(random_seat_indices_.begin(),
+                        random_seat_indices_.begin() + num_random_seats_);
   player_id_array_t random_seat_index_permutation = random_seat_indices_;
   lock.unlock();
 
@@ -205,10 +208,9 @@ GameServer<GameState>::SharedData::generate_player_order(const player_instantiat
   return player_order;
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thread_id_t id)
-: shared_data_(shared_data)
-, id_(id) {
+    : shared_data_(shared_data), id_(id) {
   std::bitset<kNumPlayers> human_tui_indices;
   for (int p = 0; p < kNumPlayers; ++p) {
     instantiations_[p] = shared_data_.registration_templates()[p].instantiate(id);
@@ -228,14 +230,14 @@ GameServer<GameState>::GameThread::GameThread(SharedData& shared_data, game_thre
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 GameServer<GameState>::GameThread::~GameThread() {
   if (thread_) delete thread_;
 
   for (const auto& reg : instantiations_) delete reg.player;
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::GameThread::run() {
   const Params& params = shared_data_.params();
 
@@ -264,9 +266,9 @@ void GameServer<GameState>::GameThread::run() {
   }
 }
 
-template<GameStateConcept GameState>
-typename GameServer<GameState>::GameOutcome
-GameServer<GameState>::GameThread::play_game(player_array_t& players) {
+template <GameStateConcept GameState>
+typename GameServer<GameState>::GameOutcome GameServer<GameState>::GameThread::play_game(
+    player_array_t& players) {
   game_id_t game_id = util::get_unique_id();
 
   player_name_array_t player_names;
@@ -323,10 +325,10 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
   throw std::runtime_error("should not get here");
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 GameServer<GameState>::GameServer(const Params& params) : shared_data_(params) {}
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 GameServer<GameState>::~GameServer() {
   if (kill_thread_) {
     if (kill_thread_->joinable()) kill_thread_->detach();
@@ -334,10 +336,10 @@ GameServer<GameState>::~GameServer() {
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::wait_for_remote_player_registrations() {
-  util::clean_assert(num_registered_players() <= kNumPlayers, "Invalid number of players registered: %d",
-                     num_registered_players());
+  util::clean_assert(num_registered_players() <= kNumPlayers,
+                     "Invalid number of players registered: %d", num_registered_players());
 
   // fill in missing slots with remote players
   int shortage = kNumPlayers - num_registered_players();
@@ -372,7 +374,7 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
     do {
       Packet<Registration> packet;
       packet.read_from(socket);  // TODO: catch exception and engage in retry-protocol with client
-      const Registration &registration = packet.payload();
+      const Registration& registration = packet.payload();
       std::string registered_name = registration.dynamic_size_section.player_name;
       remaining_requests = registration.remaining_requests;
       int max_simultaneous_games = registration.max_simultaneous_games;
@@ -385,7 +387,7 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
       std::string name = reg->gen->get_name();
       util::clean_assert(!name.empty(), "Unexpected empty name");
 
-      RemotePlayerProxyGenerator *gen = dynamic_cast<RemotePlayerProxyGenerator *>(reg->gen);
+      RemotePlayerProxyGenerator* gen = dynamic_cast<RemotePlayerProxyGenerator*>(reg->gen);
       gen->initialize(socket, max_simultaneous_games, reg->player_id);
       reg->seat = seat;
 
@@ -394,13 +396,14 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
       response_packet.set_player_name(name);
       response_packet.send_to(socket);
 
-      printf("Registered player: \"%s\" (seat: %d, remaining: %d)\n", name.c_str(), (int) seat, remaining_requests);
+      printf("Registered player: \"%s\" (seat: %d, remaining: %d)\n", name.c_str(), (int)seat,
+             remaining_requests);
       std::cout.flush();
     } while (remaining_requests);
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::run() {
   wait_for_remote_player_registrations();
   shared_data_.init_random_seat_indices();
@@ -415,9 +418,15 @@ void GameServer<GameState>::run() {
   RemotePlayerProxy<GameState>::PacketDispatcher::start_all(parallelism);
 
   time_point_t start_time = std::chrono::steady_clock::now();
-  if (!params().kill_file.empty()) { kill_thread_ = new std::thread([&] { kill_file_checker(); }); }
-  for (auto thread : threads_) { thread->launch(); }
-  for (auto thread : threads_) { thread->join(); }
+  if (!params().kill_file.empty()) {
+    kill_thread_ = new std::thread([&] { kill_file_checker(); });
+  }
+  for (auto thread : threads_) {
+    thread->launch();
+  }
+  for (auto thread : threads_) {
+    thread->join();
+  }
   time_point_t end_time = std::chrono::steady_clock::now();
 
   int num_games = shared_data_.num_games_started();
@@ -428,15 +437,16 @@ void GameServer<GameState>::run() {
 
   printf("\nAll games complete!\n");
   for (player_id_t p = 0; p < kNumPlayers; ++p) {
-    printf("pid=%d name=%s %s\n", p, shared_data_.get_player_name(p).c_str(), get_results_str(results[p]).c_str());
+    printf("pid=%d name=%s %s\n", p, shared_data_.get_player_name(p).c_str(),
+           get_results_str(results[p]).c_str());
   }
 
   util::ParamDumper::add("Parallelism factor", "%d", (int)threads_.size());
   util::ParamDumper::add("Num games", "%d", num_games);
-  util::ParamDumper::add("Total runtime", "%.3fs", ns*1e-9);
-  util::ParamDumper::add("Avg runtime", "%.3fs", ns*1e-9 / num_games);
+  util::ParamDumper::add("Total runtime", "%.3fs", ns * 1e-9);
+  util::ParamDumper::add("Avg runtime", "%.3fs", ns * 1e-9 / num_games);
 
-  for (auto thread: threads_) {
+  for (auto thread : threads_) {
     delete thread;
   }
 
@@ -444,7 +454,7 @@ void GameServer<GameState>::run() {
   util::ParamDumper::flush();
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 void GameServer<GameState>::kill_file_checker() {
   boost::filesystem::path kill_path(params().kill_file);
   while (!boost::filesystem::exists(kill_path)) {
@@ -459,7 +469,7 @@ void GameServer<GameState>::kill_file_checker() {
   }
 }
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 std::string GameServer<GameState>::get_results_str(const results_map_t& map) {
   int win = 0;
   int loss = 0;
@@ -470,9 +480,12 @@ std::string GameServer<GameState>::get_results_str(const results_map_t& map) {
     float f = it.first;
     int count = it.second;
     score += f * count;
-    if (f == 1) win += count;
-    else if (f == 0) loss += count;
-    else draw += count;
+    if (f == 1)
+      win += count;
+    else if (f == 0)
+      loss += count;
+    else
+      draw += count;
   }
   return util::create_string("W%d L%d D%d [%.16g]", win, loss, draw, score);
 }

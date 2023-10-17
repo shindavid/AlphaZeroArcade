@@ -48,8 +48,7 @@ inline std::string PerfectOracle::QueryResult::get_overlay() const {
       chars[i] = '+';
     }
   }
-  return util::create_string(" %c %c %c %c %c %c %c",
-                             chars[0], chars[1], chars[2], chars[3],
+  return util::create_string(" %c %c %c %c %c %c %c", chars[0], chars[1], chars[2], chars[3],
                              chars[4], chars[5], chars[6]);
 }
 
@@ -57,8 +56,9 @@ inline PerfectOracle::PerfectOracle() {
   std::string c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
 
   if (c4_solver_dir_str.empty()) {
-    throw util::Exception("c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
-                          util::Config::kFilename);
+    throw util::Exception(
+        "c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
+        util::Config::kFilename);
   }
   boost::filesystem::path c4_solver_dir(c4_solver_dir_str);
   if (!boost::filesystem::is_directory(c4_solver_dir)) {
@@ -73,15 +73,14 @@ inline PerfectOracle::PerfectOracle() {
   }
 
   namespace bp = boost::process;
-  std::string c4_cmd = util::create_string("%s -b %s -a", c4_solver_bin.c_str(), c4_solver_book.c_str());
+  std::string c4_cmd =
+      util::create_string("%s -b %s -a", c4_solver_bin.c_str(), c4_solver_book.c_str());
   proc_ = new bp::child(c4_cmd, bp::std_out > out_, bp::std_err > bp::null, bp::std_in < in_);
 }
 
-inline PerfectOracle::~PerfectOracle() {
-  delete proc_;
-}
+inline PerfectOracle::~PerfectOracle() { delete proc_; }
 
-inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory &history) {
+inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory& history) {
   std::string s;
 
   {
@@ -135,30 +134,28 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
   po2::options_description desc("c4::PerfectPlayer options");
   return desc
-      .template add_option<"strength", 's'>
-          (po::value<int>(&strength)->default_value(strength),
-           "strength (0-21). The last s moves are played perfectly, the others randomly. 0 is random, 21 is perfect.")
-      .template add_option<"verbose", 'v'>(
-          po::bool_switch(&verbose)->default_value(verbose), "verbose mode")
-      ;
+      .template add_option<"strength", 's'>(
+          po::value<int>(&strength)->default_value(strength),
+          "strength (0-21). The last s moves are played perfectly, the others randomly. 0 is "
+          "random, 21 is perfect.")
+      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                           "verbose mode");
 }
 
 inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
-  util::clean_assert(params_.strength >= 0 && params_.strength <= 21, "strength must be in [0, 21]");
+  util::clean_assert(params_.strength >= 0 && params_.strength <= 21,
+                     "strength must be in [0, 21]");
 }
 
-inline void PerfectPlayer::start_game() {
-  move_history_.reset();
-}
+inline void PerfectPlayer::start_game() { move_history_.reset(); }
 
-inline void PerfectPlayer::receive_state_change(
-    core::seat_index_t, const GameState&, const Action& action)
-{
+inline void PerfectPlayer::receive_state_change(core::seat_index_t, const GameState&,
+                                                const Action& action) {
   move_history_.append(action[0]);
 }
 
-inline PerfectPlayer::ActionResponse
-PerfectPlayer::get_action_response(const GameState& state, const ActionMask& valid_actions) {
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
+    const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
 
   ActionResponse response;

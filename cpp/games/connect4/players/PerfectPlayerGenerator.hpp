@@ -11,14 +11,16 @@
 namespace c4 {
 
 class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<c4::GameState> {
-public:
+ public:
   std::vector<std::string> get_types() const override { return {"Perfect"}; }
   std::string get_description() const override { return "Perfect player"; }
-  core::AbstractPlayer<c4::GameState>* generate(core::game_thread_id_t) override { return new PerfectPlayer(params_); }
+  core::AbstractPlayer<c4::GameState>* generate(core::game_thread_id_t) override {
+    return new PerfectPlayer(params_);
+  }
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args);
 
-private:
+ private:
   PerfectPlayer::Params params_;
 };
 

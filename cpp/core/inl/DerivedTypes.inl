@@ -2,18 +2,17 @@
 
 namespace core {
 
-template<typename GameState>
-typename GameStateTypes<GameState>::LocalPolicyArray
-GameStateTypes<GameState>::global_to_local(const PolicyTensor& policy, const ActionMask& mask) {
+template <typename GameState>
+typename GameStateTypes<GameState>::LocalPolicyArray GameStateTypes<GameState>::global_to_local(
+    const PolicyTensor& policy, const ActionMask& mask) {
   LocalPolicyArray out;
   global_to_local(policy, mask, out);
   return out;
 }
 
-template<typename GameState>
-void GameStateTypes<GameState>::global_to_local(
-    const PolicyTensor& policy, const ActionMask& mask, LocalPolicyArray& out)
-{
+template <typename GameState>
+void GameStateTypes<GameState>::global_to_local(const PolicyTensor& policy, const ActionMask& mask,
+                                                LocalPolicyArray& out) {
   out.resize(eigen_util::count(mask));
   const auto& policy_array = eigen_util::reinterpret_as_array(policy);
   const auto& mask_array = eigen_util::reinterpret_as_array(mask);
@@ -29,18 +28,17 @@ void GameStateTypes<GameState>::global_to_local(
   }
 }
 
-template<typename GameState>
-typename GameStateTypes<GameState>::PolicyTensor
-GameStateTypes<GameState>::local_to_global(const LocalPolicyArray& policy, const ActionMask& mask) {
+template <typename GameState>
+typename GameStateTypes<GameState>::PolicyTensor GameStateTypes<GameState>::local_to_global(
+    const LocalPolicyArray& policy, const ActionMask& mask) {
   PolicyTensor out;
   local_to_global(policy, mask, out);
   return out;
 }
 
-template<typename GameState>
-void GameStateTypes<GameState>::local_to_global(
-  const LocalPolicyArray& policy, const ActionMask& mask, PolicyTensor& out)
-{
+template <typename GameState>
+void GameStateTypes<GameState>::local_to_global(const LocalPolicyArray& policy,
+                                                const ActionMask& mask, PolicyTensor& out) {
   PolicyArray& out_array = eigen_util::reinterpret_as_array(out);
   out_array.setConstant(0);
 
@@ -57,9 +55,9 @@ void GameStateTypes<GameState>::local_to_global(
   }
 }
 
-template<typename GameState>
-typename GameStateTypes<GameState>::Action
-GameStateTypes<GameState>::get_nth_valid_action(const ActionMask& valid_actions, int n) {
+template <typename GameState>
+typename GameStateTypes<GameState>::Action GameStateTypes<GameState>::get_nth_valid_action(
+    const ActionMask& valid_actions, int n) {
   const bool* data = valid_actions.data();
   int i = 0;
   for (; i < kNumGlobalActionsBound; ++i) {
@@ -71,17 +69,17 @@ GameStateTypes<GameState>::get_nth_valid_action(const ActionMask& valid_actions,
   return eigen_util::unflatten_index(valid_actions, i);
 }
 
-template<typename GameState>
+template <typename GameState>
 void GameStateTypes<GameState>::nullify_action(Action& action) {
   action.fill(-1);
 }
 
-template<typename GameState>
+template <typename GameState>
 bool GameStateTypes<GameState>::is_nullified(const Action& action) {
   return action[0] == -1;
 }
 
-template<typename GameState>
+template <typename GameState>
 bool GameStateTypes<GameState>::is_valid_action(const Action& action) {
   PolicyShape shape;  // dummy instances to access dimension, constructor should be no-op
   for (size_t i = 0; i < action.size(); ++i) {
@@ -94,28 +92,30 @@ bool GameStateTypes<GameState>::is_valid_action(const Action& action) {
   return true;
 }
 
-template<typename GameState>
-bool GameStateTypes<GameState>::is_valid_action(const Action& action, const ActionMask& valid_actions) {
+template <typename GameState>
+bool GameStateTypes<GameState>::is_valid_action(const Action& action,
+                                                const ActionMask& valid_actions) {
   return is_valid_action(action) && valid_actions(action);
 }
 
-template<typename GameState>
+template <typename GameState>
 void GameStateTypes<GameState>::validate_action(const Action& action) {
   if (!is_valid_action(action)) {
     throw util::Exception("Invalid action (action=%s)",
-      util::std_array_to_string(action, "(", ",", ")").c_str());
+                          util::std_array_to_string(action, "(", ",", ")").c_str());
   }
 }
 
-template<typename GameState>
-void GameStateTypes<GameState>::validate_action(const Action& action, const ActionMask& valid_actions) {
+template <typename GameState>
+void GameStateTypes<GameState>::validate_action(const Action& action,
+                                                const ActionMask& valid_actions) {
   if (!is_valid_action(action, valid_actions)) {
     throw util::Exception("Invalid action (action=%s)",
-      util::std_array_to_string(action, "(", ",", ")").c_str());
+                          util::std_array_to_string(action, "(", ",", ")").c_str());
   }
 }
 
-template<typename GameState>
+template <typename GameState>
 void GameStateTypes<GameState>::normalize(const ActionMask& mask, PolicyTensor& policy) {
   dtype sum = eigen_util::sum(policy);
   if (!sum) {
@@ -125,7 +125,7 @@ void GameStateTypes<GameState>::normalize(const ActionMask& mask, PolicyTensor& 
   policy = policy / sum;
 }
 
-template<typename GameState>
+template <typename GameState>
 math::var_bindings_map_t GameStateTypes<GameState>::get_var_bindings() {
   math::var_bindings_map_t bindings;
   bindings["b"] = kMaxNumLocalActions;

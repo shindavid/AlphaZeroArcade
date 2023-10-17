@@ -11,13 +11,15 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline SearchThread<GameState, Tensorizor>::SearchThread(
-    SharedData* shared_data, NNEvaluationService* nn_eval_service, const ManagerParams* manager_params, int thread_id)
-: shared_data_(shared_data)
-, nn_eval_service_(nn_eval_service)
-, manager_params_(manager_params)
-, thread_id_(thread_id) {
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline SearchThread<GameState, Tensorizor>::SearchThread(SharedData* shared_data,
+                                                         NNEvaluationService* nn_eval_service,
+                                                         const ManagerParams* manager_params,
+                                                         int thread_id)
+    : shared_data_(shared_data),
+      nn_eval_service_(nn_eval_service),
+      manager_params_(manager_params),
+      thread_id_(thread_id) {
   if (kEnableProfiling) {
     auto dir = manager_params->profiling_dir();
     int manager_id = shared_data->manager_id;
@@ -28,21 +30,21 @@ inline SearchThread<GameState, Tensorizor>::SearchThread(
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline SearchThread<GameState, Tensorizor>::~SearchThread() {
   kill();
   profiler_.dump(1);
   profiler_.close_file();
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::join() {
   if (thread_ && thread_->joinable()) {
     thread_->join();
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::kill() {
   join();
   if (thread_) {
@@ -51,31 +53,31 @@ inline void SearchThread<GameState, Tensorizor>::kill() {
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::launch(const SearchParams* search_params, std::function<void()> f) {
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void SearchThread<GameState, Tensorizor>::launch(const SearchParams* search_params,
+                                                        std::function<void()> f) {
   kill();
   search_params_ = search_params;
   thread_ = new std::thread(f);
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree_size_limit) {
   profiler_.record(SearchThreadRegion::kCheckVisitReady);
   const auto& stats = root->stats();
   return search_active() && stats.total_count() <= tree_size_limit;
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::run() {
   search_path_.clear();
   visit(shared_data_->root_node.get(), nullptr, shared_data_->move_number);
   dump_profiling_stats();
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::visit(
-    Node* tree, edge_t* edge, move_number_t move_number)
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
+                                                       move_number_t move_number) {
   search_path_.emplace_back(tree, edge);
 
   if (mcts::kEnableDebug) {
@@ -85,7 +87,8 @@ inline void SearchThread<GameState, Tensorizor>::visit(
     } else {
       printer << __func__ << "()";
     }
-    printer << " " << search_path_str() << " cp=" << (int)tree->stable_data().current_player << std::endl;
+    printer << " " << search_path_str() << " cp=" << (int)tree->stable_data().current_player
+            << std::endl;
   }
 
   const auto& stable_data = tree->stable_data();
@@ -112,7 +115,8 @@ inline void SearchThread<GameState, Tensorizor>::visit(
 
     edge_t* edge = children_data.find(action_index);
     if (!edge) {
-      Action action = GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
+      Action action =
+          GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
       auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
 
       std::unique_lock lock(tree->children_mutex());
@@ -129,7 +133,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicyArray& P) {
   int rows = P.rows();
   double alpha = manager_params_->dirichlet_alpha_factor / sqrt(rows);
@@ -137,7 +141,7 @@ inline void SearchThread<GameState, Tensorizor>::add_dirichlet_noise(LocalPolicy
   P = (1.0 - manager_params_->dirichlet_mult) * P + manager_params_->dirichlet_mult * noise;
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
   profiler_.record(SearchThreadRegion::kVirtualBackprop);
 
@@ -152,7 +156,7 @@ inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
@@ -174,7 +178,7 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
@@ -196,7 +200,7 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_edge) {
   // short-circuit
   if (mcts::kEnableDebug) {
@@ -214,7 +218,7 @@ void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_ed
   }
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename SearchThread<GameState, Tensorizor>::evaluation_result_t
 SearchThread<GameState, Tensorizor>::evaluate(Node* tree) {
   profiler_.record(SearchThreadRegion::kEvaluate);
@@ -225,21 +229,21 @@ SearchThread<GameState, Tensorizor>::evaluate(Node* tree) {
   auto state = evaluation_data.state;
 
   switch (state) {
-    case Node::kUnset:
-    {
+    case Node::kUnset: {
       evaluate_unset(tree, &lock, &data);
       tree->cv_evaluate().notify_all();
       break;
     }
-    default: break;
+    default:
+      break;
   }
   return data;
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void SearchThread<GameState, Tensorizor>::evaluate_unset(
-    Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data)
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void SearchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
+                                                         std::unique_lock<std::mutex>* lock,
+                                                         evaluation_result_t* data) {
   profiler_.record(SearchThreadRegion::kEvaluateUnset);
 
   if (mcts::kEnableDebug) {
@@ -261,7 +265,8 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
     PolicyTensor uniform_policy;
     uniform_value.setConstant(1.0 / kNumPlayers);
     uniform_policy.setConstant(0);
-    data->evaluation = std::make_shared<NNEvaluation>(uniform_value, uniform_policy, stable_data.valid_action_mask);
+    data->evaluation = std::make_shared<NNEvaluation>(uniform_value, uniform_policy,
+                                                      stable_data.valid_action_mask);
   } else {
     core::symmetry_index_t sym_index = stable_data.sym_index;
     typename NNEvaluationService::Request request{tree, &profiler_, thread_id_, sym_index};
@@ -284,22 +289,21 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(
   evaluation_data.state = Node::kSet;
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
   std::string delim = GameState::action_delimiter();
   std::vector<std::string> vec;
   for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    const GameState& prev_state = search_path_[n-1].node->stable_data().state;
+    const GameState& prev_state = search_path_[n - 1].node->stable_data().state;
     Action action = search_path_[n].edge->action();
     vec.push_back(prev_state.action_to_str(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
-    Node* tree, NNEvaluation* evaluation)
-{
+    Node* tree, NNEvaluation* evaluation) {
   profiler_.record(SearchThreadRegion::kPUCT);
 
   PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node.get());

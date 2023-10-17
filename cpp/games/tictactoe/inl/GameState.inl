@@ -2,7 +2,8 @@
 
 #include <common/SquareBoardSymmetryBase.hpp>
 
-inline std::size_t std::hash<tictactoe::GameState>::operator()(const tictactoe::GameState& state) const {
+inline std::size_t std::hash<tictactoe::GameState>::operator()(
+    const tictactoe::GameState& state) const {
   return state.hash();
 }
 
@@ -65,20 +66,22 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   int index = row * kBoardDimension + col;
   bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask_;
   bool occupied_by_any_player = (mask_t(1) << index) & full_mask_;
-  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1-cp)) : -1;
+  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
-inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(const Action* last_action,
+                            const player_name_array_t* player_names) const {
   auto cp = get_current_player();
   mask_t opp_player_mask = get_opponent_mask();
   mask_t o_mask = (cp == kO) ? cur_player_mask_ : opp_player_mask;
   mask_t x_mask = (cp == kX) ? cur_player_mask_ : opp_player_mask;
 
-  char text[] =  "0 1 2  | | | |\n"
-                 "3 4 5  | | | |\n"
-                 "6 7 8  | | | |\n";
+  char text[] =
+      "0 1 2  | | | |\n"
+      "3 4 5  | | | |\n"
+      "6 7 8  | | | |\n";
 
-  int offset_table[] = { 8, 10, 12, 23, 25, 27, 38, 40, 42 };
+  int offset_table[] = {8, 10, 12, 23, 25, 27, 38, 40, 42};
   for (int i = 0; i < kNumCells; ++i) {
     int offset = offset_table[i];
     if (o_mask & (mask_t(1) << i)) {
@@ -101,9 +104,8 @@ inline void GameState::dump(const Action* last_action, const player_name_array_t
 
 namespace mcts {
 
-inline void SearchResultsDumper<tictactoe::GameState>::dump(
-    const LocalPolicyArray &action_policy, const SearchResults &results)
-{
+inline void SearchResultsDumper<tictactoe::GameState>::dump(const LocalPolicyArray& action_policy,
+                                                            const SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

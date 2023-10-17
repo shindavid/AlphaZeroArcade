@@ -15,14 +15,14 @@ namespace common {
 /*
  * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
  */
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
-public:
+ public:
   /*
    * The argument for using a full search is so that the opp reply target is more accurate.
    *
-   * The argument against is that the opp reply target is not that important, making full searches for that purpose
-   * an inefficient use of compute budget.
+   * The argument against is that the opp reply target is not that important, making full searches
+   * for that purpose an inefficient use of compute budget.
    */
   static constexpr bool kForceFullSearchIfRecordingAsOppReply = false;
 
@@ -51,18 +51,19 @@ public:
   using MctsManager = base_t::MctsManager;
   using MctsSearchResults = base_t::MctsSearchResults;
 
-  template<typename... BaseArgs>
+  template <typename... BaseArgs>
   DataExportingMctsPlayer(const TrainingDataWriterParams& writer_params, BaseArgs&&...);
 
   void start_game() override;
-  void receive_state_change(
-      core::seat_index_t seat, const GameState& state, const Action& action) override;
+  void receive_state_change(core::seat_index_t seat, const GameState& state,
+                            const Action& action) override;
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
-protected:
+ protected:
   static PolicyTensor extract_policy(const MctsSearchResults* results);
-  void record_position(const GameState& state, const ActionMask& valid_actions, const PolicyTensor& policy);
+  void record_position(const GameState& state, const ActionMask& valid_actions,
+                       const PolicyTensor& policy);
 
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameData_sptr game_data_;
@@ -71,4 +72,3 @@ protected:
 }  // namespace common
 
 #include <common/players/inl/DataExportingMctsPlayer.inl>
-

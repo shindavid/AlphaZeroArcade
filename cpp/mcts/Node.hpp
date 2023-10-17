@@ -24,9 +24,9 @@ namespace mcts {
  * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
  * achieved in a high-performance manner through mutexes and condition variables.
  */
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class Node {
-public:
+ public:
   using sptr = std::shared_ptr<Node>;
 
   using NNEvaluation = mcts::NNEvaluation<GameState>;
@@ -81,7 +81,10 @@ public:
     int total_count() const { return real_count + virtual_count; }
     void virtual_increment() { virtual_count++; }
     void real_increment() { real_count++; }
-    void increment_transfer() { real_count++; virtual_count--; }
+    void increment_transfer() {
+      real_count++;
+      virtual_count--;
+    }
     void set_eval_exact(const ValueArray& value) {
       eval = value;
       for (int p = 0; p < kNumPlayers; ++p) {
@@ -90,10 +93,13 @@ public:
       }
       real_increment();
     }
-    void set_eval_with_virtual_undo(const ValueArray& value) { eval = value; increment_transfer(); }
+    void set_eval_with_virtual_undo(const ValueArray& value) {
+      eval = value;
+      increment_transfer();
+    }
 
-    ValueArray eval;  // game-outcome for terminal nodes, nn-eval for non-terminal nodes
-    ValueArray real_avg;  // excludes virtual loss
+    ValueArray eval;             // game-outcome for terminal nodes, nn-eval for non-terminal nodes
+    ValueArray real_avg;         // excludes virtual loss
     ValueArray virtualized_avg;  // includes virtual loss
 
     // TODO: generalize these fields to utility lower/upper bounds
@@ -124,7 +130,7 @@ public:
     void increment_count() { count_++; }
     int count() const { return count_.load(); }
 
-  private:
+   private:
     volatile sptr child_;
     volatile Action action_;
     volatile core::action_index_t action_index_ = -1;
@@ -163,15 +169,14 @@ public:
    * TODO: use a custom allocator for the linked list.
    */
   struct children_data_t {
-
-    template<bool is_const>
+    template <bool is_const>
     struct iterator_base_t {
       using chunk_t = std::conditional_t<is_const, const edge_chunk_t, edge_chunk_t>;
 
-      iterator_base_t(chunk_t* chunk=nullptr, int index=0);
+      iterator_base_t(chunk_t* chunk = nullptr, int index = 0);
       bool operator==(const iterator_base_t& other) const = default;
 
-    protected:
+     protected:
       void increment();
       void nullify_if_at_end();
 
@@ -183,14 +188,21 @@ public:
       using base_t = iterator_base_t<false>;
 
       using iterator_category = std::forward_iterator_tag;
-      using difference_type   = std::ptrdiff_t;
-      using value_type        = edge_t;
-      using pointer           = value_type*;
-      using reference         = value_type&;
+      using difference_type = std::ptrdiff_t;
+      using value_type = edge_t;
+      using pointer = value_type*;
+      using reference = value_type&;
 
       using base_t::base_t;
-      iterator& operator++() { this->increment(); return *this; }
-      iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+      iterator& operator++() {
+        this->increment();
+        return *this;
+      }
+      iterator operator++(int) {
+        auto tmp = *this;
+        ++(*this);
+        return tmp;
+      }
       bool operator==(const iterator& other) const = default;
       bool operator!=(const iterator& other) const = default;
       edge_t& operator*() const { return this->chunk->data[this->index]; }
@@ -202,14 +214,21 @@ public:
       using base_t = iterator_base_t<true>;
 
       using iterator_category = std::forward_iterator_tag;
-      using difference_type   = std::ptrdiff_t;
-      using value_type        = edge_t;
-      using pointer           = value_type*;
-      using reference         = value_type&;
+      using difference_type = std::ptrdiff_t;
+      using value_type = edge_t;
+      using pointer = value_type*;
+      using reference = value_type&;
 
       using base_t::base_t;
-      const_iterator& operator++() { this->increment(); return *this; }
-      const_iterator operator++(int) { auto tmp = *this; ++(*this); return tmp; }
+      const_iterator& operator++() {
+        this->increment();
+        return *this;
+      }
+      const_iterator operator++(int) {
+        auto tmp = *this;
+        ++(*this);
+        return tmp;
+      }
       bool operator==(const const_iterator& other) const = default;
       bool operator!=(const const_iterator& other) const = default;
       const edge_t& operator*() const { return this->chunk->data[this->index]; }
@@ -245,7 +264,7 @@ public:
     const_iterator begin() const { return const_iterator(&first_chunk_, 0); }
     const_iterator end() const { return const_iterator(nullptr, 0); }
 
-  private:
+   private:
     edge_chunk_t first_chunk_;
   };
 
@@ -265,7 +284,8 @@ public:
 
   PolicyTensor get_counts(const ManagerParams& params) const;
   ValueArray make_virtual_loss() const;
-  template<typename UpdateT> void update_stats(const UpdateT& update_instruction);
+  template <typename UpdateT>
+  void update_stats(const UpdateT& update_instruction);
   sptr lookup_child_by_action(const Action& action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
@@ -277,7 +297,7 @@ public:
   const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
-private:
+ private:
   std::condition_variable cv_evaluate_;
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;

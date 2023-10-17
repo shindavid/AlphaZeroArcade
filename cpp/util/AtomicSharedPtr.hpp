@@ -6,17 +6,15 @@
 namespace util {
 
 /*
- * Same as std::atomic<std::shared_ptr<T>>, but with various convenience methods to make AtomicSharedPtr usage
- * similar to a raw pointer.
+ * Same as std::atomic<std::shared_ptr<T>>, but with various convenience methods to make
+ * AtomicSharedPtr usage similar to a raw pointer.
  */
-template<typename T>
+template <typename T>
 class AtomicSharedPtr : public std::atomic<std::shared_ptr<T>> {
-public:
+ public:
   AtomicSharedPtr() = default;
 
-  AtomicSharedPtr(const AtomicSharedPtr& ptr) {
-    this->store(ptr.load());
-  }
+  AtomicSharedPtr(const AtomicSharedPtr& ptr) { this->store(ptr.load()); }
 
   AtomicSharedPtr& operator=(const AtomicSharedPtr& ptr) {
     this->store(ptr.load());
@@ -28,17 +26,11 @@ public:
     return *this;
   }
 
-  operator T*() const {
-    return this->load().get();
-  }
+  operator T*() const { return this->load().get(); }
 
-  operator bool() const {
-    return this->load().get() != nullptr;
-  }
+  operator bool() const { return this->load().get() != nullptr; }
 
-  T* operator->() const {
-    return this->load().get();
-  }
+  T* operator->() const { return this->load().get(); }
 };
 
 }  // namespace util

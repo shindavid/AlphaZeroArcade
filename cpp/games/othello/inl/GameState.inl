@@ -10,7 +10,8 @@
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 
-inline std::size_t std::hash<othello::GameState>::operator()(const othello::GameState& state) const {
+inline std::size_t std::hash<othello::GameState>::operator()(
+    const othello::GameState& state) const {
   return state.hash();
 }
 
@@ -30,7 +31,7 @@ inline int GameState::get_count(core::seat_index_t seat) const {
   }
 }
 
-  // copied from edax-reversi repo - board_next()
+// copied from edax-reversi repo - board_next()
 inline core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
   int action_index = action[0];
   if (action_index == kPass) {
@@ -93,7 +94,8 @@ inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   return occupied_by_opponent ? (1 - cp) : (occupied_by_cur_player ? cp : -1);
 }
 
-inline void GameState::dump(const Action* last_action, const player_name_array_t* player_names) const {
+inline void GameState::dump(const Action* last_action,
+                            const player_name_array_t* player_names) const {
   ActionMask valid_actions = get_valid_actions();
   int last_action_index = last_action ? (*last_action)[0] : -1;
   bool display_last_action = last_action_index >= 0;
@@ -104,7 +106,7 @@ inline void GameState::dump(const Action* last_action, const player_name_array_t
     blink_col = last_action_index % kBoardDimension;
   }
   if (!util::tty_mode() && display_last_action) {
-    std::string s(2*blink_col+3, ' ');
+    std::string s(2 * blink_col + 3, ' ');
     printf("%sx\n", s.c_str());
   }
   printf("   A B C D E F G H\n");
@@ -133,11 +135,10 @@ inline void GameState::dump(const Action* last_action, const player_name_array_t
   std::cout << std::endl;
 }
 
-inline std::size_t GameState::hash() const {
-  return util::tuple_hash(to_tuple());
-}
+inline std::size_t GameState::hash() const { return util::tuple_hash(to_tuple()); }
 
-inline void GameState::row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const {
+inline void GameState::row_dump(const ActionMask& valid_actions, row_t row,
+                                column_t blink_column) const {
   core::seat_index_t current_player = get_current_player();
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
@@ -146,7 +147,7 @@ inline void GameState::row_dump(const ActionMask& valid_actions, row_t row, colu
   if (!util::tty_mode() && blink_column >= 0) {
     prefix = 'x';
   }
-  printf("%c%d", prefix, (int)(row+1));
+  printf("%c%d", prefix, (int)(row + 1));
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
     bool valid = valid_actions[index];
@@ -154,10 +155,12 @@ inline void GameState::row_dump(const ActionMask& valid_actions, row_t row, colu
     bool occupied_by_opp_player = (1UL << index) & opponent_mask_;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
 
-    const char* color = occupied_by_cur_player ? cur_color : (occupied_by_opp_player ? opp_color : "");
+    const char* color =
+        occupied_by_cur_player ? cur_color : (occupied_by_opp_player ? opp_color : "");
     const char* c = occupied ? ansi::kCircle("") : (valid ? "." : " ");
 
-    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c, occupied ? ansi::kReset("") : "");
+    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c,
+           occupied ? ansi::kReset("") : "");
   }
 
   printf("|\n");
@@ -184,46 +187,56 @@ inline typename GameState::GameOutcome GameState::compute_outcome() const {
 inline mask_t GameState::get_moves(mask_t P, mask_t O) {
   mask_t mask = O & 0x7E7E7E7E7E7E7E7Eull;
 
-  return (get_some_moves(P, mask, 1) // horizontal
-          | get_some_moves(P, O, 8)   // vertical
-          | get_some_moves(P, mask, 7)   // diagonals
-          | get_some_moves(P, mask, 9))
-         & ~(P|O); // mask with empties
+  return (get_some_moves(P, mask, 1)    // horizontal
+          | get_some_moves(P, O, 8)     // vertical
+          | get_some_moves(P, mask, 7)  // diagonals
+          | get_some_moves(P, mask, 9)) &
+         ~(P | O);  // mask with empties
 }
 
 // copied from edax-reversi repo
 inline mask_t GameState::get_some_moves(mask_t P, mask_t mask, int dir) {
 #if PARALLEL_PREFIX & 1
   // 1-stage Parallel Prefix (intermediate between kogge stone & sequential)
-    // 6 << + 6 >> + 7 | + 10 &
-    register unsigned long long flip_l, flip_r;
-    register unsigned long long mask_l, mask_r;
-    const int dir2 = dir + dir;
+  // 6 << + 6 >> + 7 | + 10 &
+  register unsigned long long flip_l, flip_r;
+  register unsigned long long mask_l, mask_r;
+  const int dir2 = dir + dir;
 
-    flip_l  = mask & (P << dir);          flip_r  = mask & (P >> dir);
-    flip_l |= mask & (flip_l << dir);     flip_r |= mask & (flip_r >> dir);
-    mask_l  = mask & (mask << dir);       mask_r  = mask & (mask >> dir);
-    flip_l |= mask_l & (flip_l << dir2);  flip_r |= mask_r & (flip_r >> dir2);
-    flip_l |= mask_l & (flip_l << dir2);  flip_r |= mask_r & (flip_r >> dir2);
+  flip_l = mask & (P << dir);
+  flip_r = mask & (P >> dir);
+  flip_l |= mask & (flip_l << dir);
+  flip_r |= mask & (flip_r >> dir);
+  mask_l = mask & (mask << dir);
+  mask_r = mask & (mask >> dir);
+  flip_l |= mask_l & (flip_l << dir2);
+  flip_r |= mask_r & (flip_r >> dir2);
+  flip_l |= mask_l & (flip_l << dir2);
+  flip_r |= mask_r & (flip_r >> dir2);
 
-    return (flip_l << dir) | (flip_r >> dir);
+  return (flip_l << dir) | (flip_r >> dir);
 
 #elif KOGGE_STONE & 1
   // kogge-stone algorithm
-    // 6 << + 6 >> + 12 & + 7 |
-    // + better instruction independency
-    register unsigned long long flip_l, flip_r;
-    register unsigned long long mask_l, mask_r;
-    const int dir2 = dir << 1;
-    const int dir4 = dir << 2;
+  // 6 << + 6 >> + 12 & + 7 |
+  // + better instruction independency
+  register unsigned long long flip_l, flip_r;
+  register unsigned long long mask_l, mask_r;
+  const int dir2 = dir << 1;
+  const int dir4 = dir << 2;
 
-    flip_l  = P | (mask & (P << dir));    flip_r  = P | (mask & (P >> dir));
-    mask_l  = mask & (mask << dir);       mask_r  = mask & (mask >> dir);
-    flip_l |= mask_l & (flip_l << dir2);  flip_r |= mask_r & (flip_r >> dir2);
-    mask_l &= (mask_l << dir2);           mask_r &= (mask_r >> dir2);
-    flip_l |= mask_l & (flip_l << dir4);  flip_r |= mask_r & (flip_r >> dir4);
+  flip_l = P | (mask & (P << dir));
+  flip_r = P | (mask & (P >> dir));
+  mask_l = mask & (mask << dir);
+  mask_r = mask & (mask >> dir);
+  flip_l |= mask_l & (flip_l << dir2);
+  flip_r |= mask_r & (flip_r >> dir2);
+  mask_l &= (mask_l << dir2);
+  mask_r &= (mask_r >> dir2);
+  flip_l |= mask_l & (flip_l << dir4);
+  flip_r |= mask_r & (flip_r >> dir4);
 
-    return ((flip_l & mask) << dir) | ((flip_r & mask) >> dir);
+  return ((flip_l & mask) << dir) | ((flip_r & mask) >> dir);
 
 #else
   // sequential algorithm
@@ -245,9 +258,8 @@ inline mask_t GameState::get_some_moves(mask_t P, mask_t mask, int dir) {
 
 namespace mcts {
 
-inline void SearchResultsDumper<othello::GameState>::dump(
-    const LocalPolicyArray &action_policy, const SearchResults &results)
-{
+inline void SearchResultsDumper<othello::GameState>::dump(const LocalPolicyArray& action_policy,
+                                                          const SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

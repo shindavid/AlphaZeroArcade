@@ -16,8 +16,9 @@
 
 namespace c4 {
 
-class CompetitiveMctsPlayerGenerator : public common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor> {
-public:
+class CompetitiveMctsPlayerGenerator
+    : public common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor> {
+ public:
   using base_t = common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
 
   struct Params {
@@ -28,10 +29,9 @@ public:
       namespace po2 = boost_util::program_options;
 
       po2::options_description desc("c4::CompetitiveMctsPlayerGenerator options");
-      return desc
-          .template add_option<"grade-moves">(po::bool_switch(&grade_moves),
-                                              "use perfect oracle to report % of moves that were correct")
-          ;
+      return desc.template add_option<"grade-moves">(
+          po::bool_switch(&grade_moves),
+          "use perfect oracle to report % of moves that were correct");
     }
   };
 
@@ -41,7 +41,7 @@ public:
   void parse_args(const std::vector<std::string>& args) override;
   void end_session() override;
 
-protected:
+ protected:
   auto make_options_description() {
     return base_t::make_options_description().add(params_.make_options_description());
   }
@@ -54,7 +54,8 @@ protected:
   OracleGrader* grader_ = nullptr;
 };
 
-using TrainingMctsPlayerGenerator = common::TrainingMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
+using TrainingMctsPlayerGenerator =
+    common::TrainingMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
 
 }  // namespace c4
 

@@ -12,4 +12,4 @@ const int kNumPlayers = 2;
 const core::seat_index_t kX = 0;
 const core::seat_index_t kO = 1;
 
-}  //namespace tictactoe
+}  // namespace tictactoe

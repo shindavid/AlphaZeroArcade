@@ -25,7 +25,8 @@ inline boost::filesystem::path Repo::find_root() {
     break;
   }
 
-  throw Exception("Could not find repo marker %s in any ancestor dir of %s", kMarkerFilename, cwd.c_str());
+  throw Exception("Could not find repo marker %s in any ancestor dir of %s", kMarkerFilename,
+                  cwd.c_str());
 }
 
 }  // namespace util

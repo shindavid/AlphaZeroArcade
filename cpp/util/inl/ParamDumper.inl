@@ -13,7 +13,8 @@ inline void ParamDumper::add(const char* key, const char* value_fmt, ...) {
   va_end(ap);
 
   if (n < 0) {
-    throw Exception("ParamDumper::add(): encountered encoding error (N=%d, fmt=\"%s\")", N, value_fmt);
+    throw Exception("ParamDumper::add(): encountered encoding error (N=%d, fmt=\"%s\")", N,
+                    value_fmt);
   }
   if (n >= N) {
     throw Exception("ParamDumper::add(): char buffer overflow (%d >= %d)", n, N);
@@ -25,14 +26,14 @@ inline void ParamDumper::add(const char* key, const char* value_fmt, ...) {
 inline void ParamDumper::flush() {
   int max_key_len = 0;
   int max_value_len = 0;
-  for (const auto &p: instance()->vec_) {
-    max_key_len = std::max(max_key_len, (int) p.first.size());
-    max_value_len = std::max(max_value_len, (int) p.second.size());
+  for (const auto& p : instance()->vec_) {
+    max_key_len = std::max(max_key_len, (int)p.first.size());
+    max_value_len = std::max(max_value_len, (int)p.second.size());
   }
 
   std::string fmt_str = util::create_string("%%-%ds %%%ds\n", max_key_len, max_value_len);
   const char* fmt = fmt_str.c_str();
-  for (const auto &p: instance()->vec_) {
+  for (const auto& p : instance()->vec_) {
     printf(fmt, p.first.c_str(), p.second.c_str());
   }
   instance()->vec_.clear();

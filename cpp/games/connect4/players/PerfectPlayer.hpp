@@ -16,13 +16,13 @@
 namespace c4 {
 
 class PerfectOracle {
-public:
+ public:
   using GameStateTypes = core::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
   class MoveHistory {
-  public:
+   public:
     MoveHistory();
     MoveHistory(const MoveHistory&);
 
@@ -31,7 +31,7 @@ public:
     std::string to_string() const;
     int length() const { return char_pointer_ - chars_; }
 
-  private:
+   private:
     void write(boost::process::opstream& in);
 
     char chars_[kMaxMovesPerGame + 1];
@@ -50,9 +50,9 @@ public:
    *
    * If s > 0, then the move wins in s moves against perfect counter-play.
    *
-   * If the position is winning, the member best_score is set to the positive score closest to zero. If the position is
-   * losing, the member best_score is set to the negative score closest to zero. If the position is drawn, the member
-   * best_score is set to 0.
+   * If the position is winning, the member best_score is set to the positive score closest to zero.
+   * If the position is losing, the member best_score is set to the negative score closest to zero.
+   * If the position is drawn, the member best_score is set to 0.
    */
   struct QueryResult {
     static constexpr int kIllegalMoveScore = -1000;
@@ -68,7 +68,7 @@ public:
 
   QueryResult query(MoveHistory& history);
 
-private:
+ private:
   std::mutex mutex_;
   boost::process::ipstream out_;
   boost::process::opstream in_;
@@ -76,7 +76,7 @@ private:
 };
 
 class PerfectPlayer : public Player {
-public:
+ public:
   using base_t = Player;
 
   struct Params {
@@ -98,7 +98,7 @@ public:
   void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
 
-private:
+ private:
   const Params params_;
 
   PerfectOracle oracle_;

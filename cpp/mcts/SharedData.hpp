@@ -15,7 +15,7 @@ namespace mcts {
  *
  * It is separated from Manager to avoid circular dependencies.
  */
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 struct SharedData {
   using Node = mcts::Node<GameState, Tensorizor>;
   using NodeCache = mcts::NodeCache<GameState, Tensorizor>;

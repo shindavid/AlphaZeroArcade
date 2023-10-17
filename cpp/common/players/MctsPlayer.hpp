@@ -79,8 +79,8 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
   void set_facing_human_tui_player() override {
-    facing_human_tui_player_ = true;
-  }  // affects printing
+    facing_human_tui_player_ = true;  // affects printing
+  }
 
  protected:
   const MctsSearchResults* mcts_search(const GameState& state, SearchMode search_mode) const;

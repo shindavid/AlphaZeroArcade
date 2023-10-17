@@ -7,7 +7,8 @@ inline CompetitiveMctsPlayerGenerator::~CompetitiveMctsPlayerGenerator() {
   if (oracle_) delete oracle_;
 }
 
-inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer* CompetitiveMctsPlayerGenerator::generate_from_scratch() {
+inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer*
+CompetitiveMctsPlayerGenerator::generate_from_scratch() {
   if (params_.grade_moves) {
     return new OracleGradedMctsPlayer(grader_, mcts_player_params_, manager_params_);
   } else {
@@ -15,8 +16,8 @@ inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer* CompetitiveMctsPlayerGene
   }
 }
 
-inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer* CompetitiveMctsPlayerGenerator::generate_from_manager(
-    MctsManager* manager) {
+inline CompetitiveMctsPlayerGenerator::BaseMctsPlayer*
+CompetitiveMctsPlayerGenerator::generate_from_manager(MctsManager* manager) {
   if (params_.grade_moves) {
     return new OracleGradedMctsPlayer(grader_, mcts_player_params_, manager);
   } else {

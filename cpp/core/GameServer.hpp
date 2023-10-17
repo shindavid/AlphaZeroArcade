@@ -15,9 +15,9 @@
 
 namespace core {
 
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 class GameServer {
-public:
+ public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
 
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -38,11 +38,12 @@ public:
   using seat_index_array_t = std::array<seat_index_t, kNumPlayers>;
 
   /*
-   * A player_instantiation_t is instantiated from a registration_t. See registration_t for more detail.
+   * A player_instantiation_t is instantiated from a registration_t. See registration_t for more
+   * detail.
    */
   struct player_instantiation_t {
     Player* player = nullptr;
-    seat_index_t seat = -1;  // -1 means random seat
+    seat_index_t seat = -1;      // -1 means random seat
     player_id_t player_id = -1;  // order in which player was registered
   };
   using player_instantiation_array_t = std::array<player_instantiation_t, kNumPlayers>;
@@ -50,17 +51,20 @@ public:
   /*
    * A registration_t gives birth to a player_instantiation_t.
    *
-   * The difference is that a registration_t has a player-*generating-function*, rather than a player.
-   * This is needed because when multiple GameThread's are launched, each needs to instantiate its own Player.
-   * This requires the GameServer API to demand passing in a player-*generator*, as opposed to a player, so that
-   * each spawned GameThread can create its own player.
+   * The difference is that a registration_t has a player-*generating-function*, rather than a
+   * player. This is needed because when multiple GameThread's are launched, each needs to
+   * instantiate its own Player. This requires the GameServer API to demand passing in a
+   * player-*generator*, as opposed to a player, so that each spawned GameThread can create its own
+   * player.
    */
   struct registration_t {
     PlayerGenerator* gen = nullptr;
-    seat_index_t seat = -1;  // -1 means random seat
+    seat_index_t seat = -1;      // -1 means random seat
     player_id_t player_id = -1;  // order in which player was generated
 
-    player_instantiation_t instantiate(game_thread_id_t id) const { return {gen->generate_with_name(id), seat, player_id}; }
+    player_instantiation_t instantiate(game_thread_id_t id) const {
+      return {gen->generate_with_name(id), seat, player_id};
+    }
   };
   using registration_vec_t = std::vector<registration_t>;
 
@@ -68,7 +72,7 @@ public:
     auto make_options_description();
 
     std::string kill_file;  // if non-empty, kill server when this file is created
-    int num_games = 1000;  // if <=0, run indefinitely
+    int num_games = 1000;   // if <=0, run indefinitely
     int parallelism = 100;  // number of games to run simultaneously
     int port = 0;
     bool display_progress_bar = false;
@@ -76,15 +80,15 @@ public:
     bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
   };
 
-protected:
+ protected:
   static std::string get_results_str(const results_map_t& map);
 
-private:
+ private:
   /*
    * Members of GameServer that need to be accessed by the individual GameThread's.
    */
   class SharedData {
-  public:
+   public:
     SharedData(const Params& params) : params_(params) {}
     ~SharedData();
 
@@ -97,14 +101,17 @@ private:
     bool ready_to_start() const;
     int compute_parallelism_factor() const;
     int num_games_started() const { return num_games_started_; }
-    void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote=false);
+    void register_player(seat_index_t seat, PlayerGenerator* gen, bool implicit_remote = false);
     int num_registrations() const { return registrations_.size(); }
-    player_instantiation_array_t generate_player_order(const player_instantiation_array_t& instantiations);
+    player_instantiation_array_t generate_player_order(
+        const player_instantiation_array_t& instantiations);
     void init_random_seat_indices();
     registration_vec_t& registration_templates() { return registrations_; }
-    const std::string& get_player_name(player_id_t p) const { return registrations_[p].gen->get_name(); }
+    const std::string& get_player_name(player_id_t p) const {
+      return registrations_[p].gen->get_name();
+    }
 
-  private:
+   private:
     const Params params_;
 
     registration_vec_t registrations_;
@@ -122,15 +129,19 @@ private:
   };
 
   class GameThread {
-  public:
+   public:
     GameThread(SharedData& shared_data, game_thread_id_t);
     ~GameThread();
 
-    void join() { if (thread_ && thread_->joinable()) thread_->join(); }
-    void launch() { thread_ = new std::thread([&] { run(); }); }
+    void join() {
+      if (thread_ && thread_->joinable()) thread_->join();
+    }
+    void launch() {
+      thread_ = new std::thread([&] { run(); });
+    }
     void decommission() { decommissioned_ = true; }
 
-  private:
+   private:
     void run();
     GameOutcome play_game(player_array_t&);
 
@@ -141,19 +152,23 @@ private:
     bool decommissioned_ = false;
   };
 
-public:
+ public:
   GameServer(const Params& params);
   ~GameServer();
 
   /*
-   * A negative seat implies a random seat. Otherwise, the player generated is assigned the specified seat.
+   * A negative seat implies a random seat. Otherwise, the player generated is assigned the
+   * specified seat.
    *
-   * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in which the
-   * registrations are made. When aggregate game outcome stats are reported, they are aggregated by player_id_t.
+   * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in
+   * which the registrations are made. When aggregate game outcome stats are reported, they are
+   * aggregated by player_id_t.
    *
    * Takes ownership of the pointer.
    */
-  void register_player(seat_index_t seat, PlayerGenerator* gen) { shared_data_.register_player(seat, gen); }
+  void register_player(seat_index_t seat, PlayerGenerator* gen) {
+    shared_data_.register_player(seat, gen);
+  }
 
   /*
    * Blocks until all players have registered.
@@ -166,7 +181,7 @@ public:
   void run();
   void shutdown();
 
-private:
+ private:
   void kill_file_checker();
 
   SharedData shared_data_;

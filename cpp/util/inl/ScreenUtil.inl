@@ -23,9 +23,7 @@ inline void ScreenClearer::clear_once() {
   }
 }
 
-inline void ScreenClearer::reset() {
-  instance()->ready_ = true;
-}
+inline void ScreenClearer::reset() { instance()->ready_ = true; }
 
 inline ScreenClearer* ScreenClearer::instance() {
   if (!instance_) {

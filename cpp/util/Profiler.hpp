@@ -32,9 +32,9 @@ namespace util {
  * }
  * profiler.dump(file);  // final dump
  */
-template<int NumRegions, bool Verbose=false>
+template <int NumRegions, bool Verbose = false>
 class Profiler {
-public:
+ public:
   using clock_t = std::chrono::steady_clock;
   using time_point_t = std::chrono::time_point<clock_t>;
   static constexpr int kNumRegions = NumRegions;
@@ -42,16 +42,18 @@ public:
 
   Profiler() { clear(); }
   void initialize_file(const boost::filesystem::path& path) { file_ = fopen(path.c_str(), "w"); }
-  void close_file() { if (file_) fclose(file_); }
+  void close_file() {
+    if (file_) fclose(file_);
+  }
 
   void set_name(const std::string& name) { name_ = name; }
   int count() const { return count_; }
   void skip_next_n_dumps(int n) { skip_count_ = n; }
   void record(int region);
   void clear();
-  void dump(int count=1);  // dump only if ++count_ == count
+  void dump(int count = 1);  // dump only if ++count_ == count
 
-private:
+ private:
   void dump_helper(FILE* file, const char* name, int count);
 
   std::string name_;
@@ -64,11 +66,11 @@ private:
 };
 
 /*
- * A dummy profiler that has the same interface as Profiler, but does nothing. This exists so that we can use the same
- * code in both profile and release builds.
+ * A dummy profiler that has the same interface as Profiler, but does nothing. This exists so that
+ * we can use the same code in both profile and release builds.
  */
 class DummyProfiler {
-public:
+ public:
   void initialize_file(const boost::filesystem::path& path) {}
   void close_file() {}
 
@@ -77,7 +79,7 @@ public:
   void skip_next_n_dumps(int n) {}
   void record(int region) {}
   void clear() {}
-  void dump(int count=1) {}
+  void dump(int count = 1) {}
 };
 
 }  // namespace util

@@ -27,26 +27,31 @@ inline EdaxPlayer::EdaxPlayer(const Params& params) : params_(params) {
   std::string edax_bin_str = util::Config::instance()->get("othello.edax_bin", "");
 
   if (edax_dir_str.empty()) {
-    throw util::CleanException("othello.edax_dir not specified! Please follow setup instructions in py/othello/README.md");
+    throw util::CleanException(
+        "othello.edax_dir not specified! Please follow setup instructions in py/othello/README.md");
   }
   if (edax_bin_str.empty()) {
-    throw util::CleanException("othello.edax_bin not specified! Please follow setup instructions in py/othello/README.md");
+    throw util::CleanException(
+        "othello.edax_bin not specified! Please follow setup instructions in py/othello/README.md");
   }
   boost::filesystem::path edax_dir(edax_dir_str);
   boost::filesystem::path edax_bin = edax_dir / edax_bin_str;
   if (!boost::filesystem::is_directory(edax_dir)) {
-    throw util::Exception("Dir specified by config value 'othello.edax_dir' does not exist: %s. "
-                          "Please follow setup instructions in py/othello/README.md", edax_dir.c_str());
+    throw util::Exception(
+        "Dir specified by config value 'othello.edax_dir' does not exist: %s. "
+        "Please follow setup instructions in py/othello/README.md",
+        edax_dir.c_str());
   }
   if (!boost::filesystem::is_regular_file(edax_bin)) {
-    throw util::Exception("File formed by combining config values 'othello.edax_dir' and 'othello.edax_bin' "
-                          "does not exist: %s. Please follow setup instructions in py/othello/README.md",
-                          edax_bin.c_str());
+    throw util::Exception(
+        "File formed by combining config values 'othello.edax_dir' and 'othello.edax_bin' "
+        "does not exist: %s. Please follow setup instructions in py/othello/README.md",
+        edax_bin.c_str());
   }
 
   namespace bp = boost::process;
-  proc_ = new bp::child(edax_bin_str, bp::start_dir(edax_dir), bp::std_out > out_, bp::std_err > bp::null,
-                        bp::std_in < in_);
+  proc_ = new bp::child(edax_bin_str, bp::start_dir(edax_dir), bp::std_out > out_,
+                        bp::std_err > bp::null, bp::std_in < in_);
 
   std::string level_str = util::create_string("level %d\n", params_.depth);
   in_.write(level_str.c_str(), level_str.size());
@@ -58,15 +63,18 @@ inline void EdaxPlayer::start_game() {
   in_.flush();
 }
 
-inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&, const Action& action) {
+inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&,
+                                             const Action& action) {
   if (seat == this->get_my_seat()) return;
   submit_action(action);
 }
 
-inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const GameState&, const ActionMask& valid_actions) {
+inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const GameState&,
+                                                                  const ActionMask& valid_actions) {
   int num_valid_actions = eigen_util::count(valid_actions);
   if (params_.verbose) {
-    std::cout << "EdaxPlayer::get_action_response() - num_valid_actions=" << num_valid_actions << std::endl;
+    std::cout << "EdaxPlayer::get_action_response() - num_valid_actions=" << num_valid_actions
+              << std::endl;
   }
   if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
     Action action = eigen_util::sample(valid_actions);

@@ -15,9 +15,9 @@ namespace mcts {
 /*
  * Node lookup used to support MCGS.
  */
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class NodeCache {
-public:
+ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = typename GameStateTypes::Action;
   using Node = mcts::Node<GameState, Tensorizor>;
@@ -27,7 +27,7 @@ public:
   void clear_before(move_number_t move_number);
   Node_sptr fetch_or_create(move_number_t move_number, Node* parent, const Action& action);
 
-private:
+ private:
   using submap_t = std::unordered_map<GameState, Node_sptr>;
   using map_t = std::map<move_number_t, submap_t*>;
 

@@ -2,9 +2,8 @@
 
 namespace util {
 
-template<class Key_, class Value_>
-void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value)
-{
+template <class Key_, class Value_>
+void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value) {
   typename Map::iterator i = map_.find(key);
   if (i == map_.end()) {
     // insert item into the cache, but first check if it is full
@@ -19,9 +18,8 @@ void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value)
   }
 }
 
-template<class Key_, class Value_>
-boost::optional<Value_> LRUCache<Key_, Value_>::get(const Key& key)
-{
+template <class Key_, class Value_>
+boost::optional<Value_> LRUCache<Key_, Value_>::get(const Key& key) {
   // lookup value in the cache
   typename Map::iterator i = map_.find(key);
   if (i == map_.end()) {
@@ -51,14 +49,13 @@ boost::optional<Value_> LRUCache<Key_, Value_>::get(const Key& key)
   }
 }
 
-template<class Key_, class Value_>
-void LRUCache<Key_, Value_>::clear()
-{
+template <class Key_, class Value_>
+void LRUCache<Key_, Value_>::clear() {
   map_.clear();
   list_.clear();
 }
 
-template<class Key_, class Value_>
+template <class Key_, class Value_>
 float LRUCache<Key_, Value_>::get_hash_balance_factor() const {
   size_t min_size = std::numeric_limits<size_t>::max() - 1;
   size_t max_size = 0;
@@ -72,9 +69,8 @@ float LRUCache<Key_, Value_>::get_hash_balance_factor() const {
   return 1.0 * num / den;
 }
 
-template<class Key_, class Value_>
-void LRUCache<Key_, Value_>::evict()
-{
+template <class Key_, class Value_>
+void LRUCache<Key_, Value_>::evict() {
   // evict item from the end of most recently used list
   typename KeyList::iterator i = --list_.end();
   map_.erase(*i);

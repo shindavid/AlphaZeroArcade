@@ -5,7 +5,8 @@
 
 namespace tictactoe {
 
-inline HumanTuiPlayer::Action HumanTuiPlayer::prompt_for_action(const GameState& state, const ActionMask& valid_actions) {
+inline HumanTuiPlayer::Action HumanTuiPlayer::prompt_for_action(const GameState& state,
+                                                                const ActionMask& valid_actions) {
   Action action;
   action[0] = prompt_for_action_helper(state, valid_actions);
   return action;

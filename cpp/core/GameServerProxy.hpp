@@ -17,7 +17,7 @@ namespace core {
 
 template <GameStateConcept GameState>
 class GameServerProxy {
-public:
+ public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
@@ -48,7 +48,7 @@ public:
   };
 
   class SharedData {
-  public:
+   public:
     SharedData(const Params& params);
     ~SharedData();
     void register_player(seat_index_t seat, PlayerGenerator* gen);
@@ -58,17 +58,18 @@ public:
     const serializer_t& serializer() const { return serializer_; }
     void end_session();
 
-  private:
+   private:
     serializer_t serializer_;
-    seat_generator_vec_t seat_generators_;  // temp storage
+    seat_generator_vec_t seat_generators_;   // temp storage
     player_generator_array_t players_ = {};  // indexed by player_id_t
     Params params_;
     io::Socket* socket_ = nullptr;
   };
 
   class PlayerThread {
-  public:
-    PlayerThread(SharedData& shared_data, Player* player, game_thread_id_t game_thread_id, player_id_t player_id);
+   public:
+    PlayerThread(SharedData& shared_data, Player* player, game_thread_id_t game_thread_id,
+                 player_id_t player_id);
     ~PlayerThread();
 
     void handle_start_game(const StartGame& payload);
@@ -76,10 +77,12 @@ public:
     void handle_action_prompt(const ActionPrompt& payload);
     void handle_end_game(const EndGame& payload);
 
-    void join() { if (thread_ && thread_->joinable()) thread_->join(); }
+    void join() {
+      if (thread_ && thread_->joinable()) thread_->join();
+    }
     void stop();
 
-  private:
+   private:
     void send_action_packet(const ActionResponse&);
     void run();
 
@@ -100,24 +103,28 @@ public:
     bool ready_to_get_action_ = false;
   };
   using thread_array_t = std::array<PlayerThread*, kNumPlayers>;  // indexed by player_id_t
-  using thread_vec_t = std::vector<thread_array_t>;  // index by game_thread_id_t
+  using thread_vec_t = std::vector<thread_array_t>;               // index by game_thread_id_t
 
   GameServerProxy(const Params& params) : shared_data_(params) {}
   ~GameServerProxy();
 
   /*
-   * A negative seat implies a random seat. Otherwise, the player generated is assigned the specified seat.
+   * A negative seat implies a random seat. Otherwise, the player generated is assigned the
+   * specified seat.
    *
-   * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in which the
-   * registrations are made. When aggregate game outcome stats are reported, they are aggregated by player_id_t.
+   * The player generator is assigned a unique player_id_t (0, 1, 2, ...), according to the order in
+   * which the registrations are made. When aggregate game outcome stats are reported, they are
+   * aggregated by player_id_t.
    *
    * Takes ownership of the pointer.
    */
-  void register_player(seat_index_t seat, PlayerGenerator* gen) { shared_data_.register_player(seat, gen); }
+  void register_player(seat_index_t seat, PlayerGenerator* gen) {
+    shared_data_.register_player(seat, gen);
+  }
 
   void run();
 
-private:
+ private:
   void init_player_threads();
   void destroy_player_threads();
   void handle_start_game(const GeneralPacket& packet);

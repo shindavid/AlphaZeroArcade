@@ -20,7 +20,9 @@
 #include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
 
-namespace tictactoe { class GameState; }
+namespace tictactoe {
+class GameState;
+}
 
 template <>
 struct std::hash<tictactoe::GameState> {
@@ -41,7 +43,7 @@ constexpr mask_t make_mask(int a, int b, int c) {
  * 6 7 8
  */
 class GameState {
-public:
+ public:
   static constexpr int kNumPlayers = tictactoe::kNumPlayers;
   static constexpr int kMaxNumLocalActions = kNumCells;
   static constexpr int kTypicalNumMovesPerGame = kNumCells;
@@ -77,23 +79,17 @@ public:
   std::string action_to_str(const Action& action) const { return std::to_string(action[0]); }
 
   core::seat_index_t get_player_at(int row, int col) const;
-  void dump(const Action* last_action=nullptr, const player_name_array_t* player_names=nullptr) const;
+  void dump(const Action* last_action = nullptr,
+            const player_name_array_t* player_names = nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
 
   static constexpr mask_t kThreeInARowMasks[] = {
-    make_mask(0, 1, 2),
-    make_mask(3, 4, 5),
-    make_mask(6, 7, 8),
-    make_mask(0, 3, 6),
-    make_mask(1, 4, 7),
-    make_mask(2, 5, 8),
-    make_mask(0, 4, 8),
-    make_mask(2, 4, 6)
-  };
+      make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
+      make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
 
-private:
-  mask_t full_mask_ = 0;  // spaces occupied by either player
+ private:
+  mask_t full_mask_ = 0;        // spaces occupied by either player
   mask_t cur_player_mask_ = 0;  // spaces occupied by current player
 };
 
@@ -106,7 +102,8 @@ using Player = core::AbstractPlayer<GameState>;
 namespace core {
 
 // template specialization
-template<> struct serializer<tictactoe::GameState> {
+template <>
+struct serializer<tictactoe::GameState> {
   using type = DeterministicGameSerializer<tictactoe::GameState>;
 };
 
@@ -114,7 +111,8 @@ template<> struct serializer<tictactoe::GameState> {
 
 namespace mcts {
 
-template<> struct SearchResultsDumper<tictactoe::GameState> {
+template <>
+struct SearchResultsDumper<tictactoe::GameState> {
   using LocalPolicyArray = tictactoe::GameState::LocalPolicyArray;
   using SearchResults = mcts::SearchResults<tictactoe::GameState>;
 

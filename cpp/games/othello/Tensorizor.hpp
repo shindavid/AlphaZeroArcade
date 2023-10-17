@@ -49,10 +49,7 @@ class Tensorizor {
   void clear() {}
   void receive_state_change(const GameState& state, const Action& action) {}
 
-  using AuxTargetList = mp::TypeList <
-    ScoreMarginTarget,
-    OwnershipTarget
-  >;
+  using AuxTargetList = mp::TypeList<ScoreMarginTarget, OwnershipTarget>;
 
   void tensorize(InputTensor& tensor, const GameState& state) const {
     core::seat_index_t cp = state.get_current_player();

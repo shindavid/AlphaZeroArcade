@@ -18,12 +18,12 @@
 namespace core {
 
 /*
- * In a server-client setup, the server process will create a RemotePlayerProxy to act as a proxy for remote
- * players. The RemotePlayerProxy will communicate with the remote player over a socket.
+ * In a server-client setup, the server process will create a RemotePlayerProxy to act as a proxy
+ * for remote players. The RemotePlayerProxy will communicate with the remote player over a socket.
  */
-template<GameStateConcept GameState>
+template <GameStateConcept GameState>
 class RemotePlayerProxy : public AbstractPlayer<GameState> {
-public:
+ public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = typename GameStateTypes::Action;
@@ -36,7 +36,7 @@ public:
   using serializer_t = core::serializer_t<GameState>;
 
   class PacketDispatcher {
-  public:
+   public:
     static PacketDispatcher* create(io::Socket* socket);
     static void start_all(int num_game_threads);
     static void teardown();
@@ -44,7 +44,7 @@ public:
     void add_player(RemotePlayerProxy* player);
     void start();
 
-  private:
+   private:
     PacketDispatcher(io::Socket* socket);
     PacketDispatcher(const PacketDispatcher&) = delete;
     PacketDispatcher& operator=(const PacketDispatcher&) = delete;
@@ -69,7 +69,7 @@ public:
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
-private:
+ private:
   std::condition_variable cv_;
   mutable std::mutex mutex_;
 
@@ -85,4 +85,3 @@ private:
 }  // namespace core
 
 #include <core/players/inl/RemotePlayerProxy.inl>
-

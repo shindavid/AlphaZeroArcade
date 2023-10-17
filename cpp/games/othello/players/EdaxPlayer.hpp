@@ -20,12 +20,13 @@ namespace othello {
  *
  * See: https://github.com/okuhara/edax-reversi-AVX
  *
- * Currently, we interact with the edax engine in a clunky, inefficient way: we launch the edax process, submit
- * moves to it via stdin, and parse the stdout to get the engine's response. Later, we can try to avoid the I/O and
- * the text parsing by building and linking against an edax library directly.
+ * Currently, we interact with the edax engine in a clunky, inefficient way: we launch the edax
+ * process, submit moves to it via stdin, and parse the stdout to get the engine's response. Later,
+ * we can try to avoid the I/O and the text parsing by building and linking against an edax library
+ * directly.
  */
 class EdaxPlayer : public Player {
-public:
+ public:
   using base_t = Player;
 
   struct Params {
@@ -41,7 +42,7 @@ public:
   void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
 
-private:
+ private:
   void submit_action(const Action& action);
 
   const Params params_;

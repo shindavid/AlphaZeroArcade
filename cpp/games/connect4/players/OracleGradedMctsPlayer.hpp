@@ -15,7 +15,7 @@
 namespace c4 {
 
 class OracleGrader {
-public:
+ public:
   struct mistake_tracker_t {
     float mistake_total_prior_t0 = 0;
     float mistake_total_prior_t1 = 0;
@@ -37,7 +37,7 @@ public:
               float mistake_rate_posterior_t0, float mistake_rate_posterior_t1, float baseline);
   void dump() const;
 
-protected:
+ protected:
   std::mutex mutex_;
   PerfectOracle* oracle_;
   mistake_tracker_map_t mistake_tracker_map_;
@@ -45,20 +45,19 @@ protected:
 };
 
 class OracleGradedMctsPlayer : public common::MctsPlayer<GameState, Tensorizor> {
-public:
+ public:
   using base_t = common::MctsPlayer<GameState, Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
-  template<typename... BaseArgs>
+  template <typename... BaseArgs>
   OracleGradedMctsPlayer(OracleGrader*, BaseArgs&&...);
 
   void start_game() override;
-  void receive_state_change(
-      core::seat_index_t, const GameState&, const Action&) override;
+  void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
   ActionResponse get_action_response(const GameState&, const ActionMask&) override;
 
-protected:
+ protected:
   void update_mistake_stats(const PerfectOracle::QueryResult& result, const PolicyArray& net_policy,
                             const PolicyArray& posterior_policy, const ActionMask& valid_actions,
                             int move_number) const;

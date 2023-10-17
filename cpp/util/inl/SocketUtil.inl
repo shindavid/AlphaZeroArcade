@@ -37,8 +37,7 @@ inline void Socket::shutdown() {
   }
 }
 
-inline Socket* Socket::create_server_socket(io::port_t port, int max_connections)
-{
+inline Socket* Socket::create_server_socket(io::port_t port, int max_connections) {
   auto fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
     throw util::Exception("Could not create socket");
@@ -74,7 +73,7 @@ inline Socket* Socket::create_client_socket(std::string const& host, port_t port
   sockaddr_in addr;
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
-  addr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr *) *entry->h_addr_list));
+  addr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr*)*entry->h_addr_list));
 
   int retry_count = 5;
   int sleep_time_ms = 100;
@@ -99,9 +98,7 @@ inline Socket* Socket::accept() const {
   return get_instance(fd);
 }
 
-inline Socket::Reader::Reader(Socket* socket) : socket_(socket) {
-  socket->read_mutex_.lock();
-}
+inline Socket::Reader::Reader(Socket* socket) : socket_(socket) { socket->read_mutex_.lock(); }
 
 inline Socket::Reader::~Reader() {
   if (!released_) {

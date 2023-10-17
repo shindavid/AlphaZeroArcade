@@ -9,12 +9,13 @@ namespace math {
 using var_bindings_map_t = std::map<std::string, double>;
 
 /*
- * We frequently want to decay some parameter from A to B, using a half-life specified in moves. This class is used
- * to facilitate such calculations in an efficient manner using a clear interface.
+ * We frequently want to decay some parameter from A to B, using a half-life specified in moves.
+ * This class is used to facilitate such calculations in an efficient manner using a clear
+ * interface.
  */
 class ExponentialDecay {
-public:
-  ExponentialDecay(float value=0);  // use this for a non-decaying static value
+ public:
+  ExponentialDecay(float value = 0);  // use this for a non-decaying static value
 
   /*
    * Starts at start_value. Every half_life moves, gets 50% of the way closer to end_value.
@@ -32,16 +33,19 @@ public:
    *
    * "4.32"             fixed 4.32, no decay
    * "10->2:0.4"        decay from 10 to 2, with a half-life of 0.4 moves
-   * "5b->2b:sqrt(a)"   decay from 5b to 2b, with a half-life of sqrt(a) moves ("a" and "b" must be bound in bindings)
+   * "5b->2b:sqrt(a)"   decay from 5b to 2b, with a half-life of sqrt(a) moves ("a" and "b" must be
+   * bound in bindings)
    */
   static ExponentialDecay parse(const std::string& repr, const var_bindings_map_t& bindings);
-  static ExponentialDecay parse(const std::string& repr) { return parse(repr, var_bindings_map_t{}); }
+  static ExponentialDecay parse(const std::string& repr) {
+    return parse(repr, var_bindings_map_t{});
+  }
 
   void reset() { cur_value_ = start_value_; }
   float value() const { return cur_value_; }
   void step() { cur_value_ += (end_value_ - cur_value_) * decay_factor_; }
 
-private:
+ private:
   const float start_value_;
   const float end_value_;
   const float half_life_;

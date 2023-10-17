@@ -2,7 +2,7 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NodeCache<GameState, Tensorizor>::clear() {
   std::lock_guard<std::mutex> lock(mutex_);
   for (auto& [_, submap] : map_) {
@@ -11,7 +11,7 @@ void NodeCache<GameState, Tensorizor>::clear() {
   map_.clear();
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NodeCache<GameState, Tensorizor>::clear_before(move_number_t move_number) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto begin = map_.begin();
@@ -22,10 +22,10 @@ void NodeCache<GameState, Tensorizor>::clear_before(move_number_t move_number) {
   map_.erase(begin, end);
 }
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename NodeCache<GameState, Tensorizor>::Node_sptr NodeCache<GameState, Tensorizor>::fetch_or_create(
-    move_number_t move_number, Node* parent, const Action& action)
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+typename NodeCache<GameState, Tensorizor>::Node_sptr
+NodeCache<GameState, Tensorizor>::fetch_or_create(move_number_t move_number, Node* parent,
+                                                  const Action& action) {
   GameState state = parent->stable_data().state;
   auto outcome = state.apply_move(action);
 
@@ -47,6 +47,5 @@ typename NodeCache<GameState, Tensorizor>::Node_sptr NodeCache<GameState, Tensor
   }
   return it->second;
 }
-
 
 }  // namespace mcts

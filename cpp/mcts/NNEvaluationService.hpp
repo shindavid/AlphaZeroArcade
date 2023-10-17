@@ -17,27 +17,30 @@
 namespace mcts {
 
 /*
- * The NNEvaluationService services multiple search threads, which may belong to multiple mcts::Manager instances (if
- * two mcts agents are playing against each other for instance).
+ * The NNEvaluationService services multiple search threads, which may belong to multiple
+ * mcts::Manager instances (if two mcts agents are playing against each other for instance).
  *
- * The main API is the evaluate() method. It tensorizes a game state, passes the tensor to a neural network, and
- * returns the output. Under its hood, it batches multiple evaluate() requests in order to maximize GPU throughput.
- * This batching is transparent to the caller, as the evaluate() method blocks internally until the batch is full
- * (or until a timeout is hit).
+ * The main API is the evaluate() method. It tensorizes a game state, passes the tensor to a neural
+ * network, and returns the output. Under its hood, it batches multiple evaluate() requests in order
+ * to maximize GPU throughput. This batching is transparent to the caller, as the evaluate() method
+ * blocks internally until the batch is full (or until a timeout is hit).
  *
- * Batching of N evaluations is accomplished by maintaining a length-N array of evaluation objects, and various
- * tensors (for nnet input and output) of shape (N, ...). Each evaluate() call gets assigned a particular index i
- * with 0 <= i < N, and writes to the i'th slot of these data structures. A separate evaluation thread issues the
- * nnet evaluation and writes to the i'th slot of the output data structures.
+ * Batching of N evaluations is accomplished by maintaining a length-N array of evaluation objects,
+ * and various tensors (for nnet input and output) of shape (N, ...). Each evaluate() call gets
+ * assigned a particular index i with 0 <= i < N, and writes to the i'th slot of these data
+ * structures. A separate evaluation thread issues the nnet evaluation and writes to the i'th slot
+ * of the output data structures.
  *
  * The service has an LRU cache, which helps to avoid the costly GPU operations when possible.
  *
- * Here is a detailed description of how this implementation handles the various thread safety considerations.
+ * Here is a detailed description of how this implementation handles the various thread safety
+ * considerations.
  *
  * There are three mutexes:
  *
- * - cache_mutex_: prevents race-conditions on cache reads/writes - especially important because without locking,
- *                 cache eviction can lead to a key-value pair disappearing after checking for the key
+ * - cache_mutex_: prevents race-conditions on cache reads/writes - especially important because
+ * without locking, cache eviction can lead to a key-value pair disappearing after checking for the
+ * key
  * - batch_data_.mutex: prevents race-conditions on reads/writes of batch_data_
  * - batch_metadata_.mutex: prevents race-conditions on reads/writes of batch_metadata_
  *
@@ -45,25 +48,25 @@ namespace mcts {
  *
  * - input: the batch input tensor
  * - value/policy: the batch output tensors
- * - eval_ptr_data: mainly an array of N smart-pointers to a struct that has copied a slice of the value/policy
- *                  tensors.
+ * - eval_ptr_data: mainly an array of N smart-pointers to a struct that has copied a slice of the
+ * value/policy tensors.
  *
  * The batch_metadata_ member consists of three ints:
  *
  * - reserve_index: the next slot of batch_data_.input to write to
  * - commit_count: the number of slots of batch_data_.input that have been written to
- * - unread_count: the number of entries of batch_data_.eval_ptr_data that have not yet been read by their
- *                 corresponding search threads
+ * - unread_count: the number of entries of batch_data_.eval_ptr_data that have not yet been read by
+ * their corresponding search threads
  *
- * The loop() and evaluate() methods of NNEvaluationService have been carefully written to ensure that the reads
- * and writes of these data structures are thread-safe.
+ * The loop() and evaluate() methods of NNEvaluationService have been carefully written to ensure
+ * that the reads and writes of these data structures are thread-safe.
  *
  * Compiling with -DMCTS_DEBUG will enable a bunch of prints that allow you to watch the sequence of
  * operations in the interleaving threads.
  */
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class NNEvaluationService {
-public:
+ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using dtype = torch_util::dtype;
@@ -107,9 +110,9 @@ public:
   /*
    * Constructs an evaluation thread and returns it.
    *
-   * If another thread with the given model_filename has already been create()'d, then returns that. If that returned
-   * thread does not match the thread parameters (batch_size, nn_eval_timeout_ns, cache_size), then raises an
-   * exception.
+   * If another thread with the given model_filename has already been create()'d, then returns that.
+   * If that returned thread does not match the thread parameters (batch_size, nn_eval_timeout_ns,
+   * cache_size), then raises an exception.
    */
   static NNEvaluationService* create(const ManagerParams& manager_params);
 
@@ -123,13 +126,15 @@ public:
   void disconnect();
 
   /*
-   * Called by search threads. Returns immediately if we get a cache-hit. Otherwise, blocks on the service thread.
+   * Called by search threads. Returns immediately if we get a cache-hit. Otherwise, blocks on the
+   * service thread.
    *
-   * Note that historically, parallel MCTS did evaluations asynchronously. AlphaGo Zero was the first version that
-   * switched to blocking evaluations.
+   * Note that historically, parallel MCTS did evaluations asynchronously. AlphaGo Zero was the
+   * first version that switched to blocking evaluations.
    *
-   * "Compared to the MCTS in AlphaGo Fan and AlphaGo Lee, the principal differences are...each search thread simply
-   * waits for the neural network evaluation, rather than performing evaluation and backup asynchronously"
+   * "Compared to the MCTS in AlphaGo Fan and AlphaGo Lee, the principal differences are...each
+   * search thread simply waits for the neural network evaluation, rather than performing evaluation
+   * and backup asynchronously"
    *
    * - Mastering the Game of Go without Human Knowledge (page 27)
    *
@@ -143,7 +148,7 @@ public:
   static void end_session();
   static float pct_virtual_loss_influenced_puct_calcs();  // summed over all instances
 
-private:
+ private:
   using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
   using cache_key_t = util::HashablePair<GameState, core::symmetry_index_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
@@ -158,9 +163,11 @@ private:
   Response check_cache(const Request&, const cache_key_t& cache_key);
   void wait_until_batch_reservable(const Request&, std::unique_lock<std::mutex>& metadata_lock);
   int allocate_reserve_index(const Request&, std::unique_lock<std::mutex>& metadata_lock);
-  void tensorize_and_transform_input(const Request& request, const cache_key_t& cache_key, int reserve_index);
+  void tensorize_and_transform_input(const Request& request, const cache_key_t& cache_key,
+                                     int reserve_index);
   void increment_commit_count(const Request&);
-  NNEvaluation_sptr get_eval(const Request&, int reserve_index, std::unique_lock<std::mutex>& metadata_lock);
+  NNEvaluation_sptr get_eval(const Request&, int reserve_index,
+                             std::unique_lock<std::mutex>& metadata_lock);
   void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
 
   void wait_until_batch_ready();
@@ -232,8 +239,8 @@ private:
     int unread_count = 0;
     bool accepting_reservations = true;
     std::string repr() const {
-      return util::create_string("res=%d, com=%d, unr=%d, acc=%d",
-                                 reserve_index, commit_count, unread_count, accepting_reservations);
+      return util::create_string("res=%d, com=%d, unr=%d, acc=%d", reserve_index, commit_count,
+                                 unread_count, accepting_reservations);
     }
   };
   batch_metadata_t batch_metadata_;

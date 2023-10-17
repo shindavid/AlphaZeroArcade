@@ -4,19 +4,19 @@
 
 namespace mcts {
 
-template<core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline PUCTStats<GameState, Tensorizor>::PUCTStats(
-    const ManagerParams& params, const SearchParams& search_params, const Node* tree, bool is_root)
-: cp(tree->stable_data().current_player)
-, P(tree->evaluation_data().local_policy_prob_distr)
-, V(P.rows())
-, PW(P.rows())
-, PL(P.rows())
-, E(P.rows())
-, N(P.rows())
-, VN(P.rows())
-, PUCT(P.rows())
-{
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
+                                                   const SearchParams& search_params,
+                                                   const Node* tree, bool is_root)
+    : cp(tree->stable_data().current_player),
+      P(tree->evaluation_data().local_policy_prob_distr),
+      V(P.rows()),
+      PW(P.rows()),
+      PL(P.rows()),
+      E(P.rows()),
+      N(P.rows()),
+      VN(P.rows()),
+      PUCT(P.rows()) {
   V.setZero();
   PW.setZero();
   PL.setZero();
@@ -65,8 +65,8 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(
    *
    * We multiply V by 2 to account for this difference.
    *
-   * This could have been accomplished also by multiplying cPUCT by 0.5, but this way maintains better
-   * consistency with the AlphaZero/KataGo approach.
+   * This could have been accomplished also by multiplying cPUCT by 0.5, but this way maintains
+   * better consistency with the AlphaZero/KataGo approach.
    */
   PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 

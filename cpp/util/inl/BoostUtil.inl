@@ -2,7 +2,8 @@
 
 namespace boost_util {
 
-inline std::string get_option_value(const std::vector<std::string>& args, const std::string& option_name) {
+inline std::string get_option_value(const std::vector<std::string>& args,
+                                    const std::string& option_name) {
   std::string dashed_option_name = "--" + option_name;
   for (size_t i = 0; i < args.size(); ++i) {
     const std::string& arg = args[i];
@@ -23,13 +24,15 @@ inline std::string get_option_value(const std::vector<std::string>& args, const 
   return "";
 }
 
-inline std::string pop_option_value(std::vector<std::string>& args, const std::string& option_name) {
+inline std::string pop_option_value(std::vector<std::string>& args,
+                                    const std::string& option_name) {
   std::string dashed_option_name = "--" + option_name;
   for (size_t i = 0; i < args.size(); ++i) {
     const std::string& arg = args[i];
     if (arg == dashed_option_name) {
       if (i + 1 >= args.size()) {
-        throw std::runtime_error(util::create_string("Missing value for option '%s'", option_name.c_str()));
+        throw std::runtime_error(
+            util::create_string("Missing value for option '%s'", option_name.c_str()));
       }
       std::string value = args[i + 1];
       args.erase(args.begin() + i, args.begin() + i + 2);

@@ -12,7 +12,7 @@ namespace mcts {
 /*
  * This class can be template-specialized to dump the results of MCTS.
  */
-template<core::GameStateConcept GameState>
+template <core::GameStateConcept GameState>
 struct SearchResultsDumper {
   using GameStateTypes = core::GameStateTypes<GameState>;
   using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;

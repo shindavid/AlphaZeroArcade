@@ -22,7 +22,9 @@
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
-namespace othello { class GameState; }
+namespace othello {
+class GameState;
+}
 
 template <>
 struct std::hash<othello::GameState> {
@@ -39,7 +41,7 @@ namespace othello {
  * https://github.com/abulmo/edax-reversi
  */
 class GameState {
-public:
+ public:
   static constexpr int kNumPlayers = othello::kNumPlayers;
   static constexpr int kMaxNumLocalActions = othello::kMaxNumLocalActions;
   static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
@@ -73,18 +75,21 @@ public:
   std::string action_to_str(const Action& action) const;
 
   core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
-  void dump(const Action* last_action=nullptr, const player_name_array_t* player_names=nullptr) const;
+  void dump(const Action* last_action = nullptr,
+            const player_name_array_t* player_names = nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;
 
-private:
-  auto to_tuple() const { return std::make_tuple(opponent_mask_, cur_player_mask_, cur_player_, pass_count_); }
+ private:
+  auto to_tuple() const {
+    return std::make_tuple(opponent_mask_, cur_player_mask_, cur_player_, pass_count_);
+  }
   GameOutcome compute_outcome() const;  // assumes game has ended
   void row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const;
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 
-  mask_t opponent_mask_ = kStartingWhiteMask;  // spaces occupied by either player
+  mask_t opponent_mask_ = kStartingWhiteMask;    // spaces occupied by either player
   mask_t cur_player_mask_ = kStartingBlackMask;  // spaces occupied by current player
   core::seat_index_t cur_player_ = kStartingColor;
   int8_t pass_count_ = 0;
@@ -96,12 +101,13 @@ extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 
 using Player = core::AbstractPlayer<GameState>;
 
-}  // namespace c4
+}  // namespace othello
 
 namespace core {
 
 // template specialization
-template<> struct serializer<othello::GameState> {
+template <>
+struct serializer<othello::GameState> {
   using type = DeterministicGameSerializer<othello::GameState>;
 };
 
@@ -109,13 +115,14 @@ template<> struct serializer<othello::GameState> {
 
 namespace mcts {
 
-template<> struct SearchResultsDumper<othello::GameState> {
+template <>
+struct SearchResultsDumper<othello::GameState> {
   using LocalPolicyArray = othello::GameState::LocalPolicyArray;
   using SearchResults = mcts::SearchResults<othello::GameState>;
 
   static void dump(const LocalPolicyArray& action_policy, const SearchResults& results);
 };
 
-}
+}  // namespace mcts
 
 #include <games/othello/inl/GameState.inl>
