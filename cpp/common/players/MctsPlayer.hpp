@@ -23,23 +23,18 @@ namespace common {
 /*
  * The MctsPlayer uses MCTS to select actions.
  *
- * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they can share the same
- * MCTS tree, as an optimization. This implementation supports this optimization.
+ * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they
+ * can share the same MCTS tree, as an optimization. This implementation supports this optimization.
  */
-template<core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
+template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 class MctsPlayer : public core::AbstractPlayer<GameState_> {
-public:
+ public:
   using base_t = core::AbstractPlayer<GameState_>;
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
 
   // See KataGo paper for description of search modes.
-  enum SearchMode {
-    kFast,
-    kFull,
-    kRawPolicy,
-    kNumSearchModes
-  };
+  enum SearchMode { kFast, kFull, kRawPolicy, kNumSearchModes };
 
   struct Params {
     Params(mcts::Mode);
@@ -64,6 +59,7 @@ public:
   using player_name_array_t = typename GameStateTypes::player_name_array_t;
 
   using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using ValueArray = typename GameStateTypes::ValueArray;
@@ -71,21 +67,26 @@ public:
   using PolicyTensor = typename GameStateTypes::PolicyTensor;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 
-  MctsPlayer(const Params&, MctsManager* mcts_manager);  // uses this constructor when sharing an MCTS manager
-  template <typename... Ts> MctsPlayer(const Params&, Ts&&... mcts_params_args);
+  // uses this constructor when sharing an MCTS manager
+  MctsPlayer(const Params&, MctsManager* mcts_manager);
+  template <typename... Ts>
+  MctsPlayer(const Params&, Ts&&... mcts_params_args);
   ~MctsPlayer();
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  Action get_action(const GameState&, const ActionMask&) override;
+  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
-  void set_facing_human_tui_player() override { facing_human_tui_player_ = true; }  // affects printing
+  void set_facing_human_tui_player() override {
+    facing_human_tui_player_ = true;
+  }  // affects printing
 
-protected:
+ protected:
   const MctsSearchResults* mcts_search(const GameState& state, SearchMode search_mode) const;
   SearchMode choose_search_mode() const;
-  Action get_action_helper(SearchMode, const MctsSearchResults*, const ActionMask& valid_actions) const;
+  ActionResponse get_action_response_helper(SearchMode, const MctsSearchResults*,
+                                            const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     LocalPolicyArray action_policy;
@@ -112,4 +113,3 @@ protected:
 }  // namespace common
 
 #include <common/players/inl/MctsPlayer.inl>
-

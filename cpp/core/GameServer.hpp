@@ -23,6 +23,7 @@ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
   using ActionMask = typename GameStateTypes::ActionMask;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
@@ -72,6 +73,7 @@ public:
     int port = 0;
     bool display_progress_bar = false;
     bool announce_game_results = false;  // print outcome of each individual match
+    bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
   };
 
 protected:

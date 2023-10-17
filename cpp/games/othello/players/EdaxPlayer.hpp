@@ -39,7 +39,7 @@ public:
 
   void start_game() override;
   void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  Action get_action(const GameState&, const ActionMask&) override;
+  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
 
 private:
   void submit_action(const Action& action);

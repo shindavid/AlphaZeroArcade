@@ -26,8 +26,8 @@ inline void HumanTuiPlayer<GameState_>::receive_state_change(
 }
 
 template<core::GameStateConcept GameState_>
-typename HumanTuiPlayer<GameState_>::Action
-HumanTuiPlayer<GameState_>::get_action(
+typename HumanTuiPlayer<GameState_>::ActionResponse
+HumanTuiPlayer<GameState_>::get_action_response(
   const GameState& state, const ActionMask& valid_actions)
 {
   util::ScreenClearer::clear_once();

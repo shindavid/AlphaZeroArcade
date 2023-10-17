@@ -157,9 +157,11 @@ inline void PerfectPlayer::receive_state_change(
   move_history_.append(action[0]);
 }
 
-inline PerfectPlayer::Action
-PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline PerfectPlayer::ActionResponse
+PerfectPlayer::get_action_response(const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
+
+  ActionResponse response;
 
   ActionMask candidates;
   candidates.setZero();
@@ -173,6 +175,7 @@ PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_action
 
   // if no known winning moves, then add all draws/uncertain moves
   bool known_win = eigen_util::any(candidates);
+  response.victory_guarantee = known_win;
   if (!known_win) {
     for (int j = 0; j < kNumColumns; ++j) {
       int score = result.scores[j];
@@ -191,7 +194,7 @@ PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_action
   }
 
   if (params_.verbose) {
-    std::cout << "get_action()" << std::endl;
+    std::cout << "get_action_response()" << std::endl;
     state.dump();
     std::cout << "scores: " << result.scores.transpose() << std::endl;
     std::cout << "best_score: " << result.best_score << std::endl;
@@ -205,7 +208,8 @@ PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_action
     std::cout << std::endl;
   }
 
-  return eigen_util::sample(candidates);
+  response.action = eigen_util::sample(candidates);
+  return response;
 }
 
 }  // namespace c4

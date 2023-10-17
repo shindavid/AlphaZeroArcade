@@ -61,6 +61,20 @@ struct GameStateTypes {
   using ActionMask = Eigen::TensorFixedSize<bool, PolicyShape, Eigen::RowMajor>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 
+  /*
+   * An ActionResponse is an action together with an optional bool indicating whether the player
+   * believes their victory is guaranteed.
+   *
+   * A GameServer can be configured to trust this guarantee, and immediately end the game. This
+   * can speed up simulations.
+   */
+  struct ActionResponse {
+    ActionResponse() : victory_guarantee(false) {}
+    ActionResponse(Action a, bool v=false) : action(a), victory_guarantee(v) {}
+    Action action;
+    bool victory_guarantee;
+  };
+
   static LocalPolicyArray global_to_local(const PolicyTensor& policy, const ActionMask& mask);
   static void global_to_local(const PolicyTensor& policy, const ActionMask& mask, LocalPolicyArray& out);
 

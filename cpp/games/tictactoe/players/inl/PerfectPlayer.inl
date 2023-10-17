@@ -16,22 +16,19 @@ inline auto PerfectPlayer::Params::make_options_description() {
 
   po2::options_description desc("tictactoe::PerfectPlayer options");
   return desc
-      .template add_option<"strength", 's'>(
-          po::value<int>(&strength)->default_value(strength),
-          "strength (0-1). 0 is random, 1 is perfect.")
-      .template add_option<"verbose", 'v'>(
-          po::bool_switch(&verbose)->default_value(verbose),
-          "verbose mode")
-          ;
+      .template add_option<"strength", 's'>(po::value<int>(&strength)->default_value(strength),
+                                            "strength (0-1). 0 is random, 1 is perfect.")
+      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                           "verbose mode");
 }
 
 inline PerfectPlayer::PerfectPlayer(const Params& params)
- : params_(params)
- , lookup_map_(make_lookup_map()) {
+    : params_(params), lookup_map_(make_lookup_map()) {
   util::clean_assert(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline PerfectPlayer::Action PerfectPlayer::get_action(const GameState& state, const ActionMask& valid_actions) {
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
+    const GameState& state, const ActionMask& valid_actions) {
   if (params_.strength == 0) {
     return eigen_util::sample(valid_actions);
   }
@@ -96,8 +93,7 @@ inline PerfectPlayer::Action PerfectPlayer::get_action(const GameState& state, c
   try {
     action[0] = lookup_map_.at(key).select();
     return action;
-  }
-  catch (const std::out_of_range&) {
+  } catch (const std::out_of_range&) {
     throw util::Exception("lookup failed (%08ux|%08ux)", uint32_t(x_mask), uint32_t(o_mask));
   }
 }
@@ -106,7 +102,7 @@ inline PerfectPlayer::Action PerfectPlayer::get_action(const GameState& state, c
  * The uint64_t contains the move probability, multiplied by 255 and rounded down to the nearest
  * int, for moves 1-8, one byte per move, with move 1 in the high byte and move 8 in the low byte.
  * The move probability for move 0 is 1 minus the sum of the other move probabilities.
-*/
+ */
 inline PerfectPlayer::policy_t::policy_t(uint64_t u) {
   for (int i = kNumCells - 1; i >= 1; --i) {
     p[i] = (u & 0xff);
@@ -138,4 +134,4 @@ inline uint64_t PerfectPlayer::make_lookup(mask_t x_mask, mask_t o_mask) {
   return (uint64_t(x_mask) << 32) | uint64_t(o_mask);
 }
 
-} // namespace tictactoe
+}  // namespace tictactoe

@@ -18,6 +18,7 @@ public:
   using GameStateTypes = core::GameStateTypes<GameState>;
 
   using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using player_array_t = typename base_t::player_array_t;
@@ -26,7 +27,7 @@ public:
   virtual ~HumanTuiPlayer() {}
   void start_game() override;
   void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  Action get_action(const GameState&, const ActionMask&) override;
+  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
   bool is_human_tui_player() const override { return true; }

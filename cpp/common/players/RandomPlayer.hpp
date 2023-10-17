@@ -16,11 +16,11 @@ class RandomPlayer : public core::AbstractPlayer<GameState> {
 public:
   using base_t = core::AbstractPlayer<GameState>;
   using GameStateTypes = core::GameStateTypes<GameState>;
-  using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
 
-  Action get_action(const GameState&, const ActionMask& mask) override {
+  ActionResponse get_action_response(const GameState&, const ActionMask& mask) override {
     return eigen_util::sample(mask);
   }
 };

@@ -7,18 +7,20 @@
 namespace core {
 
 template <GameStateConcept GameState>
-size_t GeneralSerializer<GameState>::serialize_action(char* buf, size_t buf_size, const Action& action) const {
-  if (sizeof(action) > buf_size) {
-    throw util::Exception("Buffer too small (%ld > %ld)", sizeof(action), buf_size);
+size_t GeneralSerializer<GameState>::serialize_action_response(
+    char* buf, size_t buf_size, const ActionResponse& response) const {
+  if (sizeof(response) > buf_size) {
+    throw util::Exception("Buffer too small (%ld > %ld)", sizeof(response), buf_size);
   }
-  memcpy(buf, &action, sizeof(action));
-  return sizeof(action);
+  memcpy(buf, &response, sizeof(response));
+  return sizeof(response);
 }
 
 template <GameStateConcept GameState>
-void GeneralSerializer<GameState>::deserialize_action(const char* buf, Action* action) const {
-  memcpy(action, buf, sizeof(*action));
-  GameStateTypes::validate_action(*action);
+void GeneralSerializer<GameState>::deserialize_action_response(const char* buf,
+                                                               ActionResponse* response) const {
+  memcpy(response, buf, sizeof(*response));
+  GameStateTypes::validate_action(response->action);
 }
 
 template <GameStateConcept GameState>

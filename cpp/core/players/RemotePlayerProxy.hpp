@@ -27,6 +27,7 @@ public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
   using ActionMask = typename GameStateTypes::ActionMask;
   using GameOutcome = typename GameStateTypes::GameOutcome;
   using Player = AbstractPlayer<GameState>;
@@ -65,7 +66,7 @@ public:
 
   void start_game() override;
   void receive_state_change(seat_index_t, const GameState&, const Action&) override;
-  Action get_action(const GameState&, const ActionMask&) override;
+  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
   void end_game(const GameState&, const GameOutcome&) override;
 
 private:
@@ -74,7 +75,7 @@ private:
 
   serializer_t serializer_;
   const GameState* state_ = nullptr;
-  Action action_;
+  ActionResponse action_response_;
 
   io::Socket* socket_;
   const player_id_t player_id_;

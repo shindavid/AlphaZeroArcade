@@ -124,9 +124,9 @@ public:
     }
   }
 
-  Action get_action(const GameState& state, const ActionMask& mask) override {
+  ActionResponse get_action_response(const GameState& state, const ActionMask& mask) override {
     supervisor_->write(game_data_, state);
-    return BasePlayer::get_action(state, mask);
+    return BasePlayer::get_action_response(state, mask);
   }
 
 private:

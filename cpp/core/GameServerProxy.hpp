@@ -21,9 +21,11 @@ public:
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
-  using Action = typename GameState::Action;
-  using ActionMask = typename GameState::ActionMask;
-  using GameOutcome = typename GameState::GameOutcome;
+  using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = typename GameStateTypes::Action;
+  using ActionResponse = typename GameStateTypes::ActionResponse;
+  using ActionMask = typename GameStateTypes::ActionMask;
+  using GameOutcome = typename GameStateTypes::GameOutcome;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<GameState>;
@@ -78,7 +80,7 @@ public:
     void stop();
 
   private:
-    void send_action_packet(const Action& a);
+    void send_action_packet(const ActionResponse&);
     void run();
 
     std::condition_variable cv_;
