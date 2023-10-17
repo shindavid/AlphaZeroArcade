@@ -73,6 +73,7 @@ public:
     int port = 0;
     bool display_progress_bar = false;
     bool announce_game_results = false;  // print outcome of each individual match
+    bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
   };
 
 protected:

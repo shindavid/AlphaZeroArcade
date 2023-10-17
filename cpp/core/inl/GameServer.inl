@@ -28,19 +28,27 @@ auto GameServer<GameState>::Params::make_options_description() {
   po2::options_description desc("GameServer options");
 
   return desc
-      .template add_option<"kill-file", 'k'>(po::value<std::string>(&kill_file),
+      .template add_option<"kill-file", 'k'>(
+          po::value<std::string>(&kill_file),
           "if specified, the server will exit when this file is created")
       .template add_option<"port">(po::value<int>(&port)->default_value(port),
-          "port for external players to connect to (must be set to a nonzero value if using external players)")
+                                   "port for external players to connect to (must be set to a "
+                                   "nonzero value if using external players)")
       .template add_option<"num-games", 'G'>(po::value<int>(&num_games)->default_value(num_games),
-          "num games (<=0 means run indefinitely)")
-      .template add_option<"parallelism", 'p'>(po::value<int>(&parallelism)->default_value(parallelism),
-          "max num games to play simultaneously. Participating players can request lower values and the server will respect their requests")
+                                             "num games (<=0 means run indefinitely)")
+      .template add_option<"parallelism", 'p'>(
+          po::value<int>(&parallelism)->default_value(parallelism),
+          "max num games to play simultaneously. Participating players can request lower values "
+          "and the server will respect their requests")
       .template add_bool_switches<"display-progress-bar", "hide-progress-bar">(
-          &display_progress_bar, "display progress bar (only in tty-mode without TUI player)", "hide progress bar")
-      .template add_bool_switches<"announce", "no-announce">(
-          &announce_game_results, "announce each game result", "do not announce each game result")
-      ;
+          &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
+          "hide progress bar")
+      .template add_bool_switches<"announce-game-results", "do-not-announce-game-results">(
+          &announce_game_results, "announce result after each individual game",
+          "do not announce result after each individual game")
+      .template add_bool_switches<"respect-victory-hints", "do-not-respect-victory-hints">(
+          &respect_victory_hints, "immediately exit game if a player claims imminent victory",
+          "ignore imminent victory claims from players");
 }
 
 template<GameStateConcept GameState>
@@ -278,12 +286,24 @@ GameServer<GameState>::GameThread::play_game(player_array_t& players) {
     ActionResponse response = player->get_action_response(state, valid_actions);
     Action action = response.action;
 
-    // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash the server.
+    // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
+    // the server.
     GameStateTypes::validate_action(action, valid_actions);
 
-    auto outcome = state.apply_move(action);
-    for (auto player2 : players) {
-      player2->receive_state_change(seat, state, action);
+    GameOutcome outcome;
+    if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
+      outcome.setZero();
+      outcome[seat] = 1;
+      if (shared_data_.params().announce_game_results) {
+        printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
+               player->get_name().c_str(), int(seat));
+        std::cout << std::endl;
+      }
+    } else {
+      outcome = state.apply_move(action);
+      for (auto player2 : players) {
+        player2->receive_state_change(seat, state, action);
+      }
     }
     if (is_terminal_outcome(outcome)) {
       for (auto player2 : players) {
