@@ -194,11 +194,12 @@ template <GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::send_action_packet(const ActionResponse& response) {
   Packet<ActionDecision> packet;
   ActionDecision& decision = packet.payload();
-  char* buf = decision.dynamic_size_section.buf;
+  auto& section = decision.dynamic_size_section;
+
   decision.game_thread_id = game_thread_id_;
   decision.player_id = player_id_;
-  packet.set_dynamic_section_size(
-      shared_data_.serializer().serialize_action_response(buf, sizeof(buf), response));
+  packet.set_dynamic_section_size(shared_data_.serializer().serialize_action_response(
+      section.buf, sizeof(section.buf), response));
   packet.send_to(shared_data_.socket());
 }
 

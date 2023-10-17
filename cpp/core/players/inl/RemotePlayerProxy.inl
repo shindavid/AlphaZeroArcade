@@ -135,8 +135,9 @@ void RemotePlayerProxy<GameState>::receive_state_change(seat_index_t seat, const
   Packet<StateChange> packet;
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;
-  auto buf = packet.payload().dynamic_size_section.buf;
-  int buf_size = serializer_.serialize_state_change(buf, sizeof(buf), state, seat, action);
+  auto& section = packet.payload().dynamic_size_section;
+  int buf_size =
+      serializer_.serialize_state_change(section.buf, sizeof(section.buf), state, seat, action);
   packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 }
@@ -152,8 +153,9 @@ RemotePlayerProxy<GameState>::get_action_response(const GameState& state,
   Packet<ActionPrompt> packet;
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;
-  auto buf = packet.payload().dynamic_size_section.buf;
-  int buf_size = serializer_.serialize_action_prompt(buf, sizeof(buf), valid_actions);
+  auto& section = packet.payload().dynamic_size_section;
+  int buf_size =
+      serializer_.serialize_action_prompt(section.buf, sizeof(section.buf), valid_actions);
   packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 
@@ -167,8 +169,8 @@ void RemotePlayerProxy<GameState>::end_game(const GameState& state, const GameOu
   Packet<EndGame> packet;
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;
-  auto buf = packet.payload().dynamic_size_section.buf;
-  int buf_size = serializer_.serialize_game_end(buf, sizeof(buf), outcome);
+  auto& section = packet.payload().dynamic_size_section;
+  int buf_size = serializer_.serialize_game_end(section.buf, sizeof(section.buf), outcome);
   packet.set_dynamic_section_size(buf_size);
   packet.send_to(socket_);
 }
