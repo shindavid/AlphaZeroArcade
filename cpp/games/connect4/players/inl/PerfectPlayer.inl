@@ -161,6 +161,8 @@ inline PerfectPlayer::ActionResponse
 PerfectPlayer::get_action_response(const GameState& state, const ActionMask& valid_actions) {
   auto result = oracle_.query(move_history_);
 
+  ActionResponse response;
+
   ActionMask candidates;
   candidates.setZero();
 
@@ -173,6 +175,7 @@ PerfectPlayer::get_action_response(const GameState& state, const ActionMask& val
 
   // if no known winning moves, then add all draws/uncertain moves
   bool known_win = eigen_util::any(candidates);
+  response.victory_guarantee = known_win;
   if (!known_win) {
     for (int j = 0; j < kNumColumns; ++j) {
       int score = result.scores[j];
@@ -205,7 +208,8 @@ PerfectPlayer::get_action_response(const GameState& state, const ActionMask& val
     std::cout << std::endl;
   }
 
-  return eigen_util::sample(candidates);
+  response.action = eigen_util::sample(candidates);
+  return response;
 }
 
 }  // namespace c4
