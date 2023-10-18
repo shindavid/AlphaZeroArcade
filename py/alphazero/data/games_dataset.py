@@ -56,6 +56,9 @@ def compute_n_window(n_total: int) -> int:
 
     https://arxiv.org/pdf/1902.10565.pdf
     """
+    if ModelingArgs.fixed_window_n:
+        return ModelingArgs.fixed_window_n
+
     c = ModelingArgs.window_c
     alpha = ModelingArgs.window_alpha
     beta = ModelingArgs.window_beta

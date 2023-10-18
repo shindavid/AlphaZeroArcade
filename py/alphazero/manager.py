@@ -685,11 +685,13 @@ class TrainingStats:
 
 
 class NetTrainer:
-    def __init__(self, n_minibatches_to_process: int, py_cuda_device_str: str):
+    def __init__(self, n_minibatches_to_process: int=-1, py_cuda_device_str: str='cuda:0'):
         self.n_minibatches_to_process = n_minibatches_to_process
         self.py_cuda_device_str = py_cuda_device_str
-        self.n_minibatches_processed = 0
+        self.reset()
 
+    def reset(self):
+        self.n_minibatches_processed = 0
         self.for_loop_time = 0
         self.t0 = time.time()
 
@@ -701,7 +703,8 @@ class NetTrainer:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
-        loader has been processed, whichever comes first.
+        loader has been processed, whichever comes first. If self.n_minibatches_to_process is
+        negative, that is treated like infinity.
         """
         games_dataset.set_key_order(net.target_names())
 

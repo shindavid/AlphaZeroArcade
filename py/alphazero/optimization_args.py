@@ -1,4 +1,5 @@
 import argparse
+from typing import Optional
 
 
 class ModelingArgs:
@@ -40,6 +41,7 @@ class ModelingArgs:
     window_alpha: float
     window_beta: float
     window_c: int
+    fixed_window_n: Optional[int]
     momentum: float
     weight_decay: float
     learning_rate: float
@@ -52,6 +54,7 @@ class ModelingArgs:
         ModelingArgs.window_alpha = args.window_alpha
         ModelingArgs.window_beta = args.window_beta
         ModelingArgs.window_c = args.window_c
+        ModelingArgs.fixed_window_n = args.fixed_window_n
         ModelingArgs.momentum = args.momentum
         ModelingArgs.weight_decay = args.weight_decay
         ModelingArgs.learning_rate = args.learning_rate
@@ -71,6 +74,8 @@ class ModelingArgs:
                            help='beta for n_window formula (default: %(default)s)')
         group.add_argument('-c', '--window-c', type=int, default=250000,
                            help='c for n_window formula (default: %(default)s)')
+        group.add_argument('-F', '--fixed-window-n', type=int,
+                           help='if specified, uses this fixed window n instead of the n_window formula')
         group.add_argument('-M', '--momentum', type=float, default=0.9,
                            help='momentum (default: %(default)s)')
         group.add_argument('-w', '--weight-decay', type=float, default=6e-5,
