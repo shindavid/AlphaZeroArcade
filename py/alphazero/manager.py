@@ -564,9 +564,6 @@ class AlphaZeroManager:
                 outputs_list = net(inputs)
                 assert len(outputs_list) == len(labels_list)
 
-                # labels_list = [labels.reshape((labels.shape[0], -1)) for labels in labels_list]
-                # outputs_list = [outputs.reshape((outputs.shape[0], -1)) for outputs in outputs_list]
-
                 masks = [target.get_mask(labels) for labels, target in zip(labels_list, net.learning_targets)]
 
                 labels_list = [apply_mask(labels, mask) for mask, labels in zip(masks, labels_list)]
