@@ -527,9 +527,7 @@ class AlphaZeroManager:
         gen = self.get_latest_model_generation() + 1
         timed_print(f'Train gen:{gen}')
 
-        for_loop_time = 0
-        t0 = time.time()
-        steps = 0
+        trainer = NetTrainer(ModelingArgs.snapshot_steps, self.py_cuda_device_str)
         while True:
             games_dataset = GamesDataset(self.self_play_data_dir)
             loader = torch.utils.data.DataLoader(
@@ -540,63 +538,13 @@ class AlphaZeroManager:
                 shuffle=True)
 
             net, optimizer = self.get_net_and_optimizer(loader)
-            games_dataset.set_key_order(net.target_names())
 
-            loss_fns = [target.loss_fn() for target in net.learning_targets]
-
-            suffix = ''
-            if steps:
-                suffix = f' (minibatches processed: {steps})'
-            timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
-                        f'{games_dataset.n_total_positions} total positions{suffix}')
-
-            stats = TrainingStats(net)
-            for data in loader:
-                t1 = time.time()
-                inputs = data[0]
-                labels_list = data[1:]
-                inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
-
-                labels_list = [target.convert_labels(labels) for labels, target in zip(labels_list, net.learning_targets)]
-                labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
-
-                optimizer.zero_grad()
-                outputs_list = net(inputs)
-                assert len(outputs_list) == len(labels_list)
-
-                masks = [target.get_mask(labels) for labels, target in zip(labels_list, net.learning_targets)]
-
-                labels_list = [apply_mask(labels, mask) for mask, labels in zip(masks, labels_list)]
-                outputs_list = [apply_mask(outputs, mask) for mask, outputs in zip(masks, outputs_list)]
-
-                loss_list = [loss_fn(outputs, labels) for loss_fn, outputs, labels in
-                             zip(loss_fns, outputs_list, labels_list)]
-
-                loss = sum([loss * target.loss_weight for loss, target in zip(loss_list, net.learning_targets)])
-
-                results_list = [EvaluationResults(labels, outputs, loss) for labels, outputs, loss in
-                                zip(labels_list, outputs_list, loss_list)]
-
-                stats.update(results_list)
-
-                loss.backward()
-                optimizer.step()
-                steps += 1
-                t2 = time.time()
-                for_loop_time += t2 - t1
-                if steps == ModelingArgs.snapshot_steps:
-                    break
-            stats.dump()
-            if steps >= ModelingArgs.snapshot_steps:
+            trainer.do_training_epoch(loader, net, optimizer, games_dataset)
+            if trainer.n_minibatches_processed >= ModelingArgs.snapshot_steps:
                 break
 
-        t3 = time.time()
-        total_time = t3 - t0
-        data_loading_time = total_time - for_loop_time
-
-        timed_print(f'Gen {gen} training complete ({steps} minibatch updates)')
-        timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
-        timed_print(f'Training time:     {for_loop_time:10.3f} seconds')
+        timed_print(f'Gen {gen} training complete ({trainer.n_minibatches_processed} minibatch updates)')
+        trainer.dump_timing_stats()
 
         if pre_commit_func:
             pre_commit_func()
@@ -734,3 +682,78 @@ class TrainingStats:
             substats.dump(total_loss)
 
         TrainingSubStats.dump_total_loss(total_loss)
+
+
+class NetTrainer:
+    def __init__(self, n_minibatches_to_process: int, py_cuda_device_str: str):
+        self.n_minibatches_to_process = n_minibatches_to_process
+        self.py_cuda_device_str = py_cuda_device_str
+        self.n_minibatches_processed = 0
+
+        self.for_loop_time = 0
+        self.t0 = time.time()
+
+    def do_training_epoch(self,
+                          loader: torch.utils.data.DataLoader,
+                          net: NeuralNet,
+                          optimizer: optim.Optimizer,
+                          games_dataset: GamesDataset):
+        """
+        Performs a training epoch by processing data from loader. Stops when either
+        self.n_minibatches_to_process minibatch updates have been performed or until all the data in
+        loader has been processed, whichever comes first.
+        """
+        games_dataset.set_key_order(net.target_names())
+
+        loss_fns = [target.loss_fn() for target in net.learning_targets]
+
+        suffix = ''
+        if self.n_minibatches_processed:
+            suffix = f' (minibatches processed: {self.n_minibatches_processed})'
+        timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
+                    f'{games_dataset.n_total_positions} total positions{suffix}')
+
+        stats = TrainingStats(net)
+        for data in loader:
+            t1 = time.time()
+            inputs = data[0]
+            labels_list = data[1:]
+            inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
+
+            labels_list = [target.convert_labels(labels) for labels, target in zip(labels_list, net.learning_targets)]
+            labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
+
+            optimizer.zero_grad()
+            outputs_list = net(inputs)
+            assert len(outputs_list) == len(labels_list)
+
+            masks = [target.get_mask(labels) for labels, target in zip(labels_list, net.learning_targets)]
+
+            labels_list = [apply_mask(labels, mask) for mask, labels in zip(masks, labels_list)]
+            outputs_list = [apply_mask(outputs, mask) for mask, outputs in zip(masks, outputs_list)]
+
+            loss_list = [loss_fn(outputs, labels) for loss_fn, outputs, labels in
+                            zip(loss_fns, outputs_list, labels_list)]
+
+            loss = sum([loss * target.loss_weight for loss, target in zip(loss_list, net.learning_targets)])
+
+            results_list = [EvaluationResults(labels, outputs, loss) for labels, outputs, loss in
+                            zip(labels_list, outputs_list, loss_list)]
+
+            stats.update(results_list)
+
+            loss.backward()
+            optimizer.step()
+            self.n_minibatches_processed += 1
+            t2 = time.time()
+            self.for_loop_time += t2 - t1
+            if self.n_minibatches_processed == self.n_minibatches_to_process:
+                break
+
+        stats.dump()
+
+    def dump_timing_stats(self):
+        total_time = time.time() - self.t0
+        data_loading_time = total_time - self.for_loop_time
+        timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
+        timed_print(f'Training time:     {self.for_loop_time:10.3f} seconds')
