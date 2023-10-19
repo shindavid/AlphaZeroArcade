@@ -65,3 +65,18 @@ Steps:
   4. Run `just build` to build
   5. Run `just train_c4 YOUR_TAG_HERE -S` to train connect-4
 
+## Example plots
+
+Here is a plot showing learning progress for the game of Connect4:
+
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/58b52859-75ed-4830-950f-893b5473f3d3)
+
+The agent being tested is an MCTS agent using i=300 iterations per search.
+
+In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
+against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
+exhaustive tree-search represents perfect-play. Given furthermore that the first player is provably winning in Connect4
+with perfect play, the dashed line at y=21 represents perfect play. The above plot thus indicates that the system learns
+to master Connect4 at 300 mcts iterations in about ~5 hours. The slight dips in the curve after hitting y=21 can be
+attributed to a minor injection of randomness in the agent's first R moves, and disappears if we increase from i=300
+to i=1600 or more.
