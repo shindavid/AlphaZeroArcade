@@ -1,7 +1,9 @@
 import datetime
 import hashlib
+import inspect
 import os
 import shutil
+from typing import List, Union
 
 
 _sha256_cache = {}
@@ -77,3 +79,44 @@ def atomic_cp(src, dst, intermediate=None):
     assert not os.path.exists(intermediate), intermediate
     shutil.copyfile(src, intermediate)
     os.rename(intermediate, dst)
+
+
+def get_function_arguments(ignore: Union[str, List[str], None]=None):
+    """
+    If called from within a function, returns a dict mapping the names of the function's arguments
+    to their values.
+
+    If ignore is specified, then the returned dict will not contain any keys in ignore. The type
+    of ignore should be a list of strings; if it is a string, then it will be interpreted as a
+    singleton list of that string.
+
+    Example:
+
+    class Foo:
+        def __init__(self, a=1, b=2):
+            print(get_function_arguments('self'))
+
+    foo = Foo(b=3)  # will print {'a': 1, 'b': 3}
+
+    Courtesy of ChatGPT.
+    """
+    ignore = [] if ignore is None else ignore
+    if type(ignore) is str:
+        # interpret string arg as a singleton list
+        ignore = [ignore]
+
+    # Get the frame of the caller
+    frame = inspect.currentframe().f_back
+
+    # Extract the function's argument names
+    arg_info = inspect.getargvalues(frame)
+    arg_names = arg_info.args
+
+    # Build a dictionary of the function's arguments
+    args = {name: arg_info.locals[name] for name in arg_names if name not in ignore}
+
+    # Don't forget to delete the frame object to avoid reference cycles
+    # (The Python docs caution that frame objects may cause memory leaks if not cleaned up properly)
+    del frame
+
+    return args

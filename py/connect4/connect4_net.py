@@ -6,6 +6,7 @@ from torch import nn as nn
 
 from neural_net import NeuralNet, PolicyTarget, ValueTarget, OwnershipTarget
 from res_net_modules import ConvBlock, ResBlock, GPResBlock, PolicyHead, ValueHead, OwnershipHead
+from util.py_util import get_function_arguments
 from util.torch_util import Shape
 
 
@@ -23,10 +24,8 @@ class C4Net(NeuralNet):
         for name in target_names:
             assert name in C4Net.VALID_TARGET_NAMES, name
 
-        super(C4Net, self).__init__(input_shape)
+        super(C4Net, self).__init__(input_shape, get_function_arguments(ignore='self'))
         board_size = math.prod(input_shape[1:])
-        self.n_conv_filters = n_conv_filters
-        self.n_res_blocks = n_res_blocks
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
 
@@ -44,30 +43,3 @@ class C4Net(NeuralNet):
         for block in self.res_blocks:
             x = block(x)
         return tuple(head(x) for head in self.heads)
-
-    @staticmethod
-    def create(input_shape: Shape, target_names: List[str]) -> 'C4Net':
-        """
-        TODO: load architecture parameters from config and pass them to constructor call
-        """
-        return C4Net(input_shape, target_names)
-
-    @staticmethod
-    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'C4Net':
-        model_state_dict = checkpoint['model_state_dict']
-        input_shape = checkpoint['input_shape']
-        target_names = checkpoint['target_names']
-        n_conv_filters = checkpoint['n_conv_filters']
-        n_res_blocks = checkpoint['n_res_blocks']
-        model = C4Net(input_shape, target_names, n_conv_filters, n_res_blocks)
-        model.load_state_dict(model_state_dict)
-        return model
-
-    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
-        checkpoint.update({
-            'model_state_dict': self.state_dict(),
-            'input_shape': self.input_shape,
-            'target_names': self.target_names(),
-            'n_conv_filters': self.n_conv_filters,
-            'n_res_blocks': self.n_res_blocks,
-        })

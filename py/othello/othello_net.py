@@ -6,6 +6,7 @@ from torch import nn as nn
 
 from neural_net import NeuralNet, PolicyTarget, ValueTarget, ScoreMarginTarget, OwnershipTarget
 from res_net_modules import ConvBlock, GPResBlock, ResBlock, PolicyHead, ValueHead, ScoreMarginHead, OwnershipHead
+from util.py_util import get_function_arguments
 from util.torch_util import Shape
 
 
@@ -24,7 +25,7 @@ class OthelloNet(NeuralNet):
         for name in target_names:
             assert name in OthelloNet.VALID_TARGET_NAMES, name
 
-        super(OthelloNet, self).__init__(input_shape)
+        super(OthelloNet, self).__init__(input_shape, get_function_arguments(ignore='self'))
         board_size = math.prod(input_shape[1:])
         self.n_conv_filters = n_conv_filters
         self.n_res_blocks = n_res_blocks
@@ -51,30 +52,3 @@ class OthelloNet(NeuralNet):
         for block in self.res_blocks:
             x = block(x)
         return tuple(head(x) for head in self.heads)
-
-    @staticmethod
-    def create(input_shape: Shape, target_names: List[str]) -> 'OthelloNet':
-        """
-        TODO: load architecture parameters from config and pass them to constructor call
-        """
-        return OthelloNet(input_shape, target_names)
-
-    @staticmethod
-    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'OthelloNet':
-        model_state_dict = checkpoint['model_state_dict']
-        input_shape = checkpoint['input_shape']
-        target_names = checkpoint['target_names']
-        n_conv_filters = checkpoint['n_conv_filters']
-        n_res_blocks = checkpoint['n_res_blocks']
-        model = OthelloNet(input_shape, target_names, n_conv_filters, n_res_blocks)
-        model.load_state_dict(model_state_dict)
-        return model
-
-    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
-        checkpoint.update({
-            'model_state_dict': self.state_dict(),
-            'input_shape': self.input_shape,
-            'target_names': self.target_names(),
-            'n_conv_filters': self.n_conv_filters,
-            'n_res_blocks': self.n_res_blocks,
-        })

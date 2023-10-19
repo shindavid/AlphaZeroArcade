@@ -353,7 +353,7 @@ class AlphaZeroManager:
         if checkpoint_info is None:
             input_shape = loader.dataset.get_input_shape()
             target_names = loader.dataset.get_target_names()
-            self._net = self.game_type.net_type.create(input_shape, target_names)
+            self._net = self.game_type.net_type(input_shape, target_names)
             timed_print(f'Creating new net with input shape {input_shape}')
         else:
             gen = checkpoint_info.generation

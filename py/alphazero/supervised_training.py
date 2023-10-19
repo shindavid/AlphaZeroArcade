@@ -74,7 +74,7 @@ def main():
     else:
         target_names = loader.dataset.get_target_names()
         input_shape = loader.dataset.get_input_shape()
-        net = game_type.net_type.create(input_shape, target_names)
+        net = game_type.net_type(input_shape, target_names)
         epoch = 0
 
     net.cuda(Args.cuda_device_str)
