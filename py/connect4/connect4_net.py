@@ -20,14 +20,18 @@ NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 class C4Net(NeuralNet):
     VALID_TARGET_NAMES = ['policy', 'value', 'opp_policy', 'ownership']
 
-    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64, n_res_blocks=19):
+    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64,
+                 n_res_blocks=19, n_gp_res_blocks=0):
         for name in target_names:
             assert name in C4Net.VALID_TARGET_NAMES, name
 
         super(C4Net, self).__init__(input_shape, get_function_arguments(ignore='self'))
         board_size = math.prod(input_shape[1:])
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
-        self.res_blocks = nn.ModuleList([ResBlock(n_conv_filters) for _ in range(n_res_blocks)])
+        self.res_blocks = nn.ModuleList(
+            [ResBlock(n_conv_filters) for _ in range(n_res_blocks - n_gp_res_blocks)] +
+            [GPResBlock(n_conv_filters) for _ in range(n_gp_res_blocks)]
+            )
 
         self.add_head(PolicyHead(board_size, NUM_COLUMNS, n_conv_filters), PolicyTarget('policy', 1.0))
         self.add_head(ValueHead(board_size, NUM_COLORS, n_conv_filters), ValueTarget('value', 1.5))

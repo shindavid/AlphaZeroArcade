@@ -21,7 +21,8 @@ NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 class OthelloNet(NeuralNet):
     VALID_TARGET_NAMES = ['policy', 'value', 'opp_policy', 'ownership', 'score_margin']
 
-    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64, n_res_blocks=19):
+    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64,
+                 n_res_blocks=19, n_gp_res_blocks=0):
         for name in target_names:
             assert name in OthelloNet.VALID_TARGET_NAMES, name
 
@@ -31,8 +32,8 @@ class OthelloNet(NeuralNet):
         self.n_res_blocks = n_res_blocks
         self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
         self.res_blocks = nn.ModuleList(
-            [ResBlock(n_conv_filters) for _ in range(n_res_blocks - 2)] +
-            [GPResBlock(n_conv_filters), GPResBlock(n_conv_filters)]
+            [ResBlock(n_conv_filters) for _ in range(n_res_blocks - n_gp_res_blocks)] +
+            [GPResBlock(n_conv_filters) for _ in range(n_gp_res_blocks)]
             )
 
         self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('policy', 1.0))

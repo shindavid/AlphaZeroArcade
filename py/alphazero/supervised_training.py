@@ -19,6 +19,7 @@ class Args:
     tag: str
     epochs: int
     game: str
+    num_gp_res_blocks: int
     checkpoint_filename: str
     cuda_device_str: str
 
@@ -28,6 +29,7 @@ class Args:
         Args.tag = args.tag
         Args.epochs = args.epochs
         Args.game = args.game
+        Args.num_gp_res_blocks = args.num_gp_res_blocks
         Args.checkpoint_filename = args.checkpoint_filename
         Args.cuda_device_str = args.cuda_device_str
         assert Args.epochs > 0, 'epochs has to be positive'
@@ -40,6 +42,7 @@ def load_args():
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
     parser.add_argument('-e', '--epochs', type=int, default=100, help='the number of epochs')
     parser.add_argument('-g', '--game', help='the game')
+    parser.add_argument('-G', '--num-gp-res-blocks', type=int, default=0, help='num gp res blocks')
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
@@ -74,7 +77,7 @@ def main():
     else:
         target_names = loader.dataset.get_target_names()
         input_shape = loader.dataset.get_input_shape()
-        net = game_type.net_type(input_shape, target_names)
+        net = game_type.net_type(input_shape, target_names, n_gp_res_blocks=Args.num_gp_res_blocks)
         epoch = 0
 
     net.cuda(Args.cuda_device_str)
