@@ -364,7 +364,8 @@ class AlphaZeroManager:
             with tempfile.TemporaryDirectory() as tmp:
                 tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
-                self._net = self.game_type.net_type.load_checkpoint(tmp_checkpoint_filename)
+                checkpoint = torch.load(tmp_checkpoint_filename)
+                self._net = self.game_type.net_type.load_from_checkpoint(checkpoint)
 
         self._net.cuda(device=self.py_cuda_device)
         self._net.train()
@@ -550,7 +551,9 @@ class AlphaZeroManager:
         model_filename = self.get_model_filename(gen)
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
         tmp_model_filename = make_hidden_filename(model_filename)
-        net.save_checkpoint(tmp_checkpoint_filename)
+        checkpoint = {}
+        net.add_to_checkpoint(checkpoint)
+        torch.save(checkpoint, tmp_checkpoint_filename)
         net.save_model(tmp_model_filename)
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)

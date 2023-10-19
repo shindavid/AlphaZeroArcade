@@ -4,7 +4,7 @@ Wrapper around torch's nn.Module that facilitates caching and save/load mechanic
 import abc
 import copy
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
@@ -289,15 +289,16 @@ class NeuralNet(nn.Module):
 
     @staticmethod
     @abc.abstractmethod
-    def load_checkpoint(filename: str) -> 'NeuralNet':
+    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'NeuralNet':
         """
-        Inverse of save_checkpoint(). Load a neural net from disk, so that it can be used for inference.
+        Load a neural net from a checkpoint. Inverse of add_to_checkpoint().
         """
         pass
 
     @abc.abstractmethod
-    def save_checkpoint(self, filename: str):
+    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
         """
-        Serialize the current state of this neural net to disk, so that it can be loaded later via load_checkpoint().
+        Save the current state of this neural net to a checkpoint, so that it can be loaded later
+        via load_from_checkpoint().
         """
         pass

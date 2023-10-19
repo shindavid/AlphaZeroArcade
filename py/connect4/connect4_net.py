@@ -1,5 +1,5 @@
 import math
-from typing import List
+from typing import Any, Dict, List
 
 import torch
 from torch import nn as nn
@@ -53,8 +53,7 @@ class C4Net(NeuralNet):
         return C4Net(input_shape, target_names)
 
     @staticmethod
-    def load_checkpoint(filename: str) -> 'C4Net':
-        checkpoint = torch.load(filename)
+    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'C4Net':
         model_state_dict = checkpoint['model_state_dict']
         input_shape = checkpoint['input_shape']
         target_names = checkpoint['target_names']
@@ -64,11 +63,11 @@ class C4Net(NeuralNet):
         model.load_state_dict(model_state_dict)
         return model
 
-    def save_checkpoint(self, filename: str):
-        torch.save({
+    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
+        checkpoint.update({
             'model_state_dict': self.state_dict(),
             'input_shape': self.input_shape,
             'target_names': self.target_names(),
             'n_conv_filters': self.n_conv_filters,
             'n_res_blocks': self.n_res_blocks,
-        }, filename)
+        })
