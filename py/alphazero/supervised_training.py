@@ -8,10 +8,10 @@ from torch import optim
 
 import games
 from alphazero.data.games_dataset import GamesDataset
+from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
 from config import Config
 from util.py_util import timed_print
-from alphazero.manager import NetTrainer
 
 
 class Args:
