@@ -69,14 +69,12 @@ Steps:
 
 Here is a plot showing learning progress for the game of Connect4:
 
-![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/58b52859-75ed-4830-950f-893b5473f3d3)
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/6616ecaa-5314-404d-876a-2db9f2a1be15)
 
-The agent being tested is an MCTS agent using i=300 iterations per search.
+The agent being tested is an MCTS agent using i=1600 iterations per search.
 
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
 against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
 exhaustive tree-search represents perfect-play. Given furthermore that the first player is provably winning in Connect4
 with perfect play, the dashed line at y=21 represents perfect play. The above plot thus indicates that the system learns
-to master Connect4 at 300 mcts iterations in about ~5 hours. The slight dips in the curve after hitting y=21 can be
-attributed to a minor injection of randomness in the agent's first R moves, and disappears if we increase from i=300
-to i=1600 or more.
+to perfectly play Connect4 at 1600 mcts iterations in under 5 hours.
