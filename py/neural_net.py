@@ -4,7 +4,7 @@ Wrapper around torch's nn.Module that facilitates caching and save/load mechanic
 import abc
 import copy
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn.functional as F
@@ -190,13 +190,18 @@ class OwnershipTarget(LearningTarget):
 class NeuralNet(nn.Module):
     _filename_to_net: Dict[str, torch.jit.ScriptModule] = {}
 
-    def __init__(self, input_shape: Shape):
+    def __init__(self, input_shape: Shape, constructor_args: Dict[str, Any]):
         """
         input_shape: the shape of a single row of data. The shape of the Tensor's that can passed into the
         forward() method will have one more dimension in front, corresponding to the number of rows.
+
+        constructor_args: a dict of the exact arguments that were passed to the constructor of the
+        derived class. This is used to facilitate saving/loading of the model. This is a bit of a
+        hack, so be careful.
         """
         super(NeuralNet, self).__init__()
         self.input_shape = input_shape
+        self.constructor_args = copy.deepcopy(constructor_args)
 
         # heads and learning_targets are parallel lists, with the same length
         self.heads = nn.ModuleList()
@@ -276,28 +281,30 @@ class NeuralNet(nn.Module):
     def target_names(self) -> List[str]:
         return [target.name for target in self.learning_targets]
 
-    @staticmethod
-    @abc.abstractmethod
-    def create(input_shape: Shape, head_names: List[str]) -> 'NeuralNet':
+    @classmethod
+    def load_from_checkpoint(cls, checkpoint: Dict[str, Any]) -> 'NeuralNet':
         """
-        Create a new neural net of the derived type, with the given input shape, with the given heads.
+        Load a neural net from a checkpoint. Inverse of add_to_checkpoint().
+        """
+        if 'model_state_dict' in checkpoint:
+            # Backwards-compatibility support for pre-2023-10-20 checkpoints
+            print('Loading from old-style checkpoint')
+            model_state_dict = checkpoint['model_state_dict']
+            keys = ['input_shape', 'target_names', 'n_conv_filters', 'n_res_blocks']
+            constructor_args = { key : checkpoint[key] for key in checkpoint if key in keys }
+        else:
+            model_state_dict = checkpoint['model.state_dict']
+            constructor_args = checkpoint['model.constructor_args']
+        model = cls(**constructor_args)
+        model.load_state_dict(model_state_dict)
+        return model
 
-        Different implementations of this method might differ in how they initialize architecture parameters (for
-        example by loading from a config file). They also might differ in how they initialize model weights.
+    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
         """
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def load_checkpoint(filename: str) -> 'NeuralNet':
+        Save the current state of this neural net to a checkpoint, so that it can be loaded later
+        via load_from_checkpoint().
         """
-        Inverse of save_checkpoint(). Load a neural net from disk, so that it can be used for inference.
-        """
-        pass
-
-    @abc.abstractmethod
-    def save_checkpoint(self, filename: str):
-        """
-        Serialize the current state of this neural net to disk, so that it can be loaded later via load_checkpoint().
-        """
-        pass
+        checkpoint.update({
+            'model.state_dict': self.state_dict(),
+            'model.constructor_args': self.constructor_args,
+        })
