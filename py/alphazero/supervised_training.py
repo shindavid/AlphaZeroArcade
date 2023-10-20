@@ -43,6 +43,7 @@ def load_args():
     parser.add_argument('-e', '--epochs', type=int, default=100, help='the number of epochs')
     parser.add_argument('-g', '--game', help='the game')
     parser.add_argument('-G', '--num-gp-res-blocks', type=int, default=0, help='num gp res blocks')
+    parser.add_argument('-O', '--optimizer', choices=['SGD', 'Adam'], default='SGD', help='optimizer type')
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
@@ -70,8 +71,11 @@ def main():
         pin_memory=True,
         shuffle=True)
 
+    checkpoint = {}
     if Args.checkpoint_filename and os.path.isfile(Args.checkpoint_filename):
         checkpoint = torch.load(Args.checkpoint_filename)
+
+    if checkpoint:
         net = game_type.net_type.load_from_checkpoint(checkpoint)
         epoch = checkpoint['epoch']
     else:
@@ -84,9 +88,17 @@ def main():
     net.train()
 
     learning_rate = ModelingArgs.learning_rate
-    momentum = ModelingArgs.momentum
     weight_decay = ModelingArgs.weight_decay
-    optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+    if Args.optimizer == 'SGD':
+        momentum = ModelingArgs.momentum
+        optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+    elif Args.optimizer == 'Adam':
+        optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    else:
+        raise Exception(f'Unknown optimizer: {Args.optimizer}')
+
+    if checkpoint and 'opt.state_dict' in checkpoint:
+        optimizer.load_state_dict(checkpoint['opt.state_dict'])
 
     trainer = NetTrainer(ModelingArgs.snapshot_steps, Args.cuda_device_str)
     while epoch < Args.epochs:
@@ -97,6 +109,7 @@ def main():
         if Args.checkpoint_filename:
             checkpoint = {
                 'epoch': epoch,
+                'opt.state_dict': optimizer.state_dict(),
                 }
             net.add_to_checkpoint(checkpoint)
             torch.save(checkpoint, Args.checkpoint_filename)
