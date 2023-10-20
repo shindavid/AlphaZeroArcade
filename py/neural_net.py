@@ -286,8 +286,15 @@ class NeuralNet(nn.Module):
         """
         Load a neural net from a checkpoint. Inverse of add_to_checkpoint().
         """
-        model_state_dict = checkpoint['model.state_dict']
-        constructor_args = checkpoint['model.constructor_args']
+        if 'model_state_dict' in checkpoint:
+            # Backwards-compatibility support for pre-2023-10-20 checkpoints
+            print('Loading from old-style checkpoint')
+            model_state_dict = checkpoint['model_state_dict']
+            keys = ['input_shape', 'target_names', 'n_conv_filters', 'n_res_blocks']
+            constructor_args = { key : checkpoint[key] for key in checkpoint if key in keys }
+        else:
+            model_state_dict = checkpoint['model.state_dict']
+            constructor_args = checkpoint['model.constructor_args']
         model = cls(**constructor_args)
         model.load_state_dict(model_state_dict)
         return model
