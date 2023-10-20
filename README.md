@@ -131,6 +131,20 @@ This will launch an interactive bokeh plot in your web-browser. A sample plot ca
 If doing the above instructions for c4 or othello instead of tictactoe, you need to download and build binaries.
 The instructions for this can be found in `py/othello/README.md` and `py/connect4/README.md`.
 
+## Example plots
+
+Here is a plot showing learning progress for the game of Connect4:
+
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/a8c1edb8-425e-4634-803f-086801aa59cd)
+
+The dark curve corresponds to an MCTS agent using i=1600 iterations per search. The light curve corresponds to an agent
+that plays according to network policy only with no search.
+
+In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
+against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
+exhaustive tree-search represents perfect-play, meaning that the dashed line at y=21 represents perfect play. The above
+plot thus indicates that the system learns to perfectly play Connect4 at 1600 mcts iterations in under 5 hours.
+
 ## C++ Overview
 
 ### Directory Structure
@@ -188,17 +202,4 @@ Steps:
   3. Run `just goto HOSTNAME` to log into the cloud docker container
   4. Run `just build` to build
   5. Run `just train_c4 YOUR_TAG_HERE -S` to train connect-4
-
-## Example plots
-
-Here is a plot showing learning progress for the game of Connect4:
-
-![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/18c4c4ee-01b5-4dc3-b85b-1554dbee525c)
-
-The agent being tested is an MCTS agent using i=1600 iterations per search.
-
-In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
-against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
-exhaustive tree-search represents perfect-play. Given furthermore that the first player is provably winning in Connect4
-with perfect play, the dashed line at y=21 represents perfect play. The above plot thus indicates that the system learns
-to perfectly play Connect4 at 1600 mcts iterations in under 5 hours.
+  6. 
