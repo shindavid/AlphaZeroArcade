@@ -143,7 +143,8 @@ that plays according to network policy only with no search.
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
 against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
 exhaustive tree-search represents perfect-play, meaning that the dashed line at y=21 represents perfect play. The above
-plot thus indicates that the system learns to perfectly play Connect4 at 1600 mcts iterations in under 5 hours.
+plot thus indicates that the system attains optimal results against perfect play within 5 hours (i.e., it always wins as
+first player against perfect play).
 
 ## C++ Overview
 
