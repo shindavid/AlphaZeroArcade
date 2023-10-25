@@ -24,7 +24,7 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from neural_net import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
+from learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
 from util.torch_util import Shape
 
 

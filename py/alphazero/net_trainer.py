@@ -1,8 +1,8 @@
 from typing import List
 import torch
 from alphazero.data.games_dataset import GamesDataset
-from res_net_modules import Head, Model
-from neural_net import LearningTarget
+from net_modules import Head, Model
+from learning_targets import LearningTarget
 from torch import optim
 from util.py_util import timed_print
 from util.torch_util import apply_mask

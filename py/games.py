@@ -1,9 +1,9 @@
 from typing import Dict, Optional
 
-from res_net_modules import ModelConfigGenerator
-from connect4.connect4_net import C4_MODEL_CONFIGS
-from othello.othello_net import OTHELLO_MODEL_CONFIGS
-from tictactoe.tictactoe_net import TICTACTOE_MODEL_CONFIGS
+from net_modules import ModelConfigGenerator
+from connect4.connect4_model_configs import C4_MODEL_CONFIGS
+from othello.othello_model_configs import OTHELLO_MODEL_CONFIGS
+from tictactoe.tictactoe_model_configs import TICTACTOE_MODEL_CONFIGS
 
 
 class ReferencePlayerFamily:

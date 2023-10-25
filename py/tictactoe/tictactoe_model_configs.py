@@ -1,6 +1,6 @@
 import math
 
-from res_net_modules import ModelConfig, ModuleSpec, GlobalPoolingLayer
+from net_modules import ModelConfig, ModuleSpec, GlobalPoolingLayer
 from util.torch_util import Shape
 
 

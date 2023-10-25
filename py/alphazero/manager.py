@@ -52,7 +52,7 @@ from alphazero.data.games_dataset import GamesDataset
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
 from games import GameType
-from res_net_modules import Model
+from net_modules import Model
 from util import subprocess_util
 from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo

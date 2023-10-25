@@ -1,25 +1,25 @@
 import math
 
-from res_net_modules import ModelConfig, ModuleSpec, GlobalPoolingLayer
+from net_modules import ModelConfig, ModuleSpec, GlobalPoolingLayer
 from util.torch_util import Shape
 
 
-NUM_COLUMNS = 7
-NUM_ROWS = 6
-NUM_COLORS = 2
+BOARD_LENGTH = 8
+NUM_SQUARES = BOARD_LENGTH * BOARD_LENGTH
 NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-def c4_b19_c64(input_shape: Shape):
+def othello_b19_c64(input_shape: Shape):
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_shape = (NUM_COLUMNS, )
+    policy_shape = (NUM_SQUARES,)
     c_trunk = 64
     c_mid = 64
     c_neck_spatial = 64
     c_neck_gpool = 64
     c_neck_gpool_out = GlobalPoolingLayer.NUM_CHANNELS * c_neck_gpool
+    c_score_margin_hidden = 128
 
     return ModelConfig(
         input_shape=input_shape,
@@ -56,9 +56,11 @@ def c4_b19_c64(input_shape: Shape):
         heads=[
             ModuleSpec(type='PolicyHead',
                        args=['policy', board_size, c_neck_spatial, policy_shape]),
-            ModuleSpec(type='ValueHead', args=['value', c_neck_gpool_out, NUM_COLORS]),
+            ModuleSpec(type='ValueHead', args=['value', c_neck_gpool_out, NUM_PLAYERS]),
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_neck_spatial, policy_shape]),
+            ModuleSpec(type='ScoreMarginHead',
+                       args=['score_margin', c_neck_gpool_out, c_score_margin_hidden, NUM_SQUARES]),
             ModuleSpec(type='OwnershipHead',
                        args=['ownership', c_neck_spatial, NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES]),
             ],
@@ -67,12 +69,13 @@ def c4_b19_c64(input_shape: Shape):
             'policy': 1.0,
             'value': 1.5,
             'opp_policy': 0.15,
+            'score_margin': 0.02,
             'ownership': 0.15
             },
         )
 
 
-C4_MODEL_CONFIGS = {
-    'c4_b19_c64': c4_b19_c64,
-    'default': c4_b19_c64,
+OTHELLO_MODEL_CONFIGS = {
+    'othello_b19_c64': othello_b19_c64,
+    'default': othello_b19_c64,
 }
