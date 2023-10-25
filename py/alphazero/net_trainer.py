@@ -1,7 +1,8 @@
 from typing import List
 import torch
 from alphazero.data.games_dataset import GamesDataset
-from neural_net import LearningTarget, NeuralNet
+from res_net_modules import Head, Model
+from neural_net import LearningTarget
 from torch import optim
 from util.py_util import timed_print
 from util.torch_util import apply_mask
@@ -23,8 +24,9 @@ class EvaluationResults:
 class TrainingSubStats:
     max_descr_len = 0
 
-    def __init__(self, target: LearningTarget):
-        self.target = target
+    def __init__(self, head: Head, loss_weight: float):
+        self.head = head
+        self.loss_weight = loss_weight
         self.accuracy_num = 0.0
         self.loss_num = 0.0
         self.den = 0
@@ -33,11 +35,12 @@ class TrainingSubStats:
 
     @property
     def descr(self) -> str:
-        return self.target.name
+        return self.head.name
 
     def update(self, results: EvaluationResults):
         n = len(results)
-        self.accuracy_num += self.target.get_num_correct_predictions(results.outputs, results.labels)
+        self.accuracy_num += self.head.target.get_num_correct_predictions(
+            results.outputs, results.labels)
         self.loss_num += float(results.loss.item()) * n
         self.den += n
 
@@ -53,7 +56,7 @@ class TrainingSubStats:
         output.append('   | accuracy: %8.6f   ' % self.accuracy())
 
         loss = self.loss()
-        weight = self.target.loss_weight
+        weight = self.loss_weight
         loss_pct = 100. * loss * weight / total_loss if total_loss else 0.0
         output.append('loss: %8.6f * %5.3f = %8.6f [%6.3f%%]' % (
             loss, weight, loss * weight, loss_pct))
@@ -69,8 +72,9 @@ class TrainingSubStats:
 
 
 class TrainingStats:
-    def __init__(self, net: NeuralNet):
-        self.substats_list = [TrainingSubStats(target) for target in net.learning_targets]
+    def __init__(self, net: Model):
+        self.substats_list = [TrainingSubStats(head, net.loss_weights[head.name])
+                              for head in net.heads]
 
     def update(self, results_list: List[EvaluationResults]):
         for results, substats in zip(results_list, self.substats_list):
@@ -79,7 +83,7 @@ class TrainingStats:
     def dump(self):
         total_loss = 0
         for substats in self.substats_list:
-            total_loss += substats.loss() * substats.target.loss_weight
+            total_loss += substats.loss() * substats.loss_weight
 
         for substats in self.substats_list:
             substats.dump(total_loss)
@@ -100,7 +104,7 @@ class NetTrainer:
 
     def do_training_epoch(self,
                           loader: torch.utils.data.DataLoader,
-                          net: NeuralNet,
+                          net: Model,
                           optimizer: optim.Optimizer,
                           games_dataset: GamesDataset):
         """
@@ -109,9 +113,13 @@ class NetTrainer:
         loader has been processed, whichever comes first. If self.n_minibatches_to_process is
         negative, that is treated like infinity.
         """
-        games_dataset.set_key_order(net.target_names())
+        games_dataset.set_key_order(net.target_names)
 
-        loss_fns = [target.loss_fn() for target in net.learning_targets]
+        loss_fns = []
+        loss_weights = []
+        for head in net.heads:
+            loss_fns.append(head.target.loss_fn())
+            loss_weights.append(net.loss_weights[head.name])
 
         suffix = ''
         if self.n_minibatches_processed:
@@ -141,7 +149,7 @@ class NetTrainer:
             loss_list = [loss_fn(outputs, labels) for loss_fn, outputs, labels in
                             zip(loss_fns, outputs_list, labels_list)]
 
-            loss = sum([loss * target.loss_weight for loss, target in zip(loss_list, net.learning_targets)])
+            loss = sum([loss * loss_weight for loss, loss_weight in zip(loss_list, loss_weights)])
 
             results_list = [EvaluationResults(labels, outputs, loss) for labels, outputs, loss in
                             zip(labels_list, outputs_list, loss_list)]

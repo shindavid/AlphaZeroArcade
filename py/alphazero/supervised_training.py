@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch import optim
 
 import games
+from res_net_modules import Model
 from alphazero.data.games_dataset import GamesDataset
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
@@ -17,9 +18,9 @@ from util.py_util import timed_print
 class Args:
     alphazero_dir: str
     tag: str
+    model_cfg: str
     epochs: int
     game: str
-    num_gp_res_blocks: int
     checkpoint_filename: str
     cuda_device_str: str
 
@@ -27,9 +28,9 @@ class Args:
     def load(args):
         Args.alphazero_dir = args.alphazero_dir
         Args.tag = args.tag
+        Args.model_cfg = args.model_cfg
         Args.epochs = args.epochs
         Args.game = args.game
-        Args.num_gp_res_blocks = args.num_gp_res_blocks
         Args.checkpoint_filename = args.checkpoint_filename
         Args.cuda_device_str = args.cuda_device_str
         assert Args.epochs > 0, 'epochs has to be positive'
@@ -40,9 +41,9 @@ def load_args():
     cfg = Config.instance()
 
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
+    parser.add_argument('-m', '--model-cfg', default='default', help='model config (default: %(default)s)')
     parser.add_argument('-e', '--epochs', type=int, default=100, help='the number of epochs')
     parser.add_argument('-g', '--game', help='the game')
-    parser.add_argument('-G', '--num-gp-res-blocks', type=int, default=0, help='num gp res blocks')
     parser.add_argument('-O', '--optimizer', choices=['SGD', 'Adam'], default='SGD', help='optimizer type')
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
@@ -76,12 +77,13 @@ def main():
         checkpoint = torch.load(Args.checkpoint_filename)
 
     if checkpoint:
-        net = game_type.net_type.load_from_checkpoint(checkpoint)
+        net = Model.load_from_checkpoint(checkpoint)
         epoch = checkpoint['epoch']
     else:
         target_names = loader.dataset.get_target_names()
         input_shape = loader.dataset.get_input_shape()
-        net = game_type.net_type(input_shape, target_names, n_gp_res_blocks=Args.num_gp_res_blocks)
+        net = Model(game_type.model_dict[Args.model_cfg](input_shape))
+        net.validate_targets(target_names)
         epoch = 0
 
     net.cuda(Args.cuda_device_str)

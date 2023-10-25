@@ -1,267 +1,497 @@
+"""
+Most of the code in this file is based on classes defined in py/model_pytorch.py in the KataGo
+codebase.
+
+Note that KataGo has the requirement of supporting multiple board-sizes, and this in turn leads to
+some additional complexity in the form of mask operations with additional carefully crated
+normalization steps. We do not have this requirement, which has allowed for some simplifications.
+
+Additionally, KataGo has sophisticated weight initialization and regularization schemes. For now,
+we leave these out, relying on pytorch's defaults.
+
+Note that as a whole, KataGo uses pre-activation residual blocks, while AlphaGo Zero uses
+post-activation residual blocks. We follow KataGo and use pre-activation throughout.
+
+KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
+AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+"""
+import copy
+from dataclasses import dataclass, field
 import math
-from typing import Union
+import os
+from typing import Any, Callable, Dict, List, Optional, Union
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
+from neural_net import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
 from util.torch_util import Shape
 
 
 class GlobalPoolingLayer(nn.Module):
     """
-    From "Accelerating Self-Play Learning in Go" (KataGo paper):
-    The Global Pooling module as described in the paper:
+    This corresponds to KataGPool in the KataGo codebase.
+
+    The KataGo paper describes this layer as:
+
     1. The mean of each channel
     2. The mean of each channel multiplied by 1/10 ( b - b_avg )
     3. The maximum of each channel.
+
     https://arxiv.org/pdf/1902.10565.pdf
+
+    Of these, the second one is only needed because KataGo uses mixed board-sizes. With a fixed
+    board-size, the second one collapses to zero. In our context, then, we omit the second one.
     """
-    def __init__(self, scale=1/10):
+    NUM_CHANNELS = 2  # for KataGo this is 3, see above
+
+    def __init__(self):
         super(GlobalPoolingLayer, self).__init__()
-        self.scale = scale
 
     def forward(self, x):
         g_mean = torch.mean(x, keepdim=True, dim=(2, 3))
-        g_scaled_mean = self.scale * g_mean
-        # g_max shape: NC1
         g_max, _ = torch.max(x.view(x.shape[:2] + (-1,)), dim=-1, keepdim=True)
-        return torch.cat([g_mean, g_scaled_mean, g_max[..., None]], dim=1)
-
-
-class GlobalPoolingBiasStruct(nn.Module):
-    """
-    From "Accelerating Self-Play Learning in Go" (KataGo paper):
-    The  global pooling bias structure as described in the paper:
-    • Input tensors X (shape b x b x cX) and G (shape b x b x cG).
-    • A batch normalization layer and ReLu activation applied to G (output shape b x b x cG).
-    • A global pooling layer (output shape 3cG).
-    • A fully connected layer to cX outputs (output shape cX).
-    • Channelwise addition with X (output shape b x b x cX).
-    https://arxiv.org/pdf/1902.10565.pdf
-    """
-    def __init__(self, g_channels):
-        super(GlobalPoolingBiasStruct, self).__init__()
-        self.global_pool = GlobalPoolingLayer()
-        self.bn = nn.BatchNorm2d(g_channels)
-        self.relu = nn.ReLU()
-        self.fc = nn.Linear(3 * g_channels, g_channels)
-
-    def forward(self, p, g):
-        """
-        (My understanding*) For the policy head:
-        X: the board feature map (b x b x cx)
-        P: output of 1x1 convolution ?
-        G: output of 1x1 convolution ?
-        (Maybe X here becomes P?)
-        GlobalPoolingBiasStruct pools G to bias the output of P
-        """
-        g = self.global_pool(self.relu(self.bn(g)))
-        g = self.fc(g[..., 0, 0])[..., None, None]
-        return p + g
+        return torch.cat([g_mean, g_max[..., None]], dim=1)
 
 
 class ConvBlock(nn.Module):
     """
-    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+    This corresponds to NormActConv with c_gpool=None in the KataGo codebase.
 
-    The convolutional block applies the following modules:
+    The KataGo paper does not explicitly name this block, but its components are described like
+    this:
 
-    1. A convolution of 256 filters of kernel size 3 × 3 with stride 1
+    1. A batch-normalization layer.
+    2. A ReLU activation function.
+    3. A 3x3 convolution outputting c channels.
+
+    For reference, the AlphaGo Zero paper describes the convolutional block as follows:
+
+    1. A convolution of 256 filters of kernel size 3 x 3 with stride 1
     2. Batch normalisation
     3. A rectifier non-linearity
-
-    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
     """
-    def __init__(self, n_input_channels: int, n_conv_filters: int):
+    def __init__(self, c_in: int, c_out: int):
         super(ConvBlock, self).__init__()
-        self.conv = nn.Conv2d(n_input_channels, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
-        self.batch = nn.BatchNorm2d(n_conv_filters)
+        self.norm = nn.BatchNorm2d(c_in)
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_out, kernel_size=3, padding=1, bias=False)
 
     def forward(self, x):
-        return F.relu(self.batch(self.conv(x)))
+        out = x
+        out = self.act(self.norm(out))
+        out = self.conv(out)
+        return out
+
+
+class ConvBlockWithGlobalPooling(nn.Module):
+    """
+    This corresponds to NormActConv with c_gpool!=None in the KataGo codebase. This has no
+    analog in the AlphaGo Zero paper.
+
+    The KataGo paper does not explicitly name this block, but it is described in terms of a
+    "global pooling bias structure", which is described like this:
+
+    - takes input tensors X (shape b x b x cX) and G (shape b x b x cG)
+    - consists of:
+        - A batch normalization layer and ReLU activation applied to G (output shape b x b x cG).
+        - A global pooling layer (output shape 3cG).
+        - A fully connected layer to cX outputs (output shape cX).
+        - Channelwise addition with X, treating the cX values as per-channel biases (output shape
+          b x b x cX)
+
+    It should be noted that there are slight differences between the description in the paper and
+    the implementation in the codebase. We follow the codebase here.
+
+    The KataGo codebase has an intermediate class called KataConvAndGPool corresponding to this
+    global pooling bias structure. Here, that class is effectively merged into this one.
+    """
+    def __init__(self, c_in: int, c_out: int, c_gpool: int):
+        super(ConvBlockWithGlobalPooling, self).__init__()
+        self.norm = nn.BatchNorm2d(c_in)
+        self.norm_g = nn.BatchNorm2d(c_gpool)
+        self.act = F.relu
+        self.conv_r = nn.Conv2d(c_in, c_out, kernel_size=3, padding=1, bias=False)
+        self.conv_g = nn.Conv2d(c_in, c_gpool, kernel_size=3, padding=1, bias=False)
+        self.pool_g = GlobalPoolingLayer()
+        self.linear_g = nn.Linear(GlobalPoolingLayer.NUM_CHANNELS * c_gpool, c_out, bias=False)
+
+    def forward(self, x):
+        out = x
+        out = self.act(self.norm(out))
+
+        out_r = self.conv_r(out)
+
+        out_g = self.conv_g(out)
+        out_g = self.act(self.norm_g(out_g))
+        out_g = self.pool_g(out_g).squeeze(-1).squeeze(-1)
+        out_g = self.linear_g(out_g).unsqueeze(-1).unsqueeze(-1)
+
+        out = out_r + out_g
+        return out
 
 
 class ResBlock(nn.Module):
     """
-    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+    This corresponds to ResBlock with c_gpool=None in the KataGo codebase. As in the KataGo
+    codebase, we construct this by composing ConvBlock's. By contrast, the AlphaGo Zero paper
+    describes this independently of their ConvBlock description.
 
-    Each residual block applies the following modules sequentially to its input:
-
-    1. A convolution of 256 filters of kernel size 3 × 3 with stride 1
-    2. Batch normalisation
-    3. A rectifier non-linearity
-    4. A convolution of 256 filters of kernel size 3 × 3 with stride 1
-    5. Batch normalisation
-    6. A skip connection that adds the input to the block
-    7. A rectifier non-linearity
-
-    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
+    Both the KataGo paper and the AlphaGo Zero paper effectively describe this block as a
+    composition of two ConvBlocks with a skip connection.
     """
-    def __init__(self, n_conv_filters: int):
+    def __init__(self, name: str, c_in_out: int, c_mid: int):
         super(ResBlock, self).__init__()
-        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
-        self.batch1 = nn.BatchNorm2d(n_conv_filters)
-        self.conv2 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
-        self.batch2 = nn.BatchNorm2d(n_conv_filters)
+        self.name = name
+        self.conv1 = ConvBlock(c_in_out, c_mid)
+        self.conv2 = ConvBlock(c_mid, c_in_out)
 
     def forward(self, x):
-        identity = x
-        out = F.relu(self.batch1(self.conv1(x)))
-        out = self.batch2(self.conv2(out))
-        out += identity  # skip connection
-        return F.relu(out)
+        out = x
+        out = self.conv1(out)
+        out = self.conv2(out)
+        return x + out
 
 
-class GPResBlock(nn.Module):
+class ResBlockWithGlobalPooling(nn.Module):
     """
-    From "Accelerating Self-Play Learning in Go" (KataGo paper):
-    The residual block with global pooling bias structure as described in the paper
-    https://arxiv.org/pdf/1902.10565.pdf
+    This corresponds to ResBlock with c_gpool!=None in the KataGo codebase. This has no
+    analog in the AlphaGo Zero paper.
     """
-    def __init__(self, n_conv_filters: int):
-        super(GPResBlock, self).__init__()
-        assert n_conv_filters % 2 == 0, 'n_conv_filters has to be even'
-        self.c_mid = n_conv_filters // 2
-        self.gpbs = GlobalPoolingBiasStruct(self.c_mid)
-        self.conv1 = nn.Conv2d(n_conv_filters, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
-        self.batch1 = nn.BatchNorm2d(n_conv_filters)
-        self.conv2 = nn.Conv2d(self.c_mid, n_conv_filters, kernel_size=3, stride=1, padding=1, bias=False)
-        self.batch2 = nn.BatchNorm2d(n_conv_filters)
+    def __init__(self, c_in_out: int, c_mid_total: int, c_mid_gp: int):
+        super(ResBlockWithGlobalPooling, self).__init__()
+        assert 0 < c_mid_gp < c_mid_total
+        self.conv1 = ConvBlockWithGlobalPooling(c_in_out, c_mid_total - c_mid_gp, c_mid_gp)
+        self.conv2 = ConvBlock(c_mid_total - c_mid_gp, c_in_out)
 
     def forward(self, x):
-        identity = x
-        # outputs [N, C, H, W]
-        out = F.relu(self.batch1(self.conv1(x)))
-        # use first c_pool layers, to bias the the other part 
-        # outputs [N, Cp, H, W]
-        # return torch.zeros(0)
-        out = self.gpbs(out[:, self.c_mid:], out[:, :self.c_mid])
-        # outputs [N, C, H, W]
-        out = self.batch2(self.conv2(out))
-        out += identity  # skip connection
-        return F.relu(out)
+        out = x
+        out = self.conv1(out)
+        out = self.conv2(out)
+        return x + out
 
 
-class PolicyHead(nn.Module):
+class Neck(nn.Module):
     """
-    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+    A layer connecting the output of the residual blocks to the heads (policy, value, and aux). This
+    does not exist in KataGo; we construct it by pulling out components from KataGo's ValueHead
+    and PolicyHead. Specifically, we have this layer compute 3 components:
 
-    The policy head applies the following modules:
+    S:  spatial info
+    G:  globally pooled info
+    SG: spacial info mixed with globally pooled info
 
-    1. A convolution of 2 filters of kernel size 1 × 1 with stride 1
+    We introduce this layer for increased modularity with respect to the heads.
+    """
+    def __init__(self, c_in: int, c_spatial: int, c_gpool: int):
+        super(Neck, self).__init__()
+
+        self.act = F.relu
+        self.conv_s = nn.Conv2d(c_in, c_spatial, kernel_size=1, bias=False)
+        self.conv_g = nn.Conv2d(c_in, c_gpool, kernel_size=1, bias=True)
+        self.pool_g = GlobalPoolingLayer()
+        self.linear_g = nn.Linear(GlobalPoolingLayer.NUM_CHANNELS * c_gpool, c_spatial, bias=True)
+
+    def forward(self, x):
+        out_s = self.conv_s(x)
+
+        out_g = self.conv_g(x)
+        out_g = self.act(out_g)
+        out_g = self.pool_g(out_g).squeeze(-1).squeeze(-1)
+
+        out_sg = out_s + self.linear_g(out_g).unsqueeze(-1).unsqueeze(-1)
+        out_sg = self.act(out_sg)
+        return out_s, out_g, out_sg
+
+
+class Head(nn.Module):
+    def __init__(self, name: str, target: LearningTarget):
+        super(Head, self).__init__()
+
+        self.name = name
+        self.target = target
+
+
+class PolicyHead(Head):
+    """
+    This, together with Neck, corresponds to the policy-subhead of PolicyHead in the KataGo
+    codebase.
+
+    KataGo uses a Conv2d for its final layer, with special handling for the pass move. We currently
+    match AlphaGo and use a Linear layer instead, as this generalizes better to games where the
+    policy shape does not match the board shape. Later we should make this more flexible so that
+    we can match KataGo if we desire.
+
+    For reference, the AlphaGo Zero paper describes the policy head as follows:
+
+    1. A convolution of 2 filters of kernel size 1 x 1 with stride 1
     2. Batch normalisation
     3. A rectifier non-linearity
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
-
-    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
-
-    According to the Oracle blog post, both the Oracle dev team and the LeelaChess dev team found
-    that increasing the number of filters to 32 in the output head significantly sped up
-    training, so we do the same here.
     """
-    def __init__(self, board_size: int, policy_shape: Union[Shape, int], n_input_channels: int,
-                 n_filters=2):
-        super(PolicyHead, self).__init__()
+    def __init__(self, name: str, board_size: int, c_in: int, policy_shape: Union[Shape, int]):
+        super(PolicyHead, self).__init__(name, PolicyTarget())
+
         policy_shape = tuple([policy_shape]) if isinstance(policy_shape, int) else policy_shape
-        self.board_size = board_size
         self.policy_shape = policy_shape
         self.policy_size = math.prod(policy_shape)
-        self.n_filters = n_filters
+        self.board_size = board_size
+        self.c_in = c_in
+        self.linear = nn.Linear(c_in * board_size, self.policy_size)
+        self.conv = nn.Conv2d(c_in, self.policy_size, kernel_size=1, bias=False)
 
-        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(n_filters)
-        self.linear = nn.Linear(n_filters * board_size, self.policy_size)
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.batch(x)
-        x = F.relu(x)
-        x = x.view(-1, self.n_filters * self.board_size)
-        x = self.linear(x)
-        x = x.view(-1, *self.policy_shape)
-        return x
+    def forward(self, s, g, sg):
+        out = sg
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        out = out.view(-1, *self.policy_shape)
+        return out
 
 
-class ValueHead(nn.Module):
+class ValueHead(Head):
     """
-    From "Mastering the Game of Go without Human Knowledge" (AlphaGo Zero paper):
+    This, together with Neck, corresponds to the value-subhead ValueHead in the KataGo codebase.
 
-    The value head applies the following modules:
+    Note that while AlphaGo used a scalar output for the value head, KataGo uses a length-3 logit
+    vector, corresponding to {win, loss, draw} probabilities.
 
-    1. A convolution of 1 filter of kernel size 1 × 1 with stride 1
+    Because we support p-player games, generalizing KataGo's approach seems like it might be
+    unwieldy, as we would need exponentially many outputs corresponding to all the different
+    possible draw-combinations that could occur in arbitrary p-player games. We instead generalize
+    AlphaGo's representation, using a length-p logit vector, corresponding to each player's
+    expected win-share.
+
+    For reference, the AlphaGo Zero paper describes the value head as follows:
+
+    1. A convolution of 1 filter of kernel size 1 x 1 with stride 1
     2. Batch normalisation
     3. A rectifier non-linearity
     4. A fully connected linear layer to a hidden layer of size 256
     5. A rectifier non-linearity
     6. A fully connected linear layer to a scalar
-    7. A tanh non-linearity outputting a scalar in the range [−1, 1]
-
-    https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
-
-    Here, we are choosing to replace the scalar with a length-p array to generalize for p-player games. The output
-    will be interpreted as logit probabilities for the corresponding player's expected win shares.
-
-    According to the Oracle blog post, both the Oracle dev team and the LeelaChess dev team found
-    that increasing the number of filters to 32 in the output head significantly sped up
-    training, so we do the same here.
+    7. A tanh non-linearity outputting a scalar in the range [-1, 1]
     """
-    def __init__(self, board_size: int, n_players: int, n_input_channels: int,
-                 n_filters=1):
-        super(ValueHead, self).__init__()
-        self.board_size = board_size
-        self.n_filters = n_filters
+    def __init__(self, name: str, c_in: int, n_players: int):
+        super(ValueHead, self).__init__(name, ValueTarget())
 
-        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(n_filters)
-        self.linear1 = nn.Linear(n_filters * board_size, 256)
-        self.linear2 = nn.Linear(256, n_players)
+        self.linear = nn.Linear(c_in, n_players)
+
+    def forward(self, s, g, sg):
+        return self.linear(g)
+
+
+class ScoreMarginHead(Head):
+    def __init__(self, name: str, c_in: int, c_hidden: int, max_score_margin: int,
+                 min_score_margin: Optional[int]=None):
+        target = ScoreMarginTarget(max_score_margin, min_score_margin)
+        super(ScoreMarginHead, self).__init__(name, target)
+
+        min_score_margin = -max_score_margin if min_score_margin is None else min_score_margin
+        n_possible_score_margins = max_score_margin - min_score_margin + 1
+        self.linear1 = nn.Linear(c_in, c_hidden)
+        self.linear2 = nn.Linear(c_hidden, n_possible_score_margins)
+        self.act = F.relu
+
+    def forward(self, s, g, sg):
+        out = g
+        out = self.linear1(out)
+        out = self.act(out)
+        out = self.linear2(out)
+        return out
+
+
+class OwnershipHead(Head):
+    def __init__(self, name: str, c_in: int, n_possible_owners: int):
+        super(OwnershipHead, self).__init__(name, OwnershipTarget())
+
+        self.conv = nn.Conv2d(c_in, n_possible_owners, kernel_size=1, bias=False)
+
+    def forward(self, s, g, sg):
+        """
+        We have this operate on s, rather than the richer sg, to match KataGo.
+
+        TODO: try operating on sg instead. If this is not worse, then we can remove s from the
+        Neck output.
+        """
+        return self.conv(s)
+
+
+MODULE_MAP = {
+    'ConvBlock': ConvBlock,
+    'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
+    'ResBlock': ResBlock,
+    'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
+    'Neck': Neck,
+    'PolicyHead': PolicyHead,
+    'ValueHead': ValueHead,
+    'ScoreMarginHead': ScoreMarginHead,
+    'OwnershipHead': OwnershipHead,
+    }
+
+
+@dataclass
+class ModuleSpec:
+    type: str
+    args: list = field(default_factory=list)
+    kwargs: dict = field(default_factory=dict)
+
+
+@dataclass
+class ModelConfig:
+    input_shape: Shape
+    stem: ModuleSpec
+    blocks: List[ModuleSpec]
+    neck: ModuleSpec
+    heads: List[ModuleSpec]
+    loss_weights: Dict[str, float]
+
+    def validate(self):
+        for spec in [self.stem] + self.blocks + [self.neck] + self.heads:
+            assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
+
+
+ModelConfigGenerator = Callable[[Shape], ModelConfig]
+
+
+class Model(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super(Model, self).__init__()
+
+        config.validate()
+
+        self.config = config
+        self.input_shape = config.input_shape
+        self.stem = Model._construct_module(config.stem)
+        self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
+        self.neck = Model._construct_module(config.neck)
+        self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
+        self.loss_weights = config.loss_weights
+
+        self.validate()
+
+    @property
+    def learning_targets(self) -> List[LearningTarget]:
+        return [head.target for head in self.heads]
+
+    @property
+    def target_names(self) -> List[str]:
+        return [head.name for head in self.heads]
 
     def forward(self, x):
-        x = F.relu(self.batch(self.conv(x)))
-        x = x.view(-1, self.n_filters * self.board_size)
-        x = F.relu(self.linear1(x))
-        x = self.linear2(x)
-        return x
+        out = x
+        out = self.stem(out)
+        for block in self.blocks:
+            out = block(out)
+        out = self.neck(out)
+        return tuple(head(*out) for head in self.heads)
 
+    @staticmethod
+    def _construct_module(spec: ModuleSpec) -> nn.Module:
+        cls = MODULE_MAP[spec.type]
+        return cls(*spec.args, **spec.kwargs)
 
-class ScoreMarginHead(nn.Module):
-    def __init__(self, board_size: int, n_possible_score_margins: int, n_input_channels: int,
-                 n_filters=1):
-        super(ScoreMarginHead, self).__init__()
-        self.board_size = board_size
-        self.n_filters = n_filters
-        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(n_filters)
-        self.linear1 = nn.Linear(board_size * n_filters, 256)
-        self.linear2 = nn.Linear(256, n_possible_score_margins)
+    def validate(self):
+        head_names = set()
+        for head in self.heads:
+            assert head.name not in head_names, f'Head with name {head.name} already exists'
+            head_names.add(head.name)
 
-    def forward(self, x):
-        x = F.relu(self.batch(self.conv(x)))
-        x = x.view(-1, self.n_filters * self.board_size)
-        x = F.relu(self.linear1(x))
-        x = self.linear2(x)
-        return x
+        assert self.heads[0].name == 'policy', 'The first head must be the policy head'
+        assert self.heads[1].name == 'value', 'The second head must be the value head'
 
+        for name in self.loss_weights:
+            assert name in head_names, f'Loss weight for unknown head {name}'
 
-class OwnershipHead(nn.Module):
-    def __init__(self, board_size: int, output_shape: Shape, n_input_channels: int,
-                 n_filters=2):
-        super(OwnershipHead, self).__init__()
-        self.board_size = board_size
-        self.n_filters = n_filters
-        self.output_shape = output_shape
-        self.output_size = math.prod(output_shape)
+        for name in head_names:
+            assert name in self.loss_weights, f'Loss weight missing for head {name}'
 
-        self.conv = nn.Conv2d(n_input_channels, n_filters, kernel_size=1, stride=1, bias=False)
-        self.batch = nn.BatchNorm2d(n_filters)
-        self.linear = nn.Linear(n_filters * board_size, self.output_size)
+    def validate_targets(self, targets: List[str]):
+        for target in targets:
+            assert target in self.loss_weights, f'Unknown target {target}'
+        for target in self.loss_weights:
+            assert target in targets, f'Missing target {target}'
 
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.batch(x)
-        x = F.relu(x)
-        x = x.view(-1, self.n_filters * self.board_size)
-        x = self.linear(x)
-        x = x.view(-1, *self.output_shape)
-        return x
+    @classmethod
+    def load_model(cls, filename: str, device = 'cuda', verbose: bool = False,
+                   eval_mode: bool = True,
+                   set_grad_enabled: Optional[bool] = None) -> torch.jit.ScriptModule:
+        """
+        Loads a model previously saved to disk via save(). This uses torch.jit.load(), which
+        returns a torch.jit.ScriptModule, which looks/feels/sounds like nn.Module, but is not
+        exactly the same thing.
+
+        If set_grad_enabled is None (default), then calls torch.set_grad_enabled(False) if
+        eval_mode is True. Note that this mutates torch's global state.
+        """
+        if verbose:
+            print(f'Loading model from {filename}')
+
+        net = torch.jit.load(filename)
+        net.to(device)
+        set_grad_enabled = not eval_mode if set_grad_enabled is None else set_grad_enabled
+        if set_grad_enabled:
+            torch.set_grad_enabled(False)
+
+        if eval_mode:
+            net.eval()
+        else:
+            net.train()
+
+        if verbose:
+            print(f'Model successfully loaded!')
+        return net
+
+    def save_model(self, filename: str, verbose: bool = False):
+        """
+        Saves this network to disk, from which it can be loaded either by c++ or by python. Uses the
+        torch.jit.trace() function to accomplish this.
+
+        Note that prior to saving, we "freeze" the model, by switching it to eval mode and disabling
+        gradient. The documentation seems to imply that this is an important step:
+
+        "...In the returned :class:`ScriptModule`, operations that have different behaviors in
+          ``training`` and ``eval`` modes will always behave as if it is in the mode it was in
+          during tracing, no matter which mode the `ScriptModule` is in..."
+
+        In order to avoid modifying self during the save() call, we actually deepcopy self and then
+        do the freeze and trace on the copy.
+        """
+        output_dir = os.path.split(filename)[0]
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        clone = copy.deepcopy(self)
+
+        # strip all aux heads to avoid unnecessary c++ computation
+        clone.heads = clone.heads[:2]
+
+        clone.to('cpu')
+        clone.eval()
+        forward_shape = tuple([1] + list(self.input_shape))
+        example_input = torch.zeros(forward_shape)
+        mod = torch.jit.trace(clone, example_input)
+        mod.save(filename)
+        if verbose:
+            print(f'Model saved to {filename}')
+
+    @staticmethod
+    def load_from_checkpoint(checkpoint: Dict[str, Any]) -> 'Model':
+        """
+        Load a model from a checkpoint. Inverse of add_to_checkpoint().
+        """
+        model_state_dict = checkpoint['model.state_dict']
+        config = checkpoint['model.config']
+        model = Model(config)
+        model.load_state_dict(model_state_dict)
+        return model
+
+    def add_to_checkpoint(self, checkpoint: Dict[str, Any]):
+        """
+        Save the current state of this neural net to a checkpoint, so that it can be loaded later
+        via load_from_checkpoint().
+        """
+        checkpoint.update({
+            'model.state_dict': self.state_dict(),
+            'model.config': self.config,
+        })

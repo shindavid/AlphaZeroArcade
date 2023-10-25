@@ -1,55 +1,81 @@
 import math
-from typing import Any, Dict, List
 
-import torch
-from torch import nn as nn
-
-from neural_net import NeuralNet, PolicyTarget, ValueTarget, ScoreMarginTarget, OwnershipTarget
-from res_net_modules import ConvBlock, GPResBlock, ResBlock, PolicyHead, ValueHead, ScoreMarginHead, OwnershipHead
-from util.py_util import get_function_arguments
+from res_net_modules import ModelConfig, ModuleSpec, GlobalPoolingLayer
 from util.torch_util import Shape
 
 
 BOARD_LENGTH = 8
 NUM_SQUARES = BOARD_LENGTH * BOARD_LENGTH
-NUM_ACTIONS = NUM_SQUARES + 1  # + 1 for pass
-NUM_POSSIBLE_SCORE_MARGINS = NUM_SQUARES * 2 + 1
 NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-class OthelloNet(NeuralNet):
-    VALID_TARGET_NAMES = ['policy', 'value', 'opp_policy', 'ownership', 'score_margin']
+def othello_b19_c64(input_shape: Shape):
+    board_shape = input_shape[1:]
+    board_size = math.prod(board_shape)
+    policy_shape = (NUM_SQUARES,)
+    c_trunk = 64
+    c_mid = 64
+    c_neck_spatial = 64
+    c_neck_gpool = 64
+    c_neck_gpool_out = GlobalPoolingLayer.NUM_CHANNELS * c_neck_gpool
+    c_score_margin_hidden = 128
 
-    def __init__(self, input_shape: Shape, target_names: List[str], n_conv_filters=64,
-                 n_res_blocks=19, n_gp_res_blocks=0):
-        for name in target_names:
-            assert name in OthelloNet.VALID_TARGET_NAMES, name
+    return ModelConfig(
+        input_shape=input_shape,
 
-        super(OthelloNet, self).__init__(input_shape, get_function_arguments(ignore='self'))
-        board_size = math.prod(input_shape[1:])
-        self.n_conv_filters = n_conv_filters
-        self.n_res_blocks = n_res_blocks
-        self.conv_block = ConvBlock(input_shape[0], n_conv_filters)
-        self.res_blocks = nn.ModuleList(
-            [ResBlock(n_conv_filters) for _ in range(n_res_blocks - n_gp_res_blocks)] +
-            [GPResBlock(n_conv_filters) for _ in range(n_gp_res_blocks)]
-            )
+        stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
-        self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('policy', 1.0))
-        self.add_head(ValueHead(board_size, NUM_PLAYERS, n_conv_filters), ValueTarget('value', 1.5))
-        if 'opp_policy' in target_names:
-            self.add_head(PolicyHead(board_size, NUM_ACTIONS, n_conv_filters), PolicyTarget('opp_policy', 0.15))
-        if 'score_margin' in target_names:
-            self.add_head(ScoreMarginHead(board_size, NUM_POSSIBLE_SCORE_MARGINS, n_conv_filters),
-                          ScoreMarginTarget('score_margin', 0.02, NUM_SQUARES))
-        if 'ownership' in target_names:
-            shape = (NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES, BOARD_LENGTH, BOARD_LENGTH)
-            self.add_head(OwnershipHead(board_size, shape, n_conv_filters),
-                          OwnershipTarget('ownership', 0.15))
+        blocks=[
+            ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block5', c_trunk, c_mid]),
 
-    def forward(self, x):
-        x = self.conv_block(x)
-        for block in self.res_blocks:
-            x = block(x)
-        return tuple(head(x) for head in self.heads)
+            ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block10', c_trunk, c_mid]),
+
+            ModuleSpec(type='ResBlock', args=['block11', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block12', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block13', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block14', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block15', c_trunk, c_mid]),
+
+            ModuleSpec(type='ResBlock', args=['block16', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block18', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
+            ],
+
+        neck=ModuleSpec(type='Neck', args=[c_trunk, c_neck_spatial, c_neck_gpool]),
+
+        heads=[
+            ModuleSpec(type='PolicyHead',
+                       args=['policy', board_size, c_neck_spatial, policy_shape]),
+            ModuleSpec(type='ValueHead', args=['value', c_neck_gpool_out, NUM_PLAYERS]),
+            ModuleSpec(type='PolicyHead',
+                       args=['opp_policy', board_size, c_neck_spatial, policy_shape]),
+            ModuleSpec(type='ScoreMarginHead',
+                       args=['score_margin', c_neck_gpool_out, c_score_margin_hidden, NUM_SQUARES]),
+            ModuleSpec(type='OwnershipHead',
+                       args=['ownership', c_neck_spatial, NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES]),
+            ],
+
+        loss_weights={
+            'policy': 1.0,
+            'value': 1.5,
+            'opp_policy': 0.15,
+            'score_margin': 0.02,
+            'ownership': 0.15
+            },
+        )
+
+
+OTHELLO_MODEL_CONFIGS = {
+    'othello_b19_c64': othello_b19_c64,
+    'default': othello_b19_c64,
+}
