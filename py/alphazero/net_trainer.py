@@ -73,10 +73,12 @@ class TrainingSubStats:
 
 class TrainingStats:
     def __init__(self, net: Model):
+        self.n_samples = 0
         self.substats_list = [TrainingSubStats(head, net.loss_weights[head.name])
                               for head in net.heads]
 
-    def update(self, results_list: List[EvaluationResults]):
+    def update(self, results_list: List[EvaluationResults], n_samples):
+        self.n_samples += n_samples
         for results, substats in zip(results_list, self.substats_list):
             substats.update(results)
 
@@ -106,7 +108,8 @@ class NetTrainer:
                           loader: torch.utils.data.DataLoader,
                           net: Model,
                           optimizer: optim.Optimizer,
-                          games_dataset: GamesDataset):
+                          games_dataset: GamesDataset,
+                          print_sampling_info: bool=True) -> TrainingStats:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -115,17 +118,15 @@ class NetTrainer:
         """
         games_dataset.set_key_order(net.target_names)
 
-        loss_fns = []
-        loss_weights = []
-        for head in net.heads:
-            loss_fns.append(head.target.loss_fn())
-            loss_weights.append(net.loss_weights[head.name])
+        loss_fns = [head.target.loss_fn() for head in net.heads]
+        loss_weights = [net.loss_weights[head.name] for head in net.heads]
 
-        suffix = ''
-        if self.n_minibatches_processed:
-            suffix = f' (minibatches processed: {self.n_minibatches_processed})'
-        timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
-                    f'{games_dataset.n_total_positions} total positions{suffix}')
+        if print_sampling_info:
+          suffix = ''
+          if self.n_minibatches_processed:
+              suffix = f' (minibatches processed: {self.n_minibatches_processed})'
+          timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
+                      f'{games_dataset.n_total_positions} total positions{suffix}')
 
         stats = TrainingStats(net)
         for data in loader:
@@ -151,10 +152,10 @@ class NetTrainer:
 
             loss = sum([loss * loss_weight for loss, loss_weight in zip(loss_list, loss_weights)])
 
-            results_list = [EvaluationResults(labels, outputs, loss) for labels, outputs, loss in
+            results_list = [EvaluationResults(labels, outputs, subloss) for labels, outputs, subloss in
                             zip(labels_list, outputs_list, loss_list)]
 
-            stats.update(results_list)
+            stats.update(results_list, len(inputs))
 
             loss.backward()
             optimizer.step()
@@ -164,7 +165,7 @@ class NetTrainer:
             if self.n_minibatches_processed == self.n_minibatches_to_process:
                 break
 
-        stats.dump()
+        return stats
 
     def dump_timing_stats(self):
         total_time = time.time() - self.t0

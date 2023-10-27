@@ -542,7 +542,8 @@ class AlphaZeroManager:
 
             net, optimizer = self.get_net_and_optimizer(loader)
 
-            trainer.do_training_epoch(loader, net, optimizer, games_dataset)
+            stats = trainer.do_training_epoch(loader, net, optimizer, games_dataset)
+            stats.dump()
             if trainer.n_minibatches_processed >= ModelingArgs.snapshot_steps:
                 break
 
