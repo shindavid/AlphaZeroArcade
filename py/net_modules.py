@@ -171,39 +171,6 @@ class ResBlockWithGlobalPooling(nn.Module):
         return x + out
 
 
-class Neck(nn.Module):
-    """
-    A layer connecting the output of the residual blocks to the heads (policy, value, and aux). This
-    does not exist in KataGo; we construct it by pulling out components from KataGo's ValueHead
-    and PolicyHead. Specifically, we have this layer compute 3 components:
-
-    S:  spatial info
-    G:  globally pooled info
-    SG: spacial info mixed with globally pooled info
-
-    We introduce this layer for increased modularity with respect to the heads.
-    """
-    def __init__(self, c_in: int, c_spatial: int, c_gpool: int):
-        super(Neck, self).__init__()
-
-        self.act = F.relu
-        self.conv_s = nn.Conv2d(c_in, c_spatial, kernel_size=1, bias=False)
-        self.conv_g = nn.Conv2d(c_in, c_gpool, kernel_size=1, bias=True)
-        self.pool_g = GlobalPoolingLayer()
-        self.linear_g = nn.Linear(GlobalPoolingLayer.NUM_CHANNELS * c_gpool, c_spatial, bias=True)
-
-    def forward(self, x):
-        out_s = self.conv_s(x)
-
-        out_g = self.conv_g(x)
-        out_g = self.act(out_g)
-        out_g = self.pool_g(out_g).squeeze(-1).squeeze(-1)
-
-        out_sg = out_s + self.linear_g(out_g).unsqueeze(-1).unsqueeze(-1)
-        out_sg = self.act(out_sg)
-        return out_s, out_g, out_sg
-
-
 class Head(nn.Module):
     def __init__(self, name: str, target: LearningTarget):
         super(Head, self).__init__()
@@ -214,13 +181,33 @@ class Head(nn.Module):
 
 class PolicyHead(Head):
     """
-    This, together with Neck, corresponds to the policy-subhead of PolicyHead in the KataGo
-    codebase.
+    This maps to the main subhead of PolicyHead in the KataGo codebase.
 
-    KataGo uses a Conv2d for its final layer, with special handling for the pass move. We currently
-    match AlphaGo and use a Linear layer instead, as this generalizes better to games where the
-    policy shape does not match the board shape. Later we should make this more flexible so that
-    we can match KataGo if we desire.
+    Per David Wu's advice on our 2023-10-26 Zoom meeting, I am NOT replicating KataGo's head
+    architecture here. Some notes on why:
+
+    - KataGo incorporates a gpool layer, and he says that this only exists because of the need to
+      predict the "pass" move, which is a special consideration in the game of go and not generally
+      applicable to other games. For other games, he feels the gpool layer should not be needed.
+      I asked about global strategic considerations like kos in go, and he says that the global
+      layers in the trunk should propagate that information already.
+
+    - KataGo forgoes a final linear layer in favor of a convolutional layer. This works because the
+      spatial shape of the input matches the spatial shape of the policy output. This is not
+      generally true in all games. In the future, I can allow for specialization in games that share
+      this property by providing a convolution-based policy head class, or perhaps even by making
+      this policy head class automatically default to a convolution when it detects a spatial shape
+      match, but that is premature at this time.
+
+    - He suggested that for a more robust general purpose policy head, we can use an attention
+      layer. If we want to help the network along in games with input-vs-policy spatial match, we
+      can achieve this by initializing the weights of the layer specially. This deserves some
+      careful experimentation if we go this route.
+
+    With that said, we do follow KataGo in the following respects:
+
+    - pre-activation instead of post-activation
+    - no batch-norms
 
     For reference, the AlphaGo Zero paper describes the policy head as follows:
 
@@ -230,19 +217,23 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, name: str, board_size: int, c_in: int, policy_shape: Union[Shape, int]):
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int,
+                 policy_shape: Union[Shape, int]):
         super(PolicyHead, self).__init__(name, PolicyTarget())
 
         policy_shape = tuple([policy_shape]) if isinstance(policy_shape, int) else policy_shape
         self.policy_shape = policy_shape
         self.policy_size = math.prod(policy_shape)
-        self.board_size = board_size
-        self.c_in = c_in
-        self.linear = nn.Linear(c_in * board_size, self.policy_size)
-        self.conv = nn.Conv2d(c_in, self.policy_size, kernel_size=1, bias=False)
 
-    def forward(self, s, g, sg):
-        out = sg
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.linear = nn.Linear(c_hidden * spatial_size, self.policy_size)
+
+    def forward(self, x):
+        out = x
+        out = self.act(out)
+        out = self.conv(out)
+        out = self.act(out)
         out = out.view(out.shape[0], -1)
         out = self.linear(out)
         out = out.view(-1, *self.policy_shape)
@@ -251,16 +242,23 @@ class PolicyHead(Head):
 
 class ValueHead(Head):
     """
-    This, together with Neck, corresponds to the value-subhead ValueHead in the KataGo codebase.
+    This maps to the main subhead of ValueHead in the KataGo codebase.
 
-    Note that while AlphaGo used a scalar output for the value head, KataGo uses a length-3 logit
-    vector, corresponding to {win, loss, draw} probabilities.
+    Per David Wu's advice on our 2023-10-26 Zoom meeting, I am NOT replicating KataGo's head
+    architecture here. Some notes on why:
 
-    Because we support p-player games, generalizing KataGo's approach seems like it might be
-    unwieldy, as we would need exponentially many outputs corresponding to all the different
-    possible draw-combinations that could occur in arbitrary p-player games. We instead generalize
-    AlphaGo's representation, using a length-p logit vector, corresponding to each player's
-    expected win-share.
+    - KataGo collapses the spatial information into a gpool layer, and predicts off of that. He says
+      that this is actually taking advantage of special properties of the game of go: the gpool
+      layer collapses the spatial channels into mean values, and the game of go happens to decide
+      the winner based on comparing mean black ownership vs mean white ownership. If the rules of
+      go were slightly tweaked, the gpool layer would no longer have the appropriate information.
+      A general purpose value head should not rely on this. (Although, we could do the same for the
+      game of Othello.)
+
+    With that said, we do follow KataGo in the following respects:
+
+    - pre-activation instead of post-activation
+    - no batch-norms
 
     For reference, the AlphaGo Zero paper describes the value head as follows:
 
@@ -271,30 +269,72 @@ class ValueHead(Head):
     5. A rectifier non-linearity
     6. A fully connected linear layer to a scalar
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
+
+    Note that while AlphaGo used a scalar output for the value head, KataGo uses a length-3 logit
+    vector, corresponding to {win, loss, draw} probabilities.
+
+    Because we support p-player games, generalizing KataGo's approach seems like it might be
+    unwieldy, as the number of different win/loss/draw combinations in general p-player games is
+    exponential in p. We instead go with a sort of hybrid approach, using a length-p logit vector,
+    corresponding to each player's expected win-share.
+
+    It is worth mentioning that some time ago, David Wu suggested relaxing various assumptions,
+    like zero-sumness, and like fixed-sized rewards for winning/losing. If/when we explore this,
+    we may want to reexamine our expected win-share representation.
+
+    TODO: having 2 linear layers feels unnecessary. Try removing one, perhaps increasing
+    c_hidden to compensate.
     """
-    def __init__(self, name: str, c_in: int, n_players: int):
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
+                 n_players: int):
         super(ValueHead, self).__init__(name, ValueTarget())
 
-        self.linear = nn.Linear(c_in, n_players)
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, n_players)
 
-    def forward(self, s, g, sg):
-        return self.linear(g)
+    def forward(self, x):
+        out = x
+        out = self.act(out)
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear1(out)
+        out = self.act(out)
+        out = self.linear2(out)
+        return out
 
 
 class ScoreMarginHead(Head):
-    def __init__(self, name: str, c_in: int, c_hidden: int, max_score_margin: int,
-                 min_score_margin: Optional[int]=None):
+    """
+    This maps to one of the subheads of ValueHead in the KataGo codebase.
+
+    The actual subhead in KataGo has some intricate scaling complexities which I frankly didn't
+    completely understand. I am instead doing something I feel is reasonable, mimicking the flow of
+    the ValueHead.
+
+    TODO: having 2 linear layers feels unnecessary. Try removing one, perhaps increasing
+    c_hidden to compensate.
+    """
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
+                 max_score_margin: int, min_score_margin: Optional[int]=None):
         target = ScoreMarginTarget(max_score_margin, min_score_margin)
         super(ScoreMarginHead, self).__init__(name, target)
 
         min_score_margin = -max_score_margin if min_score_margin is None else min_score_margin
         n_possible_score_margins = max_score_margin - min_score_margin + 1
-        self.linear1 = nn.Linear(c_in, c_hidden)
-        self.linear2 = nn.Linear(c_hidden, n_possible_score_margins)
         self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, n_possible_score_margins)
 
-    def forward(self, s, g, sg):
-        out = g
+    def forward(self, x):
+        out = x
+        out = self.act(out)
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
         out = self.linear1(out)
         out = self.act(out)
         out = self.linear2(out)
@@ -302,19 +342,32 @@ class ScoreMarginHead(Head):
 
 
 class OwnershipHead(Head):
-    def __init__(self, name: str, c_in: int, n_possible_owners: int):
+    """
+    This maps to one of the subheads of ValueHead in the KataGo codebase.
+
+    For historical reasons, I am mimicking the flow of the PolicyHead for now.
+
+    TODO: try to simplify to just act + conv with n_possible_owners channels.
+    """
+    def __init__(self, name: str, spatial_shape: Shape, c_in: int, c_hidden: int,
+                 n_possible_owners: int):
         super(OwnershipHead, self).__init__(name, OwnershipTarget())
 
-        self.conv = nn.Conv2d(c_in, n_possible_owners, kernel_size=1, bias=False)
+        spatial_size = math.prod(spatial_shape)
+        self.output_shape = (n_possible_owners, *spatial_shape)
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.linear = nn.Linear(c_hidden * spatial_size, n_possible_owners * spatial_size)
 
-    def forward(self, s, g, sg):
-        """
-        We have this operate on s, rather than the richer sg, to match KataGo.
-
-        TODO: try operating on sg instead. If this is not worse, then we can remove s from the
-        Neck output.
-        """
-        return self.conv(s)
+    def forward(self, x):
+        out = x
+        out = self.act(out)
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        out = out.view(-1, *self.output_shape)
+        return out
 
 
 MODULE_MAP = {
@@ -322,7 +375,6 @@ MODULE_MAP = {
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'ResBlock': ResBlock,
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
-    'Neck': Neck,
     'PolicyHead': PolicyHead,
     'ValueHead': ValueHead,
     'ScoreMarginHead': ScoreMarginHead,
@@ -342,12 +394,11 @@ class ModelConfig:
     input_shape: Shape
     stem: ModuleSpec
     blocks: List[ModuleSpec]
-    neck: ModuleSpec
     heads: List[ModuleSpec]
     loss_weights: Dict[str, float]
 
     def validate(self):
-        for spec in [self.stem] + self.blocks + [self.neck] + self.heads:
+        for spec in [self.stem] + self.blocks + self.heads:
             assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
 
 
@@ -364,7 +415,6 @@ class Model(nn.Module):
         self.input_shape = config.input_shape
         self.stem = Model._construct_module(config.stem)
         self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
-        self.neck = Model._construct_module(config.neck)
         self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
         self.loss_weights = config.loss_weights
 
@@ -383,8 +433,7 @@ class Model(nn.Module):
         out = self.stem(out)
         for block in self.blocks:
             out = block(out)
-        out = self.neck(out)
-        return tuple(head(*out) for head in self.heads)
+        return tuple(head(out) for head in self.heads)
 
     @staticmethod
     def _construct_module(spec: ModuleSpec) -> nn.Module:

@@ -1,6 +1,6 @@
 import math
 
-from net_modules import ModelConfig, ModuleSpec, GlobalPoolingLayer
+from net_modules import ModelConfig, ModuleSpec
 from util.torch_util import Shape
 
 
@@ -17,9 +17,11 @@ def c4_b19_c64(input_shape: Shape):
     policy_shape = (NUM_COLUMNS, )
     c_trunk = 64
     c_mid = 64
-    c_neck_spatial = 64
-    c_neck_gpool = 64
-    c_neck_gpool_out = GlobalPoolingLayer.NUM_CHANNELS * c_neck_gpool
+    c_policy_hidden = 2
+    c_opp_policy_hidden = 2
+    c_value_hidden = 1
+    n_value_hidden = 256
+    c_ownership_hidden = 2
 
     return ModelConfig(
         input_shape=input_shape,
@@ -51,16 +53,17 @@ def c4_b19_c64(input_shape: Shape):
             ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
             ],
 
-        neck=ModuleSpec(type='Neck', args=[c_trunk, c_neck_spatial, c_neck_gpool]),
-
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_neck_spatial, policy_shape]),
-            ModuleSpec(type='ValueHead', args=['value', c_neck_gpool_out, NUM_COLORS]),
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+            ModuleSpec(type='ValueHead',
+                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
+                             NUM_PLAYERS]),
             ModuleSpec(type='PolicyHead',
-                       args=['opp_policy', board_size, c_neck_spatial, policy_shape]),
+                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
             ModuleSpec(type='OwnershipHead',
-                       args=['ownership', c_neck_spatial, NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES]),
+                       args=['ownership', board_shape, c_trunk, c_ownership_hidden,
+                             NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES]),
             ],
 
         loss_weights={
