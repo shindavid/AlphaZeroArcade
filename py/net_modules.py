@@ -343,26 +343,19 @@ class OwnershipHead(Head):
     This maps to one of the subheads of ValueHead in the KataGo codebase.
 
     For historical reasons, I am mimicking the flow of the PolicyHead for now.
-
-    TODO: try to simplify to just act + conv with n_possible_owners channels.
     """
-    def __init__(self, name: str, spatial_shape: Shape, c_in: int, c_hidden: int,
-                 n_possible_owners: int):
+    def __init__(self, name: str, c_in: int, c_hidden: int, n_possible_owners: int):
         super(OwnershipHead, self).__init__(name, OwnershipTarget())
 
-        spatial_size = math.prod(spatial_shape)
-        self.output_shape = (n_possible_owners, *spatial_shape)
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-        self.linear = nn.Linear(c_hidden * spatial_size, n_possible_owners * spatial_size)
+        self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.conv2 = nn.Conv2d(c_hidden, n_possible_owners, kernel_size=1, bias=False)
 
     def forward(self, x):
         out = x
-        out = self.conv(out)
+        out = self.conv1(out)
         out = self.act(out)
-        out = out.view(out.shape[0], -1)
-        out = self.linear(out)
-        out = out.view(-1, *self.output_shape)
+        out = self.conv2(out)
         return out
 
 

@@ -20,7 +20,7 @@ def tictactoe_b19_c64(input_shape: Shape):
     c_opp_policy_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
-    c_ownership_hidden = 2
+    c_ownership_hidden = 16
 
     return ModelConfig(
         input_shape=input_shape,
@@ -61,7 +61,7 @@ def tictactoe_b19_c64(input_shape: Shape):
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
             ModuleSpec(type='OwnershipHead',
-                       args=['ownership', board_shape, c_trunk, c_ownership_hidden,
+                       args=['ownership', c_trunk, c_ownership_hidden,
                              NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES]),
             ],
 

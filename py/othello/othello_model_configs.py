@@ -22,7 +22,7 @@ def othello_b19_c64(input_shape: Shape):
     n_value_hidden = 256
     c_score_margin_hidden = 1
     n_score_margin_hidden = 256
-    c_ownership_hidden = 2
+    c_ownership_hidden = 64
 
     return ModelConfig(
         input_shape=input_shape,
@@ -66,7 +66,7 @@ def othello_b19_c64(input_shape: Shape):
                        args=['score_margin', board_size, c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, NUM_SQUARES]),
             ModuleSpec(type='OwnershipHead',
-                       args=['ownership', board_shape, c_trunk, c_ownership_hidden,
+                       args=['ownership', c_trunk, c_ownership_hidden,
                              NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES]),
             ],
 
