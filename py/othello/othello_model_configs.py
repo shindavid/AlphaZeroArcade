@@ -13,7 +13,7 @@ NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 def othello_b19_c64(input_shape: Shape):
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_shape = (NUM_SQUARES,)
+    policy_shape = (NUM_SQUARES + 1,)  # + 1 for pass
     c_trunk = 64
     c_mid = 64
     c_policy_hidden = 2
