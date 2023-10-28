@@ -226,12 +226,11 @@ class PolicyHead(Head):
         self.policy_size = math.prod(policy_shape)
 
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, self.policy_size)
 
     def forward(self, x):
         out = x
-        out = self.act(out)
         out = self.conv(out)
         out = self.act(out)
         out = out.view(out.shape[0], -1)
@@ -290,13 +289,12 @@ class ValueHead(Head):
         super(ValueHead, self).__init__(name, ValueTarget())
 
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, n_players)
 
     def forward(self, x):
         out = x
-        out = self.act(out)
         out = self.conv(out)
         out = self.act(out)
         out = out.view(out.shape[0], -1)
@@ -325,13 +323,12 @@ class ScoreMarginHead(Head):
         min_score_margin = -max_score_margin if min_score_margin is None else min_score_margin
         n_possible_score_margins = max_score_margin - min_score_margin + 1
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, n_possible_score_margins)
 
     def forward(self, x):
         out = x
-        out = self.act(out)
         out = self.conv(out)
         out = self.act(out)
         out = out.view(out.shape[0], -1)
@@ -356,12 +353,11 @@ class OwnershipHead(Head):
         spatial_size = math.prod(spatial_shape)
         self.output_shape = (n_possible_owners, *spatial_shape)
         self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=False)
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear = nn.Linear(c_hidden * spatial_size, n_possible_owners * spatial_size)
 
     def forward(self, x):
         out = x
-        out = self.act(out)
         out = self.conv(out)
         out = self.act(out)
         out = out.view(out.shape[0], -1)
