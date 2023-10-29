@@ -21,7 +21,7 @@ def othello_b19_c64(input_shape: Shape):
     c_value_hidden = 1
     n_value_hidden = 256
     c_score_margin_hidden = 1
-    n_score_margin_hidden = 256
+    n_score_margin_hidden = 32
     c_ownership_hidden = 64
 
     return ModelConfig(
