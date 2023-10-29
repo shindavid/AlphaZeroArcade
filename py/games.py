@@ -1,9 +1,9 @@
-from typing import Type, Optional
+from typing import Dict, Optional
 
-from connect4.connect4_net import C4Net
-from neural_net import NeuralNet
-from othello.othello_net import OthelloNet
-from tictactoe.tictactoe_net import TicTacToeNet
+from net_modules import ModelConfigGenerator
+from connect4.connect4_model_configs import C4_MODEL_CONFIGS
+from othello.othello_model_configs import OTHELLO_MODEL_CONFIGS
+from tictactoe.tictactoe_model_configs import TICTACTOE_MODEL_CONFIGS
 
 
 class ReferencePlayerFamily:
@@ -15,18 +15,18 @@ class ReferencePlayerFamily:
 
 
 class GameType:
-    def __init__(self, name: str, net_type: Type[NeuralNet],
+    def __init__(self, name: str, model_dict: Dict[str, ModelConfigGenerator],
                  reference_player_family: Optional[ReferencePlayerFamily] = None,
                  binary_name: Optional[str] = None):
         self.name = name
-        self.net_type = net_type
+        self.model_dict = model_dict
         self.reference_player_family = reference_player_family
         self.binary_name = binary_name if binary_name is not None else name
 
 
-Connect4 = GameType('c4', C4Net, ReferencePlayerFamily('Perfect', '--strength', 0, 21))
-Othello = GameType('othello', OthelloNet, ReferencePlayerFamily('edax', '--depth', 0, 21))
-TicTacToe = GameType('tictactoe', TicTacToeNet, ReferencePlayerFamily('Perfect', '--strength', 0, 1))
+Connect4 = GameType('c4', C4_MODEL_CONFIGS, ReferencePlayerFamily('Perfect', '--strength', 0, 21))
+Othello = GameType('othello', OTHELLO_MODEL_CONFIGS, ReferencePlayerFamily('edax', '--depth', 0, 21))
+TicTacToe = GameType('tictactoe', TICTACTOE_MODEL_CONFIGS, ReferencePlayerFamily('Perfect', '--strength', 0, 1))
 
 
 ALL_GAME_TYPES = [Connect4, Othello, TicTacToe]

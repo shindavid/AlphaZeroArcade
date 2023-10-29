@@ -64,23 +64,23 @@ class ModelingArgs:
     def add_args(parser: argparse.ArgumentParser):
         group = parser.add_argument_group('alphazero modeling options')
 
-        group.add_argument('-m', '--minibatch-size', type=int, default=256,
+        group.add_argument('--minibatch-size', type=int, default=256,
                            help='minibatch size (default: %(default)s)')
-        group.add_argument('-s', '--snapshot-steps', type=int, default=2048,
+        group.add_argument('--snapshot-steps', type=int, default=2048,
                            help='steps per snapshot (default: %(default)s)')
-        group.add_argument('-A', '--window-alpha', type=float, default=0.75,
+        group.add_argument('--window-alpha', type=float, default=0.75,
                            help='alpha for n_window formula (default: %(default)s)')
-        group.add_argument('-B', '--window-beta', type=float, default=0.4,
+        group.add_argument('--window-beta', type=float, default=0.4,
                            help='beta for n_window formula (default: %(default)s)')
-        group.add_argument('-c', '--window-c', type=int, default=250000,
+        group.add_argument('--window-c', type=int, default=250000,
                            help='c for n_window formula (default: %(default)s)')
-        group.add_argument('-F', '--fixed-window-n', type=int,
+        group.add_argument('--fixed-window-n', type=int,
                            help='if specified, uses this fixed window n instead of the n_window formula')
-        group.add_argument('-M', '--momentum', type=float, default=0.9,
+        group.add_argument('--momentum', type=float, default=0.9,
                            help='momentum (default: %(default)s)')
-        group.add_argument('-w', '--weight-decay', type=float, default=6e-5,
+        group.add_argument('--weight-decay', type=float, default=6e-5,
                            help='weight decay (default: %(default)s)')
-        group.add_argument('-l', '--learning-rate', type=float, default=6e-5,
+        group.add_argument('--learning-rate', type=float, default=6e-5,
                            help='learning rate (default: %(default)s)')
         group.add_argument('-S', '--synchronous-mode', action='store_true',
                            help='synchronous mode (default: asynchronous)')

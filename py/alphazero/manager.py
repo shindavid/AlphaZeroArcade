@@ -52,7 +52,7 @@ from alphazero.data.games_dataset import GamesDataset
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
 from games import GameType
-from neural_net import NeuralNet
+from net_modules import Model
 from util import subprocess_util
 from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo
@@ -162,6 +162,10 @@ class AlphaZeroManager:
 
         self._binary_path_set = False
         self._binary_path = binary_path
+        self.model_cfg = None
+
+    def set_model_cfg(self, model_cfg: str):
+        self.model_cfg = model_cfg
 
     def makedirs(self):
         os.makedirs(self.models_dir, exist_ok=True)
@@ -345,7 +349,7 @@ class AlphaZeroManager:
                 break
             g += 1
 
-    def get_net_and_optimizer(self, loader: 'DataLoader') -> Tuple[NeuralNet, optim.Optimizer]:
+    def get_net_and_optimizer(self, loader: 'DataLoader') -> Tuple[Model, optim.Optimizer]:
         if self._net is not None:
             return self._net, self._opt
 
@@ -353,7 +357,8 @@ class AlphaZeroManager:
         if checkpoint_info is None:
             input_shape = loader.dataset.get_input_shape()
             target_names = loader.dataset.get_target_names()
-            self._net = self.game_type.net_type(input_shape, target_names)
+            self._net = Model(self.game_type.model_dict[self.model_cfg](input_shape))
+            self._net.validate_targets(target_names)
             timed_print(f'Creating new net with input shape {input_shape}')
         else:
             gen = checkpoint_info.generation
@@ -365,7 +370,7 @@ class AlphaZeroManager:
                 tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
                 shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
                 checkpoint = torch.load(tmp_checkpoint_filename)
-                self._net = self.game_type.net_type.load_from_checkpoint(checkpoint)
+                self._net = Model.load_from_checkpoint(checkpoint)
 
         self._net.cuda(device=self.py_cuda_device)
         self._net.train()
@@ -537,7 +542,8 @@ class AlphaZeroManager:
 
             net, optimizer = self.get_net_and_optimizer(loader)
 
-            trainer.do_training_epoch(loader, net, optimizer, games_dataset)
+            stats = trainer.do_training_epoch(loader, net, optimizer, games_dataset)
+            stats.dump()
             if trainer.n_minibatches_processed >= ModelingArgs.snapshot_steps:
                 break
 

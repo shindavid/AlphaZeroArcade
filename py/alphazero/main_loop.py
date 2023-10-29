@@ -14,6 +14,7 @@ class Args:
     game: str
     binary_path: str
     tag: str
+    model_cfg: str
     fork_from: str
     restart_gen: int
 
@@ -23,6 +24,7 @@ class Args:
         Args.game = args.game
         Args.binary_path = args.binary_path
         Args.tag = args.tag
+        Args.model_cfg = args.model_cfg
         Args.fork_from = args.fork_from
         Args.restart_gen = args.restart_gen
         assert Args.game, 'Required option: --game/-g'
@@ -42,6 +44,7 @@ def load_args():
                         'multiple binaries are found in the alphazero dir, then this option is '
                         'required.')
     parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
+    parser.add_argument('-m', '--model-cfg', default='default', help='model config (default: %(default)s)')
     parser.add_argument('-f', '--fork-from', help='tag to fork off of (e.g., "v1", or "v1@100" to fork off of gen 100))')
     parser.add_argument('--restart-gen', type=int, help='gen to resume at')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
@@ -69,6 +72,8 @@ def main():
         manager.fork_from(fork_manager, gen)
     if Args.restart_gen:
         manager.erase_data_after(Args.restart_gen)
+
+    manager.set_model_cfg(Args.model_cfg)
     manager.run(async_mode=not ModelingArgs.synchronous_mode)
 
 

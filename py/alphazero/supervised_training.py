@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch import optim
 
 import games
+from net_modules import Model
 from alphazero.data.games_dataset import GamesDataset
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
@@ -16,20 +17,22 @@ from util.py_util import timed_print
 
 class Args:
     alphazero_dir: str
-    tag: str
-    epochs: int
     game: str
-    num_gp_res_blocks: int
+    tag: str
+    model_cfg: str
+    epochs: int
+    optimizer: str
     checkpoint_filename: str
     cuda_device_str: str
 
     @staticmethod
     def load(args):
         Args.alphazero_dir = args.alphazero_dir
-        Args.tag = args.tag
-        Args.epochs = args.epochs
         Args.game = args.game
-        Args.num_gp_res_blocks = args.num_gp_res_blocks
+        Args.tag = args.tag
+        Args.model_cfg = args.model_cfg
+        Args.epochs = args.epochs
+        Args.optimizer = args.optimizer
         Args.checkpoint_filename = args.checkpoint_filename
         Args.cuda_device_str = args.cuda_device_str
         assert Args.epochs > 0, 'epochs has to be positive'
@@ -39,10 +42,12 @@ def load_args():
     parser = argparse.ArgumentParser()
     cfg = Config.instance()
 
-    parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
-    parser.add_argument('-e', '--epochs', type=int, default=100, help='the number of epochs')
+    # parser.add_argument('-f', '--test-fraction', type=float, default=0.1,
+    #                     help='what fraction of the data to use for testing (default: %(default).2f)')
     parser.add_argument('-g', '--game', help='the game')
-    parser.add_argument('-G', '--num-gp-res-blocks', type=int, default=0, help='num gp res blocks')
+    parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
+    parser.add_argument('-m', '--model-cfg', default='default', help='model config (default: %(default)s)')
+    parser.add_argument('-e', '--epochs', type=int, default=100, help='the number of epochs')
     parser.add_argument('-O', '--optimizer', choices=['SGD', 'Adam'], default='SGD', help='optimizer type')
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
@@ -76,12 +81,13 @@ def main():
         checkpoint = torch.load(Args.checkpoint_filename)
 
     if checkpoint:
-        net = game_type.net_type.load_from_checkpoint(checkpoint)
+        net = Model.load_from_checkpoint(checkpoint)
         epoch = checkpoint['epoch']
     else:
         target_names = loader.dataset.get_target_names()
         input_shape = loader.dataset.get_input_shape()
-        net = game_type.net_type(input_shape, target_names, n_gp_res_blocks=Args.num_gp_res_blocks)
+        net = Model(game_type.model_dict[Args.model_cfg](input_shape))
+        net.validate_targets(target_names)
         epoch = 0
 
     net.cuda(Args.cuda_device_str)
@@ -101,10 +107,17 @@ def main():
         optimizer.load_state_dict(checkpoint['opt.state_dict'])
 
     trainer = NetTrainer(ModelingArgs.snapshot_steps, Args.cuda_device_str)
+    n_samples_processed = 0
     while epoch < Args.epochs:
         trainer.reset()
         print(f'Epoch: {epoch}/{Args.epochs}')
-        trainer.do_training_epoch(loader, net, optimizer, dataset)
+        stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
+        stats.dump()
+        n_samples_processed += stats.n_samples
+        avg_sample_usage = n_samples_processed / dataset.n_window
+        trainer.dump_timing_stats()
+        print('Average sample usage: %.3f' % avg_sample_usage)
+        print('')
 
         if Args.checkpoint_filename:
             checkpoint = {
