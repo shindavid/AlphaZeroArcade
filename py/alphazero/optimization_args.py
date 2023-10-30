@@ -45,7 +45,6 @@ class ModelingArgs:
     momentum: float
     weight_decay: float
     learning_rate: float
-    synchronous_mode: bool
 
     @staticmethod
     def load(args):
@@ -58,7 +57,6 @@ class ModelingArgs:
         ModelingArgs.momentum = args.momentum
         ModelingArgs.weight_decay = args.weight_decay
         ModelingArgs.learning_rate = args.learning_rate
-        ModelingArgs.synchronous_mode = args.synchronous_mode
 
     @staticmethod
     def add_args(parser: argparse.ArgumentParser):
@@ -82,5 +80,3 @@ class ModelingArgs:
                            help='weight decay (default: %(default)s)')
         group.add_argument('--learning-rate', type=float, default=6e-5,
                            help='learning rate (default: %(default)s)')
-        group.add_argument('-S', '--synchronous-mode', action='store_true',
-                           help='synchronous mode (default: asynchronous)')

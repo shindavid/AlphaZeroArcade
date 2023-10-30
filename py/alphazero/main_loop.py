@@ -17,6 +17,7 @@ class Args:
     model_cfg: str
     fork_from: str
     restart_gen: int
+    synchronous_mode: bool
 
     @staticmethod
     def load(args):
@@ -27,6 +28,7 @@ class Args:
         Args.model_cfg = args.model_cfg
         Args.fork_from = args.fork_from
         Args.restart_gen = args.restart_gen
+        Args.synchronous_mode = args.synchronous_mode
         assert Args.game, 'Required option: --game/-g'
         assert Args.tag, 'Required option: --tag/-t'
         assert Args.tag.find('@') == -1, 'Tag cannot contain @'
@@ -47,6 +49,8 @@ def load_args():
     parser.add_argument('-m', '--model-cfg', default='default', help='model config (default: %(default)s)')
     parser.add_argument('-f', '--fork-from', help='tag to fork off of (e.g., "v1", or "v1@100" to fork off of gen 100))')
     parser.add_argument('--restart-gen', type=int, help='gen to resume at')
+    parser.add_argument('-S', '--synchronous-mode', action='store_true',
+                        help='synchronous mode (default: asynchronous)')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
     ModelingArgs.add_args(parser)
 
@@ -74,7 +78,7 @@ def main():
         manager.erase_data_after(Args.restart_gen)
 
     manager.set_model_cfg(Args.model_cfg)
-    manager.run(async_mode=not ModelingArgs.synchronous_mode)
+    manager.run(async_mode=not Args.synchronous_mode)
 
 
 if __name__ == '__main__':
