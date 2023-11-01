@@ -7,13 +7,17 @@ There are many AlphaZero implementations out there, but most of them are for a s
 more generic but at a serious performance cost. This implementation is designed to be maximally generic at minimal
 overhead.
 
+The implementation aims to incorporate as many state-of-the-art ideas and techniques as possible from other projects.
+In particular, it borrows heavily from [KataGo](https://github.com/lightvector/KataGo). In the limit, it hopes to work
+just-as-well as KataGo does for go, while minimizing go-specific details in its implementation.
+
 ## Getting Started
 
 ### Initial setup
 
 The project assumes you are working on a Linux platform. No other OS's will be supported.
 
-It is recommended to create a conda environment for this repo. You can use the project's `environment.yml` for this
+It is recommended to create a conda environment for this repo. You can use the project's `requirements.txt` for this
 purpose.
 
 After creating and activating the conda environment, you must run the following command from the repo root one-time to
@@ -26,7 +30,8 @@ $ cd py; python setup.py develop; cd -
 There are then a few third-party dependencies that are not available in conda/pip that you must download manually. Currently,
 these are libtorch, EigenRand, and tinyexpr. The script `extra_deps/update.sh` downloads those packages and installs them
 in the `extra_deps/` directory. You can install them  into `extra_deps/` by running the script or by manually running a
-subset of the install commands from the script as needed. Alternatively you can install them elsewhere.
+subset of the install commands from the script as needed. Alternatively you can install them elsewhere, or point to existing
+locations if you already have one or more of these packages installed on your machine.
 
 If you wish to test against third-party reference agents for Connect4 or Othello, you need to download other packages
 and build those separately as well; more on that later.
@@ -129,7 +134,9 @@ This will launch an interactive bokeh plot in your web-browser. A sample plot ca
 ### Reference Agents for Connect4 and Othello
 
 If doing the above instructions for c4 or othello instead of tictactoe, you need to download and build binaries.
-The instructions for this can be found in `py/othello/README.md` and `py/connect4/README.md`.
+The instructions for this can be found in 
+[`py/othello/README.md`](https://github.com/shindavid/AlphaZeroArcade/blob/main/py/othello/README.md) and 
+[`py/connect4/README.md`](https://github.com/shindavid/AlphaZeroArcade/blob/main/py/connect4/README.md).
 
 ## Example plots
 
@@ -138,7 +145,7 @@ Here is a plot showing learning progress for the game of Connect4:
 ![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/a8c1edb8-425e-4634-803f-086801aa59cd)
 
 The dark curve corresponds to an MCTS agent using i=1600 iterations per search. The light curve corresponds to an agent
-that plays according to network policy only with no search.
+that plays according to the raw network policy with no search.
 
 In the above, the y-axis is a measure of skill. A skill-level of 13 means that the agent has an approximately 50% win-rate
 against a 13-ply exhaustive tree-search agent. Given that each player makes a maximum of 21 moves in Connect4, 21-ply
@@ -171,7 +178,7 @@ A high-performance MCTS implementation should aim to saturate both GPU and CPU r
 resources are fully saturated, it is common for the PUCT calculation that powers MCTS to become a bottleneck. In order
 to optimize this calculation, it is important for the various tensors involved to have sizes and types known at compile
 time. If the sizes and types are specified at runtime, then the tensor calculations can hide a lot of inefficient
-dynamic memory allocation/deallocation under the hood.
+dynamic memory allocation/deallocation and virtual dispatch under the hood.
 
 Fundamentally, this consideration drove the design of this framework to specify the game type as a template parameter.
 The simpler alternative would have been to use an abstract game-type base class and inheritance, but this would incur
@@ -179,7 +186,7 @@ the performance penalty described above.
 
 Note: most MCTS implementations are for 1-player games or 2-player zero-sum games. In such games, the value of a state
 can be represented as a scalar. This implementation, however, supports n-player games for arbitrary n, and so the value
-is instead represented as a 1D tensor. This is another reason why compile-time knowledge of the game type is important,
+is instead represented as a 1D tensor. This is another reason why compile-time knowledge of the game type helps,
 as otherwise, all value-calculations (which are simply scalar calculations in typical MCTS implementations) would incur
 dynamic memory allocation/deallocation.
 
