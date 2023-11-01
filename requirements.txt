@@ -36,6 +36,7 @@ charset-normalizer=2.1.1=pyhd8ed1ab_0
 cmake=3.24.2=h5432695_0
 colorama=0.4.5=pyhd8ed1ab_0
 contourpy=1.0.7=py310hdf3cbec_0
+coverage=7.3.2=pypi_0
 cryptography=41.0.4=py310h75e40e8_0
 cudatoolkit=11.6.0=hecad31d_10
 cudnn=8.4.1.50=hed8a83a_0
