@@ -6,6 +6,14 @@ import shutil
 from typing import List, Union
 
 
+def is_iterable(obj):
+    try:
+        iter(obj)
+        return True
+    except TypeError:
+        return False
+
+
 _sha256_cache = {}
 
 
