@@ -8,7 +8,7 @@ more generic but at a serious performance cost. This implementation is designed 
 overhead.
 
 The implementation aims to incorporate as many state-of-the-art ideas and techniques as possible from other projects.
-In particular, it borrows heavily from [KataGo](https://github.com/lightvector/KataGo). In the limit, it hopes to work
+In particular, it borrows heavily from [KataGo](https://github.com/lightvector/KataGo). Eventually, it hopes to work
 just-as-well as KataGo does for go, while minimizing go-specific details in its implementation.
 
 ## Getting Started
