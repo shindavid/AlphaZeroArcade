@@ -1,4 +1,5 @@
 import bisect
+import copy
 from typing import Iterable, Optional, Tuple
 
 from util.py_util import is_iterable
@@ -87,19 +88,40 @@ class InfiniteSequence:
             assert self._max_values[i] == max(self._values[i], self._max_values[i + 1])
         assert self._indices[0] == 0
 
-    def to_string(self, delim='\n') -> str:
+    def to_string(self, delim: str, cap=None) -> str:
         """
         Helper to __str__(). This is separated out in order to give greater control over the
         formatting.
-        """
-        tokens = []
-        for i in range(len(self._indices) - 1):
-            start = self._indices[i]
-            end = self._indices[i + 1]
-            value = self._values[i]
-            tokens.append('[%d, %d): %s' % (start, end, self._value_fmt % value))
 
-        tokens.append('[%d, inf): %s' % (self._indices[-1], self._value_fmt % self._values[-1]))
+        delim is used to separate the tokens.
+
+        If cap is specified, then all values that are > cap will be replaced with cap.
+        """
+        indices = self._indices
+        values = self._values
+        if cap is not None:
+            eps = 1e-6  # arbitrary positive constant
+            clone = copy.deepcopy(self)
+            clone._values = [min(v, cap + eps) for v in values]
+            clone._collapse(range(len(indices)))
+            # the max_values invariant is broken after this collapse, but we don't need to fix it
+
+            indices = clone._indices
+            values = clone._values
+
+        tokens = []
+        for i in range(len(indices) - 1):
+            start = indices[i]
+            end = indices[i + 1]
+            value = values[i]
+            suffix = ''
+            if cap is not None and value > cap:
+                # if we got here then eps was added to the value
+                value = cap
+                suffix = '+'
+            tokens.append('[%d, %d): %s%s' % (start, end, self._value_fmt % value, suffix))
+
+        tokens.append('[%d, inf): %s' % (indices[-1], self._value_fmt % values[-1]))
         return delim.join(tokens)
 
     def __str__(self):
