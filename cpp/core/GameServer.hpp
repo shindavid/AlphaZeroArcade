@@ -156,6 +156,8 @@ class GameServer {
   GameServer(const Params& params);
   ~GameServer();
 
+  static void request_shutdown() { shutdown_requested_ = true; }
+
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
    * specified seat.
@@ -187,6 +189,8 @@ class GameServer {
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
   std::thread* kill_thread_ = nullptr;
+
+  static bool shutdown_requested_;
 };
 
 }  // namespace core

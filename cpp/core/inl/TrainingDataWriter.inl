@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 
+#include <core/GameServer.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/StringUtil.hpp>
@@ -38,8 +39,13 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
   namespace po2 = boost_util::program_options;
 
   po2::options_description desc("TrainingDataWriter options");
-  return desc.template add_option<"games-dir", 'g'>(
-      po::value<std::string>(&games_dir)->default_value(games_dir.c_str()), "where to write games");
+  return desc
+      .template add_option<"games-dir", 'g'>(
+          po::value<std::string>(&games_dir)->default_value(games_dir.c_str()),
+          "where to write games")
+      .template add_option<"max-rows", 'M'>(
+          po::value<int64_t>(&max_rows)->default_value(max_rows),
+          "if specified, kill process after writing this many rows");
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -282,6 +288,15 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   // write-then-mv to avoid race-conditions with partially-written files
   torch_util::save(tensor_map, tmp_output_path.string());
   std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
+
+  rows_written_ += rows;
+  if (params_.max_rows > 0 && rows_written_ >= params_.max_rows) {
+    std::cout << "TrainingDataWriter: wrote " << rows_written_ << " rows, exiting" << std::endl;
+
+    // This assumes that we are in the same process as the GameServer, which is true for now. I
+    // don't foresee the assumption being violated.
+    GameServer<GameState>::request_shutdown();
+  }
 }
 
 }  // namespace core
