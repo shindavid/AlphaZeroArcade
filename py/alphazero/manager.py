@@ -40,6 +40,7 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+import time
 from typing import Optional, List, Tuple, Callable
 
 import torch
@@ -48,7 +49,7 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 from alphazero.custom_types import Generation
-from alphazero.data.games_dataset import GamesDataset
+from alphazero.data.games_dataset import  GamesDatasetGenerator, get_katago_sample_size
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
 from games import GameType
@@ -97,26 +98,27 @@ class SelfPlayResults:
 
 
 class SelfPlayProcData:
-    def __init__(self, cmd: str, n_games: int, gen: Generation, games_dir: str):
-        if os.path.exists(games_dir):
-            # This likely means that we are resuming a previous run that already wrote some games to this directory.
-            # In principle, we could make use of those games. However, that complicates the tracking of some stats, like
-            # the total amount of time spent on self-play. Since not a lot of compute/time is spent on each generation,
-            # we just blow away the directory to make our lives simpler
+    def __init__(self, cmd: str, wait_for_completion: bool, gen: Generation, games_dir: str):
+        done_file = os.path.join(games_dir, 'done.txt')
+        if os.path.exists(games_dir) and not os.path.isfile(done_file):
+            # This likely means that we are resuming a previous run that already wrote some games
+            # to this directory. In principle, we could make use of those games. However, that
+            # complicates the tracking of some stats, like the total amount of time spent on
+            # self-play. Since not a lot of compute/time is spent on each generation, we just blow
+            # away the directory to make our lives simpler
             if os.path.islink(games_dir):
                 # remove the sym link
                 os.remove(games_dir)
             else:
-                shutil.rmtree(games_dir)
+                os.system(f'rm -rf {games_dir}')
 
         self.proc_complete = False
         self.proc = subprocess_util.Popen(cmd)
-        self.n_games = n_games
         self.gen = gen
         self.games_dir = games_dir
         timed_print(f'Running gen-{gen} self-play [{self.proc.pid}]: {cmd}')
 
-        if self.n_games:
+        if wait_for_completion:
             self.wait_for_completion()
 
     def terminate(self, timeout: Optional[int] = None, finalize_games_dir=True,
@@ -142,13 +144,10 @@ class SelfPlayProcData:
 class AlphaZeroManager:
     def __init__(self, game_type: GameType, base_dir: str, binary_path: Optional[str] = None):
         self.game_type = game_type
+        self.base_dir: str = base_dir
         self.py_cuda_device: int = 0
         self.log_file = None
         self.self_play_proc_data: Optional[SelfPlayProcData] = None
-
-        self.n_gen0_games = 4000
-        self.n_sync_games = 1000
-        self.base_dir: str = base_dir
 
         self._net = None
         self._opt = None
@@ -163,6 +162,9 @@ class AlphaZeroManager:
         self._binary_path_set = False
         self._binary_path = binary_path
         self.model_cfg = None
+
+        self.dataset_generator = GamesDatasetGenerator(self.self_play_data_dir,
+                                                       ModelingArgs.sample_limit)
 
     def set_model_cfg(self, model_cfg: str):
         self.model_cfg = model_cfg
@@ -349,6 +351,52 @@ class AlphaZeroManager:
                 break
             g += 1
 
+    def load_last_checkpoint(self):
+        """
+        If a prior checkpoint exists, does the following:
+
+        - Sets self._net
+        - Sets self._opt
+        - Sets self.dataset_generator.expected_sample_counts
+        """
+        checkpoint_info = self.get_latest_checkpoint_info()
+        if checkpoint_info is None:
+            return
+
+        gen = checkpoint_info.generation
+        checkpoint_filename = self.get_checkpoint_filename(gen)
+        timed_print(f'Loading checkpoint: {checkpoint_filename}')
+
+        # copying the checkpoint to somewhere local first seems to bypass some sort of
+        # filesystem issue
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
+            shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
+            checkpoint = torch.load(tmp_checkpoint_filename)
+            self._net = Model.load_from_checkpoint(checkpoint)
+            self.dataset_generator.expected_sample_counts = checkpoint['sample_counts']
+
+        self._init_net_and_opt()
+
+    def _init_net_and_opt(self):
+        """
+        Assumes that self._net has been initialized, and that self._opt has not.
+
+        Moves self._net to cuda device and puts it in train mode.
+
+        Initializes self._opt.
+        """
+        self._net.cuda(device=self.py_cuda_device)
+        self._net.train()
+
+        learning_rate = ModelingArgs.learning_rate
+        momentum = ModelingArgs.momentum
+        weight_decay = ModelingArgs.weight_decay
+        self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum,
+                              weight_decay=weight_decay)
+
+        # TODO: SWA, cyclic learning rate
+
     def get_net_and_optimizer(self, loader: 'DataLoader') -> Tuple[Model, optim.Optimizer]:
         if self._net is not None:
             return self._net, self._opt
@@ -359,28 +407,10 @@ class AlphaZeroManager:
             target_names = loader.dataset.get_target_names()
             self._net = Model(self.game_type.model_dict[self.model_cfg](input_shape))
             self._net.validate_targets(target_names)
+            self._init_net_and_opt()
             timed_print(f'Creating new net with input shape {input_shape}')
         else:
-            gen = checkpoint_info.generation
-            checkpoint_filename = self.get_checkpoint_filename(gen)
-            timed_print(f'Loading checkpoint: {checkpoint_filename}')
-
-            # copying the checkpoint to somewhere local first seems to bypass some sort of filesystem issue
-            with tempfile.TemporaryDirectory() as tmp:
-                tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
-                shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
-                checkpoint = torch.load(tmp_checkpoint_filename)
-                self._net = Model.load_from_checkpoint(checkpoint)
-
-        self._net.cuda(device=self.py_cuda_device)
-        self._net.train()
-
-        learning_rate = ModelingArgs.learning_rate
-        momentum = ModelingArgs.momentum
-        weight_decay = ModelingArgs.weight_decay
-        self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
-
-        # TODO: SWA, cyclic learning rate
+            self.load_last_checkpoint()
 
         return self._net, self._opt
 
@@ -445,9 +475,16 @@ class AlphaZeroManager:
     def get_latest_generation(self) -> Generation:
         return min(self.get_latest_model_generation(), self.get_latest_player_generation())
 
-    def get_latest_self_play_data_generation(self) -> Generation:
+    def get_latest_completed_self_play_data_generation(self) -> Generation:
         info = AlphaZeroManager.get_latest_info(self.self_play_data_dir)
-        return 0 if info is None else info.generation
+        if info is None:
+            return -1
+        gen = info.generation
+        done_file = os.path.join(self.self_play_data_dir, info.path, 'done.txt')
+        if not os.path.isfile(done_file):
+            gen -= 1
+
+        return gen
 
     def get_latest_model_filename(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.models_dir)
@@ -464,19 +501,23 @@ class AlphaZeroManager:
 
         return cmd
 
-    def get_self_play_proc(self, async_mode: bool) -> SelfPlayProcData:
-        gen = self.get_latest_model_generation()
+    def get_self_play_proc(self, async_mode: bool) -> Optional[SelfPlayProcData]:
+        model_gen = self.get_latest_model_generation()
+        self_play_gen = self.get_latest_completed_self_play_data_generation()
+        if model_gen == self_play_gen:
+            return None
 
+        gen = model_gen
         games_dir = self.get_self_play_data_subdir(gen)
 
         if gen == 0:
-            n_games = self.n_gen0_games
+            n_games = 4000
         elif not async_mode:
-            n_games = self.n_sync_games
+            n_games = 1000
         else:
             n_games = 0
 
-        base_player_args = []  # '--no-forced-playouts']
+        base_player_args = []
         if gen:
             model = self.get_model_filename(gen)
             base_player_args.extend(['-m', model])
@@ -487,52 +528,80 @@ class AlphaZeroManager:
             '-g', games_dir,
         ] + base_player_args
 
+        # if gen == 0:
+        #     max_rows = ModelingArgs.minibatch_size * ModelingArgs.snapshot_steps
+        #     player_args.extend(['--max-rows', max_rows])
+
         player2_args = [
             '--name=MCTS2',
             '--copy-from=MCTS',
         ]
 
         bin_tgt = self.binary_path
+        kill_file = os.path.join(games_dir, 'kill.txt')
+
         self_play_cmd = [
             bin_tgt,
             '-G', n_games,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
+            '--kill-file', kill_file,
         ]
 
-        if n_games == 0:
-            kill_file = os.path.join(games_dir, 'kill.txt')
-            self_play_cmd.extend([
-                '--kill-file', kill_file
-            ])
+        wait_for_completion = n_games > 0
 
         competitive_player_args = ['--type=MCTS-C'] + base_player_args
-        competitive_player_str = '%s --player "%s"\n' % (bin_tgt, ' '.join(map(str, competitive_player_args)))
+        competitive_player_args_str = ' '.join(map(str, competitive_player_args))
+        competitive_player_str = '%s --player "%s"\n' % (bin_tgt, competitive_player_args_str)
         player_filename = os.path.join(self.players_dir, f'gen-{gen}.txt')
         with open(player_filename, 'w') as f:
             f.write(competitive_player_str)
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
-        return SelfPlayProcData(self_play_cmd, n_games, gen, games_dir)
+        return SelfPlayProcData(self_play_cmd, wait_for_completion, gen, games_dir)
 
-    def train_step(self, pre_commit_func: Optional[Callable[[], None]] = None):
+    def train_step(self,
+                   pre_train_func: Optional[Callable[[], None]] = None,
+                   post_train_func: Optional[Callable[[], None]] = None) -> bool:
         """
-        Performs a train-step. This performs N minibatch-updates of size S, where:
+        Attempts a train-step (one epoch). If there is not enough data to perform a train-step,
+        skips out early and returns False. Otherwise, performs a train-step and returns True.
 
-        N = ModelingArgs.snapshot_steps
-        S = ModelingArgs.minibatch_size
+        If specified...
 
-        After the last minibatch update is complete, but before the model is committed to disk, pre_commit_func() is
-        called. We use this function shutdown the c++ self-play process. This is necessary because the self-play process
-        prints important metadata to stdout, and we don't want to commit a model for which we don't have the metadata.
+        - pre_train_func() is called before the first minibatch is processed
+        - post_train_func() is called after the last minibatch is processed.
+
+        These functions are used to gracefully shutdown the c++ self-play process.
         """
-        print('******************************')
         gen = self.get_latest_model_generation() + 1
+
+        print('******************************')
         timed_print(f'Train gen:{gen}')
 
+        self.dataset_generator.self_play_metadata.refresh()
+        dataset_size = get_katago_sample_size(self.dataset_generator.n_total_positions)
+        games_dataset = self.dataset_generator.get_next_dataset(dataset_size, use_prefix=False)
+        if games_dataset is None:
+            return False
+
+        timed_print(
+            'Sampling from %s of %s (%.1f%%) positions, from %.1f%% (gen-%s) to %.1f%% (gen-%s)' %
+            (dataset_size, games_dataset.n_total_positions,
+             100. * dataset_size / games_dataset.n_total_positions,
+             100. * games_dataset.start / games_dataset.n_total_positions,
+             games_dataset.window[0].game_metadata.generation,
+             100. * games_dataset.end / games_dataset.n_total_positions,
+             games_dataset.window[-1].game_metadata.generation
+             ))
+        # print('sampled_counts:\n ',
+        #       self.dataset_generator.expected_sample_counts.to_string(delim='\n  '))
+
         trainer = NetTrainer(ModelingArgs.snapshot_steps, self.py_cuda_device_str)
+        if pre_train_func:
+            pre_train_func()
+
         while True:
-            games_dataset = GamesDataset(self.self_play_data_dir)
             loader = torch.utils.data.DataLoader(
                 games_dataset,
                 batch_size=ModelingArgs.minibatch_size,
@@ -544,20 +613,23 @@ class AlphaZeroManager:
 
             stats = trainer.do_training_epoch(loader, net, optimizer, games_dataset)
             stats.dump()
+
+            self.dataset_generator.record_dataset_usage(games_dataset, stats.n_samples)
             if trainer.n_minibatches_processed >= ModelingArgs.snapshot_steps:
                 break
 
-        timed_print(f'Gen {gen} training complete ({trainer.n_minibatches_processed} minibatch updates)')
+        timed_print(f'Gen {gen} training complete')
         trainer.dump_timing_stats()
 
-        if pre_commit_func:
-            pre_commit_func()
+        if post_train_func:
+            post_train_func()
 
         checkpoint_filename = self.get_checkpoint_filename(gen)
         model_filename = self.get_model_filename(gen)
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
         tmp_model_filename = make_hidden_filename(model_filename)
         checkpoint = {}
+        checkpoint['sample_counts'] = self.dataset_generator.expected_sample_counts
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
         net.save_model(tmp_model_filename)
@@ -565,6 +637,7 @@ class AlphaZeroManager:
         os.rename(tmp_model_filename, model_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
         timed_print(f'Model saved: {model_filename}')
+        return True
 
     @staticmethod
     def finalize_games_dir(games_dir: str, results: SelfPlayResults):
@@ -600,9 +673,27 @@ class AlphaZeroManager:
             self.py_cuda_device = 1
 
         self.init_logging(self.stdout_filename)
+        self.load_last_checkpoint()
         while True:
             self.self_play_proc_data = self.get_self_play_proc(async_mode)
-            self.train_step(pre_commit_func=lambda: self.self_play_proc_data.terminate(timeout=300))
+
+            pre_train_func = None
+            post_train_func = None
+            if self.self_play_proc_data is not None:
+                if async_mode:
+                    post_train_func = lambda: self.self_play_proc_data.terminate(timeout=300)
+                else:
+                    pre_train_func = lambda: self.self_play_proc_data.terminate(timeout=300)
+
+            sleep_time = 0
+            while True:
+                if self.train_step(pre_train_func=pre_train_func, post_train_func=post_train_func):
+                    break
+                else:
+                    if sleep_time == 0:
+                        timed_print('Not enough data to train, waiting for more...')
+                    sleep_time = 3
+                    time.sleep(sleep_time)
 
     def shutdown(self):
         """

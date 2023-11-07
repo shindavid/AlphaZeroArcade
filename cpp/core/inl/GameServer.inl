@@ -21,6 +21,9 @@
 namespace core {
 
 template <GameStateConcept GameState>
+bool GameServer<GameState>::shutdown_requested_ = false;
+
+template <GameStateConcept GameState>
 auto GameServer<GameState>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -73,6 +76,7 @@ void GameServer<GameState>::SharedData::init_progress_bar() {
 
 template <GameStateConcept GameState>
 bool GameServer<GameState>::SharedData::request_game(int num_games) {
+  if (shutdown_requested_) return false;
   std::lock_guard<std::mutex> guard(mutex_);
   if (num_games > 0 && num_games_started_ >= num_games) return false;
   num_games_started_++;

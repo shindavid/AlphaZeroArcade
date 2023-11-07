@@ -108,8 +108,7 @@ class NetTrainer:
                           loader: torch.utils.data.DataLoader,
                           net: Model,
                           optimizer: optim.Optimizer,
-                          games_dataset: GamesDataset,
-                          print_sampling_info: bool=True) -> TrainingStats:
+                          games_dataset: GamesDataset) -> TrainingStats:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
@@ -120,13 +119,6 @@ class NetTrainer:
 
         loss_fns = [head.target.loss_fn() for head in net.heads]
         loss_weights = [net.loss_weights[head.name] for head in net.heads]
-
-        if print_sampling_info:
-          suffix = ''
-          if self.n_minibatches_processed:
-              suffix = f' (minibatches processed: {self.n_minibatches_processed})'
-          timed_print(f'Sampling from the {games_dataset.n_window} most recent positions among '
-                      f'{games_dataset.n_total_positions} total positions{suffix}')
 
         stats = TrainingStats(net)
         for data in loader:

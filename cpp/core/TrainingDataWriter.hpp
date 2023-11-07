@@ -29,6 +29,7 @@ class TrainingDataWriter {
     bool operator==(const Params& other) const = default;
 
     std::string games_dir = "c4_games";
+    int64_t max_rows = 0;
   };
 
   using GameState = GameState_;
@@ -158,6 +159,7 @@ class TrainingDataWriter {
   std::thread* thread_;
   game_data_map_t game_data_map_;
   game_queue_t game_queue_[2];
+  int64_t rows_written_ = 0;
   int queue_index_ = 0;
   bool closed_ = false;
 
