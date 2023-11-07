@@ -38,10 +38,7 @@ class ModelingArgs:
     """
     minibatch_size: int
     snapshot_steps: int
-    window_alpha: float
-    window_beta: float
-    window_c: int
-    fixed_window_n: Optional[int]
+    sample_limit: int
     momentum: float
     weight_decay: float
     learning_rate: float
@@ -50,10 +47,7 @@ class ModelingArgs:
     def load(args):
         ModelingArgs.minibatch_size = args.minibatch_size
         ModelingArgs.snapshot_steps = args.snapshot_steps
-        ModelingArgs.window_alpha = args.window_alpha
-        ModelingArgs.window_beta = args.window_beta
-        ModelingArgs.window_c = args.window_c
-        ModelingArgs.fixed_window_n = args.fixed_window_n
+        ModelingArgs.sample_limit = args.sample_limit
         ModelingArgs.momentum = args.momentum
         ModelingArgs.weight_decay = args.weight_decay
         ModelingArgs.learning_rate = args.learning_rate
@@ -66,14 +60,9 @@ class ModelingArgs:
                            help='minibatch size (default: %(default)s)')
         group.add_argument('--snapshot-steps', type=int, default=2048,
                            help='steps per snapshot (default: %(default)s)')
-        group.add_argument('--window-alpha', type=float, default=0.75,
-                           help='alpha for n_window formula (default: %(default)s)')
-        group.add_argument('--window-beta', type=float, default=0.4,
-                           help='beta for n_window formula (default: %(default)s)')
-        group.add_argument('--window-c', type=int, default=250000,
-                           help='c for n_window formula (default: %(default)s)')
-        group.add_argument('--fixed-window-n', type=int,
-                           help='if specified, uses this fixed window n instead of the n_window formula')
+        group.add_argument(
+            '--sample-limit', type=int, default=None,
+            help='if set, max number of times to train over a single row (default: unlimited)')
         group.add_argument('--momentum', type=float, default=0.9,
                            help='momentum (default: %(default)s)')
         group.add_argument('--weight-decay', type=float, default=6e-5,

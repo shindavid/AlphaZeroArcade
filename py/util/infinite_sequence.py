@@ -68,12 +68,16 @@ class InfiniteSequence:
         print('values: [%s]' % (', '.join(self._value_fmt % v for v in self._values)))
         print('max_values: [%s]' % (', '.join(self._value_fmt % v for v in self._max_values)))
 
-    def get_start(self, max_value: float) -> Optional[int]:
+    def get_start(self, max_value: Optional[float]) -> Optional[int]:
         """
         Returns the minimum N with the property that S[n] <= max_value for all n >= N.
 
+        If max_value is None, interprets that as max_value = +inf (and so this returns 0)
+
         If no such N exists, returns None.
         """
+        if max_value is None:
+            return 0
         k = bisect.bisect_left(self._max_values, -max_value, key=lambda w: -w)
         if k == len(self._indices):
             return None
