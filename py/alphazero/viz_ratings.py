@@ -13,18 +13,18 @@ While the above is running, launch the following, preferably from a different ma
 
 ./alphazero/compute_ratings.py -g <GAME> -t <TAG> -D
 
-Alternatively, if you don't have enough hardware, stop the main loop before running the above. You don't need daemon
-mode (-D) in this case.
+Alternatively, if you don't have enough hardware, stop the main loop before running the above. You
+don't need daemon mode (-D) in this case.
 
 While the above is running, launch the visualizer:
 
 ./alphazero/viz_ratings.py -g <GAME> -t <TAG>
 
-If you have multiple main-loops (running or completed), you can pass a comma-separated list of tags for the -t option
-for both compute_ratings.py and viz_ratings.py.
+If you have multiple main-loops (running or completed), you can pass a comma-separated list of tags
+for the -t option for both compute_ratings.py and viz_ratings.py. Or, you can leave out -t
+altogether to process all tags you have ever used for the given game.
 
-The visualizer will show a graph based on the rating data generated so-far by compute_ratings.py. Refreshing the
-browser window will cause the visualizer to update the graph with the latest data.
+The visualizer will show a graph based on the rating data generated so-far by compute_ratings.py.
 """
 import argparse
 import os
@@ -61,7 +61,8 @@ class Args:
         Args.alphazero_dir = args.alphazero_dir
         Args.game = args.game
         Args.tags = [t for t in args.tag.split(',') if t] if args.tag else None
-        Args.mcts_iters_list = [] if not args.mcts_iters else [int(s) for s in args.mcts_iters.split(',')]
+        Args.mcts_iters_list = [] if not args.mcts_iters else \
+            [int(s) for s in args.mcts_iters.split(',')]
         Args.tag = args.tag
         Args.port = args.port
 
@@ -72,10 +73,14 @@ def load_args():
 
     parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
-    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1,v2"). If not specified, plots all tags')
-    parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), comma-separated (e.g. "300,3000")')
-    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
-    parser.add_argument('-p', '--port', type=int, default=5006, help='bokeh port (default: %(default)s)')
+    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1,v2"). '
+                        'If not specified, plots all tags')
+    parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), '
+                        'comma-separated (e.g. "300,3000")')
+    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir',
+                            help='alphazero directory')
+    parser.add_argument('-p', '--port', type=int, default=5006,
+                        help='bokeh port (default: %(default)s)')
 
     args = parser.parse_args()
     Args.load(args)
@@ -89,13 +94,15 @@ class RatingData:
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
 
-        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? ORDER BY mcts_gen',
-                             (mcts_iters,))
+        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? '
+                             'ORDER BY mcts_gen', (mcts_iters,))
 
         gen_ratings = res.fetchall()
 
-        x_values_columns = ['mcts_gen', 'n_games', 'runtime', 'n_evaluated_positions', 'n_batches_evaluated']
-        res = cursor.execute('SELECT %s FROM x_values ORDER BY mcts_gen' % (', '.join(x_values_columns)))
+        x_values_columns = ['mcts_gen', 'n_games', 'runtime', 'n_evaluated_positions',
+                            'n_batches_evaluated']
+        res = cursor.execute('SELECT %s FROM x_values ORDER BY mcts_gen' % (
+            ', '.join(x_values_columns)))
         x_values = res.fetchall()
 
         gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
@@ -201,9 +208,11 @@ class ProgressVisualizer:
             for col in data:
                 x = data[col]
                 mx = min(x)
-                self.min_x_dict[col] = mx if col not in self.min_x_dict else min(self.min_x_dict[col], mx)
+                self.min_x_dict[col] = mx if col not in self.min_x_dict else \
+                    min(self.min_x_dict[col], mx)
                 mx = max(x)
-                self.max_x_dict[col] = mx if col not in self.max_x_dict else max(self.max_x_dict[col], mx)
+                self.max_x_dict[col] = mx if col not in self.max_x_dict else \
+                    max(self.max_x_dict[col], mx)
 
             x = data[cls.X_VAR_COLUMNS[self.x_var_index]]
             y = data[self.y_variable]
@@ -267,7 +276,8 @@ class ProgressVisualizer:
                       y_axis_label='Rating', x_axis_label=cls.X_VARS[self.x_var_index],
                       active_scroll='xwheel_zoom',
                       tools='pan,box_zoom,xwheel_zoom,reset,save')
-        hline = Span(location=self.y_limit, dimension='width', line_color='gray', line_dash='dashed', line_width=1)
+        hline = Span(location=self.y_limit, dimension='width', line_color='gray',
+                     line_dash='dashed', line_width=1)
         plot.add_layout(hline)
 
         self.add_lines(plot)
@@ -310,7 +320,8 @@ class ProgressVisualizer:
         for widget in widgets:
             widget.on_change('active', update_data)
 
-        inputs = column(plot, row(column(checkbox_group, reload_button, realign_button), radio_group))
+        inputs = column(plot, row(column(checkbox_group, reload_button, realign_button),
+                                  radio_group))
         return plot, inputs
 
 
