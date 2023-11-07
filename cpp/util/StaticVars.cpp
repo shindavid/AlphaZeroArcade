@@ -1,5 +1,5 @@
 #include <util/Config.hpp>
-#include <util/ParamDumper.hpp>
+#include <util/KeyValueDumper.hpp>
 #include <util/Random.hpp>
 #include <util/RepoUtil.hpp>
 #include <util/ScreenUtil.hpp>
@@ -9,7 +9,7 @@
 namespace util {
 
 Config* Config::instance_ = nullptr;
-ParamDumper* ParamDumper::instance_ = nullptr;
+KeyValueDumper* KeyValueDumper::instance_ = nullptr;
 Random* Random::instance_ = nullptr;
 Repo* Repo::instance_ = nullptr;
 ScreenClearer* ScreenClearer::instance_ = nullptr;

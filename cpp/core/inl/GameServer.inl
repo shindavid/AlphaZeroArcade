@@ -13,7 +13,7 @@
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
-#include <util/ParamDumper.hpp>
+#include <util/KeyValueDumper.hpp>
 #include <util/Random.hpp>
 #include <util/SocketUtil.hpp>
 #include <util/StringUtil.hpp>
@@ -444,17 +444,17 @@ void GameServer<GameState>::run() {
            get_results_str(results[p]).c_str());
   }
 
-  util::ParamDumper::add("Parallelism factor", "%d", (int)threads_.size());
-  util::ParamDumper::add("Num games", "%d", num_games);
-  util::ParamDumper::add("Total runtime", "%.3fs", ns * 1e-9);
-  util::ParamDumper::add("Avg runtime", "%.3fs", ns * 1e-9 / num_games);
+  util::KeyValueDumper::add("Parallelism factor", "%d", (int)threads_.size());
+  util::KeyValueDumper::add("Num games", "%d", num_games);
+  util::KeyValueDumper::add("Total runtime", "%.3fs", ns * 1e-9);
+  util::KeyValueDumper::add("Avg runtime", "%.3fs", ns * 1e-9 / num_games);
 
   for (auto thread : threads_) {
     delete thread;
   }
 
   shared_data_.end_session();
-  util::ParamDumper::flush();
+  util::KeyValueDumper::flush();
 }
 
 template <GameStateConcept GameState>

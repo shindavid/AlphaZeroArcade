@@ -9,7 +9,7 @@
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/Math.hpp>
-#include <util/ParamDumper.hpp>
+#include <util/KeyValueDumper.hpp>
 #include <util/Random.hpp>
 #include <util/RepoUtil.hpp>
 #include <util/ScreenUtil.hpp>
@@ -38,12 +38,12 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(mcts::Mode mode) {
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
   if (full_pct == 0) {
-    util::ParamDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
+    util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
-    util::ParamDumper::add("MctsPlayer num fast iters", "%d", num_fast_iters);
-    util::ParamDumper::add("MctsPlayer num full iters", "%d", num_full_iters);
-    util::ParamDumper::add("MctsPlayer num fast iters", "%.8g", full_pct);
-    util::ParamDumper::add("MctsPlayer move temperature", "%s", move_temperature_str.c_str());
+    util::KeyValueDumper::add("MctsPlayer num fast iters", "%d", num_fast_iters);
+    util::KeyValueDumper::add("MctsPlayer num full iters", "%d", num_full_iters);
+    util::KeyValueDumper::add("MctsPlayer num fast iters", "%.8g", full_pct);
+    util::KeyValueDumper::add("MctsPlayer move temperature", "%s", move_temperature_str.c_str());
   }
 }
 

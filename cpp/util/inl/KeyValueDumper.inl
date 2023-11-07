@@ -1,10 +1,10 @@
-#include <util/ParamDumper.hpp>
+#include <util/KeyValueDumper.hpp>
 
 #include <util/StringUtil.hpp>
 
 namespace util {
 
-inline void ParamDumper::add(const char* key, const char* value_fmt, ...) {
+inline void KeyValueDumper::add(const char* key, const char* value_fmt, ...) {
   constexpr int N = 1024;
   char value[N];
   va_list ap;
@@ -13,17 +13,17 @@ inline void ParamDumper::add(const char* key, const char* value_fmt, ...) {
   va_end(ap);
 
   if (n < 0) {
-    throw Exception("ParamDumper::add(): encountered encoding error (N=%d, fmt=\"%s\")", N,
+    throw Exception("KeyValueDumper::add(): encountered encoding error (N=%d, fmt=\"%s\")", N,
                     value_fmt);
   }
   if (n >= N) {
-    throw Exception("ParamDumper::add(): char buffer overflow (%d >= %d)", n, N);
+    throw Exception("KeyValueDumper::add(): char buffer overflow (%d >= %d)", n, N);
   }
 
   instance()->vec_.emplace_back(util::create_string("%s:", key), value);
 }
 
-inline void ParamDumper::flush() {
+inline void KeyValueDumper::flush() {
   int max_key_len = 0;
   int max_value_len = 0;
   for (const auto& p : instance()->vec_) {
@@ -40,9 +40,9 @@ inline void ParamDumper::flush() {
   std::cout.flush();
 }
 
-inline ParamDumper* ParamDumper::instance() {
+inline KeyValueDumper* KeyValueDumper::instance() {
   if (instance_ == nullptr) {
-    instance_ = new ParamDumper();
+    instance_ = new KeyValueDumper();
   }
   return instance_;
 }

@@ -6,10 +6,10 @@
 
 namespace util {
 
-class ParamDumper {
+class KeyValueDumper {
  public:
   /*
-   * Adds a parameter to dump.
+   * Adds a key-value pair to dump.
    *
    * add("foo", "%.3fsec", 1.2345);
    * add("some_really_strong_str", "%d", 10);
@@ -33,9 +33,9 @@ class ParamDumper {
   static void flush();
 
  private:
-  static ParamDumper* instance();
+  static KeyValueDumper* instance();
 
-  static ParamDumper* instance_;
+  static KeyValueDumper* instance_;
 
   using pair_t = std::pair<std::string, std::string>;
   using vec_t = std::vector<pair_t>;
@@ -45,4 +45,4 @@ class ParamDumper {
 
 }  // namespace util
 
-#include <util/inl/ParamDumper.inl>
+#include <util/inl/KeyValueDumper.inl>

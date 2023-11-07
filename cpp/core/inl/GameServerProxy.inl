@@ -262,7 +262,7 @@ void GameServerProxy<GameState>::run() {
 
   destroy_player_threads();
   shared_data_.end_session();
-  util::ParamDumper::flush();
+  util::KeyValueDumper::flush();
 }
 
 template <GameStateConcept GameState>

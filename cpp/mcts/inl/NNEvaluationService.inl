@@ -210,9 +210,9 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
   float avg_batch_size =
       batches_evaluated > 0 ? evaluated_positions * 1.0 / batches_evaluated : 0.0f;
 
-  util::ParamDumper::add("MCTS evaluated positions", "%ld", evaluated_positions);
-  util::ParamDumper::add("MCTS batches evaluated", "%ld", batches_evaluated);
-  util::ParamDumper::add("MCTS avg batch size", "%.2f", avg_batch_size);
+  util::KeyValueDumper::add("MCTS evaluated positions", "%ld", evaluated_positions);
+  util::KeyValueDumper::add("MCTS batches evaluated", "%ld", batches_evaluated);
+  util::KeyValueDumper::add("MCTS avg batch size", "%.2f", avg_batch_size);
   session_ended_ = true;
 }
 
