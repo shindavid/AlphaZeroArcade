@@ -201,17 +201,26 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
 
   int64_t evaluated_positions = 0;
   int64_t batches_evaluated = 0;
+  int64_t max_batches_evaluated = 0;
+  int max_batch_size = 0;
   for (auto it : instance_map_) {
     NNEvaluationService* service = it.second;
     evaluated_positions += service->evaluated_positions_;
     batches_evaluated += service->batches_evaluated_;
+    max_batches_evaluated += service->max_batches_evaluated_;
+    max_batch_size = std::max(max_batch_size, (int)service->max_evaluated_batch_size_);
   }
+
+  float max_batch_pct = batches_evaluated > 0 ? 100.0 * max_batches_evaluated / batches_evaluated
+                                              : 0.0f;
 
   float avg_batch_size =
       batches_evaluated > 0 ? evaluated_positions * 1.0 / batches_evaluated : 0.0f;
 
   util::KeyValueDumper::add("MCTS evaluated positions", "%ld", evaluated_positions);
   util::KeyValueDumper::add("MCTS batches evaluated", "%ld", batches_evaluated);
+  util::KeyValueDumper::add("MCTS max batch pct", "%.2f%%", max_batch_pct);
+  util::KeyValueDumper::add("MCTS max batch size", "%d", max_batch_size);
   util::KeyValueDumper::add("MCTS avg batch size", "%.2f", avg_batch_size);
   session_ended_ = true;
 }
@@ -281,8 +290,17 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   }
   lock.unlock();
 
-  evaluated_positions_ += batch_metadata_.reserve_index;
+  int batch_size = batch_metadata_.reserve_index;
+
+
+  evaluated_positions_ += batch_size;
   batches_evaluated_++;
+  max_evaluated_batch_size_ = std::max((int)max_evaluated_batch_size_, batch_size);
+
+  bool maxed = batch_size == batch_size_limit_;
+  if (maxed) {
+    max_batches_evaluated_++;
+  }
 
   batch_metadata_.unread_count = batch_metadata_.commit_count;
   batch_metadata_.reserve_index = 0;

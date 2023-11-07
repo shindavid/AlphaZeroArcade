@@ -249,8 +249,10 @@ class NNEvaluationService {
 
   std::atomic<int> cache_hits_ = 0;
   std::atomic<int> cache_misses_ = 0;
+  std::atomic<int> max_evaluated_batch_size_ = 0;
   std::atomic<int64_t> evaluated_positions_ = 0;
   std::atomic<int64_t> batches_evaluated_ = 0;
+  std::atomic<int64_t> max_batches_evaluated_ = 0;
   std::atomic<int64_t> total_puct_calcs_ = 0;
   std::atomic<int64_t> virtual_loss_influenced_puct_calcs_ = 0;
 };

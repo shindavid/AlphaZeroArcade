@@ -74,13 +74,15 @@ class PathInfo:
 class SelfPlayResults:
     def __init__(self, stdout: str):
         """
-        Parallelism factor:           25
-        Num games:                    25
-        Total runtime:            3.220s
-        Avg runtime:              0.129s
-        MCTS evaluated positions:   6654
-        MCTS batches evaluated:      139
-        MCTS avg batch size:       47.87
+        Parallelism factor:            100
+        Num games:                    1000
+        Total runtime:            131.500s
+        Avg runtime:                0.132s
+        MCTS evaluated positions:  2434106
+        MCTS batches evaluated:      18118
+        MCTS max batch pct:          4.76%
+        MCTS max batch size:           216
+        MCTS avg batch size:        134.35
         """
         mappings = {}
         for line in stdout.splitlines():
@@ -95,6 +97,9 @@ class SelfPlayResults:
         self.total_runtime = float(mappings['Total runtime'].split('s')[0])
         self.mcts_evaluated_positions = int(mappings['MCTS evaluated positions'])
         self.mcts_batches_evaluated = int(mappings['MCTS batches evaluated'])
+        self.mcts_max_batch_pct = float(mappings['MCTS max batch pct'][:-1])  # chop off trailing %
+        self.mcts_max_batch_size = int(mappings['MCTS max batch size'])
+        self.mcts_avg_batch_size = float(mappings['MCTS avg batch size'])
 
 
 class SelfPlayProcData:
