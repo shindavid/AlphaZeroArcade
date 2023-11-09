@@ -28,7 +28,8 @@ struct SharedData {
   Node::sptr root_node;
   int manager_id = -1;
   move_number_t move_number = 0;
-  bool search_active = false;
+  bool seeking_search_threads = false;
+  int active_search_thread_count = 0;
 };
 
 }  // namespace mcts

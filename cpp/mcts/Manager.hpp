@@ -3,7 +3,6 @@
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #include <core/BasicTypes.hpp>
@@ -36,6 +35,7 @@ class Manager {
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchResults = mcts::SearchResults<GameState>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
+  using SearchThreadManager = mcts::SearchThreadManager<GameState, Tensorizor>;
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
@@ -64,10 +64,6 @@ class Manager {
   const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state,
                               const SearchParams& params);
 
-  void start_search_threads(const SearchParams* search_params);
-  void wait_for_search_threads();
-  void stop_search_threads();
-  void run_search(SearchThread* thread, int tree_size_limit);
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
   static void end_session() { NNEvaluationService::end_session(); }
@@ -82,14 +78,10 @@ class Manager {
   const ManagerParams params_;
   SharedData shared_data_;
   const SearchParams pondering_search_params_;
-  search_thread_vec_t search_threads_;
+  SearchThreadManager* search_thread_manager_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 
   SearchResults results_;
-
-  std::mutex search_mutex_;
-  std::condition_variable cv_search_;
-  int num_active_search_threads_ = 0;
   bool connected_ = false;
 };
 

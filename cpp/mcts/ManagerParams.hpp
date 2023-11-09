@@ -31,7 +31,7 @@ struct ManagerParams {
 
   std::string model_filename;
   std::string cuda_device = "cuda:0";
-  int num_search_threads = 8;
+  int num_search_threads = 256;
   int batch_size_limit = 216;
   bool enable_pondering = false;  // pondering = think during opponent's turn
   int pondering_tree_size_limit = 4096;

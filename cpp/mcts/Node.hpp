@@ -278,7 +278,6 @@ class Node {
 
   void debug_dump() const;
 
-  std::condition_variable& cv_evaluate() { return cv_evaluate_; }
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
   std::mutex& stats_mutex() const { return stats_mutex_; }
 
@@ -298,7 +297,6 @@ class Node {
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
  private:
-  std::condition_variable cv_evaluate_;
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;
   mutable std::mutex stats_mutex_;

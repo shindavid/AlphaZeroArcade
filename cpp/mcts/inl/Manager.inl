@@ -40,9 +40,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (params.enable_pondering && num_search_threads() == 1) {
     throw util::Exception("pondering mode does not work with only 1 search thread");
   }
-  for (int i = 0; i < num_search_threads(); ++i) {
-    search_threads_.push_back(new SearchThread(&shared_data_, nn_eval_service_, &params_, i));
-  }
+  search_thread_manager_ = SearchThreadManager::get(params);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -51,9 +49,7 @@ inline Manager<GameState, Tensorizor>::~Manager() {
   if (nn_eval_service_) {
     nn_eval_service_->disconnect();
   }
-  for (auto* thread : search_threads_) {
-    delete thread;
-  }
+  search_thread_manager_->shutdown();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -73,7 +69,7 @@ inline void Manager<GameState, Tensorizor>::start() {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
-  stop_search_threads();
+  search_thread_manager_->wait_for_completion(&shared_data_);
   shared_data_.root_node = nullptr;
 }
 
@@ -84,7 +80,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   shared_data_.move_number++;
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
-  stop_search_threads();
+  search_thread_manager_->wait_for_completion(&shared_data_);
   auto root_node = shared_data_.root_node;
   if (!root_node.get()) return;
 
@@ -97,7 +93,8 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   shared_data_.root_node = new_root;
 
   if (params_.enable_pondering) {
-    start_search_threads(&pondering_search_params_);
+    search_thread_manager_->add_work(&shared_data_, nn_eval_service_, &pondering_search_params_,
+                                     &params_);
   }
 }
 
@@ -105,7 +102,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 inline const typename Manager<GameState, Tensorizor>::SearchResults*
 Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameState& game_state,
                                        const SearchParams& params) {
-  stop_search_threads();
+  search_thread_manager_->wait_for_completion(&shared_data_);
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
@@ -114,8 +111,13 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
         std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
   }
 
-  start_search_threads(&params);
-  wait_for_search_threads();
+  if (mcts::kEnableDebug) {
+    const GameState& state = shared_data_.root_node->stable_data().state;
+    state.dump();
+  }
+
+  search_thread_manager_->add_work(&shared_data_, nn_eval_service_, &params, &params_);
+  search_thread_manager_->wait_for_completion(&shared_data_);
 
   const auto& root = shared_data_.root_node;
   const auto& evaluation_data = root->evaluation_data();
@@ -133,56 +135,6 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
   results_.win_rates = stats.real_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::start_search_threads(
-    const SearchParams* search_params) {
-  util::release_assert(!shared_data_.search_active);
-  shared_data_.search_active = true;
-  num_active_search_threads_ = num_search_threads();
-
-  if (mcts::kEnableDebug) {
-    const GameState& state = shared_data_.root_node->stable_data().state;
-    state.dump();
-  }
-
-  for (auto* thread : search_threads_) {
-    thread->launch(search_params,
-                   [=, this] { this->run_search(thread, search_params->tree_size_limit); });
-  }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::wait_for_search_threads() {
-  util::release_assert(shared_data_.search_active);
-
-  for (auto* thread : search_threads_) {
-    thread->join();
-  }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::stop_search_threads() {
-  shared_data_.search_active = false;
-
-  std::unique_lock<std::mutex> lock(search_mutex_);
-  cv_search_.wait(lock, [&] { return num_active_search_threads_ == 0; });
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int tree_size_limit) {
-  thread->run();
-
-  if (!thread->is_pondering() && shared_data_.root_node->stable_data().num_valid_actions > 1) {
-    while (thread->needs_more_visits(shared_data_.root_node.get(), tree_size_limit)) {
-      thread->run();
-    }
-  }
-
-  std::unique_lock<std::mutex> lock(search_mutex_);
-  num_active_search_threads_--;
-  cv_search_.notify_one();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
