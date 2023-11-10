@@ -36,7 +36,7 @@ void SearchThreadManager<GameState, Tensorizor>::shutdown() {
 
   std::cout << "SearchThreadManager::shutdown()" << std::endl;
   shutdown_initiated_ = true;
-  cv_.notify_all();
+  work_items_cv_.notify_all();
   for (auto thread : threads_) {
     delete thread;
   }
@@ -47,41 +47,48 @@ void SearchThreadManager<GameState, Tensorizor>::add_work(SharedData* shared_dat
                                                           NNEvaluationService* nn_eval_service,
                                                           const SearchParams* search_params,
                                                           const ManagerParams* manager_params) {
-  std::unique_lock lock(mutex_);
   shared_data->seeking_search_threads = true;
+  std::unique_lock lock(work_items_mutex_);
   work_items_.emplace_back(shared_data, nn_eval_service, search_params, manager_params);
   work_item_index_ = work_items_.size() - 1;
   lock.unlock();
-  cv_.notify_all();
+  work_items_cv_.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThreadManager<GameState, Tensorizor>::remove_work(SharedData* shared_data) {
-  // assumes mutex_ is locked
   shared_data->seeking_search_threads = false;
 
+  std::unique_lock lock(work_items_mutex_);
   auto it = work_items_.begin();
   while (it != work_items_.end()) {
     if (it->shared_data == shared_data) {
       work_items_.erase(it);
-      return;
     } else {
       ++it;
     }
   }
+
+  lock.unlock();
+  work_items_cv_.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThreadManager<GameState, Tensorizor>::wait_for_completion(SharedData* shared_data) {
-  std::unique_lock lock(mutex_);
-  cv_.wait(lock, [&] {
-    return !shared_data->seeking_search_threads && shared_data->active_search_thread_count == 0;
-  });
+  shared_data->wait_for_search_completion();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 bool SearchThreadManager<GameState, Tensorizor>::get_next_work_item(work_item_t* work_item) {
-  // assumes mutex_ is locked
+  std::unique_lock lock(work_items_mutex_);
+
+  work_items_cv_.wait(lock, [&] { return get_next_work_item_helper(work_item); });
+
+  return !shutdown_initiated_;
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+bool SearchThreadManager<GameState, Tensorizor>::get_next_work_item_helper(work_item_t* work_item) {
   if (shutdown_initiated_) return true;
   if (work_items_.empty()) return false;
   if (work_item_index_ >= (int)work_items_.size()) work_item_index_ = 0;
@@ -138,16 +145,11 @@ inline void SearchThread<GameState, Tensorizor>::kill() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::loop() {
   while (true) {
-    work_item_t work_item;
-    std::unique_lock lock(manager_->mutex());
     if (shared_data_) {
-      shared_data_->active_search_thread_count--;
-      manager_->cv().notify_all();
+      shared_data_->increment_active_search_thread_count(-1);
     }
-    manager_->cv().wait(lock, [&] { return manager_->get_next_work_item(&work_item); });
-    if (manager_->shutdown_initiated()) return;
-    work_item.shared_data->active_search_thread_count++;
-    lock.unlock();
+    work_item_t work_item;
+    if (!manager_->get_next_work_item(&work_item)) return;
 
     search_path_.clear();
     shared_data_ = work_item.shared_data;
@@ -155,6 +157,7 @@ inline void SearchThread<GameState, Tensorizor>::loop() {
     search_params_ = work_item.search_params;
     manager_params_ = work_item.manager_params;
 
+    shared_data_->increment_active_search_thread_count(+1);
     if (!shared_data_->seeking_search_threads) {
       continue;
     }
@@ -163,10 +166,7 @@ inline void SearchThread<GameState, Tensorizor>::loop() {
     visit(root, nullptr, shared_data_->move_number);
 
     if (root->stats().total_count() > search_params_->tree_size_limit) {
-      lock.lock();
       manager_->remove_work(shared_data_);
-      lock.unlock();
-      manager_->cv().notify_all();
     }
 
     dump_profiling_stats();

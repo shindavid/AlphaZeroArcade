@@ -8,6 +8,8 @@
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
 
+#include <mutex>
+
 namespace mcts {
 
 /*
@@ -28,7 +30,26 @@ struct SharedData {
   Node::sptr root_node;
   int manager_id = -1;
   move_number_t move_number = 0;
+
   bool seeking_search_threads = false;
+
+  void increment_active_search_thread_count(int delta) {
+    std::unique_lock lock(mutex);
+    active_search_thread_count += delta;
+    if (active_search_thread_count == 0) {
+      lock.unlock();
+      cv.notify_all();
+    }
+  }
+
+  void wait_for_search_completion() {
+    std::unique_lock lock(mutex);
+    cv.wait(lock, [&]() { return !seeking_search_threads && active_search_thread_count == 0; });
+  }
+
+private:
+  std::mutex mutex;
+  std::condition_variable cv;
   int active_search_thread_count = 0;
 };
 

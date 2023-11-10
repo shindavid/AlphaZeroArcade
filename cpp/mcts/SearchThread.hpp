@@ -56,15 +56,15 @@ class SearchThreadManager {
 
   /*
    * Marks the SharedData as seeking search threads, and adds a work item to the work queue.
-   * Notifies all threads waiting on cv_.
+   * Notifies all threads waiting on work_items_cv_.
    */
   void add_work(SharedData*, NNEvaluationService*, const SearchParams*, const ManagerParams*);
 
   /*
    * Marks the SharedData as not seeking search threads, and removes the matching work item from the
-   * work queue. Notifies all threads waiting on cv_.
+   * work queue. Notifies all threads waiting on work_items_cv_.
    */
-  void remove_work(SharedData*);  // assumes mutex_ is locked
+  void remove_work(SharedData*);
 
   /*
    * Waits until the SharedData is no longer seeking search threads. Then waits until no more
@@ -72,16 +72,13 @@ class SearchThreadManager {
    */
   void wait_for_completion(SharedData*);
 
-  std::mutex& mutex() { return mutex_; }
-  std::condition_variable& cv() { return cv_; }
+  std::mutex& work_items_mutex() { return work_items_mutex_; }
+  std::condition_variable& work_items_cv() { return work_items_cv_; }
 
   /*
-   * If there is an available work item, sets *work_item to that work item and returns true. If
-   * shutdown has been initiated, returns true.
+   * If a shutdown has been initiated, returns false.
    *
-   * Else, return false.
-   *
-   * Assumes that the caller has locked mutex_.
+   * Otherwise, sets *work_item to an available work item and returns true.
    */
   bool get_next_work_item(work_item_t* work_item);
 
@@ -91,6 +88,11 @@ class SearchThreadManager {
 
  private:
   using work_item_vec_t = std::vector<work_item_t>;
+
+  /*
+   * Helper to get_next_work_item(). Assumes work_items_mutex_ is locked.
+   */
+  bool get_next_work_item_helper(work_item_t* work_item);
 
   /*
    * Adds more threads until the total number of threads is at least num_total_threads.
@@ -105,8 +107,8 @@ class SearchThreadManager {
   int work_item_index_ = 0;
   bool shutdown_initiated_ = false;
 
-  std::mutex mutex_;
-  std::condition_variable cv_;
+  std::mutex work_items_mutex_;
+  std::condition_variable work_items_cv_;
 };
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
