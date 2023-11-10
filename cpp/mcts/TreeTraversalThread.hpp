@@ -22,6 +22,7 @@ namespace mcts {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class TreeTraversalThread;
+
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class TreeTraversalThreadManager {
  public:
