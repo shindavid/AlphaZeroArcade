@@ -2,11 +2,15 @@
 
 #include <util/CppUtil.hpp>
 
+#include <cstdint>
+
 namespace mcts {
 
 enum Mode { kCompetitive, kTraining };
 
-struct SearchThreadRegion {
+enum TreeTraversalMode : int8_t { kPrefetchMode = 0, kSearchMode = 1, kNumTreeTraversalModes = 2 };
+
+struct TreeTraversalThreadRegion {
   enum region_t {
     kCheckVisitReady,
     kAcquiringLazilyInitializedDataMutex,

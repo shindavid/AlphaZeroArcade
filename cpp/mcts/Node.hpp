@@ -75,6 +75,21 @@ class Node {
    *
    * Despite the above caveats, we can still read without a mutex, since all usages are ok with
    * arbitrarily-partially written data.
+   *
+   * TODO: There are a number of ways to shrink the memory footprint of this object:
+   *
+   * 1. I don't think there's a need to have both real_avg and virtualized_avg, as the virtualized
+   *    avg can be quickly computed as needed from the real avg and the counts.
+   * 2. eval is a static write-once value, so it belongs outside of stats_t (probably in
+   *    stable_data_t?).
+   * 3. In zero-sum games, ValueArray can be specialized to only store (n-1) values, and packed.
+   * 4. The provably_* bitsets can be changed to use a specialized bitset type that uses fewer than
+   *    8 bytes.
+   *
+   * With the above changes, this object can be shrunk to 16 bytes in the two-player zero-sum case.
+   * Currently, it is 48 bytes. This shrinkage became slightly more relevant with the introduction
+   * of Deterministic Multithreaded MCTS, which maintains two stats_t objects per node, one for
+   * prefetched data and one for confirmed data.
    */
   struct stats_t {
     stats_t();
@@ -127,14 +142,14 @@ class Node {
     Action action() const { return const_cast<Action&>(action_); }
     core::action_index_t action_index() const { return action_index_; }
     sptr child() const { return const_cast<sptr&>(child_); }
-    void increment_count() { count_++; }
-    int count() const { return count_.load(); }
+    void increment_count(TreeTraversalMode mode) { count_[mode]++; }
+    int count(TreeTraversalMode mode) const { return count_[mode].load(); }
 
    private:
     volatile sptr child_;
     volatile Action action_;
     volatile core::action_index_t action_index_ = -1;
-    std::atomic<int> count_ = 0;  // real only
+    std::atomic<int> count_[kNumTreeTraversalModes] = {0, 0};  // real only
   };
 
   /*
@@ -291,19 +306,19 @@ class Node {
   const children_data_t& children_data() const { return children_data_; }
   children_data_t& children_data() { return children_data_; }
   std::mutex& children_mutex() { return children_mutex_; }
-  const stats_t& stats() const { return stats_; }
-  stats_t& stats() { return stats_; }
+  const stats_t& stats(TreeTraversalMode mode) const { return stats_[mode]; }
+  stats_t& stats(TreeTraversalMode mode) { return stats_[mode]; }
   const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
  private:
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;
-  mutable std::mutex stats_mutex_;
+  mutable std::mutex stats_mutex_;  // protects usage of stats_[kPrefetchMode]
   const stable_data_t stable_data_;
   children_data_t children_data_;
   evaluation_data_t evaluation_data_;
-  stats_t stats_;
+  stats_t stats_[kNumTreeTraversalModes];
 };
 
 }  // namespace mcts

@@ -21,11 +21,11 @@
 namespace mcts {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class SearchThread;
+class TreeTraversalThread;
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class SearchThreadManager {
+class TreeTraversalThreadManager {
  public:
-  using thread_vec_t = std::vector<SearchThread<GameState, Tensorizor>*>;
+  using thread_vec_t = std::vector<TreeTraversalThread<GameState, Tensorizor>*>;
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
 
@@ -37,16 +37,16 @@ class SearchThreadManager {
   };
 
   /*
-   * Gets a singleton SearchThreadManager, to be shared by all mcts::Manager's for this
+   * Gets a singleton TreeTraversalThreadManager, to be shared by all mcts::Manager's for this
    * (GameState, Tensorizor).
    *
    * The passed-in params has a num_search_threads field that specifies the number of threads to
    * use. If multiple calls specify different values for num_search_threads, the singleton is
    * configured to use the maximum of the specified values.
    */
-  static SearchThreadManager* get(const ManagerParams& params);
+  static TreeTraversalThreadManager* get(const ManagerParams& params);
 
-  SearchThreadManager(const boost::filesystem::path& profiling_dir)
+  TreeTraversalThreadManager(const boost::filesystem::path& profiling_dir)
       : profiling_dir_(profiling_dir) {}
 
   /*
@@ -99,7 +99,7 @@ class SearchThreadManager {
    */
   void add_threads_if_necessary(int num_total_threads);
 
-  static SearchThreadManager* instance_;
+  static TreeTraversalThreadManager* instance_;
 
   boost::filesystem::path profiling_dir_;
   thread_vec_t threads_;
@@ -112,7 +112,7 @@ class SearchThreadManager {
 };
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class SearchThread {
+class TreeTraversalThread {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using NNEvaluation = mcts::NNEvaluation<GameState>;
@@ -132,8 +132,8 @@ class SearchThread {
   using ValueArray = typename GameStateTypes::ValueArray;
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
-  using SearchThreadManager = mcts::SearchThreadManager<GameState, Tensorizor>;
-  using work_item_t = typename SearchThreadManager::work_item_t;
+  using TreeTraversalThreadManager = mcts::TreeTraversalThreadManager<GameState, Tensorizor>;
+  using work_item_t = typename TreeTraversalThreadManager::work_item_t;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActionsBound = GameStateTypes::kNumGlobalActionsBound;
@@ -141,8 +141,8 @@ class SearchThread {
   using dtype = torch_util::dtype;
   using profiler_t = search_thread_profiler_t;
 
-  SearchThread(SearchThreadManager* manager, int thread_id);
-  ~SearchThread();
+  TreeTraversalThread(TreeTraversalThreadManager* manager, int thread_id);
+  ~TreeTraversalThread();
 
   int thread_id() const { return thread_id_; }
 
@@ -223,11 +223,11 @@ class SearchThread {
   search_path_t search_path_;
   profiler_t profiler_;
 
-  SearchThreadManager* const manager_;
+  TreeTraversalThreadManager* const manager_;
   const int thread_id_;
   std::thread* thread_ = nullptr;
 };
 
 }  // namespace mcts
 
-#include <mcts/inl/SearchThread.inl>
+#include <mcts/inl/TreeTraversalThread.inl>

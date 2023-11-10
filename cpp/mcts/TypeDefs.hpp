@@ -7,10 +7,10 @@
 
 namespace mcts {
 
-using search_thread_region_t = SearchThreadRegion::region_t;
+using search_thread_region_t = TreeTraversalThreadRegion::region_t;
 #ifdef PROFILE_MCTS
 using search_thread_profiler_t =
-    util::Profiler<int(SearchThreadRegion::kNumRegions), kEnableVerboseProfiling>;
+    util::Profiler<int(TreeTraversalThreadRegion::kNumRegions), kEnableVerboseProfiling>;
 using nn_evaluation_service_profiler_t =
     util::Profiler<int(NNEvaluationServiceRegion::kNumRegions), kEnableVerboseProfiling>;
 #else   // PROFILE_MCTS

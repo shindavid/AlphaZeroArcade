@@ -40,7 +40,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (params.enable_pondering && num_search_threads() == 1) {
     throw util::Exception("pondering mode does not work with only 1 search thread");
   }
-  search_thread_manager_ = SearchThreadManager::get(params);
+  search_thread_manager_ = TreeTraversalThreadManager::get(params);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
