@@ -299,7 +299,7 @@ class Node {
   PolicyTensor get_counts(const ManagerParams& params) const;
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
-  void update_stats(const UpdateT& update_instruction);
+  void update_stats(const UpdateT& update_instruction, TreeTraversalMode mode);
   sptr lookup_child_by_action(const Action& action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }

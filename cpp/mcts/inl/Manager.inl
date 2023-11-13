@@ -40,16 +40,18 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (params.enable_pondering && num_search_threads() == 1) {
     throw util::Exception("pondering mode does not work with only 1 search thread");
   }
-  search_thread_manager_ = TreeTraversalThreadManager::get(params);
+  search_thread_ = new SearchThread(&shared_data_, nn_eval_service_, &params_);
+  prefetch_manager_ = PrefetchThreadManager::get(params);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::~Manager() {
   clear();
+  prefetch_manager_->shutdown();
+  delete search_thread_;
   if (nn_eval_service_) {
     nn_eval_service_->disconnect();
   }
-  search_thread_manager_->shutdown();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -69,7 +71,7 @@ inline void Manager<GameState, Tensorizor>::start() {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
-  search_thread_manager_->wait_for_completion(&shared_data_);
+  prefetch_manager_->wait_for_completion(&shared_data_);
   shared_data_.root_node = nullptr;
 }
 
@@ -80,7 +82,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   shared_data_.move_number++;
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
-  search_thread_manager_->wait_for_completion(&shared_data_);
+  prefetch_manager_->wait_for_completion(&shared_data_);
   auto root_node = shared_data_.root_node;
   if (!root_node.get()) return;
 
@@ -93,7 +95,8 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   shared_data_.root_node = new_root;
 
   if (params_.enable_pondering) {
-    search_thread_manager_->add_work(&shared_data_, nn_eval_service_, &pondering_search_params_,
+    shared_data_.activate_search();
+    prefetch_manager_->add_work(&shared_data_, nn_eval_service_, &pondering_search_params_,
                                      &params_);
   }
 }
@@ -102,7 +105,10 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 inline const typename Manager<GameState, Tensorizor>::SearchResults*
 Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameState& game_state,
                                        const SearchParams& params) {
-  search_thread_manager_->wait_for_completion(&shared_data_);
+  if (params_.enabled_pondering) {
+    shared_data_.deactivate_search();
+    prefetch_manager_->wait_for_completion(&shared_data_);
+  }
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
@@ -116,8 +122,10 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
     state.dump();
   }
 
-  search_thread_manager_->add_work(&shared_data_, nn_eval_service_, &params, &params_);
-  search_thread_manager_->wait_for_completion(&shared_data_);
+  search_thread_->set_search_params(&params);
+  shared_data_.activate_search();
+  prefetch_manager_->add_work(&shared_data_, nn_eval_service_, &params, &params_);
+  prefetch_manager_->wait_for_completion(&shared_data_);
 
   const auto& root = shared_data_.root_node;
   const auto& evaluation_data = root->evaluation_data();

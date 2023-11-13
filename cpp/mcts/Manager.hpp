@@ -13,10 +13,11 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/PrefetchThread.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
-#include <mcts/TreeTraversalThread.hpp>
+#include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 
 namespace mcts {
@@ -35,7 +36,8 @@ class Manager {
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchResults = mcts::SearchResults<GameState>;
   using TreeTraversalThread = mcts::TreeTraversalThread<GameState, Tensorizor>;
-  using TreeTraversalThreadManager = mcts::TreeTraversalThreadManager<GameState, Tensorizor>;
+  using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
+  using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
   using SharedData = mcts::SharedData<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
@@ -78,7 +80,8 @@ class Manager {
   const ManagerParams params_;
   SharedData shared_data_;
   const SearchParams pondering_search_params_;
-  TreeTraversalThreadManager* search_thread_manager_;
+  PrefetchThreadManager* prefetch_manager_;
+  SearchThread* search_thread_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 
   SearchResults results_;

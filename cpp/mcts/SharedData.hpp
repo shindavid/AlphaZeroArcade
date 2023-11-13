@@ -31,26 +31,56 @@ struct SharedData {
   int manager_id = -1;
   move_number_t move_number = 0;
 
-  bool seeking_search_threads = false;
+  void activate_search() {
+    std::unique_lock lock(mutex_);
+    if (search_active_) return;
+    search_active_ = true;
+    lock.unlock();
 
-  void increment_active_search_thread_count(int delta) {
-    std::unique_lock lock(mutex);
-    active_search_thread_count += delta;
-    if (active_search_thread_count == 0) {
+    search_begin_cv_.notify_all();
+  }
+
+  void deactivate_search() {
+    std::unique_lock lock(mutex_);
+    if (!search_active_) return;
+    search_active_ = false;
+    lock.unlock();
+
+    search_end_cv_.notify_all();
+  }
+
+  bool search_active() const { return search_active_; }
+
+  void increment_active_thread_count() {
+    std::unique_lock lock(mutex_);
+    active_thread_count_++;
+  }
+
+  void decrement_active_thread_count() {
+    std::unique_lock lock(mutex_);
+    active_thread_count_--;
+    if (active_thread_count_ == 0) {
       lock.unlock();
-      cv.notify_all();
+      search_end_cv_.notify_all();
     }
   }
 
+  void wait_for_search_activation() {
+    std::unique_lock lock(mutex_);
+    search_begin_cv_.wait(lock, [&]() { return search_active_; });
+  }
+
   void wait_for_search_completion() {
-    std::unique_lock lock(mutex);
-    cv.wait(lock, [&]() { return !seeking_search_threads && active_search_thread_count == 0; });
+    std::unique_lock lock(mutex_);
+    search_end_cv_.wait(lock, [&]() { return !search_active_ && active_thread_count_ == 0; });
   }
 
 private:
-  std::mutex mutex;
-  std::condition_variable cv;
-  int active_search_thread_count = 0;
+  std::mutex mutex_;
+  std::condition_variable search_begin_cv_;
+  std::condition_variable search_end_cv_;
+  int active_thread_count_ = 0;
+  bool search_active_ = false;
 };
 
 }  // namespace mcts

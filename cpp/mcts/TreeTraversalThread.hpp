@@ -20,98 +20,58 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class TreeTraversalThread;
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class TreeTraversalThreadManager {
- public:
-  using thread_vec_t = std::vector<TreeTraversalThread<GameState, Tensorizor>*>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
-  using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
-
-  struct work_item_t {
-    SharedData* shared_data = nullptr;
-    NNEvaluationService* nn_eval_service = nullptr;
-    const SearchParams* search_params = nullptr;
-    const ManagerParams* manager_params = nullptr;
-  };
-
-  /*
-   * Gets a singleton TreeTraversalThreadManager, to be shared by all mcts::Manager's for this
-   * (GameState, Tensorizor).
-   *
-   * The passed-in params has a num_search_threads field that specifies the number of threads to
-   * use. If multiple calls specify different values for num_search_threads, the singleton is
-   * configured to use the maximum of the specified values.
-   */
-  static TreeTraversalThreadManager* get(const ManagerParams& params);
-
-  TreeTraversalThreadManager(const boost::filesystem::path& profiling_dir)
-      : profiling_dir_(profiling_dir) {}
-
-  /*
-   * Destroys all threads.
-   */
-  void shutdown();
-
-  /*
-   * Marks the SharedData as seeking search threads, and adds a work item to the work queue.
-   * Notifies all threads waiting on work_items_cv_.
-   */
-  void add_work(SharedData*, NNEvaluationService*, const SearchParams*, const ManagerParams*);
-
-  /*
-   * Marks the SharedData as not seeking search threads, and removes the matching work item from the
-   * work queue. Notifies all threads waiting on work_items_cv_.
-   */
-  void remove_work(SharedData*);
-
-  /*
-   * Waits until the SharedData is no longer seeking search threads. Then waits until no more
-   * search threads are working on it.
-   */
-  void wait_for_completion(SharedData*);
-
-  std::mutex& work_items_mutex() { return work_items_mutex_; }
-  std::condition_variable& work_items_cv() { return work_items_cv_; }
-
-  /*
-   * If a shutdown has been initiated, returns false.
-   *
-   * Otherwise, sets *work_item to an available work item and returns true.
-   */
-  bool get_next_work_item(work_item_t* work_item);
-
-  const boost::filesystem::path& profiling_dir() const { return profiling_dir_; }
-
-  bool shutdown_initiated() const { return shutdown_initiated_; }
-
- private:
-  using work_item_vec_t = std::vector<work_item_t>;
-
-  /*
-   * Helper to get_next_work_item(). Assumes work_items_mutex_ is locked.
-   */
-  bool get_next_work_item_helper(work_item_t* work_item);
-
-  /*
-   * Adds more threads until the total number of threads is at least num_total_threads.
-   */
-  void add_threads_if_necessary(int num_total_threads);
-
-  static TreeTraversalThreadManager* instance_;
-
-  boost::filesystem::path profiling_dir_;
-  thread_vec_t threads_;
-  work_item_vec_t work_items_;
-  int work_item_index_ = 0;
-  bool shutdown_initiated_ = false;
-
-  std::mutex work_items_mutex_;
-  std::condition_variable work_items_cv_;
-};
-
+/*
+ * A common base class for PrefetchThread and SearchThread. Members that are used by both classes
+ * live here.
+ *
+ * SearchThread is responsible for updating the "official" counts/values in an MCTS tree. A given
+ * tree will only have one active SearchThread at a time.
+ *
+ * Meanwhile, the tree will have many active PrefetchThread's, which do the "hard" work. Namely,
+ * they zip around the tree, expand children, and make batched neural network evaluations. When
+ * doing this, they try to predict in advance which parts of the tree the single SearchThread will
+ * visit in the future, similarly to how hardware prefetchers try to predict which parts of memory
+ * the CPU will access in the future. The way they try to predict this is by mimicking the same
+ * PUCT calculations that the SearchThread will do, except they apply virtual loss to make use of
+ * parallelism.
+ *
+ * For the most part, the PrefetchThread's operate independently of the single SearchThread.
+ * However, there is a mechanism by which the SearchThread can alert the PrefetchThread's if it
+ * detects that the PrefetchThread's are wasting too much time predicting in the wrong region of the
+ * tree. In such scenarios, the PrefetchThread's will stop and recalibrate according to the
+ * SearchThread's "official" counts/values.
+ *
+ * In typical multithreaded MCTS implementations, these roles are effectively merged into one -
+ * each thread does "prefetching"-style behavior, applying virtual loss to make use of parallelism,
+ * but then uses the results of the calculations that supports its prefetch-predictions to directly
+ * update the "official" counts/values.
+ *
+ * The following text, taken from a message from user nerai from the Computer Go Community Discord,
+ * summarizes the problem with such implementations:
+ *
+ * "There is an inherent problem with parallelizing MCTS. The algorithm was proven to converge to
+ * optimal results in serial operation, but in parallel operation, this convergence is degraded.
+ * This is perhaps mostly due to the fact that the algorithm expects a node to be visited only when
+ * it is the most interesting at some point in the search. By definition, a 2-parallel search must
+ * look at (in the best case) the second most interesting node concurrently to the most interesting
+ * node, and so on.
+ *
+ * The issue with this is that a node with more visits receives a greater weight in further
+ * calculations. As a simplified example, imagine a node that has one excellent continuation while
+ * all other child moves are horrible. Of course, the good path should be taken almost exclusively.
+ * But if this node is evaluated in parallel, in addition to the good path the algorithm must pick
+ * some bad paths, too, to avoid contention.
+ *
+ * The results of these evaluations will be somehow averaged, leading to the parent node looking
+ * worse than it should. It will thus take some time for the search to focus on the parent node
+ * again and eventually recognize its dominant continuation. Until then, the search is -- to some
+ * degree -- misguided and will produce worse results. This can drastically reduce playing strength.
+ *
+ * All of this does not matter much at a parallelism level of 5 or 10, as it will work around the
+ * inaccuracy over a few thousand visits, which is common nowadays. It has, however, a severe impact
+ * at levels of hundreds, thousands or more. MCTS in its classic variants is not built to deal with
+ * this."
+ */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class TreeTraversalThread {
  public:
@@ -133,8 +93,8 @@ class TreeTraversalThread {
   using ValueArray = typename GameStateTypes::ValueArray;
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
-  using TreeTraversalThreadManager = mcts::TreeTraversalThreadManager<GameState, Tensorizor>;
-  using work_item_t = typename TreeTraversalThreadManager::work_item_t;
+  using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
+  using work_item_t = typename PrefetchThreadManager::work_item_t;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActionsBound = GameStateTypes::kNumGlobalActionsBound;
@@ -142,40 +102,50 @@ class TreeTraversalThread {
   using dtype = torch_util::dtype;
   using profiler_t = search_thread_profiler_t;
 
-  TreeTraversalThread(TreeTraversalThreadManager* manager, int thread_id);
+  TreeTraversalThread(TreeTraversalMode traversal_mode,
+                      const boost::filesystem::path& profiling_dir, int thread_id);
   ~TreeTraversalThread();
 
   int thread_id() const { return thread_id_; }
 
   void join();
   void kill();
-  void loop();
   bool is_pondering() const { return search_params_->ponder; }
 
   void dump_profiling_stats() { profiler_.dump(64); }
 
- private:
+ protected:
   struct VirtualIncrement {
-    void operator()(Node* node) const { node->stats().virtual_increment(); }
+    void operator()(Node* node, TreeTraversalMode mode) const {
+      node->stats(mode).virtual_increment();
+    }
   };
 
   struct RealIncrement {
-    void operator()(Node* node) const { node->stats().real_increment(); }
+    void operator()(Node* node, TreeTraversalMode mode) const {
+      node->stats(mode).real_increment();
+    }
   };
 
   struct IncrementTransfer {
-    void operator()(Node* node) const { node->stats().increment_transfer(); }
+    void operator()(Node* node, TreeTraversalMode mode) const {
+      node->stats(mode).increment_transfer();
+    }
   };
 
   struct SetEvalExact {
     SetEvalExact(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().set_eval_exact(value); }
+    void operator()(Node* node, TreeTraversalMode mode) const {
+      node->stats(mode).set_eval_exact(value);
+    }
     const ValueArray& value;
   };
 
   struct SetEvalWithVirtualUndo {
     SetEvalWithVirtualUndo(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().set_eval_with_virtual_undo(value); }
+    void operator()(Node* node, TreeTraversalMode mode) const {
+      node->stats(mode).set_eval_with_virtual_undo(value);
+    }
     const ValueArray& value;
   };
 
@@ -191,11 +161,8 @@ class TreeTraversalThread {
   };
   using search_path_t = std::vector<visitation_t>;
 
-  void visit(Node* tree, edge_t* edge, move_number_t move_number);
   void add_dirichlet_noise(LocalPolicyArray& P);
-  void virtual_backprop();
   void pure_backprop(const ValueArray& value);
-  void backprop_with_virtual_undo(const ValueArray& value);
   void short_circuit_backprop(edge_t* last_edge);
   evaluation_result_t evaluate(Node* tree);
   void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
@@ -224,7 +191,7 @@ class TreeTraversalThread {
   search_path_t search_path_;
   profiler_t profiler_;
 
-  TreeTraversalThreadManager* const manager_;
+  const TreeTraversalMode traversal_mode_;
   const int thread_id_;
   std::thread* thread_ = nullptr;
 };

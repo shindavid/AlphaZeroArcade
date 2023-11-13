@@ -168,7 +168,8 @@ typename Node<GameState, Tensorizor>::ValueArray Node<GameState, Tensorizor>::ma
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 template <typename UpdateT>
-void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction) {
+void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction,
+                                               TreeTraversalMode mode) {
   core::seat_index_t cp = stable_data().current_player;
 
   ValueArray real_sum;
@@ -189,7 +190,7 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   all_provably_winning.set();
   all_provably_losing.set();
   for (const edge_t& edge : children_data_) {
-    const auto& child_stats = edge.child()->stats();
+    const auto& child_stats = edge.child()->stats(mode);
     int count = edge.count();
     real_sum += child_stats.real_avg * count;
     real_count += count;
@@ -200,11 +201,13 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
     num_children++;
   }
 
-  std::unique_lock lock(stats_mutex_);
-  update_instruction(this);
+  if (mode == kPrefetchMode) stats_mutex_.lock();
+  update_instruction(this, mode);
 
-  if (stats_.real_count) {
-    real_sum += stats_.eval;
+  stats_t& stats = this->stats(mode);
+
+  if (stats.real_count) {
+    real_sum += stats.eval;
     real_count++;
   }
 
@@ -213,22 +216,24 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   if (num_valid_actions == 0) {
     // terminal state, provably_winning/losing are already set by instruction
   } else if (cp_has_winning_move) {
-    stats_.provably_winning[cp] = true;
-    stats_.provably_losing.set();
-    stats_.provably_losing[cp] = false;
+    stats.provably_winning[cp] = true;
+    stats.provably_losing.set();
+    stats.provably_losing[cp] = false;
   } else if (num_children == num_valid_actions) {
-    stats_.provably_winning = all_provably_winning;
-    stats_.provably_losing = all_provably_losing;
+    stats.provably_winning = all_provably_winning;
+    stats.provably_losing = all_provably_losing;
   }
 
-  stats_.real_avg = real_count ? (real_sum / real_count) : real_sum;
-  if (stats_.virtual_count) {
-    ValueArray virtualized_num = real_sum + make_virtual_loss() * stats_.virtual_count;
-    int virtualized_den = real_count + stats_.virtual_count;
-    stats_.virtualized_avg = virtualized_num / virtualized_den;
+  stats.real_avg = real_count ? (real_sum / real_count) : real_sum;
+  if (stats.virtual_count) {
+    ValueArray virtualized_num = real_sum + make_virtual_loss() * stats.virtual_count;
+    int virtualized_den = real_count + stats.virtual_count;
+    stats.virtualized_avg = virtualized_num / virtualized_den;
   } else {
-    stats_.virtualized_avg = stats_.real_avg;
+    stats.virtualized_avg = stats.real_avg;
   }
+
+  if (mode == kPrefetchMode) stats_mutex_.unlock();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
