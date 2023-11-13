@@ -48,7 +48,7 @@ void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
 
   const auto& stable_data = tree->stable_data();
   const auto& outcome = stable_data.outcome;
-  if (core::is_terminal_outcome(outcome)) {
+  if (GameStateTypes::is_terminal_outcome(outcome)) {
     pure_backprop(outcome);
     return;
   }

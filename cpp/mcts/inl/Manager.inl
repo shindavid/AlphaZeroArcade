@@ -97,7 +97,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   if (params_.enable_pondering) {
     shared_data_.activate_search();
     prefetch_manager_->add_work(&shared_data_, nn_eval_service_, &pondering_search_params_,
-                                     &params_);
+                                &params_);
   }
 }
 
@@ -112,7 +112,7 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
-    auto outcome = core::make_non_terminal_outcome<kNumPlayers>();
+    auto outcome = GameStateTypes::make_non_terminal_outcome();
     shared_data_.root_node =
         std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
   }

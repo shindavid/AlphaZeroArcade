@@ -66,7 +66,7 @@ inline void TreeTraversalThread<GameState, Tensorizor>::pure_backprop(const Valu
 
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(SetEvalExact(value), traversal_mode_);
+  last_node->update_stats(RealIncrementAndDeduceCertainOutcomes(value), traversal_mode_);
   last_edge->increment_count(traversal_mode_);
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {

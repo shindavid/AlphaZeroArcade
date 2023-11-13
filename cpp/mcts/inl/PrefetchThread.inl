@@ -152,7 +152,7 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
 
   const auto& stable_data = tree->stable_data();
   const auto& outcome = stable_data.outcome;
-  if (core::is_terminal_outcome(outcome)) {
+  if (GameStateTypes::is_terminal_outcome(outcome)) {
     pure_backprop(outcome);
     return;
   }
@@ -218,7 +218,7 @@ void PrefetchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Val
 
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(SetEvalWithVirtualUndo(value), traversal_mode_);
+  last_node->update_stats(IncrementTransfer{}, traversal_mode_);
   if (last_edge) last_edge->increment_count(traversal_mode_);
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {

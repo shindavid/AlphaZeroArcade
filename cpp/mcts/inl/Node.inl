@@ -19,7 +19,6 @@ inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(const Tensorizo
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stats_t::stats_t() {
-  eval.setZero();
   real_avg.setZero();
   virtualized_avg.setZero();
 }
@@ -207,7 +206,7 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   stats_t& stats = this->stats(mode);
 
   if (stats.real_count) {
-    real_sum += stats.eval;
+    real_sum += evaluation_data_.value;
     real_count++;
   }
 

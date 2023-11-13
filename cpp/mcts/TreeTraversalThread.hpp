@@ -133,18 +133,11 @@ class TreeTraversalThread {
     }
   };
 
-  struct SetEvalExact {
-    SetEvalExact(const ValueArray& value) : value(value) {}
+  struct RealIncrementAndDeduceCertainOutcomes {
+    RealIncrementAndDeduceCertainOutcomes(const ValueArray& value) : value(value) {}
     void operator()(Node* node, TreeTraversalMode mode) const {
-      node->stats(mode).set_eval_exact(value);
-    }
-    const ValueArray& value;
-  };
-
-  struct SetEvalWithVirtualUndo {
-    SetEvalWithVirtualUndo(const ValueArray& value) : value(value) {}
-    void operator()(Node* node, TreeTraversalMode mode) const {
-      node->stats(mode).set_eval_with_virtual_undo(value);
+      node->stats(mode).real_increment();
+      node->stats(mode).deduce_certain_outcomes(value);
     }
     const ValueArray& value;
   };

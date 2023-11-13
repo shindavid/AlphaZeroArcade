@@ -80,16 +80,14 @@ class Node {
    *
    * 1. I don't think there's a need to have both real_avg and virtualized_avg, as the virtualized
    *    avg can be quickly computed as needed from the real avg and the counts.
-   * 2. eval is a static write-once value, so it belongs outside of stats_t (probably in
-   *    stable_data_t?).
-   * 3. In zero-sum games, ValueArray can be specialized to only store (n-1) values, and packed.
-   * 4. The provably_* bitsets can be changed to use a specialized bitset type that uses fewer than
+   * 2. In zero-sum games, ValueArray can be specialized to only store (n-1) values, and packed.
+   * 3. The provably_* bitsets can be changed to use a specialized bitset type that uses fewer than
    *    8 bytes.
    *
    * With the above changes, this object can be shrunk to 16 bytes in the two-player zero-sum case.
-   * Currently, it is 48 bytes. This shrinkage became slightly more relevant with the introduction
-   * of Deterministic Multithreaded MCTS, which maintains two stats_t objects per node, one for
-   * prefetched data and one for confirmed data.
+   * This shrinkage became slightly more relevant with the introduction of Deterministic
+   * Multithreaded MCTS, which maintains two stats_t objects per node, one for prefetched data and
+   * one for confirmed data.
    */
   struct stats_t {
     stats_t();
@@ -100,20 +98,16 @@ class Node {
       real_count++;
       virtual_count--;
     }
-    void set_eval_exact(const ValueArray& value) {
-      eval = value;
+    void deduce_certain_outcomes(const ValueArray& value) {
       for (int p = 0; p < kNumPlayers; ++p) {
         provably_winning[p] = value(p) == 1;
         provably_losing[p] = value(p) == 0;
       }
-      real_increment();
     }
     void set_eval_with_virtual_undo(const ValueArray& value) {
-      eval = value;
       increment_transfer();
     }
 
-    ValueArray eval;             // game-outcome for terminal nodes, nn-eval for non-terminal nodes
     ValueArray real_avg;         // excludes virtual loss
     ValueArray virtualized_avg;  // includes virtual loss
 
@@ -286,6 +280,19 @@ class Node {
   struct evaluation_data_t {
     NNEvaluation::asptr ptr;
     LocalPolicyArray local_policy_prob_distr;
+
+    /*
+     * For non-terminal nodes, value is a copy of ptr->value_prob_distr_, and represents a
+     * neural-net evaluation of the node.
+     *
+     * For terminal nodes, value is a copy of stable_data_.outcome, and represents an outcome as
+     * determined by the rules of the game.
+     *
+     * Either way, value is a redundant copied value. We don't need this field, and could instead
+     * have a getter that branches based on whether the node is terminal or not. Having a copied
+     * value is likely a tiny efficiency win.
+     */
+    ValueArray value;
     evaluation_state_t state = kUnset;
   };
 

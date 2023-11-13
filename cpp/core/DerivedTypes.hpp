@@ -17,29 +17,6 @@
 
 namespace core {
 
-/*
- * Represents the outcome of a game, as a length-t array of non-negative floats, where t is the
- * number of players in the game.
- *
- * If the outcome represents a terminal game state, the array will have sum 1. Normally, one slot in
- * the array, corresponding to the winner, will equal 1, and the other slots will equal 0. In the
- * even of a draw, the tied players will typically each equal the same fractional value.
- *
- * If the game is not yet over, the outcome will have all zeros.
- */
-template <int NumPlayers>
-using GameOutcome = Eigen::Array<torch_util::dtype, NumPlayers, 1>;
-template <int NumPlayers>
-bool is_terminal_outcome(const GameOutcome<NumPlayers>& outcome) {
-  return outcome.sum() > 0;
-}
-template <int NumPlayers>
-auto make_non_terminal_outcome() {
-  GameOutcome<NumPlayers> o;
-  o.setZero();
-  return o;
-}
-
 template <typename GameState>
 struct GameStateTypes {
   using dtype = torch_util::dtype;
@@ -51,8 +28,6 @@ struct GameStateTypes {
 
   using SymmetryIndexSet = std::bitset<kMaxNumSymmetries>;
 
-  using GameOutcome = core::GameOutcome<kNumPlayers>;
-
   using PolicyShape = typename GameState::ActionShape;
   using ValueShape = eigen_util::Shape<kNumPlayers>;
 
@@ -61,6 +36,7 @@ struct GameStateTypes {
 
   using PolicyArray = Eigen::Array<dtype, kNumGlobalActionsBound, 1>;
   using ValueArray = Eigen::Array<dtype, kNumPlayers, 1>;
+  using GameOutcome = ValueArray;
   using LocalPolicyArray = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
 
   using DynamicPolicyTensor = Eigen::Tensor<dtype, PolicyShape::count + 1, Eigen::RowMajor>;
@@ -83,6 +59,9 @@ struct GameStateTypes {
     Action action;
     bool victory_guarantee;
   };
+
+  static bool is_terminal_outcome(const GameOutcome& outcome);  // nonzero represents terminal
+  static GameOutcome make_non_terminal_outcome();  // all zeros represents non-terminal
 
   static LocalPolicyArray global_to_local(const PolicyTensor& policy, const ActionMask& mask);
   static void global_to_local(const PolicyTensor& policy, const ActionMask& mask,
