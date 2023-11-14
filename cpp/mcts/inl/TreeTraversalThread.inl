@@ -149,70 +149,91 @@ core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action
     util::ThreadSafePrinter printer(thread_id());
 
     const auto& tree_stats = tree->stats(traversal_mode_);
+    core::seat_index_t cp = tree->stable_data().current_player;
 
-    printer << "*************" << std::endl;
-    printer << __func__ << "() " << search_path_str() << std::endl;
-    printer << "real_avg: " << tree_stats.real_avg.transpose() << std::endl;
-    printer << "virt_avg: " << tree_stats.virtualized_avg.transpose() << std::endl;
-
-    using ScalarT = typename PVec::Scalar;
-    constexpr int kNumCols1 = PolicyShape::count;
-    constexpr int kNumCols2 = 8;
-    using ArrayT1 = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols1, 0, PVec::MaxRowsAtCompileTime>;
-    using ArrayT2 = Eigen::Array<ScalarT, Eigen::Dynamic, kNumCols2, 0, PVec::MaxRowsAtCompileTime>;
-
-    ArrayT1 A(P.rows(), kNumCols1);
-    const ActionMask& valid_actions = tree->stable_data().valid_action_mask;
-    const bool* data = valid_actions.data();
-    int c = 0;
-    for (int i = 0; i < kNumGlobalActionsBound; ++i) {
-      if (!data[i]) continue;
-      Action action = eigen_util::unflatten_index(valid_actions, i);
-      for (int j = 0; j < kNumCols1; ++j) {
-        A(c, j) = action[j];
-      }
-    }
+    using ArrayT1 = Eigen::Array<dtype, 3, kNumPlayers>;
+    ArrayT1 A1;
+    A1.setZero();
+    A1.row(0) = tree_stats.real_avg;
+    A1.row(1) = tree_stats.virtualized_avg;
+    A1(2, cp) = 1;
 
     std::ostringstream ss1;
-    ss1 << A.transpose();
+    ss1 << A1;
     std::string s1 = ss1.str();
 
     std::vector<std::string> s1_lines;
     boost::split(s1_lines, s1, boost::is_any_of("\n"));
 
-    printer << "valid: " << s1_lines[0] << std::endl;
-    for (int i = 1; i < kNumCols1; ++i) {
-      printer << "       " << s1_lines[i] << std::endl;
+    printer << "real_avg: " << s1_lines[0] << std::endl;
+    printer << "virt_avg: " << s1_lines[1] << std::endl;
+
+    std::string cp_line = s1_lines[2];
+    std::replace(cp_line.begin(), cp_line.end(), '0', ' ');
+    std::replace(cp_line.begin(), cp_line.end(), '1', '*');
+
+    printer << "cp:       " << cp_line << std::endl;
+
+    using ScalarT = typename PVec::Scalar;
+    constexpr int kNumRows1 = PolicyShape::count;
+    constexpr int kNumRows2 = 9;  // P, V, PW, PL, E, N, VN, PUCT, argmax
+    constexpr int kNumRows = kNumRows1 + kNumRows2;
+    constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
+    using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
+
+    ArrayT2 A2(kNumRows, P.rows());
+    A2.setZero();
+
+    const ActionMask& valid_actions = tree->stable_data().valid_action_mask;
+    const bool* data = valid_actions.data();
+    int r = 0;
+    int c = 0;
+    for (int i = 0; i < kNumGlobalActionsBound; ++i) {
+      if (!data[i]) continue;
+      Action action = eigen_util::unflatten_index(valid_actions, i);
+      for (int j = 0; j < kNumRows1; ++j) {
+        A2(j, c) = action[j];
+      }
+      ++c;
     }
+    r += kNumRows1;
 
-    ArrayT2 M(P.rows(), kNumCols2);
-
-    M.col(0) = P;
-    M.col(1) = stats.V;
-    M.col(2) = stats.PW;
-    M.col(3) = stats.PL;
-    M.col(4) = stats.E;
-    M.col(5) = N;
-    M.col(6) = stats.VN;
-    M.col(7) = PUCT;
+    A2.row(r++) = P;
+    A2.row(r++) = stats.V;
+    A2.row(r++) = stats.PW;
+    A2.row(r++) = stats.PL;
+    A2.row(r++) = stats.E;
+    A2.row(r++) = N;
+    A2.row(r++) = stats.VN;
+    A2.row(r++) = PUCT;
+    A2(r, argmax_index) = 1;
 
     std::ostringstream ss2;
-    ss2 << M.transpose();
+    ss2 << A2;
     std::string s2 = ss2.str();
 
     std::vector<std::string> s2_lines;
     boost::split(s2_lines, s2, boost::is_any_of("\n"));
 
-    printer << "P:     " << s2_lines[0] << std::endl;
-    printer << "V:     " << s2_lines[1] << std::endl;
-    printer << "PW:    " << s2_lines[2] << std::endl;
-    printer << "PL:    " << s2_lines[3] << std::endl;
-    printer << "E:     " << s2_lines[4] << std::endl;
-    printer << "N:     " << s2_lines[5] << std::endl;
-    printer << "VN:    " << s2_lines[6] << std::endl;
-    printer << "PUCT:  " << s2_lines[7] << std::endl;
+    r = 0;
+    printer << "move:  " << s2_lines[r++] << std::endl;
+    while (r < kNumRows1) {
+      printer << "       " << s2_lines[r++] << std::endl;
+    }
+    printer << "P:     " << s2_lines[r++] << std::endl;
+    printer << "V:     " << s2_lines[r++] << std::endl;
+    printer << "PW:    " << s2_lines[r++] << std::endl;
+    printer << "PL:    " << s2_lines[r++] << std::endl;
+    printer << "E:     " << s2_lines[r++] << std::endl;
+    printer << "N:     " << s2_lines[r++] << std::endl;
+    printer << "VN:    " << s2_lines[r++] << std::endl;
+    printer << "PUCT:  " << s2_lines[r++] << std::endl;
 
-    printer << "argmax: " << argmax_index << std::endl;
+    std::string argmax_line = s2_lines[r];
+    std::replace(argmax_line.begin(), argmax_line.end(), '0', ' ');
+    std::replace(argmax_line.begin(), argmax_line.end(), '1', '*');
+
+    printer << "argmax:" << argmax_line << std::endl;
     printer << "*************" << std::endl;
   }
   return argmax_index;
