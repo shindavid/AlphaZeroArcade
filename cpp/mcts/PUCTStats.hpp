@@ -4,6 +4,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
+#include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
@@ -22,7 +23,7 @@ struct PUCTStats {
   static constexpr float eps = 1e-6;  // needed when N == 0
 
   PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params,
-            const Node* tree, bool is_root);
+            TreeTraversalMode traversal_mode, const Node* tree, bool is_root);
 
   core::seat_index_t cp;
   const LocalPolicyArray& P;

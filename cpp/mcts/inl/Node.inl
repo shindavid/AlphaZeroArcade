@@ -119,12 +119,12 @@ inline typename Node<GameState, Tensorizor>::PolicyTensor Node<GameState, Tensor
   PolicyTensor counts;
   counts.setZero();
 
-  bool provably_winning = stats_.provably_winning[cp];
-  bool provably_losing = stats_.provably_losing[cp];
+  bool provably_winning = stats_[kSearchMode].provably_winning[cp];
+  bool provably_losing = stats_[kSearchMode].provably_losing[cp];
 
   for (auto& it : children_data_) {
     Action action = it.action();
-    const auto& stats = it.child()->stats();
+    const auto& stats = it.child()->stats(kSearchMode);
     int count = stats.real_count;
 
     int modified_count = count;
@@ -190,7 +190,7 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   all_provably_losing.set();
   for (const edge_t& edge : children_data_) {
     const auto& child_stats = edge.child()->stats(mode);
-    int count = edge.count();
+    int count = edge.count(mode);
     real_sum += child_stats.real_avg * count;
     real_count += count;
 

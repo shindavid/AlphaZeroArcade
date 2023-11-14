@@ -14,6 +14,7 @@
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/NodeCache.hpp>
+#include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -93,9 +94,6 @@ class TreeTraversalThread {
   using ValueArray = typename GameStateTypes::ValueArray;
   using ValueTensor = typename GameStateTypes::ValueTensor;
 
-  using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
-  using work_item_t = typename PrefetchThreadManager::work_item_t;
-
   static constexpr int kNumPlayers = GameState::kNumPlayers;
   static constexpr int kNumGlobalActionsBound = GameStateTypes::kNumGlobalActionsBound;
 
@@ -155,10 +153,8 @@ class TreeTraversalThread {
   using search_path_t = std::vector<visitation_t>;
 
   void add_dirichlet_noise(LocalPolicyArray& P);
-  void pure_backprop(const ValueArray& value);
+  void backprop(const ValueArray& value, BackpropMode mode);
   void short_circuit_backprop(edge_t* last_edge);
-  evaluation_result_t evaluate(Node* tree);
-  void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
   std::string search_path_str() const;  // slow, for debugging
 
   /*

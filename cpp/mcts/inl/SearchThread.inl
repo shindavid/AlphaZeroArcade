@@ -6,84 +6,87 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 SearchThread<GameState, Tensorizor>::SearchThread(SharedData* shared_data,
                                                   NNEvaluationService* nn_eval_service,
                                                   const ManagerParams* manager_params)
-    : base_t(kSearchMode, params.profiling_dir(), 0),
-      shared_data_(shared_data),
-      nn_eval_service_(nn_eval_service),
-      manager_params_(manager_params) {
-  thread_ = new std::thread([this] { loop(); });
+    : base_t(kSearchMode, manager_params->profiling_dir(), 0) {
+  this->shared_data_ = shared_data;
+  this->nn_eval_service_ = nn_eval_service;
+  this->manager_params_ = manager_params;
+  this->thread_ = new std::thread([this] { loop(); });
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::loop() {
   while (true) {
-    shared_data_->wait_for_search_activation();
+    this->shared_data_->wait_for_search_activation();
 
-    search_path_.clear();
-    Node* root = shared_data_->root_node.get();
-    visit(root, nullptr, shared_data_->move_number);
+    this->search_path_.clear();
+    Node* root = this->shared_data_->root_node.get();
+    search(root, root, nullptr, this->shared_data_->move_number);
 
-    if (root->stats().total_count() > search_params_->tree_size_limit) {
-      manager_->remove_work(shared_data_);
+    if (root->stats(kSearchMode).total_count() > this->search_params_->tree_size_limit) {
+      this->shared_data_->deactivate_search();
     }
 
-    dump_profiling_stats();
+    this->dump_profiling_stats();
   }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
-                                                move_number_t move_number) {
-  search_path_.emplace_back(tree, edge);
+void SearchThread<GameState, Tensorizor>::search(Node* root, Node* tree, edge_t* edge,
+                                                 move_number_t move_number) {
+  this->search_path_.emplace_back(tree, edge);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id());
+    util::ThreadSafePrinter printer(this->thread_id_);
     if (edge) {
       printer << __func__ << util::std_array_to_string(edge->action(), "(", ",", ")");
     } else {
       printer << __func__ << "()";
     }
-    printer << " " << search_path_str() << " cp=" << (int)tree->stable_data().current_player
+    printer << " " << this->search_path_str() << " cp=" << (int)tree->stable_data().current_player
             << std::endl;
   }
 
   const auto& stable_data = tree->stable_data();
   const auto& outcome = stable_data.outcome;
   if (GameStateTypes::is_terminal_outcome(outcome)) {
-    pure_backprop(outcome);
+    this->backprop(outcome, kTerminal);
     return;
   }
 
-  if (!shared_data_->search_active()) return;  // short-circuit
+  if (!this->shared_data_->search_active()) return;  // short-circuit
 
-  evaluation_result_t data = evaluate(tree);
-  NNEvaluation* evaluation = data.evaluation.get();
+  constexpr int kPrefetchFailLimit = 100;
+  bool eval_available = this->shared_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
+  if (!eval_available) {
+    this->shared_data_->reset_prefetch_threads();
+    eval_available = this->shared_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
+    util::release_assert(eval_available);
+  }
 
-  if (data.backpropagated_virtual_loss) {
+  bool first_visit = tree->stats(kSearchMode).real_count == 0;
+  NNEvaluation* evaluation = tree->evaluation_data().ptr.load().get();
+
+  if (first_visit) {
     if (mcts::kEnableDebug) {
-      util::ThreadSafePrinter printer(thread_id());
+      util::ThreadSafePrinter printer(this->thread_id_);
       printer << "hit leaf node" << std::endl;
     }
-    backprop_with_virtual_undo(evaluation->value_prob_distr());
+    this->backprop(evaluation->value_prob_distr(), kNonterminal);
   } else {
-    auto& children_data = tree->children_data();
-    core::action_index_t action_index = get_best_action_index(tree, evaluation);
-
-    edge_t* edge = children_data.find(action_index);
+    core::action_index_t action_index = this->get_best_action_index(tree, evaluation);
+    edge_t* edge = this->shared_data_->wait_for_edge(root, tree, action_index, kPrefetchFailLimit);
     if (!edge) {
-      Action action =
-          GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
-      auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
-
-      std::unique_lock lock(tree->children_mutex());
-      edge = children_data.insert(action, action_index, child);
+      this->shared_data_->reset_prefetch_threads();
+      edge = this->shared_data_->wait_for_edge(root, tree, action_index, kPrefetchFailLimit);
+      util::release_assert(edge);
     }
 
-    int edge_count = edge->count();
-    int child_count = edge->child()->stats(traversal_mode_).real_count;
+    int edge_count = edge->count(kSearchMode);
+    int child_count = edge->child()->stats(kSearchMode).real_count;
     if (edge_count < child_count) {
-      short_circuit_backprop(edge);
+      this->short_circuit_backprop(edge);
     } else {
-      visit(edge->child().get(), edge, move_number + 1);
+      search(root, edge->child().get(), edge, move_number + 1);
     }
   }
 }

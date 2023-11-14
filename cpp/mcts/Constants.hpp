@@ -10,29 +10,22 @@ enum Mode { kCompetitive, kTraining };
 
 enum TreeTraversalMode : int8_t { kPrefetchMode = 0, kSearchMode = 1, kNumTreeTraversalModes = 2 };
 
+enum BackpropMode : int8_t { kTerminal, kNonterminal };
+
 struct TreeTraversalThreadRegion {
   enum region_t {
-    kCheckVisitReady,
-    kAcquiringLazilyInitializedDataMutex,
-    kLazyInit,
-    kPureBackprop,
+    kBackprop,
     kBackpropWithVirtualUndo,
     kMisc,
     kCheckingCache,
-    kAcquiringBatchMutex,
     kWaitingUntilBatchReservable,
     kTensorizing,
     kIncrementingCommitCount,
     kWaitingForReservationProcessing,
     kVirtualBackprop,
-    kConstructingChildren,
     kPUCT,
-    kAcquiringStatsMutex,
-    kBackpropEvaluation,
-    kMarkFullyAnalyzed,
     kEvaluate,
     kEvaluateUnset,
-    kEvaluatePending,
     kNumRegions
   };
 };

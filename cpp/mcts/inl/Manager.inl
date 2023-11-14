@@ -71,7 +71,7 @@ inline void Manager<GameState, Tensorizor>::start() {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
-  prefetch_manager_->wait_for_completion(&shared_data_);
+  shared_data_.wait_for_search_completion();
   shared_data_.root_node = nullptr;
 }
 
@@ -82,7 +82,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   shared_data_.move_number++;
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
-  prefetch_manager_->wait_for_completion(&shared_data_);
+  shared_data_.wait_for_search_completion();
   auto root_node = shared_data_.root_node;
   if (!root_node.get()) return;
 
@@ -105,9 +105,9 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 inline const typename Manager<GameState, Tensorizor>::SearchResults*
 Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameState& game_state,
                                        const SearchParams& params) {
-  if (params_.enabled_pondering) {
+  if (params_.enable_pondering) {
     shared_data_.deactivate_search();
-    prefetch_manager_->wait_for_completion(&shared_data_);
+    shared_data_.wait_for_search_completion();
   }
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
@@ -125,12 +125,12 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
   search_thread_->set_search_params(&params);
   shared_data_.activate_search();
   prefetch_manager_->add_work(&shared_data_, nn_eval_service_, &params, &params_);
-  prefetch_manager_->wait_for_completion(&shared_data_);
+  shared_data_.wait_for_search_completion();
 
   const auto& root = shared_data_.root_node;
   const auto& evaluation_data = root->evaluation_data();
   const auto& stable_data = root->stable_data();
-  const auto& stats = root->stats();
+  const auto& stats = root->stats(kSearchMode);
 
   auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
@@ -160,7 +160,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
   if (params_.model_filename.empty()) return;
 
-  PUCTStats stats(params_, search_params, shared_data_.root_node.get(), true);
+  PUCTStats stats(params_, search_params, kSearchMode, shared_data_.root_node.get(), true);
 
   auto orig_counts = results_.counts;
   const auto& P = stats.P;

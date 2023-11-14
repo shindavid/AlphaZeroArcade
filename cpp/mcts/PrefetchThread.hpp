@@ -61,12 +61,6 @@ class PrefetchThreadManager {
    */
   void remove_work(SharedData*);
 
-  /*
-   * Waits until the SharedData is no longer seeking search threads. Then waits until no more
-   * search threads are working on it.
-   */
-  void wait_for_completion(SharedData*);
-
   std::mutex& work_items_mutex() { return work_items_mutex_; }
   std::condition_variable& work_items_cv() { return work_items_cv_; }
 
@@ -113,6 +107,21 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 class PrefetchThread : public TreeTraversalThread<GameState, Tensorizor> {
  public:
   using base_t = TreeTraversalThread<GameState, Tensorizor>;
+  using Action = typename base_t::Action;
+  using GameStateTypes = typename base_t::GameStateTypes;
+  using IncrementTransfer = typename base_t::IncrementTransfer;
+  using LocalPolicyArray = typename base_t::LocalPolicyArray;
+  using NNEvaluation = typename base_t::NNEvaluation;
+  using NNEvaluationService = typename base_t::NNEvaluationService;
+  using Node = typename base_t::Node;
+  using PolicyTensor = typename base_t::PolicyTensor;
+  using ValueArray = typename base_t::ValueArray;
+  using ValueTensor = typename base_t::ValueTensor;
+  using VirtualIncrement = typename base_t::VirtualIncrement;
+  using edge_t = typename base_t::edge_t;
+  using evaluation_result_t = base_t::evaluation_result_t;
+  using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
+  using work_item_t = PrefetchThreadManager::work_item_t;
 
   PrefetchThread(PrefetchThreadManager* manager, int thread_id);
 
@@ -121,6 +130,8 @@ class PrefetchThread : public TreeTraversalThread<GameState, Tensorizor> {
   void prefetch(Node* tree, edge_t* edge, move_number_t move_number);
   void virtual_backprop();
   void backprop_with_virtual_undo(const ValueArray& value);
+  evaluation_result_t evaluate(Node* tree);
+  void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
 
   PrefetchThreadManager* const manager_;
 };

@@ -56,8 +56,9 @@ inline void TreeTraversalThread<GameState, Tensorizor>::add_dirichlet_noise(Loca
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void TreeTraversalThread<GameState, Tensorizor>::pure_backprop(const ValueArray& value) {
-  profiler_.record(TreeTraversalThreadRegion::kPureBackprop);
+inline void TreeTraversalThread<GameState, Tensorizor>::backprop(const ValueArray& value,
+                                                                 BackpropMode mode) {
+  profiler_.record(TreeTraversalThreadRegion::kBackprop);
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id_);
@@ -66,8 +67,14 @@ inline void TreeTraversalThread<GameState, Tensorizor>::pure_backprop(const Valu
 
   Node* last_node = search_path_.back().node;
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(RealIncrementAndDeduceCertainOutcomes(value), traversal_mode_);
-  last_edge->increment_count(traversal_mode_);
+  if (mode == kTerminal) {
+    last_node->update_stats(RealIncrementAndDeduceCertainOutcomes(value), traversal_mode_);
+  } else if (mode == kNonterminal) {
+    last_node->update_stats(RealIncrement{}, traversal_mode_);
+  } else {
+    throw util::Exception("Unknown BackpropMode: %d", (int)mode);
+  }
+  if (last_edge) last_edge->increment_count(traversal_mode_);
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     Node* child = search_path_[i].node;
@@ -90,79 +97,9 @@ void TreeTraversalThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* 
   for (int i = search_path_.size() - 1; i >= 0; --i) {
     Node* child = search_path_[i].node;
     edge_t* edge = search_path_[i].edge;
-    child->update_stats(RealIncrement{});
+    child->update_stats(RealIncrement{}, traversal_mode_);
     if (i) edge->increment_count(traversal_mode_);
   }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename TreeTraversalThread<GameState, Tensorizor>::evaluation_result_t
-TreeTraversalThread<GameState, Tensorizor>::evaluate(Node* tree) {
-  profiler_.record(TreeTraversalThreadRegion::kEvaluate);
-
-  std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
-  typename Node::evaluation_data_t& evaluation_data = tree->evaluation_data();
-  evaluation_result_t data{evaluation_data.ptr.load(), false};
-  auto state = evaluation_data.state;
-
-  switch (state) {
-    case Node::kUnset: {
-      evaluate_unset(tree, &lock, &data);
-      break;
-    }
-    default:
-      break;
-  }
-  return data;
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void TreeTraversalThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
-                                                         std::unique_lock<std::mutex>* lock,
-                                                         evaluation_result_t* data) {
-  profiler_.record(TreeTraversalThreadRegion::kEvaluateUnset);
-
-  if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << std::endl;
-  }
-
-  data->backpropagated_virtual_loss = true;
-  util::debug_assert(data->evaluation.get() == nullptr);
-
-  auto& evaluation_data = tree->evaluation_data();
-
-  virtual_backprop();
-
-  const auto& stable_data = tree->stable_data();
-  if (!nn_eval_service_) {
-    // no-model mode
-    ValueTensor uniform_value;
-    PolicyTensor uniform_policy;
-    uniform_value.setConstant(1.0 / kNumPlayers);
-    uniform_policy.setConstant(0);
-    data->evaluation = std::make_shared<NNEvaluation>(uniform_value, uniform_policy,
-                                                      stable_data.valid_action_mask);
-  } else {
-    core::symmetry_index_t sym_index = stable_data.sym_index;
-    typename NNEvaluationService::Request request{tree, &profiler_, thread_id_, sym_index};
-    auto response = nn_eval_service_->evaluate(request);
-    data->evaluation = response.ptr;
-  }
-
-  LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree == shared_data_->root_node.get()) {
-    if (!search_params_->disable_exploration) {
-      if (manager_params_->dirichlet_mult) {
-        add_dirichlet_noise(P);
-      }
-      P = P.pow(1.0 / root_softmax_temperature());
-      P /= P.sum();
-    }
-  }
-  evaluation_data.local_policy_prob_distr = P;
-  evaluation_data.ptr.store(data->evaluation);
-  evaluation_data.state = Node::kSet;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -182,7 +119,8 @@ core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action
     Node* tree, NNEvaluation* evaluation) {
   profiler_.record(TreeTraversalThreadRegion::kPUCT);
 
-  PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node.get());
+  PUCTStats stats(*manager_params_, *search_params_, traversal_mode_, tree,
+                  tree == shared_data_->root_node.get());
 
   using PVec = LocalPolicyArray;
 
@@ -210,10 +148,12 @@ core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id());
 
+    const auto& tree_stats = tree->stats(traversal_mode_);
+
     printer << "*************" << std::endl;
     printer << __func__ << "() " << search_path_str() << std::endl;
-    printer << "real_avg: " << tree->stats().real_avg.transpose() << std::endl;
-    printer << "virt_avg: " << tree->stats().virtualized_avg.transpose() << std::endl;
+    printer << "real_avg: " << tree_stats.real_avg.transpose() << std::endl;
+    printer << "virt_avg: " << tree_stats.virtualized_avg.transpose() << std::endl;
 
     using ScalarT = typename PVec::Scalar;
     constexpr int kNumCols1 = PolicyShape::count;

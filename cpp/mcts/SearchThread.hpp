@@ -6,6 +6,7 @@
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TreeTraversalThread.hpp>
+#include <mcts/TypeDefs.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -17,18 +18,23 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 class SearchThread : public TreeTraversalThread<GameState, Tensorizor> {
  public:
   using base_t = TreeTraversalThread<GameState, Tensorizor>;
-  using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using GameStateTypes = typename base_t::GameStateTypes;
+  using NNEvaluation = typename base_t::NNEvaluation;
+  using NNEvaluationService = typename base_t::NNEvaluationService;
+  using Node = typename base_t::Node;
+  using SharedData = typename base_t::SharedData;
+  using ValueArray = typename base_t::ValueArray;
+  using edge_t = typename base_t::edge_t;
 
   SearchThread(SharedData*, NNEvaluationService*, const ManagerParams*);
 
   void set_search_params(const SearchParams* search_params) {
-    search_params_ = search_params;
+    this->search_params_ = search_params;
   }
 
  protected:
   void loop();
-  void visit(Node* tree, edge_t* edge, move_number_t move_number);
+  void search(Node* root, Node* tree, edge_t* edge, move_number_t move_number);
 };
 
 }  // namespace mcts
