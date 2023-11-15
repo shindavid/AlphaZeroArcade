@@ -127,9 +127,9 @@ inline void PrefetchThread<GameState, Tensorizor>::loop() {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* edge,
+inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* node, edge_t* edge,
                                                             move_number_t move_number) {
-  this->search_path_.emplace_back(tree, edge);
+  this->search_path_.emplace_back(node, edge);
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(this->thread_id_);
@@ -138,11 +138,11 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
     } else {
       printer << __func__ << "()";
     }
-    printer << " " << this->search_path_str() << " cp=" << (int)tree->stable_data().current_player
+    printer << " " << this->search_path_str() << " cp=" << (int)node->stable_data().current_player
             << std::endl;
   }
 
-  const auto& stable_data = tree->stable_data();
+  const auto& stable_data = node->stable_data();
   const auto& outcome = stable_data.outcome;
   if (GameStateTypes::is_terminal_outcome(outcome)) {
     this->backprop(outcome, kTerminal);
@@ -151,7 +151,7 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
 
   if (!this->tree_data_->search_active()) return;  // short-circuit
 
-  evaluation_result_t data = evaluate(tree);
+  evaluation_result_t data = evaluate(node);
   NNEvaluation* evaluation = data.evaluation.get();
 
   if (data.backpropagated_virtual_loss) {
@@ -161,17 +161,17 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
     }
     backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
-    auto& children_data = tree->children_data();
-    core::action_index_t action_index = this->get_best_action_index(tree, evaluation);
+    auto& children_data = node->children_data();
+    core::action_index_t action_index = this->get_best_action_index(node, evaluation);
 
     edge_t* edge = children_data.find(action_index);
     if (!edge) {
       Action action =
           GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
-      auto child = this->tree_data_->node_cache().fetch_or_create(move_number, tree, action,
+      auto child = this->tree_data_->node_cache().fetch_or_create(move_number, node, action,
                                                                   this->manager_params_);
 
-      std::unique_lock lock(tree->children_mutex());
+      std::unique_lock lock(node->children_mutex());
       edge = children_data.insert(action, action_index, child);
     }
 
@@ -224,17 +224,17 @@ void PrefetchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Val
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename PrefetchThread<GameState, Tensorizor>::evaluation_result_t
-PrefetchThread<GameState, Tensorizor>::evaluate(Node* tree) {
+PrefetchThread<GameState, Tensorizor>::evaluate(Node* node) {
   this->profiler_.record(TreeTraversalThreadRegion::kEvaluate);
 
-  std::unique_lock<std::mutex> lock(tree->evaluation_data_mutex());
-  typename Node::evaluation_data_t& evaluation_data = tree->evaluation_data();
+  std::unique_lock<std::mutex> lock(node->evaluation_data_mutex());
+  typename Node::evaluation_data_t& evaluation_data = node->evaluation_data();
   evaluation_result_t data{evaluation_data.ptr.load(), false};
   auto state = evaluation_data.state;
 
   switch (state) {
     case Node::kUnset: {
-      evaluate_unset(tree, &lock, &data);
+      evaluate_unset(node, &lock, &data);
       lock.unlock();
       break;
     }
@@ -245,7 +245,7 @@ PrefetchThread<GameState, Tensorizor>::evaluate(Node* tree) {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
+void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* node,
                                                            std::unique_lock<std::mutex>* lock,
                                                            evaluation_result_t* data) {
   this->profiler_.record(TreeTraversalThreadRegion::kEvaluateUnset);
@@ -258,11 +258,11 @@ void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
   data->backpropagated_virtual_loss = true;
   util::debug_assert(data->evaluation.get() == nullptr);
 
-  auto& evaluation_data = tree->evaluation_data();
+  auto& evaluation_data = node->evaluation_data();
 
   this->virtual_backprop();
 
-  const auto& stable_data = tree->stable_data();
+  const auto& stable_data = node->stable_data();
   if (!this->nn_eval_service_) {
     // no-model mode
     ValueTensor uniform_value;
@@ -273,14 +273,14 @@ void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
                                                       stable_data.valid_action_mask);
   } else {
     core::symmetry_index_t sym_index = stable_data.sym_index;
-    typename NNEvaluationService::Request request{tree, &this->profiler_, this->thread_id_,
+    typename NNEvaluationService::Request request{node, &this->profiler_, this->thread_id_,
                                                   sym_index};
     auto response = this->nn_eval_service_->evaluate(request);
     data->evaluation = response.ptr;
   }
 
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree == this->tree_data_->root_node().get()) {
+  if (node == this->tree_data_->root_node().get()) {
     if (!this->search_params_->disable_exploration) {
       if (this->manager_params_->dirichlet_mult) {
         this->add_dirichlet_noise(P);

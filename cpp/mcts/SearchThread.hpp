@@ -34,7 +34,7 @@ class SearchThread : public TreeTraversalThread<GameState, Tensorizor> {
 
  protected:
   void loop();
-  void search(Node* root, Node* tree, edge_t* edge, move_number_t move_number);
+  void search(Node* root, Node* node, edge_t* edge, move_number_t move_number);
 };
 
 }  // namespace mcts

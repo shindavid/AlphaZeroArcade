@@ -8,9 +8,9 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
                                                    const SearchParams& search_params,
                                                    TreeTraversalMode traversal_mode,
-                                                   const Node* tree, bool is_root)
-    : cp(tree->stable_data().current_player),
-      P(tree->evaluation_data().local_policy_prob_distr),
+                                                   const Node* node, bool is_root)
+    : cp(node->stable_data().current_player),
+      P(node->evaluation_data().local_policy_prob_distr),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -28,7 +28,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
   std::bitset<kMaxNumLocalActions> fpu_bits;
   fpu_bits.set();
 
-  for (const auto& edge : tree->children_data()) {
+  for (const auto& edge : node->children_data()) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
@@ -50,7 +50,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
     /*
      * Again, we do NOT grab the stats_mutex here!
      */
-    const auto& stats = tree->stats(traversal_mode);
+    const auto& stats = node->stats(traversal_mode);
     dtype PV = stats.virtualized_avg(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;

@@ -143,14 +143,14 @@ inline NNEvaluationService<GameState, Tensorizor>::~NNEvaluationService() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename NNEvaluationService<GameState, Tensorizor>::Response
 NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
-  const Node* tree = request.tree;
+  const Node* node = request.node;
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("evaluate()\n");
   }
 
-  const auto& stable_data = tree->stable_data();
+  const auto& stable_data = node->stable_data();
   cache_key_t cache_key(stable_data.state, request.sym_index);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
@@ -403,9 +403,9 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
     const Request& request, const cache_key_t& cache_key, int reserve_index) {
-  Node* tree = request.tree;
+  Node* node = request.node;
 
-  const auto& stable_data = tree->stable_data();
+  const auto& stable_data = node->stable_data();
   const Tensorizor& tensorizor = stable_data.tensorizor;
   const GameState& state = stable_data.state;
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;

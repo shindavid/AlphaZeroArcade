@@ -116,11 +116,11 @@ std::string TreeTraversalThread<GameState, Tensorizor>::search_path_str() const 
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action_index(
-    Node* tree, NNEvaluation* evaluation) {
+    Node* node, NNEvaluation* evaluation) {
   profiler_.record(TreeTraversalThreadRegion::kPUCT);
 
-  PUCTStats stats(*manager_params_, *search_params_, traversal_mode_, tree,
-                  tree == tree_data_->root_node().get());
+  PUCTStats stats(*manager_params_, *search_params_, traversal_mode_, node,
+                  node == tree_data_->root_node().get());
 
   using PVec = LocalPolicyArray;
 
@@ -148,8 +148,8 @@ core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id());
 
-    const auto& tree_stats = tree->stats(traversal_mode_);
-    core::seat_index_t cp = tree->stable_data().current_player;
+    const auto& tree_stats = node->stats(traversal_mode_);
+    core::seat_index_t cp = node->stable_data().current_player;
 
     using ArrayT1 = Eigen::Array<dtype, 3, kNumPlayers>;
     ArrayT1 A1;
@@ -184,7 +184,7 @@ core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action
     ArrayT2 A2(kNumRows, P.rows());
     A2.setZero();
 
-    const ActionMask& valid_actions = tree->stable_data().valid_action_mask;
+    const ActionMask& valid_actions = node->stable_data().valid_action_mask;
     const bool* data = valid_actions.data();
     int r = 0;
     int c = 0;

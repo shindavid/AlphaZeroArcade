@@ -127,11 +127,11 @@ class PrefetchThread : public TreeTraversalThread<GameState, Tensorizor> {
 
  protected:
   void loop();
-  void prefetch(Node* tree, edge_t* edge, move_number_t move_number);
+  void prefetch(Node* node, edge_t* edge, move_number_t move_number);
   void virtual_backprop();
   void backprop_with_virtual_undo(const ValueArray& value);
-  evaluation_result_t evaluate(Node* tree);
-  void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
+  evaluation_result_t evaluate(Node* node);
+  void evaluate_unset(Node* node, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
 
   PrefetchThreadManager* const manager_;
 };

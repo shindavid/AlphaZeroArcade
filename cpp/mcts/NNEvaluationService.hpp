@@ -96,7 +96,7 @@ class NNEvaluationService {
   using PolicyTransform = core::AbstractSymmetryTransform<PolicyTensor>;
 
   struct Request {
-    Node* tree;
+    Node* node;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;
