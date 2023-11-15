@@ -184,7 +184,17 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
     if (temp != 0) {
       policy = policy.pow(1.0 / temp);
     } else {
-      policy = (policy == policy.maximum()).template cast<torch_util::dtype>();
+      /*
+       * This is awkward, but I couldn't get a simpler incantation to work. I want to do:
+       *
+       * policiy = (policy == policy.maximum()).template cast<torch_util::dtype>();
+       *
+       * But the above doesn't work.
+       */
+      PolicyTensor policy_max = policy.maximum();
+      PolicyTensor policy_max_broadcasted;
+      policy_max_broadcasted.setConstant(policy_max(0));
+      policy = (policy == policy_max_broadcasted).template cast<torch_util::dtype>();
     }
   }
 
