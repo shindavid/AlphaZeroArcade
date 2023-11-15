@@ -168,7 +168,8 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
     if (!edge) {
       Action action =
           GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
-      auto child = this->shared_data_->node_cache.fetch_or_create(move_number, tree, action);
+      auto child = this->shared_data_->node_cache.fetch_or_create(move_number, tree, action,
+                                                                  this->manager_params_);
 
       std::unique_lock lock(tree->children_mutex());
       edge = children_data.insert(action, action_index, child);

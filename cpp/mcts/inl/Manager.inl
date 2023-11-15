@@ -115,7 +115,7 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
   if (!shared_data_.root_node || add_noise) {
     auto outcome = GameStateTypes::make_non_terminal_outcome();
     shared_data_.root_node =
-        std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
+        std::make_shared<Node>(tensorizor, game_state, outcome, &params_);  // TODO: use memory pool
   }
 
   if (mcts::kEnableDebug) {

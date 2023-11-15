@@ -9,6 +9,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
+#include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/TypeDefs.hpp>
 
@@ -53,7 +54,7 @@ class Node {
   };
 
   struct stable_data_t {
-    stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
+    stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&, const ManagerParams*);
 
     Tensorizor tensorizor;
     GameState state;
@@ -297,7 +298,7 @@ class Node {
     evaluation_state_t state = kUnset;
   };
 
-  Node(const Tensorizor&, const GameState&, const GameOutcome&);
+  Node(const Tensorizor&, const GameState&, const GameOutcome&, const ManagerParams*);
 
   void debug_dump() const;
 
@@ -320,6 +321,7 @@ class Node {
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
  private:
+  static core::symmetry_index_t make_sym_index(const GameState& state, const ManagerParams& params);
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;
   mutable std::mutex stats_mutex_;  // protects usage of stats_[kPrefetchMode]

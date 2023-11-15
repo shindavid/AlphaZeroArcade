@@ -45,6 +45,9 @@ inline auto ManagerParams::make_options_description() {
           "num search threads")
       .template add_option<"batch-size-limit", 'b'>(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit), "batch size limit")
+      .template add_bool_switches<"apply-random-symmetries", "disable-random-symmetries">(
+          &apply_random_symmetries, "apply random symmetries",
+          "disable random symmetries")
       .template add_bool_switches<"enable-pondering", "disable-pondering">(
           &enable_pondering, "enable pondering (search during opponent's turn)",
           "disable pondering (search during opponent's turn)")
