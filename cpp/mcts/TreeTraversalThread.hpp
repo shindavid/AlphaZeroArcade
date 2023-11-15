@@ -16,7 +16,7 @@
 #include <mcts/NodeCache.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/TreeData.hpp>
 #include <mcts/TypeDefs.hpp>
 
 namespace mcts {
@@ -82,7 +82,7 @@ class TreeTraversalThread {
   using Node = mcts::Node<GameState, Tensorizor>;
   using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using TreeData = mcts::TreeData<GameState, Tensorizor>;
   using edge_t = typename Node::edge_t;
 
   using Action = typename GameStateTypes::Action;
@@ -168,11 +168,11 @@ class TreeTraversalThread {
    */
   core::action_index_t get_best_action_index(Node* tree, NNEvaluation* evaluation);
 
-  auto& dirichlet_gen() { return shared_data_->dirichlet_gen; }
-  auto& rng() { return shared_data_->rng; }
-  float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
+  auto& dirichlet_gen() { return tree_data_->dirichlet_gen; }
+  auto& rng() { return tree_data_->rng; }
+  float root_softmax_temperature() const { return tree_data_->root_softmax_temperature.value(); }
 
-  SharedData* shared_data_ = nullptr;
+  TreeData* tree_data_ = nullptr;
   NNEvaluationService* nn_eval_service_ = nullptr;
   const SearchParams* search_params_ = nullptr;
   const ManagerParams* manager_params_ = nullptr;

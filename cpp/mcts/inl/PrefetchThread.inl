@@ -33,25 +33,25 @@ void PrefetchThreadManager<GameState, Tensorizor>::shutdown() {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void PrefetchThreadManager<GameState, Tensorizor>::add_work(SharedData* shared_data,
+void PrefetchThreadManager<GameState, Tensorizor>::add_work(TreeData* tree_data,
                                                             NNEvaluationService* nn_eval_service,
                                                             const SearchParams* search_params,
                                                             const ManagerParams* manager_params) {
   std::unique_lock lock(work_items_mutex_);
-  work_items_.emplace_back(shared_data, nn_eval_service, search_params, manager_params);
+  work_items_.emplace_back(tree_data, nn_eval_service, search_params, manager_params);
   work_item_index_ = work_items_.size() - 1;
   lock.unlock();
   work_items_cv_.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void PrefetchThreadManager<GameState, Tensorizor>::remove_work(SharedData* shared_data) {
-  shared_data->deactivate_search();
+void PrefetchThreadManager<GameState, Tensorizor>::remove_work(TreeData* tree_data) {
+  tree_data->deactivate_search();
 
   std::unique_lock lock(work_items_mutex_);
   auto it = work_items_.begin();
   while (it != work_items_.end()) {
-    if (it->shared_data == shared_data) {
+    if (it->tree_data == tree_data) {
       work_items_.erase(it);
     } else {
       ++it;
@@ -105,24 +105,24 @@ inline void PrefetchThread<GameState, Tensorizor>::loop() {
     if (!manager_->get_next_work_item(&work_item)) return;
 
     this->search_path_.clear();
-    this->shared_data_ = work_item.shared_data;
+    this->tree_data_ = work_item.tree_data;
     this->nn_eval_service_ = work_item.nn_eval_service;
     this->search_params_ = work_item.search_params;
     this->manager_params_ = work_item.manager_params;
 
     // Incrementing before checking search_active here avoids potential race-condition
-    this->shared_data_->increment_active_thread_count();
-    if (!this->shared_data_->search_active()) {
-      this->shared_data_->decrement_active_thread_count();
+    this->tree_data_->increment_active_thread_count();
+    if (!this->tree_data_->search_active()) {
+      this->tree_data_->decrement_active_thread_count();
       continue;
     }
 
-    Node* root = this->shared_data_->root_node.get();
-    prefetch(root, nullptr, this->shared_data_->move_number);
-    this->shared_data_->prefetch_notify();
+    Node* root = this->tree_data_->root_node.get();
+    prefetch(root, nullptr, this->tree_data_->move_number);
+    this->tree_data_->prefetch_notify();
 
     this->dump_profiling_stats();
-    this->shared_data_->decrement_active_thread_count();
+    this->tree_data_->decrement_active_thread_count();
   }
 }
 
@@ -149,7 +149,7 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
     return;
   }
 
-  if (!this->shared_data_->search_active()) return;  // short-circuit
+  if (!this->tree_data_->search_active()) return;  // short-circuit
 
   evaluation_result_t data = evaluate(tree);
   NNEvaluation* evaluation = data.evaluation.get();
@@ -168,7 +168,7 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
     if (!edge) {
       Action action =
           GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
-      auto child = this->shared_data_->node_cache.fetch_or_create(move_number, tree, action,
+      auto child = this->tree_data_->node_cache.fetch_or_create(move_number, tree, action,
                                                                   this->manager_params_);
 
       std::unique_lock lock(tree->children_mutex());
@@ -280,7 +280,7 @@ void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
   }
 
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree == this->shared_data_->root_node.get()) {
+  if (tree == this->tree_data_->root_node.get()) {
     if (!this->search_params_->disable_exploration) {
       if (this->manager_params_->dirichlet_mult) {
         this->add_dirichlet_noise(P);

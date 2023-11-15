@@ -3,11 +3,11 @@
 namespace mcts {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-SearchThread<GameState, Tensorizor>::SearchThread(SharedData* shared_data,
+SearchThread<GameState, Tensorizor>::SearchThread(TreeData* tree_data,
                                                   NNEvaluationService* nn_eval_service,
                                                   const ManagerParams* manager_params)
     : base_t(kSearchMode, manager_params->profiling_dir(), 0) {
-  this->shared_data_ = shared_data;
+  this->tree_data_ = tree_data;
   this->nn_eval_service_ = nn_eval_service;
   this->manager_params_ = manager_params;
   this->thread_ = new std::thread([this] { loop(); });
@@ -16,15 +16,15 @@ SearchThread<GameState, Tensorizor>::SearchThread(SharedData* shared_data,
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::loop() {
   while (true) {
-    this->shared_data_->wait_for_search_activation();
-    if (this->shared_data_->shutdown_initiated()) return;
+    this->tree_data_->wait_for_search_activation();
+    if (this->tree_data_->shutdown_initiated()) return;
 
     this->search_path_.clear();
-    Node* root = this->shared_data_->root_node.get();
-    search(root, root, nullptr, this->shared_data_->move_number);
+    Node* root = this->tree_data_->root_node.get();
+    search(root, root, nullptr, this->tree_data_->move_number);
 
     if (root->stats(kSearchMode).total_count() > this->search_params_->tree_size_limit) {
-      this->shared_data_->deactivate_search();
+      this->tree_data_->deactivate_search();
     }
 
     this->dump_profiling_stats();
@@ -54,13 +54,13 @@ void SearchThread<GameState, Tensorizor>::search(Node* root, Node* tree, edge_t*
     return;
   }
 
-  if (!this->shared_data_->search_active()) return;  // short-circuit
+  if (!this->tree_data_->search_active()) return;  // short-circuit
 
   constexpr int kPrefetchFailLimit = 400;
-  bool eval_available = this->shared_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
+  bool eval_available = this->tree_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
   if (!eval_available) {
-    this->shared_data_->reset_prefetch_threads();
-    eval_available = this->shared_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
+    this->tree_data_->reset_prefetch_threads();
+    eval_available = this->tree_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
     util::release_assert(eval_available);
   }
 
@@ -75,10 +75,10 @@ void SearchThread<GameState, Tensorizor>::search(Node* root, Node* tree, edge_t*
     this->backprop(evaluation->value_prob_distr(), kNonterminal);
   } else {
     core::action_index_t action_index = this->get_best_action_index(tree, evaluation);
-    edge_t* edge = this->shared_data_->wait_for_edge(root, tree, action_index, kPrefetchFailLimit);
+    edge_t* edge = this->tree_data_->wait_for_edge(root, tree, action_index, kPrefetchFailLimit);
     if (!edge) {
-      this->shared_data_->reset_prefetch_threads();
-      edge = this->shared_data_->wait_for_edge(root, tree, action_index, kPrefetchFailLimit);
+      this->tree_data_->reset_prefetch_threads();
+      edge = this->tree_data_->wait_for_edge(root, tree, action_index, kPrefetchFailLimit);
       util::release_assert(edge);
     }
 

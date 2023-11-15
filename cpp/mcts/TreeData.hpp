@@ -15,12 +15,12 @@
 namespace mcts {
 
 /*
- * SharedData is owned by the Manager and shared by other threads/services.
+ * TreeData is owned by the Manager and shared by other threads/services.
  *
  * It is separated from Manager to avoid circular dependencies.
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-struct SharedData {
+struct TreeData {
   using Node = mcts::Node<GameState, Tensorizor>;
   using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using edge_t = typename Node::edge_t;

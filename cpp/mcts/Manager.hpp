@@ -18,7 +18,7 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/TreeData.hpp>
 
 namespace mcts {
 
@@ -38,7 +38,7 @@ class Manager {
   using TreeTraversalThread = mcts::TreeTraversalThread<GameState, Tensorizor>;
   using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using TreeData = mcts::TreeData<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -78,7 +78,7 @@ class Manager {
   static int next_instance_id_;  // for naming debug/profiling output files
 
   const ManagerParams params_;
-  SharedData shared_data_;
+  TreeData tree_data_;
   const SearchParams pondering_search_params_;
   PrefetchThreadManager* prefetch_manager_;
   SearchThread* search_thread_;

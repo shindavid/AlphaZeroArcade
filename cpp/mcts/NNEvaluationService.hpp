@@ -8,7 +8,7 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/TreeData.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/HashablePair.hpp>
 #include <util/LRUCache.hpp>

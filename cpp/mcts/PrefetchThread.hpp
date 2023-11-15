@@ -5,7 +5,7 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/SearchParams.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/TreeData.hpp>
 #include <mcts/TreeTraversalThread.hpp>
 
 #include <boost/filesystem.hpp>
@@ -22,11 +22,11 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 class PrefetchThreadManager {
  public:
   using thread_vec_t = std::vector<PrefetchThread<GameState, Tensorizor>*>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using TreeData = mcts::TreeData<GameState, Tensorizor>;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
 
   struct work_item_t {
-    SharedData* shared_data = nullptr;
+    TreeData* tree_data = nullptr;
     NNEvaluationService* nn_eval_service = nullptr;
     const SearchParams* search_params = nullptr;
     const ManagerParams* manager_params = nullptr;
@@ -53,13 +53,13 @@ class PrefetchThreadManager {
   /*
    * Adds a work item to the work queue. Notifies all threads waiting on work_items_cv_.
    */
-  void add_work(SharedData*, NNEvaluationService*, const SearchParams*, const ManagerParams*);
+  void add_work(TreeData*, NNEvaluationService*, const SearchParams*, const ManagerParams*);
 
   /*
-   * Marks the SharedData as not seeking search threads, and removes the matching work item from the
+   * Marks the TreeData as not seeking search threads, and removes the matching work item from the
    * work queue. Notifies all threads waiting on work_items_cv_.
    */
-  void remove_work(SharedData*);
+  void remove_work(TreeData*);
 
   std::mutex& work_items_mutex() { return work_items_mutex_; }
   std::condition_variable& work_items_cv() { return work_items_cv_; }
