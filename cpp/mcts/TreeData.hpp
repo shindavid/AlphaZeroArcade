@@ -20,19 +20,33 @@ namespace mcts {
  * It is separated from Manager to avoid circular dependencies.
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-struct TreeData {
+class TreeData {
+ public:
   using Node = mcts::Node<GameState, Tensorizor>;
+  using Node_sptr = typename Node::sptr;
   using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
   using edge_t = typename Node::edge_t;
 
-  eigen_util::UniformDirichletGen<float> dirichlet_gen;
-  math::ExponentialDecay root_softmax_temperature;
-  Eigen::Rand::P8_mt19937_64 rng;
+  using DirichletGen = eigen_util::UniformDirichletGen<float>;
 
-  NodeCache node_cache;
-  Node::sptr root_node;
-  int manager_id = -1;
-  move_number_t move_number = 0;
+  DirichletGen& dirichlet_gen() { return dirichlet_gen_; }
+
+  int manager_id() const { return manager_id_; }
+  void set_manager_id(int manager_id) { manager_id_ = manager_id; }
+
+  void set_root_softmax_temperature(const math::ExponentialDecay& temp);
+  float root_softmax_temperature_value() const { return root_softmax_temperature_.value(); }
+  void step_root_softmax_temperature() { root_softmax_temperature_.step(); }
+  void reset_root_softmax_temperature() { root_softmax_temperature_.reset(); }
+
+  auto& rng() { return rng_; }
+  NodeCache& node_cache() { return node_cache_; }
+  void set_root_node(Node_sptr root_node) { root_node_ = root_node; }
+  Node_sptr root_node() { return root_node_; }
+
+  void reset_move_number() { move_number_ = 0; }
+  void increment_move_number() { move_number_++; }
+  move_number_t move_number() const { return move_number_; }
 
   /*
    * Signals to TreeTraversalThread's that they should start traversing. Called by Manager.
@@ -127,6 +141,15 @@ struct TreeData {
   void reset_prefetch_threads();
 
  private:
+  eigen_util::UniformDirichletGen<float> dirichlet_gen_;
+  math::ExponentialDecay root_softmax_temperature_;
+  Eigen::Rand::P8_mt19937_64 rng_;
+
+  NodeCache node_cache_;
+  Node::sptr root_node_;
+  int manager_id_ = -1;
+  move_number_t move_number_ = 0;
+
   mutable std::mutex prefetch_mutex_;
   mutable std::mutex search_mutex_;
   std::condition_variable prefetch_cv_;

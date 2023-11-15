@@ -3,6 +3,12 @@
 namespace mcts {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void TreeData<GameState, Tensorizor>::set_root_softmax_temperature(
+    const math::ExponentialDecay& temp) {
+  new (&root_softmax_temperature_) math::ExponentialDecay(temp);
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void TreeData<GameState, Tensorizor>::activate_search() {
   std::unique_lock lock(search_mutex_);
   if (search_active_) return;

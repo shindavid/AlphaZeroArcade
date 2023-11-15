@@ -117,8 +117,8 @@ inline void PrefetchThread<GameState, Tensorizor>::loop() {
       continue;
     }
 
-    Node* root = this->tree_data_->root_node.get();
-    prefetch(root, nullptr, this->tree_data_->move_number);
+    Node* root = this->tree_data_->root_node().get();
+    prefetch(root, nullptr, this->tree_data_->move_number());
     this->tree_data_->prefetch_notify();
 
     this->dump_profiling_stats();
@@ -168,7 +168,7 @@ inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* tree, edge_t* 
     if (!edge) {
       Action action =
           GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
-      auto child = this->tree_data_->node_cache.fetch_or_create(move_number, tree, action,
+      auto child = this->tree_data_->node_cache().fetch_or_create(move_number, tree, action,
                                                                   this->manager_params_);
 
       std::unique_lock lock(tree->children_mutex());
@@ -280,7 +280,7 @@ void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
   }
 
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
-  if (tree == this->tree_data_->root_node.get()) {
+  if (tree == this->tree_data_->root_node().get()) {
     if (!this->search_params_->disable_exploration) {
       if (this->manager_params_->dirichlet_mult) {
         this->add_dirichlet_noise(P);

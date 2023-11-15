@@ -20,8 +20,8 @@ void SearchThread<GameState, Tensorizor>::loop() {
     if (this->tree_data_->shutdown_initiated()) return;
 
     this->search_path_.clear();
-    Node* root = this->tree_data_->root_node.get();
-    search(root, root, nullptr, this->tree_data_->move_number);
+    Node* root = this->tree_data_->root_node().get();
+    search(root, root, nullptr, this->tree_data_->move_number());
 
     if (root->stats(kSearchMode).total_count() > this->search_params_->tree_size_limit) {
       this->tree_data_->deactivate_search();

@@ -120,7 +120,7 @@ core::action_index_t TreeTraversalThread<GameState, Tensorizor>::get_best_action
   profiler_.record(TreeTraversalThreadRegion::kPUCT);
 
   PUCTStats stats(*manager_params_, *search_params_, traversal_mode_, tree,
-                  tree == tree_data_->root_node.get());
+                  tree == tree_data_->root_node().get());
 
   using PVec = LocalPolicyArray;
 

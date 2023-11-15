@@ -168,9 +168,9 @@ class TreeTraversalThread {
    */
   core::action_index_t get_best_action_index(Node* tree, NNEvaluation* evaluation);
 
-  auto& dirichlet_gen() { return tree_data_->dirichlet_gen; }
-  auto& rng() { return tree_data_->rng; }
-  float root_softmax_temperature() const { return tree_data_->root_softmax_temperature.value(); }
+  auto& dirichlet_gen() { return tree_data_->dirichlet_gen(); }
+  auto& rng() { return tree_data_->rng(); }
+  float root_softmax_temperature() const { return tree_data_->root_softmax_temperature_value(); }
 
   TreeData* tree_data_ = nullptr;
   NNEvaluationService* nn_eval_service_ = nullptr;
