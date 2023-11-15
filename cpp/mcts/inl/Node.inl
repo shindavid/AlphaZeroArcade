@@ -96,7 +96,9 @@ void Node<GameState,
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::Node(const Tensorizor& tensorizor, const GameState& state,
                                          const GameOutcome& outcome)
-    : stable_data_(tensorizor, state, outcome) {}
+    : stable_data_(tensorizor, state, outcome) {
+  evaluation_data_.value = outcome;
+}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Node<GameState, Tensorizor>::debug_dump() const {

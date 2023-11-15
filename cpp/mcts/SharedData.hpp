@@ -53,6 +53,7 @@ struct SharedData {
   }
 
   bool search_active() const { return search_active_; }
+  bool shutdown_initiated() const { return shutdown_initiated_; }
 
   void increment_active_thread_count() {
     std::unique_lock lock(search_mutex_);
@@ -70,12 +71,19 @@ struct SharedData {
 
   void wait_for_search_activation() {
     std::unique_lock lock(search_mutex_);
-    search_begin_cv_.wait(lock, [&]() { return search_active_; });
+    search_begin_cv_.wait(lock, [&]() { return search_active_ || shutdown_initiated_; });
   }
 
   void wait_for_search_completion() {
     std::unique_lock lock(search_mutex_);
     search_end_cv_.wait(lock, [&]() { return !search_active_ && active_thread_count_ == 0; });
+  }
+
+  void shutdown() {
+    std::unique_lock lock(search_mutex_);
+    shutdown_initiated_ = true;
+    lock.unlock();
+    search_begin_cv_.notify_all();
   }
 
   /*
@@ -148,6 +156,7 @@ struct SharedData {
   std::condition_variable search_end_cv_;
   int active_thread_count_ = 0;
   bool search_active_ = false;
+  bool shutdown_initiated_ = false;
 };
 
 }  // namespace mcts

@@ -17,6 +17,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void SearchThread<GameState, Tensorizor>::loop() {
   while (true) {
     this->shared_data_->wait_for_search_activation();
+    if (this->shared_data_->shutdown_initiated()) return;
 
     this->search_path_.clear();
     Node* root = this->shared_data_->root_node.get();
@@ -55,7 +56,7 @@ void SearchThread<GameState, Tensorizor>::search(Node* root, Node* tree, edge_t*
 
   if (!this->shared_data_->search_active()) return;  // short-circuit
 
-  constexpr int kPrefetchFailLimit = 100;
+  constexpr int kPrefetchFailLimit = 400;
   bool eval_available = this->shared_data_->wait_for_eval(root, tree, kPrefetchFailLimit);
   if (!eval_available) {
     this->shared_data_->reset_prefetch_threads();

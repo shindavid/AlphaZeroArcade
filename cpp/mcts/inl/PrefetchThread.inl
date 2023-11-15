@@ -25,7 +25,6 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void PrefetchThreadManager<GameState, Tensorizor>::shutdown() {
   if (shutdown_initiated_) return;
 
-  std::cout << "PrefetchThreadManager::shutdown()" << std::endl;
   shutdown_initiated_ = true;
   work_items_cv_.notify_all();
   for (auto thread : threads_) {
@@ -292,6 +291,7 @@ void PrefetchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
   evaluation_data.local_policy_prob_distr = P;
   evaluation_data.ptr.store(data->evaluation);
   evaluation_data.state = Node::kSet;
+  evaluation_data.value = data->evaluation->value_prob_distr();
 }
 
 }  // namespace mcts

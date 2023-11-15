@@ -290,7 +290,8 @@ class Node {
      *
      * Either way, value is a redundant copied value. We don't need this field, and could instead
      * have a getter that branches based on whether the node is terminal or not. Having a copied
-     * value is likely a tiny efficiency win.
+     * value is likely a tiny efficiency win by virtue of skipping branches and pointer
+     * redirections.
      */
     ValueArray value;
     evaluation_state_t state = kUnset;

@@ -47,6 +47,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::~Manager() {
   clear();
+  shared_data_.shutdown();
   prefetch_manager_->shutdown();
   delete search_thread_;
   if (nn_eval_service_) {
