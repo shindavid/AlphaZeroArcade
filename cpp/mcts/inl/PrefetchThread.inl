@@ -46,8 +46,6 @@ void PrefetchThreadManager<GameState, Tensorizor>::add_work(TreeData* tree_data,
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void PrefetchThreadManager<GameState, Tensorizor>::remove_work(TreeData* tree_data) {
-  tree_data->deactivate_search();
-
   std::unique_lock lock(work_items_mutex_);
   auto it = work_items_.begin();
   while (it != work_items_.end()) {
@@ -102,6 +100,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 inline void PrefetchThread<GameState, Tensorizor>::loop() {
   while (true) {
     work_item_t work_item;
+    this->profiler_.record(TreeTraversalThreadRegion::kGetNextWorkItem);
     if (!manager_->get_next_work_item(&work_item)) return;
 
     this->search_path_.clear();
@@ -111,9 +110,9 @@ inline void PrefetchThread<GameState, Tensorizor>::loop() {
     this->manager_params_ = work_item.manager_params;
 
     // Incrementing before checking search_active here avoids potential race-condition
-    this->tree_data_->increment_active_thread_count();
+    this->tree_data_->increment_active_prefetch_thread_count();
     if (!this->tree_data_->search_active()) {
-      this->tree_data_->decrement_active_thread_count();
+      this->tree_data_->decrement_active_prefetch_thread_count();
       continue;
     }
 
@@ -122,13 +121,14 @@ inline void PrefetchThread<GameState, Tensorizor>::loop() {
     this->tree_data_->prefetch_notify();
 
     this->dump_profiling_stats();
-    this->tree_data_->decrement_active_thread_count();
+    this->tree_data_->decrement_active_prefetch_thread_count();
   }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void PrefetchThread<GameState, Tensorizor>::prefetch(Node* node, edge_t* edge,
                                                             move_number_t move_number) {
+  this->profiler_.record(TreeTraversalThreadRegion::kPrefetch);
   this->search_path_.emplace_back(node, edge);
 
   if (mcts::kEnableDebug) {

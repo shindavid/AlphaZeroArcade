@@ -139,12 +139,13 @@ class Node {
     sptr child() const { return const_cast<sptr&>(child_); }
     void increment_count(TreeTraversalMode mode) { count_[mode]++; }
     int count(TreeTraversalMode mode) const { return count_[mode].load(); }
+    void reset_count() { count_[kPrefetchMode].store(count(kSearchMode)); }
 
-   private:
-    volatile sptr child_;
-    volatile Action action_;
-    volatile core::action_index_t action_index_ = -1;
-    std::atomic<int> count_[kNumTreeTraversalModes] = {0, 0};  // real only
+     private:
+      volatile sptr child_;
+      volatile Action action_;
+      volatile core::action_index_t action_index_ = -1;
+      std::atomic<int> count_[kNumTreeTraversalModes] = {0, 0};  // real only
   };
 
   /*
@@ -310,6 +311,13 @@ class Node {
   template <typename UpdateT>
   void update_stats(const UpdateT& update_instruction, TreeTraversalMode mode);
   sptr lookup_child_by_action(const Action& action) const;
+
+  /*
+   * Copies search-mode stats to prefetch-mode stats. Recursively does this for all children.
+   *
+   * Assumes that all other threads besides the current one have stopped working on this tree.
+   */
+  void reset_prefetch_stats();
 
   const stable_data_t& stable_data() const { return stable_data_; }
   const children_data_t& children_data() const { return children_data_; }

@@ -40,16 +40,16 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (params.enable_pondering && num_search_threads() == 1) {
     throw util::Exception("pondering mode does not work with only 1 search thread");
   }
-  search_thread_ = new SearchThread(&tree_data_, nn_eval_service_, &params_);
   prefetch_manager_ = PrefetchThreadManager::get(params);
+  search_thread_ = new SearchThread(&tree_data_, nn_eval_service_, prefetch_manager_, &params_);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::~Manager() {
   clear();
   tree_data_.shutdown();
-  prefetch_manager_->shutdown();
   delete search_thread_;
+  prefetch_manager_->shutdown();
   if (nn_eval_service_) {
     nn_eval_service_->disconnect();
   }
@@ -72,7 +72,7 @@ inline void Manager<GameState, Tensorizor>::start() {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
-  tree_data_.wait_for_search_completion();
+  tree_data_.wait_for_prefetch_threads();
   tree_data_.set_root_node(nullptr);
 }
 
@@ -83,7 +83,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   tree_data_.increment_move_number();
   tree_data_.node_cache().clear_before(tree_data_.move_number());
   tree_data_.step_root_softmax_temperature();
-  tree_data_.wait_for_search_completion();
+  tree_data_.wait_for_prefetch_threads();
   auto root_node = tree_data_.root_node();
   if (!root_node.get()) return;
 
@@ -108,7 +108,7 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
                                        const SearchParams& params) {
   if (params_.enable_pondering) {
     tree_data_.deactivate_search();
-    tree_data_.wait_for_search_completion();
+    tree_data_.wait_for_prefetch_threads();
   }
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
@@ -126,7 +126,7 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
   search_thread_->set_search_params(&params);
   tree_data_.activate_search();
   prefetch_manager_->add_work(&tree_data_, nn_eval_service_, &params, &params_);
-  tree_data_.wait_for_search_completion();
+  tree_data_.wait_for_prefetch_threads();
 
   const auto& root = tree_data_.root_node();
   const auto& evaluation_data = root->evaluation_data();

@@ -5,8 +5,10 @@ namespace mcts {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 SearchThread<GameState, Tensorizor>::SearchThread(TreeData* tree_data,
                                                   NNEvaluationService* nn_eval_service,
+                                                  PrefetchThreadManager* prefetch_manager,
                                                   const ManagerParams* manager_params)
     : base_t(kSearchMode, manager_params->profiling_dir(), 0) {
+  this->prefetch_manager_ = prefetch_manager;
   this->tree_data_ = tree_data;
   this->nn_eval_service_ = nn_eval_service;
   this->manager_params_ = manager_params;
@@ -16,6 +18,7 @@ SearchThread<GameState, Tensorizor>::SearchThread(TreeData* tree_data,
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::loop() {
   while (true) {
+    this->profiler_.record(TreeTraversalThreadRegion::kWaitForSearchActivation);
     this->tree_data_->wait_for_search_activation();
     if (this->tree_data_->shutdown_initiated()) return;
 
@@ -34,6 +37,7 @@ void SearchThread<GameState, Tensorizor>::loop() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void SearchThread<GameState, Tensorizor>::search(Node* root, Node* node, edge_t* edge,
                                                  move_number_t move_number) {
+  this->profiler_.record(TreeTraversalThreadRegion::kSearch);
   this->search_path_.emplace_back(node, edge);
 
   if (mcts::kEnableDebug) {
@@ -56,11 +60,13 @@ void SearchThread<GameState, Tensorizor>::search(Node* root, Node* node, edge_t*
 
   if (!this->tree_data_->search_active()) return;  // short-circuit
 
-  constexpr int kPrefetchFailLimit = 400;
-  bool eval_available = this->tree_data_->wait_for_eval(root, node, kPrefetchFailLimit);
+  this->profiler_.record(TreeTraversalThreadRegion::kWaitForEval);
+
+  constexpr int kOverPrefetchLimit = 100;
+  bool eval_available = this->tree_data_->wait_for_eval(root, node, kOverPrefetchLimit);
   if (!eval_available) {
-    this->tree_data_->reset_prefetch_threads();
-    eval_available = this->tree_data_->wait_for_eval(root, node, kPrefetchFailLimit);
+    reset();
+    eval_available = this->tree_data_->wait_for_eval(root, node, kOverPrefetchLimit);
     util::release_assert(eval_available);
   }
 
@@ -75,10 +81,11 @@ void SearchThread<GameState, Tensorizor>::search(Node* root, Node* node, edge_t*
     this->backprop(evaluation->value_prob_distr(), kNonterminal);
   } else {
     core::action_index_t action_index = this->get_best_action_index(node, evaluation);
-    edge_t* edge = this->tree_data_->wait_for_edge(root, node, action_index, kPrefetchFailLimit);
+    this->profiler_.record(TreeTraversalThreadRegion::kWaitForEdge);
+    edge_t* edge = this->tree_data_->wait_for_edge(root, node, action_index, kOverPrefetchLimit);
     if (!edge) {
-      this->tree_data_->reset_prefetch_threads();
-      edge = this->tree_data_->wait_for_edge(root, node, action_index, kPrefetchFailLimit);
+      reset();
+      edge = this->tree_data_->wait_for_edge(root, node, action_index, kOverPrefetchLimit);
       util::release_assert(edge);
     }
 
@@ -89,6 +96,28 @@ void SearchThread<GameState, Tensorizor>::search(Node* root, Node* node, edge_t*
     } else {
       search(root, edge->child().get(), edge, move_number + 1);
     }
+  }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void SearchThread<GameState, Tensorizor>::reset() {
+  this->profiler_.record(TreeTraversalThreadRegion::kReset);
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer(this->thread_id_);
+    printer << "Resetting prefetch stats..." << std::endl;
+  }
+  prefetch_manager_->remove_work(this->tree_data_);
+  this->tree_data_->wait_for_prefetch_threads(false);
+
+  // TODO: distribute this work across prefetch threads, and/or do something more lightweight
+  // than bluntly copying the whole tree.
+  this->tree_data_->root_node()->reset_prefetch_stats();
+  prefetch_manager_->add_work(this->tree_data_, this->nn_eval_service_, this->search_params_,
+                              this->manager_params_);
+
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer(this->thread_id_);
+    printer << "Prefetch stats reset complete!" << std::endl;
   }
 }
 

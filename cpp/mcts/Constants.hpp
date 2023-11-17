@@ -26,6 +26,13 @@ struct TreeTraversalThreadRegion {
     kPUCT,
     kEvaluate,
     kEvaluateUnset,
+    kPrefetch,
+    kSearch,
+    kGetNextWorkItem,
+    kWaitForSearchActivation,
+    kWaitForEval,
+    kWaitForEdge,
+    kReset,
     kNumRegions
   };
 };

@@ -56,8 +56,8 @@ class PrefetchThreadManager {
   void add_work(TreeData*, NNEvaluationService*, const SearchParams*, const ManagerParams*);
 
   /*
-   * Marks the TreeData as not seeking search threads, and removes the matching work item from the
-   * work queue. Notifies all threads waiting on work_items_cv_.
+   * Removes the matching work item from the work queue. Notifies all threads waiting on
+   * work_items_cv_.
    */
   void remove_work(TreeData*);
 

@@ -4,6 +4,7 @@
 #include <core/TensorizorConcept.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
+#include <mcts/PrefetchThread.hpp>
 #include <mcts/TreeData.hpp>
 #include <mcts/TreeTraversalThread.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -22,11 +23,12 @@ class SearchThread : public TreeTraversalThread<GameState, Tensorizor> {
   using NNEvaluation = typename base_t::NNEvaluation;
   using NNEvaluationService = typename base_t::NNEvaluationService;
   using Node = typename base_t::Node;
+  using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
   using TreeData = typename base_t::TreeData;
   using ValueArray = typename base_t::ValueArray;
   using edge_t = typename base_t::edge_t;
 
-  SearchThread(TreeData*, NNEvaluationService*, const ManagerParams*);
+  SearchThread(TreeData*, NNEvaluationService*, PrefetchThreadManager*, const ManagerParams*);
 
   void set_search_params(const SearchParams* search_params) {
     this->search_params_ = search_params;
@@ -35,6 +37,9 @@ class SearchThread : public TreeTraversalThread<GameState, Tensorizor> {
  protected:
   void loop();
   void search(Node* root, Node* node, edge_t* edge, move_number_t move_number);
+  void reset();
+
+  PrefetchThreadManager* prefetch_manager_;
 };
 
 }  // namespace mcts

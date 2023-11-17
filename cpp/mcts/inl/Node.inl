@@ -250,8 +250,17 @@ typename Node<GameState, Tensorizor>::sptr Node<GameState, Tensorizor>::lookup_c
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-core::symmetry_index_t Node<GameState, Tensorizor>::make_sym_index(
-    const GameState& state, const ManagerParams& params) {
+void Node<GameState, Tensorizor>::reset_prefetch_stats() {
+  stats_[kPrefetchMode] = stats_[kSearchMode];
+  for (auto& edge : children_data_) {
+    edge.reset_count();
+    edge.child()->reset_prefetch_stats();
+  }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+core::symmetry_index_t Node<GameState, Tensorizor>::make_sym_index(const GameState& state,
+                                                                   const ManagerParams& params) {
   if (params.apply_random_symmetries) {
     return bitset_util::choose_random_on_index(state.get_symmetry_indices());
   }
