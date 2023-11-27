@@ -8,7 +8,7 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <common/SquareBoardSymmetryBase.hpp>
+#include <core/SquareBoardSymmetries.hpp>
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
@@ -63,7 +63,7 @@ class GameState {
 
   template <eigen_util::FixedTensorConcept Tensor>
   core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
-    return common::SquareBoardSymmetries<Tensor, BoardShape>::get_symmetry(index);
+    return core::SquareBoardSymmetries<Tensor, BoardShape>::get_symmetry(index);
   }
 
   SymmetryIndexSet get_symmetry_indices() const;

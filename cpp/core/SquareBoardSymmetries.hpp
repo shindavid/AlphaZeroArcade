@@ -9,7 +9,7 @@
 #include <Eigen/Core>
 #include <unsupported/Eigen/CXX11/Tensor>
 
-namespace common {
+namespace core {
 
 /*
  * SquareBoardSymmetries can be used as a base class for tensorizors for games played on a square
@@ -188,4 +188,4 @@ template <eigen_util::FixedTensorConcept Tensor, eigen_util::ShapeConcept BoardS
 SquareBoardSymmetries<Tensor, BoardShape>::transforms_struct_t
     SquareBoardSymmetries<Tensor, BoardShape>::transforms_struct_;
 
-}  // namespace common
+}  // namespace core
