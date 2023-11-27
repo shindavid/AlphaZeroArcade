@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/players/MctsPlayer.hpp>
+#include <games/generic/players/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -10,7 +10,7 @@
 
 #include <vector>
 
-namespace common {
+namespace generic {
 
 /*
  * A variant of MctsPlayer that exports training data to a file via TrainingDataWriter.
@@ -69,6 +69,6 @@ class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
   TrainingDataWriter::GameData_sptr game_data_;
 };
 
-}  // namespace common
+}  // namespace generic
 
-#include <common/players/inl/DataExportingMctsPlayer.inl>
+#include <games/generic/players/inl/DataExportingMctsPlayer.inl>

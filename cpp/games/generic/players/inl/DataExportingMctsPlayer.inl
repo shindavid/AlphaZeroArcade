@@ -1,10 +1,10 @@
 #pragma once
 
-#include <common/players/DataExportingMctsPlayer.hpp>
+#include <games/generic/players/DataExportingMctsPlayer.hpp>
 
 #include <util/BitSet.hpp>
 
-namespace common {
+namespace generic {
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 template <typename... BaseArgs>
@@ -120,4 +120,4 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::record_position(
   }
 }
 
-}  // namespace common
+}  // namespace generic

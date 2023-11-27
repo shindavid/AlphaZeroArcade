@@ -18,7 +18,7 @@
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
 
-namespace common {
+namespace generic {
 
 /*
  * The MctsPlayer uses MCTS to select actions.
@@ -110,6 +110,6 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
   int move_count_ = 0;
 };
 
-}  // namespace common
+}  // namespace generic
 
-#include <common/players/inl/MctsPlayer.inl>
+#include <games/generic/players/inl/MctsPlayer.inl>

@@ -9,10 +9,30 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
-#include <common/players/HumanTuiPlayer.hpp>
-#include <common/players/RandomPlayer.hpp>
 #include <util/CppUtil.hpp>
 #include <util/MetaProgramming.hpp>
+
+namespace core {
+
+template <GameStateConcept GameState>
+class PlayerSubfactoryBase {
+ public:
+  virtual ~PlayerSubfactoryBase() = default;
+  virtual AbstractPlayerGenerator<GameState>* create() const = 0;
+};
+
+/*
+ * PlayerSubfactory is a helper class used by PlayerFactory. Each PlayerSubfactory is associated
+ * with a particular player type.
+ *
+ * A PlayerFactory in turn is associated with a list of PlayerSubfactory objects. This list
+ * corresponds to the list of player types that the factory can create.
+ */
+template <typename GeneratorT>
+class PlayerSubfactory : public PlayerSubfactoryBase<typename GeneratorT::GameState> {
+ public:
+  GeneratorT* create() const override { return new GeneratorT(); }
+};
 
 /*
  * The PlayerFactory is a template class that facilitates the creation of player objects from
@@ -20,15 +40,13 @@
  *
  * See cpp/connect4/PlayerFactory.hpp for an example of how to use this class.
  */
-namespace core {
-
 template <GameStateConcept GameState_>
 class PlayerFactory {
  public:
   using GameState = GameState_;
   using Player = AbstractPlayer<GameState>;
   using PlayerGenerator = AbstractPlayerGenerator<GameState>;
-  using PlayerGeneratorCreatorBase = core::PlayerGeneratorCreatorBase<GameState>;
+  using PlayerSubfactoryBase = core::PlayerSubfactoryBase<GameState>;
 
   struct player_generator_seat_t {
     PlayerGenerator* generator = nullptr;
@@ -36,7 +54,7 @@ class PlayerFactory {
   };
   using player_generator_seat_vec_t = std::vector<player_generator_seat_t>;
   using player_generator_vec_t = std::vector<PlayerGenerator*>;
-  using player_generator_creator_vec_t = std::vector<PlayerGeneratorCreatorBase*>;
+  using player_subfactory_vec_t = std::vector<PlayerSubfactoryBase*>;
 
   struct Params {
     auto make_options_description();
@@ -55,7 +73,7 @@ class PlayerFactory {
    * From this, the PlayerFactory generates the appropriate help message, with player-specific
    * details printed only if the associated type is passed via --player "--type=..."
    */
-  PlayerFactory(const player_generator_creator_vec_t& creators);
+  PlayerFactory(const player_subfactory_vec_t& subfactories);
 
   player_generator_seat_vec_t parse(const std::vector<std::string>& player_strs);
   void print_help(const std::vector<std::string>& player_strs);
@@ -66,7 +84,7 @@ class PlayerFactory {
   PlayerGenerator* parse_helper(const std::string& player_str, const std::string& name,
                                 const std::vector<std::string>& tokens);
 
-  player_generator_creator_vec_t creators_;
+  player_subfactory_vec_t subfactories_;
   std::map<std::string, std::vector<std::string>> name_map_;
 };
 

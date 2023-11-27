@@ -1,8 +1,8 @@
-#include <common/players/MctsPlayerGenerator.hpp>
+#include <games/generic/players/MctsPlayerGenerator.hpp>
 
 #include <mcts/Constants.hpp>
 
-namespace common {
+namespace generic {
 
 // MctsPlayerGeneratorBase
 
@@ -89,4 +89,4 @@ void TrainingMctsPlayerGenerator<GameState, Tensorizor>::parse_args(
   this->parse_args_helper(make_options_description(), args);
 }
 
-}  // namespace common
+}  // namespace generic

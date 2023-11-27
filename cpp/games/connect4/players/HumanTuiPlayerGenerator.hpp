@@ -7,14 +7,14 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <common/players/HumanTuiPlayerGenerator.hpp>
+#include <games/generic/players/HumanTuiPlayerGenerator.hpp>
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace c4 {
 
-class HumanTuiPlayerGenerator : public common::HumanTuiPlayerGenerator<c4::GameState> {
+class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::GameState> {
  public:
   struct Params {
     bool cheat_mode;

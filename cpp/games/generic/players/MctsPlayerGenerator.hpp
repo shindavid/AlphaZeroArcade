@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include <common/players/DataExportingMctsPlayer.hpp>
-#include <common/players/MctsPlayer.hpp>
+#include <games/generic/players/DataExportingMctsPlayer.hpp>
+#include <games/generic/players/MctsPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
@@ -13,13 +13,13 @@
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 
-namespace common {
+namespace generic {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<GameState> {
  public:
   using MctsManager = mcts::Manager<GameState, Tensorizor>;
-  using BaseMctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
+  using BaseMctsPlayer = generic::MctsPlayer<GameState, Tensorizor>;
 
   MctsPlayerGeneratorBase(mcts::Mode mode) : manager_params_(mode) {}
 
@@ -52,7 +52,7 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState,
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
   using MctsManager = typename base_t::MctsManager;
-  using MctsPlayer = common::MctsPlayer<GameState, Tensorizor>;
+  using MctsPlayer = generic::MctsPlayer<GameState, Tensorizor>;
   using MctsPlayerParams = typename MctsPlayer::Params;
 
   CompetitiveMctsPlayerGenerator();
@@ -80,7 +80,7 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
   using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
   using MctsManager = typename base_t::MctsManager;
-  using MctsPlayer = common::DataExportingMctsPlayer<GameState, Tensorizor>;
+  using MctsPlayer = generic::DataExportingMctsPlayer<GameState, Tensorizor>;
   using MctsPlayerParams = typename MctsPlayer::Params;
   using TrainingDataWriterParams = typename MctsPlayer::TrainingDataWriterParams;
 
@@ -105,6 +105,6 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
   TrainingDataWriterParams writer_params_;
 };
 
-}  // namespace common
+}  // namespace generic
 
-#include <common/players/inl/MctsPlayerGenerator.inl>
+#include <games/generic/players/inl/MctsPlayerGenerator.inl>

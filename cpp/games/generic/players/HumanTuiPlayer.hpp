@@ -5,7 +5,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace generic {
 
 /*
  * Abstract class. Derived classes must implement the prompt_for_action() method.
@@ -49,6 +49,6 @@ class HumanTuiPlayer : public core::AbstractPlayer<GameState_> {
   Action last_action_;
 };
 
-}  // namespace common
+}  // namespace generic
 
-#include <common/players/inl/HumanTuiPlayer.inl>
+#include <games/generic/players/inl/HumanTuiPlayer.inl>

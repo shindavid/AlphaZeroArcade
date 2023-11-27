@@ -7,7 +7,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
-#include <common/players/MctsPlayerGenerator.hpp>
+#include <games/generic/players/MctsPlayerGenerator.hpp>
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
 #include <games/connect4/Tensorizor.hpp>
@@ -17,9 +17,9 @@
 namespace c4 {
 
 class CompetitiveMctsPlayerGenerator
-    : public common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor> {
+    : public generic::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor> {
  public:
-  using base_t = common::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
+  using base_t = generic::CompetitiveMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
 
   struct Params {
     bool grade_moves;
@@ -55,7 +55,7 @@ class CompetitiveMctsPlayerGenerator
 };
 
 using TrainingMctsPlayerGenerator =
-    common::TrainingMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
+    generic::TrainingMctsPlayerGenerator<c4::GameState, c4::Tensorizor>;
 
 }  // namespace c4
 

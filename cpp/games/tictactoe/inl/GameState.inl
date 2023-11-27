@@ -1,6 +1,6 @@
 #include <games/tictactoe/GameState.hpp>
 
-#include <common/SquareBoardSymmetryBase.hpp>
+#include <core/SquareBoardSymmetries.hpp>
 
 inline std::size_t std::hash<tictactoe::GameState>::operator()(
     const tictactoe::GameState& state) const {
