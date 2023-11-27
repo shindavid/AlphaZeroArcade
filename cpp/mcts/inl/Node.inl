@@ -8,18 +8,18 @@ namespace mcts {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(const Tensorizor& t,
                                                                  const GameState& s,
-                                                                 const GameOutcome& o)
+                                                                 const GameOutcome& o,
+                                                                 const ManagerParams* mp)
     : tensorizor(t),
       state(s),
       outcome(o),
       valid_action_mask(s.get_valid_actions()),
       num_valid_actions(eigen_util::count(valid_action_mask)),
       current_player(s.get_current_player()),
-      sym_index(bitset_util::choose_random_on_index(state.get_symmetry_indices())) {}
+      sym_index(make_sym_index(state, *mp)) {}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stats_t::stats_t() {
-  eval.setZero();
   real_avg.setZero();
   virtualized_avg.setZero();
 }
@@ -96,8 +96,10 @@ void Node<GameState,
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::Node(const Tensorizor& tensorizor, const GameState& state,
-                                         const GameOutcome& outcome)
-    : stable_data_(tensorizor, state, outcome) {}
+                                         const GameOutcome& outcome, const ManagerParams* params)
+    : stable_data_(tensorizor, state, outcome, params) {
+  evaluation_data_.value = outcome;
+}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Node<GameState, Tensorizor>::debug_dump() const {
@@ -120,12 +122,12 @@ inline typename Node<GameState, Tensorizor>::PolicyTensor Node<GameState, Tensor
   PolicyTensor counts;
   counts.setZero();
 
-  bool provably_winning = stats_.provably_winning[cp];
-  bool provably_losing = stats_.provably_losing[cp];
+  bool provably_winning = stats_[kSearchMode].provably_winning[cp];
+  bool provably_losing = stats_[kSearchMode].provably_losing[cp];
 
   for (auto& it : children_data_) {
     Action action = it.action();
-    const auto& stats = it.child()->stats();
+    const auto& stats = it.child()->stats(kSearchMode);
     int count = stats.real_count;
 
     int modified_count = count;
@@ -168,7 +170,8 @@ typename Node<GameState, Tensorizor>::ValueArray Node<GameState, Tensorizor>::ma
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 template <typename UpdateT>
-void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction) {
+void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction,
+                                               TreeTraversalMode mode) {
   core::seat_index_t cp = stable_data().current_player;
 
   ValueArray real_sum;
@@ -189,8 +192,8 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   all_provably_winning.set();
   all_provably_losing.set();
   for (const edge_t& edge : children_data_) {
-    const auto& child_stats = edge.child()->stats();
-    int count = edge.count();
+    const auto& child_stats = edge.child()->stats(mode);
+    int count = edge.count(mode);
     real_sum += child_stats.real_avg * count;
     real_count += count;
 
@@ -200,11 +203,13 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
     num_children++;
   }
 
-  std::unique_lock lock(stats_mutex_);
-  update_instruction(this);
+  if (mode == kPrefetchMode) stats_mutex_.lock();
+  update_instruction(this, mode);
 
-  if (stats_.real_count) {
-    real_sum += stats_.eval;
+  stats_t& stats = this->stats(mode);
+
+  if (stats.real_count) {
+    real_sum += evaluation_data_.value;
     real_count++;
   }
 
@@ -213,22 +218,24 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   if (num_valid_actions == 0) {
     // terminal state, provably_winning/losing are already set by instruction
   } else if (cp_has_winning_move) {
-    stats_.provably_winning[cp] = true;
-    stats_.provably_losing.set();
-    stats_.provably_losing[cp] = false;
+    stats.provably_winning[cp] = true;
+    stats.provably_losing.set();
+    stats.provably_losing[cp] = false;
   } else if (num_children == num_valid_actions) {
-    stats_.provably_winning = all_provably_winning;
-    stats_.provably_losing = all_provably_losing;
+    stats.provably_winning = all_provably_winning;
+    stats.provably_losing = all_provably_losing;
   }
 
-  stats_.real_avg = real_count ? (real_sum / real_count) : real_sum;
-  if (stats_.virtual_count) {
-    ValueArray virtualized_num = real_sum + make_virtual_loss() * stats_.virtual_count;
-    int virtualized_den = real_count + stats_.virtual_count;
-    stats_.virtualized_avg = virtualized_num / virtualized_den;
+  stats.real_avg = real_count ? (real_sum / real_count) : real_sum;
+  if (stats.virtual_count) {
+    ValueArray virtualized_num = real_sum + make_virtual_loss() * stats.virtual_count;
+    int virtualized_den = real_count + stats.virtual_count;
+    stats.virtualized_avg = virtualized_num / virtualized_den;
   } else {
-    stats_.virtualized_avg = stats_.real_avg;
+    stats.virtualized_avg = stats.real_avg;
   }
+
+  if (mode == kPrefetchMode) stats_mutex_.unlock();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -240,6 +247,24 @@ typename Node<GameState, Tensorizor>::sptr Node<GameState, Tensorizor>::lookup_c
     }
   }
   return nullptr;
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void Node<GameState, Tensorizor>::reset_prefetch_stats() {
+  stats_[kPrefetchMode] = stats_[kSearchMode];
+  for (auto& edge : children_data_) {
+    edge.reset_count();
+    edge.child()->reset_prefetch_stats();
+  }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+core::symmetry_index_t Node<GameState, Tensorizor>::make_sym_index(const GameState& state,
+                                                                   const ManagerParams& params) {
+  if (params.apply_random_symmetries) {
+    return bitset_util::choose_random_on_index(state.get_symmetry_indices());
+  }
+  return 0;
 }
 
 }  // namespace mcts

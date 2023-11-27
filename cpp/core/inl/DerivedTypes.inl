@@ -3,6 +3,19 @@
 namespace core {
 
 template <typename GameState>
+bool GameStateTypes<GameState>::is_terminal_outcome(const GameOutcome& outcome) {
+  return outcome.sum() > 0;
+}
+
+template <typename GameState>
+typename GameStateTypes<GameState>::GameOutcome
+GameStateTypes<GameState>::make_non_terminal_outcome() {
+  GameOutcome outcome;
+  outcome.setZero();
+  return outcome;
+}
+
+template <typename GameState>
 typename GameStateTypes<GameState>::LocalPolicyArray GameStateTypes<GameState>::global_to_local(
     const PolicyTensor& policy, const ActionMask& mask) {
   LocalPolicyArray out;

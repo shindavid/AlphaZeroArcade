@@ -310,7 +310,7 @@ typename GameServer<GameState>::GameOutcome GameServer<GameState>::GameThread::p
         player2->receive_state_change(seat, state, action);
       }
     }
-    if (is_terminal_outcome(outcome)) {
+    if (GameStateTypes::is_terminal_outcome(outcome)) {
       for (auto player2 : players) {
         player2->end_game(state, outcome);
       }

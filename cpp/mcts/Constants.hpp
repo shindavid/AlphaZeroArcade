@@ -2,33 +2,37 @@
 
 #include <util/CppUtil.hpp>
 
+#include <cstdint>
+
 namespace mcts {
 
 enum Mode { kCompetitive, kTraining };
 
-struct SearchThreadRegion {
+enum TreeTraversalMode : int8_t { kPrefetchMode = 0, kSearchMode = 1, kNumTreeTraversalModes = 2 };
+
+enum BackpropMode : int8_t { kTerminal, kNonterminal };
+
+struct TreeTraversalThreadRegion {
   enum region_t {
-    kCheckVisitReady,
-    kAcquiringLazilyInitializedDataMutex,
-    kLazyInit,
-    kPureBackprop,
+    kBackprop,
     kBackpropWithVirtualUndo,
     kMisc,
     kCheckingCache,
-    kAcquiringBatchMutex,
     kWaitingUntilBatchReservable,
     kTensorizing,
     kIncrementingCommitCount,
     kWaitingForReservationProcessing,
     kVirtualBackprop,
-    kConstructingChildren,
     kPUCT,
-    kAcquiringStatsMutex,
-    kBackpropEvaluation,
-    kMarkFullyAnalyzed,
     kEvaluate,
     kEvaluateUnset,
-    kEvaluatePending,
+    kPrefetch,
+    kSearch,
+    kGetNextWorkItem,
+    kWaitForSearchActivation,
+    kWaitForEval,
+    kWaitForEdge,
+    kReset,
     kNumRegions
   };
 };

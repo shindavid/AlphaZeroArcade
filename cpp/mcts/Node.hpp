@@ -9,6 +9,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
+#include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/TypeDefs.hpp>
 
@@ -53,7 +54,7 @@ class Node {
   };
 
   struct stable_data_t {
-    stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
+    stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&, const ManagerParams*);
 
     Tensorizor tensorizor;
     GameState state;
@@ -75,6 +76,19 @@ class Node {
    *
    * Despite the above caveats, we can still read without a mutex, since all usages are ok with
    * arbitrarily-partially written data.
+   *
+   * TODO: There are a number of ways to shrink the memory footprint of this object:
+   *
+   * 1. I don't think there's a need to have both real_avg and virtualized_avg, as the virtualized
+   *    avg can be quickly computed as needed from the real avg and the counts.
+   * 2. In zero-sum games, ValueArray can be specialized to only store (n-1) values, and packed.
+   * 3. The provably_* bitsets can be changed to use a specialized bitset type that uses fewer than
+   *    8 bytes.
+   *
+   * With the above changes, this object can be shrunk to 16 bytes in the two-player zero-sum case.
+   * This shrinkage became slightly more relevant with the introduction of Deterministic
+   * Multithreaded MCTS, which maintains two stats_t objects per node, one for prefetched data and
+   * one for confirmed data.
    */
   struct stats_t {
     stats_t();
@@ -85,20 +99,16 @@ class Node {
       real_count++;
       virtual_count--;
     }
-    void set_eval_exact(const ValueArray& value) {
-      eval = value;
+    void deduce_certain_outcomes(const ValueArray& value) {
       for (int p = 0; p < kNumPlayers; ++p) {
         provably_winning[p] = value(p) == 1;
         provably_losing[p] = value(p) == 0;
       }
-      real_increment();
     }
     void set_eval_with_virtual_undo(const ValueArray& value) {
-      eval = value;
       increment_transfer();
     }
 
-    ValueArray eval;             // game-outcome for terminal nodes, nn-eval for non-terminal nodes
     ValueArray real_avg;         // excludes virtual loss
     ValueArray virtualized_avg;  // includes virtual loss
 
@@ -127,14 +137,15 @@ class Node {
     Action action() const { return const_cast<Action&>(action_); }
     core::action_index_t action_index() const { return action_index_; }
     sptr child() const { return const_cast<sptr&>(child_); }
-    void increment_count() { count_++; }
-    int count() const { return count_.load(); }
+    void increment_count(TreeTraversalMode mode) { count_[mode]++; }
+    int count(TreeTraversalMode mode) const { return count_[mode].load(); }
+    void reset_count() { count_[kPrefetchMode].store(count(kSearchMode)); }
 
-   private:
-    volatile sptr child_;
-    volatile Action action_;
-    volatile core::action_index_t action_index_ = -1;
-    std::atomic<int> count_ = 0;  // real only
+     private:
+      volatile sptr child_;
+      volatile Action action_;
+      volatile core::action_index_t action_index_ = -1;
+      std::atomic<int> count_[kNumTreeTraversalModes] = {0, 0};  // real only
   };
 
   /*
@@ -271,41 +282,61 @@ class Node {
   struct evaluation_data_t {
     NNEvaluation::asptr ptr;
     LocalPolicyArray local_policy_prob_distr;
+
+    /*
+     * For non-terminal nodes, value is a copy of ptr->value_prob_distr_, and represents a
+     * neural-net evaluation of the node.
+     *
+     * For terminal nodes, value is a copy of stable_data_.outcome, and represents an outcome as
+     * determined by the rules of the game.
+     *
+     * Either way, value is a redundant copied value. We don't need this field, and could instead
+     * have a getter that branches based on whether the node is terminal or not. Having a copied
+     * value is likely a tiny efficiency win by virtue of skipping branches and pointer
+     * redirections.
+     */
+    ValueArray value;
     evaluation_state_t state = kUnset;
   };
 
-  Node(const Tensorizor&, const GameState&, const GameOutcome&);
+  Node(const Tensorizor&, const GameState&, const GameOutcome&, const ManagerParams*);
 
   void debug_dump() const;
 
-  std::condition_variable& cv_evaluate() { return cv_evaluate_; }
   std::mutex& evaluation_data_mutex() const { return evaluation_data_mutex_; }
   std::mutex& stats_mutex() const { return stats_mutex_; }
 
   PolicyTensor get_counts(const ManagerParams& params) const;
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
-  void update_stats(const UpdateT& update_instruction);
+  void update_stats(const UpdateT& update_instruction, TreeTraversalMode mode);
   sptr lookup_child_by_action(const Action& action) const;
+
+  /*
+   * Copies search-mode stats to prefetch-mode stats. Recursively does this for all children.
+   *
+   * Assumes that all other threads besides the current one have stopped working on this tree.
+   */
+  void reset_prefetch_stats();
 
   const stable_data_t& stable_data() const { return stable_data_; }
   const children_data_t& children_data() const { return children_data_; }
   children_data_t& children_data() { return children_data_; }
   std::mutex& children_mutex() { return children_mutex_; }
-  const stats_t& stats() const { return stats_; }
-  stats_t& stats() { return stats_; }
+  const stats_t& stats(TreeTraversalMode mode) const { return stats_[mode]; }
+  stats_t& stats(TreeTraversalMode mode) { return stats_[mode]; }
   const evaluation_data_t& evaluation_data() const { return evaluation_data_; }
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
  private:
-  std::condition_variable cv_evaluate_;
+  static core::symmetry_index_t make_sym_index(const GameState& state, const ManagerParams& params);
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;
-  mutable std::mutex stats_mutex_;
+  mutable std::mutex stats_mutex_;  // protects usage of stats_[kPrefetchMode]
   const stable_data_t stable_data_;
   children_data_t children_data_;
   evaluation_data_t evaluation_data_;
-  stats_t stats_;
+  stats_t stats_[kNumTreeTraversalModes];
 };
 
 }  // namespace mcts

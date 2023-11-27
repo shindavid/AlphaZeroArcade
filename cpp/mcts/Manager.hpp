@@ -3,7 +3,6 @@
 #include <condition_variable>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #include <core/BasicTypes.hpp>
@@ -14,11 +13,12 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/PrefetchThread.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
-#include <mcts/SharedData.hpp>
+#include <mcts/TreeData.hpp>
 
 namespace mcts {
 
@@ -35,8 +35,10 @@ class Manager {
   using Node = mcts::Node<GameState, Tensorizor>;
   using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
   using SearchResults = mcts::SearchResults<GameState>;
+  using TreeTraversalThread = mcts::TreeTraversalThread<GameState, Tensorizor>;
+  using PrefetchThreadManager = mcts::PrefetchThreadManager<GameState, Tensorizor>;
   using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using TreeData = mcts::TreeData<GameState, Tensorizor>;
 
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -64,32 +66,25 @@ class Manager {
   const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state,
                               const SearchParams& params);
 
-  void start_search_threads(const SearchParams* search_params);
-  void wait_for_search_threads();
-  void stop_search_threads();
-  void run_search(SearchThread* thread, int tree_size_limit);
   void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
   static void end_session() { NNEvaluationService::end_session(); }
 
  private:
-  using search_thread_vec_t = std::vector<SearchThread*>;
+  using search_thread_vec_t = std::vector<TreeTraversalThread*>;
   void prune_counts(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
 
   static int next_instance_id_;  // for naming debug/profiling output files
 
   const ManagerParams params_;
-  SharedData shared_data_;
+  TreeData tree_data_;
   const SearchParams pondering_search_params_;
-  search_thread_vec_t search_threads_;
+  PrefetchThreadManager* prefetch_manager_;
+  SearchThread* search_thread_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 
   SearchResults results_;
-
-  std::mutex search_mutex_;
-  std::condition_variable cv_search_;
-  int num_active_search_threads_ = 0;
   bool connected_ = false;
 };
 

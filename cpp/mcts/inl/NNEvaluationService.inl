@@ -143,14 +143,14 @@ inline NNEvaluationService<GameState, Tensorizor>::~NNEvaluationService() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename NNEvaluationService<GameState, Tensorizor>::Response
 NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
-  const Node* tree = request.tree;
+  const Node* node = request.node;
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("evaluate()\n");
   }
 
-  const auto& stable_data = tree->stable_data();
+  const auto& stable_data = node->stable_data();
   cache_key_t cache_key(stable_data.state, request.sym_index);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
@@ -325,7 +325,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 NNEvaluationService<GameState, Tensorizor>::Response
 NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request,
                                                         const cache_key_t& cache_key) {
-  request.thread_profiler->record(SearchThreadRegion::kCheckingCache);
+  request.thread_profiler->record(TreeTraversalThreadRegion::kCheckingCache);
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
@@ -349,7 +349,7 @@ NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request,
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_reservable(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock) {
-  request.thread_profiler->record(SearchThreadRegion::kWaitingUntilBatchReservable);
+  request.thread_profiler->record(TreeTraversalThreadRegion::kWaitingUntilBatchReservable);
 
   const char* func = __func__;
   if (mcts::kEnableDebug) {
@@ -371,7 +371,7 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_reservable(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock) {
-  request.thread_profiler->record(SearchThreadRegion::kMisc);
+  request.thread_profiler->record(TreeTraversalThreadRegion::kMisc);
 
   int my_index = batch_metadata_.reserve_index;
   util::debug_assert(my_index < batch_size_limit_);
@@ -403,16 +403,16 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
     const Request& request, const cache_key_t& cache_key, int reserve_index) {
-  Node* tree = request.tree;
+  Node* node = request.node;
 
-  const auto& stable_data = tree->stable_data();
+  const auto& stable_data = node->stable_data();
   const Tensorizor& tensorizor = stable_data.tensorizor;
   const GameState& state = stable_data.state;
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
   core::symmetry_index_t sym_index = cache_key.second;
 
-  request.thread_profiler->record(SearchThreadRegion::kTensorizing);
+  request.thread_profiler->record(TreeTraversalThreadRegion::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
@@ -430,7 +430,7 @@ void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::increment_commit_count(const Request& request) {
-  request.thread_profiler->record(SearchThreadRegion::kIncrementingCommitCount);
+  request.thread_profiler->record(TreeTraversalThreadRegion::kIncrementingCommitCount);
 
   batch_metadata_.commit_count++;
   if (mcts::kEnableDebug) {
@@ -445,7 +445,7 @@ typename NNEvaluationService<GameState, Tensorizor>::NNEvaluation_sptr
 NNEvaluationService<GameState, Tensorizor>::get_eval(const Request& request, int reserve_index,
                                                      std::unique_lock<std::mutex>& metadata_lock) {
   const char* func = __func__;
-  request.thread_profiler->record(SearchThreadRegion::kWaitingForReservationProcessing);
+  request.thread_profiler->record(TreeTraversalThreadRegion::kWaitingForReservationProcessing);
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(request.thread_id);
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());

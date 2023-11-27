@@ -7,9 +7,10 @@ namespace mcts {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
                                                    const SearchParams& search_params,
-                                                   const Node* tree, bool is_root)
-    : cp(tree->stable_data().current_player),
-      P(tree->evaluation_data().local_policy_prob_distr),
+                                                   TreeTraversalMode traversal_mode,
+                                                   const Node* node, bool is_root)
+    : cp(node->stable_data().current_player),
+      P(node->evaluation_data().local_policy_prob_distr),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -27,18 +28,18 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
   std::bitset<kMaxNumLocalActions> fpu_bits;
   fpu_bits.set();
 
-  for (const auto& edge : tree->children_data()) {
+  for (const auto& edge : node->children_data()) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
     core::action_index_t i = edge.action_index();
-    const auto& child_stats = edge.child()->stats();
+    const auto& child_stats = edge.child()->stats(traversal_mode);
 
     V(i) = child_stats.virtualized_avg(cp);
     PW(i) = child_stats.provably_winning[cp];
     PL(i) = child_stats.provably_losing[cp];
-    E(i) = edge.count();
+    E(i) = edge.count(traversal_mode);
     N(i) = child_stats.real_count;
     VN(i) = child_stats.virtual_count;
 
@@ -49,7 +50,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
     /*
      * Again, we do NOT grab the stats_mutex here!
      */
-    const auto& stats = tree->stats();  // no struct copy, not needed here
+    const auto& stats = node->stats(traversal_mode);
     dtype PV = stats.virtualized_avg(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;

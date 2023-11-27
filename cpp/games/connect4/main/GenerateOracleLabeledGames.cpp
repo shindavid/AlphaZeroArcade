@@ -112,7 +112,7 @@ class OracleSupervisedPlayer : public BasePlayer {
   void receive_state_change(seat_index_t p, const GameState& state, const Action& action,
                             const GameOutcome& outcome) override {
     BasePlayer::receive_state_change(p, state, action, outcome);
-    if (core::is_terminal_outcome(outcome)) {
+    if (GameStateTypes::is_terminal_outcome(outcome)) {
       supervisor_->close(game_data_);
     } else if (p == BasePlayer::get_my_seat()) {
       supervisor_->receive_move(state, action);
