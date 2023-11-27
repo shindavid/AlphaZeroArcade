@@ -14,20 +14,20 @@ namespace othello {
 class PlayerFactory : public core::PlayerFactory<GameState> {
  public:
   using base_t = core::PlayerFactory<GameState>;
-  using player_generator_creator_vec_t = base_t::player_generator_creator_vec_t;
+  using player_subfactory_vec_t = base_t::player_subfactory_vec_t;
 
   PlayerFactory() : base_t(make_generators()) {}
 
  private:
-  static player_generator_creator_vec_t make_generators() {
-    return {new core::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
-            new core::PlayerGeneratorCreator<othello::EdaxPlayerGenerator>(),
-            new core::PlayerGeneratorCreator<
+  static player_subfactory_vec_t make_generators() {
+    return {new core::PlayerSubfactory<othello::HumanTuiPlayerGenerator>(),
+            new core::PlayerSubfactory<othello::EdaxPlayerGenerator>(),
+            new core::PlayerSubfactory<
                 generic::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
-            new core::PlayerGeneratorCreator<
+            new core::PlayerSubfactory<
                 generic::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
-            new core::PlayerGeneratorCreator<generic::RandomPlayerGenerator<GameState>>(),
-            new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()};
+            new core::PlayerSubfactory<generic::RandomPlayerGenerator<GameState>>(),
+            new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<GameState>>()};
   }
 };
 

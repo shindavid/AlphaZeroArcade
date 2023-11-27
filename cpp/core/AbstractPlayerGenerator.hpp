@@ -135,19 +135,6 @@ class AbstractPlayerGenerator {
   std::string name_;
 };
 
-template <GameStateConcept GameState>
-class PlayerGeneratorCreatorBase {
- public:
-  virtual ~PlayerGeneratorCreatorBase() = default;
-  virtual AbstractPlayerGenerator<GameState>* create() const = 0;
-};
-
-template <typename GeneratorT>
-class PlayerGeneratorCreator : public PlayerGeneratorCreatorBase<typename GeneratorT::GameState> {
- public:
-  GeneratorT* create() const override { return new GeneratorT(); }
-};
-
 }  // namespace core
 
 #include <core/inl/AbstractPlayerGenerator.inl>

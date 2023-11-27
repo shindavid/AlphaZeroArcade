@@ -30,12 +30,12 @@ auto PlayerFactory<GameState>::Params::make_options_description() {
 }
 
 template <GameStateConcept GameState>
-PlayerFactory<GameState>::PlayerFactory(const player_generator_creator_vec_t& creators)
-    : creators_(creators) {
+PlayerFactory<GameState>::PlayerFactory(const player_subfactory_vec_t& subfactories)
+    : subfactories_(subfactories) {
   // validate that the generator types don't overlap
   std::set<std::string> types;
-  for (auto* creator : creators_) {
-    auto* generator = creator->create();
+  for (auto* subfactory : subfactories_) {
+    auto* generator = subfactory->create();
     for (const auto& type : generator->get_types()) {
       if (types.count(type)) {
         throw util::Exception("PlayerFactory: duplicate type: %s", type.c_str());
@@ -91,8 +91,8 @@ void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player
   std::cout << "The set of legal --type values are:" << std::endl;
 
   player_generator_vec_t generators;
-  for (auto* creator : creators_) {
-    generators.push_back(creator->create());
+  for (auto* subfactory : subfactories_) {
+    generators.push_back(subfactory->create());
   }
   for (auto* generator : generators) {
     std::cout << "  " << type_str(generator) << ": " << generator->get_description() << std::endl;
@@ -187,8 +187,8 @@ typename PlayerFactory<GameState>::PlayerGenerator* PlayerFactory<GameState>::pa
     util::clean_assert(!name_map_.count(name), "Duplicate --name \"%s\"", name.c_str());
     name_map_[name] = orig_tokens;
   }
-  for (auto* creator : creators_) {
-    auto* generator = creator->create();
+  for (auto* subfactory : subfactories_) {
+    auto* generator = subfactory->create();
     if (matches(generator, type)) {
       generator->set_name(name);
       generator->parse_args(tokens);
