@@ -16,10 +16,10 @@ class PlayerFactory : public core::PlayerFactory<GameState> {
   using base_t = core::PlayerFactory<GameState>;
   using player_subfactory_vec_t = base_t::player_subfactory_vec_t;
 
-  PlayerFactory() : base_t(make_generators()) {}
+  PlayerFactory() : base_t(make_subfactories()) {}
 
  private:
-  static player_subfactory_vec_t make_generators() {
+  static player_subfactory_vec_t make_subfactories() {
     return {new core::PlayerSubfactory<othello::HumanTuiPlayerGenerator>(),
             new core::PlayerSubfactory<othello::EdaxPlayerGenerator>(),
             new core::PlayerSubfactory<
