@@ -1,14 +1,14 @@
 #pragma once
 
-#include <common/players/HumanTuiPlayer.hpp>
+#include <games/generic/players/HumanTuiPlayer.hpp>
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
 
 namespace c4 {
 
-class HumanTuiPlayer : public common::HumanTuiPlayer<GameState> {
+class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
  public:
-  using base_t = common::HumanTuiPlayer<GameState>;
+  using base_t = generic::HumanTuiPlayer<GameState>;
 
   HumanTuiPlayer(bool cheat_mode);
   ~HumanTuiPlayer();

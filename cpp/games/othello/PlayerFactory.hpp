@@ -2,8 +2,8 @@
 
 #include <core/PlayerFactory.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <common/players/MctsPlayerGenerator.hpp>
-#include <common/players/RandomPlayerGenerator.hpp>
+#include <games/generic/players/MctsPlayerGenerator.hpp>
+#include <games/generic/players/RandomPlayerGenerator.hpp>
 #include <games/othello/GameState.hpp>
 #include <games/othello/Tensorizor.hpp>
 #include <games/othello/players/EdaxPlayerGenerator.hpp>
@@ -23,10 +23,10 @@ class PlayerFactory : public core::PlayerFactory<GameState> {
     return {new core::PlayerGeneratorCreator<othello::HumanTuiPlayerGenerator>(),
             new core::PlayerGeneratorCreator<othello::EdaxPlayerGenerator>(),
             new core::PlayerGeneratorCreator<
-                common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
+                generic::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
             new core::PlayerGeneratorCreator<
-                common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
-            new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
+                generic::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
+            new core::PlayerGeneratorCreator<generic::RandomPlayerGenerator<GameState>>(),
             new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()};
   }
 };

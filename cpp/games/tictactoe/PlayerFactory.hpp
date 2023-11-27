@@ -2,8 +2,8 @@
 
 #include <core/PlayerFactory.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <common/players/MctsPlayerGenerator.hpp>
-#include <common/players/RandomPlayerGenerator.hpp>
+#include <games/generic/players/MctsPlayerGenerator.hpp>
+#include <games/generic/players/RandomPlayerGenerator.hpp>
 #include <games/tictactoe/GameState.hpp>
 #include <games/tictactoe/Tensorizor.hpp>
 #include <games/tictactoe/players/HumanTuiPlayerGenerator.hpp>
@@ -23,10 +23,10 @@ class PlayerFactory : public core::PlayerFactory<GameState> {
     return {new core::PlayerGeneratorCreator<tictactoe::HumanTuiPlayerGenerator>(),
             new core::PlayerGeneratorCreator<tictactoe::PerfectPlayerGenerator>(),
             new core::PlayerGeneratorCreator<
-                common::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
+                generic::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
             new core::PlayerGeneratorCreator<
-                common::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
-            new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
+                generic::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
+            new core::PlayerGeneratorCreator<generic::RandomPlayerGenerator<GameState>>(),
             new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()};
   }
 };

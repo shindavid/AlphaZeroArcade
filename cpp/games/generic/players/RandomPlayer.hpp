@@ -6,7 +6,7 @@
 #include <util/EigenUtil.hpp>
 #include <util/Random.hpp>
 
-namespace common {
+namespace generic {
 
 /*
  * RandomPlayer always chooses uniformly at random among the set of legal moves.
@@ -25,4 +25,4 @@ public:
   }
 };
 
-}  // namespace common
+}  // namespace generic

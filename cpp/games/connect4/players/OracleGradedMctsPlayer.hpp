@@ -4,7 +4,7 @@
  * MctsPlayer that is graded by the perfect oracle.
  */
 
-#include <common/players/MctsPlayer.hpp>
+#include <games/generic/players/MctsPlayer.hpp>
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
 #include <games/connect4/Tensorizor.hpp>
@@ -44,9 +44,9 @@ class OracleGrader {
   mistake_tracker_t overall_tracker_;
 };
 
-class OracleGradedMctsPlayer : public common::MctsPlayer<GameState, Tensorizor> {
+class OracleGradedMctsPlayer : public generic::MctsPlayer<GameState, Tensorizor> {
  public:
-  using base_t = common::MctsPlayer<GameState, Tensorizor>;
+  using base_t = generic::MctsPlayer<GameState, Tensorizor>;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using PolicyArray = typename GameStateTypes::PolicyArray;
 

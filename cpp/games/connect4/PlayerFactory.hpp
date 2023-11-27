@@ -2,8 +2,8 @@
 
 #include <core/PlayerFactory.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <common/players/MctsPlayerGenerator.hpp>
-#include <common/players/RandomPlayerGenerator.hpp>
+#include <games/generic/players/MctsPlayerGenerator.hpp>
+#include <games/generic/players/RandomPlayerGenerator.hpp>
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/Tensorizor.hpp>
 #include <games/connect4/players/HumanTuiPlayerGenerator.hpp>
@@ -25,7 +25,7 @@ class PlayerFactory : public core::PlayerFactory<GameState> {
             new core::PlayerGeneratorCreator<c4::CompetitiveMctsPlayerGenerator>(),
             new core::PlayerGeneratorCreator<c4::TrainingMctsPlayerGenerator>(),
             new core::PlayerGeneratorCreator<c4::PerfectPlayerGenerator>(),
-            new core::PlayerGeneratorCreator<common::RandomPlayerGenerator<GameState>>(),
+            new core::PlayerGeneratorCreator<generic::RandomPlayerGenerator<GameState>>(),
             new core::PlayerGeneratorCreator<core::RemotePlayerProxyGenerator<GameState>>()};
   }
 };

@@ -1,4 +1,4 @@
-#include <common/players/HumanTuiPlayer.hpp>
+#include <games/generic/players/HumanTuiPlayer.hpp>
 
 #include <cstdlib>
 #include <iostream>
@@ -6,7 +6,7 @@
 #include <core/DerivedTypes.hpp>
 #include <util/ScreenUtil.hpp>
 
-namespace common {
+namespace generic {
 
 template <core::GameStateConcept GameState_>
 inline void HumanTuiPlayer<GameState_>::start_game() {
@@ -68,4 +68,4 @@ inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state, bool
   state.dump(&last_action_, &this->get_player_names());
 }
 
-}  // namespace common
+}  // namespace generic

@@ -1,4 +1,4 @@
-#include <common/players/MctsPlayer.hpp>
+#include <games/generic/players/MctsPlayer.hpp>
 
 #include <unistd.h>
 
@@ -16,7 +16,7 @@
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
 
-namespace common {
+namespace generic {
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 MctsPlayer<GameState_, Tensorizor_>::Params::Params(mcts::Mode mode) {
@@ -234,4 +234,4 @@ inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
   std::cout << std::endl;
 }
 
-}  // namespace common
+}  // namespace generic

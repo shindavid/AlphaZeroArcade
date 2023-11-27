@@ -3,11 +3,11 @@
 #include <string>
 #include <vector>
 
-#include <common/players/HumanTuiPlayer.hpp>
+#include <games/generic/players/HumanTuiPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace generic {
 
 template<core::GameStateConcept GameState>
 class HumanTuiPlayerGenerator : public core::AbstractPlayerGenerator<GameState> {
@@ -20,4 +20,4 @@ public:
   int max_simultaneous_games() const override { return 1; }
 };
 
-}  // namespace common
+}  // namespace generic

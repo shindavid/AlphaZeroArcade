@@ -17,7 +17,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/ParallelGameRunner.hpp>
 #include <core/TrainingDataWriter.hpp>
-#include <common/players/RandomPlayer.hpp>
+#include <games/generic/players/RandomPlayer.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>

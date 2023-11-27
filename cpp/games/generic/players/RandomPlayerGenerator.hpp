@@ -3,12 +3,12 @@
 #include <string>
 #include <vector>
 
-#include <common/players/RandomPlayer.hpp>
+#include <games/generic/players/RandomPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
 
-namespace common {
+namespace generic {
 
 template <core::GameStateConcept GameState>
 class RandomPlayerGenerator : public core::AbstractPlayerGenerator<GameState> {
@@ -21,4 +21,4 @@ class RandomPlayerGenerator : public core::AbstractPlayerGenerator<GameState> {
   }
 };
 
-}  // namespace common
+}  // namespace generic
