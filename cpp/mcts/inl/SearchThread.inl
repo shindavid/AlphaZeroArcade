@@ -19,22 +19,24 @@ inline SearchThread<GameState, Tensorizor>::SearchThread(SharedData* shared_data
     : shared_data_(shared_data),
       nn_eval_service_(nn_eval_service),
       manager_params_(manager_params),
-      thread_id_(thread_id) {
-  if (kEnableProfiling) {
-    auto dir = manager_params->profiling_dir();
-    int manager_id = shared_data->manager_id;
-    auto profiling_file_path = dir / util::create_string("search%d-%d.txt", manager_id, thread_id);
-    profiler_.initialize_file(profiling_file_path);
-    profiler_.set_name(util::create_string("s-%d-%-2d", manager_id, thread_id));
-    profiler_.skip_next_n_dumps(5);
-  }
-}
+      thread_id_(thread_id) {}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline SearchThread<GameState, Tensorizor>::~SearchThread() {
   kill();
   profiler_.dump(1);
   profiler_.close_file();
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void SearchThread<GameState, Tensorizor>::set_profiling_dir(
+    const boost::filesystem::path& profiling_dir) {
+  auto dir = profiling_dir;
+  int manager_id = shared_data_->manager_id;
+  auto profiling_file_path = dir / util::create_string("search%d-%d.txt", manager_id, thread_id_);
+  profiler_.initialize_file(profiling_file_path);
+  profiler_.set_name(util::create_string("s-%d-%-2d", manager_id, thread_id_));
+  profiler_.skip_next_n_dumps(5);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

@@ -53,6 +53,7 @@ class SearchThread {
 
   int thread_id() const { return thread_id_; }
 
+  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
   void join();
   void kill();
   void launch(const SearchParams* search_params, std::function<void()> f);

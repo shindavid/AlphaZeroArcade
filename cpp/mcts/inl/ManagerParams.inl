@@ -34,28 +34,16 @@ inline auto ManagerParams::make_options_description() {
 
   po2::options_description desc("Manager options");
 
-  return desc
-      .template add_option<"model-filename", 'm'>(
-          po::value<std::string>(&model_filename),
-          "model filename. If not specified, a uniform model is implicitly used")
-      .template add_option<"cuda-device">(
-          po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device")
+  auto out = desc
       .template add_option<"num-search-threads", 'n'>(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
-      .template add_option<"batch-size-limit", 'b'>(
-          po::value<int>(&batch_size_limit)->default_value(batch_size_limit), "batch size limit")
       .template add_bool_switches<"enable-pondering", "disable-pondering">(
           &enable_pondering, "enable pondering (search during opponent's turn)",
           "disable pondering (search during opponent's turn)")
       .template add_option<"pondering-tree-size-limit">(
           po::value<int>(&pondering_tree_size_limit)->default_value(pondering_tree_size_limit),
           "max tree size to grow to when pondering (only respected in --enable-pondering mode)")
-      .template add_option<"nn-eval-timeout-ns">(
-          po::value<int64_t>(&nn_eval_timeout_ns)->default_value(nn_eval_timeout_ns),
-          "nn eval thread timeout in ns")
-      .template add_option<"cache-size">(po::value<size_t>(&cache_size)->default_value(cache_size),
-                                         "nn eval thread cache size")
       .template add_option<"root-softmax-temp">(
           po::value<std::string>(&root_softmax_temperature_str)
               ->default_value(root_softmax_temperature_str),
@@ -75,6 +63,8 @@ inline auto ManagerParams::make_options_description() {
           "directory in which to dump mcts profiling stats")
 #endif  // PROFILE_MCTS
       ;
+
+  return out.add(NNEvaluationServiceParams::make_options_description());
 }
 
 }  // namespace mcts

@@ -5,8 +5,8 @@
 #include <core/NeuralNet.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
-#include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
+#include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -114,7 +114,7 @@ class NNEvaluationService {
    * If that returned thread does not match the thread parameters (batch_size, nn_eval_timeout_ns,
    * cache_size), then raises an exception.
    */
-  static NNEvaluationService* create(const ManagerParams& manager_params);
+  static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -124,6 +124,8 @@ class NNEvaluationService {
   void connect();
 
   void disconnect();
+
+  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 
   /*
    * Called by search threads. Returns immediately if we get a cache-hit. Otherwise, blocks on the
@@ -154,7 +156,7 @@ class NNEvaluationService {
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 
-  NNEvaluationService(const ManagerParams& manager_params);
+  NNEvaluationService(const NNEvaluationServiceParams& params);
   ~NNEvaluationService();
 
   void batch_evaluate();
@@ -185,22 +187,6 @@ class NNEvaluationService {
     PolicyTransform* policy_transform;
   };
 
-  static instance_map_t instance_map_;
-  static int next_instance_id_;
-  static bool session_ended_;
-
-  const int instance_id_;  // for naming debug/profiling output files
-
-  profiler_t profiler_;
-  std::thread* thread_ = nullptr;
-  std::mutex cache_mutex_;
-  std::mutex connection_mutex_;
-
-  std::condition_variable cv_service_loop_;
-  std::condition_variable cv_evaluate_;
-
-  core::NeuralNet net_;
-
   struct tensor_group_t {
     void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value);
 
@@ -219,6 +205,24 @@ class NNEvaluationService {
     std::mutex mutex;
     tensor_group_t* tensor_groups_;
   };
+
+  static instance_map_t instance_map_;
+  static int next_instance_id_;
+  static bool session_ended_;
+
+  const int instance_id_;  // for naming debug/profiling output files
+  const NNEvaluationServiceParams params_;
+
+  profiler_t profiler_;
+  std::thread* thread_ = nullptr;
+  std::mutex cache_mutex_;
+  std::mutex connection_mutex_;
+
+  std::condition_variable cv_service_loop_;
+  std::condition_variable cv_evaluate_;
+
+  core::NeuralNet net_;
+
   batch_data_t batch_data_;
 
   core::NeuralNet::input_vec_t input_vec_;
@@ -229,7 +233,6 @@ class NNEvaluationService {
   cache_t cache_;
 
   const std::chrono::nanoseconds timeout_duration_;
-  const int batch_size_limit_;
 
   time_point_t deadline_;
   struct batch_metadata_t {
