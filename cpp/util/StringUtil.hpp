@@ -39,6 +39,8 @@ std::vector<std::string> split(const std::string& s);
 template <int N = 1024>
 inline std::string create_string(char const* fmt, ...);
 
+bool ends_with(const std::string& value, const std::string& ending);
+
 }  // namespace util
 
 #include <util/inl/StringUtil.inl>

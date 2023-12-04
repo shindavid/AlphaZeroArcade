@@ -52,17 +52,20 @@ struct Main {
 
       po2::options_description raw_desc("General options");
       auto desc = raw_desc.template add_option<"help", 'h'>("help")
+                      .template add_option<"help-full">("help with no-op flags included")
                       .add(args.make_options_description())
                       .add(game_server_params.make_options_description())
                       .add(game_server_proxy_params.make_options_description());
 
-      po::variables_map vm;
-      po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
-      po::notify(vm);
+      po::variables_map vm = po2::parse_args(desc, ac, av);
 
       PlayerFactory player_factory;
-      if (vm.count("help")) {
-        std::cout << desc << std::endl;
+      bool help_full = vm.count("help-full");
+      bool help = vm.count("help");
+      if (help || help_full) {
+        po2::Settings::help_full = help_full;
+        desc.print(std::cout);
+        std::cout << std::endl;
         player_factory.print_help(args.player_strs);
         return 0;
       }

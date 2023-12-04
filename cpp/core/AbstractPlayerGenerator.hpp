@@ -4,11 +4,10 @@
 #include <string>
 #include <vector>
 
-#include <boost/program_options.hpp>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
+#include <util/BoostUtil.hpp>
 
 namespace core {
 
@@ -125,10 +124,8 @@ class AbstractPlayerGenerator {
    */
   template <typename T>
   void parse_args_helper(T&& desc, const std::vector<std::string>& args) {
-    namespace po = boost::program_options;
-    po::variables_map vm;
-    po::store(po::command_line_parser(args).options(desc).run(), vm);
-    po::notify(vm);
+    namespace po2 = boost_util::program_options;
+    po2::parse_args(desc, args);
   }
 
  private:
