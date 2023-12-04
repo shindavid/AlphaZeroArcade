@@ -38,7 +38,7 @@ inline auto ManagerParams::make_options_description() {
       .template add_option<"num-search-threads", 'n'>(
           po::value<int>(&num_search_threads)->default_value(num_search_threads),
           "num search threads")
-      .template add_bool_switches<"enable-pondering", "disable-pondering">(
+      .template add_flag<"enable-pondering", "disable-pondering">(
           &enable_pondering, "enable pondering (search during opponent's turn)",
           "disable pondering (search during opponent's turn)")
       .template add_option<"pondering-tree-size-limit">(
@@ -53,9 +53,9 @@ inline auto ManagerParams::make_options_description() {
                                                   "dirichlet mult")
       .template add_option<"dirichlet-alpha-factor">(
           po2::float_value("%.2f", &dirichlet_alpha_factor), "dirichlet alpha factor")
-      .template add_bool_switches<"forced-playouts", "no-forced-playouts">(
+      .template add_flag<"forced-playouts", "no-forced-playouts">(
           &forced_playouts, "enable forced playouts", "disable forced playouts")
-      .template add_bool_switches<"enable-first-play-urgency", "disable-first-play-urgency">(
+      .template add_flag<"enable-first-play-urgency", "disable-first-play-urgency">(
           &enable_first_play_urgency, "enable first play urgency", "disable first play urgency")
 #ifdef PROFILE_MCTS
       .template add_option<"profiling-dir">(

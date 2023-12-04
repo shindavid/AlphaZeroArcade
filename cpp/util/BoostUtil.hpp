@@ -116,7 +116,7 @@ class options_description {
    * See: https://stackoverflow.com/a/33172979/543913
    */
   template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
-  auto add_bool_switches(bool* flag, const char* true_help, const char* false_help) {
+  auto add_flag(bool* flag, const char* true_help, const char* false_help) {
     auto out = augment<TrueStrLit>().template augment<FalseStrLit>();
 
     std::string full_true_help = true_help;

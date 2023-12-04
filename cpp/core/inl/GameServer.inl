@@ -43,13 +43,13 @@ auto GameServer<GameState>::Params::make_options_description() {
           po::value<int>(&parallelism)->default_value(parallelism),
           "max num games to play simultaneously. Participating players can request lower values "
           "and the server will respect their requests")
-      .template add_bool_switches<"display-progress-bar", "hide-progress-bar">(
+      .template add_flag<"display-progress-bar", "hide-progress-bar">(
           &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
           "hide progress bar")
-      .template add_bool_switches<"announce-game-results", "do-not-announce-game-results">(
+      .template add_flag<"announce-game-results", "do-not-announce-game-results">(
           &announce_game_results, "announce result after each individual game",
           "do not announce result after each individual game")
-      .template add_bool_switches<"respect-victory-hints", "do-not-respect-victory-hints">(
+      .template add_flag<"respect-victory-hints", "do-not-respect-victory-hints">(
           &respect_victory_hints, "immediately exit game if a player claims imminent victory",
           "ignore imminent victory claims from players");
 }
