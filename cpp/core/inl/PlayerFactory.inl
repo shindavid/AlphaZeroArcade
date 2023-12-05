@@ -77,7 +77,7 @@ typename PlayerFactory<GameState>::player_generator_seat_vec_t PlayerFactory<Gam
 template <GameStateConcept GameState>
 void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player_strs) {
   Params params;
-  params.make_options_description().print(std::cout);
+  std::cout << params.make_options_description();
   std::cout << "  --... ...             type-specific args, dependent on --type" << std::endl
             << std::endl;
 

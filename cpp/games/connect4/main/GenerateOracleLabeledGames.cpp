@@ -163,9 +163,7 @@ int main(int ac, char* av[]) {
                   .add(parallel_game_runner_params.make_options_description())
                   .add(training_data_writer_params.make_options_description());
 
-  po::variables_map vm;
-  po::store(po::command_line_parser(ac, av).options(desc).run(), vm);
-  po::notify(vm);
+  auto vm = po2::parse_args(desc, ac, av);
 
   if (vm.count("help")) {
     std::cout << desc << std::endl;

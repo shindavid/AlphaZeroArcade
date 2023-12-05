@@ -1,3 +1,4 @@
+#include <util/BoostUtil.hpp>
 #include <util/Config.hpp>
 #include <util/KeyValueDumper.hpp>
 #include <util/Random.hpp>
@@ -5,6 +6,14 @@
 #include <util/ScreenUtil.hpp>
 #include <util/ThreadSafePrinter.hpp>
 #include <util/SocketUtil.hpp>
+
+namespace boost_util {
+namespace program_options {
+
+bool Settings::help_full = false;
+
+}  // namespace program_options
+}  // namespace boost_util
 
 namespace util {
 

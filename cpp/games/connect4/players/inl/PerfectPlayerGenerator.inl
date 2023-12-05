@@ -1,6 +1,6 @@
 #include <games/connect4/players/PerfectPlayerGenerator.hpp>
 
-#include <boost/program_options.hpp>
+#include <util/BoostUtil.hpp>
 
 namespace c4 {
 
@@ -9,10 +9,8 @@ inline std::string PerfectPlayerGenerator::get_default_name() const {
 }
 
 inline void PerfectPlayerGenerator::parse_args(const std::vector<std::string>& args) {
-  namespace po = boost::program_options;
-  po::variables_map vm;
-  po::store(po::command_line_parser(args).options(params_.make_options_description()).run(), vm);
-  po::notify(vm);
+  namespace po2 = boost_util::program_options;
+  po2::parse_args(params_.make_options_description(), args);
 }
 
 }  // namespace c4

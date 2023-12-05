@@ -16,29 +16,19 @@ typename NNEvaluationService<GameState, Tensorizor>::instance_map_t
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tensorizor>::create(
-    const ManagerParams& manager_params) {
-  boost::filesystem::path model_file_path(manager_params.model_filename);
-  std::chrono::nanoseconds timeout_duration(manager_params.nn_eval_timeout_ns);
+    const NNEvaluationServiceParams& params) {
+  boost::filesystem::path model_file_path(params.model_filename);
+  std::chrono::nanoseconds timeout_duration(params.nn_eval_timeout_ns);
 
   auto it = instance_map_.find(model_file_path);
   if (it == instance_map_.end()) {
-    auto instance = new NNEvaluationService(manager_params);
+    auto instance = new NNEvaluationService(params);
     instance_map_[model_file_path] = instance;
     return instance;
   }
   NNEvaluationService* instance = it->second;
-  if (instance->batch_size_limit_ != manager_params.batch_size_limit) {
-    throw util::Exception(
-        "Conflicting NNEvaluationService::create() calls: batch_size_limit %d vs %d",
-        instance->batch_size_limit_, manager_params.batch_size_limit);
-  }
-  if (instance->timeout_duration_ != timeout_duration) {
-    throw util::Exception(
-        "Conflicting NNEvaluationService::create() calls: unequal timeout_duration");
-  }
-  if (instance->cache_.capacity() != manager_params.cache_size) {
-    throw util::Exception("Conflicting NNEvaluationService::create() calls: cache_size %ld vs %ld",
-                          instance->cache_.capacity(), manager_params.cache_size);
+  if (instance->params_ != params) {
+    throw util::Exception("Conflicting NNEvaluationService::create() calls");
   }
   return instance;
 }
@@ -49,6 +39,10 @@ void NNEvaluationService<GameState, Tensorizor>::connect() {
   num_connections_++;
   if (thread_) return;
   thread_ = new std::thread([&] { this->loop(); });
+
+  if (params_.refresh_weights) {
+    weight_refresh_thread_ = new std::thread([&] { this->weight_refresh_loop(); });
+  }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -61,42 +55,49 @@ void NNEvaluationService<GameState, Tensorizor>::disconnect() {
     delete thread_;
     thread_ = nullptr;
   }
+  if (weight_refresh_thread_) {
+    if (weight_refresh_thread_->joinable()) weight_refresh_thread_->detach();
+    delete weight_refresh_thread_;
+    weight_refresh_thread_ = nullptr;
+  }
   profiler_.close_file();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void NNEvaluationService<GameState, Tensorizor>::set_profiling_dir(
+    const boost::filesystem::path& profiling_dir) {
+  std::string name = util::create_string("eval-%d", instance_id_);
+  auto profiling_file_path = profiling_dir / util::create_string("%s.txt", name.c_str());
+  profiler_.initialize_file(profiling_file_path);
+  profiler_.set_name(name);
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
-    const ManagerParams& manager_params)
+    const NNEvaluationServiceParams& params)
     : instance_id_(next_instance_id_++),
-      net_(manager_params.model_filename, manager_params.cuda_device),
-      batch_data_(manager_params.batch_size_limit),
-      full_input_(util::to_std_array<int64_t>(manager_params.batch_size_limit,
+      params_(params),
+      net_(params.model_filename, params.cuda_device),
+      batch_data_(params.batch_size_limit),
+      full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
-      cache_(manager_params.cache_size),
-      timeout_duration_(manager_params.nn_eval_timeout_ns),
-      batch_size_limit_(manager_params.batch_size_limit) {
-  auto input_shape =
-      util::to_std_array<int64_t>(batch_size_limit_, eigen_util::to_int64_std_array_v<InputShape>);
-  auto policy_shape =
-      util::to_std_array<int64_t>(batch_size_limit_, eigen_util::to_int64_std_array_v<PolicyShape>);
-  auto value_shape =
-      util::to_std_array<int64_t>(batch_size_limit_, eigen_util::to_int64_std_array_v<ValueShape>);
+      cache_(params.cache_size),
+      timeout_duration_(params.nn_eval_timeout_ns) {
+  auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
+                                                 eigen_util::to_int64_std_array_v<InputShape>);
+  auto policy_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
+                                                  eigen_util::to_int64_std_array_v<PolicyShape>);
+  auto value_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
+                                                 eigen_util::to_int64_std_array_v<ValueShape>);
 
   torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<dtype>)
-                         .to(at::Device(manager_params.cuda_device));
+                         .to(at::Device(params.cuda_device));
   torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
   torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<ValueScalar>);
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
-
-  if (kEnableProfiling) {
-    std::string name = util::create_string("eval-%d", instance_id_);
-    auto profiling_file_path =
-        manager_params.profiling_dir() / util::create_string("%s.txt", name.c_str());
-    profiler_.initialize_file(profiling_file_path);
-    profiler_.set_name(name);
-  }
+  model_last_modified_ = boost::filesystem::last_write_time(params_.model_filename);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -297,7 +298,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   batches_evaluated_++;
   max_evaluated_batch_size_ = std::max((int)max_evaluated_batch_size_, batch_size);
 
-  bool maxed = batch_size == batch_size_limit_;
+  bool maxed = batch_size == params_.batch_size_limit;
   if (maxed) {
     max_batches_evaluated_++;
   }
@@ -312,12 +313,26 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::loop() {
   while (active()) {
+    reload_weights_if_needed();
     wait_until_batch_ready();
     wait_for_first_reservation();
     wait_for_last_reservation();
     wait_for_commits();
     batch_evaluate();
     profiler_.dump();
+  }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::weight_refresh_loop() {
+  while (active()) {
+    std::time_t mod_time = boost::filesystem::last_write_time(params_.model_filename);
+    if (mod_time != model_last_modified_) {
+      model_last_modified_ = mod_time;
+      weight_refresh_needed_ = true;
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 }
 
@@ -357,7 +372,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_reservable(
     printer.printf("  %s(%s)...\n", func, batch_metadata_.repr().c_str());
   }
   cv_evaluate_.wait(metadata_lock, [&] {
-    if (batch_metadata_.unread_count == 0 && batch_metadata_.reserve_index < batch_size_limit_ &&
+    if (batch_metadata_.unread_count == 0 &&
+        batch_metadata_.reserve_index < params_.batch_size_limit &&
         batch_metadata_.accepting_reservations)
       return true;
     if (mcts::kEnableDebug) {
@@ -374,7 +390,7 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
   request.thread_profiler->record(SearchThreadRegion::kMisc);
 
   int my_index = batch_metadata_.reserve_index;
-  util::debug_assert(my_index < batch_size_limit_);
+  util::debug_assert(my_index < params_.batch_size_limit);
   batch_metadata_.reserve_index++;
   if (my_index == 0) {
     deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
@@ -484,6 +500,24 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::reload_weights_if_needed() {
+  if (!weight_refresh_needed_) return;
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Refreshing network weights...\n");
+  }
+  weight_refresh_needed_ = false;
+  new (&net_) core::NeuralNet(params_.model_filename, params_.cuda_device);
+
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Clearing network cache...\n");
+  }
+  std::unique_lock lock(cache_mutex_);
+  cache_.clear();
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_ready() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingUntilBatchReady);
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
@@ -539,7 +573,7 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_last_reservation() {
                    batch_metadata_.repr().c_str());
   }
   cv_service_loop_.wait_until(lock, deadline_, [&] {
-    if (batch_metadata_.reserve_index == batch_size_limit_) return true;
+    if (batch_metadata_.reserve_index == params_.batch_size_limit) return true;
     if (mcts::kEnableDebug) {
       util::ThreadSafePrinter printer;
       printer.printf("<---------------------- %s %s(%s) still waiting ---------------------->\n",

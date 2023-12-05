@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include <boost/program_options.hpp>
@@ -44,6 +45,10 @@ inline auto float_value(const char* fmt, float* dest, float default_value) {
 
 inline auto float_value(const char* fmt, float* dest) { return float_value(fmt, dest, *dest); }
 
+struct Settings {
+  static bool help_full;
+};
+
 /*
  * This class is a thin wrapper around boost::program_options::options_description. It aims to
  * provide a similar interface, with the added benefit that option-naming clashes are detected at
@@ -68,84 +73,76 @@ inline auto float_value(const char* fmt, float* dest) { return float_value(fmt, 
  *     .add_option<"bar">(...)
  *     ;
  */
-template <typename StringLiteralSequence_ = util::StringLiteralSequence<>,
+template <typename StrSeq_ = util::StringLiteralSequence<>,
           util::IntSequenceConcept CharSeq_ = std::integer_sequence<int>>
-class options_description : public boost::program_options::options_description {
+class options_description {
  public:
-  using StringLiteralSequence = StringLiteralSequence_;
+  using StrSeq = StrSeq_;
   using CharSeq = CharSeq_;
 
   using base_t = boost::program_options::options_description;
 
-  template <typename... Ts>
-  options_description(Ts&&... ts) : base_t(std::forward<Ts>(ts)...) {}
-
-  template <util::StringLiteral StrLit, char Char = ' ', typename... Ts>
-  auto add_option(Ts&&... ts) {
-    static_assert(!util::string_literal_sequence_contains_v<StringLiteralSequence, StrLit>,
-                  "Options name clash!");
-    constexpr bool UsingAbbrev = Char != ' ';
-    static_assert(!UsingAbbrev || !util::int_sequence_contains_v<CharSeq, int(Char)>,
-                  "Options abbreviation clash!");
-
-    using StringLiteralSequence2 =
-        util::concat_string_literal_sequence_t<StringLiteralSequence,
-                                               util::StringLiteralSequence<StrLit>>;
-    using CharSeq2 = std::conditional_t<
-        UsingAbbrev, util::concat_int_sequence_t<CharSeq, util::int_sequence<int(Char)>>, CharSeq>;
-    using OutT = options_description<StringLiteralSequence2, CharSeq2>;
-
-    OutT out(*this);
-    std::string full_name(StrLit.value);
-    if (UsingAbbrev) {
-      full_name = util::create_string("%s,%c", full_name.c_str(), Char);
-    }
-
-    out.add_options()(full_name.c_str(), std::forward<Ts>(ts)...);
-    return out;
-  }
+  options_description(const char* name) : full_base_(new base_t(name)), base_(new base_t(name)) {}
+  ~options_description();
 
   /*
-   * Adds both --foo and --no-foo options.
+   * Similar to boost::program_options::options_description::add_options()(...), except that the
+   * option name(s) is passed as a template argument, rather than as a function argument. This
+   * allow for compile-time checking of name clashes.
+   */
+  template <util::StringLiteral StrLit, char Char = ' ', typename... Ts>
+  auto add_option(Ts&&... ts);
+
+  /*
+   * Adds both --foo and --no-foo options. One of the two will be suppressed from the --help output,
+   * depending on the value of *flag. This allows you to brainlessly add both options without
+   * having to worry about what the default value is.
+   *
+   * Using --help-full instead of --help/-h will show both options.
    *
    * See: https://stackoverflow.com/a/33172979/543913
    */
   template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
-  auto add_bool_switches(bool* flag, const char* true_help, const char* false_help) {
-    namespace po = boost::program_options;
+  auto add_flag(bool* flag, const char* true_help, const char* false_help);
 
-    std::string full_true_help = (*flag) ? "no-op" : true_help;
-    std::string full_false_help = (*flag) ? false_help : "no-op";
+  /*
+   * Adds all options from desc to this.
+   */
+  template <typename StrSeq2, util::IntSequenceConcept CharSeq2>
+  auto add(const options_description<StrSeq2, CharSeq2>& desc);
 
-    return (*this)
-        .template add_option<TrueStrLit>(po::value(flag)->implicit_value(true)->zero_tokens(),
-                                         full_true_help.c_str())
-        .template add_option<FalseStrLit>(po::value(flag)->implicit_value(false)->zero_tokens(),
-                                          full_false_help.c_str());
+  void print(std::ostream& s) const;
+
+  friend std::ostream& operator<<(std::ostream& s, const options_description& desc) {
+    desc.print(s);
+    return s;
   }
 
-  template <typename StringLiteralSequence2, util::IntSequenceConcept CharSeq2>
-  auto add(const options_description<StringLiteralSequence2, CharSeq2>& desc) {
-    static_assert(util::no_overlap_v<StringLiteralSequence, StringLiteralSequence2>,
-                  "Options name clash!");
-    static_assert(util::no_overlap_v<CharSeq, CharSeq2>, "Options abbreviation clash!");
-
-    using StringLiteralSequence3 =
-        util::concat_string_literal_sequence_t<StringLiteralSequence, StringLiteralSequence2>;
-    using CharSeq3 = util::concat_int_sequence_t<CharSeq, CharSeq2>;
-    using OutT = options_description<StringLiteralSequence3, CharSeq3>;
-
-    OutT out(*this);
-    out.add_wrapper(desc);
-    return out;
-  }
+  const base_t& get() const { return *full_base_; }
+  base_t& get() { return *full_base_; }
 
  private:
-  void add_wrapper(const boost::program_options::options_description& desc) { base_t::add(desc); }
+  options_description(base_t* full_base, base_t* base) : full_base_(full_base), base_(base) {}
+
+  template <util::StringLiteral StrLit, char Char = ' '>
+  auto augment() const;
 
   template <typename, util::IntSequenceConcept>
   friend class boost_util::program_options::options_description;
+
+  base_t* full_base_;    // includes hidden options
+  base_t* base_;         // excludes hidden options
+  std::string tmp_str_;  // hack for convenience in augment() usage
 };
+
+/*
+ * Constructs a boost::program_options::command_line_parser out of ts, which is expected to be
+ * a collection of strings from the command line. Uses this to store to the passed-in desc, which
+ * should be a {boost, boost_util}::program_options::options_description. Returns the parsed
+ * variables_map.
+ */
+template <typename T, typename... Ts>
+boost::program_options::variables_map parse_args(const T& desc, Ts&&... ts);
 
 }  // namespace program_options
 

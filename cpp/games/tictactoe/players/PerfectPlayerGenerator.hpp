@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/program_options.hpp>
-
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <games/tictactoe/GameState.hpp>
@@ -22,10 +20,8 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::G
   Player* generate(core::game_thread_id_t) override { return new PerfectPlayer(params_); }
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) {
-    namespace po = boost::program_options;
-    po::variables_map vm;
-    po::store(po::command_line_parser(args).options(params_.make_options_description()).run(), vm);
-    po::notify(vm);
+    namespace po2 = boost_util::program_options;
+    po2::parse_args(params_.make_options_description(), args);
   }
 
  private:

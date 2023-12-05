@@ -6,6 +6,7 @@
 #include <boost/filesystem.hpp>
 
 #include <mcts/Constants.hpp>
+#include <mcts/NNEvaluationServiceParams.hpp>
 #include <util/CppUtil.hpp>
 
 namespace mcts {
@@ -15,7 +16,7 @@ namespace mcts {
  *
  * By contrast, SearchParams pertains to each individual search() call.
  */
-struct ManagerParams {
+struct ManagerParams : public NNEvaluationServiceParams {
   ManagerParams(mcts::Mode);
 
   auto make_options_description();
@@ -29,14 +30,9 @@ struct ManagerParams {
   boost::filesystem::path profiling_dir() const { return {}; }
 #endif  // PROFILE_MCTS
 
-  std::string model_filename;
-  std::string cuda_device = "cuda:0";
   int num_search_threads = 8;
-  int batch_size_limit = 216;
   bool enable_pondering = false;  // pondering = think during opponent's turn
   int pondering_tree_size_limit = 4096;
-  int64_t nn_eval_timeout_ns = util::us_to_ns(250);
-  size_t cache_size = 1048576;
 
   std::string root_softmax_temperature_str;
   float cPUCT = 1.1;

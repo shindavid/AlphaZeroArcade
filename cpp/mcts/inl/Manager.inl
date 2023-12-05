@@ -33,6 +33,9 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
 
   if (!params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(params);
+    if (mcts::kEnableProfiling) {
+      nn_eval_service_->set_profiling_dir(params.profiling_dir());
+    }
   }
   if (num_search_threads() < 1) {
     throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
@@ -41,7 +44,11 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
     throw util::Exception("pondering mode does not work with only 1 search thread");
   }
   for (int i = 0; i < num_search_threads(); ++i) {
-    search_threads_.push_back(new SearchThread(&shared_data_, nn_eval_service_, &params_, i));
+    auto thread = new SearchThread(&shared_data_, nn_eval_service_, &params_, i);
+    if (mcts::kEnableProfiling) {
+      thread->set_profiling_dir(params.profiling_dir());
+    }
+    search_threads_.push_back(thread);
   }
 }
 
