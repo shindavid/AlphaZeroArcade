@@ -22,6 +22,11 @@ struct NNEvaluationServiceParams {
   int batch_size_limit = 216;
   int64_t nn_eval_timeout_ns = util::us_to_ns(250);
   size_t cache_size = 1048576;
+
+  /*
+   * If true, the NNEvaluationService will periodically refresh its weights from disk.
+   */
+  bool refresh_weights = false;
 };
 
 }  // namespace mcts

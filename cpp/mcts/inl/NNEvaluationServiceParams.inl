@@ -28,7 +28,9 @@ inline auto NNEvaluationServiceParams::make_options_description() {
           "nn eval thread timeout in ns")
       .template add_option<"cache-size">(po::value<size_t>(&cache_size)->default_value(cache_size),
                                          "nn eval thread cache size")
-      ;
+      .template add_flag<"refresh-weights", "do-not-refresh-weights">(
+          &refresh_weights, "periodically refresh weights from disk",
+          "do not periodically refresh weights from disk");
 }
 
 }  // namespace mcts

@@ -39,6 +39,10 @@ void NNEvaluationService<GameState, Tensorizor>::connect() {
   num_connections_++;
   if (thread_) return;
   thread_ = new std::thread([&] { this->loop(); });
+
+  if (params_.refresh_weights) {
+    weight_refresh_thread_ = new std::thread([&] { this->weight_refresh_loop(); });
+  }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -50,6 +54,11 @@ void NNEvaluationService<GameState, Tensorizor>::disconnect() {
     if (thread_->joinable()) thread_->detach();
     delete thread_;
     thread_ = nullptr;
+  }
+  if (weight_refresh_thread_) {
+    if (weight_refresh_thread_->joinable()) weight_refresh_thread_->detach();
+    delete weight_refresh_thread_;
+    weight_refresh_thread_ = nullptr;
   }
   profiler_.close_file();
 }
@@ -88,6 +97,7 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
+  model_last_modified_ = boost::filesystem::last_write_time(params_.model_filename);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -303,12 +313,26 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::loop() {
   while (active()) {
+    reload_weights_if_needed();
     wait_until_batch_ready();
     wait_for_first_reservation();
     wait_for_last_reservation();
     wait_for_commits();
     batch_evaluate();
     profiler_.dump();
+  }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::weight_refresh_loop() {
+  while (active()) {
+    std::time_t mod_time = boost::filesystem::last_write_time(params_.model_filename);
+    if (mod_time != model_last_modified_) {
+      model_last_modified_ = mod_time;
+      weight_refresh_needed_ = true;
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 }
 
@@ -473,6 +497,24 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
     }
     return false;
   });
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::reload_weights_if_needed() {
+  if (!weight_refresh_needed_) return;
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Refreshing network weights...\n");
+  }
+  weight_refresh_needed_ = false;
+  new (&net_) core::NeuralNet(params_.model_filename, params_.cuda_device);
+
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Clearing network cache...\n");
+  }
+  std::unique_lock lock(cache_mutex_);
+  cache_.clear();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

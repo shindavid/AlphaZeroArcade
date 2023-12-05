@@ -161,6 +161,7 @@ class NNEvaluationService {
 
   void batch_evaluate();
   void loop();
+  void weight_refresh_loop();
 
   Response check_cache(const Request&, const cache_key_t& cache_key);
   void wait_until_batch_reservable(const Request&, std::unique_lock<std::mutex>& metadata_lock);
@@ -172,6 +173,7 @@ class NNEvaluationService {
                              std::unique_lock<std::mutex>& metadata_lock);
   void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
 
+  void reload_weights_if_needed();
   void wait_until_batch_ready();
   void wait_for_first_reservation();
   void wait_for_last_reservation();
@@ -249,6 +251,10 @@ class NNEvaluationService {
   batch_metadata_t batch_metadata_;
 
   int num_connections_ = 0;
+
+  std::thread* weight_refresh_thread_ = nullptr;
+  std::time_t model_last_modified_;
+  bool weight_refresh_needed_ = false;
 
   std::atomic<int> cache_hits_ = 0;
   std::atomic<int> cache_misses_ = 0;
