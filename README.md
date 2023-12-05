@@ -17,8 +17,11 @@ just-as-well as KataGo does for go, while minimizing go-specific details in its 
 
 The project assumes you are working on a Linux platform. No other OS's will be supported.
 
-It is recommended to create a conda environment for this repo. You can use the project's `requirements.txt` for this
-purpose.
+It is recommended to create a conda environment for this repo, with a command like:
+
+```
+$ conda env create -n env_name -f environment.yml
+```
 
 After creating and activating the conda environment, you must run the following command from the repo root one-time to
 get your local python imports to work properly:
