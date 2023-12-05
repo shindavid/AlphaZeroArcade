@@ -64,8 +64,7 @@ struct Main {
       bool help = vm.count("help");
       if (help || help_full) {
         po2::Settings::help_full = help_full;
-        desc.print(std::cout);
-        std::cout << std::endl;
+        std::cout << desc << std::endl;
         player_factory.print_help(args.player_strs);
         return 0;
       }

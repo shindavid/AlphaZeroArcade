@@ -125,7 +125,7 @@ auto options_description<StrSeq, CharSeq>::add(const options_description<StrSeq2
 }
 
 template <typename StrSeq, util::IntSequenceConcept CharSeq>
-void options_description<StrSeq, CharSeq>::print(std::ostream& s) {
+void options_description<StrSeq, CharSeq>::print(std::ostream& s) const {
   if (Settings::help_full) {
     full_base_->print(s);
   } else {

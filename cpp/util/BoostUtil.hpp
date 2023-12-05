@@ -111,7 +111,12 @@ class options_description {
   template <typename StrSeq2, util::IntSequenceConcept CharSeq2>
   auto add(const options_description<StrSeq2, CharSeq2>& desc);
 
-  void print(std::ostream& s);
+  void print(std::ostream& s) const;
+
+  friend std::ostream& operator<<(std::ostream& s, const options_description& desc) {
+    desc.print(s);
+    return s;
+  }
 
   const base_t& get() const { return *full_base_; }
   base_t& get() { return *full_base_; }
@@ -125,8 +130,8 @@ class options_description {
   template <typename, util::IntSequenceConcept>
   friend class boost_util::program_options::options_description;
 
-  base_t* full_base_;     // includes hidden options
-  base_t* base_;          // excludes hidden options
+  base_t* full_base_;    // includes hidden options
+  base_t* base_;         // excludes hidden options
   std::string tmp_str_;  // hack for convenience in augment() usage
 };
 
