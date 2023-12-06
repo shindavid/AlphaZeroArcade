@@ -33,6 +33,9 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
 
   if (!params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(params);
+    if (params.cmd_server_port > 0) {
+      nn_eval_service_->subscribe(params.cmd_server_hostname, params.cmd_server_port);
+    }
     if (mcts::kEnableProfiling) {
       nn_eval_service_->set_profiling_dir(params.profiling_dir());
     }

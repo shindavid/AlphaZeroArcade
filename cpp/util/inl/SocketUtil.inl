@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <chrono>
+#include <cstring>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <thread>
@@ -112,7 +113,7 @@ inline int Socket::Reader::read(char* data, int size) {
   }
   auto n = recv(socket_->fd_, data, size, 0);
   if (n < 0) {
-    throw util::Exception("Could not read from socket");
+    throw util::Exception("Could not read from socket: %s", strerror(errno));
   }
   return n;
 }

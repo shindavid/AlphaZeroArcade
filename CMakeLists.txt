@@ -43,12 +43,13 @@ set(executables
         util_unit_tests
         )
 
+add_subdirectory("cpp/mcts")
 add_subdirectory("cpp/util")
 add_subdirectory("cpp/games/connect4")
 add_subdirectory("cpp/games/othello")
 add_subdirectory("cpp/games/tictactoe")
 
-set(common-libs util)
+set(common-libs mcts util)
 set(other-libs connect4-lib othello-lib tictactoe-lib)
 
 foreach(tgt ${executables} ${common-libs} ${other-libs})

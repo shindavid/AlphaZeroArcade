@@ -9,6 +9,7 @@
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
+#include <mcts/CmdServer.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/HashablePair.hpp>
 #include <util/LRUCache.hpp>
@@ -65,7 +66,7 @@ namespace mcts {
  * operations in the interleaving threads.
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class NNEvaluationService {
+class NNEvaluationService : public CmdServerListener {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
@@ -116,6 +117,8 @@ class NNEvaluationService {
    */
   static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
+  void handle_cmd_server_msg(char msg) override;
+
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
    *
@@ -161,7 +164,6 @@ class NNEvaluationService {
 
   void batch_evaluate();
   void loop();
-  void weight_refresh_loop();
 
   Response check_cache(const Request&, const cache_key_t& cache_key);
   void wait_until_batch_reservable(const Request&, std::unique_lock<std::mutex>& metadata_lock);
@@ -252,8 +254,6 @@ class NNEvaluationService {
 
   int num_connections_ = 0;
 
-  std::thread* weight_refresh_thread_ = nullptr;
-  std::time_t model_last_modified_;
   bool weight_refresh_needed_ = false;
 
   std::atomic<int> cache_hits_ = 0;
