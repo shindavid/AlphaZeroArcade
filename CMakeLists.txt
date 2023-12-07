@@ -23,17 +23,17 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
-include_directories("cpp")
+include_directories("cpp/include")
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
-add_executable(c4 cpp/games/connect4/main/Connect4.cpp)
-add_executable(othello cpp/games/othello/main/Othello.cpp)
-add_executable(othello_unit_tests cpp/games/othello/main/UnitTests.cpp)
-add_executable(tictactoe cpp/games/tictactoe/main/TicTacToe.cpp)
-add_executable(util_unit_tests cpp/util/main/UnitTests.cpp)
+add_executable(c4 cpp/src/games/connect4/main/Connect4.cpp)
+add_executable(othello cpp/src/games/othello/main/Othello.cpp)
+add_executable(othello_unit_tests cpp/src/games/othello/main/UnitTests.cpp)
+add_executable(tictactoe cpp/src/games/tictactoe/main/TicTacToe.cpp)
+add_executable(util_unit_tests cpp/src/util/main/UnitTests.cpp)
 
 set(executables
         c4
@@ -43,11 +43,11 @@ set(executables
         util_unit_tests
         )
 
-add_subdirectory("cpp/mcts")
-add_subdirectory("cpp/util")
-add_subdirectory("cpp/games/connect4")
-add_subdirectory("cpp/games/othello")
-add_subdirectory("cpp/games/tictactoe")
+add_subdirectory("cpp/src/mcts")
+add_subdirectory("cpp/src/util")
+add_subdirectory("cpp/src/games/connect4")
+add_subdirectory("cpp/src/games/othello")
+add_subdirectory("cpp/src/games/tictactoe")
 
 set(common-libs mcts util)
 set(other-libs connect4-lib othello-lib tictactoe-lib)
