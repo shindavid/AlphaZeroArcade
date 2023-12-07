@@ -175,7 +175,10 @@ class NNEvaluationService : public CmdServerListener {
                              std::unique_lock<std::mutex>& metadata_lock);
   void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
 
+  void wait_for_unpause();
   void reload_weights_if_needed();
+  void pause();
+  void unpause();
   void wait_until_batch_ready();
   void wait_for_first_reservation();
   void wait_for_last_reservation();
@@ -255,6 +258,9 @@ class NNEvaluationService : public CmdServerListener {
   int num_connections_ = 0;
 
   bool weight_refresh_needed_ = false;
+  bool paused_ = false;
+  std::mutex pause_mutex_;
+  std::condition_variable cv_paused_;
 
   std::atomic<int> cache_hits_ = 0;
   std::atomic<int> cache_misses_ = 0;

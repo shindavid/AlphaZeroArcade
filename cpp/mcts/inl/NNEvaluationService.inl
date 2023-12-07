@@ -39,6 +39,12 @@ void NNEvaluationService<GameState, Tensorizor>::handle_cmd_server_msg(char msg)
     case 'r':
       weight_refresh_needed_ = true;
       break;
+    case 'p':
+      pause();
+      break;
+    case 'u':
+      unpause();
+      break;
     default:
       break;
   }
@@ -315,6 +321,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::loop() {
   while (active()) {
     reload_weights_if_needed();
+    wait_for_unpause();
     wait_until_batch_ready();
     wait_for_first_reservation();
     wait_for_last_reservation();
@@ -488,6 +495,19 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
+  if (!paused_) return;  // early exit for common case, bypassing lock
+
+  std::unique_lock lock(pause_mutex_);
+  cv_paused_.wait(lock, [&] { return !paused_; });
+
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Resuming...\n");
+  }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::reload_weights_if_needed() {
   if (!weight_refresh_needed_) return;
   if (mcts::kEnableDebug) {
@@ -503,6 +523,28 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights_if_needed() {
   }
   std::unique_lock lock(cache_mutex_);
   cache_.clear();
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::pause() {
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Pausing...\n");
+  }
+  std::lock_guard guard(pause_mutex_);
+  paused_ = true;
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::unpause() {
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Unpausing...\n");
+  }
+  std::unique_lock lock(pause_mutex_);
+  paused_ = false;
+  lock.unlock();
+  cv_paused_.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
