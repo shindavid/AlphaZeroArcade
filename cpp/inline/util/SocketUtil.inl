@@ -66,7 +66,7 @@ inline Socket* Socket::create_server_socket(io::port_t port, int max_connections
 inline Socket* Socket::create_client_socket(std::string const& host, port_t port) {
   auto fd = socket(AF_INET, SOCK_STREAM, 0);
   if (fd < 0) {
-    throw util::Exception("Could not create socket");
+    throw util::CleanException("Could not create socket at %s:%d", host.c_str(), port);
   }
 
   struct hostent* entry = gethostbyname(host.c_str());
@@ -84,7 +84,7 @@ inline Socket* Socket::create_client_socket(std::string const& host, port_t port
     sleep_time_ms *= 2;
   }
   if (retry_count == 0) {
-    throw util::Exception("Could not connect to socket");
+    throw util::CleanException("Could not connect to socket at %s:%d", host.c_str(), port);
   }
 
   return get_instance(fd);
