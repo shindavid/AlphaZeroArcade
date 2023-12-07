@@ -160,17 +160,30 @@ first player against perfect play).
 
 ### Directory Structure
 
-In the below list of modules in the `cpp/` directory, no module has any dependencies on a module that appears later in
-the list.
+In the `cpp/` directory, there are 3 high-level subdirectories:
+
+```
+cpp/include/
+cpp/inline/
+cpp/src/
+```
+
+The `include/` directory contains the header files (`.hpp`), and the `src/` directory contains independently compiled
+`.cpp` files. For headers that contain template functions, the implementations of those functions typically live in an
+inline file (`.inl`) - those files live in the `inline/` directory, and are `#include`'d at the bottom of the
+corresponding header file. All three directories have parallel matching subdirectory structures.
+
+Below are the list of modules of `cpp/include/`. In the list, no module has any dependencies on a module that appears
+later in the list.
 
 * `third_party`: third-party code that was simply copy-pasted because it was not available as a package
-* `util`: utility code that is not specific to AlphaZero
-* `core`: generic code for games (nothing MCTS-specific). Some key classes provided here:
+* `util`: utility code that is not specific to games/AlphaZero
+* `core`: core game code (nothing MCTS-specific). Some key classes provided here:
   * `AbstractPlayer`: abstract class for a player that can play a game
   * `GameServer`: runs a series of games between players (which can optionally join from other processes)
 * `mcts`: generic MCTS implementation
-* `common`: provides `AbstractPlayer` derived classes that work for any game type
-* `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
+* `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory. There is a
+  `generic/` subdirectory which contains generic player implementations that can be used by other games.
 
 ### Game Types as C++ Template Parameters
 
@@ -213,4 +226,3 @@ Steps:
   3. Run `just goto HOSTNAME` to log into the cloud docker container
   4. Run `just build` to build
   5. Run `just train_c4 YOUR_TAG_HERE -S` to train connect-4
-  6. 
