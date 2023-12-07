@@ -153,4 +153,4 @@ struct TensorizorTypes {
 
 }  // namespace core
 
-#include <core/inl/DerivedTypes.inl>
+#include <inline/core/DerivedTypes.inl>

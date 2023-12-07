@@ -34,4 +34,4 @@ class NNEvaluation {
 
 }  // namespace mcts
 
-#include <mcts/inl/NNEvaluation.inl>
+#include <inline/mcts/NNEvaluation.inl>

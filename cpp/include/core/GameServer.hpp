@@ -195,4 +195,4 @@ class GameServer {
 
 }  // namespace core
 
-#include <core/inl/GameServer.inl>
+#include <inline/core/GameServer.inl>

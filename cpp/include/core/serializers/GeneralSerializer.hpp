@@ -46,4 +46,4 @@ class GeneralSerializer : public AbstractSerializer<GameState> {
 
 }  // namespace core
 
-#include <core/serializers/inl/GeneralSerializer.inl>
+#include <inline/core/serializers/GeneralSerializer.inl>

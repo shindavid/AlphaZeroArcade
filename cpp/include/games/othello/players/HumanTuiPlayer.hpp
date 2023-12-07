@@ -13,4 +13,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
 
 }  // namespace othello
 
-#include <games/othello/players/inl/HumanTuiPlayer.inl>
+#include <inline/games/othello/players/HumanTuiPlayer.inl>

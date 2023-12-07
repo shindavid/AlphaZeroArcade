@@ -274,4 +274,4 @@ class NNEvaluationService : public CmdServerListener {
 
 }  // namespace mcts
 
-#include <mcts/inl/NNEvaluationService.inl>
+#include <inline/mcts/NNEvaluationService.inl>

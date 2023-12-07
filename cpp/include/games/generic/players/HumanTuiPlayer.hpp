@@ -51,4 +51,4 @@ class HumanTuiPlayer : public core::AbstractPlayer<GameState_> {
 
 }  // namespace generic
 
-#include <games/generic/players/inl/HumanTuiPlayer.inl>
+#include <inline/games/generic/players/HumanTuiPlayer.inl>

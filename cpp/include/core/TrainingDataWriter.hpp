@@ -171,4 +171,4 @@ class TrainingDataWriter {
 
 }  // namespace core
 
-#include <core/inl/TrainingDataWriter.inl>
+#include <inline/core/TrainingDataWriter.inl>

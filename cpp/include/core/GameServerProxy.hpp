@@ -138,4 +138,4 @@ class GameServerProxy {
 
 }  // namespace core
 
-#include <core/inl/GameServerProxy.inl>
+#include <inline/core/GameServerProxy.inl>

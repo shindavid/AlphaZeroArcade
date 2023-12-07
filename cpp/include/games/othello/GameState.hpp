@@ -125,4 +125,4 @@ struct SearchResultsDumper<othello::GameState> {
 
 }  // namespace mcts
 
-#include <games/othello/inl/GameState.inl>
+#include <inline/games/othello/GameState.inl>

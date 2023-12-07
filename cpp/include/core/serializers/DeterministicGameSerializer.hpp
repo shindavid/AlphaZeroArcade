@@ -29,4 +29,4 @@ class DeterministicGameSerializer : public GeneralSerializer<GameState> {
 
 }  // namespace core
 
-#include <core/serializers/inl/DeterministicGameSerializer.inl>
+#include <inline/core/serializers/DeterministicGameSerializer.inl>

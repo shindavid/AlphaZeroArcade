@@ -107,4 +107,4 @@ class PerfectPlayer : public Player {
 
 }  // namespace c4
 
-#include <games/connect4/players/inl/PerfectPlayer.inl>
+#include <inline/games/connect4/players/PerfectPlayer.inl>

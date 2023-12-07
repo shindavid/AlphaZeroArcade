@@ -35,4 +35,4 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
 
 }  // namespace core
 
-#include <core/players/inl/RemotePlayerProxyGenerator.inl>
+#include <inline/core/players/RemotePlayerProxyGenerator.inl>

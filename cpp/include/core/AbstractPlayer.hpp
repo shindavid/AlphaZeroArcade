@@ -93,4 +93,4 @@ class AbstractPlayer {
 
 }  // namespace core
 
-#include <core/inl/AbstractPlayer.inl>
+#include <inline/core/AbstractPlayer.inl>

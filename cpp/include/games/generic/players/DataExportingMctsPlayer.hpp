@@ -71,4 +71,4 @@ class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
 
 }  // namespace generic
 
-#include <games/generic/players/inl/DataExportingMctsPlayer.inl>
+#include <inline/games/generic/players/DataExportingMctsPlayer.inl>

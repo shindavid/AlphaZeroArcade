@@ -372,4 +372,4 @@ uint64_t hash(const TensorT& tensor);
 
 }  // namespace eigen_util
 
-#include <util/inl/EigenUtil.inl>
+#include <inline/util/EigenUtil.inl>

@@ -37,4 +37,4 @@ class NodeCache {
 
 }  // namespace mcts
 
-#include <mcts/inl/NodeCache.inl>
+#include <inline/mcts/NodeCache.inl>

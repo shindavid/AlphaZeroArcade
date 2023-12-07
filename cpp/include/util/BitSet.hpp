@@ -71,4 +71,4 @@ std::string to_string(const std::bitset<N>&);
 
 }  // namespace bitset_util
 
-#include <util/inl/BitSet.inl>
+#include <inline/util/BitSet.inl>

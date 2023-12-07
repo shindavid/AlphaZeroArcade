@@ -23,4 +23,4 @@ class NeuralNet {
 
 }  // namespace core
 
-#include <core/inl/NeuralNet.inl>
+#include <inline/core/NeuralNet.inl>

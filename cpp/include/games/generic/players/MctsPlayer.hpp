@@ -112,4 +112,4 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
 
 }  // namespace generic
 
-#include <games/generic/players/inl/MctsPlayer.inl>
+#include <inline/games/generic/players/MctsPlayer.inl>

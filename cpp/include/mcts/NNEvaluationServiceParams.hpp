@@ -26,4 +26,4 @@ struct NNEvaluationServiceParams {
 
 }  // namespace mcts
 
-#include <mcts/inl/NNEvaluationServiceParams.inl>
+#include <inline/mcts/NNEvaluationServiceParams.inl>

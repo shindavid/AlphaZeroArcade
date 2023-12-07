@@ -26,4 +26,4 @@ class ScreenClearer {
 
 }  // namespace util
 
-#include <util/inl/ScreenUtil.inl>
+#include <inline/util/ScreenUtil.inl>

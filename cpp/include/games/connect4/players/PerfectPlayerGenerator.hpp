@@ -27,4 +27,4 @@ class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<c4::GameStat
 
 }  // namespace c4
 
-#include <games/connect4/players/inl/PerfectPlayerGenerator.inl>
+#include <inline/games/connect4/players/PerfectPlayerGenerator.inl>

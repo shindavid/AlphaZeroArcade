@@ -39,4 +39,4 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
 
 }  // namespace c4
 
-#include <games/connect4/players/inl/HumanTuiPlayerGenerator.inl>
+#include <inline/games/connect4/players/HumanTuiPlayerGenerator.inl>

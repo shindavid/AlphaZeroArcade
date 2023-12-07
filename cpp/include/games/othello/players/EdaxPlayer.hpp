@@ -54,4 +54,4 @@ class EdaxPlayer : public Player {
 
 }  // namespace othello
 
-#include <games/othello/players/inl/EdaxPlayer.inl>
+#include <inline/games/othello/players/EdaxPlayer.inl>

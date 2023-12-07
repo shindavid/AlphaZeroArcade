@@ -84,4 +84,4 @@ class RemotePlayerProxy : public AbstractPlayer<GameState> {
 
 }  // namespace core
 
-#include <core/players/inl/RemotePlayerProxy.inl>
+#include <inline/core/players/RemotePlayerProxy.inl>

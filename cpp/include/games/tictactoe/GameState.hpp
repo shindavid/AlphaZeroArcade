@@ -121,4 +121,4 @@ struct SearchResultsDumper<tictactoe::GameState> {
 
 }  // namespace mcts
 
-#include <games/tictactoe/inl/GameState.inl>
+#include <inline/games/tictactoe/GameState.inl>

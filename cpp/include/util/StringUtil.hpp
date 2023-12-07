@@ -43,4 +43,4 @@ bool ends_with(const std::string& value, const std::string& ending);
 
 }  // namespace util
 
-#include <util/inl/StringUtil.inl>
+#include <inline/util/StringUtil.inl>

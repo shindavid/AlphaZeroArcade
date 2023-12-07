@@ -47,4 +47,4 @@ class PerfectPlayer : public Player {
 
 }  // namespace tictactoe
 
-#include <games/tictactoe/players/inl/PerfectPlayer.inl>
+#include <inline/games/tictactoe/players/PerfectPlayer.inl>

@@ -55,4 +55,4 @@ template<> struct SearchResultsDumper<blokus::GameState> {
 
 }  // namespace mcts
 
-#include <games/blokus/inl/GameState.inl>
+#include <inline/games/blokus/GameState.inl>

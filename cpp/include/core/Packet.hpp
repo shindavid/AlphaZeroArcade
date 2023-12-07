@@ -230,4 +230,4 @@ class GeneralPacket {
 
 }  // namespace core
 
-#include <core/inl/Packet.inl>
+#include <inline/core/Packet.inl>

@@ -194,4 +194,4 @@ using convert_type_t = typename convert_type<T>::type;
 
 }  // namespace torch_util
 
-#include <util/inl/TorchUtil.inl>
+#include <inline/util/TorchUtil.inl>

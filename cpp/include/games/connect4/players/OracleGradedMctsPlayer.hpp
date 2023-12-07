@@ -68,4 +68,4 @@ class OracleGradedMctsPlayer : public generic::MctsPlayer<GameState, Tensorizor>
 
 }  // namespace c4
 
-#include <games/connect4/players/inl/OracleGradedMctsPlayer.inl>
+#include <inline/games/connect4/players/OracleGradedMctsPlayer.inl>

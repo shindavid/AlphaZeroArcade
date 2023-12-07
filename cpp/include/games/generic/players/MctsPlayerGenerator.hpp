@@ -107,4 +107,4 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
 
 }  // namespace generic
 
-#include <games/generic/players/inl/MctsPlayerGenerator.inl>
+#include <inline/games/generic/players/MctsPlayerGenerator.inl>

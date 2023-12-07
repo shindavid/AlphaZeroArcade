@@ -41,4 +41,4 @@ class Config {
 
 }  // namespace util
 
-#include <util/inl/Config.inl>
+#include <inline/util/Config.inl>

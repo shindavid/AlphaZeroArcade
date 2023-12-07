@@ -138,4 +138,4 @@ class SearchThread {
 
 }  // namespace mcts
 
-#include <mcts/inl/SearchThread.inl>
+#include <inline/mcts/SearchThread.inl>

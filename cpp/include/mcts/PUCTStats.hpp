@@ -37,4 +37,4 @@ struct PUCTStats {
 
 }  // namespace mcts
 
-#include <mcts/inl/PUCTStats.inl>
+#include <inline/mcts/PUCTStats.inl>

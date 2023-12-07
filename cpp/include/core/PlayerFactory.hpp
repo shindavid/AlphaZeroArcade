@@ -90,4 +90,4 @@ class PlayerFactory {
 
 }  // namespace core
 
-#include <core/inl/PlayerFactory.inl>
+#include <inline/core/PlayerFactory.inl>

@@ -310,4 +310,4 @@ class Node {
 
 }  // namespace mcts
 
-#include <mcts/inl/Node.inl>
+#include <inline/mcts/Node.inl>

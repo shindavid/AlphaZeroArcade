@@ -27,4 +27,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
 
 }  // namespace c4
 
-#include <games/connect4/players/inl/HumanTuiPlayer.inl>
+#include <inline/games/connect4/players/HumanTuiPlayer.inl>

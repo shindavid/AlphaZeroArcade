@@ -59,4 +59,4 @@ using TrainingMctsPlayerGenerator =
 
 }  // namespace c4
 
-#include <games/connect4/players/inl/MctsPlayerGenerator.inl>
+#include <inline/games/connect4/players/MctsPlayerGenerator.inl>

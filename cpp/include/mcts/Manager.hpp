@@ -95,4 +95,4 @@ class Manager {
 
 }  // namespace mcts
 
-#include <mcts/inl/Manager.inl>
+#include <inline/mcts/Manager.inl>

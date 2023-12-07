@@ -134,4 +134,4 @@ class AbstractPlayerGenerator {
 
 }  // namespace core
 
-#include <core/inl/AbstractPlayerGenerator.inl>
+#include <inline/core/AbstractPlayerGenerator.inl>

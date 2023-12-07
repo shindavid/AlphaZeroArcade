@@ -71,4 +71,4 @@ struct ManagerParams : public NNEvaluationServiceParams {
 
 }  // namespace mcts
 
-#include <mcts/inl/ManagerParams.inl>
+#include <inline/mcts/ManagerParams.inl>

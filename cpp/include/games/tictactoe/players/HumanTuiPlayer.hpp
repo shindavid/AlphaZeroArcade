@@ -18,4 +18,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
 
 }  // namespace tictactoe
 
-#include <games/tictactoe/players/inl/HumanTuiPlayer.inl>
+#include <inline/games/tictactoe/players/HumanTuiPlayer.inl>
