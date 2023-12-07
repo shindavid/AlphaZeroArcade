@@ -57,12 +57,6 @@ inline auto ManagerParams::make_options_description() {
               &forced_playouts, "enable forced playouts", "disable forced playouts")
           .template add_flag<"enable-first-play-urgency", "disable-first-play-urgency">(
               &enable_first_play_urgency, "enable first play urgency", "disable first play urgency")
-          .template add_option<"cmd-server-hostname">(
-              po::value<std::string>(&cmd_server_hostname)->default_value(cmd_server_hostname),
-              "cmd server hostname")
-          .template add_option<"cmd-server-port">(
-              po::value<io::port_t>(&cmd_server_port)->default_value(cmd_server_port),
-              "cmd server port. If unset, then this runs without a cmd server")
 #ifdef PROFILE_MCTS
           .template add_option<"profiling-dir">(
               po::value<std::string>(&profiling_dir_str)->default_value(default_profiling_dir),

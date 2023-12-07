@@ -61,9 +61,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
   bool exploit_proven_winners = true;
   bool avoid_proven_losers = true;
 
-  std::string cmd_server_hostname = "localhost";
-  io::port_t cmd_server_port = 0;
-
 #ifdef PROFILE_MCTS
   std::string profiling_dir_str;
 #endif  // PROFILE_MCTS

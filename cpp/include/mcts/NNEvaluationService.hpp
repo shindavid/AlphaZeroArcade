@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/CmdServerListener.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/NeuralNet.hpp>
@@ -9,7 +10,6 @@
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
-#include <mcts/CmdServerListener.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/HashablePair.hpp>
 #include <util/LRUCache.hpp>
@@ -66,7 +66,7 @@ namespace mcts {
  * operations in the interleaving threads.
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class NNEvaluationService : public CmdServerListener {
+class NNEvaluationService : public core::CmdServerListener {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;

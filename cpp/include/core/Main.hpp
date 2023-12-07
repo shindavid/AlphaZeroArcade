@@ -1,11 +1,13 @@
 #pragma once
 
 #include <core/AbstractPlayer.hpp>
+#include <core/CmdServerClient.hpp>
 #include <core/GameServer.hpp>
 #include <core/GameServerProxy.hpp>
 #include <core/GameStateConcept.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
+#include <util/SocketUtil.hpp>
 
 #include <boost/program_options.hpp>
 
@@ -21,6 +23,8 @@ struct Main {
   using Player = core::AbstractPlayer<GameState>;
 
   struct Args {
+    std::string cmd_server_hostname = "localhost";
+    io::port_t cmd_server_port = 0;
     std::vector<std::string> player_strs;
 
     auto make_options_description() {
@@ -29,9 +33,16 @@ struct Main {
 
       po2::options_description desc("Program options");
 
-      return desc.template add_option<"player">(po::value<std::vector<std::string>>(&player_strs),
-                                                "Space-delimited list of player options, wrapped "
-                                                "in quotes, to be specified multiple times");
+      return desc
+          .template add_option<"cmd-server-hostname">(
+              po::value<std::string>(&cmd_server_hostname)->default_value(cmd_server_hostname),
+              "cmd server hostname")
+          .template add_option<"cmd-server-port">(
+              po::value<io::port_t>(&cmd_server_port)->default_value(cmd_server_port),
+              "cmd server port. If unset, then this runs without a cmd server")
+          .template add_option<"player">(po::value<std::vector<std::string>>(&player_strs),
+                                         "Space-delimited list of player options, wrapped "
+                                         "in quotes, to be specified multiple times");
     }
   };
 
@@ -67,6 +78,10 @@ struct Main {
         std::cout << desc << std::endl;
         player_factory.print_help(args.player_strs);
         return 0;
+      }
+
+      if (args.cmd_server_port > 0) {
+        core::CmdServerClient::init(args.cmd_server_hostname, args.cmd_server_port);
       }
 
       if (game_server_proxy_params.remote_port) {
