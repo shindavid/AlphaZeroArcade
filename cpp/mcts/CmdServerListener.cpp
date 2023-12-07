@@ -1,13 +1,36 @@
-#include <mcts/CmdServer.hpp>
+#include <mcts/CmdServerListener.hpp>
+
+#include <map>
+#include <thread>
+#include <vector>
 
 namespace mcts {
 
-CmdServerForwarder::forwarder_map_t CmdServerForwarder::map_;
+class CmdServerForwarder {
+ public:
+  using forwarder_map_t = std::map<io::host_port_t, CmdServerForwarder*>;
+  using listener_vec_t = std::vector<CmdServerListener*>;
+
+  static CmdServerForwarder* get(const io::host_port_t& host_port);
+  void add(CmdServerListener* listener);
+
+ private:
+  CmdServerForwarder(const io::host_port_t& host_port);
+  ~CmdServerForwarder();
+  void loop();
+
+  static forwarder_map_t map_;
+  io::Socket* socket_;
+  std::thread* thread_;
+  listener_vec_t listeners_;
+};
 
 void CmdServerListener::subscribe(const std::string& host, io::port_t port) {
   io::host_port_t host_port{host, port};
   CmdServerForwarder::get(host_port)->add(this);
 }
+
+CmdServerForwarder::forwarder_map_t CmdServerForwarder::map_;
 
 CmdServerForwarder* CmdServerForwarder::get(const io::host_port_t& host_port) {
   auto it = map_.find(host_port);

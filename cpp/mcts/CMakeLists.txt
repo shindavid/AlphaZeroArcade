@@ -1,3 +1,3 @@
 add_library(mcts
-        CmdServer.cpp
+        CmdServerListener.cpp
         )

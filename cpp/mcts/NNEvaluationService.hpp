@@ -9,7 +9,7 @@
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
-#include <mcts/CmdServer.hpp>
+#include <mcts/CmdServerListener.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/HashablePair.hpp>
 #include <util/LRUCache.hpp>
