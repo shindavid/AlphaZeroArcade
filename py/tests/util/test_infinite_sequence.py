@@ -13,16 +13,18 @@ def trim(s: str) -> str:
 
 class TestInfiniteSequence(unittest.TestCase):
     def custom_str_assert(self, S, expected):
-        self.assertEqual(S.to_string(), trim(expected))
+        self.assertEqual(S.to_string('\n'), trim(expected))
 
     def test_all(self):
         S = InfiniteSequence(value_fmt='%.f')
         S.check_invariants()
         self.custom_str_assert(S, '[0, inf): 0')
-        self.assertEqual(S.get_start(0), 0)
-        self.assertEqual(S.get_start(1), 0)
         self.assertEqual(S[0], 0)
         self.assertEqual(S[999999], 0)
+        self.assertEqual(S.sum(), 0)
+        self.assertEqual(S[:50].sum(), 0)
+        self.assertEqual(S[50:150].sum(), 0)
+        self.assertEqual(S[150:].sum(), 0)
 
         S[100] = 1
         S.check_invariants()
@@ -33,12 +35,14 @@ class TestInfiniteSequence(unittest.TestCase):
                                [101, inf): 0
                                '''
                                )
-        self.assertEqual(S.get_start(0), 101)
-        self.assertEqual(S.get_start(1), 0)
         self.assertEqual(S[99], 0)
         self.assertEqual(S[100], 1)
         self.assertEqual(S[101], 0)
         self.assertEqual(S[999999], 0)
+        self.assertEqual(S.sum(), 1)
+        self.assertEqual(S[:50].sum(), 0)
+        self.assertEqual(S[50:150].sum(), 1)
+        self.assertEqual(S[150:].sum(), 0)
 
         S[:400] += 2
         S.check_invariants()
@@ -50,16 +54,16 @@ class TestInfiniteSequence(unittest.TestCase):
                                [400, inf): 0
                                '''
                                )
-        self.assertEqual(S.get_start(0), 400)
-        self.assertEqual(S.get_start(1), 400)
-        self.assertEqual(S.get_start(2), 101)
-        self.assertEqual(S.get_start(3), 0)
         self.assertEqual(S[99], 2)
         self.assertEqual(S[100], 3)
         self.assertEqual(S[101], 2)
         self.assertEqual(S[399], 2)
         self.assertEqual(S[400], 0)
         self.assertEqual(S[999999], 0)
+        self.assertEqual(S.sum(), 801)
+        self.assertEqual(S[:50].sum(), 100)
+        self.assertEqual(S[50:150].sum(), 201)
+        self.assertEqual(S[150:].sum(), 500)
 
         S[300:400] = 0
         S.check_invariants()
@@ -71,10 +75,6 @@ class TestInfiniteSequence(unittest.TestCase):
                                [300, inf): 0
                                '''
                                )
-        self.assertEqual(S.get_start(0), 300)
-        self.assertEqual(S.get_start(1), 300)
-        self.assertEqual(S.get_start(2), 101)
-        self.assertEqual(S.get_start(3), 0)
         self.assertEqual(S[99], 2)
         self.assertEqual(S[100], 3)
         self.assertEqual(S[101], 2)
@@ -83,6 +83,10 @@ class TestInfiniteSequence(unittest.TestCase):
         self.assertEqual(S[399], 0)
         self.assertEqual(S[400], 0)
         self.assertEqual(S[999999], 0)
+        self.assertEqual(S.sum(), 601)
+        self.assertEqual(S[:50].sum(), 100)
+        self.assertEqual(S[50:150].sum(), 201)
+        self.assertEqual(S[150:].sum(), 300)
 
         S[101:150] += 1
         S.check_invariants()
@@ -94,10 +98,6 @@ class TestInfiniteSequence(unittest.TestCase):
                                [300, inf): 0
                                '''
                                )
-        self.assertEqual(S.get_start(0), 300)
-        self.assertEqual(S.get_start(1), 300)
-        self.assertEqual(S.get_start(2), 150)
-        self.assertEqual(S.get_start(3), 0)
         self.assertEqual(S[99], 2)
         self.assertEqual(S[100], 3)
         self.assertEqual(S[101], 3)
@@ -107,6 +107,10 @@ class TestInfiniteSequence(unittest.TestCase):
         self.assertEqual(S[299], 2)
         self.assertEqual(S[300], 0)
         self.assertEqual(S[999999], 0)
+        self.assertEqual(S.sum(), 650)
+        self.assertEqual(S[:50].sum(), 100)
+        self.assertEqual(S[50:150].sum(), 250)
+        self.assertEqual(S[150:].sum(), 300)
 
         S[150:] -= -1
         S.check_invariants()
@@ -117,10 +121,6 @@ class TestInfiniteSequence(unittest.TestCase):
                                [300, inf): 1
                                '''
                                )
-        self.assertEqual(S.get_start(0), None)
-        self.assertEqual(S.get_start(1), 300)
-        self.assertEqual(S.get_start(2), 300)
-        self.assertEqual(S.get_start(3), 0)
         self.assertEqual(S[99], 2)
         self.assertEqual(S[100], 3)
         self.assertEqual(S[101], 3)
@@ -130,6 +130,10 @@ class TestInfiniteSequence(unittest.TestCase):
         self.assertEqual(S[299], 3)
         self.assertEqual(S[300], 1)
         self.assertEqual(S[999999], 1)
+        self.assertEqual(S.sum(), float('inf'))
+        self.assertEqual(S[:50].sum(), 100)
+        self.assertEqual(S[50:150].sum(), 250)
+        self.assertEqual(S[150:].sum(), float('inf'))
 
 
 if __name__ == '__main__':

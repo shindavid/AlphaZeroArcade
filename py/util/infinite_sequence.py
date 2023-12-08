@@ -9,6 +9,8 @@ class _InfiniteSequenceSlice:
     """
     This is a proxy object used to support the += and -= operators for InfiniteSequence.
 
+    It is also to support for sum(seq[a:b]).
+
     See InfiniteSequence.__getitem__().
     """
     def __init__(self, seq: 'InfiniteSequence', start, stop):
@@ -24,6 +26,9 @@ class _InfiniteSequenceSlice:
     def __isub__(self, delta):
         self.add_delta = -delta
         return self
+
+    def sum(self):
+        return self.seq.calc_sum(self.start, self.stop)
 
 
 class InfiniteSequence:
@@ -59,29 +64,12 @@ class InfiniteSequence:
         """
         self._indices = [0]
         self._values = [initial_value]
-        self._max_values = [initial_value]  # self._max_values[i] == max(self._values[i:])
         self._value_fmt = value_fmt
 
     def debug_print(self, msg: str):
         print(f'--- {msg} ---')
         print('indices:', self._indices)
         print('values: [%s]' % (', '.join(self._value_fmt % v for v in self._values)))
-        print('max_values: [%s]' % (', '.join(self._value_fmt % v for v in self._max_values)))
-
-    def get_start(self, max_value: Optional[float]) -> Optional[int]:
-        """
-        Returns the minimum N with the property that S[n] <= max_value for all n >= N.
-
-        If max_value is None, interprets that as max_value = +inf (and so this returns 0)
-
-        If no such N exists, returns None.
-        """
-        if max_value is None:
-            return 0
-        k = bisect.bisect_left(self._max_values, -max_value, key=lambda w: -w)
-        if k == len(self._indices):
-            return None
-        return self._indices[k]
 
     def check_invariants(self):
         assert len(self._indices) == len(self._values)
@@ -89,7 +77,6 @@ class InfiniteSequence:
         for i in range(len(self._indices) - 1):
             assert self._indices[i] < self._indices[i + 1]
             assert self._values[i] != self._values[i + 1]
-            assert self._max_values[i] == max(self._values[i], self._max_values[i + 1])
         assert self._indices[0] == 0
 
     def to_string(self, delim: str, cap=None) -> str:
@@ -108,7 +95,6 @@ class InfiniteSequence:
             clone = copy.deepcopy(self)
             clone._values = [min(v, cap + eps) for v in values]
             clone._collapse(range(len(indices)))
-            # the max_values invariant is broken after this collapse, but we don't need to fix it
 
             indices = clone._indices
             values = clone._values
@@ -130,6 +116,9 @@ class InfiniteSequence:
 
     def __str__(self):
         return 'WeightSequence(%s)' % self.to_string(delim=', ')
+
+    def sum(self):
+        return self.calc_sum(None, None)
 
     def __getitem__(self, index):
         """
@@ -184,15 +173,14 @@ class InfiniteSequence:
             if self._values[i-1] == self._values[i]:
                 self._indices.pop(i)
                 self._values.pop(i)
-                self._max_values.pop(i)
 
     def _insert_indices(self, start: Optional[int], end: Optional[int]) -> Tuple[int, int]:
         """
         Helper to _set() and _increment().
 
         Inserts start and end into self._indices if either is not currently present in
-        self._indices. Upon such insertions, makes corresponding insertions to self._values and
-        self._max_values, copying the previous value in those lists.
+        self._indices. Upon such insertions, makes corresponding insertions to self._values,
+        copying the previous value in those lists.
 
         If start is None, then it is interpreted as 0. If end is None, then it is ignored.
 
@@ -211,7 +199,6 @@ class InfiniteSequence:
             assert a > 0
             self._indices.insert(a, start)
             self._values.insert(a, self._values[a - 1])
-            self._max_values.insert(a, self._max_values[a - 1])
 
         if end is not None:
             b = bisect.bisect_left(self._indices, end)
@@ -219,27 +206,10 @@ class InfiniteSequence:
                 assert b > 0
                 self._indices.insert(b, end)
                 self._values.insert(b, self._values[b - 1])
-                self._max_values.insert(b, self._max_values[b - 1])
         else:
             b = len(self._indices)
 
         return (a, b)
-
-    def _recalculate_max_values(self, end: int):
-        """
-        Recomputes self._max_values for indices < end.
-        """
-        n = len(self._max_values)
-        i = end - 1
-        assert i < n
-
-        if i == n - 1:
-            self._max_values[i] = self._values[i]
-            i -= 1
-
-        while i >= 0:
-            self._max_values[i] = max(self._values[i], self._max_values[i + 1])
-            i -= 1
 
     def _set(self, start: Optional[int], end: Optional[int], value):
         """
@@ -252,9 +222,7 @@ class InfiniteSequence:
 
         self._indices = self._indices[:a+1] + self._indices[b:]
         self._values = self._values[:a] + [value] + self._values[b:]
-        self._max_values = self._max_values[:a] + [value] + self._max_values[b:]
 
-        self._recalculate_max_values(a + 2)
         self._collapse((a, a + 1))
 
     def _increment(self, start: Optional[int], end: Optional[int], delta):
@@ -265,20 +233,40 @@ class InfiniteSequence:
         """
         assert not is_iterable(delta), delta
         a, b = self._insert_indices(start, end)
-        n = len(self._max_values)
+        n = len(self._values)
 
         i = b - 1
         assert i < n
 
         if i + 1 == n:
             self._values[i] += delta
-            self._max_values[i] = self._values[i]
             i -= 1
 
         while i >= a:
             self._values[i] += delta
-            self._max_values[i] = max(self._values[i], self._max_values[i + 1])
             i -= 1
 
-        self._recalculate_max_values(b)
         self._collapse((a, b))
+
+    def calc_sum(self, start: Optional[int], end: Optional[int]):
+        """
+        Returns sum(S[start:end]). May return inf or -inf if end is None.
+        """
+        if end is None:
+            # we are summing infinitely many elements
+            last_value = self._values[-1]
+            if last_value > 0:
+                return float('inf')
+            elif last_value < 0:
+                return float('-inf')
+            else:
+                end = self._indices[-1]
+
+        a, b = self._insert_indices(start, end)
+
+        s = 0
+        for i in range(a, b):
+            s += self._values[i] * (self._indices[i + 1] - self._indices[i])
+
+        self._collapse((a, b))
+        return s

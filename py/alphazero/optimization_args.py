@@ -61,8 +61,8 @@ class ModelingArgs:
         group.add_argument('--snapshot-steps', type=int, default=2048,
                            help='steps per snapshot (default: %(default)s)')
         group.add_argument(
-            '--sample-limit', type=int, default=None,
-            help='if set, max number of times to train over a single row (default: unlimited)')
+            '--sample-limit', type=int, default=8,
+            help='max number of times to train over a single row (default: %(default)s))')
         group.add_argument('--momentum', type=float, default=0.9,
                            help='momentum (default: %(default)s)')
         group.add_argument('--weight-decay', type=float, default=6e-5,
