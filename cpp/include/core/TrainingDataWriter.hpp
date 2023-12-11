@@ -94,12 +94,9 @@ class TrainingDataWriter {
   using data_chunk_list_t = std::list<DataChunk>;
 
   /*
-   * Note: we assume that all GameData read/write operations are from thread-safe contexts. That is,
-   * if two self-play Player's hold onto the same GameData, they should read/write to it in separate
-   * threads.
-   *
-   * We can relax this assumption easily by adding some mutexing to this class. With the current
-   * overall architecture, that is not necessary.
+   * Note: we assume that all GameData read/write operations are from thread-safe contexts. We can
+   * relax this assumption easily by adding some mutexing to this class. With the current overall
+   * architecture, that is not necessary.
    */
   class GameData {
    public:
