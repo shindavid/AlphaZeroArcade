@@ -71,11 +71,12 @@ def atomic_cp(src, dst, intermediate=None):
 
     The above cmd is not atomic, however. This function is.
 
-    It works by first copying src to a temporary file, then renaming the temporary file to dst. This works
-    because the unix cmd "mv" is atomic (as long as the file systems are on the same machine).
+    It works by first copying src to a temporary file, then renaming the temporary file to dst. This
+    works because the unix cmd "mv" is atomic (as long as the files are in the same filesystem).
 
-    The location of the temporary file is specified by intermediate. If intermediate is None, then the location is
-    created by prepending a '.' to the filename part of dst. It is the responsibility of the caller to ensure that:
+    The location of the temporary file is specified by intermediate. If intermediate is None, then
+    the location is created by prepending a '.' to the filename part of dst. It is the
+    responsibility of the caller to ensure that:
 
     1. intermediate is on the same file system as dst
     2. intermediate does not already exist
@@ -87,6 +88,34 @@ def atomic_cp(src, dst, intermediate=None):
     assert not os.path.exists(intermediate), intermediate
     shutil.copyfile(src, intermediate)
     os.rename(intermediate, dst)
+
+
+def atomic_softlink(target, link_name, intermediate=None):
+    """
+    Equivalent to the unix cmd:
+
+    ln -sf target link_name
+
+    The above cmd is not atomic, however. This function is.
+
+    It works by first creating a temporary symlink intermediate, then renaming the temporary
+    symlink to link_name. This works because the unix cmd "mv" is atomic (as long as the files
+    are in the same filesystem).
+
+    The location of the temporary file is specified by intermediate. If intermediate is None, then
+    the location is created by prepending a '.' to the filename part of link_name. It is the
+    responsibility of the caller to ensure that:
+
+    1. intermediate is on the same file system as link_name
+    2. intermediate does not already exist
+    3. the temporary existance of intermediate does not cause any problems
+    """
+    if intermediate is None:
+        intermediate = make_hidden_filename(link_name)
+
+    assert not os.path.exists(intermediate), intermediate
+    os.symlink(target, intermediate)
+    os.rename(intermediate, link_name)
 
 
 def get_function_arguments(ignore: Union[str, List[str], None]=None):
