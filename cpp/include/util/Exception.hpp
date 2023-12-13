@@ -11,7 +11,8 @@ namespace util {
  * TODO: dynamic resizing in case the error text exceeds 1024 chars.
  *
  * TODO: once the std::format library is implemented in gcc, use that instead of printf-style
- * formatting.
+ * formatting. Currently, it is supported in gcc-13, but cuda does not support gcc-13, so we are
+ * stuck with this.
  */
 class Exception : public std::exception {
  public:
