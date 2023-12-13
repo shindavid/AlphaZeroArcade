@@ -1,6 +1,7 @@
 #include <core/CmdServerClient.hpp>
 
 #include <core/CmdServerListener.hpp>
+#include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 
 #include <map>
@@ -21,6 +22,7 @@ void CmdServerClient::init(const std::string& host, io::port_t port) {
 
 CmdServerClient::CmdServerClient(const std::string& host, io::port_t port) {
   socket_ = io::Socket::create_client_socket(host, port);
+  receive_client_id_assignment();
   thread_ = new std::thread([this]() { loop(); });
 }
 
@@ -32,13 +34,37 @@ CmdServerClient::~CmdServerClient() {
   delete thread_;
 }
 
+void CmdServerClient::receive_client_id_assignment() {
+  boost::json::object msg;
+  msg["type"] = "connect";
+
+  socket_->json_write(msg);
+
+  boost::json::value response;
+  if (!socket_->json_read(&response)) {
+    throw util::Exception("Unexpected cmd-server socket close");
+  }
+
+  std::string response_type = response.at("type").as_string().c_str();
+  util::release_assert(response_type == "connect_ack", "Expected connect_ack, got %s",
+                       response_type.c_str());
+
+  int64_t client_id = response.at("client_id").as_int64();
+  util::release_assert(client_id >= 0, "Invalid client_id %ld", client_id);
+
+  client_id_ = client_id;
+}
+
 void CmdServerClient::loop() {
   while (true) {
-    io::Socket::Reader reader(socket_);
-    char msg[1];
-    reader.read(msg, 1);
+    boost::json::value msg;
+    if (!socket_->json_read(&msg)) {
+      throw util::Exception("Unexpected cmd-server socket close");
+    }
+
+    std::string type = msg.at("type").as_string().c_str();
     for (auto* listener : listeners_) {
-      listener->handle_cmd_server_msg(msg[0]);
+      listener->handle_cmd_server_msg(msg, type);
     }
   }
 }

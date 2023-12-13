@@ -314,7 +314,6 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
 
   const PVec& P = stats.P;
   const PVec& N = stats.N;
-  const PVec& VN = stats.VN;
   PVec& PUCT = stats.PUCT;
 
   bool add_noise = !search_params_->disable_exploration && manager_params_->dirichlet_mult > 0;
@@ -328,10 +327,6 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
 
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
-
-  if (nn_eval_service_) {
-    nn_eval_service_->record_puct_calc(VN.sum() > 0);
-  }
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer(thread_id());

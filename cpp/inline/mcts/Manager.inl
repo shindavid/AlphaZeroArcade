@@ -34,7 +34,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (!params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(params);
     if (core::CmdServerClient::initialized()) {
-      nn_eval_service_->subscribe();
+      nn_eval_service_->connect_to_cmd_server(core::CmdServerClient::get());
     }
     if (mcts::kEnableProfiling) {
       nn_eval_service_->set_profiling_dir(params.profiling_dir());
@@ -193,12 +193,6 @@ inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int
   std::unique_lock<std::mutex> lock(search_mutex_);
   num_active_search_threads_--;
   cv_search_.notify_one();
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::get_cache_stats(int& hits, int& misses, int& size,
-                                                     float& hash_balance_factor) const {
-  nn_eval_service_->get_cache_stats(hits, misses, size, hash_balance_factor);
 }
 
 /*

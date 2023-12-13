@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/CmdServerClient.hpp>
 #include <core/CmdServerListener.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -14,6 +15,8 @@
 #include <util/HashablePair.hpp>
 #include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
+
+#include <vector>
 
 namespace mcts {
 
@@ -117,7 +120,8 @@ class NNEvaluationService : public core::CmdServerListener {
    */
   static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
-  void handle_cmd_server_msg(char msg) override;
+  void connect_to_cmd_server(core::CmdServerClient* cmd_server_client);
+  void handle_cmd_server_msg(const boost::json::value& msg, const std::string& type) override;
 
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
@@ -147,11 +151,7 @@ class NNEvaluationService : public core::CmdServerListener {
    */
   Response evaluate(const Request&);
 
-  void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
-  void record_puct_calc(bool virtual_loss_influenced);
-
-  static void end_session();
-  static float pct_virtual_loss_influenced_puct_calcs();  // summed over all instances
+  void end_session();
 
  private:
   using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
@@ -161,6 +161,8 @@ class NNEvaluationService : public core::CmdServerListener {
 
   NNEvaluationService(const NNEvaluationServiceParams& params);
   ~NNEvaluationService();
+
+  std::string dump_key(const char* descr);
 
   void batch_evaluate();
   void loop();
@@ -176,7 +178,8 @@ class NNEvaluationService : public core::CmdServerListener {
   void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
 
   void wait_for_unpause();
-  void reload_weights_if_needed();
+  void report_metrics();
+  void reload_weights(const std::string& model_filename);
   void pause();
   void unpause();
   void wait_until_batch_ready();
@@ -214,10 +217,8 @@ class NNEvaluationService : public core::CmdServerListener {
   };
 
   static instance_map_t instance_map_;
-  static int next_instance_id_;
-  static bool session_ended_;
 
-  const int instance_id_;  // for naming debug/profiling output files
+  const int instance_id_;
   const NNEvaluationServiceParams params_;
 
   profiler_t profiler_;
@@ -255,21 +256,32 @@ class NNEvaluationService : public core::CmdServerListener {
   };
   batch_metadata_t batch_metadata_;
 
+  bool session_ended_ = false;
   int num_connections_ = 0;
 
-  bool weight_refresh_needed_ = false;
   bool paused_ = false;
   std::mutex pause_mutex_;
   std::condition_variable cv_paused_;
 
-  std::atomic<int> cache_hits_ = 0;
-  std::atomic<int> cache_misses_ = 0;
-  std::atomic<int> max_evaluated_batch_size_ = 0;
-  std::atomic<int64_t> evaluated_positions_ = 0;
-  std::atomic<int64_t> batches_evaluated_ = 0;
-  std::atomic<int64_t> max_batches_evaluated_ = 0;
-  std::atomic<int64_t> total_puct_calcs_ = 0;
-  std::atomic<int64_t> virtual_loss_influenced_puct_calcs_ = 0;
+  /*
+   * perf_stats_t contains counters to track various performance metrics. The counters are
+   * reported to the cmd-server whenever the cmd-server issues either a weight-refresh cmd or a
+   * metrics-pull cmd. The counters are reset after each report.
+   *
+   * Technically, reads/writes to perf_stats_ should be protected by a mutex. But they are just
+   * counters, so it's not a big deal if they are a bit off. So we don't bother with a mutex.
+   */
+  struct perf_stats_t {
+    int64_t cache_hits = 0;
+    int64_t cache_misses = 0;
+    int max_evaluated_batch_size = 0;
+    int64_t evaluated_positions = 0;
+    int64_t batches_evaluated = 0;
+    int64_t max_batches_evaluated = 0;
+  };
+  perf_stats_t perf_stats_;
+
+  core::CmdServerClient* cmd_server_client_ = nullptr;
 };
 
 }  // namespace mcts

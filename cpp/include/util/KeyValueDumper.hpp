@@ -24,7 +24,7 @@ class KeyValueDumper {
    * - The addition of colon and \n characters
    * - The right-alignment of the values
    */
-  static void add(const char* key, const char* value_fmt, ...)
+  static void add(const std::string& key, const char* value_fmt, ...)
       __attribute__((format(printf, 2, 3)));
 
   /*

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <boost/json.hpp>
+
 #include <map>
 #include <mutex>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace io {
 
@@ -22,41 +25,88 @@ struct host_port_t {
 /*
  * Provides thread-safe access to a socket.
  *
- * Thread-safe writing is simple: just call write() and the mutex will be acquired and released for
- * you.
+ * The main methods are write() and read(). These methods are thread-safe and loop until all
+ * requested bytes are written/read.
  *
- * For reading, you may wish to do double-reads, e.g. read a header and then read the payload. For
- * this reason, the interface is slightly more complicated.
+ * In some contexts, you may wish to do multiple read() calls in a row. For example, you may wish
+ * to read a header and then read the payload. For this usage, we have a Reader class that holds
+ * on to the read-mutex for the duration of its lifetime.
  *
- * Socket* socket = Socket::get_instance(fd);
- * socket->write("hello", 5);  // thread-safe, acquires and release write-mutex
+ * Example usage:
+ *
+ * Socket* socket = Socket::create_client_socket(host, port);
+ * socket->write("hello", 5);
  *
  * {
  *   Socket::Reader reader(socket);  // acquires read-mutex of socket
- *   reader.read(buf, 4);  // thread-safe
+ *   reader.read(&header, sizeof(header));
+ *   reader.read(&payload, header.size);
  * }  // reader destructor releases read-mutex of socket
  *
- * If you wish, you can directly release the read-mutex by calling reader.release(), instead of
- * waiting for the destructor.
+ * For convenience, there are json_read() and json_write() methods specialized for json format
+ * messages. These messages are prefixed with a 4-byte length header, followed by a serialized
+ * json string of that length. (TODO: consider making JsonSocket a derived class of Socket)
  */
 class Socket {
  public:
   using map_t = std::map<file_descriptor_t, Socket*>;
 
   static Socket* get_instance(file_descriptor_t fd);
-  void write(char const* data, int size);
+
+  /*
+   * Thread-safe write to socket. Loops until size bytes are written.
+   */
+  void write(const void* data, int size);
+
+  /*
+   * Thread-safe convenience method for writing json messages. Prepends a 4-byte length header to
+   * a serialized json string, and calls write().
+   */
+  void json_write(const boost::json::value& json);
+
+  /*
+   * Thread-safe read from socket.
+   *
+   * If the socket has been closed, then returns false.
+   *
+   * Otherwise, loops until size bytes have been read, and returns true.
+   *
+   * If you need multiple read()'s in a row (like header + payload), consider using the Reader class
+   * instead.
+   */
+  bool read(void* data, int size);
+
+  /*
+   * Thread-safe convenience method for reading json messages.
+   *
+   * If the socket has been closed, then returns false.
+   *
+   * Otherwise, reads a 4-byte length, and then loops until that many more bytes have been read.
+   * Deserializes those bytes into a json object, and returns true.
+   */
+  bool json_read(boost::json::value* data);
+
   void shutdown();
 
   static Socket* create_server_socket(port_t port, int max_connections);
   static Socket* create_client_socket(std::string const& host, port_t port);
   Socket* accept() const;
 
+  /*
+   * Helper subclass that facilitates thread-safe reading. Instances of this class hold on to the
+   * read-mutex of the socket for the duration of their lifetime.
+   */
   class Reader {
    public:
     Reader(Socket* socket);
     ~Reader();
 
-    int read(char* data, int size);  // return number of bytes read. 0 means orderly-shutdown
+    /*
+     * If the socket has been closed, then returns false.
+     *
+     * Otherwise, loops until all bytes have been read, and returns true.
+     */
+    bool read(void* data, int size);
     void release();
 
    private:
@@ -72,11 +122,16 @@ class Socket {
   Socket(const Socket&) = delete;
   Socket& operator=(const Socket&) = delete;
 
+  void write_helper(const void* data, int size, const char* error_msg);
+  bool read_helper(void* data, int size, const char* error_msg);
+
   static map_t map_;
 
   mutable std::mutex write_mutex_;
   mutable std::mutex read_mutex_;
   const file_descriptor_t fd_;
+  std::vector<char> json_buffer_;
+  std::string json_str_;
   bool active_ = true;
 };
 

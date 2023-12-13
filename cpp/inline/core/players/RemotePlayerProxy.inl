@@ -33,7 +33,9 @@ void RemotePlayerProxy<GameState>::PacketDispatcher::start_all(int num_game_thre
     packet.send_to(socket);
 
     Packet<GameThreadInitializationResponse> response;
-    response.read_from(socket);
+    if (!response.read_from(socket)) {
+      throw util::Exception("Unexpected socket close");
+    }
 
     dispatcher->start();
   }

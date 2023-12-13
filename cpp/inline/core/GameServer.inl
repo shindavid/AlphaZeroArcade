@@ -376,7 +376,9 @@ void GameServer<GameState>::wait_for_remote_player_registrations() {
     int remaining_requests = 1;
     do {
       Packet<Registration> packet;
-      packet.read_from(socket);  // TODO: catch exception and engage in retry-protocol with client
+      if (!packet.read_from(socket)) {
+        throw util::Exception("Unexpected socket close");
+      }
       const Registration& registration = packet.payload();
       std::string registered_name = registration.dynamic_size_section.player_name;
       remaining_requests = registration.remaining_requests;

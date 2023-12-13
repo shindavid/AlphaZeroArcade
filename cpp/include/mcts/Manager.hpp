@@ -68,9 +68,8 @@ class Manager {
   void wait_for_search_threads();
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
-  void get_cache_stats(int& hits, int& misses, int& size, float& hash_balance_factor) const;
 
-  static void end_session() { NNEvaluationService::end_session(); }
+  void end_session() { nn_eval_service_->end_session(); }
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;

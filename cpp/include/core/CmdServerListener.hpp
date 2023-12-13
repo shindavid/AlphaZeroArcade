@@ -2,6 +2,8 @@
 
 #include <util/Exception.hpp>
 
+#include <boost/json.hpp>
+
 namespace core {
 
 /*
@@ -16,14 +18,11 @@ class CmdServerListener {
   virtual ~CmdServerListener() = default;
 
   /*
-   * Subscribe to messages from the CmdServerClient.
-   */
-  void subscribe();
-
-  /*
    * Handle a message from the cmd-server.
+   *
+   * type is the value of type= in the msg.
    */
-  virtual void handle_cmd_server_msg(char msg) = 0;
+  virtual void handle_cmd_server_msg(const boost::json::value& msg, const std::string& type) = 0;
 };
 
 }  // namespace core

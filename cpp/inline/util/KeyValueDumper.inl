@@ -4,7 +4,7 @@
 
 namespace util {
 
-inline void KeyValueDumper::add(const char* key, const char* value_fmt, ...) {
+inline void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
   constexpr int N = 1024;
   char value[N];
   va_list ap;
@@ -20,7 +20,7 @@ inline void KeyValueDumper::add(const char* key, const char* value_fmt, ...) {
     throw Exception("KeyValueDumper::add(): char buffer overflow (%d >= %d)", n, N);
   }
 
-  instance()->vec_.emplace_back(util::create_string("%s:", key), value);
+  instance()->vec_.emplace_back(util::create_string("%s:", key.c_str()), value);
 }
 
 inline void KeyValueDumper::flush() {

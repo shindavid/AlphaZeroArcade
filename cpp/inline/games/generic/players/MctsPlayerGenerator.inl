@@ -28,7 +28,11 @@ core::AbstractPlayer<GameState>* MctsPlayerGeneratorBase<GameState, Tensorizor>:
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void MctsPlayerGeneratorBase<GameState, Tensorizor>::end_session() {
-  MctsManager::end_session();
+  for (auto& pair : manager_cache_) {
+    for (MctsManager* manager : pair.second) {
+      manager->end_session();
+    }
+  }
 }
 
 // CompetitiveMctsPlayerGenerator

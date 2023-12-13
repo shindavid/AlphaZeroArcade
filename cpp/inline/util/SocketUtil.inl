@@ -23,12 +23,43 @@ inline Socket* Socket::get_instance(file_descriptor_t fd) {
   }
 }
 
-inline void Socket::write(char const* data, int size) {
-  std::lock_guard<std::mutex> lock(write_mutex_);
-  auto n = send(fd_, data, size, 0);
-  if (n < 0) {
-    throw util::Exception("Could not write to socket");
+inline void Socket::write(const void* data, int size) {
+  std::unique_lock lock(write_mutex_);
+  write_helper(data, size, "Could not write to socket");
+}
+
+inline void Socket::json_write(const boost::json::value& json) {
+  std::string json_str = boost::json::serialize(json);
+  int length = json_str.size();
+
+  std::unique_lock lock(write_mutex_);
+  write_helper(&length, sizeof(length), "Could not json_write length to socket");
+  write_helper(json_str.c_str(), json_str.size(), "Could not json_write to socket");
+}
+
+inline bool Socket::read(void* data, int size) {
+  std::unique_lock lock(read_mutex_);
+  return read_helper(data, size, "Could not read from socket");
+}
+
+inline bool Socket::json_read(boost::json::value* data) {
+  std::unique_lock lock(read_mutex_);
+
+  uint32_t length;
+  if (!read_helper(&length, sizeof(length), "Could not json_read length from socket")) {
+    return false;
   }
+  length = ntohl(length);  // ensure correct byte order
+
+  json_buffer_.resize(length);
+  if (!read_helper(json_buffer_.data(), length, "Could not json_read from socket")) {
+    return false;
+  }
+  lock.unlock();
+
+  json_str_.assign(json_buffer_.begin(), json_buffer_.end());
+  *data = boost::json::parse(json_str_);
+  return true;
 }
 
 inline void Socket::shutdown() {
@@ -107,15 +138,11 @@ inline Socket::Reader::~Reader() {
   }
 }
 
-inline int Socket::Reader::read(char* data, int size) {
+inline bool Socket::Reader::read(void* data, int size) {
   if (released_) {
     throw util::Exception("Socket::Reader::read() called after release()");
   }
-  auto n = recv(socket_->fd_, data, size, 0);
-  if (n < 0) {
-    throw util::Exception("Could not read from socket: %s", strerror(errno));
-  }
-  return n;
+  return socket_->read_helper(data, size, "Could not read from socket");
 }
 
 inline void Socket::Reader::release() {
@@ -124,6 +151,35 @@ inline void Socket::Reader::release() {
   }
   released_ = true;
   socket_->read_mutex_.unlock();
+}
+
+inline void Socket::write_helper(const void* data, int size, const char* error_msg) {
+  int bytes_sent = 0;
+  const char* data_ptr = static_cast<const char*>(data);
+
+  while (bytes_sent < size) {
+    int n = send(fd_, data_ptr + bytes_sent, size - bytes_sent, 0);
+    if (n < 0) {
+      throw util::Exception("%s", error_msg);
+    }
+    bytes_sent += n;
+  }
+}
+
+inline bool Socket::read_helper(void* data, int size, const char* error_msg) {
+  int bytes_read = 0;
+  char* data_ptr = static_cast<char*>(data);
+
+  while (bytes_read < size) {
+    int n = recv(fd_, data_ptr + bytes_read, size - bytes_read, 0);
+    if (n < 0) {
+      throw util::Exception("%s", error_msg);
+    } else if (n == 0) {
+      return false;
+    }
+    bytes_read += n;
+  }
+  return true;
 }
 
 }  // namespace io

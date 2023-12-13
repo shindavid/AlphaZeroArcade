@@ -144,12 +144,6 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response(const GameState& state,
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline void MctsPlayer<GameState_, Tensorizor_>::get_cache_stats(int& hits, int& misses, int& size,
-                                                                 float& hash_balance_factor) const {
-  mcts_manager_->get_cache_stats(hits, misses, size, hash_balance_factor);
-}
-
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsSearchResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state,
                                                  SearchMode search_mode) const {

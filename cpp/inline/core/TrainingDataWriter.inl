@@ -154,7 +154,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::close(GameData_sptr data) {
   data->close();
 
   std::unique_lock<std::mutex> lock(mutex_);
-  game_queue_[queue_index_].push_back(data);
+  completed_games_[queue_index_].push_back(data);
   game_data_map_.erase(data->id());
   lock.unlock();
   cv_.notify_one();
@@ -166,6 +166,22 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
   cv_.notify_one();
   if (thread_->joinable()) thread_->join();
   delete thread_;
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::connect_to_cmd_server(
+    CmdServerClient* cmd_server_client) {
+  cmd_server_client_ = cmd_server_client;
+  cmd_server_client_->add_listener(this);
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::handle_cmd_server_msg(
+    const boost::json::value& msg, const std::string& type) {
+  if (type == "change_games_dir") {
+    std::string new_games_dir = msg.at("games_dir").as_string().c_str();
+    schedule_games_dir_change(new_games_dir);
+  }
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -184,16 +200,42 @@ TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   while (!closed_) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    game_queue_t& queue = game_queue_[queue_index_];
-    cv_.wait(lock, [&] { return !queue.empty() || closed_; });
+    std::unique_lock lock(mutex_);
+    game_queue_t& queue = completed_games_[queue_index_];
+    cv_.wait(lock, [&] { return !queue.empty() || closed_ || pending_games_dir_change_; });
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
       write_to_file(data.get());
     }
     queue.clear();
+    change_games_dir_if_necessary();
   }
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::schedule_games_dir_change(
+    const std::string& new_games_dir) {
+  std::unique_lock lock(mutex_);
+  pending_games_dir_change_ = true;
+  pending_games_dir_ = new_games_dir;
+  lock.unlock();
+  cv_.notify_one();
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::change_games_dir_if_necessary() {
+  if (!pending_games_dir_change_) return;
+
+  std::unique_lock lock(mutex_);
+  pending_games_dir_change_ = false;
+  params_.games_dir = pending_games_dir_;
+  lock.unlock();
+
+  boost::json::object response;
+  response["type"] = "change_games_dir_ack";
+  response["client_id"] = cmd_server_client_->client_id();
+  cmd_server_client_->send(response);
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -266,7 +308,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     }
   }
 
-  int64_t ns_since_epoch = util::ns_since_epoch(std::chrono::steady_clock::now());
+  int64_t ns_since_epoch = util::ns_since_epoch();
   std::string output_filename = util::create_string("%ld-%d.ptd", ns_since_epoch, rows);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
   boost::filesystem::path output_path = games_dir() / output_filename;

@@ -16,7 +16,7 @@ add_definitions(-DNDEBUG)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
-find_package(Boost COMPONENTS program_options filesystem  REQUIRED)
+find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
 
 set(CMAKE_CXX_STANDARD  20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_FLAGS} -fconcepts-diagnostics-depth=5 -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")
@@ -45,12 +45,13 @@ set(executables
         )
 
 add_subdirectory("cpp/src/core")
+add_subdirectory("cpp/src/mcts")
 add_subdirectory("cpp/src/util")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 
-set(common-libs core util)
+set(common-libs core mcts util)
 set(other-libs connect4-lib othello-lib tictactoe-lib)
 
 foreach(tgt ${executables} ${common-libs} ${other-libs})

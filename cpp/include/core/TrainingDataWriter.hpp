@@ -10,6 +10,8 @@
 #include <boost/program_options.hpp>
 
 #include <core/AbstractSymmetryTransform.hpp>
+#include <core/CmdServerClient.hpp>
+#include <core/CmdServerListener.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
@@ -22,7 +24,7 @@ namespace core {
  * parallel.
  */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-class TrainingDataWriter {
+class TrainingDataWriter : public CmdServerListener {
  public:
   struct Params {
     auto make_options_description();
@@ -139,8 +141,10 @@ class TrainingDataWriter {
   GameData_sptr get_data(game_id_t id);
 
   void close(GameData_sptr data);
-
   void shut_down();
+
+  void connect_to_cmd_server(CmdServerClient* cmd_server_client);
+  void handle_cmd_server_msg(const boost::json::value& msg, const std::string& type) override;
 
  protected:
   using game_queue_t = std::vector<GameData_sptr>;
@@ -150,15 +154,21 @@ class TrainingDataWriter {
   ~TrainingDataWriter();
 
   void loop();
+  void schedule_games_dir_change(const std::string& new_games_dir);
+  void change_games_dir_if_necessary();
   void write_to_file(const GameData* data);
 
-  const Params params_;
+  Params params_;
+  CmdServerClient* cmd_server_client_ = nullptr;
   std::thread* thread_;
   game_data_map_t game_data_map_;
-  game_queue_t game_queue_[2];
+  game_queue_t completed_games_[2];
   int64_t rows_written_ = 0;
+
   int queue_index_ = 0;
   bool closed_ = false;
+  bool pending_games_dir_change_ = false;
+  std::string pending_games_dir_;
 
   std::condition_variable cv_;
   std::mutex mutex_;

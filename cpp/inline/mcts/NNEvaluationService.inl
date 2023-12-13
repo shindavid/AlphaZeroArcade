@@ -1,14 +1,11 @@
 #include <mcts/NNEvaluationService.hpp>
 
+#include <mcts/NNEvaluationServiceProvider.hpp>
 #include <util/Asserts.hpp>
 
+#include <boost/json/src.hpp>
+
 namespace mcts {
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-int NNEvaluationService<GameState, Tensorizor>::next_instance_id_ = 0;
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-bool NNEvaluationService<GameState, Tensorizor>::session_ended_ = false;
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename NNEvaluationService<GameState, Tensorizor>::instance_map_t
@@ -18,7 +15,6 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tensorizor>::create(
     const NNEvaluationServiceParams& params) {
   boost::filesystem::path model_file_path(params.model_filename);
-  std::chrono::nanoseconds timeout_duration(params.nn_eval_timeout_ns);
 
   auto it = instance_map_.find(model_file_path);
   if (it == instance_map_.end()) {
@@ -34,19 +30,22 @@ NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tenso
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::handle_cmd_server_msg(char msg) {
-  switch (msg) {
-    case 'r':
-      weight_refresh_needed_ = true;
-      break;
-    case 'p':
-      pause();
-      break;
-    case 'u':
-      unpause();
-      break;
-    default:
-      break;
+void NNEvaluationService<GameState, Tensorizor>::connect_to_cmd_server(
+    core::CmdServerClient* cmd_server_client) {
+  cmd_server_client_ = cmd_server_client;
+  cmd_server_client_->add_listener(this);
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::handle_cmd_server_msg(
+    const boost::json::value& msg, const std::string& type) {
+  if (type == "pause") {
+    pause();
+  } else if (type == "reload_weights") {
+    std::string model_filename = msg.at("model_filename").as_string().c_str();
+    reload_weights(model_filename);
+  } else if (type == "metrics_request") {
+    report_metrics();
   }
 }
 
@@ -83,7 +82,7 @@ inline void NNEvaluationService<GameState, Tensorizor>::set_profiling_dir(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
-    : instance_id_(next_instance_id_++),
+    : instance_id_(NNEvaluationServiceProvider::register_instance()),
       params_(params),
       net_(params.model_filename, params.cuda_device),
       batch_data_(params.batch_size_limit),
@@ -187,64 +186,39 @@ NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::get_cache_stats(int& hits, int& misses, int& size,
-                                                                 float& hash_balance_factor) const {
-  hits = cache_hits_;
-  misses = cache_misses_;
-  size = cache_.size();
-  hash_balance_factor = cache_.get_hash_balance_factor();
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::record_puct_calc(bool virtual_loss_influenced) {
-  this->total_puct_calcs_++;
-  if (virtual_loss_influenced) {
-    this->virtual_loss_influenced_puct_calcs_++;
-  }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::end_session() {
   if (session_ended_) return;
 
-  int64_t evaluated_positions = 0;
-  int64_t batches_evaluated = 0;
-  int64_t max_batches_evaluated = 0;
-  int max_batch_size = 0;
-  for (auto it : instance_map_) {
-    NNEvaluationService* service = it.second;
-    evaluated_positions += service->evaluated_positions_;
-    batches_evaluated += service->batches_evaluated_;
-    max_batches_evaluated += service->max_batches_evaluated_;
-    max_batch_size = std::max(max_batch_size, (int)service->max_evaluated_batch_size_);
-  }
+  int64_t cache_hits = perf_stats_.cache_hits;
+  int64_t cache_misses = perf_stats_.cache_misses;
+  int64_t cache_attempts = cache_hits + cache_misses;
+  float cache_hit_pct = cache_attempts > 0 ? 100.0 * cache_hits / cache_attempts : 0.0f;
 
-  float max_batch_pct = batches_evaluated > 0 ? 100.0 * max_batches_evaluated / batches_evaluated
-                                              : 0.0f;
+  int64_t evaluated_positions = perf_stats_.evaluated_positions;
+  int64_t batches_evaluated = perf_stats_.batches_evaluated;
+  int64_t max_batches_evaluated = perf_stats_.max_batches_evaluated;
+  int max_batch_size = perf_stats_.max_evaluated_batch_size;
+
+  float max_batch_pct =
+      batches_evaluated > 0 ? 100.0 * max_batches_evaluated / batches_evaluated : 0.0f;
 
   float avg_batch_size =
       batches_evaluated > 0 ? evaluated_positions * 1.0 / batches_evaluated : 0.0f;
 
-  util::KeyValueDumper::add("MCTS evaluated positions", "%ld", evaluated_positions);
-  util::KeyValueDumper::add("MCTS batches evaluated", "%ld", batches_evaluated);
-  util::KeyValueDumper::add("MCTS max batch pct", "%.2f%%", max_batch_pct);
-  util::KeyValueDumper::add("MCTS max batch size", "%d", max_batch_size);
-  util::KeyValueDumper::add("MCTS avg batch size", "%.2f", avg_batch_size);
+  util::KeyValueDumper::add(dump_key("cache hits"), "%ld", cache_hits);
+  util::KeyValueDumper::add(dump_key("cache misses"), "%ld", cache_misses);
+  util::KeyValueDumper::add(dump_key("cache hit rate"), "%.2f%%", cache_hit_pct);
+  util::KeyValueDumper::add(dump_key("evaluated positions"), "%ld", evaluated_positions);
+  util::KeyValueDumper::add(dump_key("batches evaluated"), "%ld", batches_evaluated);
+  util::KeyValueDumper::add(dump_key("max batch pct"), "%.2f%%", max_batch_pct);
+  util::KeyValueDumper::add(dump_key("max batch size"), "%d", max_batch_size);
+  util::KeyValueDumper::add(dump_key("avg batch size"), "%.2f", avg_batch_size);
   session_ended_ = true;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-float NNEvaluationService<GameState, Tensorizor>::pct_virtual_loss_influenced_puct_calcs() {
-  int64_t num = 0;
-  int64_t den = 0;
-
-  for (auto it : instance_map_) {
-    NNEvaluationService* service = it.second;
-    num += service->virtual_loss_influenced_puct_calcs_;
-    den += service->total_puct_calcs_;
-  }
-
-  return 100.0 * num / den;
+std::string NNEvaluationService<GameState, Tensorizor>::dump_key(const char* descr) {
+  return util::create_string("NN-%d %s", instance_id_, descr);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -299,16 +273,13 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   lock.unlock();
 
   int batch_size = batch_metadata_.reserve_index;
-
-
-  evaluated_positions_ += batch_size;
-  batches_evaluated_++;
-  max_evaluated_batch_size_ = std::max((int)max_evaluated_batch_size_, batch_size);
-
   bool maxed = batch_size == params_.batch_size_limit;
-  if (maxed) {
-    max_batches_evaluated_++;
-  }
+
+  perf_stats_.evaluated_positions += batch_size;
+  perf_stats_.batches_evaluated++;
+  perf_stats_.max_evaluated_batch_size =
+      std::max(perf_stats_.max_evaluated_batch_size, batch_size);
+  if (maxed) perf_stats_.max_batches_evaluated++;
 
   batch_metadata_.unread_count = batch_metadata_.commit_count;
   batch_metadata_.reserve_index = 0;
@@ -320,7 +291,6 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::loop() {
   while (active()) {
-    reload_weights_if_needed();
     wait_for_unpause();
     wait_until_batch_ready();
     wait_for_first_reservation();
@@ -349,10 +319,10 @@ NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request,
       util::ThreadSafePrinter printer(request.thread_id);
       printer.printf("  hit cache\n");
     }
-    cache_hits_++;
+    perf_stats_.cache_hits++;
     return Response{cached.value(), true};
   }
-  cache_misses_++;
+  perf_stats_.cache_misses++;
   return Response{nullptr, false};
 }
 
@@ -498,8 +468,19 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (!paused_) return;  // early exit for common case, bypassing lock
 
+  if (cmd_server_client_) {
+    boost::json::object response;
+    response["type"] = "pause_ack";
+    response["client_id"] = cmd_server_client_->client_id();
+    response["nn_eval_service_id"] = instance_id_;
+    response["num_nn_eval_services"] = NNEvaluationServiceProvider::num_instances();
+
+    cmd_server_client_->send(response);
+  }
+
   std::unique_lock lock(pause_mutex_);
   cv_paused_.wait(lock, [&] { return !paused_; });
+  lock.unlock();
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
@@ -508,21 +489,48 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights_if_needed() {
-  if (!weight_refresh_needed_) return;
+void NNEvaluationService<GameState, Tensorizor>::report_metrics() {
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
-    printer.printf("Refreshing network weights...\n");
+    printer.printf("Reporting metrics...\n");
   }
-  weight_refresh_needed_ = false;
-  new (&net_) core::NeuralNet(params_.model_filename, params_.cuda_device);
+
+  perf_stats_t perf_stats_copy = perf_stats_;
+  new (&perf_stats_) perf_stats_t();
+
+  boost::json::object response;
+  response["type"] = "metrics_report";
+  response["client_id"] = cmd_server_client_->client_id();
+  response["nn_eval_service_id"] = instance_id_;
+  response["num_nn_eval_services"] = NNEvaluationServiceProvider::num_instances();
+
+  response["timestamp"] = util::ns_since_epoch();
+  response["cache_hits"] = perf_stats_copy.cache_hits;
+  response["cache_misses"] = perf_stats_copy.cache_misses;
+  response["max_evaluated_batch_size"] = perf_stats_copy.max_evaluated_batch_size;
+  response["evaluated_positions"] = perf_stats_copy.evaluated_positions;
+  response["batches_evaluated"] = perf_stats_copy.batches_evaluated;
+  response["max_batches_evaluated"] = perf_stats_copy.max_batches_evaluated;
+
+  cmd_server_client_->send(response);
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename) {
+  util::release_assert(paused_, "%s() called while not paused", __func__);
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Refreshing network weights (%s)...\n", model_filename.c_str());
+  }
+  new (&net_) core::NeuralNet(model_filename, params_.cuda_device);
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("Clearing network cache...\n");
   }
-  std::unique_lock lock(cache_mutex_);
   cache_.clear();
+
+  unpause();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -531,7 +539,7 @@ void NNEvaluationService<GameState, Tensorizor>::pause() {
     util::ThreadSafePrinter printer;
     printer.printf("Pausing...\n");
   }
-  std::lock_guard guard(pause_mutex_);
+  std::unique_lock lock(pause_mutex_);
   paused_ = true;
 }
 

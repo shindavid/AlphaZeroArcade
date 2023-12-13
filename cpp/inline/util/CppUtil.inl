@@ -33,7 +33,7 @@ int64_t ns_since_epoch(const TimePoint& t) {
   return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();
 }
 
-inline int64_t get_unique_id() { return ns_since_epoch(std::chrono::steady_clock::now()); }
+inline int64_t get_unique_id() { return ns_since_epoch(); }
 
 template <typename A>
 constexpr auto to_std_array() {

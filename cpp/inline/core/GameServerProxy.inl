@@ -85,7 +85,9 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
     send_packet.send_to(socket_);
 
     Packet<RegistrationResponse> recv_packet;
-    recv_packet.read_from(socket_);
+    if (!recv_packet.read_from(socket_)) {
+      throw util::Exception("Unexpected socket close");
+    }
     const RegistrationResponse& response = recv_packet.payload();
     player_id_t player_id = response.player_id;
     std::string name = response.dynamic_size_section.player_name;
@@ -277,7 +279,9 @@ GameServerProxy<GameState>::~GameServerProxy() {
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::init_player_threads() {
   Packet<GameThreadInitialization> recv_packet;
-  recv_packet.read_from(shared_data_.socket());
+  if (!recv_packet.read_from(shared_data_.socket())) {
+    throw util::Exception("Unexpected socket close");
+  }
   int num_game_threads = recv_packet.payload().num_game_threads;
 
   for (game_thread_id_t g = 0; g < (game_thread_id_t)num_game_threads; ++g) {
