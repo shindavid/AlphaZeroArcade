@@ -40,5 +40,3 @@ class Config {
 };
 
 }  // namespace util
-
-#include <inline/util/Config.inl>

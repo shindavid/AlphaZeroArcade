@@ -4,7 +4,9 @@
 
 namespace util {
 
-inline void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
+KeyValueDumper* KeyValueDumper::instance_ = nullptr;
+
+void KeyValueDumper::add(const std::string& key, const char* value_fmt, ...) {
   constexpr int N = 1024;
   char value[N];
   va_list ap;
@@ -23,7 +25,7 @@ inline void KeyValueDumper::add(const std::string& key, const char* value_fmt, .
   instance()->vec_.emplace_back(util::create_string("%s:", key.c_str()), value);
 }
 
-inline void KeyValueDumper::flush() {
+void KeyValueDumper::flush() {
   int max_key_len = 0;
   int max_value_len = 0;
   for (const auto& p : instance()->vec_) {
@@ -40,7 +42,7 @@ inline void KeyValueDumper::flush() {
   std::cout.flush();
 }
 
-inline KeyValueDumper* KeyValueDumper::instance() {
+KeyValueDumper* KeyValueDumper::instance() {
   if (instance_ == nullptr) {
     instance_ = new KeyValueDumper();
   }

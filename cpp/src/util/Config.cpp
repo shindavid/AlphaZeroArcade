@@ -9,16 +9,18 @@
 
 namespace util {
 
-inline Config* Config::instance() {
+Config* Config::instance_ = nullptr;
+
+Config* Config::instance() {
   if (!instance_) {
     instance_ = new Config();
   }
   return instance_;
 }
 
-inline bool Config::contains(const std::string& key) const { return map_.contains(key); }
+bool Config::contains(const std::string& key) const { return map_.contains(key); }
 
-inline std::string Config::get(const std::string& key) const {
+std::string Config::get(const std::string& key) const {
   auto it = map_.find(key);
   if (it == map_.end()) {
     throw Exception("Mapping for key \"%s\" required in config file %s", key.c_str(),
@@ -27,13 +29,13 @@ inline std::string Config::get(const std::string& key) const {
   return it->second;
 }
 
-inline std::string Config::get(const std::string& key, const std::string& default_value) const {
+std::string Config::get(const std::string& key, const std::string& default_value) const {
   auto it = map_.find(key);
   if (it == map_.end()) return default_value;
   return it->second;
 }
 
-inline Config::Config() : config_path_(Repo::root() / kFilename) {
+Config::Config() : config_path_(Repo::root() / kFilename) {
   if (!boost::filesystem::is_regular_file(config_path_)) return;
 
   std::ifstream file(config_path_.c_str());

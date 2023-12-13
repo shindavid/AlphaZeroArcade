@@ -1,6 +1,12 @@
 add_library(util
+        BoostUtil.cpp
+        Config.cpp
         CudaUtil.cpp
+        KeyValueDumper.cpp
         Math.cpp
+        RepoUtil.cpp
+        SocketUtil.cpp
         StaticVars.cpp
+        ThreadSafePrinter.cpp
         ${MY_TINYEXPR_DIR}/tinyexpr.c
         )

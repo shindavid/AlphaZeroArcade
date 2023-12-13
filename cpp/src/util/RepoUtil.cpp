@@ -4,14 +4,16 @@
 
 namespace util {
 
-inline Repo* Repo::instance() {
+Repo* Repo::instance_ = nullptr;
+
+Repo* Repo::instance() {
   if (!instance_) {
     instance_ = new Repo();
   }
   return instance_;
 }
 
-inline boost::filesystem::path Repo::find_root() {
+boost::filesystem::path Repo::find_root() {
   boost::filesystem::path cwd = boost::filesystem::current_path();
 
   boost::filesystem::path path = cwd;
