@@ -1,5 +1,6 @@
 #include <util/EigenUtil.hpp>
 
+#include <util/Exception.hpp>
 #include <util/Random.hpp>
 
 #include <array>
