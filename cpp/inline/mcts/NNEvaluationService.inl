@@ -500,7 +500,6 @@ void NNEvaluationService<GameState, Tensorizor>::report_metrics() {
 
   boost::json::object response;
   response["type"] = "metrics_report";
-  response["client_id"] = cmd_server_client_->client_id();
   response["nn_eval_service_id"] = instance_id_;
   response["num_nn_eval_services"] = NNEvaluationServiceProvider::num_instances();
 

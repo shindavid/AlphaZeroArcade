@@ -35,21 +35,15 @@ CmdServerClient::~CmdServerClient() {
 }
 
 void CmdServerClient::receive_client_id_assignment() {
-  boost::json::object msg;
-  msg["type"] = "connect";
-
-  socket_->json_write(msg);
-
-  boost::json::value response;
-  if (!socket_->json_read(&response)) {
+  boost::json::value msg;
+  if (!socket_->json_read(&msg)) {
     throw util::Exception("Unexpected cmd-server socket close");
   }
 
-  std::string response_type = response.at("type").as_string().c_str();
-  util::release_assert(response_type == "connect_ack", "Expected connect_ack, got %s",
-                       response_type.c_str());
+  std::string type = msg.at("type").as_string().c_str();
+  util::release_assert(type == "connect", "Expected connect, got %s", type.c_str());
 
-  int64_t client_id = response.at("client_id").as_int64();
+  int64_t client_id = msg.at("client_id").as_int64();
   util::release_assert(client_id >= 0, "Invalid client_id %ld", client_id);
 
   client_id_ = client_id;

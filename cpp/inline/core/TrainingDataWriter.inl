@@ -40,9 +40,14 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
 
   po2::options_description desc("TrainingDataWriter options");
   return desc
-      .template add_option<"games-dir", 'g'>(
-          po::value<std::string>(&games_dir)->default_value(games_dir.c_str()),
-          "where to write games")
+      .template add_option<"games-base-dir", 'G'>(
+          po::value<std::string>(&games_base_dir),
+          "base directory for games files. This is fixed. Game files look like "
+          "{games-base-dir}/{games-subdir}/{timestamp}.ptj")
+      .template add_option<"games-sub-dir", 'g'>(po::value<std::string>(&games_sub_dir),
+                                                 "sub directory for games files. This can be "
+                                                 "updated by the cmd-server. Game files look like "
+                                                 "{games-base-dir}/{games-subdir}/{timestamp}.ptj")
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows");
@@ -178,17 +183,26 @@ void TrainingDataWriter<GameState_, Tensorizor_>::connect_to_cmd_server(
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::handle_cmd_server_msg(
     const boost::json::value& msg, const std::string& type) {
-  if (type == "change_games_dir") {
-    std::string new_games_dir = msg.at("games_dir").as_string().c_str();
-    schedule_games_dir_change(new_games_dir);
+  if (type == "reload_weights") {
+    std::string new_games_sub_dir = msg.at("games_sub_dir").as_string().c_str();
+    set_games_sub_dir(new_games_sub_dir);
   }
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
-    : params_(params) {
-  namespace bf = boost::filesystem;
-  bf::create_directories(games_dir());
+    : params_(params)
+    , games_base_dir_(params.games_base_dir) {
+  util::clean_assert(params.games_base_dir.size() > 0,
+                     "TrainingDataWriter: games_base_dir must be specified");
+  util::clean_assert(params.games_sub_dir.size() > 0,
+                     "TrainingDataWriter: games_sub_dir must be specified");
+
+  set_games_sub_dir(params.games_sub_dir);
+  boost::filesystem::create_directories(get_full_games_dir());
+  if (CmdServerClient::initialized()) {
+    connect_to_cmd_server(CmdServerClient::get());
+  }
   thread_ = new std::thread([&] { loop(); });
 }
 
@@ -198,44 +212,37 @@ TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::set_games_sub_dir(
+    const std::string& games_sub_dir) {
+  std::unique_lock lock(mutex_);
+  games_sub_dir_ = games_sub_dir;
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+boost::filesystem::path TrainingDataWriter<GameState_, Tensorizor_>::get_games_sub_dir() const {
+  std::unique_lock lock(mutex_);
+  return games_sub_dir_;
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+boost::filesystem::path TrainingDataWriter<GameState_, Tensorizor_>::get_full_games_dir() const {
+  std::unique_lock lock(mutex_);
+  return games_base_dir_ / games_sub_dir_;
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   while (!closed_) {
     std::unique_lock lock(mutex_);
     game_queue_t& queue = completed_games_[queue_index_];
-    cv_.wait(lock, [&] { return !queue.empty() || closed_ || pending_games_dir_change_; });
+    cv_.wait(lock, [&] { return !queue.empty() || closed_; });
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
       write_to_file(data.get());
     }
     queue.clear();
-    change_games_dir_if_necessary();
   }
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::schedule_games_dir_change(
-    const std::string& new_games_dir) {
-  std::unique_lock lock(mutex_);
-  pending_games_dir_change_ = true;
-  pending_games_dir_ = new_games_dir;
-  lock.unlock();
-  cv_.notify_one();
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::change_games_dir_if_necessary() {
-  if (!pending_games_dir_change_) return;
-
-  std::unique_lock lock(mutex_);
-  pending_games_dir_change_ = false;
-  params_.games_dir = pending_games_dir_;
-  lock.unlock();
-
-  boost::json::object response;
-  response["type"] = "change_games_dir_ack";
-  response["client_id"] = cmd_server_client_->client_id();
-  cmd_server_client_->send(response);
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -309,10 +316,13 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   }
 
   int64_t ns_since_epoch = util::ns_since_epoch();
-  std::string output_filename = util::create_string("%ld-%d.ptd", ns_since_epoch, rows);
+  std::string output_filename = util::create_string("%ld.ptd", ns_since_epoch);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
-  boost::filesystem::path output_path = games_dir() / output_filename;
-  boost::filesystem::path tmp_output_path = games_dir() / tmp_output_filename;
+
+  boost::filesystem::path games_sub_dir = get_games_sub_dir();
+  boost::filesystem::path full_games_dir = games_base_dir_ / games_sub_dir;
+  boost::filesystem::path output_path = full_games_dir / output_filename;
+  boost::filesystem::path tmp_output_path = full_games_dir / tmp_output_filename;
 
   using tensor_map_t = std::map<std::string, torch::Tensor>;
 
@@ -330,6 +340,16 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   // write-then-mv to avoid race-conditions with partially-written files
   torch_util::save(tensor_map, tmp_output_path.string());
   std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
+
+  // inform cmd-server of new file
+  if (cmd_server_client_) {
+    boost::json::object msg;
+    msg["type"] = "game";
+    msg["sub_dir"] = games_sub_dir.string();
+    msg["timestamp"] = ns_since_epoch;
+    msg["rows"] = rows;
+    cmd_server_client_->send(msg);
+  }
 
   rows_written_ += rows;
   if (params_.max_rows > 0 && rows_written_ >= params_.max_rows) {

@@ -30,7 +30,8 @@ class TrainingDataWriter : public CmdServerListener {
     auto make_options_description();
     bool operator==(const Params& other) const = default;
 
-    std::string games_dir = "c4_games";
+    std::string games_base_dir;
+    std::string games_sub_dir;
     int64_t max_rows = 0;
   };
 
@@ -149,13 +150,14 @@ class TrainingDataWriter : public CmdServerListener {
  protected:
   using game_queue_t = std::vector<GameData_sptr>;
 
-  boost::filesystem::path games_dir() const { return params_.games_dir; }
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
+  void set_games_sub_dir(const std::string& games_sub_dir);
+  boost::filesystem::path get_games_sub_dir() const;
+  boost::filesystem::path get_full_games_dir() const;
+
   void loop();
-  void schedule_games_dir_change(const std::string& new_games_dir);
-  void change_games_dir_if_necessary();
   void write_to_file(const GameData* data);
 
   Params params_;
@@ -167,11 +169,11 @@ class TrainingDataWriter : public CmdServerListener {
 
   int queue_index_ = 0;
   bool closed_ = false;
-  bool pending_games_dir_change_ = false;
-  std::string pending_games_dir_;
+  const boost::filesystem::path games_base_dir_;
+  boost::filesystem::path games_sub_dir_;
 
   std::condition_variable cv_;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
 
   static TrainingDataWriter* instance_;
 };
