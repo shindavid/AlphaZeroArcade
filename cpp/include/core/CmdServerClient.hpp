@@ -43,10 +43,13 @@ class CmdServerClient {
  private:
   CmdServerClient(const std::string& host, io::port_t port);
   ~CmdServerClient();
-  void receive_client_id_assignment();
+  void send_handshake();
+  void recv_handshake();
   void loop();
 
   static CmdServerClient* instance_;
+
+  const uint64_t proc_start_timestamp_;
   io::Socket* socket_;
   std::thread* thread_;
   listener_vec_t listeners_;

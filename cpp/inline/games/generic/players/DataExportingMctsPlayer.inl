@@ -11,7 +11,7 @@ template <typename... BaseArgs>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::DataExportingMctsPlayer(
     const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
     : base_t(std::forward<BaseArgs>(base_args)...),
-      writer_(TrainingDataWriter::instantiate(writer_params)) {}
+      writer_(TrainingDataWriter::instantiate(writer_params, base_t::get_model_generation())) {}
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 void DataExportingMctsPlayer<GameState_, Tensorizor_>::start_game() {

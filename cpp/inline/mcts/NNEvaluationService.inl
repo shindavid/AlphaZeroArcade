@@ -34,6 +34,10 @@ void NNEvaluationService<GameState, Tensorizor>::connect_to_cmd_server(
     core::CmdServerClient* cmd_server_client) {
   cmd_server_client_ = cmd_server_client;
   cmd_server_client_->add_listener(this);
+
+  boost::json::object response;
+  response["type"] = "nn_eval_service_registration";
+  cmd_server_client_->send(response);
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -42,8 +46,9 @@ void NNEvaluationService<GameState, Tensorizor>::handle_cmd_server_msg(
   if (type == "pause") {
     pause();
   } else if (type == "reload_weights") {
-    std::string model_filename = msg.at("model_filename").as_string().c_str();
-    reload_weights(model_filename);
+    std::string model_filename = msg.at("file").as_string().c_str();
+    int model_generation = msg.at("gen").as_int64();
+    reload_weights(model_filename, model_generation);
   } else if (type == "metrics_request") {
     report_metrics();
   }
@@ -84,6 +89,7 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
     : instance_id_(NNEvaluationServiceProvider::register_instance()),
       params_(params),
+      model_generation_(params.model_generation),
       net_(params.model_filename, params.cuda_device),
       batch_data_(params.batch_size_limit),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
@@ -197,7 +203,6 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
   int64_t evaluated_positions = perf_stats_.evaluated_positions;
   int64_t batches_evaluated = perf_stats_.batches_evaluated;
   int64_t max_batches_evaluated = perf_stats_.max_batches_evaluated;
-  int max_batch_size = perf_stats_.max_evaluated_batch_size;
 
   float max_batch_pct =
       batches_evaluated > 0 ? 100.0 * max_batches_evaluated / batches_evaluated : 0.0f;
@@ -211,7 +216,6 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
   util::KeyValueDumper::add(dump_key("evaluated positions"), "%ld", evaluated_positions);
   util::KeyValueDumper::add(dump_key("batches evaluated"), "%ld", batches_evaluated);
   util::KeyValueDumper::add(dump_key("max batch pct"), "%.2f%%", max_batch_pct);
-  util::KeyValueDumper::add(dump_key("max batch size"), "%d", max_batch_size);
   util::KeyValueDumper::add(dump_key("avg batch size"), "%.2f", avg_batch_size);
   session_ended_ = true;
 }
@@ -275,11 +279,12 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   int batch_size = batch_metadata_.reserve_index;
   bool maxed = batch_size == params_.batch_size_limit;
 
-  perf_stats_.evaluated_positions += batch_size;
-  perf_stats_.batches_evaluated++;
-  perf_stats_.max_evaluated_batch_size =
-      std::max(perf_stats_.max_evaluated_batch_size, batch_size);
-  if (maxed) perf_stats_.max_batches_evaluated++;
+  {
+    std::lock_guard guard(perf_stats_mutex_);
+    perf_stats_.evaluated_positions += batch_size;
+    perf_stats_.batches_evaluated++;
+    if (maxed) perf_stats_.max_batches_evaluated++;
+  }
 
   batch_metadata_.unread_count = batch_metadata_.commit_count;
   batch_metadata_.reserve_index = 0;
@@ -319,9 +324,11 @@ NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request,
       util::ThreadSafePrinter printer(request.thread_id);
       printer.printf("  hit cache\n");
     }
+    // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
     perf_stats_.cache_hits++;
     return Response{cached.value(), true};
   }
+  // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
   perf_stats_.cache_misses++;
   return Response{nullptr, false};
 }
@@ -471,10 +478,6 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (cmd_server_client_) {
     boost::json::object response;
     response["type"] = "pause_ack";
-    response["client_id"] = cmd_server_client_->client_id();
-    response["nn_eval_service_id"] = instance_id_;
-    response["num_nn_eval_services"] = NNEvaluationServiceProvider::num_instances();
-
     cmd_server_client_->send(response);
   }
 
@@ -495,18 +498,17 @@ void NNEvaluationService<GameState, Tensorizor>::report_metrics() {
     printer.printf("Reporting metrics...\n");
   }
 
+  std::unique_lock lock(perf_stats_mutex_);
   perf_stats_t perf_stats_copy = perf_stats_;
   new (&perf_stats_) perf_stats_t();
+  lock.unlock();
 
   boost::json::object response;
   response["type"] = "metrics_report";
-  response["nn_eval_service_id"] = instance_id_;
-  response["num_nn_eval_services"] = NNEvaluationServiceProvider::num_instances();
-
-  response["timestamp"] = util::ns_since_epoch();
+  response["model_gen"] = model_generation_;
+  response["report_timestamp"] = util::ns_since_epoch();
   response["cache_hits"] = perf_stats_copy.cache_hits;
   response["cache_misses"] = perf_stats_copy.cache_misses;
-  response["max_evaluated_batch_size"] = perf_stats_copy.max_evaluated_batch_size;
   response["evaluated_positions"] = perf_stats_copy.evaluated_positions;
   response["batches_evaluated"] = perf_stats_copy.batches_evaluated;
   response["max_batches_evaluated"] = perf_stats_copy.max_batches_evaluated;
@@ -515,13 +517,16 @@ void NNEvaluationService<GameState, Tensorizor>::report_metrics() {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename) {
+void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename,
+                                                                int model_generation) {
   util::release_assert(paused_, "%s() called while not paused", __func__);
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
-    printer.printf("Refreshing network weights (%s)...\n", model_filename.c_str());
+    printer.printf("Refreshing network weights (gen=%d %s)...\n", model_generation,
+                   model_filename.c_str());
   }
   new (&net_) core::NeuralNet(model_filename, params_.cuda_device);
+  model_generation_ = model_generation;
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;

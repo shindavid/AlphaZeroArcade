@@ -120,6 +120,7 @@ class NNEvaluationService : public core::CmdServerListener {
    */
   static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
+  int get_model_generation() const { return model_generation_; }
   void connect_to_cmd_server(core::CmdServerClient* cmd_server_client);
   void handle_cmd_server_msg(const boost::json::value& msg, const std::string& type) override;
 
@@ -179,7 +180,7 @@ class NNEvaluationService : public core::CmdServerListener {
 
   void wait_for_unpause();
   void report_metrics();
-  void reload_weights(const std::string& model_filename);
+  void reload_weights(const std::string& model_filename, int model_generation);
   void pause();
   void unpause();
   void wait_until_batch_ready();
@@ -220,6 +221,7 @@ class NNEvaluationService : public core::CmdServerListener {
 
   const int instance_id_;
   const NNEvaluationServiceParams params_;
+  int model_generation_ = 0;
 
   profiler_t profiler_;
   std::thread* thread_ = nullptr;
@@ -267,19 +269,16 @@ class NNEvaluationService : public core::CmdServerListener {
    * perf_stats_t contains counters to track various performance metrics. The counters are
    * reported to the cmd-server whenever the cmd-server issues either a weight-refresh cmd or a
    * metrics-pull cmd. The counters are reset after each report.
-   *
-   * Technically, reads/writes to perf_stats_ should be protected by a mutex. But they are just
-   * counters, so it's not a big deal if they are a bit off. So we don't bother with a mutex.
    */
   struct perf_stats_t {
     int64_t cache_hits = 0;
     int64_t cache_misses = 0;
-    int max_evaluated_batch_size = 0;
     int64_t evaluated_positions = 0;
     int64_t batches_evaluated = 0;
     int64_t max_batches_evaluated = 0;
   };
   perf_stats_t perf_stats_;
+  std::mutex perf_stats_mutex_;
 
   core::CmdServerClient* cmd_server_client_ = nullptr;
 };

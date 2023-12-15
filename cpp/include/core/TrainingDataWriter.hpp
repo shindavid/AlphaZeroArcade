@@ -31,7 +31,6 @@ class TrainingDataWriter : public CmdServerListener {
     bool operator==(const Params& other) const = default;
 
     std::string games_base_dir;
-    std::string games_sub_dir;
     int64_t max_rows = 0;
   };
 
@@ -132,7 +131,7 @@ class TrainingDataWriter : public CmdServerListener {
   using GameData_sptr = std::shared_ptr<GameData>;
   using game_data_map_t = std::map<game_id_t, GameData_sptr>;
 
-  static TrainingDataWriter* instantiate(const Params& params);
+  static TrainingDataWriter* instantiate(const Params& params, int model_generation);
 
   /*
    * Assumes that instantiate() was called at least once.
@@ -150,10 +149,11 @@ class TrainingDataWriter : public CmdServerListener {
  protected:
   using game_queue_t = std::vector<GameData_sptr>;
 
-  TrainingDataWriter(const Params& params);
+  TrainingDataWriter(const Params& params, int model_generation);
   ~TrainingDataWriter();
 
-  void set_games_sub_dir(const std::string& games_sub_dir);
+  static boost::filesystem::path make_games_sub_dir(int model_generation);
+  void set_model_generation(int model_generation);
   boost::filesystem::path get_games_sub_dir() const;
   boost::filesystem::path get_full_games_dir() const;
 
@@ -171,6 +171,7 @@ class TrainingDataWriter : public CmdServerListener {
   bool closed_ = false;
   const boost::filesystem::path games_base_dir_;
   boost::filesystem::path games_sub_dir_;
+  int model_generation_ = 0;
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;

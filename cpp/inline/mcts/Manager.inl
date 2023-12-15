@@ -67,6 +67,11 @@ inline Manager<GameState, Tensorizor>::~Manager() {
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+int Manager<GameState, Tensorizor>::get_model_generation() const {
+  return nn_eval_service_ ? nn_eval_service_->get_model_generation() : 0;
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::start() {
   clear();
   shared_data_.move_number = 0;

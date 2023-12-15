@@ -12,6 +12,14 @@
 
 namespace core {
 
+namespace detail {
+
+inline boost::filesystem::path make_games_sub_dir(int model_generation) {
+  return util::create_string("gen-%d", model_generation);
+}
+
+}  // namespace detail
+
 template <bool ApplySymmetry>
 struct AuxTargetHelper {};
 
@@ -40,14 +48,10 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
 
   po2::options_description desc("TrainingDataWriter options");
   return desc
-      .template add_option<"games-base-dir", 'G'>(
+      .template add_option<"games-base-dir", 'D'>(
           po::value<std::string>(&games_base_dir),
           "base directory for games files. This is fixed. Game files look like "
-          "{games-base-dir}/{games-subdir}/{timestamp}.ptj")
-      .template add_option<"games-sub-dir", 'g'>(po::value<std::string>(&games_sub_dir),
-                                                 "sub directory for games files. This can be "
-                                                 "updated by the cmd-server. Game files look like "
-                                                 "{games-base-dir}/{games-subdir}/{timestamp}.ptj")
+          "{games-base-dir}/gen-{generation}/{timestamp}.ptj")
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows");
@@ -129,12 +133,17 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>*
-TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params) {
+TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params,
+                                                         int model_generation) {
   if (!instance_) {
-    instance_ = new TrainingDataWriter(params);
+    instance_ = new TrainingDataWriter(params, model_generation);
   } else {
     if (params != instance_->params_) {
       throw std::runtime_error("TrainingDataWriter::instance() called with different params");
+    }
+    if (model_generation != instance_->model_generation_) {
+      throw std::runtime_error(
+          "TrainingDataWriter::instance() called with different model generation");
     }
   }
   return instance_;
@@ -184,21 +193,19 @@ template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_
 void TrainingDataWriter<GameState_, Tensorizor_>::handle_cmd_server_msg(
     const boost::json::value& msg, const std::string& type) {
   if (type == "reload_weights") {
-    std::string new_games_sub_dir = msg.at("games_sub_dir").as_string().c_str();
-    set_games_sub_dir(new_games_sub_dir);
+    int model_generation = msg.at("gen").as_int64();
+    set_model_generation(model_generation);
   }
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
-    : params_(params)
-    , games_base_dir_(params.games_base_dir) {
+TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params,
+                                                                int model_generation)
+    : params_(params), games_base_dir_(params.games_base_dir) {
   util::clean_assert(params.games_base_dir.size() > 0,
                      "TrainingDataWriter: games_base_dir must be specified");
-  util::clean_assert(params.games_sub_dir.size() > 0,
-                     "TrainingDataWriter: games_sub_dir must be specified");
 
-  set_games_sub_dir(params.games_sub_dir);
+  set_model_generation(model_generation);
   boost::filesystem::create_directories(get_full_games_dir());
   if (CmdServerClient::initialized()) {
     connect_to_cmd_server(CmdServerClient::get());
@@ -212,9 +219,12 @@ TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::set_games_sub_dir(
-    const std::string& games_sub_dir) {
+void TrainingDataWriter<GameState_, Tensorizor_>::set_model_generation(
+    int model_generation) {
+  boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(model_generation);
+
   std::unique_lock lock(mutex_);
+  model_generation_ = model_generation;
   games_sub_dir_ = games_sub_dir;
 }
 
@@ -319,7 +329,9 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::string output_filename = util::create_string("%ld.ptd", ns_since_epoch);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
-  boost::filesystem::path games_sub_dir = get_games_sub_dir();
+  int model_generation = model_generation_;
+
+  boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(model_generation);
   boost::filesystem::path full_games_dir = games_base_dir_ / games_sub_dir;
   boost::filesystem::path output_path = full_games_dir / output_filename;
   boost::filesystem::path tmp_output_path = full_games_dir / tmp_output_filename;
@@ -345,7 +357,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   if (cmd_server_client_) {
     boost::json::object msg;
     msg["type"] = "game";
-    msg["sub_dir"] = games_sub_dir.string();
+    msg["model_gen"] = model_generation;
     msg["timestamp"] = ns_since_epoch;
     msg["rows"] = rows;
     cmd_server_client_->send(msg);
