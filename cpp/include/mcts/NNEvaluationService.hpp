@@ -218,6 +218,7 @@ class NNEvaluationService : public core::CmdServerListener {
   };
 
   static instance_map_t instance_map_;
+  static int instance_count_;
 
   const int instance_id_;
   const NNEvaluationServiceParams params_;

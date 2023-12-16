@@ -1,6 +1,5 @@
 #include <mcts/NNEvaluationService.hpp>
 
-#include <mcts/NNEvaluationServiceProvider.hpp>
 #include <util/Asserts.hpp>
 
 #include <boost/json/src.hpp>
@@ -10,6 +9,9 @@ namespace mcts {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 typename NNEvaluationService<GameState, Tensorizor>::instance_map_t
     NNEvaluationService<GameState, Tensorizor>::instance_map_;
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+int NNEvaluationService<GameState, Tensorizor>::instance_count_ = 0;
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tensorizor>::create(
@@ -87,7 +89,7 @@ inline void NNEvaluationService<GameState, Tensorizor>::set_profiling_dir(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
-    : instance_id_(NNEvaluationServiceProvider::register_instance()),
+    : instance_id_(instance_count_++),
       params_(params),
       model_generation_(params.model_generation),
       net_(params.model_filename, params.cuda_device),

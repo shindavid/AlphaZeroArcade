@@ -45,13 +45,12 @@ set(executables
         )
 
 add_subdirectory("cpp/src/core")
-add_subdirectory("cpp/src/mcts")
 add_subdirectory("cpp/src/util")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 
-set(common-libs core mcts util)
+set(common-libs core util)
 set(other-libs connect4-lib othello-lib tictactoe-lib)
 
 foreach(tgt ${executables} ${common-libs} ${other-libs})
