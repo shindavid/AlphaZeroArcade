@@ -55,7 +55,6 @@ class Manager {
   Manager(const ManagerParams& params);
   ~Manager();
 
-  int get_model_generation() const;
   const ManagerParams& params() const { return params_; }
   int num_search_threads() const { return params().num_search_threads; }
 

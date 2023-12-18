@@ -54,7 +54,13 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
           "{games-base-dir}/gen-{generation}/{timestamp}.ptj")
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
-          "if specified, kill process after writing this many rows");
+          "if specified, kill process after writing this many rows")
+      .template add_option<"model-generation", 'g'>(
+          po::value<int>(&model_generation)->default_value(model_generation),
+          "model generation. Used to organize self-play and telemetry data")
+      .template add_flag<"report-metrics", "do-not-report-metrics">(
+          &report_metrics, "report metrics to cmd-server periodically",
+          "do not report metrics to cmd-server");
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -133,17 +139,12 @@ void TrainingDataWriter<GameState_, Tensorizor_>::GameData::commit_opp_reply_to_
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>*
-TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params,
-                                                         int model_generation) {
+TrainingDataWriter<GameState_, Tensorizor_>::instantiate(const Params& params) {
   if (!instance_) {
-    instance_ = new TrainingDataWriter(params, model_generation);
+    instance_ = new TrainingDataWriter(params);
   } else {
     if (params != instance_->params_) {
       throw std::runtime_error("TrainingDataWriter::instance() called with different params");
-    }
-    if (model_generation != instance_->model_generation_) {
-      throw std::runtime_error(
-          "TrainingDataWriter::instance() called with different model generation");
     }
   }
   return instance_;
@@ -183,32 +184,24 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::connect_to_cmd_server(
-    CmdServerClient* cmd_server_client) {
-  cmd_server_client_ = cmd_server_client;
-  cmd_server_client_->add_listener(this);
+void TrainingDataWriter<GameState_, Tensorizor_>::flush_games(int next_generation) {
+  std::unique_lock lock(mutex_);
+  flushing_ = true;
+  next_model_generation_ = next_generation;
+  lock.unlock();
+  cv_.notify_one();
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::handle_cmd_server_msg(
-    const boost::json::value& msg, const std::string& type) {
-  if (type == "reload_weights") {
-    int model_generation = msg.at("gen").as_int64();
-    set_model_generation(model_generation);
-  }
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params,
-                                                                int model_generation)
+TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
     : params_(params), games_base_dir_(params.games_base_dir) {
   util::clean_assert(params.games_base_dir.size() > 0,
                      "TrainingDataWriter: games_base_dir must be specified");
 
-  set_model_generation(model_generation);
+  set_model_generation(params.model_generation);
   boost::filesystem::create_directories(get_full_games_dir());
   if (CmdServerClient::initialized()) {
-    connect_to_cmd_server(CmdServerClient::get());
+    CmdServerClient::get()->add_listener(this);
   }
   thread_ = new std::thread([&] { loop(); });
 }
@@ -245,14 +238,28 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   while (!closed_) {
     std::unique_lock lock(mutex_);
     game_queue_t& queue = completed_games_[queue_index_];
-    cv_.wait(lock, [&] { return !queue.empty() || closed_; });
+    cv_.wait(lock, [&] { return !queue.empty() || closed_ || flushing_; });
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
       write_to_file(data.get());
     }
     queue.clear();
+    complete_flush();
   }
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::complete_flush() {
+  if (!flushing_) return;
+
+  set_model_generation(next_model_generation_);
+
+  this->ready_for_flush_games_ack_ = true;
+  if (core::CmdServerClient::get()->ready_for_flush_games_ack()) {
+    core::CmdServerClient::get()->flush_games_ack();
+  }
+  flushing_ = true;
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -325,8 +332,8 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     }
   }
 
-  int64_t ns_since_epoch = util::ns_since_epoch();
-  std::string output_filename = util::create_string("%ld.ptd", ns_since_epoch);
+  int64_t timestamp = util::ns_since_epoch();
+  std::string output_filename = util::create_string("%ld.ptd", timestamp);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
   int model_generation = model_generation_;
@@ -354,18 +361,31 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
 
   // inform cmd-server of new file
-  if (cmd_server_client_) {
+  if (core::CmdServerClient::initialized()) {
+    core::CmdServerClient* client = core::CmdServerClient::get();
+
     boost::json::object msg;
     msg["type"] = "game";
     msg["model_gen"] = model_generation;
-    msg["timestamp"] = ns_since_epoch;
+    msg["timestamp"] = timestamp;
     msg["rows"] = rows;
-    cmd_server_client_->send(msg);
+
+    if (params_.report_metrics && client->ready_for_metrics(timestamp)) {
+      msg["metrics"] = client->get_perf_stats().to_json();
+      client->set_last_metrics_ts(timestamp);
+    }
+    client->send(msg);
   }
 
   rows_written_ += rows;
   if (params_.max_rows > 0 && rows_written_ >= params_.max_rows) {
     std::cout << "TrainingDataWriter: wrote " << rows_written_ << " rows, exiting" << std::endl;
+
+    if (core::CmdServerClient::initialized()) {
+      boost::json::object msg;
+      msg["type"] = "max_rows_reached";
+      core::CmdServerClient::get()->send(msg);
+    }
 
     // This assumes that we are in the same process as the GameServer, which is true for now. I
     // don't foresee the assumption being violated.

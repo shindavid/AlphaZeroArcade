@@ -5,6 +5,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/NeuralNet.hpp>
+#include <core/PerfStats.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
@@ -69,7 +70,10 @@ namespace mcts {
  * operations in the interleaving threads.
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class NNEvaluationService : public core::CmdServerListener {
+class NNEvaluationService
+    : public core::CmdServerListener<core::CmdServerMsgType::kPause>,
+      public core::CmdServerListener<core::CmdServerMsgType::kReloadWeights>,
+      public core::CmdServerListener<core::CmdServerMsgType::kMetricsRequest> {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
@@ -120,10 +124,6 @@ class NNEvaluationService : public core::CmdServerListener {
    */
   static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
-  int get_model_generation() const { return model_generation_; }
-  void connect_to_cmd_server(core::CmdServerClient* cmd_server_client);
-  void handle_cmd_server_msg(const boost::json::value& msg, const std::string& type) override;
-
   /*
    * Instantiates the thread_ member if not yet instantiated. This spawns a new thread.
    *
@@ -154,6 +154,8 @@ class NNEvaluationService : public core::CmdServerListener {
 
   void end_session();
 
+  core::perf_stats_t get_perf_stats() override;
+
  private:
   using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
   using cache_key_t = util::HashablePair<GameState, core::symmetry_index_t>;
@@ -179,9 +181,8 @@ class NNEvaluationService : public core::CmdServerListener {
   void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
 
   void wait_for_unpause();
-  void report_metrics();
-  void reload_weights(const std::string& model_filename, int model_generation);
-  void pause();
+  void reload_weights(const std::string& model_filename) override;
+  void pause() override;
   void unpause();
   void wait_until_batch_ready();
   void wait_for_first_reservation();
@@ -222,7 +223,6 @@ class NNEvaluationService : public core::CmdServerListener {
 
   const int instance_id_;
   const NNEvaluationServiceParams params_;
-  int model_generation_ = 0;
 
   profiler_t profiler_;
   std::thread* thread_ = nullptr;
@@ -266,22 +266,8 @@ class NNEvaluationService : public core::CmdServerListener {
   std::mutex pause_mutex_;
   std::condition_variable cv_paused_;
 
-  /*
-   * perf_stats_t contains counters to track various performance metrics. The counters are
-   * reported to the cmd-server whenever the cmd-server issues either a weight-refresh cmd or a
-   * metrics-pull cmd. The counters are reset after each report.
-   */
-  struct perf_stats_t {
-    int64_t cache_hits = 0;
-    int64_t cache_misses = 0;
-    int64_t evaluated_positions = 0;
-    int64_t batches_evaluated = 0;
-    int64_t max_batches_evaluated = 0;
-  };
-  perf_stats_t perf_stats_;
-  std::mutex perf_stats_mutex_;
-
-  core::CmdServerClient* cmd_server_client_ = nullptr;
+  core::perf_stats_t perf_stats_;
+  mutable std::mutex perf_stats_mutex_;
 };
 
 }  // namespace mcts

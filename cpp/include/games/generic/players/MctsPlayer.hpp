@@ -73,7 +73,6 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
   MctsPlayer(const Params&, Ts&&... mcts_params_args);
   ~MctsPlayer();
 
-  int get_model_generation() const { return mcts_manager_->get_model_generation(); }
   MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;

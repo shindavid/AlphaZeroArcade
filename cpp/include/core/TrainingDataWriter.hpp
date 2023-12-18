@@ -24,7 +24,8 @@ namespace core {
  * parallel.
  */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-class TrainingDataWriter : public CmdServerListener {
+class TrainingDataWriter
+    : public CmdServerListener<core::CmdServerMsgType::kFlushGames> {
  public:
   struct Params {
     auto make_options_description();
@@ -32,6 +33,8 @@ class TrainingDataWriter : public CmdServerListener {
 
     std::string games_base_dir;
     int64_t max_rows = 0;
+    int model_generation = 0;
+    bool report_metrics = true;
   };
 
   using GameState = GameState_;
@@ -131,7 +134,7 @@ class TrainingDataWriter : public CmdServerListener {
   using GameData_sptr = std::shared_ptr<GameData>;
   using game_data_map_t = std::map<game_id_t, GameData_sptr>;
 
-  static TrainingDataWriter* instantiate(const Params& params, int model_generation);
+  static TrainingDataWriter* instantiate(const Params& params);
 
   /*
    * Assumes that instantiate() was called at least once.
@@ -143,13 +146,12 @@ class TrainingDataWriter : public CmdServerListener {
   void close(GameData_sptr data);
   void shut_down();
 
-  void connect_to_cmd_server(CmdServerClient* cmd_server_client);
-  void handle_cmd_server_msg(const boost::json::value& msg, const std::string& type) override;
+  void flush_games(int next_generation) override;
 
  protected:
   using game_queue_t = std::vector<GameData_sptr>;
 
-  TrainingDataWriter(const Params& params, int model_generation);
+  TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
   static boost::filesystem::path make_games_sub_dir(int model_generation);
@@ -158,10 +160,10 @@ class TrainingDataWriter : public CmdServerListener {
   boost::filesystem::path get_full_games_dir() const;
 
   void loop();
+  void complete_flush();
   void write_to_file(const GameData* data);
 
   Params params_;
-  CmdServerClient* cmd_server_client_ = nullptr;
   std::thread* thread_;
   game_data_map_t game_data_map_;
   game_queue_t completed_games_[2];
@@ -169,6 +171,8 @@ class TrainingDataWriter : public CmdServerListener {
 
   int queue_index_ = 0;
   bool closed_ = false;
+  bool flushing_ = false;
+  int next_model_generation_ = 0;
   const boost::filesystem::path games_base_dir_;
   boost::filesystem::path games_sub_dir_;
   int model_generation_ = 0;

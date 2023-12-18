@@ -33,9 +33,6 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
 
   if (!params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(params);
-    if (core::CmdServerClient::initialized()) {
-      nn_eval_service_->connect_to_cmd_server(core::CmdServerClient::get());
-    }
     if (mcts::kEnableProfiling) {
       nn_eval_service_->set_profiling_dir(params.profiling_dir());
     }
@@ -64,11 +61,6 @@ inline Manager<GameState, Tensorizor>::~Manager() {
   for (auto* thread : search_threads_) {
     delete thread;
   }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-int Manager<GameState, Tensorizor>::get_model_generation() const {
-  return nn_eval_service_ ? nn_eval_service_->get_model_generation() : 0;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

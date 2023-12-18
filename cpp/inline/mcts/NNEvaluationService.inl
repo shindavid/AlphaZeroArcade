@@ -32,31 +32,6 @@ NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tenso
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::connect_to_cmd_server(
-    core::CmdServerClient* cmd_server_client) {
-  cmd_server_client_ = cmd_server_client;
-  cmd_server_client_->add_listener(this);
-
-  boost::json::object response;
-  response["type"] = "nn_eval_service_registration";
-  cmd_server_client_->send(response);
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::handle_cmd_server_msg(
-    const boost::json::value& msg, const std::string& type) {
-  if (type == "pause") {
-    pause();
-  } else if (type == "reload_weights") {
-    std::string model_filename = msg.at("file").as_string().c_str();
-    int model_generation = msg.at("gen").as_int64();
-    reload_weights(model_filename, model_generation);
-  } else if (type == "metrics_request") {
-    report_metrics();
-  }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::connect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
   num_connections_++;
@@ -91,7 +66,6 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
     : instance_id_(instance_count_++),
       params_(params),
-      model_generation_(params.model_generation),
       net_(params.model_filename, params.cuda_device),
       batch_data_(params.batch_size_limit),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
@@ -112,6 +86,10 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
+
+  if (core::CmdServerClient::initialized()) {
+    core::CmdServerClient::get()->add_listener(this);
+  }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -204,10 +182,10 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
 
   int64_t evaluated_positions = perf_stats_.evaluated_positions;
   int64_t batches_evaluated = perf_stats_.batches_evaluated;
-  int64_t max_batches_evaluated = perf_stats_.max_batches_evaluated;
+  int64_t full_batches_evaluated = perf_stats_.full_batches_evaluated;
 
   float max_batch_pct =
-      batches_evaluated > 0 ? 100.0 * max_batches_evaluated / batches_evaluated : 0.0f;
+      batches_evaluated > 0 ? 100.0 * full_batches_evaluated / batches_evaluated : 0.0f;
 
   float avg_batch_size =
       batches_evaluated > 0 ? evaluated_positions * 1.0 / batches_evaluated : 0.0f;
@@ -220,6 +198,16 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
   util::KeyValueDumper::add(dump_key("max batch pct"), "%.2f%%", max_batch_pct);
   util::KeyValueDumper::add(dump_key("avg batch size"), "%.2f", avg_batch_size);
   session_ended_ = true;
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+core::perf_stats_t NNEvaluationService<GameState, Tensorizor>::get_perf_stats() {
+  std::unique_lock lock(perf_stats_mutex_);
+  core::perf_stats_t perf_stats_copy = perf_stats_;
+  new (&perf_stats_) core::perf_stats_t();
+  lock.unlock();
+
+  return perf_stats_copy;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -279,13 +267,13 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   lock.unlock();
 
   int batch_size = batch_metadata_.reserve_index;
-  bool maxed = batch_size == params_.batch_size_limit;
+  bool full = batch_size == params_.batch_size_limit;
 
   {
     std::lock_guard guard(perf_stats_mutex_);
     perf_stats_.evaluated_positions += batch_size;
     perf_stats_.batches_evaluated++;
-    if (maxed) perf_stats_.max_batches_evaluated++;
+    if (full) perf_stats_.full_batches_evaluated++;
   }
 
   batch_metadata_.unread_count = batch_metadata_.commit_count;
@@ -477,58 +465,28 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (!paused_) return;  // early exit for common case, bypassing lock
 
-  if (cmd_server_client_) {
-    boost::json::object response;
-    response["type"] = "pause_ack";
-    cmd_server_client_->send(response);
-  }
+  this->ready_for_pause_ack_ = true;
+  if (core::CmdServerClient::get()->ready_for_pause_ack()) {
+    core::CmdServerClient::get()->pause_ack();
+    std::unique_lock lock(pause_mutex_);
+    cv_paused_.wait(lock, [&] { return !paused_; });
+    lock.unlock();
 
-  std::unique_lock lock(pause_mutex_);
-  cv_paused_.wait(lock, [&] { return !paused_; });
-  lock.unlock();
-
-  if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("Resuming...\n");
+    if (mcts::kEnableDebug) {
+      util::ThreadSafePrinter printer;
+      printer.printf("Resuming...\n");
+    }
   }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::report_metrics() {
-  if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("Reporting metrics...\n");
-  }
-
-  std::unique_lock lock(perf_stats_mutex_);
-  perf_stats_t perf_stats_copy = perf_stats_;
-  new (&perf_stats_) perf_stats_t();
-  lock.unlock();
-
-  boost::json::object response;
-  response["type"] = "metrics_report";
-  response["model_gen"] = model_generation_;
-  response["report_timestamp"] = util::ns_since_epoch();
-  response["cache_hits"] = perf_stats_copy.cache_hits;
-  response["cache_misses"] = perf_stats_copy.cache_misses;
-  response["evaluated_positions"] = perf_stats_copy.evaluated_positions;
-  response["batches_evaluated"] = perf_stats_copy.batches_evaluated;
-  response["max_batches_evaluated"] = perf_stats_copy.max_batches_evaluated;
-
-  cmd_server_client_->send(response);
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename,
-                                                                int model_generation) {
+void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename) {
   util::release_assert(paused_, "%s() called while not paused", __func__);
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
-    printer.printf("Refreshing network weights (gen=%d %s)...\n", model_generation,
-                   model_filename.c_str());
+    printer.printf("Refreshing network weights (%s)...\n", model_filename.c_str());
   }
   new (&net_) core::NeuralNet(model_filename, params_.cuda_device);
-  model_generation_ = model_generation;
 
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;

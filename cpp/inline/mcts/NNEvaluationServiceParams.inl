@@ -21,9 +21,6 @@ inline auto NNEvaluationServiceParams::make_options_description() {
           "model filename. If not specified, a uniform model is implicitly used")
       .template add_option<"cuda-device">(
           po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device")
-      .template add_option<"model-generation", 'g'>(
-          po::value<int>(&model_generation)->default_value(model_generation),
-          "model generation. Used to organize self-play and telemetry data")
       .template add_option<"batch-size-limit", 'b'>(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit), "batch size limit")
       .template add_option<"nn-eval-timeout-ns">(
