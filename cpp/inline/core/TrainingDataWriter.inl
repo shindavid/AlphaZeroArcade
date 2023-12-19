@@ -184,12 +184,27 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::flush_games(int next_generation) {
+void TrainingDataWriter<GameState_, Tensorizor_>::pause() {
   std::unique_lock lock(mutex_);
-  flushing_ = true;
-  next_model_generation_ = next_generation;
-  lock.unlock();
-  cv_.notify_one();
+  paused_ = true;
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
+  std::unique_lock lock(mutex_);
+  paused_ = false;
+}
+
+template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+void TrainingDataWriter<GameState_, Tensorizor_>::flush_games(int next_generation) {
+  for (int q = 0; q < 1; ++q) {
+    auto& queue = completed_games_[q];
+    for (GameData_sptr& data : queue) {
+      write_to_file(data.get());
+    }
+    queue.clear();
+  }
+  set_model_generation(next_generation);
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -238,28 +253,18 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
   while (!closed_) {
     std::unique_lock lock(mutex_);
     game_queue_t& queue = completed_games_[queue_index_];
-    cv_.wait(lock, [&] { return !queue.empty() || closed_ || flushing_; });
+    cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
+    if (paused_) {
+      core::CmdServerClient::get()->handle_pause_ack(this);
+      cv_.wait(lock, [&] { return !paused_; });
+    }
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
       write_to_file(data.get());
     }
     queue.clear();
-    complete_flush();
   }
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::complete_flush() {
-  if (!flushing_) return;
-
-  set_model_generation(next_model_generation_);
-
-  this->ready_for_flush_games_ack_ = true;
-  if (core::CmdServerClient::get()->ready_for_flush_games_ack()) {
-    core::CmdServerClient::get()->flush_games_ack();
-  }
-  flushing_ = true;
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

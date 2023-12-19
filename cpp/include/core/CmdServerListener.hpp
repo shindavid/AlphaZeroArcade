@@ -13,10 +13,8 @@ class CmdServerClient;
 
 /*
  * A connection to a cmd-server can be initiated via core::CmdServerClient::init(). Once that
- * connection is established, any number of CmdServerListeners can subscribe to the connection.
- *
- * Currently, the messages sent from the cmd-server are single-character commands. Each listener
- * is responsible for parsing the command and acting on it.
+ * connection is established, any number of CmdServerListeners can register with the singleton
+ * core::CmdServerClient.
  */
 template <CmdServerMsgType type>
 class CmdServerListener {};
@@ -28,8 +26,9 @@ class CmdServerListener<CmdServerMsgType::kPause> {
 
   virtual ~CmdServerListener() = default;
   virtual void pause() = 0;
+  virtual void unpause() = 0;
 
- protected:
+ private:
   bool ready_for_pause_ack_ = false;
 };
 

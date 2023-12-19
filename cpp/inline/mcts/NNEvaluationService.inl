@@ -465,17 +465,15 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (!paused_) return;  // early exit for common case, bypassing lock
 
-  this->ready_for_pause_ack_ = true;
-  if (core::CmdServerClient::get()->ready_for_pause_ack()) {
-    core::CmdServerClient::get()->pause_ack();
-    std::unique_lock lock(pause_mutex_);
-    cv_paused_.wait(lock, [&] { return !paused_; });
-    lock.unlock();
+  core::CmdServerClient::get()->handle_pause_ack(this);
 
-    if (mcts::kEnableDebug) {
-      util::ThreadSafePrinter printer;
-      printer.printf("Resuming...\n");
-    }
+  std::unique_lock lock(pause_mutex_);
+  cv_paused_.wait(lock, [&] { return !paused_; });
+  lock.unlock();
+
+  if (mcts::kEnableDebug) {
+    util::ThreadSafePrinter printer;
+    printer.printf("Resuming...\n");
   }
 }
 
@@ -493,8 +491,6 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::strin
     printer.printf("Clearing network cache...\n");
   }
   cache_.clear();
-
-  unpause();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

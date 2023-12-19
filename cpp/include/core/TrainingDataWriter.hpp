@@ -25,7 +25,8 @@ namespace core {
  */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter
-    : public CmdServerListener<core::CmdServerMsgType::kFlushGames> {
+    : public core::CmdServerListener<core::CmdServerMsgType::kPause>,
+      public CmdServerListener<core::CmdServerMsgType::kFlushGames> {
  public:
   struct Params {
     auto make_options_description();
@@ -146,6 +147,8 @@ class TrainingDataWriter
   void close(GameData_sptr data);
   void shut_down();
 
+  void pause() override;
+  void unpause() override;
   void flush_games(int next_generation) override;
 
  protected:
@@ -160,7 +163,6 @@ class TrainingDataWriter
   boost::filesystem::path get_full_games_dir() const;
 
   void loop();
-  void complete_flush();
   void write_to_file(const GameData* data);
 
   Params params_;
@@ -171,8 +173,7 @@ class TrainingDataWriter
 
   int queue_index_ = 0;
   bool closed_ = false;
-  bool flushing_ = false;
-  int next_model_generation_ = 0;
+  bool paused_ = false;
   const boost::filesystem::path games_base_dir_;
   boost::filesystem::path games_sub_dir_;
   int model_generation_ = 0;

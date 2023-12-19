@@ -183,7 +183,7 @@ class NNEvaluationService
   void wait_for_unpause();
   void reload_weights(const std::string& model_filename) override;
   void pause() override;
-  void unpause();
+  void unpause() override;
   void wait_until_batch_ready();
   void wait_for_first_reservation();
   void wait_for_last_reservation();
