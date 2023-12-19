@@ -13,12 +13,12 @@ namespace core {
 
 CmdServerClient* CmdServerClient::instance_ = nullptr;
 
-void CmdServerClient::init(const std::string& host, io::port_t port) {
+void CmdServerClient::init(const Params& params) {
   if (instance_) {
     throw util::Exception("CmdServerClient already initialized");
   }
 
-  instance_ = new CmdServerClient(host, port);
+  instance_ = new CmdServerClient(params);
 }
 
 void CmdServerClient::handle_pause_ack(PauseListener* listener) {
@@ -69,9 +69,9 @@ perf_stats_t CmdServerClient::get_perf_stats() const {
   return stats;
 }
 
-CmdServerClient::CmdServerClient(const std::string& host, io::port_t port)
-    : proc_start_ts_(util::ns_since_epoch()) {
-  socket_ = io::Socket::create_client_socket(host, port);
+CmdServerClient::CmdServerClient(const Params& params)
+    : proc_start_ts_(util::ns_since_epoch()), shared_gpu_(params.shared_gpu) {
+  socket_ = io::Socket::create_client_socket(params.cmd_server_ip_addr, params.cmd_server_port);
   send_handshake();
   recv_handshake();
   thread_ = new std::thread([this]() { loop(); });
@@ -89,6 +89,7 @@ void CmdServerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
   msg["proc_start_timestamp"] = proc_start_ts_;
+  msg["shared_gpu"] = shared_gpu_;
   socket_->json_write(msg);
 }
 

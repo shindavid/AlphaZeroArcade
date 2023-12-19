@@ -8,12 +8,6 @@ auto Main<PlayerFactory>::Args::make_options_description() {
   po2::options_description desc("Program options");
 
   return desc
-      .template add_option<"cmd-server-hostname">(
-          po::value<std::string>(&cmd_server_hostname)->default_value(cmd_server_hostname),
-          "cmd server hostname")
-      .template add_option<"cmd-server-port">(
-          po::value<io::port_t>(&cmd_server_port)->default_value(cmd_server_port),
-          "cmd server port. If unset, then this runs without a cmd server")
       .template add_option<"player">(po::value<std::vector<std::string>>(&player_strs),
                                      "Space-delimited list of player options, wrapped "
                                      "in quotes, to be specified multiple times");
@@ -34,6 +28,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     namespace po2 = boost_util::program_options;
 
     Args args;
+    core::CmdServerClient::Params cmd_server_params;
     typename GameServerProxy::Params game_server_proxy_params;
     typename GameServer::Params game_server_params = get_default_game_server_params();
 
@@ -41,6 +36,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     auto desc = raw_desc.template add_option<"help", 'h'>("help")
                     .template add_option<"help-full">("help with no-op flags included")
                     .add(args.make_options_description())
+                    .add(cmd_server_params.make_options_description())
                     .add(game_server_params.make_options_description())
                     .add(game_server_proxy_params.make_options_description());
 
@@ -56,8 +52,8 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       return 0;
     }
 
-    if (args.cmd_server_port > 0) {
-      core::CmdServerClient::init(args.cmd_server_hostname, args.cmd_server_port);
+    if (cmd_server_params.cmd_server_port > 0) {
+      core::CmdServerClient::init(cmd_server_params);
     }
 
     if (game_server_proxy_params.remote_port) {

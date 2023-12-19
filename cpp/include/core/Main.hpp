@@ -24,8 +24,6 @@ struct Main {
   using Player = core::AbstractPlayer<GameState>;
 
   struct Args {
-    std::string cmd_server_hostname = "localhost";
-    io::port_t cmd_server_port = 0;
     std::vector<std::string> player_strs;
 
     auto make_options_description();

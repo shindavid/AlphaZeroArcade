@@ -23,7 +23,9 @@ namespace core {
  *
  * Usage:
  *
- * core::CmdServerClient::init(host, port);
+ * core::CmdServerClient::Params params;
+ * // set params
+ * core::CmdServerClient::init(params);
  *
  * core::CmdServerClient* client = core::CmdServerClient::get();
  * client->send("abc", 3);
@@ -33,12 +35,21 @@ namespace core {
  */
 class CmdServerClient {
  public:
+  struct Params {
+    auto make_options_description();
+    bool operator==(const Params& other) const = default;
+
+    std::string cmd_server_ip_addr;
+    io::port_t cmd_server_port = 0;
+    bool shared_gpu = false;
+  };
+
   using PauseListener = CmdServerListener<CmdServerMsgType::kPause>;
   using ReloadWeightsListener = CmdServerListener<CmdServerMsgType::kReloadWeights>;
   using MetricsRequestListener = CmdServerListener<CmdServerMsgType::kMetricsRequest>;
   using FlushGamesListener = CmdServerListener<CmdServerMsgType::kFlushGames>;
 
-  static void init(const std::string& host, io::port_t port);
+  static void init(const Params&);
   static bool initialized() { return instance_;  }
   static CmdServerClient* get() { return instance_;  }
   int client_id() const { return client_id_; }
@@ -67,7 +78,7 @@ class CmdServerClient {
   void set_last_metrics_ts(int64_t ts) { last_metrics_ts_ = ts; }
 
  private:
-  CmdServerClient(const std::string& host, io::port_t port);
+  CmdServerClient(const Params&);
   ~CmdServerClient();
   void send_handshake();
   void recv_handshake();
@@ -82,6 +93,7 @@ class CmdServerClient {
   static CmdServerClient* instance_;
 
   const int64_t proc_start_ts_;
+  const bool shared_gpu_;
   int64_t last_metrics_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;
