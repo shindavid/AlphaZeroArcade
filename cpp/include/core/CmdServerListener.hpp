@@ -7,7 +7,12 @@
 
 namespace core {
 
-enum class CmdServerMsgType { kPause, kReloadWeights, kMetricsRequest, kFlushGames };
+enum class CmdServerInteractionType {
+  kPause,
+  kReloadWeights,
+  kMetricsRequest,
+  kUpdateGeneration
+};
 
 class CmdServerClient;
 
@@ -15,12 +20,17 @@ class CmdServerClient;
  * A connection to a cmd-server can be initiated via core::CmdServerClient::init(). Once that
  * connection is established, any number of CmdServerListeners can register with the singleton
  * core::CmdServerClient.
+ *
+ * When the CmdServerClient receives a message from the cmd-server, it engages in various
+ * interactions with the registered listeners. The interaction types are defined in
+ * the CmdServerInteractionType enum. These interaction types are not in general the same as the
+ * msg types sent by the cmd-server.
  */
-template <CmdServerMsgType type>
+template <CmdServerInteractionType type>
 class CmdServerListener {};
 
 template <>
-class CmdServerListener<CmdServerMsgType::kPause> {
+class CmdServerListener<CmdServerInteractionType::kPause> {
  public:
   friend class CmdServerClient;
 
@@ -29,33 +39,28 @@ class CmdServerListener<CmdServerMsgType::kPause> {
   virtual void unpause() = 0;
 
  private:
-  bool ready_for_pause_ack_ = false;
+  bool pause_notified_ = false;  // used by CmdServerClient
 };
 
 template <>
-class CmdServerListener<CmdServerMsgType::kReloadWeights> {
+class CmdServerListener<CmdServerInteractionType::kReloadWeights> {
  public:
   virtual ~CmdServerListener() = default;
   virtual void reload_weights(const std::string& model_filename) = 0;
 };
 
 template <>
-class CmdServerListener<CmdServerMsgType::kMetricsRequest> {
+class CmdServerListener<CmdServerInteractionType::kMetricsRequest> {
  public:
   virtual ~CmdServerListener() = default;
   virtual perf_stats_t get_perf_stats() = 0;
 };
 
 template <>
-class CmdServerListener<CmdServerMsgType::kFlushGames> {
+class CmdServerListener<CmdServerInteractionType::kUpdateGeneration> {
  public:
-  friend class CmdServerClient;
-
   virtual ~CmdServerListener() = default;
-  virtual void flush_games(int next_generation) = 0;
-
- protected:
-  bool ready_for_flush_games_ack_ = false;
+  virtual void update_generation(int generation) = 0;
 };
 
 }  // namespace core

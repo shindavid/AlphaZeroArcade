@@ -44,7 +44,7 @@ void CmdServerClient::add_listener(T* listener) {
   detail::add_listener(pause_listeners_, listener);
   detail::add_listener(reload_weights_listeners_, listener);
   detail::add_listener(metrics_request_listeners_, listener);
-  detail::add_listener(flush_games_listeners_, listener);
+  detail::add_listener(update_generation_listeners_, listener);
 }
 
 }  // namespace core

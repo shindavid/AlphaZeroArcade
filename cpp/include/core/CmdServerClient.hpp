@@ -44,10 +44,10 @@ class CmdServerClient {
     bool shared_gpu = false;
   };
 
-  using PauseListener = CmdServerListener<CmdServerMsgType::kPause>;
-  using ReloadWeightsListener = CmdServerListener<CmdServerMsgType::kReloadWeights>;
-  using MetricsRequestListener = CmdServerListener<CmdServerMsgType::kMetricsRequest>;
-  using FlushGamesListener = CmdServerListener<CmdServerMsgType::kFlushGames>;
+  using PauseListener = CmdServerListener<CmdServerInteractionType::kPause>;
+  using ReloadWeightsListener = CmdServerListener<CmdServerInteractionType::kReloadWeights>;
+  using MetricsRequestListener = CmdServerListener<CmdServerInteractionType::kMetricsRequest>;
+  using UpdateGenerationListener = CmdServerListener<CmdServerInteractionType::kUpdateGeneration>;
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
@@ -59,18 +59,7 @@ class CmdServerClient {
 
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
-  /*
-   * Communicates that listener has finished handling the pause message.
-   *
-   * Blocks until this method is called for every PauseListener. At that point, a single pause_ack
-   * is sent to the cmd-server, and then all threads are unblocked.
-   *
-   * Call this only once per listener per pause message. Violating this will result in undefined
-   * behavior.
-   */
-  void handle_pause_ack(PauseListener* listener);
-  bool ready_for_flush_games_ack();
-  void flush_games_ack();
+  void notify_pause_received(PauseListener* listener);
   perf_stats_t get_perf_stats() const;
 
   int64_t get_last_metrics_ts() const { return last_metrics_ts_; }
@@ -80,15 +69,17 @@ class CmdServerClient {
  private:
   CmdServerClient(const Params&);
   ~CmdServerClient();
+
   void send_handshake();
   void recv_handshake();
-  void handle_pause();
-  void handle_unpause();
-  void handle_reload_weights(const std::string& model_filename);
-  void handle_metrics_request();
-  void handle_flush_games(int next_generation);
+  void pause();
+  void send_pause_ack();
+  void update_generation(int generation);
+  void unpause();
+  void reload_weights(const std::string& model_filename);
+  void send_reload_weights_ack(const perf_stats_t& stats);
   void loop();
-  bool all_pause_listeners_have_acked() const;
+  bool all_pause_notifications_received() const;
 
   static CmdServerClient* instance_;
 
@@ -100,12 +91,12 @@ class CmdServerClient {
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;
-  std::vector<FlushGamesListener*> flush_games_listeners_;
+  std::vector<UpdateGenerationListener*> update_generation_listeners_;
   int client_id_ = -1;  // assigned by cmd-server
 
-  std::condition_variable pause_ack_cv_;
-  mutable std::mutex pause_ack_mutex_;
-  bool ready_for_pause_ack_ = false;
+  std::condition_variable pause_cv_;
+  mutable std::mutex pause_mutex_;
+  bool pause_complete_ = false;
 };
 
 }  // namespace core

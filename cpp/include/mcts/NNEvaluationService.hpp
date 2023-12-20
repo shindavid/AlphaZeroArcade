@@ -71,9 +71,9 @@ namespace mcts {
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class NNEvaluationService
-    : public core::CmdServerListener<core::CmdServerMsgType::kPause>,
-      public core::CmdServerListener<core::CmdServerMsgType::kReloadWeights>,
-      public core::CmdServerListener<core::CmdServerMsgType::kMetricsRequest> {
+    : public core::CmdServerListener<core::CmdServerInteractionType::kPause>,
+      public core::CmdServerListener<core::CmdServerInteractionType::kReloadWeights>,
+      public core::CmdServerListener<core::CmdServerInteractionType::kMetricsRequest> {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;

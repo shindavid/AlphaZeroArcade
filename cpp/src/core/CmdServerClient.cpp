@@ -21,42 +21,14 @@ void CmdServerClient::init(const Params& params) {
   instance_ = new CmdServerClient(params);
 }
 
-void CmdServerClient::handle_pause_ack(PauseListener* listener) {
-  std::unique_lock lock(pause_ack_mutex_);
-  listener->ready_for_pause_ack_ = true;
-  ready_for_pause_ack_ = all_pause_listeners_have_acked();
+void CmdServerClient::notify_pause_received(PauseListener* listener) {
+  std::unique_lock lock(pause_mutex_);
+  listener->pause_notified_ = true;
+  pause_complete_ = all_pause_notifications_received();
 
-  if (ready_for_pause_ack_) {
-    boost::json::object msg;
-    msg["type"] = "pause_ack";
-    socket_->json_write(msg);
-
+  if (pause_complete_) {
     lock.unlock();
-    pause_ack_cv_.notify_all();
-  } else {
-    pause_ack_cv_.wait(lock, [this]() { return ready_for_pause_ack_; });
-  }
-
-  listener->ready_for_pause_ack_ = false;
-}
-
-bool CmdServerClient::ready_for_flush_games_ack() {
-  for (auto listener : flush_games_listeners_) {
-    if (!listener->ready_for_flush_games_ack_) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void CmdServerClient::flush_games_ack() {
-  // all flush games listeners have acked
-  boost::json::object msg;
-  msg["type"] = "flush_games_ack";
-  socket_->json_write(msg);
-
-  for (auto listener : flush_games_listeners_) {
-    listener->ready_for_flush_games_ack_ = false;
+    pause_cv_.notify_all();
   }
 }
 
@@ -108,53 +80,53 @@ void CmdServerClient::recv_handshake() {
   client_id_ = client_id;
 }
 
-void CmdServerClient::handle_pause() {
-  ready_for_pause_ack_ = false;
+void CmdServerClient::pause() {
+  if (pause_complete_) return;  // prevents deadlock in double-pause scenario
+  pause_complete_ = false;
+
   for (auto listener : pause_listeners_) {
+    listener->pause_notified_ = false;
     listener->pause();
   }
 
-  // pause is the only msg type for which the corresponding ack is sent asynchronously
+  std::unique_lock lock(pause_mutex_);
+  pause_cv_.wait(lock, [this]() { return pause_complete_; });
 }
 
-void CmdServerClient::handle_unpause() {
+void CmdServerClient::send_pause_ack() {
+  boost::json::object msg;
+  msg["type"] = "pause_ack";
+  socket_->json_write(msg);
+}
+
+void CmdServerClient::update_generation(int generation) {
+  for (auto listener : update_generation_listeners_) {
+    listener->update_generation(generation);
+  }
+}
+
+void CmdServerClient::unpause() {
   for (auto listener : pause_listeners_) {
     listener->unpause();
   }
-
-  boost::json::object msg;
-  msg["type"] = "unpause_ack";
-  socket_->json_write(msg);
 }
 
-void CmdServerClient::handle_reload_weights(const std::string& model_filename) {
+void CmdServerClient::reload_weights(const std::string& model_filename) {
   for (auto listener : reload_weights_listeners_) {
     listener->reload_weights(model_filename);
   }
+}
+
+void CmdServerClient::send_reload_weights_ack(const perf_stats_t& stats) {
+  int64_t timestamp = util::ns_since_epoch();
 
   boost::json::object msg;
   msg["type"] = "reload_weights_ack";
-  socket_->json_write(msg);
-}
-
-void CmdServerClient::handle_metrics_request() {
-  perf_stats_t stats = get_perf_stats();
-
-  int64_t timestamp = util::ns_since_epoch();
-
-  boost::json::object response;
-  response["type"] = "metrics_report";
-  response["timestamp"] = timestamp;
-  response["metrics"] = stats.to_json();
-  send(response);
+  msg["timestamp"] = timestamp;
+  msg["metrics"] = stats.to_json();
+  send(msg);
 
   set_last_metrics_ts(timestamp);
-}
-
-void CmdServerClient::handle_flush_games(int next_generation) {
-  for (auto listener : flush_games_listeners_) {
-    listener->flush_games(next_generation);
-  }
 }
 
 void CmdServerClient::loop() {
@@ -166,26 +138,26 @@ void CmdServerClient::loop() {
 
     std::string type = msg.at("type").as_string().c_str();
     if (type == "pause") {
-      handle_pause();
-      } else if (type == "unpause") {
-      handle_unpause();
+      pause();
+      send_pause_ack();
     } else if (type == "reload_weights") {
       std::string model_filename = msg.at("model_filename").as_string().c_str();
-      handle_reload_weights(model_filename);
-    } else if (type == "metrics_request") {
-      handle_metrics_request();
-    } else if (type == "flush_games") {
-      int next_generation = msg.at("next_generation").as_int64();
-      handle_flush_games(next_generation);
+      int model_generation = msg.at("model_generation").as_int64();
+      pause();
+      perf_stats_t stats = get_perf_stats();
+      update_generation(model_generation);
+      reload_weights(model_filename);
+      send_reload_weights_ack(stats);
+      unpause();
     } else {
       throw util::Exception("Unknown cmd-server message type %s", type.c_str());
     }
   }
 }
 
-bool CmdServerClient::all_pause_listeners_have_acked() const {
+bool CmdServerClient::all_pause_notifications_received() const {
   for (auto listener : pause_listeners_) {
-    if (!listener->ready_for_pause_ack_) {
+    if (!listener->pause_notified_) {
       return false;
     }
   }

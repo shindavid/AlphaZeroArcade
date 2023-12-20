@@ -465,7 +465,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (!paused_) return;  // early exit for common case, bypassing lock
 
-  core::CmdServerClient::get()->handle_pause_ack(this);
+  core::CmdServerClient::get()->notify_pause_received(this);
 
   std::unique_lock lock(pause_mutex_);
   cv_paused_.wait(lock, [&] { return !paused_; });

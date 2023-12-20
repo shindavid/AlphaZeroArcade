@@ -25,8 +25,8 @@ namespace core {
  */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter
-    : public core::CmdServerListener<core::CmdServerMsgType::kPause>,
-      public CmdServerListener<core::CmdServerMsgType::kFlushGames> {
+    : public core::CmdServerListener<core::CmdServerInteractionType::kPause>,
+      public CmdServerListener<core::CmdServerInteractionType::kUpdateGeneration> {
  public:
   struct Params {
     auto make_options_description();
@@ -149,7 +149,7 @@ class TrainingDataWriter
 
   void pause() override;
   void unpause() override;
-  void flush_games(int next_generation) override;
+  void update_generation(int generation) override;
 
  protected:
   using game_queue_t = std::vector<GameData_sptr>;

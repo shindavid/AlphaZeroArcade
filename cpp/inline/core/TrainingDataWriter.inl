@@ -195,16 +195,20 @@ void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
   paused_ = false;
 }
 
+/*
+ * NOTE: technically, update_generation() has a possible benign race-condition. While the
+ * TrainingDataWriter and NNEvaluationService(s) are paused, games could still be ongoing, reaching
+ * completion, and getting pushed to this->completed_games_. This is because a game might not need
+ * any more nn-evals to reach completion. In this case, the game will be mislabeled as belonging to
+ * the next generation, even though it never used an nn-eval from the next generation.
+ *
+ * We could fix this by adding more complexity to the CmdServerClient <-> CmdServerListener
+ * interaction, but it's not worth it. Mislabeling the generation of a game only really affects
+ * telemetry, and it's a very minor issue.
+ */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::flush_games(int next_generation) {
-  for (int q = 0; q < 1; ++q) {
-    auto& queue = completed_games_[q];
-    for (GameData_sptr& data : queue) {
-      write_to_file(data.get());
-    }
-    queue.clear();
-  }
-  set_model_generation(next_generation);
+void TrainingDataWriter<GameState_, Tensorizor_>::update_generation(int generation) {
+  set_model_generation(generation);
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -255,7 +259,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     game_queue_t& queue = completed_games_[queue_index_];
     cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
     if (paused_) {
-      core::CmdServerClient::get()->handle_pause_ack(this);
+      core::CmdServerClient::get()->notify_pause_received(this);
       cv_.wait(lock, [&] { return !paused_; });
     }
     queue_index_ = 1 - queue_index_;
