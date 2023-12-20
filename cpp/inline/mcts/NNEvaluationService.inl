@@ -180,7 +180,7 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
   int64_t cache_attempts = cache_hits + cache_misses;
   float cache_hit_pct = cache_attempts > 0 ? 100.0 * cache_hits / cache_attempts : 0.0f;
 
-  int64_t evaluated_positions = perf_stats_.evaluated_positions;
+  int64_t positions_evaluated = perf_stats_.positions_evaluated;
   int64_t batches_evaluated = perf_stats_.batches_evaluated;
   int64_t full_batches_evaluated = perf_stats_.full_batches_evaluated;
 
@@ -188,12 +188,12 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
       batches_evaluated > 0 ? 100.0 * full_batches_evaluated / batches_evaluated : 0.0f;
 
   float avg_batch_size =
-      batches_evaluated > 0 ? evaluated_positions * 1.0 / batches_evaluated : 0.0f;
+      batches_evaluated > 0 ? positions_evaluated * 1.0 / batches_evaluated : 0.0f;
 
   util::KeyValueDumper::add(dump_key("cache hits"), "%ld", cache_hits);
   util::KeyValueDumper::add(dump_key("cache misses"), "%ld", cache_misses);
   util::KeyValueDumper::add(dump_key("cache hit rate"), "%.2f%%", cache_hit_pct);
-  util::KeyValueDumper::add(dump_key("evaluated positions"), "%ld", evaluated_positions);
+  util::KeyValueDumper::add(dump_key("evaluated positions"), "%ld", positions_evaluated);
   util::KeyValueDumper::add(dump_key("batches evaluated"), "%ld", batches_evaluated);
   util::KeyValueDumper::add(dump_key("max batch pct"), "%.2f%%", max_batch_pct);
   util::KeyValueDumper::add(dump_key("avg batch size"), "%.2f", avg_batch_size);
@@ -271,7 +271,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
 
   {
     std::lock_guard guard(perf_stats_mutex_);
-    perf_stats_.evaluated_positions += batch_size;
+    perf_stats_.positions_evaluated += batch_size;
     perf_stats_.batches_evaluated++;
     if (full) perf_stats_.full_batches_evaluated++;
   }
@@ -480,6 +480,18 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename) {
   util::release_assert(paused_, "%s() called while not paused", __func__);
+
+  int64_t timestamp = util::ns_since_epoch();
+
+  core::CmdServerClient* client = core::CmdServerClient::get();
+
+  boost::json::object msg;
+  msg["type"] = "metrics";
+  msg["timestamp"] = timestamp;
+  msg["metrics"] = client->get_perf_stats().to_json();
+  client->set_last_metrics_ts(timestamp);
+  client->send(msg);
+
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("Refreshing network weights (%s)...\n", model_filename.c_str());
@@ -490,6 +502,7 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::strin
     util::ThreadSafePrinter printer;
     printer.printf("Clearing network cache...\n");
   }
+  std::unique_lock lock(cache_mutex_);
   cache_.clear();
 }
 

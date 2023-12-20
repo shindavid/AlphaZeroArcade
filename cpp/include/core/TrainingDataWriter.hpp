@@ -16,6 +16,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/CppUtil.hpp>
 
 namespace core {
 
@@ -25,8 +26,7 @@ namespace core {
  */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter
-    : public core::CmdServerListener<core::CmdServerInteractionType::kPause>,
-      public CmdServerListener<core::CmdServerInteractionType::kUpdateGeneration> {
+    : public core::CmdServerListener<core::CmdServerInteractionType::kPause> {
  public:
   struct Params {
     auto make_options_description();
@@ -34,7 +34,6 @@ class TrainingDataWriter
 
     std::string games_base_dir;
     int64_t max_rows = 0;
-    int model_generation = 0;
     bool report_metrics = true;
   };
 
@@ -114,9 +113,10 @@ class TrainingDataWriter
 
    protected:
     // friend classes only intended to use these protected members
-    GameData(game_id_t id) : id_(id) {}
+    GameData(game_id_t id) : id_(id), start_timestamp_(util::ns_since_epoch()) {}
     const data_chunk_list_t& chunks() const { return chunks_; }
     game_id_t id() const { return id_; }
+    int64_t start_timestamp() const { return start_timestamp_; }
     bool closed() const { return closed_; }
     void close() { closed_ = true; }
 
@@ -130,6 +130,7 @@ class TrainingDataWriter
     data_chunk_list_t chunks_;
     group_vec_t pending_groups_;  // for opponent-reply auxiliary policy target
     const game_id_t id_;
+    const int64_t start_timestamp_;
     bool closed_ = false;
   };
   using GameData_sptr = std::shared_ptr<GameData>;
@@ -149,18 +150,12 @@ class TrainingDataWriter
 
   void pause() override;
   void unpause() override;
-  void update_generation(int generation) override;
 
  protected:
   using game_queue_t = std::vector<GameData_sptr>;
 
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
-
-  static boost::filesystem::path make_games_sub_dir(int model_generation);
-  void set_model_generation(int model_generation);
-  boost::filesystem::path get_games_sub_dir() const;
-  boost::filesystem::path get_full_games_dir() const;
 
   void loop();
   void write_to_file(const GameData* data);
@@ -175,8 +170,6 @@ class TrainingDataWriter
   bool closed_ = false;
   bool paused_ = false;
   const boost::filesystem::path games_base_dir_;
-  boost::filesystem::path games_sub_dir_;
-  int model_generation_ = 0;
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;

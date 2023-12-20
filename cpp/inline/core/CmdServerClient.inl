@@ -28,12 +28,15 @@ inline auto CmdServerClient::Params::make_options_description() {
   po2::options_description desc("cmd-server options");
 
   return desc
-      .template add_option<"cmd-server-ip-addr">(
-          po::value<std::string>(&cmd_server_ip_addr)->default_value(cmd_server_ip_addr),
-          "cmd server ip address")
+      .template add_option<"cmd-server-hostname">(
+          po::value<std::string>(&cmd_server_hostname)->default_value(cmd_server_hostname),
+          "cmd server hotsname")
       .template add_option<"cmd-server-port">(
           po::value<io::port_t>(&cmd_server_port)->default_value(cmd_server_port),
           "cmd server port. If unset, then this runs without a cmd server")
+      .template add_option<"starting-generation">(
+          po::value<int>(&starting_generation)->default_value(starting_generation),
+          "starting generation")
       .template add_flag<"shared-gpu", "non-shared-gpu">(
           &shared_gpu, "signifies that GPU is shared with training process",
           "signifies that GPU is not shared with training process");
@@ -44,7 +47,6 @@ void CmdServerClient::add_listener(T* listener) {
   detail::add_listener(pause_listeners_, listener);
   detail::add_listener(reload_weights_listeners_, listener);
   detail::add_listener(metrics_request_listeners_, listener);
-  detail::add_listener(update_generation_listeners_, listener);
 }
 
 }  // namespace core

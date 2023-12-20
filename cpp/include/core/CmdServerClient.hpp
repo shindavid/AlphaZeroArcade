@@ -39,20 +39,21 @@ class CmdServerClient {
     auto make_options_description();
     bool operator==(const Params& other) const = default;
 
-    std::string cmd_server_ip_addr;
+    std::string cmd_server_hostname = "localhost";
     io::port_t cmd_server_port = 0;
+    int starting_generation = 0;
     bool shared_gpu = false;
   };
 
   using PauseListener = CmdServerListener<CmdServerInteractionType::kPause>;
   using ReloadWeightsListener = CmdServerListener<CmdServerInteractionType::kReloadWeights>;
   using MetricsRequestListener = CmdServerListener<CmdServerInteractionType::kMetricsRequest>;
-  using UpdateGenerationListener = CmdServerListener<CmdServerInteractionType::kUpdateGeneration>;
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
   static CmdServerClient* get() { return instance_;  }
   int client_id() const { return client_id_; }
+  int cur_generation() const { return cur_generation_; }
 
   template <typename T>
   void add_listener(T* listener);
@@ -73,11 +74,10 @@ class CmdServerClient {
   void send_handshake();
   void recv_handshake();
   void pause();
+  void send_metrics();
   void send_pause_ack();
-  void update_generation(int generation);
   void unpause();
   void reload_weights(const std::string& model_filename);
-  void send_reload_weights_ack(const perf_stats_t& stats);
   void loop();
   bool all_pause_notifications_received() const;
 
@@ -91,8 +91,8 @@ class CmdServerClient {
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;
-  std::vector<UpdateGenerationListener*> update_generation_listeners_;
   int client_id_ = -1;  // assigned by cmd-server
+  int cur_generation_;
 
   std::condition_variable pause_cv_;
   mutable std::mutex pause_mutex_;

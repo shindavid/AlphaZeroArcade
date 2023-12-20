@@ -19,7 +19,7 @@ struct perf_stats_t {
 
   int64_t cache_hits = 0;
   int64_t cache_misses = 0;
-  int64_t evaluated_positions = 0;
+  int64_t positions_evaluated = 0;
   int64_t batches_evaluated = 0;
   int64_t full_batches_evaluated = 0;
 };

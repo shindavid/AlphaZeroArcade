@@ -43,7 +43,7 @@ perf_stats_t CmdServerClient::get_perf_stats() const {
 
 CmdServerClient::CmdServerClient(const Params& params)
     : proc_start_ts_(util::ns_since_epoch()), shared_gpu_(params.shared_gpu) {
-  socket_ = io::Socket::create_client_socket(params.cmd_server_ip_addr, params.cmd_server_port);
+  socket_ = io::Socket::create_client_socket(params.cmd_server_hostname, params.cmd_server_port);
   send_handshake();
   recv_handshake();
   thread_ = new std::thread([this]() { loop(); });
@@ -93,16 +93,23 @@ void CmdServerClient::pause() {
   pause_cv_.wait(lock, [this]() { return pause_complete_; });
 }
 
+void CmdServerClient::send_metrics() {
+  int64_t timestamp = util::ns_since_epoch();
+
+  boost::json::object msg;
+  msg["type"] = "metrics";
+  msg["gen"] = cur_generation_;
+  msg["timestamp"] = timestamp;
+  msg["metrics"] = get_perf_stats().to_json();
+
+  set_last_metrics_ts(timestamp);
+  send(msg);
+}
+
 void CmdServerClient::send_pause_ack() {
   boost::json::object msg;
   msg["type"] = "pause_ack";
   socket_->json_write(msg);
-}
-
-void CmdServerClient::update_generation(int generation) {
-  for (auto listener : update_generation_listeners_) {
-    listener->update_generation(generation);
-  }
 }
 
 void CmdServerClient::unpause() {
@@ -115,18 +122,6 @@ void CmdServerClient::reload_weights(const std::string& model_filename) {
   for (auto listener : reload_weights_listeners_) {
     listener->reload_weights(model_filename);
   }
-}
-
-void CmdServerClient::send_reload_weights_ack(const perf_stats_t& stats) {
-  int64_t timestamp = util::ns_since_epoch();
-
-  boost::json::object msg;
-  msg["type"] = "reload_weights_ack";
-  msg["timestamp"] = timestamp;
-  msg["metrics"] = stats.to_json();
-  send(msg);
-
-  set_last_metrics_ts(timestamp);
 }
 
 void CmdServerClient::loop() {
@@ -142,12 +137,10 @@ void CmdServerClient::loop() {
       send_pause_ack();
     } else if (type == "reload_weights") {
       std::string model_filename = msg.at("model_filename").as_string().c_str();
-      int model_generation = msg.at("model_generation").as_int64();
+      cur_generation_ = msg.at("generation").as_int64();
       pause();
-      perf_stats_t stats = get_perf_stats();
-      update_generation(model_generation);
+      send_metrics();
       reload_weights(model_filename);
-      send_reload_weights_ack(stats);
       unpause();
     } else {
       throw util::Exception("Unknown cmd-server message type %s", type.c_str());

@@ -10,8 +10,7 @@ namespace core {
 enum class CmdServerInteractionType {
   kPause,
   kReloadWeights,
-  kMetricsRequest,
-  kUpdateGeneration
+  kMetricsRequest
 };
 
 class CmdServerClient;
@@ -54,13 +53,6 @@ class CmdServerListener<CmdServerInteractionType::kMetricsRequest> {
  public:
   virtual ~CmdServerListener() = default;
   virtual perf_stats_t get_perf_stats() = 0;
-};
-
-template <>
-class CmdServerListener<CmdServerInteractionType::kUpdateGeneration> {
- public:
-  virtual ~CmdServerListener() = default;
-  virtual void update_generation(int generation) = 0;
 };
 
 }  // namespace core

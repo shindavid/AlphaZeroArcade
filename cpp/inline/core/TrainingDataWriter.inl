@@ -6,6 +6,7 @@
 
 #include <core/GameServer.hpp>
 #include <util/BoostUtil.hpp>
+#include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/StringUtil.hpp>
 #include <util/TorchUtil.hpp>
@@ -55,9 +56,6 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows")
-      .template add_option<"model-generation", 'g'>(
-          po::value<int>(&model_generation)->default_value(model_generation),
-          "model generation. Used to organize self-play and telemetry data")
       .template add_flag<"report-metrics", "do-not-report-metrics">(
           &report_metrics, "report metrics to cmd-server periodically",
           "do not report metrics to cmd-server");
@@ -195,30 +193,12 @@ void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
   paused_ = false;
 }
 
-/*
- * NOTE: technically, update_generation() has a possible benign race-condition. While the
- * TrainingDataWriter and NNEvaluationService(s) are paused, games could still be ongoing, reaching
- * completion, and getting pushed to this->completed_games_. This is because a game might not need
- * any more nn-evals to reach completion. In this case, the game will be mislabeled as belonging to
- * the next generation, even though it never used an nn-eval from the next generation.
- *
- * We could fix this by adding more complexity to the CmdServerClient <-> CmdServerListener
- * interaction, but it's not worth it. Mislabeling the generation of a game only really affects
- * telemetry, and it's a very minor issue.
- */
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::update_generation(int generation) {
-  set_model_generation(generation);
-}
-
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
     : params_(params), games_base_dir_(params.games_base_dir) {
   util::clean_assert(params.games_base_dir.size() > 0,
                      "TrainingDataWriter: games_base_dir must be specified");
 
-  set_model_generation(params.model_generation);
-  boost::filesystem::create_directories(get_full_games_dir());
   if (CmdServerClient::initialized()) {
     CmdServerClient::get()->add_listener(this);
   }
@@ -228,28 +208,6 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& pa
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::~TrainingDataWriter() {
   shut_down();
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::set_model_generation(
-    int model_generation) {
-  boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(model_generation);
-
-  std::unique_lock lock(mutex_);
-  model_generation_ = model_generation;
-  games_sub_dir_ = games_sub_dir;
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-boost::filesystem::path TrainingDataWriter<GameState_, Tensorizor_>::get_games_sub_dir() const {
-  std::unique_lock lock(mutex_);
-  return games_sub_dir_;
-}
-
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-boost::filesystem::path TrainingDataWriter<GameState_, Tensorizor_>::get_full_games_dir() const {
-  std::unique_lock lock(mutex_);
-  return games_base_dir_ / games_sub_dir_;
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -341,11 +299,14 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     }
   }
 
-  int64_t timestamp = util::ns_since_epoch();
-  std::string output_filename = util::create_string("%ld.ptd", timestamp);
+  int64_t start_timestamp = data->start_timestamp();
+  int64_t cur_timestamp = util::ns_since_epoch();
+  std::string output_filename = util::create_string("%ld.ptd", cur_timestamp);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
-  int model_generation = model_generation_;
+  core::CmdServerClient* client = core::CmdServerClient::get();
+
+  int model_generation = client ? client->cur_generation() : 0;
 
   boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(model_generation);
   boost::filesystem::path full_games_dir = games_base_dir_ / games_sub_dir;
@@ -370,18 +331,17 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
 
   // inform cmd-server of new file
-  if (core::CmdServerClient::initialized()) {
-    core::CmdServerClient* client = core::CmdServerClient::get();
-
+  if (client) {
     boost::json::object msg;
     msg["type"] = "game";
-    msg["model_gen"] = model_generation;
-    msg["timestamp"] = timestamp;
+    msg["gen"] = model_generation;
+    msg["start_timestamp"] = start_timestamp;
+    msg["end_timestamp"] = cur_timestamp;
     msg["rows"] = rows;
 
-    if (params_.report_metrics && client->ready_for_metrics(timestamp)) {
+    if (params_.report_metrics && client->ready_for_metrics(cur_timestamp)) {
       msg["metrics"] = client->get_perf_stats().to_json();
-      client->set_last_metrics_ts(timestamp);
+      client->set_last_metrics_ts(cur_timestamp);
     }
     client->send(msg);
   }
@@ -390,10 +350,10 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   if (params_.max_rows > 0 && rows_written_ >= params_.max_rows) {
     std::cout << "TrainingDataWriter: wrote " << rows_written_ << " rows, exiting" << std::endl;
 
-    if (core::CmdServerClient::initialized()) {
+    if (client) {
       boost::json::object msg;
       msg["type"] = "max_rows_reached";
-      core::CmdServerClient::get()->send(msg);
+      client->send(msg);
     }
 
     // This assumes that we are in the same process as the GameServer, which is true for now. I
