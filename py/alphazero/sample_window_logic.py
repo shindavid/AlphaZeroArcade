@@ -57,7 +57,7 @@ class KataGoWindowSizeFunction(WindowSizeFunction):
 
     def __call__(self, n: int) -> int:
         gamma = (n / self.n0)**self.alpha - 1
-        return self.n0 * (1 + self.beta * gamma / self.alpha)
+        return min(n, self.n0 * (1 + self.beta * gamma / self.alpha))
 
 
 @dataclass
