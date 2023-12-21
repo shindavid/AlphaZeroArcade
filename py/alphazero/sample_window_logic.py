@@ -71,8 +71,7 @@ class Window:
 
     This simplification is reasonable because as the sample window slides forward, each position
     slides from the end of the window to the start of the window, and so the overestimates and
-    the underestimates will approximately cancel out. In the case of FixedWindowSizeFunction, they
-    should exactly cancel out.
+    the underestimates will approximately cancel out.
     """
     start: int
     end: int
