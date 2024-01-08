@@ -223,14 +223,14 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
-      write_to_file(data.get());
+      if (write_to_file(data.get())) break;
     }
     queue.clear();
   }
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* data) {
+bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* data) {
   int total_rows = 0;
   for (const DataChunk& chunk : data->chunks()) {
     total_rows += chunk.rows();
@@ -314,6 +314,10 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   boost::filesystem::path output_path = full_games_dir / output_filename;
   boost::filesystem::path tmp_output_path = full_games_dir / tmp_output_filename;
 
+  if (!boost::filesystem::exists(full_games_dir)) {
+    boost::filesystem::create_directories(full_games_dir);
+  }
+
   using tensor_map_t = std::map<std::string, torch::Tensor>;
 
   tensor_map_t tensor_map;
@@ -331,26 +335,35 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   torch_util::save(tensor_map, tmp_output_path.string());
   std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
 
+  auto new_rows_written = rows_written_ + rows;
+  bool done = params_.max_rows > 0 && new_rows_written >= params_.max_rows;
+
   // inform cmd-server of new file
   if (client) {
+    bool flush = done || client->ready_for_games_flush(cur_timestamp);
+
     boost::json::object msg;
     msg["type"] = "game";
     msg["gen"] = model_generation;
     msg["start_timestamp"] = start_timestamp;
     msg["end_timestamp"] = cur_timestamp;
     msg["rows"] = rows;
+    msg["flush"] = flush;
 
-    if (params_.report_metrics && client->ready_for_metrics(cur_timestamp)) {
-      msg["metrics"] = client->get_perf_stats().to_json();
-      client->set_last_metrics_ts(cur_timestamp);
+    if (flush) {
+      if (params_.report_metrics) {
+        msg["metrics"] = client->get_perf_stats().to_json();
+      }
+      client->set_last_games_flush_ts(cur_timestamp);
     }
     client->send(msg);
   }
 
-  rows_written_ += rows;
-  if (params_.max_rows > 0 && rows_written_ >= params_.max_rows) {
-    std::cout << "TrainingDataWriter: wrote " << rows_written_ << " rows, exiting" << std::endl;
-
+  rows_written_ = new_rows_written;
+  if (done) {
+    std::cout << "TrainingDataWriter: shutting down after writing " << rows_written_ << " rows"
+              << std::endl;
+    closed_ = true;
     if (client) {
       boost::json::object msg;
       msg["type"] = "max_rows_reached";
@@ -360,7 +373,9 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     // This assumes that we are in the same process as the GameServer, which is true for now. I
     // don't foresee the assumption being violated.
     GameServer<GameState>::request_shutdown();
+    return true;
   }
+  return false;
 }
 
 }  // namespace core

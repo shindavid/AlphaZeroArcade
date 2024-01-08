@@ -63,9 +63,11 @@ class CmdServerClient {
   void notify_pause_received(PauseListener* listener);
   perf_stats_t get_perf_stats() const;
 
-  int64_t get_last_metrics_ts() const { return last_metrics_ts_; }
-  bool ready_for_metrics(int64_t ts) const { return ts > last_metrics_ts_ + util::s_to_ns(1); }
-  void set_last_metrics_ts(int64_t ts) { last_metrics_ts_ = ts; }
+  int64_t get_last_games_flush_ts() const { return last_games_flush_ts_; }
+  bool ready_for_games_flush(int64_t ts) const {
+    return ts > last_games_flush_ts_ + util::s_to_ns(1);
+  }
+  void set_last_games_flush_ts(int64_t ts) { last_games_flush_ts_ = ts; }
 
  private:
   CmdServerClient(const Params&);
@@ -85,7 +87,7 @@ class CmdServerClient {
 
   const int64_t proc_start_ts_;
   const bool shared_gpu_;
-  int64_t last_metrics_ts_ = 0;
+  int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;
   std::vector<PauseListener*> pause_listeners_;

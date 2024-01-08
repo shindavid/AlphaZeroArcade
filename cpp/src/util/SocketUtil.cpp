@@ -27,7 +27,7 @@ Socket* Socket::get_instance(file_descriptor_t fd) {
 
 void Socket::json_write(const boost::json::value& json) {
   std::string json_str = boost::json::serialize(json);
-  int length = json_str.size();
+  uint32_t length = htonl(static_cast<uint32_t>(json_str.size()));
 
   std::unique_lock lock(write_mutex_);
   write_helper(&length, sizeof(length), "Could not json_write length to socket");

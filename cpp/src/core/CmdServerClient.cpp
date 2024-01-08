@@ -68,7 +68,7 @@ void CmdServerClient::send_handshake() {
 void CmdServerClient::recv_handshake() {
   boost::json::value msg;
   if (!socket_->json_read(&msg)) {
-    throw util::Exception("Unexpected cmd-server socket close");
+    throw util::Exception("%s(): unexpected cmd-server socket close", __func__);
   }
 
   std::string type = msg.at("type").as_string().c_str();
@@ -102,7 +102,7 @@ void CmdServerClient::send_metrics() {
   msg["timestamp"] = timestamp;
   msg["metrics"] = get_perf_stats().to_json();
 
-  set_last_metrics_ts(timestamp);
+  set_last_games_flush_ts(timestamp);
   send(msg);
 }
 
@@ -128,7 +128,7 @@ void CmdServerClient::loop() {
   while (true) {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
-      throw util::Exception("Unexpected cmd-server socket close");
+      throw util::Exception("%s() unexpected cmd-server socket close", __func__);
     }
 
     std::string type = msg.at("type").as_string().c_str();

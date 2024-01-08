@@ -69,7 +69,9 @@ class Manager {
   void stop_search_threads();
   void run_search(SearchThread* thread, int tree_size_limit);
 
-  void end_session() { nn_eval_service_->end_session(); }
+  void end_session() {
+    if (nn_eval_service_) nn_eval_service_->end_session();
+  }
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;

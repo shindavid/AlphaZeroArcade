@@ -158,7 +158,7 @@ class TrainingDataWriter
   ~TrainingDataWriter();
 
   void loop();
-  void write_to_file(const GameData* data);
+  bool write_to_file(const GameData* data);  // return true if this is last file
 
   Params params_;
   std::thread* thread_;

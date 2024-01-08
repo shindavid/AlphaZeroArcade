@@ -489,7 +489,7 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::strin
   msg["type"] = "metrics";
   msg["timestamp"] = timestamp;
   msg["metrics"] = client->get_perf_stats().to_json();
-  client->set_last_metrics_ts(timestamp);
+  client->set_last_games_flush_ts(timestamp);
   client->send(msg);
 
   if (mcts::kEnableDebug) {
