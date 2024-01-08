@@ -15,8 +15,8 @@ namespace core {
 
 namespace detail {
 
-inline boost::filesystem::path make_games_sub_dir(int model_generation) {
-  return util::create_string("gen-%d", model_generation);
+inline boost::filesystem::path make_games_sub_dir(int client_id, int model_generation) {
+  return util::create_string("client-%d/gen-%d", client_id, model_generation);
 }
 
 }  // namespace detail
@@ -306,9 +306,10 @@ void TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   core::CmdServerClient* client = core::CmdServerClient::get();
 
+  int client_id = client ? client->client_id() : 0;
   int model_generation = client ? client->cur_generation() : 0;
 
-  boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(model_generation);
+  boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(client_id, model_generation);
   boost::filesystem::path full_games_dir = games_base_dir_ / games_sub_dir;
   boost::filesystem::path output_path = full_games_dir / output_filename;
   boost::filesystem::path tmp_output_path = full_games_dir / tmp_output_filename;
