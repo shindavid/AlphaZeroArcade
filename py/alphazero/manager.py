@@ -112,13 +112,6 @@ class AlphaZeroManager:
             minibatches_per_window=ModelingArgs.snapshot_steps,
             minibatch_size=ModelingArgs.minibatch_size,
             )
-        # self.sampling_window = None
-
-        # self.dataset_generator = GamesDatasetGenerator(self.cmd_server_db_filename,
-        #                                                ModelingArgs.sample_limit)
-
-    # def get_done_marker_filename(self, gen: Generation) -> str:
-    #     return os.path.join(self.self_play_data_dir, f'gen-{gen}', 'done.txt')
 
     def set_model_cfg(self, model_cfg: str):
         self.model_cfg = model_cfg
@@ -318,7 +311,6 @@ class AlphaZeroManager:
             shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
             checkpoint = torch.load(tmp_checkpoint_filename)
             self._net = Model.load_from_checkpoint(checkpoint)
-            # self.dataset_generator.expected_sample_counts = checkpoint['sample_counts']
 
         self._init_net_and_opt()
 
@@ -382,9 +374,6 @@ class AlphaZeroManager:
     def get_checkpoint_filename(self, gen: Generation) -> str:
         return os.path.join(self.checkpoints_dir, f'gen-{gen}.ptc')
 
-    # def get_self_play_data_subdir(self, gen: Generation) -> str:
-    #     return os.path.join(self.self_play_data_dir, f'gen-{gen}')
-
     @staticmethod
     def get_ordered_subpaths(path: str) -> List[str]:
         subpaths = list(natsorted(f for f in os.listdir(path)))
@@ -415,22 +404,8 @@ class AlphaZeroManager:
     def get_latest_generation(self) -> Generation:
         return self.get_latest_model_generation()
 
-    # def get_latest_completed_self_play_data_generation(self) -> Generation:
-    #     info = AlphaZeroManager.get_latest_info(self.self_play_data_dir)
-    #     if info is None:
-    #         return -1
-    #     gen = info.generation
-    #     done_file = os.path.join(self.self_play_data_dir, info.path, 'done.txt')
-    #     if not os.path.isfile(done_file):
-    #         gen -= 1
-
-    #     return gen
-
     def get_latest_model_filename(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.models_dir)
-
-    # def get_latest_self_play_data_subdir(self) -> Optional[str]:
-    #     return AlphaZeroManager.get_latest_full_subpath(self.self_play_data_dir)
 
     def run_gen0_if_necessary(self):
         """
@@ -493,7 +468,6 @@ class AlphaZeroManager:
         if os.path.isfile(model_filename):
             return
 
-        # self.dataset_generator.init_to_sample_limit()
         self.train_step()
 
     def launch_cmd_server(self, port):
@@ -578,7 +552,6 @@ class AlphaZeroManager:
         tmp_checkpoint_filename = make_hidden_filename(checkpoint_filename)
         tmp_model_filename = make_hidden_filename(model_filename)
         checkpoint = {}
-        # checkpoint['sample_counts'] = self.dataset_generator.expected_sample_counts
         net.add_to_checkpoint(checkpoint)
         torch.save(checkpoint, tmp_checkpoint_filename)
         net.save_model(tmp_model_filename)
@@ -586,9 +559,6 @@ class AlphaZeroManager:
         os.rename(tmp_model_filename, model_filename)
         timed_print(f'Checkpoint saved: {checkpoint_filename}')
         timed_print(f'Model saved: {model_filename}')
-
-        # games_dir = self.get_self_play_data_subdir(gen)
-        # os.makedirs(games_dir, exist_ok=True)
 
         if gen > 1:
             self.cmd_server.reload_weights(model_filename, gen)

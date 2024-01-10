@@ -15,7 +15,7 @@ f(n) = n^0.75, where n = |M|.
 This module provides a class, GamesDatasetGenerator, that tracks the master sequence M. This class
 produces GamesDataset objects, which correspond to a window W of M.
 """
-from typing import List, Optional
+from typing import List
 
 import numpy as np
 import os
@@ -23,7 +23,6 @@ import sqlite3
 import torch
 from torch.utils.data import Dataset
 
-from alphazero.sample_window_logic import SamplingParams, Window, get_required_dataset_size
 from util.torch_util import Shape
 
 
@@ -168,32 +167,3 @@ class PositionDataset(Dataset):
     def __getitem__(self, idx):
         data, pos_index = self._get_data_and_pos_index(idx)
         return [data[key][pos_index] for key in self._key_order]
-
-
-# class PositionDatasetGenerator:
-#     def __init__(self, base_dir: str, db_conn: sqlite3.Connection, params: SamplingParams):
-#         self._base_dir = base_dir
-#         self._master_list = PositionListSlice()
-#         self._params = params
-#         self._db_conn = db_conn
-
-#     @property
-#     def master_length(self):
-#         return self._master_list.end_index
-
-#     def get_next_dataset(self, last_sample_window: Window) -> Optional[PositionDataset]:
-#         """
-#         Returns the next dataset for sampling. Returns None if there are not enough positions.
-#         """
-#         cursor = self._db_conn.cursor()
-#         self._master_list.extend(cursor)
-
-#         n = self.master_length
-#         f = get_required_dataset_size(self._params, last_sample_window)
-#         if n < f:
-#             return None
-
-#         c = n - f
-#         self._master_list.set_start_index(c)
-#         assert len(self._master_list) == f, (len(self._master_list), f)
-#         return PositionDataset(self._base_dir, self._master_list)

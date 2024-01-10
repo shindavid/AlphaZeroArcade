@@ -66,7 +66,6 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 import games
-from alphazero.data.metadata import DoneFileInfo
 from alphazero.manager import AlphaZeroManager
 from alphazero.ratings import extract_match_record, WinLossDrawCounts
 from config import Config
@@ -284,15 +283,29 @@ class Arena:
         if not missing_mcts_gen_set:
             return
 
-        values = []
-        for gen in missing_mcts_gen_set:
-            done_file = os.path.join(self.manager.get_self_play_data_subdir(gen - 1), 'done.txt')
-            done_file_info = DoneFileInfo(done_file)
-            n_games = int(done_file_info['n_games'])
-            runtime = float(done_file_info['runtime'])
-            n_evaluated_positions = int(done_file_info['n_evaluated_positions'])
-            n_batches_evaluated = int(done_file_info['n_batches_evaluated'])
+        placeholders = ', '.join('?' * len(missing_mcts_gen_set))
+        query1 = ('SELECT gen, positions_evaluated, batches_evaluated, games FROM self_play_metadata '
+                  'WHERE gen IN (%s)' % placeholders)
+        query2 = ('SELECT gen, start_timestamp, end_timestamp FROM timestamps '
+                  'WHERE gen IN (%s)' % placeholders)
 
+        training_db_conn = sqlite3.connect(os.path.join(self.manager.base_dir, 'training.db'))
+
+        c2 = training_db_conn.cursor()
+        c2.execute(query1, missing_mcts_gen_set)
+        results1 = list(c2.fetchall())
+
+        c2.execute(query2, missing_mcts_gen_set)
+        results2 = list(c2.fetchall())
+        training_db_conn.close()
+
+        runtime_dict = defaultdict(int)
+        for gen, start_timestamp, end_timestamp in results2:
+            runtime_dict[gen] += end_timestamp - start_timestamp
+
+        values = []
+        for gen, n_evaluated_positions, n_batches_evaluated, n_games in results1:
+            runtime = runtime_dict[gen]
             x_value_tuple = (gen, n_games, runtime, n_evaluated_positions, n_batches_evaluated)
             values.append(x_value_tuple)
 
