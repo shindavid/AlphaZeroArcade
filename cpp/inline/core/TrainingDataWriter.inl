@@ -364,11 +364,6 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     std::cout << "TrainingDataWriter: shutting down after writing " << rows_written_ << " rows"
               << std::endl;
     closed_ = true;
-    if (client) {
-      boost::json::object msg;
-      msg["type"] = "max_rows_reached";
-      client->send(msg);
-    }
 
     // This assumes that we are in the same process as the GameServer, which is true for now. I
     // don't foresee the assumption being violated.

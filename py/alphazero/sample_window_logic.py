@@ -85,6 +85,9 @@ class SamplingParams:
     minibatches_per_window: int
     minibatch_size: int
 
+    def samples_per_window(self):
+        return self.minibatch_size * self.minibatches_per_window
+
 
 def get_required_dataset_size(params: SamplingParams, prev_window: Window):
     """
@@ -151,3 +154,15 @@ def get_required_dataset_size(params: SamplingParams, prev_window: Window):
     assert inf_loop_protection, 'Infinite loop detected during binary search'
 
     return lo
+
+
+def construct_window(prev_window: Window, c: int, n: int, n_sampled_positions: int) -> Window:
+    """
+    Constructs a new window from a previous window, by incorporating the fact that we just sampled
+    n_sampled_positions from M[c:n].
+    """
+    assert n > c
+    n_prev_window_samples = max(0, prev_window.end - c) * prev_window.sample_rate
+    n_total_samples = n_prev_window_samples + n_sampled_positions
+    sample_rate = n_total_samples / (n - c)
+    return Window(c, n, sample_rate)

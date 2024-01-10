@@ -1,9 +1,11 @@
 from typing import List
 import torch
-from alphazero.data.games_dataset import GamesDataset
+from torch import optim
+
+from alphazero.custom_types import Generation
+from alphazero.data.games_dataset import PositionDataset
 from net_modules import Head, Model
 from learning_targets import LearningTarget
-from torch import optim
 from util.py_util import timed_print
 from util.torch_util import apply_mask
 
@@ -32,6 +34,10 @@ class TrainingSubStats:
         self.den = 0
 
         TrainingSubStats.max_descr_len = max(TrainingSubStats.max_descr_len, len(self.descr))
+
+    @property
+    def name(self) -> str:
+        return self.head.name
 
     @property
     def descr(self) -> str:
@@ -72,7 +78,14 @@ class TrainingSubStats:
 
 
 class TrainingStats:
-    def __init__(self, net: Model):
+    def __init__(self, gen: Generation, window_start: int, window_end: int, net: Model):
+        self.gen = gen
+        self.start_ts = 0
+        self.end_ts = 0
+        self.window_start = window_start
+        self.window_end = window_end
+        self.window_sample_rate = 0.0
+
         self.n_samples = 0
         self.substats_list = [TrainingSubStats(head, net.loss_weights[head.name])
                               for head in net.heads]
@@ -94,7 +107,9 @@ class TrainingStats:
 
 
 class NetTrainer:
-    def __init__(self, n_minibatches_to_process: int=-1, py_cuda_device_str: str='cuda:0'):
+    def __init__(self, gen: Generation, n_minibatches_to_process: int=-1,
+                 py_cuda_device_str: str='cuda:0'):
+        self.gen = gen
         self.n_minibatches_to_process = n_minibatches_to_process
         self.py_cuda_device_str = py_cuda_device_str
         self.reset()
@@ -108,19 +123,24 @@ class NetTrainer:
                           loader: torch.utils.data.DataLoader,
                           net: Model,
                           optimizer: optim.Optimizer,
-                          games_dataset: GamesDataset) -> TrainingStats:
+                          dataset: PositionDataset) -> TrainingStats:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
         loader has been processed, whichever comes first. If self.n_minibatches_to_process is
         negative, that is treated like infinity.
         """
-        games_dataset.set_key_order(net.target_names)
+        dataset.set_key_order(net.target_names)
 
         loss_fns = [head.target.loss_fn() for head in net.heads]
         loss_weights = [net.loss_weights[head.name] for head in net.heads]
 
-        stats = TrainingStats(net)
+        window_start = dataset.start_index
+        window_end = dataset.end_index
+
+        start_ts = time.time_ns()
+        n_samples = 0
+        stats = TrainingStats(self.gen, window_start, window_end, net)
         for data in loader:
             t1 = time.time()
             inputs = data[0]
@@ -147,6 +167,7 @@ class NetTrainer:
             results_list = [EvaluationResults(labels, outputs, subloss) for labels, outputs, subloss in
                             zip(labels_list, outputs_list, loss_list)]
 
+            n_samples += len(inputs)
             stats.update(results_list, len(inputs))
 
             loss.backward()
@@ -156,6 +177,14 @@ class NetTrainer:
             self.for_loop_time += t2 - t1
             if self.n_minibatches_processed == self.n_minibatches_to_process:
                 break
+
+        end_ts = time.time_ns()
+
+        window_sample_rate = n_samples / (window_end - window_start)
+
+        stats.start_ts = start_ts
+        stats.end_ts = end_ts
+        stats.window_sample_rate = window_sample_rate
 
         return stats
 

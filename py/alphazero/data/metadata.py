@@ -148,7 +148,9 @@ class SelfPlayMetadata:
     Current usage demands a manual reresh() call after constructing the SelfPlayMetadata object.
     """
 
-    def __init__(self, self_play_dir: str):
+    def __init__(self, db_filename: str):
+        self.db_filename = db_filename
+
         self.self_play_dir = self_play_dir
         self.metadata: Dict[Generation, GenerationMetadata] = {}
         self.n_total_positions = 0

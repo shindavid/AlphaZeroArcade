@@ -1,5 +1,5 @@
 """
-The self-play process continuously produces a chronological sequence of positions, M.
+The self-play process continuously appends to a master sequence of positions, M.
 
 The training process, on each epoch, chooses a window W corresponding to a suffix of M, and samples
 R positions uniformly from W. It then trains on those R positions.
@@ -17,37 +17,118 @@ produces GamesDataset objects, which correspond to a window W of M.
 """
 from typing import List, Optional
 
+import numpy as np
+import os
+import sqlite3
 import torch
 from torch.utils.data import Dataset
 
-from alphazero.data.metadata import SelfPlayMetadata
-from util.infinite_sequence import InfiniteSequence
+from alphazero.sample_window_logic import SamplingParams, Window, get_required_dataset_size
 from util.torch_util import Shape
 
 
-class GamesDataset(Dataset):
-    """
-    A GamesDataset represents a slice of a master list of game-positions.
-    """
-    def __init__(self, self_play_metadata: SelfPlayMetadata, start: int, end: int):
-        """
-        self_play_metadata: effectively represents a master list (M) of positions
+pos_dtype = np.dtype([('client_id', 'i4'),
+                      ('gen', 'i4'),
+                      ('game_end_ts', 'i8'),
+                      ('pos_index', 'i4')])
 
-        Constructs a GamesDataset corresponding to M[start:end]
-        """
-        self.self_play_metadata = self_play_metadata
-        self.n_total_positions = self_play_metadata.n_total_positions
-        self.start = start
-        self.end = end
-        assert 0 <= start < end <= self.n_total_positions, (start, end)
-        self.window = list(self.self_play_metadata.get_window(start, end))
-        assert len(self.window) == end - start, (len(self.window), start, end)
-        self.key_order: List[str] = []
 
-    def __str__(self):
-        first_gen = self.window[0].game_metadata.generation
-        last_gen = self.window[-1].game_metadata.generation
-        return f'GamesDataset(start={self.start}[gen-{first_gen}], end={self.end}[gen-{last_gen}])'
+class PositionListSlice:
+    def __init__(self):
+        self._positions = np.zeros(0, dtype=pos_dtype)
+        self._start_index = 0  # index of master list
+        self._last_game_id = -1
+
+    def __len__(self):
+        return len(self._positions)
+
+    def __getitem__(self, idx):
+        return self._positions[idx]
+
+    @property
+    def start_index(self):
+        """
+        Returns the index of the first position in the master list.
+        """
+        return self._start_index
+
+    @property
+    def end_index(self):
+        """
+        Returns one plus the index of the last position in the master list.
+        """
+        return self._start_index + len(self._positions)
+
+    def _get_positions(self, c: sqlite3.Cursor):
+        c.execute("""SELECT id, client_id, gen, end_timestamp, augmented_positions
+                  FROM games WHERE id > ?""", (self._last_game_id,))
+        for row in c:
+            game_id, client_id, gen, end_timestamp, augmented_positions = row
+            assert game_id >= self._last_game_id, (game_id, self._last_game_id)
+            self._last_game_id = game_id
+            for pos_index in range(augmented_positions):
+                yield (client_id, gen, end_timestamp, pos_index)
+
+    def extend(self, cursor: sqlite3.Cursor):
+        """
+        Extends the list of positions with newly added games from the database.
+        """
+        positions = np.fromiter(self._get_positions(cursor), dtype=pos_dtype)
+        self._positions = np.concatenate([self._positions, positions])
+
+    def set_start_index(self, start_index: int):
+        n_rows_to_cut = start_index - self._start_index
+        positions = self._positions[n_rows_to_cut:]
+        assert start_index >= self._start_index, (start_index, self._start_index)
+        assert len(positions) > 0, (start_index, self._start_index)
+
+        self._positions = positions
+        self._start_index = start_index
+
+
+class PositionDataset(Dataset):
+    def __init__(self, base_dir: str, positions: PositionListSlice):
+        self._base_dir = base_dir
+        self._positions = positions
+        self._key_order: List[str] = []
+
+    def announce_sampling(self, print_func):
+        dataset_size = len(self)
+        n_total_positions = self._positions.end_index
+        first_gen = self._positions[0]['gen']
+        last_gen = self._positions[-1]['gen']
+        assert first_gen <= last_gen
+        if first_gen == last_gen:
+            gen_str = f'gen {first_gen}'
+        else:
+            gen_str = f'gens {first_gen} to {last_gen}'
+        print_func(
+            'Sampling from %s of %s (%.1f%%) positions (%s)' %
+            (dataset_size, n_total_positions, 100. * dataset_size / n_total_positions, gen_str))
+
+    @property
+    def start_index(self):
+        """
+        Returns the index of the first position in the master list.
+        """
+        return self._positions.start_index
+
+    @property
+    def end_index(self):
+        """
+        Returns one plus the index of the last position in the master list.
+        """
+        return self._positions.end_index
+
+    def _get_data_and_pos_index(self, idx):
+        client_id, gen, end_timestamp, pos_index = self._positions[idx]
+        filename = self._get_filename(client_id, gen, end_timestamp)
+
+        try:
+            data = torch.jit.load(filename).state_dict()
+        except:
+            raise Exception(f'Could not load data from file: {filename}')
+        return data, pos_index
 
     def get_input_shape(self) -> Shape:
         """
@@ -58,18 +139,14 @@ class GamesDataset(Dataset):
         input. For example, we may want to vary the number of previous positions of history we
         include in the input, or we may want to add some additional input feature planes.
         """
-        position_metadata = self.window[0]
-        game_metadata = position_metadata.game_metadata
-        data = torch.jit.load(game_metadata.filename).state_dict()
-        return data['input'].shape[1:]
+        data, pos_index = self._get_data_and_pos_index(0)
+        return data['input'][pos_index].shape
 
     def get_target_names(self) -> List[str]:
         """
         Peeks into the dataset to find the names of all the targets.
         """
-        position_metadata = self.window[0]
-        game_metadata = position_metadata.game_metadata
-        data = torch.jit.load(game_metadata.filename).state_dict()
+        data, _ = self._get_data_and_pos_index(0)
         names = list(data.keys())
         return [n for n in names if n != 'input']
 
@@ -79,123 +156,44 @@ class GamesDataset(Dataset):
 
         This must be called prior to iterating over the dataset.
         """
-        self.key_order = ['input'] + target_names
+        self._key_order = ['input'] + target_names
+
+    def _get_filename(self, client_id: int, gen: int, end_ts: int) -> str:
+        return os.path.join(self._base_dir, 'self-play-data', f'client-{client_id}',
+                            f'gen-{gen}', f'{end_ts}.ptd')
 
     def __len__(self):
-        return self.end - self.start
+        return len(self._positions)
 
     def __getitem__(self, idx):
-        assert self.key_order, 'Must call set_key_order() before iterating over GamesDataset'
-        assert 0 <= idx < len(self), (idx, self.start, self.end)
-        position_metadata = self.window[idx]
-        game_metadata = position_metadata.game_metadata
-        p = position_metadata.position_index
-        try:
-            data = torch.jit.load(game_metadata.filename).state_dict()
-        except:
-            raise Exception('Could not load data from file: {}'.format(game_metadata.filename))
-        return [data[key][p] for key in self.key_order]
+        data, pos_index = self._get_data_and_pos_index(idx)
+        return [data[key][pos_index] for key in self._key_order]
 
 
-class GamesDatasetGenerator:
-    """
-    Example usage:
+# class PositionDatasetGenerator:
+#     def __init__(self, base_dir: str, db_conn: sqlite3.Connection, params: SamplingParams):
+#         self._base_dir = base_dir
+#         self._master_list = PositionListSlice()
+#         self._params = params
+#         self._db_conn = db_conn
 
-    sample_limit = 10
-    generator = GamesDatasetGenerator(self_play_data_dir, sample_limit)
-    while True:
-        dataset = generator.get_next_dataset(loader_size)
-        if dataset is None:
-            # wait for more data to be generated
-            time.sleep(5)
-            continue
+#     @property
+#     def master_length(self):
+#         return self._master_list.end_index
 
-        ...  # do an epoch network training here by iterating over dataset
+#     def get_next_dataset(self, last_sample_window: Window) -> Optional[PositionDataset]:
+#         """
+#         Returns the next dataset for sampling. Returns None if there are not enough positions.
+#         """
+#         cursor = self._db_conn.cursor()
+#         self._master_list.extend(cursor)
 
-        generator.record_dataset_usage(dataset, num_positions_sampled)
+#         n = self.master_length
+#         f = get_required_dataset_size(self._params, last_sample_window)
+#         if n < f:
+#             return None
 
-    In the above, self_play_data_dir is a directory that contains a master list of positions. A
-    GamesDatasetGenerator effectively maintains a list M that is initially equal to this master
-    list.
-
-    On every loop iteration, the generator extends M with any newly generated data, and returns a
-    GamesDataset corresponding to a subsequence of M.
-
-    When record_dataset_usage() is called, the generator marks that num_positions_sampled positions
-    were uniformly randomly sampled from dataset.
-    """
-    def __init__(self, self_play_data_dir: str, sample_limit: Optional[int] = None):
-        """
-        sample_limit dictates the maximum expected number of times any given training row can be
-        used by the training process. If None, then there is no limit.
-
-        KataGo uses a limit of 4. LeelaChessZero effectively uses a limit of 8.
-        """
-        self.expected_sample_counts = InfiniteSequence()
-        self.self_play_metadata = SelfPlayMetadata(self_play_data_dir)
-        self.self_play_data_dir = self_play_data_dir
-        self.sample_limit = sample_limit
-
-    @property
-    def n_total_positions(self) -> int:
-        return self.self_play_metadata.n_total_positions
-
-    def init_to_sample_limit(self):
-        self.expected_sample_counts[:self.n_total_positions] = self.sample_limit
-
-    def get_next_dataset(self, loader_size: int, verbose: bool = False) -> Optional[GamesDataset]:
-        """
-        Returns a DataLoader corresponding to a slice of the master list of size loader_size. If
-        use_prefix is True, the slice is taken from the beginning of the master list. Otherwise, it
-        is taken from the end.
-
-        If there are not enough positions available, returns None. If it returns None, it is
-        recommended to sleep for a few seconds before trying again, to avoid thrashing the
-        filesystem.
-        """
-        self.self_play_metadata.refresh()
-        n_total_positions = self.self_play_metadata.n_total_positions
-        end = n_total_positions
-        start = end - loader_size
-
-        sample_sum = self.expected_sample_counts[start:end].sum()
-        if verbose:
-            print('Total positions:', n_total_positions)
-            print('expected_sampled_counts:\n ',
-                  self.expected_sample_counts.to_string(delim='\n  ', cap=self.sample_limit))
-            print('sample_sum: %.3f' % sample_sum)
-            print('loader_size: %d' % loader_size)
-
-            start_pct = 100. * start / n_total_positions
-            end_pct = 100. * end / n_total_positions
-            print('Data range: [%.3f%% - %.3f%%]' % (start_pct, end_pct))
-
-        if sample_sum > self.sample_limit * loader_size:
-            return None
-
-        return GamesDataset(self.self_play_metadata, start, end)
-
-    def record_dataset_usage(self, dataset: GamesDataset, num_positions_sampled: int):
-        """
-        Marks that num_positions_sampled positions were uniformly randomly sampled from dataset.
-        It then identifies any positions in M that were sampled >= sampled_limit times, and
-        effectively discards those positions and all positions preceding them from M.
-        """
-        start = dataset.start
-        end = dataset.end
-        x = num_positions_sampled / (end - start)
-        self.expected_sample_counts[start:end] += x
-
-
-def get_katago_sample_size(n_total: int, alpha=0.75, beta=0.4, c=250000) -> int:
-    """
-    Returns the number of positions from which to sample, as a function of the total number of
-    positions in the master list.
-
-    This is the sublinear curve f(n) = n^alpha but rescaled so that f(c) = c and f'(c) = beta.
-
-    From Appendix C of KataGo paper.
-
-    https://arxiv.org/pdf/1902.10565.pdf
-    """
-    return min(n_total, int(c * (1 + beta * ((n_total / c) ** alpha - 1) / alpha)))
+#         c = n - f
+#         self._master_list.set_start_index(c)
+#         assert len(self._master_list) == f, (len(self._master_list), f)
+#         return PositionDataset(self._base_dir, self._master_list)
