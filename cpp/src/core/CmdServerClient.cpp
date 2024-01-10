@@ -81,7 +81,6 @@ void CmdServerClient::recv_handshake() {
 }
 
 void CmdServerClient::pause() {
-  if (pause_complete_) return;  // prevents deadlock in double-pause scenario
   pause_complete_ = false;
 
   for (auto listener : pause_listeners_) {
