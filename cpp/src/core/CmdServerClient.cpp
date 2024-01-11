@@ -44,6 +44,7 @@ perf_stats_t CmdServerClient::get_perf_stats() const {
 CmdServerClient::CmdServerClient(const Params& params)
     : proc_start_ts_(util::ns_since_epoch()), shared_gpu_(params.shared_gpu) {
   socket_ = io::Socket::create_client_socket(params.cmd_server_hostname, params.cmd_server_port);
+  cur_generation_ = params.starting_generation;
   send_handshake();
   recv_handshake();
   thread_ = new std::thread([this]() { loop(); });
