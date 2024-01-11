@@ -282,8 +282,9 @@ class Arena:
         missing_mcts_gen_set = full_mcts_gen_set - mcts_gen_set
         if not missing_mcts_gen_set:
             return
+        missing_mcts_gen_list = list(missing_mcts_gen_set)
 
-        placeholders = ', '.join('?' * len(missing_mcts_gen_set))
+        placeholders = ', '.join('?' * len(missing_mcts_gen_list))
         query1 = ('SELECT gen, positions_evaluated, batches_evaluated, games FROM self_play_metadata '
                   'WHERE gen IN (%s)' % placeholders)
         query2 = ('SELECT gen, start_timestamp, end_timestamp FROM timestamps '
@@ -292,10 +293,10 @@ class Arena:
         training_db_conn = sqlite3.connect(os.path.join(self.manager.base_dir, 'training.db'))
 
         c2 = training_db_conn.cursor()
-        c2.execute(query1, missing_mcts_gen_set)
+        c2.execute(query1, missing_mcts_gen_list)
         results1 = list(c2.fetchall())
 
-        c2.execute(query2, missing_mcts_gen_set)
+        c2.execute(query2, missing_mcts_gen_list)
         results2 = list(c2.fetchall())
         training_db_conn.close()
 
