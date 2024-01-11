@@ -162,25 +162,10 @@ class Arena:
     def get_mcts_player_name(gen: int):
         return f'MCTS-{gen}'
 
-    def get_binary(self, gen: int):
-        if Args.binary:
-            return Args.binary
-        cmd = self.manager.get_player_cmd(gen)
-        assert cmd is not None, gen
-        return cmd.split()[0]
-
     def get_mcts_player_str(self, gen: int):
-        cmd = self.manager.get_player_cmd(gen)
-        assert cmd is not None, gen
-        player_str = cmd[cmd.find('"') + 1: cmd.rfind('"')]
         name = Arena.get_mcts_player_name(gen)
-        kwargs = {
-            '--name': name,
-            '-i': Args.mcts_iters,
-        }
-        if Args.mcts_iters < 8:
-            kwargs['-n'] = Args.mcts_iters
-        return inject_args(player_str, kwargs)
+        model = self.manager.get_model_filename(gen)
+        return f'--type=MCTS-C --name={name} -i {Args.mcts_iters} -m {model}'
 
     @staticmethod
     def get_reference_player_name(strength: int):
@@ -196,7 +181,7 @@ class Arena:
     def create_cmd(self, mcts_gen: int, ref_strength: int, n_games: int) -> str:
         ps1 = self.get_mcts_player_str(mcts_gen)
         ps2 = self.get_reference_player_str(ref_strength)
-        binary = self.get_binary(mcts_gen)
+        binary = self.manager.get_latest_binary()
         cmd = f'{binary} -G {n_games} -p {Args.parallelism_factor} --player "{ps1}" --player "{ps2}"'
         return cmd
 

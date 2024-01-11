@@ -394,6 +394,11 @@ class AlphaZeroManager:
     def get_latest_model_filename(self) -> Optional[str]:
         return AlphaZeroManager.get_latest_full_subpath(self.models_dir)
 
+    def get_latest_binary(self):
+        bins = [os.path.join(self.bins_dir, b) for b in os.listdir(self.bins_dir)]
+        bins.sort(key=os.path.getmtime)
+        return bins[-1]
+
     def run_gen0_if_necessary(self):
         """
         Runs a single self-play generation using the dummy uniform model.
@@ -499,6 +504,7 @@ class AlphaZeroManager:
         stdout = open(os.path.join(self.base_dir, 'self-play.stdout'), 'a')
         stderr = open(os.path.join(self.base_dir, 'self-play.stderr'), 'a')
         self.self_play_proc = subprocess_util.Popen(self_play_cmd, stdout=stdout, stderr=stderr)
+        timed_print(f'Running self-play [{self.self_play_proc.pid}]: {self_play_cmd}')
 
     def wait_until_enough_training_data(self):
         self.cmd_server.wait_until_enough_training_data()
