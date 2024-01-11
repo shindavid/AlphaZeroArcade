@@ -130,7 +130,9 @@ def get_required_dataset_size(params: SamplingParams, prev_window: Window):
     rhs = lambda n: n * r + (t - r) * f(n)
 
     lo = b
-    if lhs > rhs(lo):
+
+    # print(f'DEBUG a={a} b={b} r={r} s={s} t={t} lhs={lhs} rhs(lo)={rhs(lo)}')
+    if lhs <= rhs(lo):
         return b
 
     hi = b + 2*(b-a)  # 2 prev_window lengths should usually be enough
