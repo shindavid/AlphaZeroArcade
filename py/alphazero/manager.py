@@ -477,7 +477,7 @@ class AlphaZeroManager:
         player_args = [
             '--type=MCTS-T',
             '--name=MCTS',
-            '-D', self.self_play_data_dir,
+            '--games-base-dir', self.self_play_data_dir,
             '-m', model_filename,
             '--cuda-device', cuda_device,
         ]

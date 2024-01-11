@@ -107,6 +107,7 @@ class RatingData:
 
         gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
         x_df = pd.DataFrame(x_values, columns=x_values_columns).set_index('mcts_gen')
+        x_df['runtime'] *= 1e-9  # ns -> sec
 
         window_length = 17
         y = gen_df['rating']
@@ -119,8 +120,7 @@ class RatingData:
         for col in x_df:
             x_df[col] = x_df[col].cumsum()
 
-        assert set(gen_df.index).issubset(set(x_df.index))
-        gen_df = gen_df.join(x_df).reset_index()
+        gen_df = gen_df.join(x_df, how='inner').reset_index()
 
         conn.close()
 
