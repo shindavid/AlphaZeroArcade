@@ -5,6 +5,7 @@ import os
 
 from alphazero.manager import AlphaZeroManager
 from alphazero.optimization_args import ModelingArgs
+from alphazero.sample_window_logic import SamplingParams, KataGoWindowSizeFunction
 from config import Config
 import games
 
@@ -78,7 +79,17 @@ def main():
         manager.erase_data_after(Args.restart_gen)
 
     manager.set_model_cfg(Args.model_cfg)
-    manager.launch_cmd_server(port=Args.cmd_server_port)
+
+    n0 = ModelingArgs.snapshot_steps * ModelingArgs.minibatch_size
+    window_size_function = KataGoWindowSizeFunction(n0)
+    sampling_params = SamplingParams(
+        window_size_function=window_size_function,
+        target_sample_rate=ModelingArgs.sample_limit,
+        minibatches_per_window=ModelingArgs.snapshot_steps,
+        minibatch_size=ModelingArgs.minibatch_size,
+        )
+
+    manager.launch_cmd_server(sampling_params, port=Args.cmd_server_port)
     manager.run()
 
 

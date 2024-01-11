@@ -38,13 +38,11 @@ BASE_DIR/
             ...
 """
 import os
-import pathlib
 import shutil
 import sqlite3
 import subprocess
 import sys
 import tempfile
-import time
 from typing import Optional, List, Tuple
 
 import torch
@@ -54,15 +52,13 @@ from torch.utils.data import DataLoader
 
 from alphazero.cmd_server import CmdServer
 from alphazero.custom_types import Generation
-from alphazero.data.games_dataset import PositionDataset
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
-from alphazero.sample_window_logic import SamplingParams, KataGoWindowSizeFunction, \
-    get_required_dataset_size
+from alphazero.sample_window_logic import SamplingParams
 from games import GameType
 from net_modules import Model
 from util import subprocess_util
-from util.py_util import atomic_softlink, timed_print, make_hidden_filename, sha256sum
+from util.py_util import timed_print, make_hidden_filename, sha256sum
 from util.repo_util import Repo
 
 
@@ -103,15 +99,6 @@ class AlphaZeroManager:
         self._binary_path_set = False
         self._binary_path = binary_path
         self.model_cfg = None
-
-        n0 = ModelingArgs.snapshot_steps * ModelingArgs.minibatch_size
-        window_size_function = KataGoWindowSizeFunction(n0)
-        self.sampling_params = SamplingParams(
-            window_size_function=window_size_function,
-            target_sample_rate=ModelingArgs.sample_limit,
-            minibatches_per_window=ModelingArgs.snapshot_steps,
-            minibatch_size=ModelingArgs.minibatch_size,
-            )
 
     def set_model_cfg(self, model_cfg: str):
         self.model_cfg = model_cfg
@@ -470,8 +457,8 @@ class AlphaZeroManager:
 
         self.train_step()
 
-    def launch_cmd_server(self, port):
-        self.cmd_server = CmdServer(self.sampling_params, self.base_dir, port=port)
+    def launch_cmd_server(self, sampling_params: SamplingParams, port):
+        self.cmd_server = CmdServer(sampling_params, self.base_dir, port=port)
         self.cmd_server.start()
 
     def launch_self_play(self):
