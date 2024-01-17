@@ -529,7 +529,8 @@ class CmdServer:
 
             n_augmented_positions = self.flush_pending_games(client_id, commit_to_db=False)
             if metrics:
-                self.insert_metrics(client_id, gen, start_timestamp, metrics, commit_to_db=False)
+                self.insert_metrics(
+                    client_id, gen, end_timestamp, metrics, commit_to_db=False)
             self.my_db_conn.commit()
             self._increment_master_list_length(n_augmented_positions)
 
