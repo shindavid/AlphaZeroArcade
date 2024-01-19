@@ -62,7 +62,7 @@ int64_t constexpr inline ms_to_ns(int64_t ms) { return ms * 1000 * 1000; }
 template <typename TimePoint>
 int64_t ns_since_epoch(const TimePoint&);
 
-inline int64_t ns_since_epoch() { return ns_since_epoch(std::chrono::steady_clock::now()); }
+inline int64_t ns_since_epoch() { return ns_since_epoch(std::chrono::system_clock::now()); }
 
 /*
  * Between machine reboots, no two calls to this function from the same machine should return equal
