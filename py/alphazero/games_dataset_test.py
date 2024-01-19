@@ -13,7 +13,7 @@ import argparse
 import os
 
 from config import Config
-from alphazero.data.games_dataset import GamesDatasetGenerator
+from alphazero.data.position_dataset import GamesDatasetGenerator
 
 
 class Args:

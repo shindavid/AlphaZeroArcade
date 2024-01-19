@@ -8,7 +8,7 @@ from torch import optim
 
 import games
 from net_modules import Model
-from alphazero.data.games_dataset import GamesDataset
+from alphazero.data.position_dataset import GamesDataset
 from alphazero.net_trainer import NetTrainer
 from alphazero.optimization_args import ModelingArgs
 from config import Config

@@ -1,7 +1,7 @@
 from alphazero.sample_window_logic import SamplingParams, Window, construct_window, \
     get_required_dataset_size
 from alphazero.custom_types import Generation
-from alphazero.data.games_dataset import PositionDataset, PositionListSlice
+from alphazero.data.position_dataset import PositionDataset, PositionListSlice
 from alphazero.net_trainer import TrainingStats
 from util.py_util import timed_print
 from util.socket_util import recvall
