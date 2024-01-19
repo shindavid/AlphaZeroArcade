@@ -232,17 +232,12 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   profiler_.record(NNEvaluationServiceRegion::kCopyingCpuToGpu);
   int num_rows = batch_metadata_.reserve_index;
   batch_data_.copy_input_to(num_rows, full_input_);
-  auto input_shape =
-      util::to_std_array<int64_t>(num_rows, eigen_util::to_int64_std_array_v<InputShape>);
+  auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
+                                                 eigen_util::to_int64_std_array_v<InputShape>);
   torch::Tensor full_input_torch = torch::from_blob(full_input_.data(), input_shape);
-  torch_input_gpu_.resize_(input_shape);
   torch_input_gpu_.copy_(full_input_torch);
 
   profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
-  torch_policy_.resize_(
-      util::to_std_array<int64_t>(num_rows, eigen_util::to_int64_std_array_v<PolicyShape>));
-  torch_value_.resize_(
-      util::to_std_array<int64_t>(num_rows, eigen_util::to_int64_std_array_v<ValueShape>));
   net_.predict(input_vec_, torch_policy_, torch_value_);
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
