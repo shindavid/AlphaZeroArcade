@@ -107,7 +107,13 @@ class RatingData:
 
         gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
         x_df = pd.DataFrame(x_values, columns=x_values_columns).set_index('mcts_gen')
-        x_df['runtime'] *= 1e-9  # ns -> sec
+
+        if len(x_df['runtime']) > 0:
+            # Earlier versions stored runtimes in sec, not ns. This heuristic corrects the
+            # earlier versions to ns.
+            ts = max(x_df['runtime'])
+            if ts > 1e9:
+                x_df['runtime'] *= 1e-9  # ns -> sec
 
         window_length = 17
         y = gen_df['rating']
