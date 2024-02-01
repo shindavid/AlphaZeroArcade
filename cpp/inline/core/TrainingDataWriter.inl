@@ -363,6 +363,11 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   rows_written_ = new_rows_written;
   if (done) {
+    if (client) {
+      boost::json::object msg;
+      msg["type"] = "done";
+      client->send(msg);
+    }
     std::cout << "TrainingDataWriter: shutting down after writing " << rows_written_ << " rows"
               << std::endl;
     closed_ = true;

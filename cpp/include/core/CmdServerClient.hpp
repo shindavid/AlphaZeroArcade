@@ -42,7 +42,6 @@ class CmdServerClient {
     std::string cmd_server_hostname = "localhost";
     io::port_t cmd_server_port = 0;
     int starting_generation = 0;
-    bool shared_gpu = false;
   };
 
   using PauseListener = CmdServerListener<CmdServerInteractionType::kPause>;
@@ -86,7 +85,6 @@ class CmdServerClient {
   static CmdServerClient* instance_;
 
   const int64_t proc_start_ts_;
-  const bool shared_gpu_;
   int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;
