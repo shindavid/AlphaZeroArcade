@@ -61,9 +61,12 @@ def main():
     load_args()
     log_filename = os.path.join(DirectoryOrganizer().logs_dir, 'training-server.log')
     configure_logger(log_filename, debug=Args.debug)
+
     logger.info(f'**** Starting training-server ****')
+
     training_server = TrainingServer(
         Args.cmd_server_host, Args.cmd_server_port, Args.cuda_device_str, Args.model_cfg)
+    training_server.register_signal_handler()
     training_server.run()
 
 

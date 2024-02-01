@@ -52,7 +52,7 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
       .template add_option<"games-base-dir", 'D'>(
           po::value<std::string>(&games_base_dir),
           "base directory for games files. This is fixed. Game files look like "
-          "{games-base-dir}/gen-{generation}/{timestamp}.ptj")
+          "{games-base-dir}/gen-{generation}/{timestamp}.pt")
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows")
@@ -303,7 +303,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   int64_t start_timestamp = data->start_timestamp();
   int64_t cur_timestamp = util::ns_since_epoch();
-  std::string output_filename = util::create_string("%ld.ptd", cur_timestamp);
+  std::string output_filename = util::create_string("%ld.pt", cur_timestamp);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
   core::CmdServerClient* client = core::CmdServerClient::get();

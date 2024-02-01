@@ -1,7 +1,6 @@
 from alphazero.sample_window_logic import SamplingParams, Window, construct_window, \
     get_required_dataset_size
-from alphazero.custom_types import Generation
-from alphazero.data.position_dataset import PositionDataset, PositionListSlice
+from alphazero.custom_types import ChildThreadError, Generation
 from alphazero.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, recv_json, send_json
@@ -29,10 +28,6 @@ class ClientType(Enum):
     SELF_PLAY_WRAPPER = 'self-play-wrapper'
     SELF_PLAY = 'self-play'
     TRAINING = 'training'
-
-
-class ChildThreadError(Exception):
-    pass
 
 
 @dataclass
@@ -67,13 +62,13 @@ class ClientData:
 
 class CmdServer:
     """
-    A server that accepts connections from multiple c++ CmdServerClients and communicates with them.
+    The cmd server coordinates activity between the self-play server and the training server.
 
-    A new thread is spawned for each c++ client. The thread handles all communication with the
-    client, writing data received from the client to a database.
-
-    TODO: currently this class is responsible both for client-communications and for parts of the
-    sampling window management logic. These responsibilities should be separated.
+    The eventual goal is for the cmd server to exclusively access the filesystem, while the
+    self-play and training servers communicate with the cmd-server over TCP. This will allow us
+    to flexibly distribute the self-play and training servers across multiple machines. Currently,
+    game data and models/checkpoints are written to the filesystem by the self-play and training
+    servers, so this goal has not yet been achieved.
     """
     DEFAULT_PORT = 1111
 
@@ -126,7 +121,6 @@ class CmdServer:
         self._server_socket.listen()
 
         self._last_sample_window: Window = self.load_last_sample_window()
-        self._master_list = PositionListSlice()  # lazily initialized
 
         # The length of the master_list can be computed on-demand by reading the database. To
         # avoid doing this repeatedly, we grab the value once at start-up, store it as a member, and
@@ -141,6 +135,7 @@ class CmdServer:
         threading.Thread(target=self.accept_clients, daemon=True).start()
 
     def wait_for_self_play_client_connection(self):
+        logger.info('Waiting for self play client connection...')
         while True:
             self._self_play_client_connected_event.wait(timeout=1)
             if self._self_play_client_connected_event.is_set():
@@ -151,6 +146,7 @@ class CmdServer:
                 raise ChildThreadError()
 
     def wait_for_training_client_connection(self):
+        logger.info('Waiting for training client connection...')
         while True:
             self._training_client_connected_event.wait(timeout=1)
             if self._training_client_connected_event.is_set():
@@ -164,21 +160,14 @@ class CmdServer:
         self._run_setup()
 
         try:
-            logger.info('Waiting for self play client connection...')
             self.wait_for_self_play_client_connection()
-            logger.info('Running gen0 if necessary...')
             self.run_gen0_if_necessary()
-            logger.info('Waiting for training client connection...')
             self.wait_for_training_client_connection()
-            logger.info('Training gen1 model if necessary...')
             self.train_gen1_model_if_necessary()
-            logger.info('Launching self-play...')
             self.launch_self_play()
 
             while True:
-                logger.info('Waiting for enough training data...')
                 self.wait_until_enough_training_data()
-                logger.info('Train step...')
                 self.train_step()
         except ChildThreadError:
             logger.info('Child thread error caught, exiting run()')
@@ -219,6 +208,7 @@ class CmdServer:
 
     def train_step(self):
         gen = self.organizer.get_latest_model_generation() + 1
+        logger.info(f'Performing gen-{gen} train step...')
 
         c = self.my_db_conn.cursor()
         c.execute("""SELECT cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1""")
@@ -288,7 +278,7 @@ class CmdServer:
 
         self.my_db_conn.commit()
 
-        self.reload_weights()
+        self.reload_weights(gen)
         self._train_step_done_event.set()
 
     def handle_lock_gpu(self, msg: JsonDict, client_data: ClientData):
@@ -299,12 +289,9 @@ class CmdServer:
         }
         send_json(client_data.sock, data)
 
-    def load_last_checkpoint(self):
-        raise NotImplementedError()
-
     def launch_self_play(self):
         client_data = self.get_single_client_data(ClientType.SELF_PLAY_WRAPPER)
-        logger.info('Requesting {client_data} to perform continuous self-play...')
+        logger.info(f'Requesting {client_data} to perform continuous self-play...')
 
         gen = self.organizer.get_latest_model_generation()
         model_filename = self.organizer.get_model_filename(gen)
@@ -319,22 +306,13 @@ class CmdServer:
         send_json(client_data.sock, data)
 
     def wait_until_enough_training_data(self):
+        logger.info('Waiting for more training data...')
         with self._train_ready_lock:
             self._master_list_length_for_next_train_loop = get_required_dataset_size(
                 self._last_sample_window)
             self._train_ready_event.clear()
 
         self._train_ready_event.wait()
-
-    def get_position_dataset(self) -> PositionDataset:
-        self._master_list.extend(self.my_db_conn.cursor())
-
-        f = SamplingParams.window_size_function
-        n = self._master_list.end_index
-        c = int(n - f(n))
-
-        self._master_list.set_start_index(c)
-        return PositionDataset(self.organizer.base_dir, self._master_list)
 
     @property
     def my_db_conn(self) -> sqlite3.Connection:
@@ -557,35 +535,20 @@ class CmdServer:
                 threading.Thread(target=handler_fn, args=(client_data,), daemon=True).start()
 
                 self.setup_done_check()
-            # except socket.timeout:
-            #     if self._child_thread_error_flag.is_set():
-            #         logger.info(f'Child thread error caught, exiting accept_clients() loop')
-            #         return
             except:
                 logger.error('Exception in accept_clients():', exc_info=True)
                 self._child_thread_error_flag.set()
-                # if client_id is not None:
-                #     self.remove_client(client_id)
 
     def handle_disconnect(self, client_data: ClientData):
-        # logger.info(f'Closing socket for {client_data} - removing client')
+        logger.info(f'Handling disconnect for {client_data}...')
         self.remove_client(client_data.client_id)
-        # logger.info(f'Closing socket for {client_data} - closing db conn')
         self.close_my_db_conn()
-        # logger.info(f'Closing socket for {client_data} - closing client sock')
         client_data.sock.close()
-        # logger.info(f'Closing socket for {client_data} - done')
+        logger.info(f'Disconnect complete!')
 
     def shutdown(self, return_code):
         logger.info('Shutting down...')
         self._shutdown_code = return_code
-        # with self._client_data_lock:
-        #     for client_data in self._client_data_list:
-        #         data = {'type': 'quit'}
-        #         logger.info('Shutting down - sending json')
-        #         send_json(client_data.sock, data)
-        #         logger.info('Shutting down - json sent')
-        # self._server_socket.close()
         sys.exit(return_code)
 
     def handle_self_play_wrapper_client(self, client_data: ClientData):
@@ -625,6 +588,7 @@ class CmdServer:
                 elif msg_type == 'game':
                     self.handle_game(msg, client_data)
                 elif msg_type == 'done':
+                    self.handle_disconnect(client_data)
                     self._self_play_done_event.set()
                     break
         except:
@@ -815,9 +779,13 @@ class CmdServer:
         shared_list = [c for c in self_play_list if c.shares_gpu_with(training_client_data)]
         self.pause(shared_list)
 
-    def reload_weights(self, model_filename: str, generation: int):
+    def reload_weights(self, generation: int):
+        clients = self.get_client_data_list(ClientType.SELF_PLAY)
+        if not clients:
+            return
+
+        model_filename = self.organizer.get_model_filename(generation)
         logger.info('Issuing reload...')
-        clients = self.get_clients_list()
 
         data = {
             'type': 'reload_weights',
@@ -826,4 +794,4 @@ class CmdServer:
             }
 
         for client in clients:
-            client.send_json(data)
+            send_json(client.sock, data)

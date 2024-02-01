@@ -5,11 +5,10 @@ This script serves as a thin wrapper around a c++ binary. It communicates with t
 upon receiving "start" requests from the cmd server, will start the c++ binary. From there, the
 c++ binary and the cmd server communicate directly via TCP.
 
-This setup allows us to have multiple c++ binary processes under the hood of a single self play
-server process. This is useful because generation 0 uses a different configuration than the other
-generations - it was easiest to accomplish this by simply restarting the c++ binary process
-between generations 0 and 1. Demanding a restart of the entire self-play server process between
-generations 0 and 1 would have been more complicated operationally.
+This setup allows us to relaunch the c++ binary process as needed under the hood of a single
+self-play server process. This is useful because sometimes we want certain configuration changes
+between generations. For example, gen-0 does not use a model, and in later generations we may want
+to increase the number of MCTS simulations.
 """
 import argparse
 
@@ -79,9 +78,12 @@ def main():
     load_args()
     log_filename = os.path.join(DirectoryOrganizer().logs_dir, 'self-play-server.log')
     configure_logger(log_filename, debug=Args.debug)
+
     logger.info(f'**** Starting self-play-server ****')
+
     server = SelfPlayServer(Args.cmd_server_host, Args.cmd_server_port, Args.cuda_device,
                             Args.binary_path)
+    server.register_signal_handler()
     server.run()
 
 

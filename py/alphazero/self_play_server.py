@@ -8,8 +8,11 @@ from util.socket_util import send_json, recv_json
 from util import subprocess_util
 
 import os
+import signal
 import socket
 import subprocess
+import sys
+import threading
 import time
 from typing import Optional
 
@@ -30,8 +33,17 @@ class SelfPlayServer:
         self.child_process = None
         self.client_id = None
 
+        self._shutdown_code = None
+
         self._binary_path_set = False
         self._binary_path = binary_path
+
+    def register_signal_handler(self):
+        def signal_handler(sig, frame):
+            logger.info('Detected Ctrl-C.')
+            self.shutdown(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
 
     def __str__(self):
         client_id_str = '???' if self.client_id is None else str(self.client_id)
@@ -94,7 +106,15 @@ class SelfPlayServer:
         self.send_handshake()
         self.recv_handshake()
 
-        self.recv_loop()
+        threading.Thread(target=self.recv_loop, daemon=True).start()
+        self.main_loop()
+
+    def main_loop(self):
+        while True:
+            time.sleep(1)
+            if self._shutdown_code is not None:
+                self.shutdown(self._shutdown_code)
+                break
 
     def send_handshake(self):
         data = {
@@ -128,16 +148,17 @@ class SelfPlayServer:
         except ConnectionError as e:
             if str(e).find('Socket gracefully closed by peer') != -1:
                 logger.info(f'Socket gracefully closed by peer')
-                self.shutdown()
+                self._shutdown_code = 0
+                return
             else:
                 logger.error(
                     f'Unexpected error in recv_loop():', exc_info=True)
-                self.shutdown()
-                os._exit(1)
+                self._shutdown_code = 1
+                return
         except:
             logger.error(f'Unexpected error in recv_loop():', exc_info=True)
-            self.shutdown()
-            os._exit(1)
+            self._shutdown_code = 1
+            return
 
     def start_gen0(self, msg):
         assert self.child_process is None
@@ -177,15 +198,12 @@ class SelfPlayServer:
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        log_filename = os.path.join(self.organizer.logs_dir, f'self-play-{self.client_id}.log')
-        with open(log_filename, 'w') as log_file:
+        log_filename = os.path.join(self.organizer.logs_dir, f'self-play-{self.client_id}-gen0.log')
+        with open(log_filename, 'a') as log_file:
             logger.info(f'Running gen-0 self-play: {self_play_cmd}')
             subprocess_util.run(self_play_cmd, stdout=log_file,
                                 stderr=log_file, check=True)
             logger.info(f'Gen-0 self-play complete!')
-        # logger.info(f'Running gen-0 self-play: {self_play_cmd}')
-        # subprocess_util.run(self_play_cmd, stdout=None, stderr=None, check=True)
-        # logger.info(f'Gen-0 self-play complete!')
 
     def start(self, msg):
         assert self.child_process is None
@@ -221,17 +239,18 @@ class SelfPlayServer:
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        # log_filename = os.path.join(self.organizer.logs_dir, f'self-play-{self.client_id}.log')
-        # log_file = open(log_filename, 'a')
-        # proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
-        proc = subprocess_util.Popen(self_play_cmd, stdout=None, stderr=None)
+        log_filename = os.path.join(self.organizer.logs_dir, f'self-play-{self.client_id}.log')
+        log_file = open(log_filename, 'a')
+        proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
         self.child_process = proc
         logger.info(f'Running self-play [{proc.pid}]: {self_play_cmd}')
 
     def quit(self):
-        logger.info(f'{self}: received quit command')
-        self.shutdown()
+        logger.info(f'Received quit command')
+        self._shutdown_code = 0
 
-    def shutdown(self):
+    def shutdown(self, code):
+        logger.info(f'Shutting down...')
         if self.cmd_server_socket:
             self.cmd_server_socket.close()
+        sys.exit(code)

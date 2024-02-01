@@ -63,22 +63,6 @@ class PositionListSlice:
             for pos_index in range(augmented_positions):
                 yield (client_id, gen, end_timestamp, pos_index)
 
-    # def extend(self, cursor: sqlite3.Cursor):
-    #     """
-    #     Extends the list of positions with newly added games from the database.
-    #     """
-    #     positions = np.fromiter(self._get_positions(cursor), dtype=pos_dtype)
-    #     self._positions = np.concatenate([self._positions, positions])
-
-    # def set_start_index(self, start_index: int):
-    #     n_rows_to_cut = start_index - self._start_index
-    #     positions = self._positions[n_rows_to_cut:]
-    #     assert start_index >= self._start_index, (start_index, self._start_index)
-    #     assert len(positions) > 0, (start_index, self._start_index)
-
-    #     self._positions = positions
-    #     self._start_index = start_index
-
     def set_bounds(self, cursor: sqlite3.Cursor, start: int, end:int):
         assert start >= self._start_index, (start, end, self._start_index)
         assert 0 <= start < end, (start, end, self._start_index)
@@ -166,7 +150,7 @@ class PositionDataset(Dataset):
 
     def _get_filename(self, client_id: int, gen: int, end_ts: int) -> str:
         return os.path.join(self._base_dir, 'self-play-data', f'client-{client_id}',
-                            f'gen-{gen}', f'{end_ts}.ptd')
+                            f'gen-{gen}', f'{end_ts}.pt')
 
     def __len__(self):
         return len(self._positions)

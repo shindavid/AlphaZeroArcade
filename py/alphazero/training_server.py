@@ -12,9 +12,12 @@ from util.socket_util import send_json, recv_json
 
 import os
 import shutil
+import signal
 import socket
 import sqlite3
+import sys
 import tempfile
+import threading
 import time
 from typing import Optional, Tuple
 
@@ -47,11 +50,35 @@ class TrainingServer:
         self.cmd_server_socket = None
         self.client_id = None
 
+        self._shutdown_code = None
+        self._child_thread_error_flag = threading.Event()
+
         self._net = None
         self._opt = None
         self._base_dir = None
-        self._db_conn = None
+        self._db_filename = None
+        self._db_conn_dict = {}
         self._master_list = PositionListSlice()
+
+    @property
+    def my_db_conn(self) -> sqlite3.Connection:
+        """
+        sqlite3 demands a single connection per thread. This property hides this detail under the
+        hood.
+        """
+        thread_id = threading.get_ident()
+        conn = self._db_conn_dict.get(thread_id, None)
+        if conn is None:
+            conn = sqlite3.connect(self._db_filename)
+            self._db_conn_dict[thread_id] = conn
+        return conn
+
+    def register_signal_handler(self):
+        def signal_handler(sig, frame):
+            logger.info('Detected Ctrl-C.')
+            self.shutdown(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
 
     def __str__(self):
         client_id_str = '???' if self.client_id is None else str(
@@ -76,7 +103,15 @@ class TrainingServer:
         self.send_handshake()
         self.recv_handshake()
 
-        self.recv_loop()
+        threading.Thread(target=self.recv_loop, daemon=True).start()
+        self.main_loop()
+
+    def main_loop(self):
+        while True:
+            time.sleep(1)
+            if self._shutdown_code is not None:
+                self.shutdown(self._shutdown_code)
+                break
 
     def send_handshake(self):
         data = {
@@ -96,7 +131,7 @@ class TrainingServer:
 
         db_filename = data['db_filename']
         assert os.path.isfile(db_filename), db_filename
-        self._db_conn = sqlite3.connect(db_filename)
+        self._db_filename = db_filename
 
         logger.info(f'Received client id assignment: {self.client_id}')
 
@@ -114,15 +149,15 @@ class TrainingServer:
         except ConnectionError as e:
             if str(e).find('Socket gracefully closed by peer') != -1:
                 logger.info(f'Socket gracefully closed by peer')
-                self.shutdown()
+                self._shutdown_code = 0
+                return
             else:
                 logger.error(f'Unexpected error in recv_loop():', exc_info=True)
-                self.shutdown()
-                os._exit(1)
+                self._shutdown_code = 1
+                return
         except:
             logger.error(f'Unexpected error in recv_loop():', exc_info=True)
-            self.shutdown()
-            os._exit(1)
+            self._shutdown_code = 1
 
     def train_step(self, msg):
         gen = msg['gen']
@@ -131,7 +166,7 @@ class TrainingServer:
         n_minibatches = msg['n_minibatches']
         minibatch_size = msg['minibatch_size']
 
-        cursor = self._db_conn.cursor()
+        cursor = self.my_db_conn.cursor()
         self._master_list.set_bounds(cursor, start, end)
         dataset = PositionDataset(self._base_dir, self._master_list)
 
@@ -162,12 +197,6 @@ class TrainingServer:
 
         assert trainer.n_minibatches_processed >= n_minibatches
 
-        data = {
-            'type': 'train-step-done',
-            'stats': stats.to_json(),
-            }
-        send_json(self.cmd_server_socket, data)
-
         logger.info(f'Gen {gen} training complete')
         trainer.dump_timing_stats(logger.info)
 
@@ -183,6 +212,12 @@ class TrainingServer:
         os.rename(tmp_model_filename, model_filename)
         logger.info(f'Checkpoint saved: {checkpoint_filename}')
         logger.info(f'Model saved: {model_filename}')
+
+        data = {
+            'type': 'train-step-done',
+            'stats': stats.to_json(),
+        }
+        send_json(self.cmd_server_socket, data)
 
     def load_last_checkpoint(self):
         """
@@ -203,7 +238,7 @@ class TrainingServer:
         # copying the checkpoint to somewhere local first seems to bypass some sort of
         # filesystem issue
         with tempfile.TemporaryDirectory() as tmp:
-            tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.ptc')
+            tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.pt')
             shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
             checkpoint = torch.load(tmp_checkpoint_filename)
             self._net = Model.load_from_checkpoint(checkpoint)
@@ -248,9 +283,11 @@ class TrainingServer:
         return self._net, self._opt
 
     def quit(self):
-        logger.info(f'{self}: received quit command')
-        self.shutdown()
+        logger.info(f'Received quit command')
+        self._shutdown_code = 0
 
-    def shutdown(self):
+    def shutdown(self, code):
+        logger.info(f'Shutting down...')
         if self.cmd_server_socket:
             self.cmd_server_socket.close()
+        sys.exit(code)

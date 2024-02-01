@@ -70,15 +70,6 @@ class Args:
                             help='model config (default: %(default)s)')
         parser.add_argument('--debug', action='store_true', help='debug mode')
 
-    # @staticmethod
-    # def add_to_cmd(cmd: List[str]):
-    #     cmd.extend(['--cmd-server-port', str(Args.cmd_server_port)])
-    #     if Args.binary_path:
-    #         cmd.extend(['--binary-path', Args.binary_path])
-    #     cmd.extend(['--model-cfg', Args.model_cfg])
-    #     if Args.debug:
-    #         cmd.append('--debug')
-
 
 def load_args():
     parser = argparse.ArgumentParser()

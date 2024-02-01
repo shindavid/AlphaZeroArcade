@@ -26,4 +26,5 @@ class Repo:
 
     @staticmethod
     def c4_model():
-        return os.path.join(Repo.root(), 'c4_model.ptj')
+        return os.path.join(Repo.root(), 'c4_model.pt')
+
