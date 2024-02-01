@@ -65,9 +65,9 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 import games
-from alphazero.common_args import CommonArgs
-from alphazero.directory_organizer import DirectoryOrganizer
-from alphazero.ratings import extract_match_record, WinLossDrawCounts
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.logic.ratings import extract_match_record, WinLossDrawCounts
 from util import subprocess_util
 from util.py_util import timed_print
 from util.str_util import inject_args

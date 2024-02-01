@@ -3,10 +3,10 @@
 import argparse
 import os
 
-from alphazero.cmd_server import CmdServer
-from alphazero.common_args import CommonArgs
-from alphazero.directory_organizer import DirectoryOrganizer
-from alphazero.sample_window_logic import SamplingParams
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.logic.cmd_server import CmdServer
+from alphazero.logic.sample_window_logic import SamplingParams
 from util.logging_util import configure_logger, get_logger
 
 

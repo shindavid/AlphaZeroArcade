@@ -41,8 +41,8 @@ from bokeh.plotting import figure, curdoc
 import pandas as pd
 from scipy.signal import savgol_filter
 
-from alphazero.common_args import CommonArgs
-from alphazero.directory_organizer import DirectoryOrganizer
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.directory_organizer import DirectoryOrganizer
 import games
 
 

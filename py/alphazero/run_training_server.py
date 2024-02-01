@@ -2,11 +2,11 @@
 
 import argparse
 
-from alphazero.cmd_server import CmdServer
-from alphazero.common_args import CommonArgs
-from alphazero.directory_organizer import DirectoryOrganizer
-from alphazero.training_params import TrainingParams
-from alphazero.training_server import TrainingServer
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.logic.cmd_server import CmdServer
+from alphazero.logic.training_server import TrainingServer
+from alphazero.logic.training_params import TrainingParams
 from util.logging_util import configure_logger, get_logger
 
 import os
@@ -64,10 +64,10 @@ def main():
 
     logger.info(f'**** Starting training-server ****')
 
-    training_server = TrainingServer(
+    server = TrainingServer(
         Args.cmd_server_host, Args.cmd_server_port, Args.cuda_device_str, Args.model_cfg)
-    training_server.register_signal_handler()
-    training_server.run()
+    server.register_signal_handler()
+    server.run()
 
 
 if __name__ == '__main__':

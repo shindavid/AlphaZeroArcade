@@ -12,10 +12,10 @@ to increase the number of MCTS simulations.
 """
 import argparse
 
-from alphazero.cmd_server import CmdServer
-from alphazero.common_args import CommonArgs
-from alphazero.directory_organizer import DirectoryOrganizer
-from alphazero.self_play_server import SelfPlayServer
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.logic.cmd_server import CmdServer
+from alphazero.logic.self_play_server import SelfPlayServer
 from util.logging_util import configure_logger, get_logger
 
 import os

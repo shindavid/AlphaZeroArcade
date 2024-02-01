@@ -1,7 +1,7 @@
-from alphazero.sample_window_logic import SamplingParams, Window, construct_window, \
+from alphazero.logic.sample_window_logic import SamplingParams, Window, construct_window, \
     get_required_dataset_size
-from alphazero.custom_types import ChildThreadError, Generation
-from alphazero.directory_organizer import DirectoryOrganizer
+from alphazero.logic.custom_types import ChildThreadError, Generation
+from alphazero.logic.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, recv_json, send_json
 

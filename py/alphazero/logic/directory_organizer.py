@@ -35,8 +35,8 @@ BASE_DIR/  # $alphazero_dir/game/tag/
         gen-2.pt
         ...
 """
-from alphazero.custom_types import Generation
-from alphazero.common_args import CommonArgs
+from alphazero.logic.custom_types import Generation
+from alphazero.logic.common_args import CommonArgs
 
 import os
 from typing import List, Optional

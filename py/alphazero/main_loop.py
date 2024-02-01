@@ -26,17 +26,15 @@ from pipes import quote
 import signal
 import subprocess
 import time
-from typing import List
 
 import torch
 
-from alphazero.cmd_server import CmdServer
-from alphazero.common_args import CommonArgs
-from alphazero.training_params import TrainingParams
-from alphazero.sample_window_logic import SamplingParams
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.cmd_server import CmdServer
+from alphazero.logic.sample_window_logic import SamplingParams
+from alphazero.logic.training_params import TrainingParams
 from util.logging_util import configure_logger, get_logger
 from util.repo_util import Repo
-from util.socket_util import is_port_open
 from util import subprocess_util
 
 

@@ -9,8 +9,8 @@ from torch import optim
 import games
 from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
-from alphazero.net_trainer import NetTrainer
-from alphazero.training_params import TrainingParams
+from alphazero.logic.net_trainer import NetTrainer
+from alphazero.logic.training_params import TrainingParams
 from config import Config
 from util.py_util import timed_print
 

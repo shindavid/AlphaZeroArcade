@@ -2,7 +2,7 @@ from typing import List
 import torch
 from torch import optim
 
-from alphazero.custom_types import Generation
+from alphazero.logic.custom_types import Generation
 from alphazero.data.position_dataset import PositionDataset
 from net_modules import Head, Model
 from learning_targets import LearningTarget

@@ -1,9 +1,9 @@
-from alphazero.common_args import CommonArgs
-from alphazero.custom_types import Generation
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.custom_types import Generation
 from alphazero.data.position_dataset import PositionDataset, PositionListSlice
-from alphazero.directory_organizer import DirectoryOrganizer, PathInfo
-from alphazero.net_trainer import NetTrainer
-from alphazero.training_params import TrainingParams
+from alphazero.logic.directory_organizer import DirectoryOrganizer, PathInfo
+from alphazero.logic.net_trainer import NetTrainer
+from alphazero.logic.training_params import TrainingParams
 from games import get_game_type
 from net_modules import Model
 from util.logging_util import get_logger

@@ -1,5 +1,5 @@
-from alphazero.common_args import CommonArgs
-from alphazero.directory_organizer import DirectoryOrganizer
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.directory_organizer import DirectoryOrganizer
 from games import get_game_type
 from util.logging_util import get_logger
 from util.py_util import sha256sum
