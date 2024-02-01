@@ -34,17 +34,16 @@ import sys
 from collections import defaultdict
 from typing import List, Optional
 
-import pandas as pd
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup, Button
 from bokeh.palettes import Category20
 from bokeh.plotting import figure, curdoc
-
-import games
-from config import Config
-from util.py_util import timed_print
-
+import pandas as pd
 from scipy.signal import savgol_filter
+
+from alphazero.common_args import CommonArgs
+from alphazero.directory_organizer import DirectoryOrganizer
+import games
 
 
 class Args:
@@ -66,31 +65,32 @@ class Args:
         Args.tag = args.tag
         Args.port = args.port
 
+    @staticmethod
+    def add_args(parser):
+        parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
+        parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), '
+                            'comma-separated (e.g. "300,3000")')
+        parser.add_argument('-p', '--port', type=int, default=5006,
+                            help='bokeh port (default: %(default)s)')
+
 
 def load_args():
     parser = argparse.ArgumentParser()
-    cfg = Config.instance()
 
-    parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
-    parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
-    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1,v2"). '
-                        'If not specified, plots all tags')
-    parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), '
-                        'comma-separated (e.g. "300,3000")')
-    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir',
-                            help='alphazero directory')
-    parser.add_argument('-p', '--port', type=int, default=5006,
-                        help='bokeh port (default: %(default)s)')
+    CommonArgs.add_args(parser)
+    Args.add_args(parser)
 
     args = parser.parse_args()
+
+    CommonArgs.load(args)
     Args.load(args)
 
 
 class RatingData:
     def __init__(self, tag: str, mcts_iters: int):
-        base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
+        organizer = DirectoryOrganizer()
 
-        db_filename = os.path.join(base_dir, 'ratings.db')
+        db_filename = os.path.join(organizer.databases_dir, 'ratings.db')
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
 
@@ -147,11 +147,11 @@ def make_rating_data_list(tag: Optional[str]=None) -> List[RatingData]:
             data_list.extend(make_rating_data_list(tag))
         return data_list
 
-    base_dir = os.path.join(game_dir, tag)
-
-    db_filename = os.path.join(base_dir, 'ratings.db')
+    organizer = DirectoryOrganizer()
+    db_filename = os.path.join(organizer.databases_dir, 'ratings.db')
     if not os.path.exists(db_filename):
         return []
+
     conn = sqlite3.connect(db_filename)
     cursor = conn.cursor()
     # find all distinct mcts_iters values from ratings table:
