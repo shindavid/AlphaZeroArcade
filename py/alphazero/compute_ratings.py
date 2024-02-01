@@ -157,7 +157,7 @@ class Arena:
         self.match_data: Dict[int, Dict[int, WinLossDrawCounts]] = defaultdict(lambda: defaultdict(WinLossDrawCounts))
         self.ratings: Dict[int, float] = {}  # mcts_gen -> rating
 
-        self.db_filename = os.path.join(self.base_dir, 'ratings.db')
+        self.db_filename = os.path.join(self.organizer.databases_dir, 'ratings.db')
         self._conn = None
 
     @staticmethod
