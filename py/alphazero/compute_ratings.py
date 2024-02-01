@@ -57,7 +57,6 @@ selecting populations in a principled way is a thorny theoretical problem. We ho
 on Bradley-Terry in the future, but for now, we use the simpler definition above.
 """
 import argparse
-import json
 import os
 import sqlite3
 import time
@@ -66,9 +65,9 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 import games
-from alphazero.manager import AlphaZeroManager
+from alphazero.common_args import CommonArgs
+from alphazero.directory_organizer import DirectoryOrganizer
 from alphazero.ratings import extract_match_record, WinLossDrawCounts
-from config import Config
 from util import subprocess_util
 from util.py_util import timed_print
 from util.str_util import inject_args
@@ -98,25 +97,28 @@ class Args:
         Args.binary = args.binary
         Args.daemon_mode = bool(args.daemon_mode)
 
+    @staticmethod
+    def add_args(parser):
+        parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
+        parser.add_argument('-n', '--n-games', type=int, default=100,
+                            help='number of games to play per matchup (default: %(default)s))')
+        parser.add_argument('-i', '--mcts-iters', type=int, default=1600,
+                            help='number of MCTS iterations per move (default: %(default)s)')
+        parser.add_argument('-p', '--parallelism-factor', type=int, default=100,
+                            help='parallelism factor (default: %(default)s)')
+        parser.add_argument('-b', '--binary', help='optional binary')
+        parser.add_argument('-D', '--daemon-mode', action='store_true', help='daemon mode (run forever)')
+
 
 def load_args():
     parser = argparse.ArgumentParser()
-    cfg = Config.instance()
 
-    parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
-    parser.add_argument('-t', '--tag', help='tag(s) for this run, comma-separated (e.g. "v1")')
-    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
-    parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
-    parser.add_argument('-n', '--n-games', type=int, default=100,
-                        help='number of games to play per matchup (default: %(default)s))')
-    parser.add_argument('-i', '--mcts-iters', type=int, default=1600,
-                        help='number of MCTS iterations per move (default: %(default)s)')
-    parser.add_argument('-p', '--parallelism-factor', type=int, default=100,
-                        help='parallelism factor (default: %(default)s)')
-    parser.add_argument('-b', '--binary', help='optional binary')
-    parser.add_argument('-D', '--daemon-mode', action='store_true', help='daemon mode (run forever)')
+    CommonArgs.add_args(parser)
+    Args.add_args(parser)
 
     args = parser.parse_args()
+
+    CommonArgs.load(args)
     Args.load(args)
 
 
@@ -146,7 +148,7 @@ class Arena:
         self.tag = tag
         self.game_type = games.get_game_type(Args.game)
         self.base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
-        self.manager = AlphaZeroManager(self.game_type, self.base_dir)
+        self.organizer = DirectoryOrganizer()
 
         self.min_ref_strength = self.game_type.reference_player_family.min_strength
         self.max_ref_strength = self.game_type.reference_player_family.max_strength
@@ -164,7 +166,7 @@ class Arena:
 
     def get_mcts_player_str(self, gen: int):
         name = Arena.get_mcts_player_name(gen)
-        model = self.manager.get_model_filename(gen)
+        model = self.organizer.get_model_filename(gen)
         return f'--type=MCTS-C --name={name} -i {Args.mcts_iters} -m {model}'
 
     @staticmethod
@@ -181,7 +183,7 @@ class Arena:
     def create_cmd(self, mcts_gen: int, ref_strength: int, n_games: int) -> str:
         ps1 = self.get_mcts_player_str(mcts_gen)
         ps2 = self.get_reference_player_str(ref_strength)
-        binary = self.manager.get_latest_binary()
+        binary = self.organizer.get_latest_binary()
         cmd = f'{binary} -G {n_games} -p {Args.parallelism_factor} --player "{ps1}" --player "{ps2}"'
         return cmd
 
@@ -261,7 +263,7 @@ class Arena:
         for gen in res.fetchall():
             mcts_gen_set.add(gen[0])
 
-        latest_gen = self.manager.get_latest_generation()
+        latest_gen = self.organizer.get_latest_generation()
         full_mcts_gen_set = set(range(1, latest_gen + 1))
 
         missing_mcts_gen_set = full_mcts_gen_set - mcts_gen_set
@@ -275,7 +277,7 @@ class Arena:
         query2 = ('SELECT gen, start_timestamp, end_timestamp FROM timestamps '
                   'WHERE gen IN (%s)' % placeholders)
 
-        training_db_conn = sqlite3.connect(os.path.join(self.manager.base_dir, 'training.db'))
+        training_db_conn = sqlite3.connect(os.path.join(self.organizer.databases_dir, 'training.db'))
 
         c2 = training_db_conn.cursor()
         c2.execute(query1, missing_mcts_gen_list)
@@ -373,7 +375,7 @@ class Arena:
         Finally, we find the largest gap in G, and return the midpoint of that gap. If G is fully saturated, we return
         M if M is not in G. If no such number exists, we return None.
         """
-        latest_gen = self.manager.get_latest_generation()
+        latest_gen = self.organizer.get_latest_generation()
         if latest_gen == 0:
             return None
 
