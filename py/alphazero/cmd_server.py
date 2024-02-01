@@ -2,106 +2,67 @@ from alphazero.sample_window_logic import SamplingParams, Window, construct_wind
     get_required_dataset_size
 from alphazero.custom_types import Generation
 from alphazero.data.position_dataset import PositionDataset, PositionListSlice
-from alphazero.net_trainer import TrainingStats
-from util.py_util import timed_print
-from util.socket_util import recvall
+from alphazero.directory_organizer import DirectoryOrganizer
+from util.logging_util import get_logger
+from util.socket_util import JsonDict, recv_json, send_json
 
 from collections import defaultdict
 from dataclasses import dataclass
-import json
+from enum import Enum
 import os
+import signal
 import socket
 import sqlite3
 import threading
-import traceback
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+import sys
 
 
 ClientId = int
 ThreadId = int
 
 
-def _get_next_json_msg(sock: socket.socket, timeout: Optional[float]=None):
-    """
-    Returns a json message from the socket.
+logger = get_logger()
 
-    Raises an exception if the socket is closed. See recvall() for details on possible exceptions.
-    """
-    data = recvall(sock, 4, timeout=timeout)
-    length = int.from_bytes(data, byteorder='big')
 
-    data = recvall(sock, length, timeout=timeout)
-    msg = json.loads(data.decode())
-    return msg
+class ClientType(Enum):
+    SELF_PLAY_WRAPPER = 'self-play-wrapper'
+    SELF_PLAY = 'self-play'
+    TRAINING = 'training'
+
+
+class ChildThreadError(Exception):
+    pass
 
 
 @dataclass
-class CmdServerClient:
-    def __init__(self,
-                 client_id: ClientId,
-                 sock: socket.socket,
-                 ip_address: str,
-                 port: int,
-                 proc_start_timestamp: int,
-                 shared_gpu: bool):
-        self.client_id = client_id
-        self.ip_address = ip_address
-        self.port = port
-        self.proc_start_timestamp = proc_start_timestamp
-        self.shared_gpu = shared_gpu
+class ClientData:
+    client_type: ClientType
+    client_id: ClientId
+    sock: socket.socket
+    start_timestamp: int
+    cuda_device: str  # empty str if no cuda device
 
-        self._sock_mutex = threading.Lock()
-        self._sock_valid = True
-        self._sock = sock
+    @property
+    def ip_address(self):
+        return self.sock.getsockname()[0]
 
-        self.pause_ack_event = threading.Event()
+    @property
+    def port(self):
+        return self.sock.getsockname()[1]
+
+    def shares_gpu_with(self, other: 'ClientData') -> bool:
+        if self.cuda_device == '' or other.cuda_device == '':
+            return False
+        if self.ip_address != other.ip_address:
+            return False
+        return self.cuda_device == other.cuda_device
 
     def __str__(self):
-        return f'CmdServerClient({self.client_id} ({self.ip_address}:{self.port})'
-
-    def shutdown(self):
-        with self._sock_mutex:
-            self._sock_valid = False
-            self._sock.close()
-
-    def send_json(self, data) -> bool:
-        """
-        Sends data to the server.
-
-        Returns True if the data was sent successfully, False otherwise. A failure should
-        correspond to a client disconnection.
-
-        Caller should decom the client if this returns False.
-        """
-        try:
-            msg = json.dumps(data).encode()
-            length = len(msg)
-            with self._sock_mutex:
-                if not self._sock_valid:
-                    return False
-
-                self._sock.sendall(length.to_bytes(4, byteorder='big'))
-                self._sock.sendall(msg)
-            return True
-        except:
-            print(f'CmdServerClient {self}) disconnected - send_json() failure')
-            traceback.print_exc()
-            self.shutdown()
-            return False
-
-    def get_next_json_msg(self):
-        """
-        Returns a json message from the client.
-
-        In case of error or if the socket is already closed, shuts down and returns None.
-        """
-        try:
-            with self._sock_mutex:
-                if not self._sock_valid:
-                    return None
-                return _get_next_json_msg(self._sock)
-        except ConnectionError:
-            return None
+        tokens = [str(self.client_type), str(self.client_id),
+                  f'{self.ip_address}:{self.port}', self.cuda_device]
+        tokens = [t for t in tokens if t]
+        return f'ClientData({", ".join(tokens)})'
 
 
 class CmdServer:
@@ -114,28 +75,58 @@ class CmdServer:
     TODO: currently this class is responsible both for client-communications and for parts of the
     sampling window management logic. These responsibilities should be separated.
     """
-    def __init__(self, sampling_params: SamplingParams, base_dir: str,
-                 host='localhost', port=12345):
-        self.base_dir = base_dir
-        self.db_filename = os.path.join(base_dir, 'training.db')
-        self.host = host
+    DEFAULT_PORT = 1111
+
+    def __init__(self, port: int=DEFAULT_PORT):
+        self.organizer = DirectoryOrganizer()
+        self.organizer.makedirs()
+        self.host = 'localhost'
         self.port = port
 
-        self._clients: Dict[ClientId, CmdServerClient] = {}
-        self._clients_lock = threading.Lock()
-
+        self._pause_ack_events: Dict[ClientId, threading.Event] = {}
+        self._client_data_list: List[ClientData] = []
+        self._client_data_lock = threading.Lock()
         self._db_conn_dict: Dict[ThreadId, sqlite3.Connection] = {}
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind((self.host, self.port))
-        self.server_socket.listen()
 
-        self._client_disconnect_event = threading.Event()
         self._pending_game_data = []
 
-        self.sampling_params = sampling_params
-        self.last_sample_window: Window = self.load_last_sample_window()
-        self.master_list = PositionListSlice()  # lazily initialized
+        self._server_socket = None
+        self._last_sample_window = None
+        self._master_list_length = None
+        self._master_list_length_for_next_train_loop = None
+
+        self._shutdown_code = None
+        self._child_thread_error_flag = threading.Event()
+
+        self._train_ready_event = threading.Event()
+        self._train_ready_lock = threading.Lock()
+
+        self._self_play_done_event = threading.Event()
+        self._train_step_done_event = threading.Event()
+
+        self._self_play_client_connected = False
+        self._training_client_connected = False
+        self._self_play_client_connected_event = threading.Event()
+        self._training_client_connected_event = threading.Event()
+
+    def register_signal_handler(self):
+        def signal_handler(sig, frame):
+            logger.info('Detected Ctrl-C.')
+            self.shutdown(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
+
+    def _run_setup(self):
+        logger.info('Performing CmdServer setup...')
+        self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server_socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._server_socket.setblocking(True)
+        self._server_socket.bind((self.host, self.port))
+        self._server_socket.listen()
+
+        self._last_sample_window: Window = self.load_last_sample_window()
+        self._master_list = PositionListSlice()  # lazily initialized
 
         # The length of the master_list can be computed on-demand by reading the database. To
         # avoid doing this repeatedly, we grab the value once at start-up, store it as a member, and
@@ -146,30 +137,204 @@ class CmdServer:
         # Initialized lazily.
         self._master_list_length_for_next_train_loop = 0
 
-        self._train_ready_event = threading.Event()
+        logger.info(f'Listening for CmdServer clients on port {self.port}...')
+        threading.Thread(target=self.accept_clients, daemon=True).start()
 
-        # Controls access to self._train_ready_event and self._master_list_length*
-        self._train_ready_lock = threading.Lock()
+    def wait_for_self_play_client_connection(self):
+        while True:
+            self._self_play_client_connected_event.wait(timeout=1)
+            if self._self_play_client_connected_event.is_set():
+                return
 
-        # self.dataset_generator = PositionDatasetGenerator(base_dir, self.db_conn, sampling_params)
+            if self._child_thread_error_flag.is_set():
+                logger.info('Child thread error caught, exiting wait_for_self_play_client_connection() loop')
+                raise ChildThreadError()
 
-    def get_position_dataset(self) -> PositionDataset:
-        self.master_list.extend(self.my_db_conn.cursor())
+    def wait_for_training_client_connection(self):
+        while True:
+            self._training_client_connected_event.wait(timeout=1)
+            if self._training_client_connected_event.is_set():
+                return
 
-        f = self.sampling_params.window_size_function
-        n = self.master_list.end_index
+            if self._child_thread_error_flag.is_set():
+                logger.info('Child thread error caught, exiting wait_for_training_client_connection() loop')
+                raise ChildThreadError()
+
+    def run(self):
+        self._run_setup()
+
+        try:
+            logger.info('Waiting for self play client connection...')
+            self.wait_for_self_play_client_connection()
+            logger.info('Running gen0 if necessary...')
+            self.run_gen0_if_necessary()
+            logger.info('Waiting for training client connection...')
+            self.wait_for_training_client_connection()
+            logger.info('Training gen1 model if necessary...')
+            self.train_gen1_model_if_necessary()
+            logger.info('Launching self-play...')
+            self.launch_self_play()
+
+            while True:
+                logger.info('Waiting for enough training data...')
+                self.wait_until_enough_training_data()
+                logger.info('Train step...')
+                self.train_step()
+        except ChildThreadError:
+            logger.info('Child thread error caught, exiting run()')
+            self.shutdown(1)
+        except:
+            if self._shutdown_code == 0:
+                return
+
+            logger.error('Unexpected error in run():', exc_info=True)
+            self.shutdown(1)
+
+    def run_gen0_if_necessary(self):
+        if self.is_gen0_complete():
+            return
+
+        client_data = self.get_single_client_data(ClientType.SELF_PLAY_WRAPPER)
+        logger.info(f'Requesting {client_data} to perform gen-0 self-play...')
+        max_rows = SamplingParams.samples_per_window()
+
+        data = {
+            'type': 'start-gen0',
+            'games_base_dir': self.organizer.self_play_data_dir,
+            'max_rows': max_rows,
+            }
+
+        send_json(client_data.sock, data)
+        self._self_play_done_event.wait()
+        self._self_play_done_event.clear()
+        logger.info(f'Gen-0 self-play complete!')
+
+    def train_gen1_model_if_necessary(self):
+        gen = 1
+        model_filename = self.organizer.get_model_filename(gen)
+        if os.path.isfile(model_filename):
+            return
+
+        self.train_step()
+
+    def train_step(self):
+        gen = self.organizer.get_latest_model_generation() + 1
+
+        c = self.my_db_conn.cursor()
+        c.execute("""SELECT cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1""")
+        row = c.fetchone()
+        n = row[0]
+
+        f = SamplingParams.window_size_function
+        n = row[0]
         c = int(n - f(n))
 
-        self.master_list.set_start_index(c)
-        return PositionDataset(self.base_dir, self.master_list)
+        data = {
+            'type': 'train-step',
+            'base_dir': self.organizer.base_dir,
+            'gen': gen,
+            'start': c,
+            'end': n,
+            'n_minibatches': SamplingParams.minibatches_per_epoch,
+            'minibatch_size': SamplingParams.minibatch_size,
+        }
+
+        client_data = self.get_single_client_data(ClientType.TRAINING)
+        send_json(client_data.sock, data)
+
+        self.wait_for_train_step_done()
+
+    def wait_for_train_step_done(self):
+        while True:
+            self._train_step_done_event.wait(timeout=1)
+            if self._train_step_done_event.is_set():
+                self._train_step_done_event.clear()
+                return
+
+            if self._child_thread_error_flag.is_set():
+                logger.info('Child thread error caught, exiting wait_for_train_step_done() loop')
+                raise ChildThreadError()
+
+    def handle_train_step_done(self, msg: JsonDict):
+        stats = msg['stats']
+
+        gen = stats['gen']
+        start_ts = stats['start_ts']
+        end_ts = stats['end_ts']
+        window_start = stats['window_start']
+        window_end = stats['window_end']
+        n_samples = stats['n_samples']
+        substats = stats['substats']
+
+        window = construct_window(self._last_sample_window, window_start, window_end, n_samples)
+        self._last_sample_window = window
+
+        c = self.my_db_conn.cursor()
+
+        c.execute("""INSERT OR REPLACE INTO training (gen, training_start_ts, training_end_ts,
+            window_start, window_end, window_sample_rate)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+                  (gen, start_ts, end_ts, window.start, window.end, window.sample_rate))
+
+        head_data = []
+        for head_name, head_stats in substats.items():
+            loss = head_stats['loss']
+            loss_weight = head_stats['loss_weight']
+            accuracy = head_stats['accuracy']
+            head_data.append((gen, head_name, loss, loss_weight, accuracy))
+
+        c.executemany("""INSERT OR REPLACE INTO training_heads (gen, head_name, loss, loss_weight, accuracy)
+            VALUES (?, ?, ?, ?, ?)""", head_data)
+
+        self.my_db_conn.commit()
+
+        self.reload_weights()
+        self._train_step_done_event.set()
+
+    def handle_lock_gpu(self, msg: JsonDict, client_data: ClientData):
+        self.pause_shared_gpu_self_play_clients(client_data)
+
+        data = {
+            'type': 'lock-gpu-ack',
+        }
+        send_json(client_data.sock, data)
+
+    def load_last_checkpoint(self):
+        raise NotImplementedError()
+
+    def launch_self_play(self):
+        client_data = self.get_single_client_data(ClientType.SELF_PLAY_WRAPPER)
+        logger.info('Requesting {client_data} to perform continuous self-play...')
+
+        gen = self.organizer.get_latest_model_generation()
+        model_filename = self.organizer.get_model_filename(gen)
+
+        data = {
+            'type': 'start',
+            'gen': gen,
+            'games_base_dir': self.organizer.self_play_data_dir,
+            'model': model_filename,
+        }
+
+        send_json(client_data.sock, data)
 
     def wait_until_enough_training_data(self):
         with self._train_ready_lock:
             self._master_list_length_for_next_train_loop = get_required_dataset_size(
-                self.sampling_params, self.last_sample_window)
+                self._last_sample_window)
             self._train_ready_event.clear()
 
         self._train_ready_event.wait()
+
+    def get_position_dataset(self) -> PositionDataset:
+        self._master_list.extend(self.my_db_conn.cursor())
+
+        f = SamplingParams.window_size_function
+        n = self._master_list.end_index
+        c = int(n - f(n))
+
+        self._master_list.set_start_index(c)
+        return PositionDataset(self.organizer.base_dir, self._master_list)
 
     @property
     def my_db_conn(self) -> sqlite3.Connection:
@@ -190,10 +355,6 @@ class CmdServer:
             self._db_conn_dict[thread_id].close()
             del self._db_conn_dict[thread_id]
 
-    @property
-    def n_samples_per_window(self):
-        return self.sampling_params.minibatch_size * self.sampling_params.minibatches_per_window
-
     def is_gen0_complete(self) -> bool:
         """
         Returns True if the first generation has been completed, False otherwise.
@@ -209,8 +370,7 @@ class CmdServer:
             return True
 
         assert gen == 0, gen
-        # timed_print(f'Found {n_augmented_positions} positions in generation 0 (n_samples_per_window={self.n_samples_per_window})')
-        return n_augmented_positions >= self.n_samples_per_window
+        return n_augmented_positions >= SamplingParams.samples_per_window()
 
     def load_last_sample_window(self) -> Window:
         cursor = self.my_db_conn.cursor()
@@ -219,8 +379,9 @@ class CmdServer:
         row = cursor.fetchone()
         if row is None:
             # kZero-style initialization of sample window
-            params = self.sampling_params
-            return Window(0, params.samples_per_window(), params.target_sample_rate)
+            samples_per_window = SamplingParams.samples_per_window()
+            target_sample_rate = SamplingParams.target_sample_rate
+            return Window(0, samples_per_window, target_sample_rate)
         return Window(*row)
 
     def compute_master_list_length(self) -> int:
@@ -233,19 +394,12 @@ class CmdServer:
             return 0
         return row[0]
 
-    def get_clients_list(self) -> List[CmdServerClient]:
-        with self._clients_lock:
-            return list(self._clients.values())
-
-    def wait_for_client_disconnect(self):
-        self._client_disconnect_event.wait()
-        self._client_disconnect_event.clear()
-
     def _create_db_conn(self):
-        if os.path.isfile(self.db_filename):
-            return sqlite3.connect(self.db_filename)
+        db_filename = self.organizer.training_db_filename
+        if os.path.isfile(db_filename):
+            return sqlite3.connect(db_filename)
 
-        conn = sqlite3.connect(self.db_filename)
+        conn = sqlite3.connect(db_filename)
         c = conn.cursor()
         c.execute("""CREATE TABLE training (
             gen INTEGER PRIMARY KEY,
@@ -265,10 +419,12 @@ class CmdServer:
             )""")
 
         c.execute("""CREATE TABLE clients (
-            client_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             ip_address TEXT,
             port INTEGER,
-            proc_start_timestamp INTEGER
+            role TEXT,
+            start_timestamp INTEGER,
+            cuda_device TEXT
             )""")
 
         c.execute("""CREATE TABLE metrics (
@@ -327,9 +483,24 @@ class CmdServer:
         return conn
 
     def remove_client(self, client_id: ClientId):
-        with self._clients_lock:
-            if client_id in self._clients:
-                del self._clients[client_id]
+        with self._client_data_lock:
+            self._client_data_list = [c for c in self._client_data_list if c.client_id != client_id]
+
+    def setup_done_check(self):
+        with self._client_data_lock:
+            types = set()
+            for client_data in self._client_data_list:
+                types.add(client_data.client_type)
+
+            if not self._training_client_connected:
+                if ClientType.TRAINING in types:
+                    self._training_client_connected = True
+                    self._training_client_connected_event.set()
+
+            if not self._self_play_client_connected:
+                if ClientType.SELF_PLAY_WRAPPER in types:
+                    self._self_play_client_connected = True
+                    self._self_play_client_connected_event.set()
 
     def accept_clients(self):
         """
@@ -337,73 +508,147 @@ class CmdServer:
         """
         db_conn = self.my_db_conn
         while True:
+            logger.info('Waiting for new client...')
             client_id = None
+            # if True:
             try:
-                client_socket, addr = self.server_socket.accept()
+                client_socket, addr = self._server_socket.accept()
                 ip_address, port = addr
 
-                msg = _get_next_json_msg(client_socket, timeout=1)
+                msg = recv_json(client_socket)  #, timeout=1)
                 assert msg['type'] == 'handshake', f'Expected handshake from client, got {msg}'
-                proc_start_timestamp = msg['proc_start_timestamp']
-                shared_gpu = msg['shared_gpu']
-                assert isinstance(proc_start_timestamp, int)
+                role = msg['role']
+                client_type = ClientType(role)
+
+                reply = {'type': 'handshake_ack'}
+
+                if client_type == ClientType.SELF_PLAY_WRAPPER:
+                    handler_fn = self.handle_self_play_wrapper_client
+                elif client_type == ClientType.SELF_PLAY:
+                    handler_fn = self.handle_self_play_client
+                elif client_type == ClientType.TRAINING:
+                    handler_fn = self.handle_training_client
+                    reply['base_dir'] = self.organizer.base_dir
+                    reply['db_filename'] = self.organizer.training_db_filename
+                else:
+                    raise Exception(f'Unknown client type: {client_type}')
+
+                start_timestamp = msg['start_timestamp']
+                cuda_device = msg.get('cuda_device', '')
 
                 c = db_conn.cursor()
-                c.execute('INSERT INTO clients (ip_address, port, proc_start_timestamp) VALUES (?, ?, ?)',
-                        (ip_address, port, proc_start_timestamp)
+                c.execute('INSERT INTO clients (ip_address, port, role, start_timestamp, cuda_device) VALUES (?, ?, ?, ?, ?)',
+                        (ip_address, port, role, start_timestamp, cuda_device)
                         )
                 client_id = c.lastrowid
                 db_conn.commit()
 
-                client = CmdServerClient(
-                    client_id=client_id,
-                    sock=client_socket,
-                    ip_address=ip_address,
-                    port=port,
-                    proc_start_timestamp=proc_start_timestamp,
-                    shared_gpu=shared_gpu,
-                    )
+                client_data = ClientData(
+                    client_type, client_id, client_socket, start_timestamp, cuda_device)
 
-                self._clients_lock.acquire()
-                self._clients[client_id] = client
-                self._clients_lock.release()
+                self._client_data_lock.acquire()
+                self._client_data_list.append(client_data)
+                self._client_data_lock.release()
 
-                timed_print(f'Accepted client {client_id} (shared_gpu={shared_gpu})')
+                logger.info(f'Accepted client: {client_data}')
 
-                reply = {'type': 'handshake_ack', 'client_id': client_id}
-                if not client.send_json(reply):
-                    raise Exception(f'Failed to send handshake_ack to {client}')
-                threading.Thread(target=self.handle_client, args=(client,), daemon=True).start()
+                reply['client_id'] = client_id
+                send_json(client_socket, reply)
+                threading.Thread(target=handler_fn, args=(client_data,), daemon=True).start()
+
+                self.setup_done_check()
+            # except socket.timeout:
+            #     if self._child_thread_error_flag.is_set():
+            #         logger.info(f'Child thread error caught, exiting accept_clients() loop')
+            #         return
             except:
-                print('Exception in accept_clients()')
-                traceback.print_exc()
-                if client_id is not None:
-                    self.remove_client(client_id)
+                logger.error('Exception in accept_clients():', exc_info=True)
+                self._child_thread_error_flag.set()
+                # if client_id is not None:
+                #     self.remove_client(client_id)
 
-    def handle_client(self, client: CmdServerClient):
+    def handle_disconnect(self, client_data: ClientData):
+        # logger.info(f'Closing socket for {client_data} - removing client')
+        self.remove_client(client_data.client_id)
+        # logger.info(f'Closing socket for {client_data} - closing db conn')
+        self.close_my_db_conn()
+        # logger.info(f'Closing socket for {client_data} - closing client sock')
+        client_data.sock.close()
+        # logger.info(f'Closing socket for {client_data} - done')
+
+    def shutdown(self, return_code):
+        logger.info('Shutting down...')
+        self._shutdown_code = return_code
+        # with self._client_data_lock:
+        #     for client_data in self._client_data_list:
+        #         data = {'type': 'quit'}
+        #         logger.info('Shutting down - sending json')
+        #         send_json(client_data.sock, data)
+        #         logger.info('Shutting down - json sent')
+        # self._server_socket.close()
+        sys.exit(return_code)
+
+    def handle_self_play_wrapper_client(self, client_data: ClientData):
         try:
             while True:
-                msg = client.get_next_json_msg()
-                if msg is None:
-                    break
+                try:
+                    msg = recv_json(client_data.sock)
+                except OSError:
+                    self.handle_disconnect(client_data)
+                    return
+
+                msg_type = msg['type']
+                # TODO
+        except:
+            logger.error(
+                f'Unexpected error in handle_self_play_wrapper_client({client_data}):',
+                exc_info=True)
+            self._child_thread_error_flag.set()
+
+    def handle_self_play_client(self, client_data: ClientData):
+        pause_ack_event = threading.Event()
+        self._pause_ack_events[client_data.client_id] = pause_ack_event
+
+        try:
+            while True:
+                try:
+                    msg = recv_json(client_data.sock)
+                except OSError:
+                    self.handle_disconnect(client_data)
+                    return
 
                 msg_type = msg['type']
                 if msg_type == 'pause_ack':
-                    client.pause_ack_event.set()
+                    pause_ack_event.set()
                 elif msg_type == 'metrics':
-                    self.handle_metrics(msg, client)
+                    self.handle_metrics(msg, client_data)
                 elif msg_type == 'game':
-                    self.handle_game(msg, client)
+                    self.handle_game(msg, client_data)
+                elif msg_type == 'done':
+                    self._self_play_done_event.set()
+                    break
         except:
-            print(f'Exception in handle_client({client})')
-            traceback.print_exc()
-            print('')
-        finally:
-            timed_print(f'Closing socket for {client}')
-            client.shutdown()
-            self.remove_client(client.client_id)
-            self.close_my_db_conn()
-            self._client_disconnect_event.set()
+            logger.error(
+                f'Unexpected error in handle_self_play_client({client_data}):', exc_info=True)
+            self._child_thread_error_flag.set()
+
+    def handle_training_client(self, client_data: ClientData):
+        try:
+            while True:
+                try:
+                    msg = recv_json(client_data.sock)
+                except OSError:
+                    self.handle_disconnect(client_data)
+                    return
+
+                msg_type = msg['type']
+                if msg_type == 'train-step-done':
+                    self.handle_train_step_done(msg)
+                elif msg_type == 'lock-gpu':
+                    self.handle_lock_gpu(msg, client_data)
+        except:
+            logger.error('Unexpected error in handle_training_client():', exc_info=True)
+            self._child_thread_error_flag.set()
 
     def _flush_pending_games_helper(self, c: sqlite3.Cursor, gen: Generation,
                                     game_data: Dict[Generation, list]):
@@ -504,18 +749,19 @@ class CmdServer:
         if commit_to_db:
             db_conn.commit()
 
-    def handle_metrics(self, msg, client: CmdServerClient):
+    def handle_metrics(self, msg, client_data: ClientData):
+        client_id = client_data.client_id
         gen = msg['gen']
         timestamp = msg['timestamp']
         metrics = msg['metrics']
 
-        n_augmented_positions = self.flush_pending_games(client.client_id, commit_to_db=False)
-        self.insert_metrics(client.client_id, gen, timestamp, metrics, commit_to_db=False)
+        n_augmented_positions = self.flush_pending_games(client_id, commit_to_db=False)
+        self.insert_metrics(client_id, gen, timestamp, metrics, commit_to_db=False)
         self.my_db_conn.commit()
         self._increment_master_list_length(n_augmented_positions)
 
-    def handle_game(self, msg, client: CmdServerClient):
-        client_id = client.client_id
+    def handle_game(self, msg, client_data: ClientData):
+        client_id = client_data.client_id
         gen = msg['gen']
         start_timestamp = msg['start_timestamp']
         end_timestamp = msg['end_timestamp']
@@ -534,31 +780,43 @@ class CmdServer:
             self.my_db_conn.commit()
             self._increment_master_list_length(n_augmented_positions)
 
-    def pause(self, clients: List[CmdServerClient]):
+    def pause(self, clients: List[ClientData]):
         if not clients:
             return
-        timed_print('Issuing pause...')
+        logger.info('Issuing pause...')
         data = {'type': 'pause'}
 
         for client in clients:
-            client.send_json(data)
+            send_json(client.sock, data)
 
         for client in clients:
-            client.pause_ack_event.wait()
-            client.pause_ack_event.clear()
-        timed_print('Pause acked!')
+            event = self._pause_ack_events[client.client_id]
+            event.wait()
+            event.clear()
+        logger.info('Pause acked!')
 
-    def get_shared_gpu_clients(self) -> List[CmdServerClient]:
+    def get_client_data_list(self, ctype: ClientType) -> List[ClientData]:
         """
-        Returns a list of all clients that are sharing a GPU with the training process
+        Returns a list of all client datas of the given type.
         """
-        return [c for c in self.get_clients_list() if c.shared_gpu]
+        with self._client_data_lock:
+            return [c for c in self._client_data_list if c.client_type == ctype]
 
-    def pause_shared_gpu_clients(self):
-        self.pause(self.get_shared_gpu_clients())
+    def get_single_client_data(self, ctype: ClientType) -> ClientData:
+        """
+        Returns a single client data of the given type.
+        """
+        data_list = self.get_client_data_list(ctype)
+        assert len(data_list) > 0, f'No clients of type {ctype} connected'
+        return data_list[0]
+
+    def pause_shared_gpu_self_play_clients(self, training_client_data: ClientData):
+        self_play_list = self.get_client_data_list(ClientType.SELF_PLAY)
+        shared_list = [c for c in self_play_list if c.shares_gpu_with(training_client_data)]
+        self.pause(shared_list)
 
     def reload_weights(self, model_filename: str, generation: int):
-        timed_print('Issuing reload...')
+        logger.info('Issuing reload...')
         clients = self.get_clients_list()
 
         data = {
@@ -569,28 +827,3 @@ class CmdServer:
 
         for client in clients:
             client.send_json(data)
-
-    def record_training_step(self, stats: TrainingStats):
-        window = construct_window(self.last_sample_window, stats.window_start, stats.window_end,
-                                  stats.n_samples)
-        self.last_sample_window = window
-
-        c = self.my_db_conn.cursor()
-
-        c.execute("""INSERT OR REPLACE INTO training (gen, training_start_ts, training_end_ts,
-            window_start, window_end, window_sample_rate)
-            VALUES (?, ?, ?, ?, ?, ?)""",
-            (stats.gen, stats.start_ts, stats.end_ts, window.start, window.end, window.sample_rate))
-
-        head_data = []
-        for head_stats in stats.substats_list:
-            head_data.append((stats.gen, head_stats.name, head_stats.loss(),
-                head_stats.loss_weight, head_stats.accuracy()))
-
-        c.executemany("""INSERT OR REPLACE INTO training_heads (gen, head_name, loss, loss_weight, accuracy)
-            VALUES (?, ?, ?, ?, ?)""", head_data)
-
-        self.my_db_conn.commit()
-
-    def start(self):
-        threading.Thread(target=self.accept_clients, daemon=True).start()

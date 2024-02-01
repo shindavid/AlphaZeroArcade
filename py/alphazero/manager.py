@@ -1,18 +1,11 @@
 """
-NOTE: in pytorch, it is standard to use the .pt extension for all sorts of files. I find this confusing. To clearly
-differentiate the different types of files, I have invented the following extensions:
-
-- .ptd: pytorch-data files
-- .ptc: pytorch-checkpoint files
-- .ptj: pytorch-jit-compiled model files
-
 BASE_DIR/
         stdout.txt
         training.db
         self-play-data/
             client-0/
                 gen-0/  # uses implicit dummy uniform model
-                    {timestamp}-{num_positions}.ptd
+                    {timestamp}.ptd
                     ...
                 gen-1/  # uses models/gen-1.ptj
                     ...
@@ -36,6 +29,14 @@ BASE_DIR/
             gen-1.ptc
             gen-2.ptc
             ...
+
+NOTE: in pytorch, it is standard to use the .pt extension for all sorts of files. I find this
+confusing. To clearly differentiate the different types of files, I have invented the following
+extensions:
+
+- .ptd: pytorch-data files
+- .ptc: pytorch-checkpoint files
+- .ptj: pytorch-jit-compiled model files
 """
 import os
 import shutil
@@ -53,7 +54,7 @@ from torch.utils.data import DataLoader
 from alphazero.cmd_server import CmdServer
 from alphazero.custom_types import Generation
 from alphazero.net_trainer import NetTrainer
-from alphazero.optimization_args import ModelingArgs
+from alphazero.training_params import TrainingParams
 from alphazero.sample_window_logic import SamplingParams
 from games import GameType
 from net_modules import Model
@@ -312,9 +313,9 @@ class AlphaZeroManager:
         self._net.cuda(device=0)  # net training always uses device 0
         self._net.train()
 
-        learning_rate = ModelingArgs.learning_rate
-        momentum = ModelingArgs.momentum
-        weight_decay = ModelingArgs.weight_decay
+        learning_rate = TrainingParams.learning_rate
+        momentum = TrainingParams.momentum
+        weight_decay = TrainingParams.weight_decay
         self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum,
                               weight_decay=weight_decay)
 
@@ -518,11 +519,11 @@ class AlphaZeroManager:
         timed_print(f'Train gen:{gen}')
         dataset.announce_sampling(timed_print)
 
-        trainer = NetTrainer(gen, ModelingArgs.snapshot_steps)
+        trainer = NetTrainer(gen, TrainingParams.minibatches_per_epoch)
 
         loader = torch.utils.data.DataLoader(
             dataset,
-            batch_size=ModelingArgs.minibatch_size,
+            batch_size=TrainingParams.minibatch_size,
             num_workers=4,
             pin_memory=True,
             shuffle=True)
@@ -535,7 +536,7 @@ class AlphaZeroManager:
         stats.dump()
 
         self.cmd_server.record_training_step(stats)
-        assert trainer.n_minibatches_processed >= ModelingArgs.snapshot_steps
+        assert trainer.n_minibatches_processed >= TrainingParams.minibatches_per_epoch
 
         timed_print(f'Gen {gen} training complete')
         trainer.dump_timing_stats()

@@ -10,7 +10,7 @@ import games
 from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.net_trainer import NetTrainer
-from alphazero.optimization_args import ModelingArgs
+from alphazero.training_params import TrainingParams
 from config import Config
 from util.py_util import timed_print
 
@@ -52,11 +52,11 @@ def load_args():
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
-    ModelingArgs.add_args(parser)
+    TrainingParams.add_args(parser)
 
     args = parser.parse_args()
     Args.load(args)
-    ModelingArgs.load(args)
+    TrainingParams.load(args)
 
 
 def main():
@@ -71,7 +71,7 @@ def main():
 
     loader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=ModelingArgs.minibatch_size,
+        batch_size=TrainingParams.minibatch_size,
         num_workers=4,
         pin_memory=True,
         shuffle=True)
@@ -93,10 +93,10 @@ def main():
     net.cuda(Args.cuda_device_str)
     net.train()
 
-    learning_rate = ModelingArgs.learning_rate
-    weight_decay = ModelingArgs.weight_decay
+    learning_rate = TrainingParams.learning_rate
+    weight_decay = TrainingParams.weight_decay
     if Args.optimizer == 'SGD':
-        momentum = ModelingArgs.momentum
+        momentum = TrainingParams.momentum
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     elif Args.optimizer == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -106,7 +106,8 @@ def main():
     if checkpoint and 'opt.state_dict' in checkpoint:
         optimizer.load_state_dict(checkpoint['opt.state_dict'])
 
-    trainer = NetTrainer(ModelingArgs.snapshot_steps, Args.cuda_device_str)
+    trainer = NetTrainer(
+        TrainingParams.minibatches_per_epoch, Args.cuda_device_str)
     n_samples_processed = 0
     while epoch < Args.epochs:
         trainer.reset()

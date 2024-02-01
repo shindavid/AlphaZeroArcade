@@ -35,28 +35,23 @@ pos_dtype = np.dtype([('client_id', 'i4'),
 class PositionListSlice:
     def __init__(self):
         self._positions = np.zeros(0, dtype=pos_dtype)
-        self._start_index = 0  # index of master list
+        self._start_index = 0  # index of master list, corresponds to self._positions[0]
+        self._end_index = 0  # index of master list
         self._last_game_id = -1
 
     def __len__(self):
-        return len(self._positions)
+        return self._end_index - self._start_index
 
     def __getitem__(self, idx):
         return self._positions[idx]
 
     @property
     def start_index(self):
-        """
-        Returns the index of the first position in the master list.
-        """
         return self._start_index
 
     @property
     def end_index(self):
-        """
-        Returns one plus the index of the last position in the master list.
-        """
-        return self._start_index + len(self._positions)
+        return self._end_index
 
     def _get_positions(self, c: sqlite3.Cursor):
         c.execute("""SELECT id, client_id, gen, end_timestamp, augmented_positions
@@ -68,21 +63,33 @@ class PositionListSlice:
             for pos_index in range(augmented_positions):
                 yield (client_id, gen, end_timestamp, pos_index)
 
-    def extend(self, cursor: sqlite3.Cursor):
-        """
-        Extends the list of positions with newly added games from the database.
-        """
+    # def extend(self, cursor: sqlite3.Cursor):
+    #     """
+    #     Extends the list of positions with newly added games from the database.
+    #     """
+    #     positions = np.fromiter(self._get_positions(cursor), dtype=pos_dtype)
+    #     self._positions = np.concatenate([self._positions, positions])
+
+    # def set_start_index(self, start_index: int):
+    #     n_rows_to_cut = start_index - self._start_index
+    #     positions = self._positions[n_rows_to_cut:]
+    #     assert start_index >= self._start_index, (start_index, self._start_index)
+    #     assert len(positions) > 0, (start_index, self._start_index)
+
+    #     self._positions = positions
+    #     self._start_index = start_index
+
+    def set_bounds(self, cursor: sqlite3.Cursor, start: int, end:int):
+        assert start >= self._start_index, (start, end, self._start_index)
+        assert 0 <= start < end, (start, end, self._start_index)
+
         positions = np.fromiter(self._get_positions(cursor), dtype=pos_dtype)
         self._positions = np.concatenate([self._positions, positions])
 
-    def set_start_index(self, start_index: int):
-        n_rows_to_cut = start_index - self._start_index
-        positions = self._positions[n_rows_to_cut:]
-        assert start_index >= self._start_index, (start_index, self._start_index)
-        assert len(positions) > 0, (start_index, self._start_index)
-
-        self._positions = positions
-        self._start_index = start_index
+        n_rows_to_cut = start - self._start_index
+        self._positions = self._positions[n_rows_to_cut:]
+        self._start_index = start
+        self._end_index = end
 
 
 class PositionDataset(Dataset):

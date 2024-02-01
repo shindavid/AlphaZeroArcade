@@ -76,6 +76,8 @@ class Config:
             kwargs['help'] = f'{help} (default: {value} [{filename}:{key}])'
         else:
             kwargs['help'] = f'{help} [{filename}:{key}]'
+        if help == argparse.SUPPRESS:
+            kwargs['help'] = help
 
         parser.add_argument(*args, **kwargs)
 
