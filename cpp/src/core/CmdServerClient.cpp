@@ -42,7 +42,7 @@ perf_stats_t CmdServerClient::get_perf_stats() const {
 }
 
 CmdServerClient::CmdServerClient(const Params& params)
-    : proc_start_ts_(util::ns_since_epoch()), shared_gpu_(params.shared_gpu) {
+    : proc_start_ts_(util::ns_since_epoch()) {
   socket_ = io::Socket::create_client_socket(params.cmd_server_hostname, params.cmd_server_port);
   cur_generation_ = params.starting_generation;
   send_handshake();
@@ -61,8 +61,8 @@ CmdServerClient::~CmdServerClient() {
 void CmdServerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
-  msg["proc_start_timestamp"] = proc_start_ts_;
-  msg["shared_gpu"] = shared_gpu_;
+  msg["role"] = "self-play";
+  msg["start_timestamp"] = proc_start_ts_;
   socket_->json_write(msg);
 }
 
@@ -125,10 +125,12 @@ void CmdServerClient::reload_weights(const std::string& model_filename) {
 }
 
 void CmdServerClient::loop() {
+  // TODO: heartbeat checking to make sure server is still alive
   while (true) {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
-      throw util::Exception("%s() unexpected cmd-server socket close", __func__);
+      std::cout << "Cmd-server socket closed" << std::endl;
+      break;
     }
 
     std::string type = msg.at("type").as_string().c_str();
@@ -142,6 +144,9 @@ void CmdServerClient::loop() {
       send_metrics();
       reload_weights(model_filename);
       unpause();
+    } else if (type == "quit") {
+      // TODO: add actual quit logic
+      break;
     } else {
       throw util::Exception("Unknown cmd-server message type %s", type.c_str());
     }

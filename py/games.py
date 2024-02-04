@@ -1,3 +1,4 @@
+import argparse
 from typing import Dict, Optional
 
 from net_modules import ModelConfigGenerator
@@ -38,3 +39,12 @@ def get_game_type(game_name) -> GameType:
     if game_name not in GAME_TYPES_BY_NAME:
         raise ValueError(f'Unknown game: {game_name}')
     return GAME_TYPES_BY_NAME[game_name]
+
+
+def is_valid_game_name(game_name) -> bool:
+    return game_name in GAME_TYPES_BY_NAME
+
+
+def add_parser_argument(parser: argparse.ArgumentParser, *args):
+    choices = [t.name for t in ALL_GAME_TYPES]
+    parser.add_argument(*args, choices=choices, help='game to play')

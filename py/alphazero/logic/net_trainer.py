@@ -2,7 +2,7 @@ from typing import List
 import torch
 from torch import optim
 
-from alphazero.custom_types import Generation
+from alphazero.logic.custom_types import Generation
 from alphazero.data.position_dataset import PositionDataset
 from net_modules import Head, Model
 from learning_targets import LearningTarget
@@ -56,7 +56,7 @@ class TrainingSubStats:
     def loss(self):
         return self.loss_num / self.den if self.den else 0.0
 
-    def dump(self, total_loss):
+    def dump(self, total_loss, print_fn=print):
         output = [self.descr.rjust(TrainingSubStats.max_descr_len)]
 
         output.append('   | accuracy: %8.6f   ' % self.accuracy())
@@ -67,14 +67,21 @@ class TrainingSubStats:
         output.append('loss: %8.6f * %5.3f = %8.6f [%6.3f%%]' % (
             loss, weight, loss * weight, loss_pct))
 
-        print(''.join(output))
+        print_fn(''.join(output))
+
+    def to_json(self):
+        return {
+            'accuracy': self.accuracy(),
+            'loss': self.loss(),
+            'loss_weight': self.loss_weight,
+            }
 
     @staticmethod
-    def dump_total_loss(total_loss):
+    def dump_total_loss(total_loss, print_fn=print):
         output = [''.rjust(TrainingSubStats.max_descr_len)]
         output.append('                    ')  # accuracy - 6 for 'total_'
         output.append('total_loss:                  = %8.6f' % total_loss)
-        print(''.join(output))
+        print_fn(''.join(output))
 
 
 class TrainingStats:
@@ -95,15 +102,28 @@ class TrainingStats:
         for results, substats in zip(results_list, self.substats_list):
             substats.update(results)
 
-    def dump(self):
+    def dump(self, print_fn=print):
         total_loss = 0
         for substats in self.substats_list:
             total_loss += substats.loss() * substats.loss_weight
 
         for substats in self.substats_list:
-            substats.dump(total_loss)
+            substats.dump(total_loss, print_fn=print_fn)
 
-        TrainingSubStats.dump_total_loss(total_loss)
+        TrainingSubStats.dump_total_loss(total_loss, print_fn=print_fn)
+
+    def to_json(self):
+        substats = { s.name: s.to_json() for s in self.substats_list }
+        return {
+            'gen': self.gen,
+            'start_ts': self.start_ts,
+            'end_ts': self.end_ts,
+            'window_start': self.window_start,
+            'window_end': self.window_end,
+            'window_sample_rate': self.window_sample_rate,
+            'n_samples': self.n_samples,
+            'substats': substats,
+        }
 
 
 class NetTrainer:
@@ -188,8 +208,8 @@ class NetTrainer:
 
         return stats
 
-    def dump_timing_stats(self):
+    def dump_timing_stats(self, print_fn=print):
         total_time = time.time() - self.t0
         data_loading_time = total_time - self.for_loop_time
-        timed_print(f'Data loading time: {data_loading_time:10.3f} seconds')
-        timed_print(f'Training time:     {self.for_loop_time:10.3f} seconds')
+        print_fn(f'Data loading time: {data_loading_time:10.3f} seconds')
+        print_fn(f'Training time:     {self.for_loop_time:10.3f} seconds')

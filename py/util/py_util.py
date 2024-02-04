@@ -14,6 +14,16 @@ def is_iterable(obj):
         return False
 
 
+def is_valid_path_component(path_component):
+    try:
+        # Attempt to join the path component with a dummy path
+        # If it's a valid component, it should not raise an exception
+        joined_path = os.path.join('dummy_path', path_component)
+        return os.path.split(joined_path)[1] == path_component
+    except (ValueError, OSError):
+        return False
+
+
 _sha256_cache = {}
 
 

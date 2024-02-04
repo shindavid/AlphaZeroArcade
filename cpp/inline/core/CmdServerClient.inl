@@ -36,10 +36,7 @@ inline auto CmdServerClient::Params::make_options_description() {
           "cmd server port. If unset, then this runs without a cmd server")
       .template add_option<"starting-generation">(
           po::value<int>(&starting_generation)->default_value(starting_generation),
-          "starting generation")
-      .template add_flag<"shared-gpu", "non-shared-gpu">(
-          &shared_gpu, "signifies that GPU is shared with training process",
-          "signifies that GPU is not shared with training process");
+          "starting generation");
 }
 
 template <typename T>

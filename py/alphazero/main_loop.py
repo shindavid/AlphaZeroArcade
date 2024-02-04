@@ -1,96 +1,189 @@
 #!/usr/bin/env python3
 
+"""
+An AlphaZero run has 3 components:
+
+1. self-play server(s): generates training data
+2. training server(s): trains the neural net from the training data
+3. cmd server: coordinates the training and self-play servers
+
+There is only one cmd server per run, while there can be multiple training and self-play servers.
+All the servers can run on the same machine, or on different machines - communication between them
+is done via TCP.
+
+This script launches 3 servers on the local machine: one cmd server, one training server, and one
+self-play server. This is useful for dev/testing purposes. By default, the script detects if the
+local machine has multiple GPU's or not. If there is a single GPU, then the system is configured to
+pause the self-play server whenever the training server is running.
+
+For standard production runs, you likely still only need one training server, but you will want
+multiple self-play servers, on different machines. Only for very large runs will you want multiple
+training servers - the coordination between them is not yet implemented.
+"""
 import argparse
 import os
+from pipes import quote
+import signal
+import subprocess
+import time
 
-from alphazero.manager import AlphaZeroManager
-from alphazero.optimization_args import ModelingArgs
-from alphazero.sample_window_logic import SamplingParams, KataGoWindowSizeFunction
-from config import Config
-import games
+import torch
+
+from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.cmd_server import CmdServer
+from alphazero.logic.sample_window_logic import SamplingParams
+from alphazero.logic.training_params import TrainingParams
+from util.logging_util import configure_logger, get_logger
+from util.repo_util import Repo
+from util import subprocess_util
+
+
+logger = get_logger()
 
 
 class Args:
-    alphazero_dir: str
-    game: str
-    binary_path: str
-    tag: str
-    model_cfg: str
-    fork_from: str
-    restart_gen: int
     cmd_server_port: int
+    binary_path: str
+    model_cfg: str
+    debug: bool
 
     @staticmethod
     def load(args):
-        Args.alphazero_dir = args.alphazero_dir
-        Args.game = args.game
-        Args.binary_path = args.binary_path
-        Args.tag = args.tag
-        Args.model_cfg = args.model_cfg
-        Args.fork_from = args.fork_from
-        Args.restart_gen = args.restart_gen
         Args.cmd_server_port = args.cmd_server_port
-        assert Args.game, 'Required option: --game/-g'
-        assert Args.tag, 'Required option: --tag/-t'
-        assert Args.tag.find('@') == -1, 'Tag cannot contain @'
+        Args.binary_path = args.binary_path
+        Args.model_cfg = args.model_cfg
+        Args.debug = bool(args.debug)
+
+    @staticmethod
+    def add_args(parser):
+        parser.add_argument('--cmd-server-port', type=int, default=CmdServer.DEFAULT_PORT,
+                            help='cmd server port (default: %(default)s)')
+        parser.add_argument('-b', '--binary-path',
+                            help='binary path. By default, if a unique binary is found in the '
+                            'alphazero dir, it will be used. If no binary is found in the alphazero '
+                            'dir, then will use one found in REPO_ROOT/target/Release/bin/. If '
+                            'multiple binaries are found in the alphazero dir, then this option is '
+                            'required.')
+        parser.add_argument('-m', '--model-cfg', default='default',
+                            help='model config (default: %(default)s)')
+        parser.add_argument('--debug', action='store_true', help='debug mode')
 
 
 def load_args():
     parser = argparse.ArgumentParser()
-    cfg = Config.instance()
 
-    parser.add_argument('-g', '--game', help='game to play (e.g. "c4")')
-    parser.add_argument('-b', '--binary-path',
-                        help='binary path. By default, if a unique binary is found in the '
-                        'alphazero dir, it will be used. If no binary is found in the alphazero '
-                        'dir, then will use one found in REPO_ROOT/target/Release/bin/. If '
-                        'multiple binaries are found in the alphazero dir, then this option is '
-                        'required.')
-    parser.add_argument('-t', '--tag', help='tag for this run (e.g. "v1")')
-    parser.add_argument('-m', '--model-cfg', default='default', help='model config (default: %(default)s)')
-    parser.add_argument('-f', '--fork-from', help='tag to fork off of (e.g., "v1", or "v1@100" to fork off of gen 100))')
-    parser.add_argument('--restart-gen', type=int, help='gen to resume at')
-    parser.add_argument('--cmd-server-port', type=int, default=1111, help='cmd server port (default: %(default)s)')
-    cfg.add_parser_argument('alphazero_dir', parser, '-d',
-                            '--alphazero-dir', help='alphazero directory')
-    ModelingArgs.add_args(parser)
+    CommonArgs.add_args(parser)
+    SamplingParams.add_args(parser)
+    TrainingParams.add_args(parser)
+    Args.add_args(parser)
 
     args = parser.parse_args()
+
+    CommonArgs.load(args)
+    SamplingParams.load(args)
+    TrainingParams.load(args)
     Args.load(args)
-    ModelingArgs.load(args)
+
+
+def launch_cmd_server():
+    cmd = [
+        'py/alphazero/run_cmd_server.py',
+        '--port', str(Args.cmd_server_port),
+        ]
+    if Args.debug:
+        cmd.append('--debug')
+    CommonArgs.add_to_cmd(cmd)
+    SamplingParams.add_to_cmd(cmd)
+
+    cmd = ' '.join(map(quote, cmd))
+    logger.info(f'Launching cmd server: {cmd}')
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+def launch_self_play_server(cuda_device: int):
+    cuda_device = f'cuda:{cuda_device}'
+
+    cmd = [
+        'py/alphazero/run_self_play_server.py',
+        '--cmd-server-port', str(Args.cmd_server_port),
+        '--cuda-device', cuda_device,
+    ]
+    if Args.debug:
+        cmd.append('--debug')
+    if Args.binary_path:
+        cmd.extend(['--binary-path', Args.binary_path])
+    CommonArgs.add_to_cmd(cmd)
+
+    cmd = ' '.join(map(quote, cmd))
+    logger.info(f'Launching self play server: {cmd}')
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+def launch_training_server(cuda_device: int):
+    cuda_device = f'cuda:{cuda_device}'
+
+    cmd = [
+        'py/alphazero/run_training_server.py',
+        '--cmd-server-port', str(Args.cmd_server_port),
+        '--cuda-device', cuda_device,
+        '--model-cfg', Args.model_cfg,
+    ]
+    if Args.debug:
+        cmd.append('--debug')
+    CommonArgs.add_to_cmd(cmd)
+    TrainingParams.add_to_cmd(cmd)
+
+    cmd = ' '.join(map(quote, cmd))
+    logger.info(f'Launching training server: {cmd}')
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
 def main():
     load_args()
-    base_dir = os.path.join(Args.alphazero_dir, Args.game, Args.tag)
-    game_type = games.get_game_type(Args.game)
-    manager = AlphaZeroManager(game_type, base_dir, Args.binary_path)
-    manager.makedirs()
-    if Args.fork_from:
-        fork_from = Args.fork_from
-        gen = None
-        if '@' in fork_from:
-            fork_from, gen = fork_from.split('@')
-            gen = int(gen)
-        fork_base_dir = os.path.join(Args.alphazero_dir, Args.game, fork_from)
-        fork_manager = AlphaZeroManager(game_type, fork_base_dir)
-        manager.fork_from(fork_manager, gen)
-    if Args.restart_gen:
-        manager.erase_data_after(Args.restart_gen)
+    configure_logger(debug=Args.debug)
 
-    manager.set_model_cfg(Args.model_cfg)
+    os.chdir(Repo.root())
 
-    n0 = ModelingArgs.snapshot_steps * ModelingArgs.minibatch_size
-    window_size_function = KataGoWindowSizeFunction(n0)
-    sampling_params = SamplingParams(
-        window_size_function=window_size_function,
-        target_sample_rate=ModelingArgs.sample_limit,
-        minibatches_per_window=ModelingArgs.snapshot_steps,
-        minibatch_size=ModelingArgs.minibatch_size,
-        )
+    n = torch.cuda.device_count()
+    assert n > 0, 'No GPU found'
 
-    manager.launch_cmd_server(sampling_params, port=Args.cmd_server_port)
-    manager.run()
+    procs = []
+
+    def shutdown():
+        for descr, proc in procs:
+            if proc.poll() is None:
+                proc.terminate()
+                logger.info(f'Terminated {descr} process {proc.pid}')
+
+    def signal_handler(sig, frame):
+        logger.info(f'Received signal {sig}')
+        shutdown()
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    procs.append(('Cmd-server', launch_cmd_server()))
+    time.sleep(0.5)  # Give cmd-server time to initialize socket
+    procs.append(('Self-play', launch_self_play_server(n-1)))
+    procs.append(('Training', launch_training_server(0)))
+
+    loop = True
+    while loop:
+        for descr, proc in procs:
+            if proc.poll() is None:
+                continue
+            loop = False
+            if proc.returncode != 0:
+                print('*' * 80)
+                logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
+                print('*' * 80)
+                print(proc.stderr.read())
+            else:
+                print('*' * 80)
+                logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
+        time.sleep(1)
+
+    shutdown()
+
 
 
 if __name__ == '__main__':
