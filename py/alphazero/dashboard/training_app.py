@@ -26,7 +26,8 @@ import sqlite3
 
 
 HEIGHT = 300
-WIDTH = 800
+WIDTH = 1200
+SIZING_MODE = 'fixed'
 
 
 def load_args():
@@ -294,8 +295,10 @@ class TrainingVisualizer:
         colors = self.colors
 
         x_axis_label = TrainingVisualizer.X_VARS[self.x_var_index]
-        plot = figure(height=HEIGHT, width=WIDTH, title='Train Loss', x_axis_label=x_axis_label,
-                      y_axis_label='Loss', tools='pan,box_zoom,xwheel_zoom,reset,save')
+        plot = figure(
+            height=HEIGHT, width=WIDTH, sizing_mode=SIZING_MODE,
+            title='Train Loss', x_axis_label=x_axis_label,
+            y_axis_label='Loss', tools='pan,box_zoom,xwheel_zoom,reset,save')
 
         # Add lines to the plot and create legend items
         legend_items = []
@@ -317,9 +320,11 @@ class TrainingVisualizer:
         colors = self.colors
 
         x_axis_label = TrainingVisualizer.X_VARS[self.x_var_index]
-        plot = figure(height=HEIGHT, width=WIDTH, title='Stacked Train Loss', x_axis_label=x_axis_label,
-                      y_axis_label='Loss', x_range=self.loss_plot.x_range,
-                      tools='pan,box_zoom,xwheel_zoom,reset,save')
+        plot = figure(
+            height=HEIGHT, width=WIDTH, sizing_mode=SIZING_MODE,
+            title='Stacked Train Loss', x_axis_label=x_axis_label,
+            y_axis_label='Loss', x_range=self.loss_plot.x_range,
+            tools='pan,box_zoom,xwheel_zoom,reset,save')
 
         legend_items = []
         # Create the stacked area plot
@@ -353,7 +358,7 @@ class TrainingVisualizer:
 
         x_axis_label = TrainingVisualizer.X_VARS[self.x_var_index]
         accuracy_plot = figure(
-            height=HEIGHT, width=WIDTH,
+            height=HEIGHT, width=WIDTH, sizing_mode=SIZING_MODE,
             title='Train Accuracy', x_axis_label=x_axis_label,
             y_axis_label='Accuracy', x_range=self.loss_plot.x_range, y_range=[0, 1],
             tools='pan,box_zoom,xwheel_zoom,reset,save')
