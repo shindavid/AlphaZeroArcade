@@ -1,21 +1,24 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace carcassonne {
 
 enum class TerrainType : uint8_t {
-  tField,
   tCloister,
+  tField,
   tRoad,
-  tCity
+  tCity,
+  tNumTerrainTypes
 };
 
 enum class EdgeType : uint8_t {
   eNone,
   eField,
   eRoad,
-  eCity
+  eCity,
+  eNumEdgeTypes
 };
 
 /*
@@ -55,10 +58,9 @@ enum class TileType : uint8_t {
   tFFRR000,
   tFRFR000,
   tFRRR000,
-  tRRRR000
+  tRRRR000,
+  tNumTileTypes
 };
-
-inline constexpr bool has_cloister(TileType tile);
 
 /*
  * The four cardinal directions.
@@ -72,7 +74,8 @@ enum class Direction : uint8_t {
   dN = 0,
   dE = 1,
   dS = 2,
-  dW = 3
+  dW = 3,
+  dNumDirections = 4
 };
 
 /*
@@ -96,7 +99,8 @@ enum class MeeplePlacement : uint8_t {
   mSW = 6,
   mNW = 7,
   mCloister = 8,
-  mNone = 9
+  mNone = 9,
+  mNumMeeplePlacements = 10
 };
 
 /*
@@ -108,6 +112,7 @@ enum class MeeplePlacement : uint8_t {
 class __attribute__((packed)) EdgeProfile {
  public:
   EdgeProfile(uint8_t data) : data_(data) {}
+  std::string to_string() const;
   EdgeType get(Direction direction) const;
 
  private:
@@ -126,12 +131,20 @@ class __attribute__((packed)) EdgeProfile {
 class __attribute__((packed)) MeepleLocationProfile {
  public:
   MeepleLocationProfile(uint16_t data) : data_(data) {}
-
+  std::string to_string() const;
   bool permits(MeeplePlacement m) const;
 
  private:
   const uint16_t data_;  // bit k corresponds to MeeplePlacement k
 };
+
+inline const char* terrain_to_string(TerrainType terrain);
+inline const char* edge_type_to_string(EdgeType edge);
+inline const char* tile_type_to_string(TileType tile);
+inline const char* direction_to_string(Direction direction);
+inline const char* meeple_placement_to_string(MeeplePlacement placement);
+
+inline constexpr bool has_cloister(TileType tile);
 
 /*
  * Is the given orientation valid for the given tile?
