@@ -31,6 +31,7 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
 add_executable(carcassonne cpp/src/games/carcassonne/main/Carcassonne.cpp)
+add_executable(carcassonne_unit_tests cpp/src/games/carcassonne/main/UnitTests.cpp)
 add_executable(c4 cpp/src/games/connect4/main/Connect4.cpp)
 add_executable(othello cpp/src/games/othello/main/Othello.cpp)
 add_executable(othello_unit_tests cpp/src/games/othello/main/UnitTests.cpp)
@@ -39,6 +40,7 @@ add_executable(util_unit_tests cpp/src/util/main/UnitTests.cpp)
 
 set(executables
         carcassonne
+        carcassonne_unit_tests
         c4
         othello
         othello_unit_tests
@@ -65,6 +67,8 @@ link_directories(${Boost_LIBRARY_DIRS})
 
 foreach(tgt ${executables})
     if (${tgt} STREQUAL "carcassonne")
+        target_link_libraries(${tgt} carcassonne-lib)
+    elseif (${tgt} STREQUAL "carcassonne_unit_tests")
         target_link_libraries(${tgt} carcassonne-lib)
     elseif (${tgt} STREQUAL "c4")
         target_link_libraries(${tgt} connect4-lib)
