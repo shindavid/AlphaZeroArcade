@@ -88,10 +88,8 @@ class GameState {
   static constexpr int kNumPlayers = c4::kNumPlayers;
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
+
   using ActionShape = Eigen::Sizes<kNumColumns>;
-
-  static std::string action_delimiter() { return ""; }
-
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = GameStateTypes::Action;
   using ActionMask = GameStateTypes::ActionMask;
@@ -100,6 +98,9 @@ class GameState {
   using ValueArray = GameStateTypes::ValueArray;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
+
+  static std::string action_delimiter() { return ""; }
+  static std::string action_to_str(const Action& action) { return std::to_string(action[0]); }
 
   template <eigen_util::FixedTensorConcept Tensor>
   core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
@@ -112,7 +113,6 @@ class GameState {
   GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
-  std::string action_to_str(const Action& action) const { return std::to_string(action[0]); }
 
   core::seat_index_t get_player_at(int row, int col) const;
   void dump(const Action* last_action = nullptr,

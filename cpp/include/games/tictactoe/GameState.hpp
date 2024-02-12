@@ -51,9 +51,6 @@ class GameState {
 
   using ActionShape = Eigen::Sizes<kNumCells>;
   using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-
-  static std::string action_delimiter() { return ""; }
-
   using GameStateTypes = core::GameStateTypes<GameState>;
   using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
   using Action = GameStateTypes::Action;
@@ -62,6 +59,9 @@ class GameState {
   using ValueArray = GameStateTypes::ValueArray;
   using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
   using GameOutcome = GameStateTypes::GameOutcome;
+
+  static std::string action_delimiter() { return ""; }
+  static std::string action_to_str(const Action& action) { return std::to_string(action[0]); }
 
   template <eigen_util::FixedTensorConcept Tensor>
   core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
@@ -76,7 +76,6 @@ class GameState {
   int get_move_number() const;
   mask_t get_current_player_mask() const { return cur_player_mask_; }
   mask_t get_opponent_mask() const { return full_mask_ ^ cur_player_mask_; }
-  std::string action_to_str(const Action& action) const { return std::to_string(action[0]); }
 
   core::seat_index_t get_player_at(int row, int col) const;
   void dump(const Action* last_action = nullptr,

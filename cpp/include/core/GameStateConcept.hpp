@@ -36,7 +36,7 @@ concept GameStateConcept = requires(State state) {
 
   /*
    * The string that will be used as a delimiter to separate a sequence of action strings,
-   * as returned by state.action_to_str().
+   * as returned by State::action_to_str().
    */
   { State::action_delimiter() } -> std::same_as<std::string>;
 
@@ -94,7 +94,7 @@ concept GameStateConcept = requires(State state) {
   /*
    * A string representation of an action.
    */
-  { state.action_to_str(typename GameStateTypes<State>::Action{}) } -> std::same_as<std::string>;
+  { State::action_to_str(typename GameStateTypes<State>::Action{}) } -> std::same_as<std::string>;
 
   /*
    * Must be hashable (for use in MCGS).

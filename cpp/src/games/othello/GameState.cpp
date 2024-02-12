@@ -12,6 +12,18 @@
 
 namespace othello {
 
+std::string GameState::action_to_str(const Action& action) {
+  int a = action[0];
+  if (a == kPass) {
+    return "PA";
+  }
+  char s[3];
+  s[0] = 'A' + (a % 8);
+  s[1] = '1' + (a / 8);
+  s[2] = 0;
+  return s;
+}
+
 // copied from edax-reversi repo - board_next()
 core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
   int action_index = action[0];
@@ -53,18 +65,6 @@ GameState::ActionMask GameState::get_valid_actions() const {
   }
   valid_actions(kPass) = mask == 0;
   return valid_actions;
-}
-
-std::string GameState::action_to_str(const Action& action) const {
-  int a = action[0];
-  if (a == kPass) {
-    return "PA";
-  }
-  char s[3];
-  s[0] = 'A' + (a % 8);
-  s[1] = '1' + (a / 8);
-  s[2] = 0;
-  return s;
 }
 
 void GameState::dump(const Action* last_action,

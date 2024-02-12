@@ -53,10 +53,8 @@ class Node {
   };
 
   struct stable_data_t {
-    stable_data_t(const Tensorizor&, const GameState&, const GameOutcome&);
+    stable_data_t(const GameState&, const GameOutcome&);
 
-    Tensorizor tensorizor;
-    GameState state;
     GameOutcome outcome;
     ActionMask valid_action_mask;
     int num_valid_actions;

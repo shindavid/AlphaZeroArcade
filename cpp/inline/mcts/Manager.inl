@@ -102,6 +102,8 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   }
 
   shared_data_.root_node = new_root;
+  shared_data_.root_state = state;
+  shared_data_.root_tensorizor.receive_state_change(state, action);
 
   if (params_.enable_pondering) {
     start_search_threads(&pondering_search_params_);
@@ -119,6 +121,8 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
     auto outcome = core::make_non_terminal_outcome<kNumPlayers>();
     shared_data_.root_node =
         std::make_shared<Node>(tensorizor, game_state, outcome);  // TODO: use memory pool
+    shared_data_.root_state = game_state;
+    shared_data_.root_tensorizor = tensorizor;
   }
 
   start_search_threads(&params);
@@ -150,7 +154,7 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(
   num_active_search_threads_ = num_search_threads();
 
   if (mcts::kEnableDebug) {
-    const GameState& state = shared_data_.root_node->stable_data().state;
+    const GameState& state = shared_data_.root_state;
     state.dump();
   }
 

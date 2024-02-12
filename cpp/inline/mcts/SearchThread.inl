@@ -73,6 +73,8 @@ bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void SearchThread<GameState, Tensorizor>::run() {
   search_path_.clear();
+  state_ = shared_data_->root_state;
+  tensorizor_ = shared_data_->root_tensorizor;
   visit(shared_data_->root_node.get(), nullptr, shared_data_->move_number);
   dump_profiling_stats();
 }
@@ -94,9 +96,8 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
   }
 
   const auto& stable_data = tree->stable_data();
-  const auto& outcome = stable_data.outcome;
-  if (core::is_terminal_outcome(outcome)) {
-    pure_backprop(outcome);
+  if (core::is_terminal_outcome(stable_data.outcome)) {
+    pure_backprop(stable_data.outcome);
     return;
   }
 
@@ -116,10 +117,15 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
     core::action_index_t action_index = get_best_action_index(tree, evaluation);
 
     edge_t* edge = children_data.find(action_index);
+    bool applied_action = false;
     if (!edge) {
       Action action =
           GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
-      auto child = shared_data_->node_cache.fetch_or_create(move_number, tree, action);
+      GameOutcome outcome = state_.apply_move(action);
+      tensorizor_.receive_state_change(state_, action);
+      applied_action = true;
+      auto child =
+          shared_data_->node_cache.fetch_or_create(move_number, state_, outcome, tensorizor_);
 
       std::unique_lock lock(tree->children_mutex());
       edge = children_data.insert(action, action_index, child);
@@ -130,6 +136,10 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
     if (edge_count < child_count) {
       short_circuit_backprop(edge);
     } else {
+      if (!applied_action) {
+        state_.apply_move(edge->action());
+        tensorizor_.receive_state_change(state_, edge->action());
+      }
       visit(edge->child().get(), edge, move_number + 1);
     }
   }
@@ -271,7 +281,8 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
                                                       stable_data.valid_action_mask);
   } else {
     core::symmetry_index_t sym_index = stable_data.sym_index;
-    typename NNEvaluationService::Request request{tree, &profiler_, thread_id_, sym_index};
+    typename NNEvaluationService::Request request{tree,       &state_,    &tensorizor_,
+                                                  &profiler_, thread_id_, sym_index};
     auto response = nn_eval_service_->evaluate(request);
     data->evaluation = response.ptr;
   }
@@ -296,9 +307,8 @@ std::string SearchThread<GameState, Tensorizor>::search_path_str() const {
   std::string delim = GameState::action_delimiter();
   std::vector<std::string> vec;
   for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    const GameState& prev_state = search_path_[n - 1].node->stable_data().state;
     Action action = search_path_[n].edge->action();
-    vec.push_back(prev_state.action_to_str(action));
+    vec.push_back(GameState::action_to_str(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
