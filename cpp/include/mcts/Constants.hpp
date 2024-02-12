@@ -8,7 +8,6 @@ enum Mode { kCompetitive, kTraining };
 
 struct SearchThreadRegion {
   enum region_t {
-    kCheckVisitReady,
     kAcquiringLazilyInitializedDataMutex,
     kLazyInit,
     kPureBackprop,

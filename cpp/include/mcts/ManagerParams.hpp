@@ -30,7 +30,7 @@ struct ManagerParams : public NNEvaluationServiceParams {
   boost::filesystem::path profiling_dir() const { return {}; }
 #endif  // PROFILE_MCTS
 
-  int num_search_threads = 8;
+  int num_search_threads = 1;
   bool enable_pondering = false;  // pondering = think during opponent's turn
   int pondering_tree_size_limit = 4096;
 

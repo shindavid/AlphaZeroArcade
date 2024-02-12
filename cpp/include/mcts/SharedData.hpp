@@ -1,12 +1,17 @@
 #pragma once
 
-#include <EigenRand/EigenRand>
-
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/NodeCache.hpp>
+#include <mcts/SearchParams.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
+
+#include <boost/dynamic_bitset.hpp>
+#include <EigenRand/EigenRand>
+
+#include <condition_variable>
+#include <mutex>
 
 namespace mcts {
 
@@ -24,13 +29,17 @@ struct SharedData {
   math::ExponentialDecay root_softmax_temperature;
   Eigen::Rand::P8_mt19937_64 rng;
 
+  std::mutex search_mutex;
+  std::condition_variable cv_search_on, cv_search_off;
+  boost::dynamic_bitset<> active_search_threads;
   NodeCache node_cache;
   GameState root_state;
   Tensorizor root_tensorizor;
   Node::sptr root_node;
+  SearchParams search_params;
   int manager_id = -1;
   move_number_t move_number = 0;
-  bool search_active = false;
+  bool shutting_down = false;
 };
 
 }  // namespace mcts

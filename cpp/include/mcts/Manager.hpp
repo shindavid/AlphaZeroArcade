@@ -1,9 +1,7 @@
 #pragma once
 
-#include <condition_variable>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #include <core/BasicTypes.hpp>
@@ -64,10 +62,9 @@ class Manager {
   const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state,
                               const SearchParams& params);
 
-  void start_search_threads(const SearchParams* search_params);
+  void start_search_threads(const SearchParams& search_params);
   void wait_for_search_threads();
   void stop_search_threads();
-  void run_search(SearchThread* thread, int tree_size_limit);
 
   void end_session() {
     if (nn_eval_service_) nn_eval_service_->end_session();
@@ -75,6 +72,7 @@ class Manager {
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;
+  void announce_shutdown();
   void prune_counts(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
 
@@ -88,9 +86,6 @@ class Manager {
 
   SearchResults results_;
 
-  std::mutex search_mutex_;
-  std::condition_variable cv_search_;
-  int num_active_search_threads_ = 0;
   bool connected_ = false;
 };
 

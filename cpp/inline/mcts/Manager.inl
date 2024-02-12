@@ -43,6 +43,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (params.enable_pondering && num_search_threads() == 1) {
     throw util::Exception("pondering mode does not work with only 1 search thread");
   }
+  shared_data_.active_search_threads.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
     auto thread = new SearchThread(&shared_data_, nn_eval_service_, &params_, i);
     if (mcts::kEnableProfiling) {
@@ -54,6 +55,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Manager<GameState, Tensorizor>::~Manager() {
+  announce_shutdown();
   clear();
   if (nn_eval_service_) {
     nn_eval_service_->disconnect();
@@ -61,6 +63,13 @@ inline Manager<GameState, Tensorizor>::~Manager() {
   for (auto* thread : search_threads_) {
     delete thread;
   }
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void Manager<GameState, Tensorizor>::announce_shutdown() {
+  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
+  shared_data_.shutting_down = true;
+  shared_data_.cv_search_on.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -106,7 +115,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   shared_data_.root_tensorizor.receive_state_change(state, action);
 
   if (params_.enable_pondering) {
-    start_search_threads(&pondering_search_params_);
+    start_search_threads(pondering_search_params_);
   }
 }
 
@@ -125,7 +134,11 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
     shared_data_.root_tensorizor = tensorizor;
   }
 
-  start_search_threads(&params);
+  if (mcts::kEnableDebug) {
+    shared_data_.root_state.dump();
+  }
+
+  start_search_threads(params);
   wait_for_search_threads();
 
   const auto& root = shared_data_.root_node;
@@ -148,52 +161,25 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::start_search_threads(
-    const SearchParams* search_params) {
-  util::release_assert(!shared_data_.search_active);
-  shared_data_.search_active = true;
-  num_active_search_threads_ = num_search_threads();
+    const SearchParams& search_params) {
+  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
 
-  if (mcts::kEnableDebug) {
-    const GameState& state = shared_data_.root_state;
-    state.dump();
-  }
-
-  for (auto* thread : search_threads_) {
-    thread->launch(search_params,
-                   [=, this] { this->run_search(thread, search_params->tree_size_limit); });
-  }
+  shared_data_.search_params = search_params;
+  shared_data_.active_search_threads.set();
+  shared_data_.cv_search_on.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::wait_for_search_threads() {
-  util::release_assert(shared_data_.search_active);
-
-  for (auto* thread : search_threads_) {
-    thread->join();
-  }
+  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
+  shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::stop_search_threads() {
-  shared_data_.search_active = false;
-
-  std::unique_lock<std::mutex> lock(search_mutex_);
-  cv_search_.wait(lock, [&] { return num_active_search_threads_ == 0; });
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::run_search(SearchThread* thread, int tree_size_limit) {
-  thread->run();
-
-  if (!thread->is_pondering() && shared_data_.root_node->stable_data().num_valid_actions > 1) {
-    while (thread->needs_more_visits(shared_data_.root_node.get(), tree_size_limit)) {
-      thread->run();
-    }
-  }
-
-  std::unique_lock<std::mutex> lock(search_mutex_);
-  num_active_search_threads_--;
-  cv_search_.notify_one();
+  std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
+  shared_data_.search_params.tree_size_limit = 0;
+  shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
 }
 
 /*

@@ -19,11 +19,15 @@ inline SearchThread<GameState, Tensorizor>::SearchThread(SharedData* shared_data
     : shared_data_(shared_data),
       nn_eval_service_(nn_eval_service),
       manager_params_(manager_params),
-      thread_id_(thread_id) {}
+      thread_id_(thread_id) {
+  thread_ = new std::thread([=, this] { loop(); });
+}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline SearchThread<GameState, Tensorizor>::~SearchThread() {
-  kill();
+  if (thread_ && thread_->joinable()) {
+    thread_->join();
+  }
   profiler_.dump(1);
   profiler_.close_file();
 }
@@ -40,43 +44,41 @@ inline void SearchThread<GameState, Tensorizor>::set_profiling_dir(
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::join() {
-  if (thread_ && thread_->joinable()) {
-    thread_->join();
+inline void SearchThread<GameState, Tensorizor>::wait_for_activation() const {
+  std::unique_lock lock(shared_data_->search_mutex);
+  shared_data_->cv_search_on.wait(lock, [this] {
+    return shared_data_->shutting_down || shared_data_->active_search_threads[thread_id_];
+  });
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void SearchThread<GameState, Tensorizor>::perform_visits() {
+  Node* root = shared_data_->root_node.get();
+  while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
+    search_path_.clear();
+    state_ = shared_data_->root_state;
+    tensorizor_ = shared_data_->root_tensorizor;
+    visit(root, nullptr, shared_data_->move_number);
+    dump_profiling_stats();
+    if (!shared_data_->search_params.ponder && root->stable_data().num_valid_actions == 1) break;
   }
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::kill() {
-  join();
-  if (thread_) {
-    delete thread_;
-    thread_ = nullptr;
+inline void SearchThread<GameState, Tensorizor>::deactivate() const {
+  std::unique_lock lock(shared_data_->search_mutex);
+  shared_data_->active_search_threads[thread_id_] = 0;
+  shared_data_->cv_search_off.notify_all();
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+inline void SearchThread<GameState, Tensorizor>::loop() {
+  while (!shared_data_->shutting_down) {
+    wait_for_activation();
+    if (shared_data_->shutting_down) break;
+    perform_visits();
+    deactivate();
   }
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::launch(const SearchParams* search_params,
-                                                        std::function<void()> f) {
-  kill();
-  search_params_ = search_params;
-  thread_ = new std::thread(f);
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-bool SearchThread<GameState, Tensorizor>::needs_more_visits(Node* root, int tree_size_limit) {
-  profiler_.record(SearchThreadRegion::kCheckVisitReady);
-  const auto& stats = root->stats();
-  return search_active() && stats.total_count() <= tree_size_limit;
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void SearchThread<GameState, Tensorizor>::run() {
-  search_path_.clear();
-  state_ = shared_data_->root_state;
-  tensorizor_ = shared_data_->root_tensorizor;
-  visit(shared_data_->root_node.get(), nullptr, shared_data_->move_number);
-  dump_profiling_stats();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -100,8 +102,6 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
     pure_backprop(stable_data.outcome);
     return;
   }
-
-  if (!search_active()) return;  // short-circuit
 
   evaluation_result_t data = evaluate(tree);
   NNEvaluation* evaluation = data.evaluation.get();
@@ -289,7 +289,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
 
   LocalPolicyArray P = eigen_util::softmax(data->evaluation->local_policy_logit_distr());
   if (tree == shared_data_->root_node.get()) {
-    if (!search_params_->disable_exploration) {
+    if (!shared_data_->search_params.disable_exploration) {
       if (manager_params_->dirichlet_mult) {
         add_dirichlet_noise(P);
       }
@@ -318,7 +318,8 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     Node* tree, NNEvaluation* evaluation) {
   profiler_.record(SearchThreadRegion::kPUCT);
 
-  PUCTStats stats(*manager_params_, *search_params_, tree, tree == shared_data_->root_node.get());
+  const SearchParams& search_params = shared_data_->search_params;
+  PUCTStats stats(*manager_params_, search_params, tree, tree == shared_data_->root_node.get());
 
   using PVec = LocalPolicyArray;
 
@@ -326,7 +327,7 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
   const PVec& N = stats.N;
   PVec& PUCT = stats.PUCT;
 
-  bool add_noise = !search_params_->disable_exploration && manager_params_->dirichlet_mult > 0;
+  bool add_noise = !search_params.disable_exploration && manager_params_->dirichlet_mult > 0;
   if (manager_params_->forced_playouts && add_noise) {
     PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
     auto F1 = (N < n_forced).template cast<dtype>();
