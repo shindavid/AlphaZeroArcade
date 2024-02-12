@@ -38,6 +38,8 @@ inline auto ManagerParams::make_options_description() {
       desc.template add_option<"num-search-threads", 'n'>(
               po::value<int>(&num_search_threads)->default_value(num_search_threads),
               "num search threads")
+          .template add_flag<"apply-random-symmetries", "disable-random-symmetries">(
+              &apply_random_symmetries, "apply random symmetries", "disable random symmetries")
           .template add_flag<"enable-pondering", "disable-pondering">(
               &enable_pondering, "enable pondering (search during opponent's turn)",
               "disable pondering (search during opponent's turn)")

@@ -7,12 +7,13 @@ namespace mcts {
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(const GameState& s,
-                                                                 const GameOutcome& o)
+                                                                 const GameOutcome& o,
+                                                                 const ManagerParams* mp)
     : outcome(o),
       valid_action_mask(s.get_valid_actions()),
       num_valid_actions(eigen_util::count(valid_action_mask)),
       current_player(s.get_current_player()),
-      sym_index(bitset_util::choose_random_on_index(s.get_symmetry_indices())) {}
+      sym_index(make_sym_index(s, *mp)) {}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline Node<GameState, Tensorizor>::stats_t::stats_t() {
@@ -92,9 +93,9 @@ void Node<GameState,
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::Node(const Tensorizor& tensorizor, const GameState& state,
-                                         const GameOutcome& outcome)
-    : stable_data_(state, outcome) {}
+inline Node<GameState, Tensorizor>::Node(const GameState& state,
+                                         const GameOutcome& outcome, const ManagerParams* mp)
+    : stable_data_(state, outcome, mp) {}
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Node<GameState, Tensorizor>::debug_dump() const {
@@ -237,6 +238,15 @@ typename Node<GameState, Tensorizor>::sptr Node<GameState, Tensorizor>::lookup_c
     }
   }
   return nullptr;
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+core::symmetry_index_t Node<GameState, Tensorizor>::make_sym_index(const GameState& state,
+                                                                   const ManagerParams& params) {
+  if (params.apply_random_symmetries) {
+    return bitset_util::choose_random_on_index(state.get_symmetry_indices());
+  }
+  return 0;
 }
 
 }  // namespace mcts

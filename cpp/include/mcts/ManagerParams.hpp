@@ -31,6 +31,7 @@ struct ManagerParams : public NNEvaluationServiceParams {
 #endif  // PROFILE_MCTS
 
   int num_search_threads = 1;
+  bool apply_random_symmetries = true;
   bool enable_pondering = false;  // pondering = think during opponent's turn
   int pondering_tree_size_limit = 4096;
 

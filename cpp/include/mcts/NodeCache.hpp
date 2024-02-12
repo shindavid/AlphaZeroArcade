@@ -3,6 +3,7 @@
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
+#include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
 
@@ -27,7 +28,7 @@ class NodeCache {
   void clear();
   void clear_before(move_number_t move_number);
   Node_sptr fetch_or_create(move_number_t move_number, const GameState& state,
-                            const GameOutcome& outcome, const Tensorizor& tensorizor);
+                            const GameOutcome& outcome, const ManagerParams* params);
 
  private:
   using submap_t = std::unordered_map<GameState, Node_sptr>;

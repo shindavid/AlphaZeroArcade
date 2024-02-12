@@ -26,7 +26,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 typename NodeCache<GameState, Tensorizor>::Node_sptr
 NodeCache<GameState, Tensorizor>::fetch_or_create(move_number_t move_number, const GameState& state,
                                                   const GameOutcome& outcome,
-                                                  const Tensorizor& tensorizor) {
+                                                  const ManagerParams* params) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto submap_it = map_.find(move_number);
   submap_t* submap;
@@ -38,7 +38,7 @@ NodeCache<GameState, Tensorizor>::fetch_or_create(move_number_t move_number, con
   }
   auto it = submap->find(state);
   if (it == submap->end()) {
-    (*submap)[state] = std::make_shared<Node>(tensorizor, state, outcome);  // TODO: use memory pool
+    (*submap)[state] = std::make_shared<Node>(state, outcome, params);  // TODO: use memory pool
     return (*submap)[state];
   }
   return it->second;

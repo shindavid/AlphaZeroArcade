@@ -124,8 +124,8 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
       GameOutcome outcome = state_.apply_move(action);
       tensorizor_.receive_state_change(state_, action);
       applied_action = true;
-      auto child =
-          shared_data_->node_cache.fetch_or_create(move_number, state_, outcome, tensorizor_);
+      auto child = shared_data_->node_cache.fetch_or_create(move_number, state_, outcome,
+                                                            this->manager_params_);
 
       std::unique_lock lock(tree->children_mutex());
       edge = children_data.insert(action, action_index, child);
