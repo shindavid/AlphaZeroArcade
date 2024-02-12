@@ -73,7 +73,7 @@ class GameServer {
 
     std::string kill_file;  // if non-empty, kill server when this file is created
     int num_games = 1000;   // if <=0, run indefinitely
-    int parallelism = 100;  // number of games to run simultaneously
+    int parallelism = 256;  // number of games to run simultaneously
     int port = 0;
     bool display_progress_bar = false;
     bool announce_game_results = false;  // print outcome of each individual match
