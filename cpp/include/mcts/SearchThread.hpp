@@ -24,6 +24,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 class SearchThread {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
+  using GameOutcome = GameStateTypes::GameOutcome;
   using NNEvaluation = mcts::NNEvaluation<GameState>;
   using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
   using Node = mcts::Node<GameState, Tensorizor>;
@@ -126,6 +127,8 @@ class SearchThread {
   auto& rng() { return shared_data_->rng; }
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
+  GameState state_;
+  Tensorizor tensorizor_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;
   const ManagerParams* manager_params_;
