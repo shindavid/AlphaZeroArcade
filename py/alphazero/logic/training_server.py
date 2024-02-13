@@ -35,7 +35,7 @@ logger = get_logger()
 class TrainingServerParams:
     cmd_server_host: str = 'localhost'
     cmd_server_port: int = constants.DEFAULT_CMD_SERVER_PORT
-    cuda_device_str: str = 'cuda:0'
+    cuda_device: str = 'cuda:0'
     model_cfg: str = 'default'
 
     @staticmethod
@@ -43,7 +43,7 @@ class TrainingServerParams:
         return TrainingServerParams(
             cmd_server_host=args.cmd_server_host,
             cmd_server_port=args.cmd_server_port,
-            cuda_device_str=args.cuda_device_str,
+            cuda_device=args.cuda_device,
             model_cfg=args.model_cfg,
         )
 
@@ -57,8 +57,8 @@ class TrainingServerParams:
         group.add_argument('--cmd-server-port', type=int,
                            default=defaults.cmd_server_port,
                            help='cmd-server port (default: %(default)s)')
-        group.add_argument('--cuda-device-str',
-                           default=defaults.cuda_device_str, help='cuda device str')
+        group.add_argument('--cuda-device',
+                           default=defaults.cuda_device, help='cuda device str')
         group.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
                            help='model config (default: %(default)s)')
 
