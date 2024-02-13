@@ -41,12 +41,12 @@ from bokeh.plotting import figure, curdoc
 import pandas as pd
 from scipy.signal import savgol_filter
 
-from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 import games
 
 
-class Args:
+class Params:
     launch: bool
     alphazero_dir: str
     game: str
@@ -56,14 +56,14 @@ class Args:
 
     @staticmethod
     def load(args):
-        Args.launch = bool(args.launch)
-        Args.alphazero_dir = args.alphazero_dir
-        Args.game = args.game
-        Args.tags = [t for t in args.tag.split(',') if t] if args.tag else None
-        Args.mcts_iters_list = [] if not args.mcts_iters else \
+        Params.launch = bool(args.launch)
+        Params.alphazero_dir = args.alphazero_dir
+        Params.game = args.game
+        Params.tags = [t for t in args.tag.split(',') if t] if args.tag else None
+        Params.mcts_iters_list = [] if not args.mcts_iters else \
             [int(s) for s in args.mcts_iters.split(',')]
-        Args.tag = args.tag
-        Args.port = args.port
+        Params.tag = args.tag
+        Params.port = args.port
 
     @staticmethod
     def add_args(parser):
@@ -72,23 +72,19 @@ class Args:
                             'comma-separated (e.g. "300,3000")')
         parser.add_argument('-p', '--port', type=int, default=5006,
                             help='bokeh port (default: %(default)s)')
+        CommonParams.add_args(parser)
 
 
 def load_args():
     parser = argparse.ArgumentParser()
-
-    CommonArgs.add_args(parser)
-    Args.add_args(parser)
-
+    Params.add_args(parser)
     args = parser.parse_args()
-
-    CommonArgs.load(args)
-    Args.load(args)
+    Params.load(args)
 
 
 class RatingData:
-    def __init__(self, tag: str, mcts_iters: int):
-        organizer = DirectoryOrganizer()
+    def __init__(self, common_params: CommonParams, mcts_iters: int):
+        organizer = DirectoryOrganizer(common_params)
 
         db_filename = os.path.join(organizer.databases_dir, 'ratings.db')
         conn = sqlite3.connect(db_filename)
@@ -130,24 +126,15 @@ class RatingData:
 
         conn.close()
 
+        tag = common_params.tag
         self.tag = tag
         self.mcts_iters = mcts_iters
         self.gen_df = gen_df
         self.label = f'{tag} (i={mcts_iters})'
 
 
-def make_rating_data_list(tag: Optional[str]=None) -> List[RatingData]:
-    game_dir = os.path.join(Args.alphazero_dir, Args.game)
-    if not tag:
-        tags = os.listdir(game_dir)
-        # sort tags by mtime:
-        tags = sorted(tags, key=lambda t: os.stat(os.path.join(game_dir, t)).st_mtime)
-        data_list = []
-        for tag in tags:
-            data_list.extend(make_rating_data_list(tag))
-        return data_list
-
-    organizer = DirectoryOrganizer()
+def make_rating_data_list(common_params: CommonParams) -> List[RatingData]:
+    organizer = DirectoryOrganizer(common_params)
     db_filename = os.path.join(organizer.databases_dir, 'ratings.db')
     if not os.path.exists(db_filename):
         return []
@@ -159,19 +146,27 @@ def make_rating_data_list(tag: Optional[str]=None) -> List[RatingData]:
     mcts_iters_list = [r[0] for r in res.fetchall()]
     conn.close()
 
-    if Args.mcts_iters_list:
-        mcts_iters_list = [m for m in mcts_iters_list if m in Args.mcts_iters_list]
+    if Params.mcts_iters_list:
+        mcts_iters_list = [m for m in mcts_iters_list if m in Params.mcts_iters_list]
 
-    return [RatingData(tag, m) for m in mcts_iters_list]
+    return [RatingData(common_params, m) for m in mcts_iters_list]
 
 
 def get_rating_data_list():
+    tags = Params.tags
+    if not tags:
+        game_dir = os.path.join(Params.alphazero_dir, Params.game)
+
+        tags = os.listdir(game_dir)
+        # sort tags by mtime:
+        tags = sorted(tags, key=lambda t: os.stat(
+            os.path.join(game_dir, t)).st_mtime)
+
     data_list = []
-    if Args.tags:
-        for tag in Args.tags:
-            data_list.extend(make_rating_data_list(tag))
-    else:
-        data_list = make_rating_data_list()
+    for tag in tags:
+        common_params = CommonParams(alphazero_dir=Params.alphazero_dir, game=Params.game, tag=tag)
+        data_list.extend(make_rating_data_list(common_params))
+
     return data_list
 
 
@@ -193,7 +188,7 @@ class ProgressVisualizer:
         self.x_var_index = 0
         self.sources = defaultdict(ColumnDataSource)
 
-        game = games.get_game_type(Args.game)
+        game = games.get_game_type(Params.game)
         self.y_limit = game.reference_player_family.max_strength
 
         self.plotted_labels = set()
@@ -277,7 +272,7 @@ class ProgressVisualizer:
             x_range = [self.min_x_dict[col], self.max_x_dict[col]]
             y_range = [0, self.max_y+1]
 
-        title = f'{Args.game} Alphazero Ratings'
+        title = f'{Params.game} Alphazero Ratings'
         plot = figure(height=600, width=800, title=title, x_range=x_range, y_range=y_range,
                       y_axis_label='Rating', x_axis_label=cls.X_VARS[self.x_var_index],
                       active_scroll='xwheel_zoom',
@@ -334,16 +329,16 @@ class ProgressVisualizer:
 def main():
     load_args()
 
-    if not Args.launch:
+    if not Params.launch:
         script = os.path.abspath(__file__)
         args = ' '.join(map(pipes.quote, sys.argv[1:] + ['--launch']))
-        cmd = f'bokeh serve --port {Args.port} --show {script} --args {args}'
+        cmd = f'bokeh serve --port {Params.port} --show {script} --args {args}'
         sys.exit(os.system(cmd))
     else:
         data_list = get_rating_data_list()
         viz = ProgressVisualizer(data_list)
 
-        curdoc().title = Args.game
+        curdoc().title = Params.game
         curdoc().add_root(viz.root)
 
 

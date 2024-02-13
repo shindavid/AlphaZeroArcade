@@ -1,8 +1,10 @@
 import argparse
+from dataclasses import dataclass
 from typing import List
 
 
-class TrainingParams:
+@dataclass
+class LearningParams:
     """
     Parameters that control network training.
 
@@ -46,31 +48,35 @@ class TrainingParams:
     TODO: weight EMA
     TODO: learning rate annealing
     """
-    momentum: float
-    weight_decay: float
-    learning_rate: float
+    momentum: float = 0.9
+    weight_decay: float = 6e-5
+    learning_rate: float = 6e-5
 
     @staticmethod
-    def load(args):
-        TrainingParams.momentum = args.momentum
-        TrainingParams.weight_decay = args.weight_decay
-        TrainingParams.learning_rate = args.learning_rate
+    def create(args) -> 'LearningParams':
+        return LearningParams(
+            momentum=args.momentum,
+            weight_decay=args.weight_decay,
+            learning_rate=args.learning_rate,
+        )
 
     @staticmethod
     def add_args(parser: argparse.ArgumentParser):
-        group = parser.add_argument_group('Training options')
+        defaults = LearningParams()
+        group = parser.add_argument_group('Learning options')
 
-        group.add_argument('--momentum', type=float, default=0.9,
+        group.add_argument('--momentum', type=float, default=defaults.momentum,
                            help='momentum (default: %(default)s)')
-        group.add_argument('--weight-decay', type=float, default=6e-5,
+        group.add_argument('--weight-decay', type=float, default=defaults.weight_decay,
                            help='weight decay (default: %(default)s)')
-        group.add_argument('--learning-rate', type=float, default=6e-5,
+        group.add_argument('--learning-rate', type=float, default=defaults.learning_rate,
                            help='learning rate (default: %(default)s)')
 
-    @staticmethod
-    def add_to_cmd(cmd: List[str]):
-        cmd.extend([
-            '--momentum', str(TrainingParams.momentum),
-            '--weight-decay', str(TrainingParams.weight_decay),
-            '--learning-rate', str(TrainingParams.learning_rate),
-        ])
+    def add_to_cmd(self, cmd: List[str]):
+        defaults = LearningParams()
+        if self.momentum != defaults.momentum:
+            cmd.extend(['--momentum', str(self.momentum)])
+        if self.weight_decay != defaults.weight_decay:
+            cmd.extend(['--weight-decay', str(self.weight_decay)])
+        if self.learning_rate != defaults.learning_rate:
+            cmd.extend(['--learning-rate', str(self.learning_rate)])

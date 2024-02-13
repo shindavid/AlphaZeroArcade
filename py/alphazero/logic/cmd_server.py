@@ -1,10 +1,13 @@
 from alphazero.logic.sample_window_logic import SamplingParams, Window, construct_window, \
     get_required_dataset_size
+from alphazero.logic import constants
+from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ChildThreadError, Generation
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, recv_json, send_json
 
+import argparse
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
@@ -60,6 +63,25 @@ class ClientData:
         return f'ClientData({", ".join(tokens)})'
 
 
+@dataclass
+class CmdServerParams:
+    port: int = constants.DEFAULT_CMD_SERVER_PORT
+
+    @staticmethod
+    def create(args) -> 'CmdServerParams':
+        return CmdServerParams(
+            port=args.port,
+        )
+
+    @staticmethod
+    def add_args(parser: argparse.ArgumentParser):
+        group = parser.add_argument_group('CmdServer options')
+        defaults = CmdServerParams()
+
+        group.add_argument('--port', type=int, default=defaults.port,
+                           help='port (default: %(default)s)')
+
+
 class CmdServer:
     """
     The cmd server coordinates activity between the self-play server and the training server.
@@ -70,13 +92,14 @@ class CmdServer:
     game data and models/checkpoints are written to the filesystem by the self-play and training
     servers, so this goal has not yet been achieved.
     """
-    DEFAULT_PORT = 1111
 
-    def __init__(self, port: int=DEFAULT_PORT):
-        self.organizer = DirectoryOrganizer()
+    def __init__(self, params: CmdServerParams, common_params: CommonParams,
+                 sampling_params: SamplingParams):
+        self.organizer = DirectoryOrganizer(common_params)
         self.organizer.makedirs()
         self.host = 'localhost'
-        self.port = port
+        self.port = params.port
+        self.sampling_params = sampling_params
 
         self._pause_ack_events: Dict[ClientId, threading.Event] = {}
         self._client_data_list: List[ClientData] = []
@@ -185,7 +208,7 @@ class CmdServer:
 
         client_data = self.get_single_client_data(ClientType.SELF_PLAY_WRAPPER)
         logger.info(f'Requesting {client_data} to perform gen-0 self-play...')
-        max_rows = SamplingParams.samples_per_window()
+        max_rows = self.sampling_params.samples_per_window()
 
         data = {
             'type': 'start-gen0',
@@ -215,7 +238,7 @@ class CmdServer:
         row = c.fetchone()
         n = row[0]
 
-        f = SamplingParams.window_size_function
+        f = self.sampling_params.window_size_function
         n = row[0]
         c = int(n - f(n))
 
@@ -225,8 +248,8 @@ class CmdServer:
             'gen': gen,
             'start': c,
             'end': n,
-            'n_minibatches': SamplingParams.minibatches_per_epoch,
-            'minibatch_size': SamplingParams.minibatch_size,
+            'n_minibatches': self.sampling_params.minibatches_per_epoch,
+            'minibatch_size': self.sampling_params.minibatch_size,
         }
 
         client_data = self.get_single_client_data(ClientType.TRAINING)
@@ -309,7 +332,7 @@ class CmdServer:
         logger.info('Waiting for more training data...')
         with self._train_ready_lock:
             self._master_list_length_for_next_train_loop = get_required_dataset_size(
-                self._last_sample_window)
+                self.sampling_params, self._last_sample_window)
             self._train_ready_event.clear()
 
         self._train_ready_event.wait()
@@ -348,7 +371,7 @@ class CmdServer:
             return True
 
         assert gen == 0, gen
-        return n_augmented_positions >= SamplingParams.samples_per_window()
+        return n_augmented_positions >= self.sampling_params.samples_per_window()
 
     def load_last_sample_window(self) -> Window:
         cursor = self.my_db_conn.cursor()
@@ -357,8 +380,8 @@ class CmdServer:
         row = cursor.fetchone()
         if row is None:
             # kZero-style initialization of sample window
-            samples_per_window = SamplingParams.samples_per_window()
-            target_sample_rate = SamplingParams.target_sample_rate
+            samples_per_window = self.sampling_params.samples_per_window()
+            target_sample_rate = self.sampling_params.target_sample_rate
             return Window(0, samples_per_window, target_sample_rate)
         return Window(*row)
 

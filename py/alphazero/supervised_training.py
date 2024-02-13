@@ -10,7 +10,7 @@ import games
 from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer
-from alphazero.logic.training_params import TrainingParams
+from alphazero.logic.learning_params import LearningParams
 from config import Config
 from util.py_util import timed_print
 
@@ -52,11 +52,11 @@ def load_args():
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
     cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
-    TrainingParams.add_args(parser)
+    LearningParams.add_args(parser)
 
     args = parser.parse_args()
     Args.load(args)
-    TrainingParams.load(args)
+    LearningParams.load(args)
 
 
 def main():
@@ -71,7 +71,7 @@ def main():
 
     loader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=TrainingParams.minibatch_size,
+        batch_size=LearningParams.minibatch_size,
         num_workers=4,
         pin_memory=True,
         shuffle=True)
@@ -93,10 +93,10 @@ def main():
     net.cuda(Args.cuda_device_str)
     net.train()
 
-    learning_rate = TrainingParams.learning_rate
-    weight_decay = TrainingParams.weight_decay
+    learning_rate = LearningParams.learning_rate
+    weight_decay = LearningParams.weight_decay
     if Args.optimizer == 'SGD':
-        momentum = TrainingParams.momentum
+        momentum = LearningParams.momentum
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     elif Args.optimizer == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -107,7 +107,7 @@ def main():
         optimizer.load_state_dict(checkpoint['opt.state_dict'])
 
     trainer = NetTrainer(
-        TrainingParams.minibatches_per_epoch, Args.cuda_device_str)
+        LearningParams.minibatches_per_epoch, Args.cuda_device_str)
     n_samples_processed = 0
     while epoch < Args.epochs:
         trainer.reset()

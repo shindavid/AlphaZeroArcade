@@ -36,7 +36,7 @@ BASE_DIR/  # $alphazero_dir/game/tag/
         ...
 """
 from alphazero.logic.custom_types import Generation
-from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.common_params import CommonParams
 
 import os
 from typing import List, Optional
@@ -57,10 +57,10 @@ class PathInfo:
 
 
 class DirectoryOrganizer:
-    def __init__(self):
-        alphazero_dir = CommonArgs.alphazero_dir
-        game = CommonArgs.game
-        tag = CommonArgs.tag
+    def __init__(self, args: CommonParams):
+        alphazero_dir = args.alphazero_dir
+        game = args.game
+        tag = args.tag
 
         self.base_dir = os.path.join(alphazero_dir, game, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')

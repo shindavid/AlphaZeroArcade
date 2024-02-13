@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.0.3.min.js"></script>
+    <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.0.3.min.js"></script>
+    <style>
+        #container {
+            display: flex;
+        }
+        #sidebar {
+            height: 100vh;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f0f0f0;
+            box-sizing: border-box;
+            font-size: 18px;
+        }
+        #sidebar a {
+            display: block;
+            text-decoration: underline;
+            color: blue;
+        }
+        #sidebar .active {
+            pointer-events: none; /* Makes the link not clickable */
+            text-decoration: none; /* Removes the underline */
+            color: black;
+        }
+        #main {
+            flex-grow: 1;
+            /* display: flex;
+            flex-direction: column; */
+            padding: 10px;
+        }
+        #training-plot {
+            width: 800px;
+            height: 600px;
+        }
+        /* #main > div {
+            flex-grow: 1;
+        } */
+    </style>
+    <script>
+        // Refresh the page every 60 seconds
+        // setTimeout(function(){
+        //    location.reload();
+        // }, 60000);
+
+        function showPlot(linkElement) {
+            // Hide all plots
+            document.getElementById('training').style.display = 'none';
+            document.getElementById('self-play').style.display = 'none';
+
+            var plotId = linkElement.getAttribute('data-plot-id');
+
+            // Show the selected plot
+            document.getElementById(plotId).style.display = 'block';
+
+            document.getElementById('main-title').textContent = linkElement.textContent;
+
+            // Remove the "active" class from all links
+            var links = document.querySelectorAll('#sidebar a');
+            for (var i = 0; i < links.length; i++) {
+                links[i].classList.remove('active');
+            }
+
+            // Add the "active" class to the clicked link
+            linkElement.classList.add('active');
+        }
+
+        window.onload = function() {
+            // // Get the "Network Training" link element
+            // var trainingLink = document.querySelector('a[data-plot-id="training"]');
+
+            // // Pass the "Network Training" link element to the showPlot function
+            // showPlot(trainingLink);
+        };
+    </script>
+
+</head>
+<body>
+    <h1>{{title}}</h1>
+    <div id="container">
+        <div id="sidebar">
+            <!-- Change the form to a list of links -->
+            <!-- <a href="#" onclick="showPlot(this); return false;" class="active" data-plot-id="training">Network Training</a>
+            <a href="#" onclick="showPlot(this); return false;" data-plot-id="self-play">Self Play</a> -->
+        </div>
+        <div id="main">
+            <h2 id="main-title"></h2>
+            <div id="training-plot">
+                {{ script|safe }}
+            </div>
+            <!-- <div id="training" style="display: none;">
+                {{ training_script|safe }}
+                {{ training_div|safe }}
+            </div>
+            <div id="self-play" style="display: none;">
+                {{ self_play_script|safe }}
+                {{ self_play_div|safe }}
+            </div> -->
+            <!-- <form method="POST">
+                <select name="log_file">
+                    <option value="log1.txt">log1.txt</option>
+                    <option value="log2.txt">log2.txt</option>
+                </select>
+                <input type="submit" value="Select Log File">
+            </form>
+            <pre>
+                {% for line in logs %}
+                {{ line }}
+                {% endfor %}
+            </pre> -->
+        </div>
+    </div>
+</body>
+</html>

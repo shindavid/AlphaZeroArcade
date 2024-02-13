@@ -1,15 +1,17 @@
-from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.common_params import CommonParams
+from alphazero.logic import constants
 from alphazero.logic.custom_types import Generation
 from alphazero.data.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.directory_organizer import DirectoryOrganizer, PathInfo
 from alphazero.logic.net_trainer import NetTrainer
-from alphazero.logic.training_params import TrainingParams
+from alphazero.logic.learning_params import LearningParams
 from games import get_game_type
 from net_modules import Model
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 from util.socket_util import send_json, recv_json
 
+from dataclasses import dataclass
 import os
 import shutil
 import signal
@@ -29,6 +31,38 @@ from torch.utils.data import DataLoader
 logger = get_logger()
 
 
+@dataclass
+class TrainingServerParams:
+    cmd_server_host: str = 'localhost'
+    cmd_server_port: int = constants.DEFAULT_CMD_SERVER_PORT
+    cuda_device_str: str = 'cuda:0'
+    model_cfg: str = 'default'
+
+    @staticmethod
+    def create(args) -> 'TrainingServerParams':
+        return TrainingServerParams(
+            cmd_server_host=args.cmd_server_host,
+            cmd_server_port=args.cmd_server_port,
+            cuda_device_str=args.cuda_device_str,
+            model_cfg=args.model_cfg,
+        )
+
+    @staticmethod
+    def add_args(parser):
+        defaults = TrainingServerParams()
+        group = parser.add_argument_group('TrainingServer options')
+
+        group.add_argument('--cmd-server-host', type=str, default=defaults.cmd_server_host,
+                           help='cmd-server host (default: %(default)s)')
+        group.add_argument('--cmd-server-port', type=int,
+                           default=defaults.cmd_server_port,
+                           help='cmd-server port (default: %(default)s)')
+        group.add_argument('--cuda-device-str',
+                           default=defaults.cuda_device_str, help='cuda device str')
+        group.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
+                           help='model config (default: %(default)s)')
+
+
 class TrainingServer:
     """
     NOTE: the separation of this class from CmdServer gives the impression that the two servers can
@@ -38,14 +72,15 @@ class TrainingServer:
     decouple by having the cmd server do the filesystem reads/writes, with the training server and
     cmd server communicating to each other via TCP.
     """
-    def __init__(self, cmd_server_host: str, cmd_server_port: int, cuda_device: str,
-                 model_cfg: str):
-        self.organizer = DirectoryOrganizer()
-        self.cmd_server_host = cmd_server_host
-        self.cmd_server_port = cmd_server_port
-        self.cuda_device = cuda_device
-        self.game_type = get_game_type(CommonArgs.game)
-        self.model_cfg = model_cfg
+    def __init__(self, params: TrainingServerParams, learning_params: LearningParams,
+                 common_params: CommonParams):
+        self.organizer = DirectoryOrganizer(common_params)
+        self.cmd_server_host = params.cmd_server_host
+        self.cmd_server_port = params.cmd_server_port
+        self.cuda_device = params.cuda_device
+        self.game_type = get_game_type(common_params.game)
+        self.model_cfg = params.model_cfg
+        self.learning_params = learning_params
 
         self.cmd_server_socket = None
         self.client_id = None
@@ -256,9 +291,9 @@ class TrainingServer:
         self._net.cuda(device=self.cuda_device)
         self._net.train()
 
-        learning_rate = TrainingParams.learning_rate
-        momentum = TrainingParams.momentum
-        weight_decay = TrainingParams.weight_decay
+        learning_rate = self.learning_params.learning_rate
+        momentum = self.learning_params.momentum
+        weight_decay = self.learning_params.weight_decay
         self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum,
                               weight_decay=weight_decay)
 

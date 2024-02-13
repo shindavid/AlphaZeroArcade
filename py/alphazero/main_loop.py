@@ -21,6 +21,7 @@ multiple self-play servers, on different machines. Only for very large runs will
 training servers - the coordination between them is not yet implemented.
 """
 import argparse
+from dataclasses import dataclass
 import os
 from pipes import quote
 import signal
@@ -29,11 +30,12 @@ import time
 
 import torch
 
-from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.common_params import CommonParams
+from alphazero.logic import constants
 from alphazero.logic.cmd_server import CmdServer
 from alphazero.logic.sample_window_logic import SamplingParams
-from alphazero.logic.training_params import TrainingParams
-from util.logging_util import configure_logger, get_logger
+from alphazero.logic.learning_params import LearningParams
+from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.repo_util import Repo
 from util import subprocess_util
 
@@ -41,22 +43,25 @@ from util import subprocess_util
 logger = get_logger()
 
 
-class Args:
-    cmd_server_port: int
-    binary_path: str
-    model_cfg: str
-    debug: bool
+@dataclass
+class Params:
+    cmd_server_port: int = constants.DEFAULT_CMD_SERVER_PORT
+    binary_path: str = None
+    model_cfg: str = 'default'
 
     @staticmethod
-    def load(args):
-        Args.cmd_server_port = args.cmd_server_port
-        Args.binary_path = args.binary_path
-        Args.model_cfg = args.model_cfg
-        Args.debug = bool(args.debug)
+    def create(args) -> 'Params':
+        return Params(
+            cmd_server_port=args.cmd_server_port,
+            binary_path=args.binary_path,
+            model_cfg=args.model_cfg,
+            )
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument('--cmd-server-port', type=int, default=CmdServer.DEFAULT_PORT,
+        defaults = Params()
+
+        parser.add_argument('--cmd-server-port', type=int, default=defaults.cmd_server_port,
                             help='cmd server port (default: %(default)s)')
         parser.add_argument('-b', '--binary-path',
                             help='binary path. By default, if a unique binary is found in the '
@@ -64,74 +69,82 @@ class Args:
                             'dir, then will use one found in REPO_ROOT/target/Release/bin/. If '
                             'multiple binaries are found in the alphazero dir, then this option is '
                             'required.')
-        parser.add_argument('-m', '--model-cfg', default='default',
+        parser.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
                             help='model config (default: %(default)s)')
-        parser.add_argument('--debug', action='store_true', help='debug mode')
 
 
 def load_args():
     parser = argparse.ArgumentParser()
 
-    CommonArgs.add_args(parser)
+    CommonParams.add_args(parser)
     SamplingParams.add_args(parser)
-    TrainingParams.add_args(parser)
-    Args.add_args(parser)
+    LearningParams.add_args(parser)
+    Params.add_args(parser)
+    LoggingParams.add_args(parser)
 
-    args = parser.parse_args()
-
-    CommonArgs.load(args)
-    SamplingParams.load(args)
-    TrainingParams.load(args)
-    Args.load(args)
+    return parser.parse_args()
 
 
-def launch_cmd_server():
+def launch_cmd_server(params_dict):
+    params = params_dict['Params']
+    common_params = params_dict['CommonParams']
+    sampling_params = params_dict['SamplingParams']
+    logging_params = params_dict['LoggingParams']
+
     cmd = [
         'py/alphazero/run_cmd_server.py',
-        '--port', str(Args.cmd_server_port),
+        '--port', str(params.cmd_server_port),
         ]
-    if Args.debug:
-        cmd.append('--debug')
-    CommonArgs.add_to_cmd(cmd)
-    SamplingParams.add_to_cmd(cmd)
+    common_params.add_to_cmd(cmd)
+    sampling_params.add_to_cmd(cmd)
+    logging_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching cmd server: {cmd}')
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_self_play_server(cuda_device: int):
+def launch_self_play_server(params_dict, cuda_device: int):
+    params = params_dict['Params']
+    common_params = params_dict['CommonParams']
+    logging_params = params_dict['LoggingParams']
+
     cuda_device = f'cuda:{cuda_device}'
 
     cmd = [
         'py/alphazero/run_self_play_server.py',
-        '--cmd-server-port', str(Args.cmd_server_port),
+        '--cmd-server-port', str(params.cmd_server_port),
         '--cuda-device', cuda_device,
     ]
-    if Args.debug:
-        cmd.append('--debug')
-    if Args.binary_path:
-        cmd.extend(['--binary-path', Args.binary_path])
-    CommonArgs.add_to_cmd(cmd)
+    if params.binary_path:
+        cmd.extend(['--binary-path', params.binary_path])
+
+    logging_params.add_to_cmd(cmd)
+    common_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching self play server: {cmd}')
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_training_server(cuda_device: int):
+def launch_training_server(params_dict, cuda_device: int):
+    params = params_dict['Params']
+    common_params = params_dict['CommonParams']
+    learning_params = params_dict['LearningParams']
+    logging_params = params_dict['LoggingParams']
+
     cuda_device = f'cuda:{cuda_device}'
 
     cmd = [
         'py/alphazero/run_training_server.py',
-        '--cmd-server-port', str(Args.cmd_server_port),
+        '--cmd-server-port', str(params.cmd_server_port),
         '--cuda-device', cuda_device,
-        '--model-cfg', Args.model_cfg,
+        '--model-cfg', params.model_cfg,
     ]
-    if Args.debug:
-        cmd.append('--debug')
-    CommonArgs.add_to_cmd(cmd)
-    TrainingParams.add_to_cmd(cmd)
+
+    logging_params.add_to_cmd(cmd)
+    common_params.add_to_cmd(cmd)
+    learning_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching training server: {cmd}')
@@ -139,8 +152,22 @@ def launch_training_server(cuda_device: int):
 
 
 def main():
-    load_args()
-    configure_logger(debug=Args.debug)
+    args = load_args()
+    common_params = CommonParams.create(args)
+    sampling_params = SamplingParams.create(args)
+    learning_params = LearningParams.create(args)
+    params = Params.create(args)
+    logging_params = LoggingParams.create(args)
+
+    params_dict = {
+        'CommonParams': common_params,
+        'SamplingParams': sampling_params,
+        'LearningParams': learning_params,
+        'Params': params,
+        'LoggingParams': logging_params,
+        }
+
+    configure_logger(params=logging_params)
 
     os.chdir(Repo.root())
 
@@ -161,10 +188,10 @@ def main():
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    procs.append(('Cmd-server', launch_cmd_server()))
-    time.sleep(0.5)  # Give cmd-server time to initialize socket
-    procs.append(('Self-play', launch_self_play_server(n-1)))
-    procs.append(('Training', launch_training_server(0)))
+    procs.append(('Cmd-server', launch_cmd_server(params_dict)))
+    time.sleep(0.5)  # Give cmd-server time to initialize socket (TODO: fix this hack)
+    procs.append(('Self-play', launch_self_play_server(params_dict, n-1)))
+    procs.append(('Training', launch_training_server(params_dict, 0)))
 
     loop = True
     while loop:

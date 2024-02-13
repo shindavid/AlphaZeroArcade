@@ -20,8 +20,8 @@ This module provides functionality for answering this question.
 
 import abc
 import argparse
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, fields
+from typing import Any, Dict, List
 
 
 class WindowSizeFunction(abc.ABC):
@@ -43,6 +43,20 @@ class WindowSizeFunction(abc.ABC):
         Returns the size of the next window to use, given that the master list M has size n.
         """
         pass
+
+    @staticmethod
+    def create(s: str, eval_dict: Dict[str, Any]) -> 'WindowSizeFunction':
+        eval_dict = dict(eval_dict)
+        eval_dict.update(VALID_WINDOW_SIZE_FUNCTIONS)
+
+        obj = None
+        try:
+            obj = eval(s, eval_dict)
+        except Exception as e:
+            raise ValueError(f'Failed to evaluate window size function: {s}') from e
+        assert isinstance(obj, WindowSizeFunction), f'Invalid window size function: {s}'
+        obj.set_repr(s)
+        return obj
 
 
 class FixedWindowSizeFunction(WindowSizeFunction):
@@ -100,76 +114,76 @@ VALID_WINDOW_SIZE_FUNCTIONS = {
 }
 
 
+@dataclass
 class SamplingParams:
-    window_size_function: WindowSizeFunction
-    target_sample_rate: float
-    minibatches_per_epoch: int
-    minibatch_size: int
+    _window_size_function_str: str = 'katago(n0=minibatches_per_epoch*minibatch_size)'
+    target_sample_rate: float = 8
+    minibatches_per_epoch: int = 2048
+    minibatch_size: int = 256
+    window_size_function: WindowSizeFunction = None
+
+    def __post_init__(self):
+        attrs = {f.name: getattr(self, f.name) for f in fields(self)}
+        self.window_size_function = WindowSizeFunction.create(self._window_size_function_str, attrs)
+
+    def samples_per_window(self):
+        return self.minibatch_size * self.minibatches_per_epoch
 
     @staticmethod
-    def samples_per_window():
-        return SamplingParams.minibatch_size * SamplingParams.minibatches_per_epoch
-
-    @staticmethod
-    def load(args):
-        SamplingParams.target_sample_rate = args.target_sample_rate
-        SamplingParams.minibatches_per_epoch = args.minibatches_per_epoch
-        SamplingParams.minibatch_size = args.minibatch_size
-
-        static_attrs = {k: getattr(SamplingParams, k) for k in dir(SamplingParams)}
-        static_attrs = {k: v for k, v in static_attrs.items() if
-                        not k.startswith('_') and not callable(v)}
-
-        eval_dict = dict(VALID_WINDOW_SIZE_FUNCTIONS)
-        eval_dict.update(static_attrs)
-
-        SamplingParams.window_size_function = eval(args.window_size_function, eval_dict)
-        SamplingParams.window_size_function.set_repr(args.window_size_function)
-        assert isinstance(SamplingParams.window_size_function, WindowSizeFunction)
+    def create(args) -> 'SamplingParams':
+        return SamplingParams(
+            _window_size_function_str=args.window_size_function,
+            target_sample_rate=args.target_sample_rate,
+            minibatches_per_epoch=args.minibatches_per_epoch,
+            minibatch_size=args.minibatch_size,
+        )
 
     @staticmethod
     def add_args(parser: argparse.ArgumentParser):
         group = parser.add_argument_group('Sampling options')
+        defaults = SamplingParams()
 
         valid_functions_str = str(list(VALID_WINDOW_SIZE_FUNCTIONS.keys()))
-        default_fn = 'katago(n0=minibatches_per_epoch*minibatch_size)'
-        group.add_argument('--window-size-function', default=default_fn,
+        group.add_argument('--window-size-function', default=defaults._window_size_function_str,
                            help=f'window size function (valid functions: {valid_functions_str}, default: %(default)s)')
         group.add_argument(
-            '--target-sample-rate', type=int, default=8,
+            '--target-sample-rate', type=int, default=defaults.target_sample_rate,
             help='target number of times to train over a single row (default: %(default)s))')
-        group.add_argument('--minibatches-per-epoch', type=int, default=2048,
-                            help='minibatches per epoch (default: %(default)s)')
-        group.add_argument('--minibatch-size', type=int, default=256,
+        group.add_argument('--minibatches-per-epoch', type=int,
+                           default=defaults.minibatches_per_epoch,
+                           help='minibatches per epoch (default: %(default)s)')
+        group.add_argument('--minibatch-size', type=int, default=defaults.minibatch_size,
                             help='minibatch size (default: %(default)s)')
 
-    @staticmethod
-    def add_to_cmd(cmd: List[str]):
-        cmd.extend([
-            '--window-size-function', str(SamplingParams.window_size_function),
-            '--target-sample-rate', str(SamplingParams.target_sample_rate),
-            '--minibatches-per-epoch', str(SamplingParams.minibatches_per_epoch),
-            '--minibatch-size', str(SamplingParams.minibatch_size),
-            ])
+    def add_to_cmd(self, cmd: List[str]):
+        defaults = SamplingParams()
+        if self._window_size_function_str != defaults._window_size_function_str:
+            cmd.extend(['--window-size-function', self._window_size_function_str])
+        if self.target_sample_rate != defaults.target_sample_rate:
+            cmd.extend(['--target-sample-rate', str(self.target_sample_rate)])
+        if self.minibatches_per_epoch != defaults.minibatches_per_epoch:
+            cmd.extend(['--minibatches-per-epoch', str(self.minibatches_per_epoch)])
+        if self.minibatch_size != defaults.minibatch_size:
+            cmd.extend(['--minibatch-size', str(self.minibatch_size)])
 
 
-def get_required_dataset_size(prev_window: Window):
+def get_required_dataset_size(params: SamplingParams, prev_window: Window):
     """
     Returns the minimum dataset size that would permit sampling a new window. This corresponds to
     n in the diagram above. The value of c can be computed from n, via:
 
     c = n - f(n)
 
-    where f = SamplingParams.window_size_function
+    where f = params.window_size_function
     """
-    n_samples_per_window = SamplingParams.samples_per_window()
+    n_samples_per_window = params.samples_per_window()
 
     a = prev_window.start
     b = prev_window.end
     r = prev_window.sample_rate
     s = n_samples_per_window
-    t = SamplingParams.target_sample_rate
-    f = SamplingParams.window_size_function
+    t = params.target_sample_rate
+    f = params.window_size_function
 
     """
     At the proper (c, n), we should have:

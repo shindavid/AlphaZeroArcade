@@ -65,7 +65,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 import games
-from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.ratings import extract_match_record, WinLossDrawCounts
 from util import subprocess_util
@@ -73,7 +73,7 @@ from util.py_util import timed_print
 from util.str_util import inject_args
 
 
-class Args:
+class Params:
     alphazero_dir: str
     game: str
     tags: List[str]
@@ -81,45 +81,45 @@ class Args:
     n_games: int
     mcts_iters: int
     parallelism_factor: int
+    num_search_threads: int
     binary: str
     daemon_mode: bool
 
     @staticmethod
     def load(args):
         assert args.tag, 'Required option: -t'
-        Args.alphazero_dir = args.alphazero_dir
-        Args.game = args.game
-        Args.tags = [t for t in args.tag.split(',') if t]
-        Args.clear_db = bool(args.clear_db)
-        Args.n_games = args.n_games
-        Args.mcts_iters = args.mcts_iters
-        Args.parallelism_factor = args.parallelism_factor
-        Args.binary = args.binary
-        Args.daemon_mode = bool(args.daemon_mode)
+        Params.alphazero_dir = args.alphazero_dir
+        Params.game = args.game
+        Params.tags = [t for t in args.tag.split(',') if t]
+        Params.clear_db = bool(args.clear_db)
+        Params.n_games = args.n_games
+        Params.mcts_iters = args.mcts_iters
+        Params.parallelism_factor = args.parallelism_factor
+        Params.num_search_threads = args.num_search_threads
+        Params.binary = args.binary
+        Params.daemon_mode = bool(args.daemon_mode)
 
     @staticmethod
     def add_args(parser):
         parser.add_argument('-C', '--clear-db', action='store_true', help='clear everything from database')
-        parser.add_argument('-n', '--n-games', type=int, default=100,
+        parser.add_argument('-G', '--n-games', type=int, default=100,
                             help='number of games to play per matchup (default: %(default)s))')
         parser.add_argument('-i', '--mcts-iters', type=int, default=1600,
                             help='number of MCTS iterations per move (default: %(default)s)')
         parser.add_argument('-p', '--parallelism-factor', type=int, default=100,
                             help='parallelism factor (default: %(default)s)')
+        parser.add_argument('-n', '--num-search-threads', type=int, default=4,
+                            help='num search threads per game (default: %(default)s)')
         parser.add_argument('-b', '--binary', help='optional binary')
         parser.add_argument('-D', '--daemon-mode', action='store_true', help='daemon mode (run forever)')
+        CommonParams.add_args(parser)
 
 
 def load_args():
     parser = argparse.ArgumentParser()
-
-    CommonArgs.add_args(parser)
-    Args.add_args(parser)
-
+    Params.add_args(parser)
     args = parser.parse_args()
-
-    CommonArgs.load(args)
-    Args.load(args)
+    Params.load(args)
 
 
 @dataclass
@@ -144,11 +144,11 @@ class WorkItem:
 
 
 class Arena:
-    def __init__(self, tag):
+    def __init__(self, common_params: CommonParams):
+        tag = common_params.tag
         self.tag = tag
-        self.game_type = games.get_game_type(Args.game)
-        self.base_dir = os.path.join(Args.alphazero_dir, Args.game, tag)
-        self.organizer = DirectoryOrganizer()
+        self.game_type = games.get_game_type(Params.game)
+        self.organizer = DirectoryOrganizer(common_params)
 
         self.min_ref_strength = self.game_type.reference_player_family.min_strength
         self.max_ref_strength = self.game_type.reference_player_family.max_strength
@@ -167,7 +167,7 @@ class Arena:
     def get_mcts_player_str(self, gen: int):
         name = Arena.get_mcts_player_name(gen)
         model = self.organizer.get_model_filename(gen)
-        return f'--type=MCTS-C --name={name} -i {Args.mcts_iters} -m {model}'
+        return f'--type=MCTS-C --name={name} -i {Params.mcts_iters} -m {model} -n {Params.num_search_threads}'
 
     @staticmethod
     def get_reference_player_name(strength: int):
@@ -184,7 +184,7 @@ class Arena:
         ps1 = self.get_mcts_player_str(mcts_gen)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.organizer.get_latest_binary()
-        cmd = f'{binary} -G {n_games} -p {Args.parallelism_factor} --player "{ps1}" --player "{ps2}"'
+        cmd = f'{binary} -G {n_games} -p {Params.parallelism_factor} --player "{ps1}" --player "{ps2}"'
         return cmd
 
     def test_mcts_vs_ref(self, mcts_gen: int, ref_strength: int) -> WinLossDrawCounts:
@@ -193,7 +193,7 @@ class Arena:
         """
         assert self.min_ref_strength <= ref_strength <= self.max_ref_strength, (mcts_gen, ref_strength)
         counts = self.match_data[mcts_gen][ref_strength]
-        n_games = Args.n_games - counts.n_games
+        n_games = Params.n_games - counts.n_games
         if n_games <= 0:
             return counts
         cmd = self.create_cmd(mcts_gen, ref_strength, n_games)
@@ -219,7 +219,7 @@ class Arena:
 
     def init_db(self):
         if os.path.isfile(self.db_filename):
-            if Args.clear_db:
+            if Params.clear_db:
                 os.remove(self.db_filename)
             else:
                 return
@@ -305,12 +305,12 @@ class Arena:
         timed_print(f'[{self.tag}] Loading past data...')
         c = self.conn.cursor()
         res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE mcts_iters = ?',
-                        (Args.mcts_iters,))
+                        (Params.mcts_iters,))
         for mcts_gen, ref_strength, mcts_wins, draws, ref_wins in res.fetchall():
             self.match_data[mcts_gen][ref_strength] = WinLossDrawCounts(mcts_wins, ref_wins, draws)
 
         res = c.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? AND n_games >= ?',
-                        (Args.mcts_iters, Args.n_games))
+                        (Params.mcts_iters, Params.n_games))
         for mcts_gen, rating in res.fetchall():
             self.ratings[mcts_gen] = rating
 
@@ -330,7 +330,7 @@ class Arena:
         if mcts_gen in self.ratings:
             return self.ratings[mcts_gen]
 
-        ref_dict = {k: v for k, v in self.match_data[mcts_gen].items() if v.n_games >= Args.n_games}
+        ref_dict = {k: v for k, v in self.match_data[mcts_gen].items() if v.n_games >= Params.n_games}
         for strength in sorted(ref_dict):
             counts = ref_dict[strength]
             if counts.win_rate() < 0.5:
@@ -421,13 +421,13 @@ class Arena:
         self.commit_rating(gen, rating)
 
     def commit_rating(self, gen: int, rating: float):
-        rating_tuple = (gen, Args.mcts_iters, Args.n_games, rating)
+        rating_tuple = (gen, Params.mcts_iters, Params.n_games, rating)
         c = self.conn.cursor()
         c.execute('REPLACE INTO ratings VALUES (?, ?, ?, ?)', rating_tuple)
         self.conn.commit()
 
     def commit_counts(self, mcts_gen: int, ref_strength: int, counts: WinLossDrawCounts):
-        match_tuple = (mcts_gen, Args.mcts_iters, ref_strength, counts.win, counts.draw, counts.loss)
+        match_tuple = (mcts_gen, Params.mcts_iters, ref_strength, counts.win, counts.draw, counts.loss)
         c = self.conn.cursor()
         c.execute('REPLACE INTO matches VALUES (?, ?, ?, ?, ?, ?)', match_tuple)
         self.conn.commit()
@@ -451,7 +451,7 @@ class Arena:
         timed_print(f'[{self.tag}] Running matches for gen %s (est rating %s)' %
                     (gen, None if est_rating is None else '%.3f' % est_rating))
 
-        ref_dict = {k: v for k, v in self.match_data[gen].items() if v.n_games >= Args.n_games}
+        ref_dict = {k: v for k, v in self.match_data[gen].items() if v.n_games >= Params.n_games}
         right_strengths = [strength for strength, counts in ref_dict.items() if counts.win_rate() <= 0.5]
         left_strengths = [strength for strength, counts in ref_dict.items() if counts.win_rate() > 0.5]
 
@@ -517,7 +517,11 @@ class Arena:
 
 def main():
     load_args()
-    arenas = [Arena(tag) for tag in Args.tags]
+    arenas = []
+    for tag in Params.tags:
+        common_params = CommonParams(Params.alphazero_dir, Params.game, tag)
+        arenas.append(Arena(common_params))
+
     for arena in arenas:
         arena.prepare()
 
@@ -530,7 +534,7 @@ def main():
             queue = [arena.get_next_work_item() for arena in arenas]
             queue = [item for item in queue if item is not None]
             if not queue:
-                if Args.daemon_mode:
+                if Params.daemon_mode:
                     time.sleep(5)
                     retry_count = num_retries
                     continue

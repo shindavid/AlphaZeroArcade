@@ -1,4 +1,5 @@
-from alphazero.logic.common_args import CommonArgs
+from alphazero.logic.common_params import CommonParams
+from alphazero.logic import constants
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from games import get_game_type
 from util.logging_util import get_logger
@@ -7,6 +8,7 @@ from util.repo_util import Repo
 from util.socket_util import send_json, recv_json
 from util import subprocess_util
 
+from dataclasses import dataclass
 import os
 import signal
 import socket
@@ -20,14 +22,50 @@ from typing import Optional
 logger = get_logger()
 
 
+@dataclass
+class SelfPlayServerParams:
+    cmd_server_host: str = 'localhost'
+    cmd_server_port: int = constants.DEFAULT_CMD_SERVER_PORT
+    binary_path: str = None
+    cuda_device: str = 'cuda:0'
+
+    @staticmethod
+    def create(args) -> 'SelfPlayServerParams':
+        return SelfPlayServerParams(
+            cmd_server_host=args.cmd_server_host,
+            cmd_server_port=args.cmd_server_port,
+            binary_path=args.binary_path,
+            cuda_device=args.cuda_device,
+        )
+
+    @staticmethod
+    def add_args(parser):
+        defaults = SelfPlayServerParams()
+        group = parser.add_argument_group('SelfPlayServer options')
+
+        group.add_argument('--cmd-server-host', type=str, default=defaults.cmd_server_host,
+                           help='cmd-server host (default: %(default)s)')
+        group.add_argument('--cmd-server-port', type=int,
+                           default=defaults.cmd_server_port,
+                           help='cmd-server port (default: %(default)s)')
+        group.add_argument('-b', '--binary-path',
+                           help='binary path. By default, if a unique binary is found in the '
+                           'alphazero dir, it will be used. If no binary is found in the alphazero '
+                           'dir, then will use one found in REPO_ROOT/target/Release/bin/. If '
+                           'multiple binaries are found in the alphazero dir, then this option is '
+                           'required.')
+        group.add_argument('--cuda-device', default=defaults.cuda_device,
+                           help='cuda device (default: %(default)s)')
+
+
+
 class SelfPlayServer:
-    def __init__(self, cmd_server_host: str, cmd_server_port: int, cuda_device: str,
-                 binary_path: Optional[str] = None):
-        self.organizer = DirectoryOrganizer()
-        self.game_type = get_game_type(CommonArgs.game)
-        self.cmd_server_host = cmd_server_host
-        self.cmd_server_port = cmd_server_port
-        self.cuda_device = cuda_device
+    def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
+        self.organizer = DirectoryOrganizer(common_params)
+        self.game_type = get_game_type(common_params.game)
+        self.cmd_server_host = params.cmd_server_host
+        self.cmd_server_port = params.cmd_server_port
+        self.cuda_device = params.cuda_device
         self.cmd_server_socket = None
 
         self.child_process = None
@@ -36,7 +74,7 @@ class SelfPlayServer:
         self._shutdown_code = None
 
         self._binary_path_set = False
-        self._binary_path = binary_path
+        self._binary_path = params.binary_path
 
     def register_signal_handler(self):
         def signal_handler(sig, frame):

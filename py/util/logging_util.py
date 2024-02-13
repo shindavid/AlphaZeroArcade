@@ -1,11 +1,27 @@
+from dataclasses import dataclass
 import datetime
 import logging
 import os
 import sys
-import threading
+from typing import Optional
 
 
 DEFAULT_LOGGER_NAME = 'default'
+
+
+@dataclass
+class LoggingParams:
+    debug: bool
+
+    @staticmethod
+    def create(args) -> 'LoggingParams':
+        return LoggingParams(
+            debug=bool(args.debug),
+        )
+
+    @staticmethod
+    def add_args(parser):
+        parser.add_argument('--debug', action='store_true', help='debug mode')
 
 
 class CustomFormatter(logging.Formatter):
@@ -30,7 +46,8 @@ class NonErrorStreamHandler(logging.StreamHandler):
             super().emit(record)
 
 
-def configure_logger(filename=None, debug=False, logger_name=DEFAULT_LOGGER_NAME):
+def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
+                     logger_name=DEFAULT_LOGGER_NAME):
     """
     Configures the logger. A log level of INFO is used by default. If debug is True, then a log
     level of DEBUG is used instead.
@@ -42,6 +59,7 @@ def configure_logger(filename=None, debug=False, logger_name=DEFAULT_LOGGER_NAME
     If filename is provided, then the logger will log to both stdout/stderr and the file.
     Otherwise, the logger will only log to stdout/stderr.
     """
+    debug = params.debug if params else False
     level = logging.DEBUG if debug else logging.INFO
     logger = logging.getLogger(logger_name)
     logger.setLevel(level)
