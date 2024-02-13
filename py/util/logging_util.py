@@ -3,7 +3,7 @@ import datetime
 import logging
 import os
 import sys
-from typing import Optional
+from typing import List, Optional
 
 
 DEFAULT_LOGGER_NAME = 'default'
@@ -22,6 +22,10 @@ class LoggingParams:
     @staticmethod
     def add_args(parser):
         parser.add_argument('--debug', action='store_true', help='debug mode')
+
+    def add_to_cmd(self, cmd: List[str]):
+        if self.debug:
+            cmd.append('--debug')
 
 
 class CustomFormatter(logging.Formatter):
