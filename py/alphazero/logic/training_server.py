@@ -230,7 +230,7 @@ class TrainingServer:
         stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
         stats.dump(logger.info)
 
-        assert trainer.n_minibatches_processed >= n_minibatches
+        assert stats.n_minibatches_processed >= n_minibatches
 
         logger.info(f'Gen {gen} training complete')
         trainer.dump_timing_stats(logger.info)

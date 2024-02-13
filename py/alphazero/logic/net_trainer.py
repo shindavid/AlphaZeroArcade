@@ -85,14 +85,17 @@ class TrainingSubStats:
 
 
 class TrainingStats:
-    def __init__(self, gen: Generation, window_start: int, window_end: int, net: Model):
+    def __init__(self, gen: Generation, minibatch_size: int, window_start: int,
+                 window_end: int, net: Model):
         self.gen = gen
+        self.minibatch_size = minibatch_size
         self.start_ts = 0
         self.end_ts = 0
         self.window_start = window_start
         self.window_end = window_end
         self.window_sample_rate = 0.0
 
+        self.n_minibatches_processed = 0
         self.n_samples = 0
         self.substats_list = [TrainingSubStats(head, net.loss_weights[head.name])
                               for head in net.heads]
@@ -122,6 +125,8 @@ class TrainingStats:
             'window_end': self.window_end,
             'window_sample_rate': self.window_sample_rate,
             'n_samples': self.n_samples,
+            'minibatch_size': self.minibatch_size,
+            'n_minibatches': self.n_minibatches_processed,
             'substats': substats,
         }
 
@@ -135,7 +140,6 @@ class NetTrainer:
         self.reset()
 
     def reset(self):
-        self.n_minibatches_processed = 0
         self.for_loop_time = 0
         self.t0 = time.time()
 
@@ -160,7 +164,7 @@ class NetTrainer:
 
         start_ts = time.time_ns()
         n_samples = 0
-        stats = TrainingStats(self.gen, window_start, window_end, net)
+        stats = TrainingStats(self.gen, loader.batch_size, window_start, window_end, net)
         for data in loader:
             t1 = time.time()
             inputs = data[0]
@@ -192,10 +196,10 @@ class NetTrainer:
 
             loss.backward()
             optimizer.step()
-            self.n_minibatches_processed += 1
+            stats.n_minibatches_processed += 1
             t2 = time.time()
             self.for_loop_time += t2 - t1
-            if self.n_minibatches_processed == self.n_minibatches_to_process:
+            if stats.n_minibatches_processed == self.n_minibatches_to_process:
                 break
 
         end_ts = time.time_ns()

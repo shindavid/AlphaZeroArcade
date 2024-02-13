@@ -277,6 +277,8 @@ class CmdServer:
         window_start = stats['window_start']
         window_end = stats['window_end']
         n_samples = stats['n_samples']
+        minibatch_size = stats['minibatch_size']
+        n_minibatches = stats['n_minibatches']
         substats = stats['substats']
 
         window = construct_window(self._last_sample_window, window_start, window_end, n_samples)
@@ -285,9 +287,10 @@ class CmdServer:
         c = self.my_db_conn.cursor()
 
         c.execute("""INSERT OR REPLACE INTO training (gen, training_start_ts, training_end_ts,
-            window_start, window_end, window_sample_rate)
-            VALUES (?, ?, ?, ?, ?, ?)""",
-                  (gen, start_ts, end_ts, window.start, window.end, window.sample_rate))
+            minibatch_size, n_minibatches, window_start, window_end, window_sample_rate)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                  (gen, start_ts, end_ts, minibatch_size, n_minibatches,
+                   window.start, window.end, window.sample_rate))
 
         head_data = []
         for head_name, head_stats in substats.items():
@@ -404,6 +407,8 @@ class CmdServer:
         c = conn.cursor()
         c.execute("""CREATE TABLE training (
             gen INTEGER PRIMARY KEY,
+            minibatch_size INTEGER,
+            n_minibatches INTEGER,
             training_start_ts INTEGER,
             training_end_ts INTEGER DEFAULT 0,
             window_start INTEGER,
