@@ -42,6 +42,7 @@ class CmdServerClient {
     std::string cmd_server_hostname = "localhost";
     io::port_t cmd_server_port = 0;
     int starting_generation = 0;
+    std::string cuda_device = "cuda:0";
   };
 
   using PauseListener = CmdServerListener<CmdServerInteractionType::kPause>;
@@ -85,6 +86,7 @@ class CmdServerClient {
   static CmdServerClient* instance_;
 
   const int64_t proc_start_ts_;
+  const std::string cuda_device_;
   int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;

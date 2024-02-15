@@ -36,7 +36,9 @@ inline auto CmdServerClient::Params::make_options_description() {
           "cmd server port. If unset, then this runs without a cmd server")
       .template add_option<"starting-generation">(
           po::value<int>(&starting_generation)->default_value(starting_generation),
-          "starting generation");
+          "starting generation")
+      .template add_option<"cuda-device">(
+          po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device");
 }
 
 template <typename T>

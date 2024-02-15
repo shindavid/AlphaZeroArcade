@@ -42,7 +42,7 @@ perf_stats_t CmdServerClient::get_perf_stats() const {
 }
 
 CmdServerClient::CmdServerClient(const Params& params)
-    : proc_start_ts_(util::ns_since_epoch()) {
+    : proc_start_ts_(util::ns_since_epoch()), cuda_device_(params.cuda_device) {
   socket_ = io::Socket::create_client_socket(params.cmd_server_hostname, params.cmd_server_port);
   cur_generation_ = params.starting_generation;
   send_handshake();
@@ -63,6 +63,7 @@ void CmdServerClient::send_handshake() {
   msg["type"] = "handshake";
   msg["role"] = "self-play";
   msg["start_timestamp"] = proc_start_ts_;
+  msg["cuda_device"] = cuda_device_;
   socket_->json_write(msg);
 }
 
