@@ -1,4 +1,4 @@
-#include <core/CmdServerClient.hpp>
+#include <core/TrainingServerClient.hpp>
 
 #include <util/BoostUtil.hpp>
 
@@ -21,7 +21,7 @@ void add_listener(std::vector<ListenerType*>& listeners, T* listener) {
 
 }  // namespace detail
 
-inline auto CmdServerClient::Params::make_options_description() {
+inline auto TrainingServerClient::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -42,7 +42,7 @@ inline auto CmdServerClient::Params::make_options_description() {
 }
 
 template <typename T>
-void CmdServerClient::add_listener(T* listener) {
+void TrainingServerClient::add_listener(T* listener) {
   detail::add_listener(pause_listeners_, listener);
   detail::add_listener(reload_weights_listeners_, listener);
   detail::add_listener(metrics_request_listeners_, listener);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/CmdServerListener.hpp>
+#include <core/TrainingServerListener.hpp>
 #include <core/PerfStats.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
@@ -16,24 +16,24 @@
 namespace core {
 
 /*
- * CmdServerClient is used to communicate with an external cmd-server. It is to be used as a
+ * TrainingServerClient is used to communicate with an external cmd-server. It is to be used as a
  * singleton, and can further forward messages to any number of listeners.
  *
  * For now, all messages will be in json format. We can revisit this in the future.
  *
  * Usage:
  *
- * core::CmdServerClient::Params params;
+ * core::TrainingServerClient::Params params;
  * // set params
- * core::CmdServerClient::init(params);
+ * core::TrainingServerClient::init(params);
  *
- * core::CmdServerClient* client = core::CmdServerClient::get();
+ * core::TrainingServerClient* client = core::TrainingServerClient::get();
  * client->send("abc", 3);
  *
- * To listen to messages from the cmd-server, implement the CmdServerListener interface and
+ * To listen to messages from the cmd-server, implement the TrainingServerListener interface and
  * subscribe to the client via client->add_listener(listener).
  */
-class CmdServerClient {
+class TrainingServerClient {
  public:
   struct Params {
     auto make_options_description();
@@ -45,13 +45,13 @@ class CmdServerClient {
     std::string cuda_device = "cuda:0";
   };
 
-  using PauseListener = CmdServerListener<CmdServerInteractionType::kPause>;
-  using ReloadWeightsListener = CmdServerListener<CmdServerInteractionType::kReloadWeights>;
-  using MetricsRequestListener = CmdServerListener<CmdServerInteractionType::kMetricsRequest>;
+  using PauseListener = TrainingServerListener<TrainingServerInteractionType::kPause>;
+  using ReloadWeightsListener = TrainingServerListener<TrainingServerInteractionType::kReloadWeights>;
+  using MetricsRequestListener = TrainingServerListener<TrainingServerInteractionType::kMetricsRequest>;
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
-  static CmdServerClient* get() { return instance_;  }
+  static TrainingServerClient* get() { return instance_;  }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
 
@@ -70,8 +70,8 @@ class CmdServerClient {
   void set_last_games_flush_ts(int64_t ts) { last_games_flush_ts_ = ts; }
 
  private:
-  CmdServerClient(const Params&);
-  ~CmdServerClient();
+  TrainingServerClient(const Params&);
+  ~TrainingServerClient();
 
   void send_handshake();
   void recv_handshake();
@@ -83,7 +83,7 @@ class CmdServerClient {
   void loop();
   bool all_pause_notifications_received() const;
 
-  static CmdServerClient* instance_;
+  static TrainingServerClient* instance_;
 
   const int64_t proc_start_ts_;
   const std::string cuda_device_;
@@ -103,4 +103,4 @@ class CmdServerClient {
 
 }  // namespace core
 
-#include <inline/core/CmdServerClient.inl>
+#include <inline/core/TrainingServerClient.inl>

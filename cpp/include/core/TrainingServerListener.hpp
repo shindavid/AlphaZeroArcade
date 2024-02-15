@@ -7,51 +7,51 @@
 
 namespace core {
 
-enum class CmdServerInteractionType {
+enum class TrainingServerInteractionType {
   kPause,
   kReloadWeights,
   kMetricsRequest
 };
 
-class CmdServerClient;
+class TrainingServerClient;
 
 /*
- * A connection to a cmd-server can be initiated via core::CmdServerClient::init(). Once that
- * connection is established, any number of CmdServerListeners can register with the singleton
- * core::CmdServerClient.
+ * A connection to a cmd-server can be initiated via core::TrainingServerClient::init(). Once that
+ * connection is established, any number of TrainingServerListeners can register with the singleton
+ * core::TrainingServerClient.
  *
- * When the CmdServerClient receives a message from the cmd-server, it engages in various
+ * When the TrainingServerClient receives a message from the cmd-server, it engages in various
  * interactions with the registered listeners. The interaction types are defined in
- * the CmdServerInteractionType enum. These interaction types are not in general the same as the
+ * the TrainingServerInteractionType enum. These interaction types are not in general the same as the
  * msg types sent by the cmd-server.
  */
-template <CmdServerInteractionType type>
-class CmdServerListener {};
+template <TrainingServerInteractionType type>
+class TrainingServerListener {};
 
 template <>
-class CmdServerListener<CmdServerInteractionType::kPause> {
+class TrainingServerListener<TrainingServerInteractionType::kPause> {
  public:
-  friend class CmdServerClient;
+  friend class TrainingServerClient;
 
-  virtual ~CmdServerListener() = default;
+  virtual ~TrainingServerListener() = default;
   virtual void pause() = 0;
   virtual void unpause() = 0;
 
  private:
-  bool pause_notified_ = false;  // used by CmdServerClient
+  bool pause_notified_ = false;  // used by TrainingServerClient
 };
 
 template <>
-class CmdServerListener<CmdServerInteractionType::kReloadWeights> {
+class TrainingServerListener<TrainingServerInteractionType::kReloadWeights> {
  public:
-  virtual ~CmdServerListener() = default;
+  virtual ~TrainingServerListener() = default;
   virtual void reload_weights(const std::string& model_filename) = 0;
 };
 
 template <>
-class CmdServerListener<CmdServerInteractionType::kMetricsRequest> {
+class TrainingServerListener<TrainingServerInteractionType::kMetricsRequest> {
  public:
-  virtual ~CmdServerListener() = default;
+  virtual ~TrainingServerListener() = default;
   virtual perf_stats_t get_perf_stats() = 0;
 };
 

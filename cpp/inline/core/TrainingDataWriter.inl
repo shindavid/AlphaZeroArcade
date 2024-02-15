@@ -201,8 +201,8 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& pa
   util::clean_assert(params.games_base_dir.size() > 0,
                      "TrainingDataWriter: games_base_dir must be specified");
 
-  if (CmdServerClient::initialized()) {
-    CmdServerClient::get()->add_listener(this);
+  if (TrainingServerClient::initialized()) {
+    TrainingServerClient::get()->add_listener(this);
   }
   thread_ = new std::thread([&] { loop(); });
 }
@@ -219,7 +219,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     game_queue_t& queue = completed_games_[queue_index_];
     cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
     if (paused_) {
-      core::CmdServerClient::get()->notify_pause_received(this);
+      core::TrainingServerClient::get()->notify_pause_received(this);
       cv_.wait(lock, [&] { return !paused_; });
     }
     queue_index_ = 1 - queue_index_;
@@ -306,7 +306,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::string output_filename = util::create_string("%ld.pt", cur_timestamp);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
-  core::CmdServerClient* client = core::CmdServerClient::get();
+  core::TrainingServerClient* client = core::TrainingServerClient::get();
 
   int client_id = client ? client->client_id() : 0;
   int model_generation = client ? client->cur_generation() : 0;

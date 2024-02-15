@@ -28,7 +28,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     namespace po2 = boost_util::program_options;
 
     Args args;
-    core::CmdServerClient::Params cmd_server_params;
+    core::TrainingServerClient::Params cmd_server_params;
     typename GameServerProxy::Params game_server_proxy_params;
     typename GameServer::Params game_server_params = get_default_game_server_params();
 
@@ -53,7 +53,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     }
 
     if (cmd_server_params.cmd_server_port > 0) {
-      core::CmdServerClient::init(cmd_server_params);
+      core::TrainingServerClient::init(cmd_server_params);
     }
 
     if (game_server_proxy_params.remote_port) {
