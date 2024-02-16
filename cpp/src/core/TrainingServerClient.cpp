@@ -43,7 +43,8 @@ perf_stats_t TrainingServerClient::get_perf_stats() const {
 
 TrainingServerClient::TrainingServerClient(const Params& params)
     : proc_start_ts_(util::ns_since_epoch()), cuda_device_(params.cuda_device) {
-  socket_ = io::Socket::create_client_socket(params.cmd_server_hostname, params.cmd_server_port);
+  socket_ = io::Socket::create_client_socket(params.training_server_hostname,
+                                             params.training_server_port);
   cur_generation_ = params.starting_generation;
   send_handshake();
   recv_handshake();
@@ -70,7 +71,7 @@ void TrainingServerClient::send_handshake() {
 void TrainingServerClient::recv_handshake() {
   boost::json::value msg;
   if (!socket_->json_read(&msg)) {
-    throw util::Exception("%s(): unexpected cmd-server socket close", __func__);
+    throw util::Exception("%s(): unexpected training-server socket close", __func__);
   }
 
   std::string type = msg.at("type").as_string().c_str();
@@ -149,7 +150,7 @@ void TrainingServerClient::loop() {
       // TODO: add actual quit logic
       break;
     } else {
-      throw util::Exception("Unknown cmd-server message type %s", type.c_str());
+      throw util::Exception("Unknown training-server message type %s", type.c_str());
     }
   }
 }

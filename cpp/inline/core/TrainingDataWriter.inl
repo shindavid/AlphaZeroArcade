@@ -57,8 +57,8 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows")
       .template add_flag<"report-metrics", "do-not-report-metrics">(
-          &report_metrics, "report metrics to cmd-server periodically",
-          "do not report metrics to cmd-server");
+          &report_metrics, "report metrics to training-server periodically",
+          "do not report metrics to training-server");
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -340,7 +340,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   auto new_rows_written = rows_written_ + rows;
   bool done = params_.max_rows > 0 && new_rows_written >= params_.max_rows;
 
-  // inform cmd-server of new file
+  // inform training-server of new file
   if (client) {
     bool flush = done || client->ready_for_games_flush(cur_timestamp);
 

@@ -16,8 +16,8 @@
 namespace core {
 
 /*
- * TrainingServerClient is used to communicate with an external cmd-server. It is to be used as a
- * singleton, and can further forward messages to any number of listeners.
+ * TrainingServerClient is used to communicate with an external training server. It is to be used as
+ * a singleton, and can further forward messages to any number of listeners.
  *
  * For now, all messages will be in json format. We can revisit this in the future.
  *
@@ -30,8 +30,8 @@ namespace core {
  * core::TrainingServerClient* client = core::TrainingServerClient::get();
  * client->send("abc", 3);
  *
- * To listen to messages from the cmd-server, implement the TrainingServerListener interface and
- * subscribe to the client via client->add_listener(listener).
+ * To listen to messages from the training-server, implement the TrainingServerListener interface
+ * and subscribe to the client via client->add_listener(listener).
  */
 class TrainingServerClient {
  public:
@@ -39,8 +39,8 @@ class TrainingServerClient {
     auto make_options_description();
     bool operator==(const Params& other) const = default;
 
-    std::string cmd_server_hostname = "localhost";
-    io::port_t cmd_server_port = 0;
+    std::string training_server_hostname = "localhost";
+    io::port_t training_server_port = 0;
     int starting_generation = 0;
     std::string cuda_device = "cuda:0";
   };
@@ -93,7 +93,7 @@ class TrainingServerClient {
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;
-  int client_id_ = -1;  // assigned by cmd-server
+  int client_id_ = -1;  // assigned by training-server
   int cur_generation_;
 
   std::condition_variable pause_cv_;

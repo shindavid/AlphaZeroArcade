@@ -7,23 +7,19 @@
 
 namespace core {
 
-enum class TrainingServerInteractionType {
-  kPause,
-  kReloadWeights,
-  kMetricsRequest
-};
+enum class TrainingServerInteractionType { kPause, kReloadWeights, kMetricsRequest };
 
 class TrainingServerClient;
 
 /*
- * A connection to a cmd-server can be initiated via core::TrainingServerClient::init(). Once that
- * connection is established, any number of TrainingServerListeners can register with the singleton
- * core::TrainingServerClient.
+ * A connection to a training-server can be initiated via core::TrainingServerClient::init(). Once
+ * that connection is established, any number of TrainingServerListeners can register with the
+ * singleton core::TrainingServerClient.
  *
- * When the TrainingServerClient receives a message from the cmd-server, it engages in various
+ * When the TrainingServerClient receives a message from the training-server, it engages in various
  * interactions with the registered listeners. The interaction types are defined in
- * the TrainingServerInteractionType enum. These interaction types are not in general the same as the
- * msg types sent by the cmd-server.
+ * the TrainingServerInteractionType enum. These interaction types are not in general the same as
+ * the msg types sent by the training-server.
  */
 template <TrainingServerInteractionType type>
 class TrainingServerListener {};
