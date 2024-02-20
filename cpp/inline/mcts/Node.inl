@@ -1,7 +1,7 @@
 #include <mcts/Node.hpp>
 
 #include <util/CppUtil.hpp>
-#include <util/ThreadSafePrinter.hpp>
+#include <util/LoggingUtil.hpp>
 
 namespace mcts {
 
