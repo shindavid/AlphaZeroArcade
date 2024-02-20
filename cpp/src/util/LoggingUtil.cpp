@@ -26,7 +26,7 @@ const char* TimestampPrefix::get() {
 
   auto now_ns =
       std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()) % 1000000000LL;
-  std::sprintf(buf, ".%09d", (int)now_ns.count());
+  std::sprintf(buf, ".%09d ", (int)now_ns.count());
 
   return instance()->buf_;
 }
@@ -53,7 +53,7 @@ ThreadSafePrinter& ThreadSafePrinter::operator<<(std_endl_t f) {
 int ThreadSafePrinter::print_timestamp() const {
   int out = 0;
   if (print_timestamp_) {
-    out += ::printf("%s ", TimestampPrefix::get());
+    out += ::printf("%s", TimestampPrefix::get());
   }
 
   std::string s(thread_id_ * kWhitespacePrefixLength, ' ');

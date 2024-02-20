@@ -183,10 +183,12 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::pause() {
+  std::cout << util::TimestampPrefix::get() << "TrainingDataWriter pause() " << std::endl;
   std::unique_lock lock(mutex_);
   paused_ = true;
   lock.unlock();
   cv_.notify_one();
+  std::cout << util::TimestampPrefix::get() << "TrainingDataWriter pause() - complete!" << std::endl;
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -204,6 +206,9 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& pa
                      "TrainingDataWriter: games_base_dir must be specified");
 
   if (TrainingServerClient::initialized()) {
+    if (TrainingServerClient::get()->paused()) {
+      this->paused_ = true;
+    }
     TrainingServerClient::get()->add_listener(this);
   }
   thread_ = new std::thread([&] { loop(); });

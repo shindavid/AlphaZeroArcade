@@ -4,6 +4,7 @@
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <map>
 #include <thread>
@@ -84,14 +85,20 @@ void TrainingServerClient::recv_handshake() {
 }
 
 void TrainingServerClient::pause() {
-  pause_complete_ = false;
+  std::unique_lock lock(pause_mutex_);
+  if (paused_) return;
+  paused_ = true;
+  pause_complete_ = pause_listeners_.empty();
+  lock.unlock();
 
   for (auto listener : pause_listeners_) {
     listener->pause_notified_ = false;
+  }
+  for (auto listener : pause_listeners_) {
     listener->pause();
   }
 
-  std::unique_lock lock(pause_mutex_);
+  lock.lock();
   pause_cv_.wait(lock, [this]() { return pause_complete_; });
 }
 
@@ -118,6 +125,7 @@ void TrainingServerClient::unpause() {
   for (auto listener : pause_listeners_) {
     listener->unpause();
   }
+  paused_ = false;
 }
 
 void TrainingServerClient::reload_weights(const std::string& model_filename) {
@@ -136,6 +144,8 @@ void TrainingServerClient::loop() {
     }
 
     std::string type = msg.at("type").as_string().c_str();
+    std::cout << util::TimestampPrefix::get() << "TrainingServerClient handling - " << type
+              << std::endl;
     if (type == "pause") {
       pause();
       send_pause_ack();
@@ -152,6 +162,8 @@ void TrainingServerClient::loop() {
     } else {
       throw util::Exception("Unknown training-server message type %s", type.c_str());
     }
+    std::cout << util::TimestampPrefix::get() << "TrainingServerClient " << type
+              << " handling complete" << std::endl;
   }
 }
 

@@ -1,6 +1,7 @@
 #include <core/TrainingServerClient.hpp>
 
 #include <util/BoostUtil.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <concepts>
 

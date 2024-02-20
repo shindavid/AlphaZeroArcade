@@ -52,6 +52,7 @@ class TrainingServerClient {
   static void init(const Params&);
   static bool initialized() { return instance_;  }
   static TrainingServerClient* get() { return instance_;  }
+  bool paused() const { return paused_; }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
 
@@ -99,6 +100,7 @@ class TrainingServerClient {
   std::condition_variable pause_cv_;
   mutable std::mutex pause_mutex_;
   bool pause_complete_ = false;
+  bool paused_ = false;
 };
 
 }  // namespace core
