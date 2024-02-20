@@ -193,6 +193,8 @@ template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_
 void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
   std::unique_lock lock(mutex_);
   paused_ = false;
+  lock.unlock();
+  cv_.notify_one();
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
