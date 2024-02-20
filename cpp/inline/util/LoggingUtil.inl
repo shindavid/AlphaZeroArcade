@@ -1,4 +1,4 @@
-#include <util/ThreadSafePrinter.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <chrono>
 #include <ctime>

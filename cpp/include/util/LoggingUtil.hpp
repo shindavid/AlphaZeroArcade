@@ -7,6 +7,22 @@
 namespace util {
 
 /*
+ * A class for generating a timestamp prefix for logging. The prefix is of the form
+ * "HH:MM:SS.NNNNNNNNN".
+ */
+class TimestampPrefix {
+ public:
+  static const char* get();
+
+ private:
+  static constexpr int buf_size = 32;
+  static TimestampPrefix* instance();
+  static TimestampPrefix* instance_;
+
+  char buf_[buf_size];
+};
+
+/*
  * Allows for std::cout << and printf() style printing, but in a thread-safe manner. Directly using
  * std::cout can lead to interleaved output from different threads. Directly using printf() is safe
  * from this concern, but using multiple printf() calls in a row can lead to interleaved output from
@@ -61,4 +77,4 @@ class ThreadSafePrinter {
 
 }  // namespace util
 
-#include <inline/util/ThreadSafePrinter.inl>
+#include <inline/util/LoggingUtil.inl>

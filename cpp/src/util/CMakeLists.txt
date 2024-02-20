@@ -3,10 +3,10 @@ add_library(util
         Config.cpp
         CudaUtil.cpp
         KeyValueDumper.cpp
+        LoggingUtil.cpp
         Math.cpp
         RepoUtil.cpp
         SocketUtil.cpp
         StaticVars.cpp
-        ThreadSafePrinter.cpp
         ${MY_TINYEXPR_DIR}/tinyexpr.c
         )
