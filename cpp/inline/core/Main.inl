@@ -52,6 +52,8 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       return 0;
     }
 
+    std::cout << util::TimestampPrefix::get() << " Starting process " << getpid() << std::endl;
+
     if (training_server_params.training_server_port > 0) {
       core::TrainingServerClient::init(training_server_params);
     }
