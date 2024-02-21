@@ -36,6 +36,10 @@ class ConnectionPool:
         return self.get_connection(readonly=readonly).cursor()
 
     def close_connections(self, thread_id=None):
+        """
+        Close all connections for the given thread. If thread_id is not specified, then the
+        current thread's id is used.
+        """
         if thread_id is None:
             thread_id = threading.get_ident()
         with self._conn_dict_lock:

@@ -52,7 +52,7 @@ class NonErrorStreamHandler(logging.StreamHandler):
 
 
 def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
-                     logger_name=DEFAULT_LOGGER_NAME):
+                     prefix='', logger_name=DEFAULT_LOGGER_NAME):
     """
     Configures the logger. A log level of INFO is used by default. If debug is True, then a log
     level of DEBUG is used instead.
@@ -70,8 +70,10 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
     logger.setLevel(level)
 
     custom_datefmt = '%Y-%m-%d %H:%M:%S.%f'
-    formatter = CustomFormatter(
-        '%(asctime)s [%(levelname)s] %(message)s', datefmt=custom_datefmt)
+    fmt = '%(asctime)s [%(levelname)s] %(message)s'
+    if prefix:
+        fmt = f'{prefix} {fmt}'
+    formatter = CustomFormatter(fmt, datefmt=custom_datefmt)
     # formatter = CustomFormatter(
     #     '%(asctime)s [Thread:%(thread_id)s] [%(levelname)s] %(message)s', datefmt=custom_datefmt)
 

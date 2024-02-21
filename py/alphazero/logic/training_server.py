@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from enum import Enum
 import os
 import shutil
+import signal
 import socket
 import sqlite3
 import sys
@@ -147,6 +148,13 @@ class TrainingServer:
             self.organizer.training_db_filename, constants.TRAINING_TABLE_CREATE_CMDS)
         self.self_play_db_conn_pool = ConnectionPool(
             self.organizer.self_play_db_filename, constants.SELF_PLAY_TABLE_CREATE_CMDS)
+
+    def register_signal_handler(self):
+        def signal_handler(sig, frame):
+            logger.info(f'Detected Ctrl-C in thread {threading.current_thread().name}.')
+            self.shutdown(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
 
     @property
     def model_cfg(self):
@@ -649,7 +657,7 @@ class TrainingServer:
 
             while True:
                 self.wait_until_enough_training_data()
-                self.train_step()
+                self.launch_train_step()
         except:
             logger.error('Unexpected error in train_loop():', exc_info=True)
             self._child_thread_error_flag.set()
@@ -660,7 +668,18 @@ class TrainingServer:
         if os.path.isfile(model_filename):
             return
 
-        self.train_step()
+        self.launch_train_step()
+
+    def launch_train_step(self):
+        """
+        Launches a training step in a separate thread.
+
+        Using a separate thread ensures that the DataLoader is properly cleaned up after the
+        training step is complete.
+        """
+        thread = threading.Thread(target=self.train_step, name='train_step', daemon=True)
+        thread.start()
+        thread.join()
 
     def train_step(self):
         gen = self.organizer.get_latest_model_generation() + 1
@@ -690,10 +709,25 @@ class TrainingServer:
 
         trainer = NetTrainer(gen, n_minibatches, self.params.cuda_device)
 
+        def disable_signal(worker_id):
+            """
+            Without this, the main process AND the DataLoader worker processes all handle the
+            SIGTERM, which is not desirable.
+
+            Using this function as worker_init_fn in DataLoader seems to disable the SIGTERM
+            handling in the worker processes.
+
+            In theory, the main process should still handle SIGTERM. But for reasons I don't
+            understand, using disable_signal() seems to sometimes disable SIGTERM handling in the
+            main process.
+            """
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+
         loader = DataLoader(
             dataset,
             batch_size=minibatch_size,
             num_workers=4,
+            worker_init_fn=disable_signal,
             pin_memory=True,
             shuffle=True)
 
@@ -753,6 +787,7 @@ class TrainingServer:
 
         conn.commit()
         cursor.close()
+        self.close_my_db_conns()
         self.reload_weights(gen)
 
     def load_last_checkpoint(self):

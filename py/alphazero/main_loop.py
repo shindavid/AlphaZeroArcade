@@ -154,7 +154,7 @@ def main():
         'LoggingParams': logging_params,
         }
 
-    configure_logger(params=logging_params)
+    configure_logger(params=logging_params, prefix='[main]')
 
     os.chdir(Repo.root())
 
