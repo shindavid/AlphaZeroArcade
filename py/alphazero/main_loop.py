@@ -107,7 +107,6 @@ def launch_self_play_server(params_dict, cuda_device: int):
     logging_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
-    logger.info(f'Launching self play server: {cmd}')
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
@@ -136,7 +135,7 @@ def launch_training_server(params_dict, cuda_device: int):
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching training server: {cmd}')
-    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    return subprocess_util.Popen(cmd, stdout=None, stderr=None)
 
 
 def main():
@@ -177,8 +176,7 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
 
     procs.append(('Training', launch_training_server(params_dict, 0)))
-    # Give training-server time to initialize socket (TODO: fix this hack)
-    time.sleep(0.5)
+    time.sleep(0.5)  # Give training-server time to initialize socket (TODO: fix this hack)
     procs.append(('Self-play', launch_self_play_server(params_dict, n-1)))
 
     loop = True
@@ -191,7 +189,8 @@ def main():
                 print('*' * 80)
                 logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
                 print('*' * 80)
-                print(proc.stderr.read())
+                if proc.stderr is not None:
+                    print(proc.stderr.read())
             else:
                 print('*' * 80)
                 logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')

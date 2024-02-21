@@ -12,7 +12,7 @@ from net_modules import Model
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 from util.socket_util import send_json, recv_json
-from util.sqlite3_util import MultiThreadedConnectionManager
+from util.sqlite3_util import ConnectionPool
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -120,7 +120,6 @@ class TrainingServer:
         self._pause_ack_events: Dict[ClientId, threading.Event] = {}
         self._client_data_list: List[ClientData] = []
         self._client_data_lock = threading.Lock()
-        self._db_conn_dict: Dict[ThreadId, sqlite3.Connection] = {}
         self._pending_game_data = []
 
         self._server_socket = None
@@ -142,11 +141,11 @@ class TrainingServer:
         self._net = None
         self._opt = None
 
-        self.clients_db_manager = MultiThreadedConnectionManager(
+        self.clients_db_conn_pool = ConnectionPool(
             self.organizer.clients_db_filename, constants.CLIENTS_TABLE_CREATE_CMDS)
-        self.training_db_manager = MultiThreadedConnectionManager(
+        self.training_db_conn_pool = ConnectionPool(
             self.organizer.training_db_filename, constants.TRAINING_TABLE_CREATE_CMDS)
-        self.self_play_db_manager = MultiThreadedConnectionManager(
+        self.self_play_db_conn_pool = ConnectionPool(
             self.organizer.self_play_db_filename, constants.SELF_PLAY_TABLE_CREATE_CMDS)
 
     @property
@@ -168,7 +167,7 @@ class TrainingServer:
         return os.path.join(self.organizer.models_dir, f'gen-{gen}.pt')
 
     def load_last_sample_window(self) -> Window:
-        cursor = self.training_db_manager.get_cursor()
+        cursor = self.training_db_conn_pool.get_cursor()
         cursor.execute("""SELECT window_start, window_end, window_sample_rate
                           FROM training ORDER BY gen DESC LIMIT 1""")
         row = cursor.fetchone()
@@ -182,7 +181,7 @@ class TrainingServer:
 
     def compute_master_list_length(self) -> int:
         # Return cumulative_augmented_positions for the last row of games:
-        cursor = self.self_play_db_manager.get_cursor()
+        cursor = self.self_play_db_conn_pool.get_cursor()
         cursor.execute("""SELECT cumulative_augmented_positions
                        FROM games ORDER BY id DESC LIMIT 1""")
         row = cursor.fetchone()
@@ -244,7 +243,7 @@ class TrainingServer:
         """
         Returns True if the first generation has been completed, False otherwise.
         """
-        cursor = self.self_play_db_manager.get_cursor()
+        cursor = self.self_play_db_conn_pool.get_cursor()
         cursor.execute(
             'SELECT gen, cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1')
         row = cursor.fetchone()
@@ -279,9 +278,11 @@ class TrainingServer:
         self._self_play_done_event.clear()
         logger.info(f'Gen-0 self-play complete!')
 
-    def insert_metrics(self, client_id, gen, timestamp, metrics, commit_to_db=True):
-        conn = self.self_play_db_manager.get_connection(readonly=False)
-        cursor = conn.cursor()
+    def insert_metrics(self, client_id, gen, timestamp, metrics, cursor=None):
+        commit = not bool(cursor)
+        if cursor is None:
+            conn = self.self_play_db_conn_pool.get_connection(readonly=False)
+            cursor = conn.cursor()
 
         cache_hits = metrics['cache_hits']
         cache_misses = metrics['cache_misses']
@@ -310,9 +311,9 @@ class TrainingServer:
                 batches_evaluated = batches_evaluated + ?
             WHERE gen = ?""", (positions_evaluated, batches_evaluated, gen))
 
-        if commit_to_db:
-            conn.commit()
-        cursor.close()
+        if commit:
+            cursor.connection.commit()
+            cursor.close()
 
     def handle_metrics(self, msg, client_data: ClientData):
         client_id = client_data.client_id
@@ -320,10 +321,12 @@ class TrainingServer:
         timestamp = msg['timestamp']
         metrics = msg['metrics']
 
-        n_augmented_positions = self.flush_pending_games(
-            client_id, commit_to_db=False)
-        self.insert_metrics(client_id, gen, timestamp, metrics, commit_to_db=False)
-        self.self_play_db_manager.get_connection(readonly=False).commit()
+        conn = self.self_play_db_conn_pool.get_connection(readonly=False)
+        cursor = conn.cursor()
+        n_augmented_positions = self.flush_pending_games(client_id, cursor=cursor)
+        self.insert_metrics(client_id, gen, timestamp, metrics, cursor=cursor)
+        cursor.close()
+        conn.commit()
         self._increment_master_list_length(n_augmented_positions)
 
     def handle_game(self, msg, client_data: ClientData):
@@ -340,12 +343,13 @@ class TrainingServer:
         if flush:
             metrics = msg.get('metrics', None)
 
-            n_augmented_positions = self.flush_pending_games(
-                client_id, commit_to_db=False)
+            conn = self.self_play_db_conn_pool.get_connection(readonly=False)
+            cursor = conn.cursor()
+            n_augmented_positions = self.flush_pending_games(client_id, cursor=cursor)
             if metrics:
-                self.insert_metrics(
-                    client_id, gen, end_timestamp, metrics, commit_to_db=False)
-            self.self_play_db_manager.get_connection(readonly=False).commit()
+                self.insert_metrics(client_id, gen, end_timestamp, metrics, cursor=cursor)
+            cursor.close()
+            conn.commit()
             self._increment_master_list_length(n_augmented_positions)
 
     def pause(self, clients: List[ClientData]):
@@ -406,7 +410,7 @@ class TrainingServer:
         Loop that checks for new clients. For each new client, spawns a thread to handle it.
         """
         try:
-            conn = self.clients_db_manager.get_connection(readonly=False)
+            conn = self.clients_db_conn_pool.get_connection(readonly=False)
             while True:
                 client_socket, addr = self._server_socket.accept()
                 ip_address, port = addr
@@ -446,8 +450,8 @@ class TrainingServer:
 
                 reply['client_id'] = client_id
                 send_json(client_socket, reply)
-                threading.Thread(target=handler_fn, args=(
-                    client_data,), daemon=True).start()
+                name = f'handler-{str(client_type).split(".")[1]}-{client_id}'
+                threading.Thread(target=handler_fn, name=name, args=(client_data,), daemon=True).start()
 
                 self.setup_done_check()
         except:
@@ -473,15 +477,14 @@ class TrainingServer:
     def handle_disconnect(self, client_data: ClientData):
         logger.info(f'Handling disconnect for {client_data}...')
         self.remove_client(client_data.client_id)
-        self.close_my_db_conn()
+        self.close_my_db_conns()
         client_data.sock.close()
         logger.info(f'Disconnect complete!')
 
-    def close_my_db_conn(self):
+    def close_my_db_conns(self):
         thread_id = threading.get_ident()
-        if thread_id in self._db_conn_dict:
-            self._db_conn_dict[thread_id].close()
-            del self._db_conn_dict[thread_id]
+        for pool in [self.clients_db_conn_pool, self.training_db_conn_pool, self.self_play_db_conn_pool]:
+            pool.close_connections(thread_id)
 
     def handle_self_play_wrapper_client(self, client_data: ClientData):
         try:
@@ -558,15 +561,20 @@ class TrainingServer:
                     WHERE gen = ? AND client_id = ?""",
                       (start_timestamp, end_timestamp, gen, client_id))
 
-    def flush_pending_games(self, client_id, commit_to_db=True):
+    def flush_pending_games(self, client_id, cursor=None):
         """
         Flushes pending games to the database, and returns the number of augmented positions.
+
+        Commits to the database unless cursor is provided, in which case the commit is left to the
+        caller.
         """
         if not self._pending_game_data:
             return 0
 
-        conn = self.self_play_db_manager.get_connection(readonly=False)
-        cursor = conn.cursor()
+        commit = not bool(cursor)
+        if cursor is None:
+            conn = self.self_play_db_conn_pool.get_connection(readonly=False)
+            cursor = conn.cursor()
 
         n_augmented_positions = 0
         game_dict = defaultdict(list)  # keyed by gen
@@ -582,10 +590,10 @@ class TrainingServer:
                       self._pending_game_data)
         self._pending_game_data = []
 
-        if commit_to_db:
-            conn.commit()
+        if commit:
+            cursor.connection.commit()
             self._increment_master_list_length(n_augmented_positions)
-        cursor.close()
+            cursor.close()
 
         return n_augmented_positions
 
@@ -611,11 +619,11 @@ class TrainingServer:
         self._master_list_length_for_next_train_loop = 0
 
         logger.info(f'Listening for clients on port {self.params.port}...')
-        threading.Thread(target=self.accept_clients, daemon=True).start()
+        threading.Thread(target=self.accept_clients, name='accept_clients', daemon=True).start()
 
     def run(self):
         try:
-            threading.Thread(target=self.train_loop, daemon=True).start()
+            threading.Thread(target=self.train_loop, name='train_loop', daemon=True).start()
 
             while True:
                 if self._child_thread_error_flag.is_set():
@@ -657,7 +665,7 @@ class TrainingServer:
     def train_step(self):
         gen = self.organizer.get_latest_model_generation() + 1
 
-        cursor = self.self_play_db_manager.get_cursor()
+        cursor = self.self_play_db_conn_pool.get_cursor()
         cursor.execute(
             """SELECT cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1""")
         row = cursor.fetchone()
@@ -723,7 +731,7 @@ class TrainingServer:
             self._last_sample_window, window_start, window_end, n_samples)
         self._last_sample_window = window
 
-        conn = self.training_db_manager.get_connection(readonly=False)
+        conn = self.training_db_conn_pool.get_connection(readonly=False)
         cursor = conn.cursor()
 
         cursor.execute("""INSERT OR REPLACE INTO training (gen, training_start_ts, training_end_ts,
