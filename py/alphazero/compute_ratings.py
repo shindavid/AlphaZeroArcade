@@ -157,7 +157,7 @@ class Arena:
         self.match_data: Dict[int, Dict[int, WinLossDrawCounts]] = defaultdict(lambda: defaultdict(WinLossDrawCounts))
         self.ratings: Dict[int, float] = {}  # mcts_gen -> rating
 
-        self.db_filename = os.path.join(self.organizer.databases_dir, 'ratings.db')
+        self.db_filename = self.organizer.ratings_db_filename
         self._conn = None
 
     @staticmethod
@@ -277,7 +277,7 @@ class Arena:
         query2 = ('SELECT gen, start_timestamp, end_timestamp FROM timestamps '
                   'WHERE gen IN (%s)' % placeholders)
 
-        training_db_conn = sqlite3.connect(os.path.join(self.organizer.databases_dir, 'training.db'))
+        training_db_conn = sqlite3.connect(self.organizer.self_play_db_filename, uri=True)
 
         c2 = training_db_conn.cursor()
         c2.execute(query1, missing_mcts_gen_list)

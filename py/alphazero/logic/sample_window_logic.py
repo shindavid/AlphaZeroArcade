@@ -145,7 +145,7 @@ class SamplingParams:
 
         valid_functions_str = str(list(VALID_WINDOW_SIZE_FUNCTIONS.keys()))
         group.add_argument('--window-size-function', default=defaults._window_size_function_str,
-                           help=f'window size function (valid functions: {valid_functions_str}, default: %(default)s)')
+                           help=f'window size function (valid functions: {valid_functions_str}, default: "%(default)s")')
         group.add_argument(
             '--target-sample-rate', type=int, default=defaults.target_sample_rate,
             help='target number of times to train over a single row (default: %(default)s))')

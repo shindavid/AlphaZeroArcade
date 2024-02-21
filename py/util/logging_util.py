@@ -21,7 +21,8 @@ class LoggingParams:
 
     @staticmethod
     def add_args(parser):
-        parser.add_argument('--debug', action='store_true', help='debug mode')
+        group = parser.add_argument_group('Logging options')
+        group.add_argument('--debug', action='store_true', help='debug mode')
 
     def add_to_cmd(self, cmd: List[str]):
         if self.debug:

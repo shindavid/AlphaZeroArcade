@@ -86,8 +86,8 @@ class RatingData:
     def __init__(self, common_params: CommonParams, mcts_iters: int):
         organizer = DirectoryOrganizer(common_params)
 
-        db_filename = os.path.join(organizer.databases_dir, 'ratings.db')
-        conn = sqlite3.connect(db_filename)
+        db_filename = organizer.ratings_db_filename
+        conn = sqlite3.connect(db_filename, uri=True)
         cursor = conn.cursor()
 
         res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? '
@@ -135,11 +135,11 @@ class RatingData:
 
 def make_rating_data_list(common_params: CommonParams) -> List[RatingData]:
     organizer = DirectoryOrganizer(common_params)
-    db_filename = os.path.join(organizer.databases_dir, 'ratings.db')
+    db_filename = organizer.ratings_db_filename
     if not os.path.exists(db_filename):
         return []
 
-    conn = sqlite3.connect(db_filename)
+    conn = sqlite3.connect(db_filename, uri=True)
     cursor = conn.cursor()
     # find all distinct mcts_iters values from ratings table:
     res = cursor.execute('SELECT DISTINCT mcts_iters FROM ratings')

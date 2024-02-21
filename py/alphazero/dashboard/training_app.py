@@ -52,7 +52,7 @@ class TrainingVisualizer:
         organizer = DirectoryOrganizer(common_params)
         training_db_filename = organizer.training_db_filename
 
-        conn = sqlite3.connect(training_db_filename)
+        conn = sqlite3.connect(training_db_filename, uri=True)
         c = conn.cursor()
 
         c.execute(
@@ -67,6 +67,11 @@ class TrainingVisualizer:
         c.execute("SELECT DISTINCT head_name FROM training_heads")
         head_names = c.fetchall()
 
+        conn.close()
+
+        conn = sqlite3.connect(organizer.self_play_db_filename, uri=True)
+        c = conn.cursor()
+
         c.execute(
             "SELECT gen, positions_evaluated, batches_evaluated, games, augmented_positions FROM self_play_metadata")
         self_play_metadata = c.fetchall()
@@ -75,7 +80,6 @@ class TrainingVisualizer:
             "SELECT gen, client_id, start_timestamp, end_timestamp FROM timestamps")
         timestamp_data = c.fetchall()
 
-        # Close the connection
         conn.close()
 
         head_names = [name[0] for name in head_names]

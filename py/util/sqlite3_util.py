@@ -1,7 +1,12 @@
+from util.logging_util import get_logger
+
 import os
 import sqlite3
 import threading
 from typing import Dict, List, Optional
+
+
+logger = get_logger()
 
 
 class MultiThreadedConnectionManager:
@@ -21,34 +26,44 @@ class MultiThreadedConnectionManager:
         """
         self._db_filename = db_filename
         self._create_cmds = create_cmds
-        self._conn_dict: Dict[int, sqlite3.Connection] = {}  # thread-id -> connection
+        self._conn_dict_readonly: Dict[int, sqlite3.Connection] = {}  # thread-id -> connection
+        self._conn_dict_readwrite: Dict[int, sqlite3.Connection] = {}  # thread-id -> connection
         self._conn_dict_lock = threading.Lock()
 
-    def get_cursor(self) -> sqlite3.Cursor:
-        return self.get_connection().cursor()
+    def get_cursor(self, readonly=True) -> sqlite3.Cursor:
+        return self.get_connection(readonly=readonly).cursor()
 
-    def get_connection(self) -> sqlite3.Connection:
+    def get_connection(self, readonly=True) -> sqlite3.Connection:
+        """
+        Returns a connection to the database. By default, the returned connection is read-only
+        (uri=True). Pass write=True to get a read-write connection. Only one read-write connection
+        can exist at a time.
+        """
         thread_id = threading.get_ident()
         with self._conn_dict_lock:
-            conn = self._conn_dict.get(thread_id, None)
+            conn_dict = self._conn_dict_readonly if readonly else self._conn_dict_readwrite
+            conn = conn_dict.get(thread_id, None)
+            logger.debug(f"get_connection: db_filename={self._db_filename} thread-id={thread_id}, readonly={readonly}, conn={conn}")
             if conn is None:
-                conn = self._create_connection()
-                self._conn_dict[thread_id] = conn
+                conn = self._create_connection(readonly)
+                conn_dict[thread_id] = conn
+                if not readonly and len(conn_dict) > 1:
+                    raise ValueError("Only one read-write connection is allowed (thread-id's: %s)" % list(conn_dict.keys()))
             return conn
 
-    def _create_connection(self) -> sqlite3.Connection:
+    def _create_connection(self, readonly=True) -> sqlite3.Connection:
         """
         Assumes that self._conn_dict_lock is already acquired.
         """
-        if os.path.isfile(self._db_filename):
-            return sqlite3.connect(self._db_filename)
+        if not os.path.isfile(self._db_filename):
+            if not self._create_cmds:
+                raise ValueError(f"Database file {self._db_filename} does not exist and create_cmds is not specified.")
 
-        if not self._create_cmds:
-            raise ValueError(f"Database file {self._db_filename} does not exist and create_cmds is not specified.")
+            create_conn = sqlite3.connect(self._db_filename)
+            cursor = create_conn.cursor()
+            for cmd in self._create_cmds:
+                cursor.execute(cmd)
+            create_conn.commit()
+            create_conn.close()
 
-        conn = sqlite3.connect(self._db_filename)
-        c = conn.cursor()
-        for cmd in self._create_cmds:
-            c.execute(cmd)
-        conn.commit()
-        return conn
+        return sqlite3.connect(self._db_filename, uri=readonly)
