@@ -108,28 +108,6 @@ def get_torch_dir():
     return torch_dir
 
 
-def get_eigenrand_dir():
-    cfg = Config.instance().filename
-
-    eigenrand_dir = Config.instance().get('eigenrand_dir')
-    eigenrand_link = 'https://github.com/bab2min/EigenRand.git'
-    assert eigenrand_dir, (f'Please git clone {eigenrand_link} to EIGENRAND_PATH and add an '
-                           f'entry "eigenrand_dir=EIGENRAND_PATH" to {cfg}.')
-    assert os.path.isdir(eigenrand_dir)
-    return eigenrand_dir
-
-
-def get_tinyexpr_dir():
-    cfg = Config.instance().filename
-
-    tinyexpr_dir = Config.instance().get('tinyexpr_dir')
-    tinyexpr_link = 'https://github.com/codeplea/tinyexpr.git'
-    assert tinyexpr_dir, (f'Please git clone {tinyexpr_link} to TINYEXPR_PATH and add an '
-                          f'entry "tinyexpr_dir=TINYEXPR_PATH" to {cfg}.')
-    assert os.path.isdir(tinyexpr_dir)
-    return tinyexpr_dir
-
-
 def get_conda_prefix():
     # detect if there is an active anaconda env, and if so, return a path to it
     return os.environ.get('CONDA_PREFIX', None)
@@ -156,8 +134,8 @@ def main():
     os.chdir(repo_root)
 
     torch_dir = get_torch_dir()
-    eigenrand_dir = get_eigenrand_dir()
-    tinyexpr_dir = get_tinyexpr_dir()
+    eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
+    tinyexpr_dir = os.path.join(repo_root, 'extra_deps/tinyexpr')
 
     macro_defines = args.macro_defines if args.macro_defines else []
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
