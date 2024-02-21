@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-
-"""
-TODO: incorporate ninja.
-"""
 import argparse
 import os
 import pkg_resources
@@ -25,9 +21,6 @@ def get_args():
     parser.add_argument('--clean', action='store_true', help='clean out target/.../bin/ directory')
     parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
-    parser.add_argument("-j", '--parallel', type=int,
-                        help='make -j value (for build parallelism). Uses config value cmake.j if available. '
-                             'Else uses cmake default')
     parser.add_argument('-D', '--macro-defines', action='append',
                         help='macro definitions to forward to make cmd (-D FOO -D BAR=2). If a macro name is passed'
                         ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
@@ -125,10 +118,6 @@ def main():
 
     debug = bool(args.debug)
 
-    j_value = args.parallel
-    if not j_value:
-        j_value = int(Config.instance().get('cmake.j', 0))
-
     targets = args.target.split(',') if args.target else []
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     os.chdir(repo_root)
@@ -149,6 +138,7 @@ def main():
 
     cmake_cmd_tokens = [
         'cmake',
+        '-G Ninja',
         'CMakeLists.txt',
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
@@ -173,8 +163,6 @@ def main():
     ]
     for t in targets:
         build_cmd_tokens.extend(['--target', t])
-    if j_value:
-        build_cmd_tokens.append(f'-j{j_value}')
 
     build_cmd = ' '.join(build_cmd_tokens)
     run(build_cmd)
