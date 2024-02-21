@@ -57,8 +57,8 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows")
       .template add_flag<"report-metrics", "do-not-report-metrics">(
-          &report_metrics, "report metrics to cmd-server periodically",
-          "do not report metrics to cmd-server");
+          &report_metrics, "report metrics to training-server periodically",
+          "do not report metrics to training-server");
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -183,16 +183,20 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::pause() {
+  std::cout << util::TimestampPrefix::get() << "TrainingDataWriter pause() " << std::endl;
   std::unique_lock lock(mutex_);
   paused_ = true;
   lock.unlock();
   cv_.notify_one();
+  std::cout << util::TimestampPrefix::get() << "TrainingDataWriter pause() - complete!" << std::endl;
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
   std::unique_lock lock(mutex_);
   paused_ = false;
+  lock.unlock();
+  cv_.notify_one();
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -201,8 +205,11 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& pa
   util::clean_assert(params.games_base_dir.size() > 0,
                      "TrainingDataWriter: games_base_dir must be specified");
 
-  if (CmdServerClient::initialized()) {
-    CmdServerClient::get()->add_listener(this);
+  if (TrainingServerClient::initialized()) {
+    if (TrainingServerClient::get()->paused()) {
+      this->paused_ = true;
+    }
+    TrainingServerClient::get()->add_listener(this);
   }
   thread_ = new std::thread([&] { loop(); });
 }
@@ -219,7 +226,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     game_queue_t& queue = completed_games_[queue_index_];
     cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
     if (paused_) {
-      core::CmdServerClient::get()->notify_pause_received(this);
+      core::TrainingServerClient::get()->notify_pause_received(this);
       cv_.wait(lock, [&] { return !paused_; });
     }
     queue_index_ = 1 - queue_index_;
@@ -306,7 +313,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::string output_filename = util::create_string("%ld.pt", cur_timestamp);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
-  core::CmdServerClient* client = core::CmdServerClient::get();
+  core::TrainingServerClient* client = core::TrainingServerClient::get();
 
   int client_id = client ? client->client_id() : 0;
   int model_generation = client ? client->cur_generation() : 0;
@@ -340,7 +347,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   auto new_rows_written = rows_written_ + rows;
   bool done = params_.max_rows > 0 && new_rows_written >= params_.max_rows;
 
-  // inform cmd-server of new file
+  // inform training-server of new file
   if (client) {
     bool flush = done || client->ready_for_games_flush(cur_timestamp);
 

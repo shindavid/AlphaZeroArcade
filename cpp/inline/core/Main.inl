@@ -28,7 +28,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     namespace po2 = boost_util::program_options;
 
     Args args;
-    core::CmdServerClient::Params cmd_server_params;
+    core::TrainingServerClient::Params training_server_params;
     typename GameServerProxy::Params game_server_proxy_params;
     typename GameServer::Params game_server_params = get_default_game_server_params();
 
@@ -36,7 +36,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     auto desc = raw_desc.template add_option<"help", 'h'>("help")
                     .template add_option<"help-full">("help with no-op flags included")
                     .add(args.make_options_description())
-                    .add(cmd_server_params.make_options_description())
+                    .add(training_server_params.make_options_description())
                     .add(game_server_params.make_options_description())
                     .add(game_server_proxy_params.make_options_description());
 
@@ -52,8 +52,10 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       return 0;
     }
 
-    if (cmd_server_params.cmd_server_port > 0) {
-      core::CmdServerClient::init(cmd_server_params);
+    std::cout << util::TimestampPrefix::get() << "Starting process " << getpid() << std::endl;
+
+    if (training_server_params.training_server_port > 0) {
+      core::TrainingServerClient::init(training_server_params);
     }
 
     if (game_server_proxy_params.remote_port) {

@@ -1,9 +1,10 @@
-#include <core/CmdServerClient.hpp>
+#include <core/TrainingServerClient.hpp>
 
-#include <core/CmdServerListener.hpp>
+#include <core/TrainingServerListener.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <map>
 #include <thread>
@@ -11,17 +12,17 @@
 
 namespace core {
 
-CmdServerClient* CmdServerClient::instance_ = nullptr;
+TrainingServerClient* TrainingServerClient::instance_ = nullptr;
 
-void CmdServerClient::init(const Params& params) {
+void TrainingServerClient::init(const Params& params) {
   if (instance_) {
-    throw util::Exception("CmdServerClient already initialized");
+    throw util::Exception("TrainingServerClient already initialized");
   }
 
-  instance_ = new CmdServerClient(params);
+  instance_ = new TrainingServerClient(params);
 }
 
-void CmdServerClient::notify_pause_received(PauseListener* listener) {
+void TrainingServerClient::notify_pause_received(PauseListener* listener) {
   std::unique_lock lock(pause_mutex_);
   listener->pause_notified_ = true;
   pause_complete_ = all_pause_notifications_received();
@@ -32,7 +33,7 @@ void CmdServerClient::notify_pause_received(PauseListener* listener) {
   }
 }
 
-perf_stats_t CmdServerClient::get_perf_stats() const {
+perf_stats_t TrainingServerClient::get_perf_stats() const {
   perf_stats_t stats;
 
   for (auto listener : metrics_request_listeners_) {
@@ -41,16 +42,17 @@ perf_stats_t CmdServerClient::get_perf_stats() const {
   return stats;
 }
 
-CmdServerClient::CmdServerClient(const Params& params)
-    : proc_start_ts_(util::ns_since_epoch()) {
-  socket_ = io::Socket::create_client_socket(params.cmd_server_hostname, params.cmd_server_port);
+TrainingServerClient::TrainingServerClient(const Params& params)
+    : proc_start_ts_(util::ns_since_epoch()), cuda_device_(params.cuda_device) {
+  socket_ = io::Socket::create_client_socket(params.training_server_hostname,
+                                             params.training_server_port);
   cur_generation_ = params.starting_generation;
   send_handshake();
   recv_handshake();
   thread_ = new std::thread([this]() { loop(); });
 }
 
-CmdServerClient::~CmdServerClient() {
+TrainingServerClient::~TrainingServerClient() {
   socket_->shutdown();
   if (thread_ && thread_->joinable()) {
     thread_->detach();
@@ -58,18 +60,19 @@ CmdServerClient::~CmdServerClient() {
   delete thread_;
 }
 
-void CmdServerClient::send_handshake() {
+void TrainingServerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
   msg["role"] = "self-play";
   msg["start_timestamp"] = proc_start_ts_;
+  msg["cuda_device"] = cuda_device_;
   socket_->json_write(msg);
 }
 
-void CmdServerClient::recv_handshake() {
+void TrainingServerClient::recv_handshake() {
   boost::json::value msg;
   if (!socket_->json_read(&msg)) {
-    throw util::Exception("%s(): unexpected cmd-server socket close", __func__);
+    throw util::Exception("%s(): unexpected training-server socket close", __func__);
   }
 
   std::string type = msg.at("type").as_string().c_str();
@@ -81,19 +84,25 @@ void CmdServerClient::recv_handshake() {
   client_id_ = client_id;
 }
 
-void CmdServerClient::pause() {
-  pause_complete_ = false;
+void TrainingServerClient::pause() {
+  std::unique_lock lock(pause_mutex_);
+  if (paused_) return;
+  paused_ = true;
+  pause_complete_ = pause_listeners_.empty();
+  lock.unlock();
 
   for (auto listener : pause_listeners_) {
     listener->pause_notified_ = false;
+  }
+  for (auto listener : pause_listeners_) {
     listener->pause();
   }
 
-  std::unique_lock lock(pause_mutex_);
+  lock.lock();
   pause_cv_.wait(lock, [this]() { return pause_complete_; });
 }
 
-void CmdServerClient::send_metrics() {
+void TrainingServerClient::send_metrics() {
   int64_t timestamp = util::ns_since_epoch();
 
   boost::json::object msg;
@@ -106,25 +115,26 @@ void CmdServerClient::send_metrics() {
   send(msg);
 }
 
-void CmdServerClient::send_pause_ack() {
+void TrainingServerClient::send_pause_ack() {
   boost::json::object msg;
   msg["type"] = "pause_ack";
   socket_->json_write(msg);
 }
 
-void CmdServerClient::unpause() {
+void TrainingServerClient::unpause() {
   for (auto listener : pause_listeners_) {
     listener->unpause();
   }
+  paused_ = false;
 }
 
-void CmdServerClient::reload_weights(const std::string& model_filename) {
+void TrainingServerClient::reload_weights(const std::string& model_filename) {
   for (auto listener : reload_weights_listeners_) {
     listener->reload_weights(model_filename);
   }
 }
 
-void CmdServerClient::loop() {
+void TrainingServerClient::loop() {
   // TODO: heartbeat checking to make sure server is still alive
   while (true) {
     boost::json::value msg;
@@ -134,6 +144,8 @@ void CmdServerClient::loop() {
     }
 
     std::string type = msg.at("type").as_string().c_str();
+    std::cout << util::TimestampPrefix::get() << "TrainingServerClient handling - " << type
+              << std::endl;
     if (type == "pause") {
       pause();
       send_pause_ack();
@@ -148,12 +160,14 @@ void CmdServerClient::loop() {
       // TODO: add actual quit logic
       break;
     } else {
-      throw util::Exception("Unknown cmd-server message type %s", type.c_str());
+      throw util::Exception("Unknown training-server message type %s", type.c_str());
     }
+    std::cout << util::TimestampPrefix::get() << "TrainingServerClient " << type
+              << " handling complete" << std::endl;
   }
 }
 
-bool CmdServerClient::all_pause_notifications_received() const {
+bool TrainingServerClient::all_pause_notifications_received() const {
   for (auto listener : pause_listeners_) {
     if (!listener->pause_notified_) {
       return false;

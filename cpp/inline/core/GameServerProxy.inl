@@ -15,7 +15,7 @@
 #include <core/Constants.hpp>
 #include <core/Packet.hpp>
 #include <util/Exception.hpp>
-#include <util/ThreadSafePrinter.hpp>
+#include <util/LoggingUtil.hpp>
 
 namespace core {
 

@@ -24,16 +24,16 @@ logger = get_logger()
 
 @dataclass
 class SelfPlayServerParams:
-    cmd_server_host: str = 'localhost'
-    cmd_server_port: int = constants.DEFAULT_CMD_SERVER_PORT
+    training_server_host: str = 'localhost'
+    training_server_port: int = constants.DEFAULT_TRAINING_SERVER_PORT
     binary_path: str = None
     cuda_device: str = 'cuda:0'
 
     @staticmethod
     def create(args) -> 'SelfPlayServerParams':
         return SelfPlayServerParams(
-            cmd_server_host=args.cmd_server_host,
-            cmd_server_port=args.cmd_server_port,
+            training_server_host=args.training_server_host,
+            training_server_port=args.training_server_port,
             binary_path=args.binary_path,
             cuda_device=args.cuda_device,
         )
@@ -43,11 +43,12 @@ class SelfPlayServerParams:
         defaults = SelfPlayServerParams()
         group = parser.add_argument_group('SelfPlayServer options')
 
-        group.add_argument('--cmd-server-host', type=str, default=defaults.cmd_server_host,
-                           help='cmd-server host (default: %(default)s)')
-        group.add_argument('--cmd-server-port', type=int,
-                           default=defaults.cmd_server_port,
-                           help='cmd-server port (default: %(default)s)')
+        group.add_argument('--training-server-host', type=str,
+                           default=defaults.training_server_host,
+                           help='training-server host (default: %(default)s)')
+        group.add_argument('--training-server-port', type=int,
+                           default=defaults.training_server_port,
+                           help='training-server port (default: %(default)s)')
         group.add_argument('-b', '--binary-path',
                            help='binary path. By default, if a unique binary is found in the '
                            'alphazero dir, it will be used. If no binary is found in the alphazero '
@@ -63,10 +64,10 @@ class SelfPlayServer:
     def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
         self.organizer = DirectoryOrganizer(common_params)
         self.game_type = get_game_type(common_params.game)
-        self.cmd_server_host = params.cmd_server_host
-        self.cmd_server_port = params.cmd_server_port
+        self.training_server_host = params.training_server_host
+        self.training_server_port = params.training_server_port
         self.cuda_device = params.cuda_device
-        self.cmd_server_socket = None
+        self.training_server_socket = None
 
         self.child_process = None
         self.client_id = None
@@ -101,9 +102,10 @@ class SelfPlayServer:
     @property
     def binary_path(self):
         """
-        TODO: perhaps during the handshake with the cmd-server, the cmd-server should send the
-        binary, and the self-play server should run that. This would reduce operational overhead
-        by putting the onus of building and distributing the binary in one spot (the cmd server).
+        TODO: perhaps during the handshake with the training-server, the training-server should send
+        the binary, and the self-play server should run that. This would reduce operational overhead
+        by putting the onus of building and distributing the binary in one spot (the training
+        server).
         """
         if self._binary_path_set:
             return self._binary_path
@@ -136,11 +138,11 @@ class SelfPlayServer:
         return self._binary_path
 
     def run(self):
-        cmd_server_address = (self.cmd_server_host, self.cmd_server_port)
-        cmd_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        cmd_server_socket.connect(cmd_server_address)
+        training_server_address = (self.training_server_host, self.training_server_port)
+        training_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        training_server_socket.connect(training_server_address)
 
-        self.cmd_server_socket = cmd_server_socket
+        self.training_server_socket = training_server_socket
         self.send_handshake()
         self.recv_handshake()
 
@@ -150,6 +152,11 @@ class SelfPlayServer:
     def main_loop(self):
         while True:
             time.sleep(1)
+            if self.child_process is not None and self.child_process.poll() is not None:
+                if self.child_process.returncode != 0:
+                    logger.error(f'Child process exited with code {self.child_process.returncode}')
+                    self._shutdown_code = 1
+
             if self._shutdown_code is not None:
                 self.shutdown(self._shutdown_code)
                 break
@@ -161,10 +168,10 @@ class SelfPlayServer:
             'start_timestamp': time.time_ns(),
             }
 
-        send_json(self.cmd_server_socket, data)
+        send_json(self.training_server_socket, data)
 
     def recv_handshake(self):
-        data = recv_json(self.cmd_server_socket, timeout=1)
+        data = recv_json(self.training_server_socket, timeout=1)
         assert data['type'] == 'handshake_ack', data
 
         self.client_id = data['client_id']
@@ -173,7 +180,7 @@ class SelfPlayServer:
     def recv_loop(self):
         try:
             while True:
-                msg = recv_json(self.cmd_server_socket)
+                msg = recv_json(self.training_server_socket)
 
                 msg_type = msg['type']
                 if msg_type == 'start-gen0':
@@ -201,8 +208,8 @@ class SelfPlayServer:
     def start_gen0(self, msg):
         assert self.child_process is None
 
-        # TODO: once we change c++ to directly communicate game data to cmd-server via TCP, we will
-        # no longer need games_base_dir here
+        # TODO: once we change c++ to directly communicate game data to the training-server via TCP,
+        # we will no longer need games_base_dir here
         games_base_dir = msg['games_base_dir']
         max_rows = msg['max_rows']
         gen = 0
@@ -227,8 +234,8 @@ class SelfPlayServer:
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
-            '--cmd-server-host', self.cmd_server_host,
-            '--cmd-server-port', self.cmd_server_port,
+            '--training-server-hostname', self.training_server_host,
+            '--training-server-port', self.training_server_port,
             '--starting-generation', gen,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -236,7 +243,7 @@ class SelfPlayServer:
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        log_filename = os.path.join(self.organizer.logs_dir, f'self-play-{self.client_id}-gen0.log')
+        log_filename = os.path.join(self.organizer.logs_dir, f'self-play.log')
         with open(log_filename, 'a') as log_file:
             logger.info(f'Running gen-0 self-play: {self_play_cmd}')
             subprocess_util.run(self_play_cmd, stdout=log_file,
@@ -246,8 +253,8 @@ class SelfPlayServer:
     def start(self, msg):
         assert self.child_process is None
 
-        # TODO: once we change c++ to directly communicate game data to cmd-server via TCP, we will
-        # no longer need games_base_dir or model here
+        # TODO: once we change c++ to directly communicate game data to the training-server via TCP,
+        # we will no longer need games_base_dir or model here
         games_base_dir = msg['games_base_dir']
         gen = msg['gen']
         model = msg['model']
@@ -268,16 +275,17 @@ class SelfPlayServer:
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
-            '--cmd-server-host', self.cmd_server_host,
-            '--cmd-server-port', self.cmd_server_port,
+            '--training-server-hostname', self.training_server_host,
+            '--training-server-port', self.training_server_port,
             '--starting-generation', gen,
+            '--cuda-device', self.cuda_device,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        log_filename = os.path.join(self.organizer.logs_dir, f'self-play-{self.client_id}.log')
+        log_filename = os.path.join(self.organizer.logs_dir, f'self-play.log')
         log_file = open(log_filename, 'a')
         proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
         self.child_process = proc
@@ -289,6 +297,6 @@ class SelfPlayServer:
 
     def shutdown(self, code):
         logger.info(f'Shutting down...')
-        if self.cmd_server_socket:
-            self.cmd_server_socket.close()
+        if self.training_server_socket:
+            self.training_server_socket.close()
         sys.exit(code)

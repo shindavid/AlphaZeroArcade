@@ -1,4 +1,4 @@
-#include <util/ThreadSafePrinter.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <chrono>
 #include <cstdarg>
@@ -7,7 +7,29 @@
 
 namespace util {
 
+TimestampPrefix* TimestampPrefix::instance_ = nullptr;
 std::mutex ThreadSafePrinter::mutex_;
+
+TimestampPrefix* TimestampPrefix::instance() {
+  if (!instance_) {
+    instance_ = new TimestampPrefix();
+  }
+  return instance_;
+}
+
+const char* TimestampPrefix::get() {
+  char* buf = instance()->buf_;
+
+  auto now = std::chrono::system_clock::now();
+  auto now_c = std::chrono::system_clock::to_time_t(now);
+  buf += std::strftime(buf, buf_size, "%H:%M:%S", std::localtime(&now_c));
+
+  auto now_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()) % 1000000000LL;
+  std::sprintf(buf, ".%09d ", (int)now_ns.count());
+
+  return instance()->buf_;
+}
 
 int ThreadSafePrinter::printf(const char* format, ...) {
   validate_lock();
@@ -31,15 +53,7 @@ ThreadSafePrinter& ThreadSafePrinter::operator<<(std_endl_t f) {
 int ThreadSafePrinter::print_timestamp() const {
   int out = 0;
   if (print_timestamp_) {
-    auto now = std::chrono::system_clock::now();
-    auto now_c = std::chrono::system_clock::to_time_t(now);
-
-    char buf[32];
-    std::strftime(buf, sizeof(buf), "%H:%M:%S", std::localtime(&now_c));
-
-    auto now_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()) % 1000000000LL;
-    out += ::printf("%s.%09d ", buf, (int)now_ns.count());
+    out += ::printf("%s", TimestampPrefix::get());
   }
 
   std::string s(thread_id_ * kWhitespacePrefixLength, ' ');

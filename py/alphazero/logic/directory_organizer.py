@@ -5,7 +5,9 @@ Below is a diagram of the directory structure.
 BASE_DIR/  # $alphazero_dir/game/tag/
     stdout.txt
     databases/
+        clients.db
         ratings.db
+        self-play.db
         training.db
     self-play-data/
         client-0/
@@ -70,7 +72,9 @@ class DirectoryOrganizer:
         self.logs_dir = os.path.join(self.base_dir, 'logs')
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
 
+        self.clients_db_filename = os.path.join(self.databases_dir, 'clients.db')
         self.ratings_db_filename = os.path.join(self.databases_dir, 'ratings.db')
+        self.self_play_db_filename = os.path.join(self.databases_dir, 'self-play.db')
         self.training_db_filename = os.path.join(self.databases_dir, 'training.db')
 
     def makedirs(self):

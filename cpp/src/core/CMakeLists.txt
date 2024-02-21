@@ -1,3 +1,3 @@
 add_library(core
-        CmdServerClient.cpp
+        TrainingServerClient.cpp
         )

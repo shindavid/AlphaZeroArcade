@@ -87,8 +87,11 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
-  if (core::CmdServerClient::initialized()) {
-    core::CmdServerClient::get()->add_listener(this);
+  if (core::TrainingServerClient::initialized()) {
+    if (core::TrainingServerClient::get()->paused()) {
+      this->paused_ = true;
+    }
+    core::TrainingServerClient::get()->add_listener(this);
   }
 }
 
@@ -455,7 +458,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (!paused_) return;  // early exit for common case, bypassing lock
 
-  core::CmdServerClient::get()->notify_pause_received(this);
+  core::TrainingServerClient::get()->notify_pause_received(this);
 
   std::unique_lock lock(pause_mutex_);
   cv_paused_.wait(lock, [&] { return !paused_; });
@@ -473,7 +476,7 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::strin
 
   int64_t timestamp = util::ns_since_epoch();
 
-  core::CmdServerClient* client = core::CmdServerClient::get();
+  core::TrainingServerClient* client = core::TrainingServerClient::get();
 
   boost::json::object msg;
   msg["type"] = "metrics";
@@ -499,24 +502,20 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::strin
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::pause() {
-  if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("Pausing...\n");
-  }
+  std::cout << util::TimestampPrefix::get() << "NNEvaluationService pause() " << std::endl;
   std::unique_lock lock(pause_mutex_);
   paused_ = true;
+  std::cout << util::TimestampPrefix::get() << "NNEvaluationService pause() - complete!" << std::endl;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::unpause() {
-  if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("Unpausing...\n");
-  }
+  std::cout << util::TimestampPrefix::get() << "NNEvaluationService unpause() " << std::endl;
   std::unique_lock lock(pause_mutex_);
   paused_ = false;
   lock.unlock();
   cv_paused_.notify_all();
+  std::cout << util::TimestampPrefix::get() << "NNEvaluationService unpause() - complete!" << std::endl;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

@@ -141,9 +141,9 @@ bool Socket::read_helper(void* data, int size, const char* error_msg) {
 
   while (bytes_read < size) {
     int n = recv(fd_, data_ptr + bytes_read, size - bytes_read, 0);
-    if (n < 0) {
+    if (n < -1) {
       throw util::Exception("%s", error_msg);
-    } else if (n == 0) {
+    } else if (n <= 0) {
       return false;
     }
     bytes_read += n;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/AbstractPlayer.hpp>
-#include <core/CmdServerClient.hpp>
+#include <core/TrainingServerClient.hpp>
 #include <core/GameServer.hpp>
 #include <core/GameServerProxy.hpp>
 #include <core/GameStateConcept.hpp>

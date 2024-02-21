@@ -9,8 +9,7 @@ class LearningParams:
     Parameters that control network training.
 
     Sampling-related parameters could live here, but instead live in SamplingParams. This
-    separation reflects the separation of responsibilities between the cmd-server and the
-    training-server.
+    separation is a historical artifact that deserves to be revisited.
 
     Some notes on differences between AlphaGoZero and KataGo:
 
