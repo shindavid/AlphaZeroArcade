@@ -11,7 +11,6 @@ from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer
 from alphazero.logic.learning_params import LearningParams
-from config import Config
 from util.py_util import timed_print
 
 
@@ -40,7 +39,6 @@ class Args:
 
 def load_args():
     parser = argparse.ArgumentParser()
-    cfg = Config.instance()
 
     # parser.add_argument('-f', '--test-fraction', type=float, default=0.1,
     #                     help='what fraction of the data to use for testing (default: %(default).2f)')
@@ -51,7 +49,8 @@ def load_args():
     parser.add_argument('-O', '--optimizer', choices=['SGD', 'Adam'], default='SGD', help='optimizer type')
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
-    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
+
+    # TODO: CommonParams
     LearningParams.add_args(parser)
 
     args = parser.parse_args()

@@ -6,8 +6,6 @@ import subprocess
 import sys
 from typing import List
 
-from config import Config
-
 
 def run(cmd: str):
     print(cmd)
@@ -89,14 +87,9 @@ def get_targets(targets: List[str], args) -> List[str]:
 
 
 def get_torch_dir():
-    cfg = Config.instance().filename
-
-    torch_dir = Config.instance().get('libtorch_dir')
-    torch_link = 'https://pytorch.org/get-started/locally/'
-    assert torch_dir, (f'Please download torch for C++ from {torch_link}, unzip to a path LIBTORCH_PATH, and then add an '
-                       f'entry "libtorch_dir=LIBTORCH_PATH" to {cfg}. '
-                       'An explicitly downloaded libtorch must be used instead of the one that ships with conda, '
-                       'due to the cxx11-abi issue. See here: https://github.com/pytorch/pytorch/issues/17492')
+    env_var = 'A0A_LIBTORCH_DIR'
+    torch_dir = os.environ.get(env_var, None)
+    assert torch_dir, f'env var ${env_var} not set, please run "source env_setup.sh" first'
     assert os.path.isdir(torch_dir)
     return torch_dir
 

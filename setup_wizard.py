@@ -107,6 +107,7 @@ def setup_conda(env_sh_lines):
         print(f'Conda environment {env_name} successfully created!')
     else:
         print(f'Conda environment {env_name} already exists, skipping creation.')
+    return env_name
 
 
 def cuda_check():
@@ -196,6 +197,11 @@ def setup_alphazero_dir(env_sh_lines):
     env_sh_lines.append(f'export A0A_ALPHAZERO_DIR={expanded_alphazero_dir}')
 
 
+def setup_local_python_imports(conda_env):
+    if os.system(f'cd py && python setup.py develop'):
+        raise SetupException('Failed setup.py')
+
+
 def write_env_sh(env_sh_lines):
     """
     Write the env.sh file
@@ -205,7 +211,7 @@ def write_env_sh(env_sh_lines):
         f.write('\n')
 
     print('*' * 80)
-    print('Setup wizard completed successfully!')
+    print_green('Setup wizard completed successfully!')
     print('')
     print('Please make sure to run the following whenever you start a new shell:')
     print('')
@@ -222,9 +228,10 @@ def main():
     try:
         env_sh_lines = []
         cuda_check()
-        setup_conda(env_sh_lines)
+        conda_env = setup_conda(env_sh_lines)
         setup_libtorch(env_sh_lines)
         setup_alphazero_dir(env_sh_lines)
+        setup_local_python_imports(conda_env)
         write_env_sh(env_sh_lines)
     except KeyboardInterrupt:
         print('')
