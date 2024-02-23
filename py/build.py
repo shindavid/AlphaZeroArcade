@@ -129,9 +129,10 @@ def main():
     if args.clean:
         run(f'rm -rf {target_dir}/bin/*')
 
+    # Leaving out Ninja because using Ninja breaks get_targets()
     cmake_cmd_tokens = [
         'cmake',
-        '-G Ninja',
+        # '-G Ninja',
         'CMakeLists.txt',
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
@@ -152,7 +153,8 @@ def main():
     build_cmd_tokens = [
         'cmake',
         '--build',
-        '.'
+        '.',
+        '-j8',  # TODO: remove this if we switch to Ninja
     ]
     for t in targets:
         build_cmd_tokens.extend(['--target', t])
