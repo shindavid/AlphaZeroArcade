@@ -15,7 +15,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
-#include <games/tictactoe/Constants.hpp>
+#include <tictactoe/Constants.hpp>
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
@@ -120,4 +120,4 @@ struct SearchResultsDumper<tictactoe::GameState> {
 
 }  // namespace mcts
 
-#include <inline/games/tictactoe/GameState.inl>
+#include <inline/tictactoe/GameState.inl>

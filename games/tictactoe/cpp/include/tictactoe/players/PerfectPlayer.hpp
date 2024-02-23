@@ -3,8 +3,8 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
-#include <games/tictactoe/Constants.hpp>
-#include <games/tictactoe/GameState.hpp>
+#include <tictactoe/Constants.hpp>
+#include <tictactoe/GameState.hpp>
 #include <util/BoostUtil.hpp>
 
 #include <map>
@@ -47,4 +47,4 @@ class PerfectPlayer : public Player {
 
 }  // namespace tictactoe
 
-#include <inline/games/tictactoe/players/PerfectPlayer.inl>
+#include <inline/tictactoe/players/PerfectPlayer.inl>

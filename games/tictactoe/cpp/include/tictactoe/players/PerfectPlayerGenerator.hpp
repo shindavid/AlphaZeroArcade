@@ -5,8 +5,8 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/tictactoe/GameState.hpp>
-#include <games/tictactoe/players/PerfectPlayer.hpp>
+#include <tictactoe/GameState.hpp>
+#include <tictactoe/players/PerfectPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace tictactoe {

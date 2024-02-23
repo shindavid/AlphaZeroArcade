@@ -4,10 +4,10 @@
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <games/generic/players/MctsPlayerGenerator.hpp>
 #include <games/generic/players/RandomPlayerGenerator.hpp>
-#include <games/tictactoe/GameState.hpp>
-#include <games/tictactoe/Tensorizor.hpp>
-#include <games/tictactoe/players/HumanTuiPlayerGenerator.hpp>
-#include <games/tictactoe/players/PerfectPlayerGenerator.hpp>
+#include <tictactoe/GameState.hpp>
+#include <tictactoe/Tensorizor.hpp>
+#include <tictactoe/players/HumanTuiPlayerGenerator.hpp>
+#include <tictactoe/players/PerfectPlayerGenerator.hpp>
 
 namespace tictactoe {
 

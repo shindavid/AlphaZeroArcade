@@ -1,8 +1,8 @@
 #pragma once
 
 #include <games/generic/players/HumanTuiPlayer.hpp>
-#include <games/tictactoe/GameState.hpp>
-#include <games/tictactoe/players/PerfectPlayer.hpp>
+#include <tictactoe/GameState.hpp>
+#include <tictactoe/players/PerfectPlayer.hpp>
 
 namespace tictactoe {
 
@@ -18,4 +18,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
 
 }  // namespace tictactoe
 
-#include <inline/games/tictactoe/players/HumanTuiPlayer.inl>
+#include <inline/tictactoe/players/HumanTuiPlayer.inl>

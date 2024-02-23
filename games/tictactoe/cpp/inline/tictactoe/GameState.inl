@@ -1,4 +1,4 @@
-#include <games/tictactoe/GameState.hpp>
+#include <tictactoe/GameState.hpp>
 
 #include <core/SquareBoardSymmetries.hpp>
 

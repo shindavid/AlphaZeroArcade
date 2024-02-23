@@ -1,4 +1,4 @@
-#include <games/tictactoe/players/HumanTuiPlayer.hpp>
+#include <tictactoe/players/HumanTuiPlayer.hpp>
 
 #include <iostream>
 #include <string>

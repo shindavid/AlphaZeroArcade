@@ -1,7 +1,7 @@
-#include <games/tictactoe/players/PerfectPlayer.hpp>
+#include <tictactoe/players/PerfectPlayer.hpp>
 
-#include <games/tictactoe/PerfectStrategyLookupTable.hpp>
-#include <games/tictactoe/Tensorizor.hpp>
+#include <tictactoe/PerfectStrategyLookupTable.hpp>
+#include <tictactoe/Tensorizor.hpp>
 #include <util/BitSet.hpp>
 #include <util/Random.hpp>
 

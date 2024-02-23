@@ -1,8 +1,8 @@
 #pragma once
 
 #include <core/TensorizorConcept.hpp>
-#include <games/tictactoe/Constants.hpp>
-#include <games/tictactoe/GameState.hpp>
+#include <tictactoe/Constants.hpp>
+#include <tictactoe/GameState.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
 
