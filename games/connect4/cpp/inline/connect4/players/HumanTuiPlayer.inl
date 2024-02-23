@@ -1,4 +1,4 @@
-#include <games/connect4/players/HumanTuiPlayer.hpp>
+#include <connect4/players/HumanTuiPlayer.hpp>
 
 #include <iostream>
 #include <string>

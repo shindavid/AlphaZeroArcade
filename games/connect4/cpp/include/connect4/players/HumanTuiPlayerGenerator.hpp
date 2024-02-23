@@ -8,9 +8,10 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <games/generic/players/HumanTuiPlayerGenerator.hpp>
-#include <games/connect4/GameState.hpp>
-#include <games/connect4/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>
+
+#include <connect4/GameState.hpp>
+#include <connect4/players/HumanTuiPlayer.hpp>
 
 namespace c4 {
 
@@ -39,4 +40,4 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
 
 }  // namespace c4
 
-#include <inline/games/connect4/players/HumanTuiPlayerGenerator.inl>
+#include <inline/connect4/players/HumanTuiPlayerGenerator.inl>

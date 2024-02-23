@@ -25,12 +25,14 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
+include_directories("games/connect4/cpp/include")
+include_directories("games/connect4/cpp")  # for inline/ subdirectory
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
-add_executable(c4 cpp/src/games/connect4/main/Connect4.cpp)
+add_executable(c4 games/connect4/cpp/src/connect4/main/Connect4.cpp)
 add_executable(othello cpp/src/games/othello/main/Othello.cpp)
 add_executable(othello_unit_tests cpp/src/games/othello/main/UnitTests.cpp)
 add_executable(tictactoe cpp/src/games/tictactoe/main/TicTacToe.cpp)
@@ -46,7 +48,7 @@ set(executables
 
 add_subdirectory("cpp/src/core")
 add_subdirectory("cpp/src/util")
-add_subdirectory("cpp/src/games/connect4")
+add_subdirectory("games/connect4/cpp/src/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 

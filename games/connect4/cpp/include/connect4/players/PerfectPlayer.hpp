@@ -9,9 +9,10 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
-#include <games/connect4/Constants.hpp>
-#include <games/connect4/GameState.hpp>
 #include <util/BoostUtil.hpp>
+
+#include <connect4/Constants.hpp>
+#include <connect4/GameState.hpp>
 
 namespace c4 {
 
@@ -107,4 +108,4 @@ class PerfectPlayer : public Player {
 
 }  // namespace c4
 
-#include <inline/games/connect4/players/PerfectPlayer.inl>
+#include <inline/connect4/players/PerfectPlayer.inl>

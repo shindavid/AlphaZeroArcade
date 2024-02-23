@@ -1,4 +1,4 @@
-#include <games/connect4/players/HumanTuiPlayerGenerator.hpp>
+#include <connect4/players/HumanTuiPlayerGenerator.hpp>
 
 #include <boost/program_options.hpp>
 

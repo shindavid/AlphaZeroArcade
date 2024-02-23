@@ -4,10 +4,11 @@
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <games/generic/players/MctsPlayerGenerator.hpp>
 #include <games/generic/players/RandomPlayerGenerator.hpp>
-#include <games/connect4/GameState.hpp>
-#include <games/connect4/Tensorizor.hpp>
-#include <games/connect4/players/HumanTuiPlayerGenerator.hpp>
-#include <games/connect4/players/PerfectPlayerGenerator.hpp>
+
+#include <connect4/GameState.hpp>
+#include <connect4/Tensorizor.hpp>
+#include <connect4/players/HumanTuiPlayerGenerator.hpp>
+#include <connect4/players/PerfectPlayerGenerator.hpp>
 
 namespace c4 {
 
