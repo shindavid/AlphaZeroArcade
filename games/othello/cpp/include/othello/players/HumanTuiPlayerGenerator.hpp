@@ -8,8 +8,8 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <games/generic/players/HumanTuiPlayerGenerator.hpp>
-#include <games/othello/GameState.hpp>
-#include <games/othello/players/HumanTuiPlayer.hpp>
+#include <othello/GameState.hpp>
+#include <othello/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace othello {

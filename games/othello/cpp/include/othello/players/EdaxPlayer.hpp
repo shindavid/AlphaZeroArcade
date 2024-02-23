@@ -9,8 +9,8 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
-#include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
+#include <othello/Constants.hpp>
+#include <othello/GameState.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace othello {
@@ -54,4 +54,4 @@ class EdaxPlayer : public Player {
 
 }  // namespace othello
 
-#include <inline/games/othello/players/EdaxPlayer.inl>
+#include <inline/othello/players/EdaxPlayer.inl>

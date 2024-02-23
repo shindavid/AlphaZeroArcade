@@ -16,7 +16,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
-#include <games/othello/Constants.hpp>
+#include <othello/Constants.hpp>
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchResultsDumper.hpp>
 #include <util/CppUtil.hpp>
@@ -124,4 +124,4 @@ struct SearchResultsDumper<othello::GameState> {
 
 }  // namespace mcts
 
-#include <inline/games/othello/GameState.inl>
+#include <inline/othello/GameState.inl>

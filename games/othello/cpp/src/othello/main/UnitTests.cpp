@@ -1,9 +1,9 @@
 #include <sstream>
 
 #include <core/DerivedTypes.hpp>
-#include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
-#include <games/othello/Tensorizor.hpp>
+#include <othello/Constants.hpp>
+#include <othello/GameState.hpp>
+#include <othello/Tensorizor.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 

@@ -1,4 +1,4 @@
-#include <games/othello/players/EdaxPlayer.hpp>
+#include <othello/players/EdaxPlayer.hpp>
 
 #include <string>
 

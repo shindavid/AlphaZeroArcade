@@ -1,4 +1,4 @@
-#include <games/othello/GameState.hpp>
+#include <othello/GameState.hpp>
 
 #include <algorithm>
 #include <bit>

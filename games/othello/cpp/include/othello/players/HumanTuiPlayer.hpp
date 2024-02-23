@@ -1,7 +1,7 @@
 #pragma once
 
 #include <games/generic/players/HumanTuiPlayer.hpp>
-#include <games/othello/GameState.hpp>
+#include <othello/GameState.hpp>
 
 namespace othello {
 
@@ -13,4 +13,4 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
 
 }  // namespace othello
 
-#include <inline/games/othello/players/HumanTuiPlayer.inl>
+#include <inline/othello/players/HumanTuiPlayer.inl>

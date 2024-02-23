@@ -1,8 +1,8 @@
 #pragma once
 
 #include <core/TensorizorConcept.hpp>
-#include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
+#include <othello/Constants.hpp>
+#include <othello/GameState.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
 

@@ -4,10 +4,10 @@
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <games/generic/players/MctsPlayerGenerator.hpp>
 #include <games/generic/players/RandomPlayerGenerator.hpp>
-#include <games/othello/GameState.hpp>
-#include <games/othello/Tensorizor.hpp>
-#include <games/othello/players/EdaxPlayerGenerator.hpp>
-#include <games/othello/players/HumanTuiPlayerGenerator.hpp>
+#include <othello/GameState.hpp>
+#include <othello/Tensorizor.hpp>
+#include <othello/players/EdaxPlayerGenerator.hpp>
+#include <othello/players/HumanTuiPlayerGenerator.hpp>
 
 namespace othello {
 

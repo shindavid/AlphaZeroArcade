@@ -1,6 +1,6 @@
-#include <games/othello/players/HumanTuiPlayer.hpp>
+#include <othello/players/HumanTuiPlayer.hpp>
 
-#include <games/othello/Constants.hpp>
+#include <othello/Constants.hpp>
 
 #include <iostream>
 #include <string>
