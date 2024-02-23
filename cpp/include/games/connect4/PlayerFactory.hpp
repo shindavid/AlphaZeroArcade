@@ -7,7 +7,6 @@
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/Tensorizor.hpp>
 #include <games/connect4/players/HumanTuiPlayerGenerator.hpp>
-#include <games/connect4/players/MctsPlayerGenerator.hpp>
 #include <games/connect4/players/PerfectPlayerGenerator.hpp>
 
 namespace c4 {
@@ -22,8 +21,10 @@ class PlayerFactory : public core::PlayerFactory<GameState> {
  private:
   static player_subfactory_vec_t make_subfactories() {
     return {new core::PlayerSubfactory<c4::HumanTuiPlayerGenerator>(),
-            new core::PlayerSubfactory<c4::CompetitiveMctsPlayerGenerator>(),
-            new core::PlayerSubfactory<c4::TrainingMctsPlayerGenerator>(),
+            new core::PlayerSubfactory<
+                generic::CompetitiveMctsPlayerGenerator<GameState, Tensorizor>>(),
+            new core::PlayerSubfactory<
+                generic::TrainingMctsPlayerGenerator<GameState, Tensorizor>>(),
             new core::PlayerSubfactory<c4::PerfectPlayerGenerator>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<GameState>>(),
             new core::PlayerSubfactory<core::RemotePlayerProxyGenerator<GameState>>()};
