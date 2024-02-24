@@ -36,10 +36,10 @@ include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
-add_executable(c4 games/connect4/cpp/src/connect4/main/Connect4.cpp)
-add_executable(othello games/othello/cpp/src/othello/main/Othello.cpp)
-add_executable(othello_unit_tests games/othello/cpp/src/othello/main/UnitTests.cpp)
-add_executable(tictactoe games/tictactoe/cpp/src/tictactoe/main/TicTacToe.cpp)
+add_executable(c4 games/connect4/cpp/src/main/Connect4.cpp)
+add_executable(othello games/othello/cpp/src/main/Othello.cpp)
+add_executable(othello_unit_tests games/othello/cpp/src/main/UnitTests.cpp)
+add_executable(tictactoe games/tictactoe/cpp/src/main/TicTacToe.cpp)
 add_executable(util_unit_tests cpp/src/util/main/UnitTests.cpp)
 
 set(executables
@@ -52,9 +52,9 @@ set(executables
 
 add_subdirectory("cpp/src/core")
 add_subdirectory("cpp/src/util")
-add_subdirectory("games/connect4/cpp/src/connect4")
-add_subdirectory("games/othello/cpp/src/othello")
-add_subdirectory("games/tictactoe/cpp/src/tictactoe")
+add_subdirectory("games/connect4/cpp/src")
+add_subdirectory("games/othello/cpp/src")
+add_subdirectory("games/tictactoe/cpp/src")
 
 set(common-libs core util)
 set(other-libs connect4-lib othello-lib tictactoe-lib)
