@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include <games/generic/players/DataExportingMctsPlayer.hpp>
-#include <games/generic/players/MctsPlayer.hpp>
+#include <generic_players/DataExportingMctsPlayer.hpp>
+#include <generic_players/MctsPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
@@ -107,4 +107,4 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Te
 
 }  // namespace generic
 
-#include <inline/games/generic/players/MctsPlayerGenerator.inl>
+#include <inline/generic_players/MctsPlayerGenerator.inl>

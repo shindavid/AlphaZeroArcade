@@ -1,6 +1,6 @@
 #pragma once
 
-#include <games/generic/players/MctsPlayer.hpp>
+#include <generic_players/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
@@ -71,4 +71,4 @@ class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
 
 }  // namespace generic
 
-#include <inline/games/generic/players/DataExportingMctsPlayer.inl>
+#include <inline/generic_players/DataExportingMctsPlayer.inl>

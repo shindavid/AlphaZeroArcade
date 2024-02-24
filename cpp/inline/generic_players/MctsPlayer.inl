@@ -1,4 +1,4 @@
-#include <games/generic/players/MctsPlayer.hpp>
+#include <generic_players/MctsPlayer.hpp>
 
 #include <unistd.h>
 

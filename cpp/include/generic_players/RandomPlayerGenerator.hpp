@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include <games/generic/players/RandomPlayer.hpp>
+#include <generic_players/RandomPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>

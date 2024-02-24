@@ -2,8 +2,8 @@
 
 #include <core/PlayerFactory.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <games/generic/players/MctsPlayerGenerator.hpp>
-#include <games/generic/players/RandomPlayerGenerator.hpp>
+#include <generic_players/MctsPlayerGenerator.hpp>
+#include <generic_players/RandomPlayerGenerator.hpp>
 #include <tictactoe/GameState.hpp>
 #include <tictactoe/Tensorizor.hpp>
 #include <tictactoe/players/HumanTuiPlayerGenerator.hpp>

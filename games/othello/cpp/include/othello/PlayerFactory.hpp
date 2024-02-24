@@ -2,8 +2,8 @@
 
 #include <core/PlayerFactory.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
-#include <games/generic/players/MctsPlayerGenerator.hpp>
-#include <games/generic/players/RandomPlayerGenerator.hpp>
+#include <generic_players/MctsPlayerGenerator.hpp>
+#include <generic_players/RandomPlayerGenerator.hpp>
 #include <othello/GameState.hpp>
 #include <othello/Tensorizor.hpp>
 #include <othello/players/EdaxPlayerGenerator.hpp>

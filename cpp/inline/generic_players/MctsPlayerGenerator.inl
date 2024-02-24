@@ -1,4 +1,4 @@
-#include <games/generic/players/MctsPlayerGenerator.hpp>
+#include <generic_players/MctsPlayerGenerator.hpp>
 
 #include <mcts/Constants.hpp>
 
