@@ -92,12 +92,13 @@ def setup_conda(env_sh_lines):
     print(f'Existing conda environments: {", ".join(conda_envs)}')
     print('')
 
-    default_env_name = 'AlphaZeroArcade'
+    default_env_name = os.environ.get('A0A_CONDA_ENV', 'AlphaZeroArcade')
     env_name = input(f'Enter conda environment name [{default_env_name}]: ')
     if not env_name:
         env_name = default_env_name
     validate_conda_env_name(env_name)
-    env_sh_lines.append(f'conda activate {env_name}')
+    env_sh_lines.append(f'export A0A_CONDA_ENV={env_name}')
+    env_sh_lines.append(f'conda activate $A0A_CONDA_ENV')
 
     # check whether the environment exists
     if env_name not in conda_envs:
@@ -149,10 +150,17 @@ def setup_libtorch(env_sh_lines):
     print_green('version.')
     print('')
 
+    default_location = os.environ.get('A0A_LIBTORCH_DIR', None)
+    if default_location is None:
+        prompt = 'Please enter the location of your libtorch installation: '
+    else:
+        prompt = f'Please enter the location of your libtorch installation [{default_location}]: '
     while True:
-        location = input('Please enter the location of your libtorch installation: ').strip()
+        location = input(prompt).strip()
         if not location:
-            continue
+            location = default_location
+            if not location:
+                continue
         expanded_location = os.path.expanduser(location)
         if not os.path.isdir(expanded_location):
             print_red(f'Directory {location} does not exist.')
@@ -182,10 +190,17 @@ def setup_alphazero_dir(env_sh_lines):
     print('for the data directory.')
     print('')
 
+    default_alphazero_dir = os.environ.get('A0A_ALPHAZERO_DIR', None)
+    if default_alphazero_dir is None:
+        prompt = 'Please enter the location of your AlphaZeroArcade data directory: '
+    else:
+        prompt = f'Please enter the location of your AlphaZeroArcade data directory [{default_alphazero_dir}]: '
     while True:
-        alphazero_dir = input('Please enter the location of your AlphaZeroArcade data directory: ').strip()
+        alphazero_dir = input(prompt).strip()
         if not alphazero_dir:
-            continue
+            alphazero_dir = default_alphazero_dir
+            if not alphazero_dir:
+                continue
 
         expanded_alphazero_dir = os.path.expanduser(alphazero_dir)
         if not os.path.isdir(expanded_alphazero_dir):
@@ -200,6 +215,11 @@ def setup_alphazero_dir(env_sh_lines):
 def setup_local_python_imports(conda_env):
     if os.system(f'cd py && python setup.py develop'):
         raise SetupException('Failed setup.py')
+
+
+def build_extra_deps():
+    if os.system(f'cd extra_deps && python build.py'):
+        raise SetupException('Failed to build extra_deps')
 
 
 def write_env_sh(env_sh_lines):
@@ -232,6 +252,7 @@ def main():
         setup_libtorch(env_sh_lines)
         setup_alphazero_dir(env_sh_lines)
         setup_local_python_imports(conda_env)
+        build_extra_deps()
         write_env_sh(env_sh_lines)
     except KeyboardInterrupt:
         print('')
