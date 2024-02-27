@@ -1,8 +1,6 @@
 This directory contains third-party repositories added via `git subtree`.
 
-## tinyexpr
-
-Added via command:
+The tinyexpr directory was added via this command:
 
 ```
 git subtree add --prefix=extra_deps/tinyexpr https://github.com/codeplea/tinyexpr.git master --squash
@@ -16,18 +14,17 @@ git subtree pull --prefix=extra_deps/tinyexpr https://github.com/codeplea/tinyex
 
 and then push the changes.
 
-## EigenRand
-
-Added via command:
+Similarly, we have:
 
 ```
-git subtree add --prefix=extra_deps/EigenRand https://github.com/bab2min/EigenRand.git main --squash
+EigenRand: https://github.com/bab2min/EigenRand.git (main)
+connect4: https://github.com/PascalPons/connect4.git (master)
+edax-reversi: https://github.com/abulmo/edax-reversi.git (master)
 ```
 
-To update to the latest from the source repository, run:
+Additionally, the file 7x6.book was cloned from:
 
 ```
-git subtree pull --prefix=extra_deps/EigenRand https://github.com/bab2min/EigenRand.git main --squash
+https://github.com/PascalPons/connect4/releases/download/book/7x6.book
 ```
 
-and then push the changes.
