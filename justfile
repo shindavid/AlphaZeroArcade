@@ -6,7 +6,6 @@ list:
 
 # build the repo
 build:
-  ./extra_deps/update.sh
   ./py/build.py
 
 # start a docker shell
