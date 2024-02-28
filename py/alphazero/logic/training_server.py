@@ -682,6 +682,13 @@ class TrainingServer:
         thread.join()
 
     def train_step(self):
+        try:
+            self.train_step_helper()
+        except:
+            logger.error('Unexpected error in train_step():', exc_info=True)
+            self._child_thread_error_flag.set()
+
+    def train_step_helper(self):
         gen = self.organizer.get_latest_model_generation() + 1
 
         cursor = self.self_play_db_conn_pool.get_cursor()
