@@ -13,50 +13,22 @@ just-as-well as KataGo does for go, while minimizing go-specific details in its 
 
 ## Getting Started
 
-### Initial setup
+### Env setup
 
 The project assumes you are working on a Linux platform. No other OS's will be supported.
 
-It is recommended to create a conda environment for this repo, with a command like:
+To get started, clone the repo, and then run:
 
 ```
-$ conda env create -n env_name -f environment.yml
+$ source env_setup.sh
 ```
 
-After creating and activating the conda environment, you must run the following command from the repo root one-time to
-get your local python imports to work properly:
+This will launch `setup_wizard.py`, which will walk you through the necessary installation steps. These steps may
+require some manual external steps like installing CUDA and torchlib. Such steps unfortunately cannot be automated
+because of licensing reasons.
 
-```
-$ cd py; python setup.py develop; cd -
-```
-
-There are then a few third-party dependencies that are not available in conda/pip that you must download manually. Currently,
-these are libtorch, EigenRand, and tinyexpr. The script `extra_deps/update.sh` downloads those packages and installs them
-in the `extra_deps/` directory. You can install them  into `extra_deps/` by running the script or by manually running a
-subset of the install commands from the script as needed. Alternatively you can install them elsewhere, or point to existing
-locations if you already have one or more of these packages installed on your machine.
-
-If you wish to test against third-party reference agents for Connect4 or Othello, you need to download other packages
-and build those separately as well; more on that later.
-
-A few notes:
-
-[1] Why is a separate libtorch download needed, you may ask? The version of libtorch that you get from conda/pip unfortunately is
-of the Pre-cx11 ABI variety, while this project requires the cx11 ABI variety. Note that the script has CUDA 11.8 hard-coded;
-depending on your hardware you might need a different version. The download page is [here](https://pytorch.org/get-started/locally/).
-
-[2] TODO: for the other dependencies, I should fork them and then have `update.sh` fetch from the fork, in order to have
-full control over the exact version. Perhaps using git subtree or similar would be appropriate.
-
-Finally, you should create a `config.txt` file at the root of your repo checkout with at least the following:
-
-```
-libtorch_dir = /path/to/libtorch
-eigenrand_dir = /path/to/EigenRand
-tinyexpr_dir = /path/to/tinyexpr
-
-alphazero_dir = /path/where/you/want/to/write/data/files
-```
+In the future, whenever you open a new shell, you should rerun the above command. Subsequent runs will be much faster,
+as they simply define some environment variables and activate a conda environment.
 
 ### Building
 
@@ -66,8 +38,6 @@ From the repo root, run:
 ./py/build.py
 ```
 
-Pass `-j 8` to `build.py` to use 8-fold parallelism (alternatively, add `cmake.j = 8` to your `config.txt`).
-
 This should build a binary for each supported game, along with some unit-test binaries. The end of the output should list
 the available binary paths:
 
@@ -75,9 +45,8 @@ the available binary paths:
 ...
 Binary location: target/Release/bin/c4
 Binary location: target/Release/bin/othello
-Binary location: target/Release/bin/othello_unit_tests
+Binary location: target/Release/bin/othello-tests
 Binary location: target/Release/bin/tictactoe
-Binary location: target/Release/bin/util_unit_tests
 ```
 You can then run for example `target/Release/bin/tictactoe -h` to get a list of help options.
 
@@ -86,25 +55,24 @@ You can then run for example `target/Release/bin/tictactoe -h` to get a list of 
 After building the binary, you can launch the AlphaZero loop for the game of your choice with a command like this:
 
 ```
-./py/alphazero/main_loop.py --synchronous-mode --game tictactoe --tag my-first-run
+./py/alphazero/main_loop.py --game tictactoe --tag my-first-run
 ```
 or using aliases,
 ```
-./py/alphazero/main_loop.py -S -g tictactoe -t my-first-run
+./py/alphazero/main_loop.py -g tictactoe -t my-first-run
 ```
 
 Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory 
 
 ```
-${alphazero_dir}/tictactoe/my-first-run/
+$A0A_ALPHAZERO_DIR/tictactoe/my-first-run/
 ```
 
-where `${alphazero_dir}` is the path you specified in your `config.txt`.
+where `$A0A_ALPHAZERO_DIR` is an environment variable configured during env setup.
 
-The `--synchronous-mode` option makes it so that the script alternates between running a fixed number of self-play games
-and then performing a fixed number of neural net train updates. The default behavior is asynchronous, meaning that the
-self-play and the neural-net training happen simultaneously. The default behavior requires you to have multiple CUDA
-devices on your machine (one is dedicated to self-play and one is dedicated to neural-net training).
+If you have multiple GPU's on your machine, this will run the self-play and the model training simultaneously, with
+one GPU dedicated to each. If you only have one GPU, this will pause the self-play whenever a model train step is in
+progress.
 
 ### Measuring Progress
 
@@ -112,7 +80,7 @@ You can manually play against an MCTS agent powered by a net produced by the Alp
 example, this can be done by something like:
 
 ```
-./target/Release/bin/tictactoe --player "--type=TUI" --player "--type=MCTS-C -m ${alphazero_dir}/tictactoe/my-first-run/models/gen-10.ptj"
+./target/Release/bin/tictactoe --player "--type=TUI" --player "--type=MCTS-C -m $A0A_ALPHAZERO_DIR/tictactoe/my-first-run/models/gen-10.ptj"
 ```
 
 For something more systematic, you want to run the MCTS agents against a family of reference agents. For this, you can run:
@@ -121,10 +89,13 @@ For something more systematic, you want to run the MCTS agents against a family 
 ./py/alphazero/compute_ratings.py -D -g tictactoe -t my-first-run
 ```
 
-This launches a dameon that continuously run matches between the produced family of MCTS agents against a family of
+This launches a process that continuously run matches between the produced family of MCTS agents against a family of
 reference agents, storing match results and estimated ratings into an sqlite3 database. This process too uses a GPU,
 so if you don't have a free GPU on your machine, it is recommended to run it while the main loop is not running, or
 to run it on a separate machine (your `${alphazero_dir}` should then be on a network-mounted filesystem).
+
+TODO: run `compute_ratings.py` as a client of the train server, sending results over TCP, with the train server
+writing to a database, so that the filesystem/database dependence is localized to the train server.
 
 To then visualize the data, you can run:
 
@@ -132,18 +103,9 @@ To then visualize the data, you can run:
 ./py/alphazero/viz_ratings.py -g tictactoe -t my-first-run
 ```
 
-This will launch an interactive bokeh plot in your web-browser. A sample plot can be seen below.
+This will launch an interactive bokeh plot in your web-browser.
 
-### Reference Agents for Connect4 and Othello
-
-If doing the above instructions for c4 or othello instead of tictactoe, you need to download and build binaries.
-The instructions for this can be found in 
-[`py/othello/README.md`](https://github.com/shindavid/AlphaZeroArcade/blob/main/py/othello/README.md) and 
-[`py/connect4/README.md`](https://github.com/shindavid/AlphaZeroArcade/blob/main/py/connect4/README.md).
-
-## Example plots
-
-Here is a plot showing learning progress for the game of Connect4:
+Here is an example plot for the game of Connect4:
 
 ![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/a8c1edb8-425e-4634-803f-086801aa59cd)
 
