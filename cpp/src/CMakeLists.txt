@@ -1,7 +1,6 @@
 add_library(alphazero-lib
         core/TrainingServerClient.cpp
         util/BoostUtil.cpp
-        util/Config.cpp
         util/CudaUtil.cpp
         util/KeyValueDumper.cpp
         util/LoggingUtil.cpp

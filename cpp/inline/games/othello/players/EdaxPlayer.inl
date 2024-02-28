@@ -2,10 +2,10 @@
 
 #include <string>
 
+#include <boost/dll.hpp>
 #include <boost/filesystem.hpp>
 
 #include <util/BoostUtil.hpp>
-#include <util/Config.hpp>
 
 namespace othello {
 
@@ -23,34 +23,16 @@ inline auto EdaxPlayer::Params::make_options_description() {
 
 inline EdaxPlayer::EdaxPlayer(const Params& params) : params_(params) {
   line_buffer_.resize(1);
-  std::string edax_dir_str = util::Config::instance()->get("othello.edax_dir", "");
-  std::string edax_bin_str = util::Config::instance()->get("othello.edax_bin", "");
 
-  if (edax_dir_str.empty()) {
-    throw util::CleanException(
-        "othello.edax_dir not specified! Please follow setup instructions in py/othello/README.md");
-  }
-  if (edax_bin_str.empty()) {
-    throw util::CleanException(
-        "othello.edax_bin not specified! Please follow setup instructions in py/othello/README.md");
-  }
-  boost::filesystem::path edax_dir(edax_dir_str);
-  boost::filesystem::path edax_bin = edax_dir / edax_bin_str;
-  if (!boost::filesystem::is_directory(edax_dir)) {
-    throw util::Exception(
-        "Dir specified by config value 'othello.edax_dir' does not exist: %s. "
-        "Please follow setup instructions in py/othello/README.md",
-        edax_dir.c_str());
-  }
+  auto extra_dir = boost::dll::program_location().parent_path() / "extra";
+  auto edax_bin = extra_dir / "lEdax-x64-modern";
+
   if (!boost::filesystem::is_regular_file(edax_bin)) {
-    throw util::Exception(
-        "File formed by combining config values 'othello.edax_dir' and 'othello.edax_bin' "
-        "does not exist: %s. Please follow setup instructions in py/othello/README.md",
-        edax_bin.c_str());
+    throw util::CleanException("File does not exist: %s", edax_bin.c_str());
   }
 
   namespace bp = boost::process;
-  proc_ = new bp::child(edax_bin_str, bp::start_dir(edax_dir), bp::std_out > out_,
+  proc_ = new bp::child(edax_bin.c_str(), bp::start_dir(extra_dir), bp::std_out > out_,
                         bp::std_err > bp::null, bp::std_in < in_);
 
   std::string level_str = util::create_string("level %d\n", params_.depth);

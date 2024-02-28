@@ -3,7 +3,6 @@
 #include <boost/filesystem.hpp>
 
 #include <util/BoostUtil.hpp>
-#include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
 

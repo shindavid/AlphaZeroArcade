@@ -3,7 +3,6 @@
 #include <boost/filesystem.hpp>
 
 #include <util/BoostUtil.hpp>
-#include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
 
@@ -29,8 +28,7 @@ inline auto ManagerParams::make_options_description() {
 
   boost::filesystem::path default_profiling_dir_path =
       util::Repo::root() / "output" / "mcts_profiling";
-  std::string default_profiling_dir =
-      util::Config::instance()->get("mcts_profiling_dir", default_profiling_dir_path.string());
+  std::string default_profiling_dir = default_profiling_dir_path.string();
 
   po2::options_description desc("Manager options");
 
