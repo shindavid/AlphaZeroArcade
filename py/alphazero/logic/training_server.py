@@ -658,6 +658,8 @@ class TrainingServer:
             while True:
                 self.wait_until_enough_training_data()
                 self.launch_train_step()
+                if self._child_thread_error_flag.is_set():
+                    return
         except:
             logger.error('Unexpected error in train_loop():', exc_info=True)
             self._child_thread_error_flag.set()
