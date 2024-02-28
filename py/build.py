@@ -6,9 +6,12 @@ import subprocess
 import sys
 from typing import List
 
+from game_index import GAME_SPECS_BY_NAME
 
-def run(cmd: str):
-    print(cmd)
+
+def run(cmd: str, print_cmd=True):
+    if print_cmd:
+        print(cmd)
     if os.system(cmd):
         sys.exit(1)
 
@@ -162,10 +165,29 @@ def main():
     build_cmd = ' '.join(build_cmd_tokens)
     run(build_cmd)
 
+    bin_dir = os.path.join(repo_root, target_dir, 'bin')
     bin_postfix = 'd' if args.debug else ''
     bins = get_targets(targets, args)
     for b in bins:
-        bin_loc = os.path.join(repo_root, target_dir, 'bin', f'{b}{bin_postfix}')
+        spec = GAME_SPECS_BY_NAME.get(b, None)
+        if spec is None:
+            continue
+        extra_deps = spec.extra_runtime_deps
+        for dep in extra_deps:
+            dep_loc = os.path.join(repo_root, dep)
+            if not os.path.isfile(dep_loc):
+                print(f'ERROR: extra dependency for {b} not found: {dep}')
+                print('Please rerun setup_wizard.py to fix this.')
+                raise Exception()
+            extra_dir = os.path.join(bin_dir, 'extra')
+            if not os.path.isdir(extra_dir):
+                os.makedirs(extra_dir)
+            cp_loc = os.path.join(extra_dir, os.path.basename(dep))
+            run(f'cp {dep_loc} {cp_loc}', print_cmd=False)
+            print(f'Extra dependency:', cp_loc)
+
+    for b in bins:
+        bin_loc = os.path.join(bin_dir, f'{b}{bin_postfix}')
         if os.path.isfile(bin_loc):
             relative_bin_loc = os.path.relpath(bin_loc, cwd)
             print(f'Binary location: {relative_bin_loc}')

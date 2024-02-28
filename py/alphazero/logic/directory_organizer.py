@@ -69,6 +69,7 @@ class DirectoryOrganizer:
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
         self.models_dir = os.path.join(self.base_dir, 'models')
         self.bins_dir = os.path.join(self.base_dir, 'bins')
+        self.bins_extra_dir = os.path.join(self.base_dir, 'bins', 'extra')
         self.logs_dir = os.path.join(self.base_dir, 'logs')
         self.checkpoints_dir = os.path.join(self.base_dir, 'checkpoints')
 
@@ -83,6 +84,7 @@ class DirectoryOrganizer:
         os.makedirs(self.self_play_data_dir, exist_ok=True)
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.bins_dir, exist_ok=True)
+        os.makedirs(self.bins_extra_dir, exist_ok=True)
         os.makedirs(self.logs_dir, exist_ok=True)
         os.makedirs(self.checkpoints_dir, exist_ok=True)
 
