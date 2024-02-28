@@ -184,6 +184,7 @@ class Arena:
         ps1 = self.get_mcts_player_str(mcts_gen)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.organizer.get_latest_binary()
+        assert binary is not None
         cmd = f'{binary} -G {n_games} -p {Params.parallelism_factor} --player "{ps1}" --player "{ps2}"'
         return cmd
 

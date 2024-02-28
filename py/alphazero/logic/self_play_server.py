@@ -126,8 +126,8 @@ class SelfPlayServer:
             self._binary_path = bin_tgt
             return self._binary_path
 
-        candidates = [c for c in os.listdir(self.bins_dir) if c != 'extra']
-        if len(candidates) == 0:
+        bin_tgt = self.organizer.get_latest_binary()
+        if bin_tgt is None:
             bin_name = self.game_spec.name
             bin_src = os.path.join(
                 Repo.root(), f'target/Release/bin/{bin_name}')
@@ -136,11 +136,6 @@ class SelfPlayServer:
             self._binary_path = bin_tgt
             logger.info(f'Using binary {bin_src} (copied to {bin_tgt})')
         else:
-            # get the candidate with the most recent mtime:
-            candidates = [os.path.join(self.bins_dir, c) for c in candidates]
-            candidates = [(os.path.getmtime(c), c) for c in candidates]
-            candidates.sort()
-            bin_tgt = candidates[-1][1]
             self._binary_path = bin_tgt
             logger.info(f'Using most-recently used binary: {bin_tgt}')
             self.copy_extras()
