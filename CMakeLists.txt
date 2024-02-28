@@ -35,9 +35,9 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
 add_subdirectory("cpp/src")
-add_subdirectory("games/connect4/cpp/src")
-add_subdirectory("games/othello/cpp/src")
-add_subdirectory("games/tictactoe/cpp/src")
+add_subdirectory("cpp/src/games/connect4")
+add_subdirectory("cpp/src/games/othello")
+add_subdirectory("cpp/src/games/tictactoe")
 
 foreach(tgt ${ALL_LIBS})
     foreach(lib ${EXTERNAL_LIBS})
