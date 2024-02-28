@@ -50,9 +50,17 @@ Binary location: target/Release/bin/tictactoe
 ```
 You can then run for example `target/Release/bin/tictactoe -h` to get a list of help options.
 
-### Running the AlphaZero loop
+### The AlphaZero loop
 
-After building the binary, you can launch the AlphaZero loop for the game of your choice with a command like this:
+The below figure summarizes the server architecture:
+
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/39e891fc-c2c1-42eb-a28d-551ac70698e6)
+
+The training server manages the entire loop. It continuously trains a neural network, and periodically sends snapshots
+of the network weights to one or more self-play servers. The self-play servers use the current network weights to
+generate self-play games, sending them back to the training server to incorporate into its training.
+
+You can launch this loop on your local machine, using one self-play server, for the game of your choice, with a command like this:
 
 ```
 ./py/alphazero/main_loop.py --game tictactoe --tag my-first-run
@@ -70,9 +78,15 @@ $A0A_ALPHAZERO_DIR/tictactoe/my-first-run/
 
 where `$A0A_ALPHAZERO_DIR` is an environment variable configured during env setup.
 
-If you have multiple GPU's on your machine, this will run the self-play and the model training simultaneously, with
-one GPU dedicated to each. If you only have one GPU, this will pause the self-play whenever a model train step is in
-progress.
+If you have multiple GPU's on your machine, this command will dedicate separate GPU's to your training server and
+to your self-play server. Otherwise, the two servers will share the same GPU, with the self-play paused during the
+train steps. This shared-GPU setup is slower.
+
+Note: currently, the above server diagram is a slightly idealized picture. The current implementation actually
+assumes that self-play servers reside on the same machine as the training server. The self-play servers write
+their game data directly to the filesystem. We will eventually make the self-play servers communicate the game
+data to the training server via TCP, with the training server doing to the filesystem write. Doing so will
+allow for the self-play servers to run on arbitrary machines, as the diagram implies.
 
 ### Measuring Progress
 
