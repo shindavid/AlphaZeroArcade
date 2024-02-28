@@ -153,11 +153,12 @@ def main():
     run(cmake_cmd)
 
     os.chdir(target_dir)
+    j = os.cpu_count()
     build_cmd_tokens = [
         'cmake',
         '--build',
         '.',
-        '-j8',  # TODO: remove this if we switch to Ninja
+        f'-j{j}',
     ]
     for t in targets:
         build_cmd_tokens.extend(['--target', t])
