@@ -1,4 +1,4 @@
-import games
+import game_index
 from util.py_util import is_valid_path_component
 
 import argparse
@@ -31,7 +31,7 @@ class CommonParams:
         assert self.game, 'Required option: --game/-g'
         assert self.tag, 'Required option: --tag/-t'
 
-        assert games.is_valid_game_name(self.game), f'Invalid game name: {self.game}'
+        assert game_index.is_valid_game_name(self.game), f'Invalid game name: {self.game}'
         assert self.tag.find('@') == -1, 'Tag cannot contain @'
         assert is_valid_path_component(self.tag), f'Illegal tag name: {self.tag}'
 
@@ -42,7 +42,7 @@ class CommonParams:
         env_var = 'A0A_ALPHAZERO_DIR'
         default_alphazero_dir = os.environ[env_var]
 
-        games.add_parser_argument(group, '-g', '--game')
+        game_index.add_parser_argument(group, '-g', '--game')
         if multiple_tags:
             group.add_argument('-t', '--tag', help='comma-separated tags for this run (e.g. "v1,v2")')
         else:

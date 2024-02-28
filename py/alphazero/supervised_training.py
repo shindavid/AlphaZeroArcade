@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-import games
+import game_index
 from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer
@@ -61,7 +61,7 @@ def load_args():
 def main():
     load_args()
     game = Args.game
-    game_type = games.get_game_type(game)
+    game_spec = game_index.get_game_spec(game)
 
     base_dir = os.path.join(Args.alphazero_dir, game, Args.tag)
     self_play_data_dir = os.path.join(base_dir, 'self-play-data')
@@ -85,7 +85,7 @@ def main():
     else:
         target_names = loader.dataset.get_target_names()
         input_shape = loader.dataset.get_input_shape()
-        net = Model(game_type.model_dict[Args.model_cfg](input_shape))
+        net = Model(game_spec.model_configs[Args.model_cfg](input_shape))
         net.validate_targets(target_names)
         epoch = 0
 

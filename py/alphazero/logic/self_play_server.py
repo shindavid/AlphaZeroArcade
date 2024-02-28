@@ -1,7 +1,7 @@
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic import constants
 from alphazero.logic.directory_organizer import DirectoryOrganizer
-from games import get_game_type
+from game_index import get_game_spec
 from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
@@ -63,7 +63,7 @@ class SelfPlayServerParams:
 class SelfPlayServer:
     def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
         self.organizer = DirectoryOrganizer(common_params)
-        self.game_type = get_game_type(common_params.game)
+        self.game_spec = get_game_spec(common_params.game)
         self.training_server_host = params.training_server_host
         self.training_server_port = params.training_server_port
         self.cuda_device = params.cuda_device
@@ -120,7 +120,7 @@ class SelfPlayServer:
 
         candidates = os.listdir(self.bins_dir)
         if len(candidates) == 0:
-            bin_name = self.game_type.binary_name
+            bin_name = self.game_spec.name
             bin_src = os.path.join(
                 Repo.root(), f'target/Release/bin/{bin_name}')
             bin_tgt = self.copy_binary(bin_src)

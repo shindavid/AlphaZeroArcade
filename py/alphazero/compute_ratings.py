@@ -64,7 +64,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, Optional, List
 
-import games
+import game_index
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.ratings import extract_match_record, WinLossDrawCounts
@@ -147,11 +147,11 @@ class Arena:
     def __init__(self, common_params: CommonParams):
         tag = common_params.tag
         self.tag = tag
-        self.game_type = games.get_game_type(Params.game)
+        self.game_spec = game_index.get_game_spec(Params.game)
         self.organizer = DirectoryOrganizer(common_params)
 
-        self.min_ref_strength = self.game_type.reference_player_family.min_strength
-        self.max_ref_strength = self.game_type.reference_player_family.max_strength
+        self.min_ref_strength = self.game_spec.reference_player_family.min_strength
+        self.max_ref_strength = self.game_spec.reference_player_family.max_strength
 
         # mcts_gen -> ref_strength -> WLD
         self.match_data: Dict[int, Dict[int, WinLossDrawCounts]] = defaultdict(lambda: defaultdict(WinLossDrawCounts))
@@ -175,7 +175,7 @@ class Arena:
 
     def get_reference_player_str(self, strength: int):
         name = Arena.get_reference_player_name(strength)
-        family = self.game_type.reference_player_family
+        family = self.game_spec.reference_player_family
         type_str = family.type_str
         strength_param = family.strength_param
         return f'--type={type_str} --name={name} {strength_param}={strength}'

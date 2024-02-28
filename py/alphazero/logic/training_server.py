@@ -7,7 +7,7 @@ from alphazero.logic.learning_params import LearningParams
 from alphazero.logic.net_trainer import NetTrainer
 from alphazero.logic.sample_window_logic import SamplingParams, Window, construct_window, \
     get_required_dataset_size
-from games import get_game_type
+from game_index import get_game_spec
 from net_modules import Model
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
@@ -114,7 +114,7 @@ class TrainingServer:
                  sampling_params: SamplingParams, common_params: CommonParams):
         self.organizer = DirectoryOrganizer(common_params)
         self.params = params
-        self.game_type = get_game_type(common_params.game)
+        self.game_spec = get_game_spec(common_params.game)
         self.learning_params = learning_params
         self.sampling_params = sampling_params
 
@@ -844,7 +844,7 @@ class TrainingServer:
             input_shape = loader.dataset.get_input_shape()
             target_names = loader.dataset.get_target_names()
             self._net = Model(
-                self.game_type.model_dict[self.model_cfg](input_shape))
+                self.game_spec.model_configs[self.model_cfg](input_shape))
             self._net.validate_targets(target_names)
             self._init_net_and_opt()
             logger.info(f'Creating new net with input shape {input_shape}')

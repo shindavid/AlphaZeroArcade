@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 import math
 
+from alphazero.game_spec import GameSpec, ReferencePlayerFamily
 from net_modules import ModelConfig, ModuleSpec
 from util.torch_util import Shape
 
@@ -10,7 +12,7 @@ NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-def tictactoe_b19_c64(input_shape: Shape):
+def b19_c64(input_shape: Shape):
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_shape = (NUM_ACTIONS, )
@@ -74,7 +76,15 @@ def tictactoe_b19_c64(input_shape: Shape):
         )
 
 
-TICTACTOE_MODEL_CONFIGS = {
-    'tictactoe_b19_c64': tictactoe_b19_c64,
-    'default': tictactoe_b19_c64,
-}
+@dataclass
+class TicTacToeSpec(GameSpec):
+    name = 'tictactoe'
+    model_configs = {
+        'default': b19_c64,
+        'b19_c64': b19_c64,
+    }
+    default_model_config = 'b19_c64'
+    reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
+
+
+TicTacToe = TicTacToeSpec()
