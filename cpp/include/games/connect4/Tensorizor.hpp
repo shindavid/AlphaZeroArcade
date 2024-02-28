@@ -4,11 +4,12 @@
 
 #include <core/DerivedTypes.hpp>
 #include <core/TensorizorConcept.hpp>
-#include <games/connect4/Constants.hpp>
-#include <games/connect4/GameState.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
+
+#include <games/connect4/Constants.hpp>
+#include <games/connect4/GameState.hpp>
 
 namespace c4 {
 

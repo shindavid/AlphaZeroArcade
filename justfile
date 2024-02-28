@@ -6,7 +6,6 @@ list:
 
 # build the repo
 build:
-  ./extra_deps/update.sh
   ./py/build.py
 
 # start a docker shell
@@ -30,9 +29,6 @@ genconfig:
   echo "" > config.txt
   echo "#c4.solver_dir = /home/dshin/checkouts/connect4  # connect4 solver dir" >> config.txt
   echo "libtorch_dir = {{repodir}}/extra_deps/libtorch" >> config.txt
-  echo "eigenrand_dir = {{repodir}}/extra_deps/EigenRand" >> config.txt
-  echo "tinyexpr_dir = {{repodir}}/extra_deps/tinyexpr" >> config.txt
-  echo "cmake.j = 8" >> config.txt
   echo "alphazero_dir = {{repodir}}/data" >> config.txt
 
 # train connect-4

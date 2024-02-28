@@ -1,0 +1,69 @@
+import abc
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+from net_modules import ModelConfigGenerator
+
+
+@dataclass
+class ReferencePlayerFamily:
+    """
+    A given game can have a reference player family, used to measure the skill level of the
+    AlphaZero agent. Such a family is defined by a type string, passed as the --type argument of the
+    --player command-line option for the game binary. The family should be parameterized by a
+    single integer-valued parameter, which controls how well the agent plays.
+    """
+    type_str: str
+    strength_param: str
+    min_strength: int
+    max_strength: int
+
+
+class GameSpec(abc.ABC):
+    """
+    Abstract class for defining a game that can be played by the AlphaZero.
+    """
+
+    @abc.abstractproperty
+    def name(self) -> str:
+        """
+        The name of the game. This is used both to reference the game when running scripts, and as
+        the name of the game binary.
+
+        The build process is expected to produce a binary with this name in the
+        target/Release/bin/ directory.
+        """
+        pass
+
+    @property
+    def extra_runtime_deps(self) -> List[str]:
+        """
+        List of extra files that are required to run the game, related to the repo root.
+
+        These files will be copied to the target/Release/bin/extra/ directory by the build process,
+        and to the alphazero dir's bins/extra/ directory by the alphazero process.
+        """
+        return []
+
+    @abc.abstractproperty
+    def model_configs(self) -> Dict[str, ModelConfigGenerator]:
+        """
+        Dictionary of model configurations for this game.
+
+        The keys are model names, and the values are ModelConfigGenerators.
+        """
+        return {}
+
+    @abc.abstractproperty
+    def default_model_config(self) -> str:
+        """
+        The default model configuration for this game.
+        """
+        pass
+
+    @property
+    def reference_player_family(self) -> Optional[ReferencePlayerFamily]:
+        """
+        The reference player family for this game, if any.
+        """
+        return None

@@ -15,10 +15,11 @@
 #include <core/IdentityTransform.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
-#include <games/connect4/Constants.hpp>
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
+
+#include <games/connect4/Constants.hpp>
 
 namespace c4 {
 class GameState;

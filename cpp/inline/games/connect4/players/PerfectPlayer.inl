@@ -2,10 +2,11 @@
 
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
-#include <util/Config.hpp>
 #include <util/Exception.hpp>
 #include <util/RepoUtil.hpp>
 #include <util/StringUtil.hpp>
+
+#include <boost/dll.hpp>
 
 namespace c4 {
 
@@ -53,22 +54,13 @@ inline std::string PerfectOracle::QueryResult::get_overlay() const {
 }
 
 inline PerfectOracle::PerfectOracle() {
-  std::string c4_solver_dir_str = util::Config::instance()->get("c4.solver_dir", "");
+  auto extra_dir = boost::dll::program_location().parent_path() / "extra";
+  auto c4_solver_bin = extra_dir / "c4solver";
+  auto c4_solver_book = extra_dir / "7x6.book";
 
-  if (c4_solver_dir_str.empty()) {
-    throw util::Exception(
-        "c4 solver dir not specified! Please add 'c4.solver_dir' entry in $REPO_ROOT/%s",
-        util::Config::kFilename);
-  }
-  boost::filesystem::path c4_solver_dir(c4_solver_dir_str);
-  if (!boost::filesystem::is_directory(c4_solver_dir)) {
-    throw util::Exception("Directory does not exist: %s", c4_solver_dir.c_str());
-  }
-  boost::filesystem::path c4_solver_bin = c4_solver_dir / "c4solver";
-  boost::filesystem::path c4_solver_book = c4_solver_dir / "7x6.book";
   for (const auto& path : {c4_solver_bin, c4_solver_book}) {
     if (!boost::filesystem::is_regular_file(path)) {
-      throw util::Exception("File does not exist: %s", path.c_str());
+      throw util::CleanException("File does not exist: %s", path.c_str());
     }
   }
 

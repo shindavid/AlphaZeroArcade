@@ -9,9 +9,10 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
+#include <util/BoostUtil.hpp>
+
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/GameState.hpp>
-#include <util/BoostUtil.hpp>
 
 namespace c4 {
 

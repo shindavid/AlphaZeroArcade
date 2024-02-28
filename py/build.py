@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-
-"""
-TODO: incorporate ninja.
-"""
 import argparse
 import os
 import pkg_resources
@@ -10,11 +6,12 @@ import subprocess
 import sys
 from typing import List
 
-from config import Config
+from game_index import GAME_SPECS_BY_NAME
 
 
-def run(cmd: str):
-    print(cmd)
+def run(cmd: str, print_cmd=True):
+    if print_cmd:
+        print(cmd)
     if os.system(cmd):
         sys.exit(1)
 
@@ -25,9 +22,6 @@ def get_args():
     parser.add_argument('--clean', action='store_true', help='clean out target/.../bin/ directory')
     parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
-    parser.add_argument("-j", '--parallel', type=int,
-                        help='make -j value (for build parallelism). Uses config value cmake.j if available. '
-                             'Else uses cmake default')
     parser.add_argument('-D', '--macro-defines', action='append',
                         help='macro definitions to forward to make cmd (-D FOO -D BAR=2). If a macro name is passed'
                         ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
@@ -96,38 +90,11 @@ def get_targets(targets: List[str], args) -> List[str]:
 
 
 def get_torch_dir():
-    cfg = Config.instance().filename
-
-    torch_dir = Config.instance().get('libtorch_dir')
-    torch_link = 'https://pytorch.org/get-started/locally/'
-    assert torch_dir, (f'Please download torch for C++ from {torch_link}, unzip to a path LIBTORCH_PATH, and then add an '
-                       f'entry "libtorch_dir=LIBTORCH_PATH" to {cfg}. '
-                       'An explicitly downloaded libtorch must be used instead of the one that ships with conda, '
-                       'due to the cxx11-abi issue. See here: https://github.com/pytorch/pytorch/issues/17492')
+    env_var = 'A0A_LIBTORCH_DIR'
+    torch_dir = os.environ.get(env_var, None)
+    assert torch_dir, f'env var ${env_var} not set, please run "source env_setup.sh" first'
     assert os.path.isdir(torch_dir)
     return torch_dir
-
-
-def get_eigenrand_dir():
-    cfg = Config.instance().filename
-
-    eigenrand_dir = Config.instance().get('eigenrand_dir')
-    eigenrand_link = 'https://github.com/bab2min/EigenRand.git'
-    assert eigenrand_dir, (f'Please git clone {eigenrand_link} to EIGENRAND_PATH and add an '
-                           f'entry "eigenrand_dir=EIGENRAND_PATH" to {cfg}.')
-    assert os.path.isdir(eigenrand_dir)
-    return eigenrand_dir
-
-
-def get_tinyexpr_dir():
-    cfg = Config.instance().filename
-
-    tinyexpr_dir = Config.instance().get('tinyexpr_dir')
-    tinyexpr_link = 'https://github.com/codeplea/tinyexpr.git'
-    assert tinyexpr_dir, (f'Please git clone {tinyexpr_link} to TINYEXPR_PATH and add an '
-                          f'entry "tinyexpr_dir=TINYEXPR_PATH" to {cfg}.')
-    assert os.path.isdir(tinyexpr_dir)
-    return tinyexpr_dir
 
 
 def get_conda_prefix():
@@ -147,17 +114,13 @@ def main():
 
     debug = bool(args.debug)
 
-    j_value = args.parallel
-    if not j_value:
-        j_value = int(Config.instance().get('cmake.j', 0))
-
     targets = args.target.split(',') if args.target else []
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     os.chdir(repo_root)
 
     torch_dir = get_torch_dir()
-    eigenrand_dir = get_eigenrand_dir()
-    tinyexpr_dir = get_tinyexpr_dir()
+    eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
+    tinyexpr_dir = os.path.join(repo_root, 'extra_deps/tinyexpr')
 
     macro_defines = args.macro_defines if args.macro_defines else []
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
@@ -169,8 +132,10 @@ def main():
     if args.clean:
         run(f'rm -rf {target_dir}/bin/*')
 
+    # Leaving out Ninja because using Ninja breaks get_targets()
     cmake_cmd_tokens = [
         'cmake',
+        # '-G Ninja',
         'CMakeLists.txt',
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
@@ -188,23 +153,42 @@ def main():
     run(cmake_cmd)
 
     os.chdir(target_dir)
+    j = os.cpu_count()
     build_cmd_tokens = [
         'cmake',
         '--build',
-        '.'
+        '.',
+        f'-j{j}',
     ]
     for t in targets:
         build_cmd_tokens.extend(['--target', t])
-    if j_value:
-        build_cmd_tokens.append(f'-j{j_value}')
 
     build_cmd = ' '.join(build_cmd_tokens)
     run(build_cmd)
 
+    bin_dir = os.path.join(repo_root, target_dir, 'bin')
     bin_postfix = 'd' if args.debug else ''
     bins = get_targets(targets, args)
     for b in bins:
-        bin_loc = os.path.join(repo_root, target_dir, 'bin', f'{b}{bin_postfix}')
+        spec = GAME_SPECS_BY_NAME.get(b, None)
+        if spec is None:
+            continue
+        extra_deps = spec.extra_runtime_deps
+        for dep in extra_deps:
+            dep_loc = os.path.join(repo_root, dep)
+            if not os.path.isfile(dep_loc):
+                print(f'ERROR: extra dependency for {b} not found: {dep}')
+                print('Please rerun setup_wizard.py to fix this.')
+                raise Exception()
+            extra_dir = os.path.join(bin_dir, 'extra')
+            if not os.path.isdir(extra_dir):
+                os.makedirs(extra_dir)
+            cp_loc = os.path.join(extra_dir, os.path.basename(dep))
+            run(f'cp {dep_loc} {cp_loc}', print_cmd=False)
+            print(f'Extra dependency:', cp_loc)
+
+    for b in bins:
+        bin_loc = os.path.join(bin_dir, f'{b}{bin_postfix}')
         if os.path.isfile(bin_loc):
             relative_bin_loc = os.path.relpath(bin_loc, cwd)
             print(f'Binary location: {relative_bin_loc}')

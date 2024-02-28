@@ -23,54 +23,30 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
+SET(EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
+set(COMMON_LIBS "")  # each executable of ALL_EXECUTABLES will be linked with these
+set(ALL_LIBS "")  # these are linked with each lib of EXTERNAL_LIBS
+set(ALL_EXECUTABLES "")
+
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
-include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
-add_executable(c4 cpp/src/games/connect4/main/Connect4.cpp)
-add_executable(othello cpp/src/games/othello/main/Othello.cpp)
-add_executable(othello_unit_tests cpp/src/games/othello/main/UnitTests.cpp)
-add_executable(tictactoe cpp/src/games/tictactoe/main/TicTacToe.cpp)
-add_executable(util_unit_tests cpp/src/util/main/UnitTests.cpp)
-
-set(executables
-        c4
-        othello
-        othello_unit_tests
-        tictactoe
-        util_unit_tests
-        )
-
-add_subdirectory("cpp/src/core")
-add_subdirectory("cpp/src/util")
+add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 
-set(common-libs core util)
-set(other-libs connect4-lib othello-lib tictactoe-lib)
-
-foreach(tgt ${executables} ${common-libs} ${other-libs})
-    target_link_libraries(${tgt} ${TORCH_LIBRARIES})
-    target_link_libraries(${tgt} ${Boost_LIBRARIES})
+foreach(tgt ${ALL_LIBS})
+    foreach(lib ${EXTERNAL_LIBS})
+        target_link_libraries(${tgt} ${lib})
+    endforeach()
 endforeach()
 
-link_directories(${Boost_LIBRARY_DIRS})
-
-foreach(tgt ${executables})
-    if (${tgt} STREQUAL "c4")
-        target_link_libraries(${tgt} connect4-lib)
-    elseif (${tgt} STREQUAL "othello")
-        target_link_libraries(${tgt} othello-lib)
-    elseif (${tgt} STREQUAL "tictactoe")
-        target_link_libraries(${tgt} tictactoe-lib)
-    elseif (${tgt} STREQUAL "othello_unit_tests")
-        target_link_libraries(${tgt} othello-lib)
-    endif()
-    foreach(lib ${common-libs})
+foreach(tgt ${ALL_EXECUTABLES})
+    foreach(lib ${COMMON_LIBS})
         target_link_libraries(${tgt} ${lib})
     endforeach()
     set_target_properties(${tgt} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
@@ -87,4 +63,4 @@ macro(print_all_variables)
     message(STATUS "print_all_variables------------------------------------------}")
 endmacro()
 
-#print_all_variables()
+# print_all_variables()

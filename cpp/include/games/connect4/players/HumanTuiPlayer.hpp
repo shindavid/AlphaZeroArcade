@@ -1,6 +1,7 @@
 #pragma once
 
-#include <games/generic/players/HumanTuiPlayer.hpp>
+#include <generic_players/HumanTuiPlayer.hpp>
+
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
 

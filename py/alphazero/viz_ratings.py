@@ -43,7 +43,7 @@ from scipy.signal import savgol_filter
 
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
-import games
+import game_index
 
 
 class Params:
@@ -188,7 +188,7 @@ class ProgressVisualizer:
         self.x_var_index = 0
         self.sources = defaultdict(ColumnDataSource)
 
-        game = games.get_game_type(Params.game)
+        game = game_index.get_game_spec(Params.game)
         self.y_limit = game.reference_player_family.max_strength
 
         self.plotted_labels = set()

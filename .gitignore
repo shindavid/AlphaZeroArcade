@@ -10,8 +10,8 @@ cmake-build-debug
 # python cache
 **/__pycache__
 
-# config framework
-config.txt
+# env
+.env.sh
 
 # cmake build dir
 target

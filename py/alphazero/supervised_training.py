@@ -6,12 +6,11 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-import games
+import game_index
 from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer
 from alphazero.logic.learning_params import LearningParams
-from config import Config
 from util.py_util import timed_print
 
 
@@ -40,7 +39,6 @@ class Args:
 
 def load_args():
     parser = argparse.ArgumentParser()
-    cfg = Config.instance()
 
     # parser.add_argument('-f', '--test-fraction', type=float, default=0.1,
     #                     help='what fraction of the data to use for testing (default: %(default).2f)')
@@ -51,7 +49,8 @@ def load_args():
     parser.add_argument('-O', '--optimizer', choices=['SGD', 'Adam'], default='SGD', help='optimizer type')
     parser.add_argument('-C', '--checkpoint-filename', help='checkpoint filename')
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
-    cfg.add_parser_argument('alphazero_dir', parser, '-d', '--alphazero-dir', help='alphazero directory')
+
+    # TODO: CommonParams
     LearningParams.add_args(parser)
 
     args = parser.parse_args()
@@ -62,7 +61,7 @@ def load_args():
 def main():
     load_args()
     game = Args.game
-    game_type = games.get_game_type(game)
+    game_spec = game_index.get_game_spec(game)
 
     base_dir = os.path.join(Args.alphazero_dir, game, Args.tag)
     self_play_data_dir = os.path.join(base_dir, 'self-play-data')
@@ -86,7 +85,7 @@ def main():
     else:
         target_names = loader.dataset.get_target_names()
         input_shape = loader.dataset.get_input_shape()
-        net = Model(game_type.model_dict[Args.model_cfg](input_shape))
+        net = Model(game_spec.model_configs[Args.model_cfg](input_shape))
         net.validate_targets(target_names)
         epoch = 0
 

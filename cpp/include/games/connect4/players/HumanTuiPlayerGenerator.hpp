@@ -7,10 +7,11 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/generic/players/HumanTuiPlayerGenerator.hpp>
+#include <generic_players/HumanTuiPlayerGenerator.hpp>
+#include <util/BoostUtil.hpp>
+
 #include <games/connect4/GameState.hpp>
 #include <games/connect4/players/HumanTuiPlayer.hpp>
-#include <util/BoostUtil.hpp>
 
 namespace c4 {
 

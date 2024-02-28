@@ -1,7 +1,7 @@
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic import constants
 from alphazero.logic.directory_organizer import DirectoryOrganizer
-from games import get_game_type
+from game_index import get_game_spec
 from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
@@ -63,7 +63,7 @@ class SelfPlayServerParams:
 class SelfPlayServer:
     def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
         self.organizer = DirectoryOrganizer(common_params)
-        self.game_type = get_game_type(common_params.game)
+        self.game_spec = get_game_spec(common_params.game)
         self.training_server_host = params.training_server_host
         self.training_server_port = params.training_server_port
         self.cuda_device = params.cuda_device
@@ -92,6 +92,13 @@ class SelfPlayServer:
     def bins_dir(self):
         return self.organizer.bins_dir
 
+    def copy_extras(self):
+        for extra in self.game_spec.extra_runtime_deps:
+            extra_src = os.path.join(Repo.root(), extra)
+            extra_tgt = os.path.join(self.bins_dir, 'extra', os.path.basename(extra))
+            rsync_cmd = ['rsync', '-t', extra_src, extra_tgt]
+            subprocess_util.run(rsync_cmd)
+
     def copy_binary(self, bin_src):
         bin_md5 = str(sha256sum(bin_src))
         bin_tgt = os.path.join(self.bins_dir, bin_md5)
@@ -113,27 +120,25 @@ class SelfPlayServer:
         self._binary_path_set = True
         if self._binary_path:
             bin_tgt = self.copy_binary(self._binary_path)
+            self.copy_extras()
             logger.info(
                 f'Using cmdline-specified binary {self._binary_path} (copied to {bin_tgt})')
             self._binary_path = bin_tgt
             return self._binary_path
 
-        candidates = os.listdir(self.bins_dir)
-        if len(candidates) == 0:
-            bin_name = self.game_type.binary_name
+        bin_tgt = self.organizer.get_latest_binary()
+        if bin_tgt is None:
+            bin_name = self.game_spec.name
             bin_src = os.path.join(
                 Repo.root(), f'target/Release/bin/{bin_name}')
             bin_tgt = self.copy_binary(bin_src)
+            self.copy_extras()
             self._binary_path = bin_tgt
             logger.info(f'Using binary {bin_src} (copied to {bin_tgt})')
         else:
-            # get the candidate with the most recent mtime:
-            candidates = [os.path.join(self.bins_dir, c) for c in candidates]
-            candidates = [(os.path.getmtime(c), c) for c in candidates]
-            candidates.sort()
-            bin_tgt = candidates[-1][1]
             self._binary_path = bin_tgt
             logger.info(f'Using most-recently used binary: {bin_tgt}')
+            self.copy_extras()
 
         return self._binary_path
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <games/generic/players/HumanTuiPlayer.hpp>
+#include <generic_players/HumanTuiPlayer.hpp>
 #include <games/othello/GameState.hpp>
 
 namespace othello {

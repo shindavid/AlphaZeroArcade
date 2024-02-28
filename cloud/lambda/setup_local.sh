@@ -19,8 +19,5 @@ fi
 # build docker container
 ./docker/build.sh
 
-# fetch extra deps
-./docker/shell ./extra_deps/update.sh
-
 # generate build config
 ./docker/shell just genconfig

@@ -1,4 +1,5 @@
 #include <core/Main.hpp>
+
 #include <games/connect4/PlayerFactory.hpp>
 
 int main(int ac, char* av[]) {

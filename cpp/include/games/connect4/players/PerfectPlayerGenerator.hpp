@@ -6,6 +6,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
+
 #include <games/connect4/players/PerfectPlayer.hpp>
 
 namespace c4 {

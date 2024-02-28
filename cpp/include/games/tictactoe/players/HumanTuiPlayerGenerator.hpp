@@ -7,7 +7,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/generic/players/HumanTuiPlayerGenerator.hpp>
+#include <generic_players/HumanTuiPlayerGenerator.hpp>
 #include <games/tictactoe/GameState.hpp>
 #include <games/tictactoe/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>
