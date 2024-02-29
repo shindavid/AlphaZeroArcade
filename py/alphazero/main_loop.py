@@ -107,6 +107,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
     logging_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
+    logger.info(f'Launching self-play server: {cmd}')
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
