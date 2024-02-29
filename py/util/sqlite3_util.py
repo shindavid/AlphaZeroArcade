@@ -9,6 +9,11 @@ from typing import Dict, List, Optional
 logger = get_logger()
 
 
+def open_readonly_conn(db_filename: str) -> sqlite3.Connection:
+    db_uri = f"file:{db_filename}?mode=ro"
+    return sqlite3.connect(db_uri, uri=True)
+
+
 class ConnectionPool:
     """
     This class is used to manage connections to a sqlite3 database in a multi-threaded environment.
@@ -87,6 +92,4 @@ class ConnectionPool:
 
         db_uri = f"file:{self._db_filename}?mode={'ro' if readonly else 'rw'}"
         conn = sqlite3.connect(db_uri, uri=True)
-        if not readonly:
-            conn.execute('PRAGMA journal_mode=WAL;')
         return conn

@@ -14,6 +14,7 @@ Within the flask app, you would leave out the --show. You may also need one of t
 """
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
+from util.sqlite3_util import open_readonly_conn
 
 import argparse
 from bokeh.io import curdoc
@@ -50,9 +51,8 @@ class TrainingVisualizer:
 
     def __init__(self, common_params: CommonParams):
         organizer = DirectoryOrganizer(common_params)
-        training_db_filename = organizer.training_db_filename
 
-        conn = sqlite3.connect(training_db_filename, uri=True)
+        conn = open_readonly_conn(organizer.training_db_filename)
         c = conn.cursor()
 
         c.execute(
@@ -69,7 +69,7 @@ class TrainingVisualizer:
 
         conn.close()
 
-        conn = sqlite3.connect(organizer.self_play_db_filename, uri=True)
+        conn = open_readonly_conn(organizer.self_play_db_filename)
         c = conn.cursor()
 
         c.execute(

@@ -44,6 +44,7 @@ from scipy.signal import savgol_filter
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 import game_index
+from util.sqlite3_util import open_readonly_conn
 
 
 class Params:
@@ -87,7 +88,7 @@ class RatingData:
         organizer = DirectoryOrganizer(common_params)
 
         db_filename = organizer.ratings_db_filename
-        conn = sqlite3.connect(db_filename, uri=True)
+        conn = open_readonly_conn(db_filename)
         cursor = conn.cursor()
 
         res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? '
@@ -139,7 +140,7 @@ def make_rating_data_list(common_params: CommonParams) -> List[RatingData]:
     if not os.path.exists(db_filename):
         return []
 
-    conn = sqlite3.connect(db_filename, uri=True)
+    conn = open_readonly_conn(db_filename)
     cursor = conn.cursor()
     # find all distinct mcts_iters values from ratings table:
     res = cursor.execute('SELECT DISTINCT mcts_iters FROM ratings')
