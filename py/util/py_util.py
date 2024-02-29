@@ -60,11 +60,6 @@ def sha256sum_helper(filename):
     return h.hexdigest()
 
 
-def timed_print(s, *args, **kwargs):
-    t = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-    print(f'{t} {s}', *args, **kwargs)
-
-
 def make_hidden_filename(filename):
     """
     Returns a filename formed by prepending a '.' to the filename part of filename.

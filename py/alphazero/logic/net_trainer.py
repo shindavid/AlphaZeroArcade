@@ -6,7 +6,6 @@ from alphazero.logic.custom_types import Generation
 from alphazero.data.position_dataset import PositionDataset
 from net_modules import Head, Model
 from learning_targets import LearningTarget
-from util.py_util import timed_print
 from util.torch_util import apply_mask
 
 

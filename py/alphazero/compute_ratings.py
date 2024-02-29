@@ -69,8 +69,11 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.ratings import extract_match_record, WinLossDrawCounts
 from util import subprocess_util
-from util.py_util import timed_print
+from util.logging_util import configure_logger, get_logger
 from util.sqlite3_util import open_readonly_conn
+
+
+logger = get_logger()
 
 
 class Params:
@@ -200,7 +203,7 @@ class Arena:
         cmd = self.create_cmd(mcts_gen, ref_strength, n_games)
         mcts_name = Arena.get_mcts_player_name(mcts_gen)
         ref_name = Arena.get_reference_player_name(ref_strength)
-        timed_print(f'[{self.tag}] Running {mcts_name} vs {ref_name} match: {cmd}')
+        logger.info(f'[{self.tag}] Running {mcts_name} vs {ref_name} match: {cmd}')
 
         proc = subprocess_util.Popen(cmd)
         stdout, stderr = proc.communicate()
@@ -209,7 +212,7 @@ class Arena:
         record = extract_match_record(stdout)
         counts += record.get(0)
         self.commit_counts(mcts_gen, ref_strength, counts)
-        timed_print(f'[{self.tag}] Match result: {counts}')
+        logger.info(f'[{self.tag}] Match result: {counts}')
         return counts
 
     @property
@@ -225,7 +228,7 @@ class Arena:
             else:
                 return
 
-        timed_print(f'[{self.tag}] Initializing database')
+        logger.info(f'[{self.tag}] Initializing database')
         c = self.conn.cursor()
         c.execute("""CREATE TABLE IF NOT EXISTS matches (
             mcts_gen INT,
@@ -300,10 +303,10 @@ class Arena:
 
         c.executemany('INSERT INTO x_values VALUES (?, ?, ?, ?, ?)', values)
         self.conn.commit()
-        timed_print(f'[{self.tag}] Dumped {len(values)} rows of x var data...')
+        logger.info(f'[{self.tag}] Dumped {len(values)} rows of x var data...')
 
     def load_past_data(self):
-        timed_print(f'[{self.tag}] Loading past data...')
+        logger.info(f'[{self.tag}] Loading past data...')
         c = self.conn.cursor()
         res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE mcts_iters = ?',
                         (Params.mcts_iters,))
@@ -321,7 +324,7 @@ class Arena:
             if rating is not None:
                 count += 1
 
-        timed_print(f'[{self.tag}] Loaded {count} ratings')
+        logger.info(f'[{self.tag}] Loaded {count} ratings')
 
     def compute_rating(self, mcts_gen: int):
         """
@@ -449,7 +452,7 @@ class Arena:
 
         Throughout this method, we assume that win-rate is a non-decreasing function of ref-strength.
         """
-        timed_print(f'[{self.tag}] Running matches for gen %s (est rating %s)' %
+        logger.info(f'[{self.tag}] Running matches for gen %s (est rating %s)' %
                     (gen, None if est_rating is None else '%.3f' % est_rating))
 
         ref_dict = {k: v for k, v in self.match_data[gen].items() if v.n_games >= Params.n_games}
@@ -469,7 +472,7 @@ class Arena:
             if est_rating <= max_left_strength or est_rating >= min_right_strength:
                 est_rating = None
         self.run_matches_helper(gen, est_rating, max_left_strength, min_right_strength)
-        timed_print('[%s] Computed gen-%d rating: %.3f' % (self.tag, gen, self.compute_rating(gen)))
+        logger.info('[%s] Computed gen-%d rating: %.3f' % (self.tag, gen, self.compute_rating(gen)))
 
     def run_matches_helper(self, gen: int, est_rating: Optional[float],
                            max_left_strength: int, min_right_strength: int):
@@ -477,7 +480,7 @@ class Arena:
         Helper method to run_matches().
         """
         est_rating_str = 'None' if est_rating is None else '%.3f' % est_rating
-        timed_print('[%s] run_matches_helper(gen=%d, est_rating=%s, max_left_strength=%d, min_right_strength=%d)' %
+        logger.info('[%s] run_matches_helper(gen=%d, est_rating=%s, max_left_strength=%d, min_right_strength=%d)' %
                     (self.tag, gen, est_rating_str, max_left_strength, min_right_strength))
         assert max_left_strength < min_right_strength
         if max_left_strength + 1 == min_right_strength:
@@ -518,6 +521,8 @@ class Arena:
 
 def main():
     load_args()
+    configure_logger()
+
     arenas = []
     for tag in Params.tags:
         common_params = CommonParams(Params.alphazero_dir, Params.game, tag)
@@ -548,10 +553,10 @@ def main():
                 break
             retry_count = num_retries
         except sqlite3.OperationalError as e:
-            timed_print(f'Caught sqlite3.OperationalError: {e}')
+            logger.info(f'Caught sqlite3.OperationalError: {e}')
             retry_count -= 1
             if retry_count > 0:
-                timed_print(f'Retrying in 2 seconds...')
+                logger.info(f'Retrying in 2 seconds...')
                 time.sleep(2)
             else:
                 raise

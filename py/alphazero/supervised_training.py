@@ -11,7 +11,6 @@ from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer
 from alphazero.logic.learning_params import LearningParams
-from util.py_util import timed_print
 
 
 class Args:
