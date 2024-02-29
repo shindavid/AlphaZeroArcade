@@ -70,7 +70,6 @@ from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.ratings import extract_match_record, WinLossDrawCounts
 from util import subprocess_util
 from util.logging_util import configure_logger, get_logger
-from util.sqlite3_util import open_readonly_conn
 
 
 logger = get_logger()
@@ -281,7 +280,7 @@ class Arena:
         query2 = ('SELECT gen, start_timestamp, end_timestamp FROM timestamps '
                   'WHERE gen IN (%s)' % placeholders)
 
-        training_db_conn = open_readonly_conn(self.organizer.self_play_db_filename)
+        training_db_conn = sqlite3.connect(self.organizer.self_play_db_filename)
 
         c2 = training_db_conn.cursor()
         c2.execute(query1, missing_mcts_gen_list)
