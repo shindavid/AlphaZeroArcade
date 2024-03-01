@@ -21,10 +21,8 @@ import argparse
 from dataclasses import dataclass
 import os
 from pipes import quote
-import signal
 import subprocess
 import time
-from typing import List
 
 import torch
 
@@ -63,14 +61,11 @@ class Params:
         parser.add_argument('--port', type=int,
                             default=defaults.port,
                             help='TrainingServer port (default: %(default)s)')
-        parser.add_argument('-b', '--binary-path',
-                            help='binary path. By default, if a unique binary is found in the '
-                            'alphazero dir, it will be used. If no binary is found in the alphazero '
-                            'dir, then will use one found in REPO_ROOT/target/Release/bin/. If '
-                            'multiple binaries are found in the alphazero dir, then this option is '
-                            'required.')
         parser.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
                             help='model config (default: %(default)s)')
+        parser.add_argument('-b', '--binary-path',
+                            help='binary path. Default: last-used binary for this tag. If this is '
+                            'the first run for this tag, then target/Release/bin/{game}')
 
 
 def load_args():
@@ -100,8 +95,6 @@ def launch_self_play_server(params_dict, cuda_device: int):
     ]
     if default_self_play_server_params.training_server_port != params.port:
         cmd.extend(['--training_server_port', str(params.port)])
-    if default_self_play_server_params.binary_path != params.binary_path:
-        cmd.extend(['--binary-path', params.binary_path])
 
     common_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
@@ -128,6 +121,8 @@ def launch_training_server(params_dict, cuda_device: int):
         cmd.extend(['--port', str(params.port)])
     if default_training_server_params.model_cfg != params.model_cfg:
         cmd.extend(['--model-cfg', params.model_cfg])
+    if default_training_server_params.binary_path != params.binary_path:
+        cmd.extend(['--binary-path', params.binary_path])
 
     logging_params.add_to_cmd(cmd)
     common_params.add_to_cmd(cmd)
@@ -163,41 +158,32 @@ def main():
     assert n > 0, 'No GPU found'
 
     procs = []
+    try:
+        procs.append(('Training', launch_training_server(params_dict, 0)))
+        time.sleep(0.5)  # Give training-server time to initialize socket (TODO: fix this hack)
+        procs.append(('Self-play', launch_self_play_server(params_dict, n-1)))
 
-    def shutdown():
+        loop = True
+        while loop:
+            for descr, proc in procs:
+                if proc.poll() is None:
+                    continue
+                loop = False
+                if proc.returncode != 0:
+                    print('*' * 80)
+                    logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
+                    print('*' * 80)
+                    if proc.stderr is not None:
+                        print(proc.stderr.read())
+                else:
+                    print('*' * 80)
+                    logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
+            time.sleep(1)
+    finally:
         for descr, proc in procs:
             if proc.poll() is None:
                 proc.terminate()
                 logger.info(f'Terminated {descr} process {proc.pid}')
-
-    def signal_handler(sig, frame):
-        logger.info(f'Received signal {sig}')
-        shutdown()
-
-    signal.signal(signal.SIGINT, signal_handler)
-
-    procs.append(('Training', launch_training_server(params_dict, 0)))
-    time.sleep(0.5)  # Give training-server time to initialize socket (TODO: fix this hack)
-    procs.append(('Self-play', launch_self_play_server(params_dict, n-1)))
-
-    loop = True
-    while loop:
-        for descr, proc in procs:
-            if proc.poll() is None:
-                continue
-            loop = False
-            if proc.returncode != 0:
-                print('*' * 80)
-                logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
-                print('*' * 80)
-                if proc.stderr is not None:
-                    print(proc.stderr.read())
-            else:
-                print('*' * 80)
-                logger.error(f'{descr} process {proc.pid} exited with code {proc.returncode}')
-        time.sleep(1)
-
-    shutdown()
 
 
 if __name__ == '__main__':

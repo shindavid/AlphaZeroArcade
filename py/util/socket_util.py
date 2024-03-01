@@ -3,6 +3,7 @@ from util.logging_util import get_logger
 from dataclasses import dataclass
 import json
 import logging
+import os
 import socket
 from typing import Any, Dict, Optional, Union
 
@@ -104,6 +105,48 @@ def send_json(sock: socket.socket, data: JsonData):
 
     sock.sendall(data.header)
     sock.sendall(data.payload)
+
+
+def recv_file(sock: socket.socket, filename: str) -> bytes:
+    """
+    Receives a file from the socket. This assumes that the file is prepended by a 4-byte big-endian
+    integer specifying the length of the file and a 1-byte bool specifying whether the file is
+    executable. The file is written to the given filename.
+    """
+    data = recvall(sock, 4)
+    length = int.from_bytes(data, byteorder='big')
+
+    data = recvall(sock, 1)
+    executable = bool(int.from_bytes(data, byteorder='big'))
+
+    data = recvall(sock, length)
+    with open(filename, 'wb') as f:
+        f.write(data)
+
+    if executable:
+        os.chmod(filename, 0o755)
+
+    logger.debug(f'Received file {filename} of size {length} bytes (executable: {executable})')
+
+
+def send_file(sock: socket.socket, filename: str):
+    """
+    Sends the contents of the file to the socket. This takes the form of a 4-byte big-endian integer
+    specifying the length of the file, followed by a 1-byte bool specifying whether the file is
+    executable, followed by the file itself.
+
+    Does not do any exception handling; all exceptions raised by sock.send*() are propagated.
+    """
+    with open(filename, 'rb') as f:
+        data = f.read()
+
+    n_bytes = len(data)
+    header = n_bytes.to_bytes(4, byteorder='big')
+    executable = os.access(filename, os.X_OK)
+    logger.debug(f'Sending file {filename} of size {n_bytes} bytes')
+    sock.sendall(header)
+    sock.sendall(executable.to_bytes(1, byteorder='big'))
+    sock.sendall(data)
 
 
 def is_port_open(host, port, timeout_sec=1):

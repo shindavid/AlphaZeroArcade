@@ -10,9 +10,12 @@ from alphazero.logic.sample_window_logic import SamplingParams, Window, construc
 from game_index import get_game_spec
 from net_modules import Model
 from util.logging_util import get_logger
-from util.py_util import make_hidden_filename
-from util.socket_util import send_json, recv_json
+from util.py_util import make_hidden_filename, sha256sum
+from util.repo_util import Repo
+from util.socket_util import recv_json, send_file, send_json
 from util.sqlite3_util import ConnectionPool
+from util import subprocess_util
+
 
 from collections import defaultdict
 from dataclasses import dataclass
@@ -41,6 +44,7 @@ class TrainingServerParams:
     port: int = constants.DEFAULT_TRAINING_SERVER_PORT
     cuda_device: str = 'cuda:0'
     model_cfg: str = 'default'
+    binary_path: str = None
 
     @staticmethod
     def create(args) -> 'TrainingServerParams':
@@ -48,6 +52,7 @@ class TrainingServerParams:
             port=args.port,
             cuda_device=args.cuda_device,
             model_cfg=args.model_cfg,
+            binary_path=args.binary_path,
         )
 
     @staticmethod
@@ -63,6 +68,9 @@ class TrainingServerParams:
                            help='cuda device used for network training (default: %(default)s)')
         group.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
                            help='model config (default: %(default)s)')
+        group.add_argument('-b', '--binary-path',
+                           help='binary path. Default: last-used binary for this tag. If this is '
+                           'the first run for this tag, then target/Release/bin/{game}')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = TrainingServerParams()
@@ -72,6 +80,8 @@ class TrainingServerParams:
             cmd.extend(['--cuda-device', self.cuda_device])
         if self.model_cfg != defaults.model_cfg:
             cmd.extend(['--model-cfg', self.model_cfg])
+        if self.binary_path:
+            cmd.extend(['--binary-path', self.binary_path])
 
 
 ClientId = int
@@ -107,6 +117,17 @@ class ClientData:
                   f'{self.ip_address}:{self.port}', self.cuda_device]
         tokens = [t for t in tokens if t]
         return f'ClientData({", ".join(tokens)})'
+
+
+@dataclass
+class RuntimeAsset:
+    src_path: str
+    tgt_path: str
+    sha256: str
+
+    @staticmethod
+    def make(src_path: str, tgt_path: str):
+        return RuntimeAsset(src_path, tgt_path, str(sha256sum(src_path)))
 
 
 class TrainingServer:
@@ -148,6 +169,45 @@ class TrainingServer:
             self.organizer.training_db_filename, constants.TRAINING_TABLE_CREATE_CMDS)
         self.self_play_db_conn_pool = ConnectionPool(
             self.organizer.self_play_db_filename, constants.SELF_PLAY_TABLE_CREATE_CMDS)
+
+        self.binary_path = self.get_binary_path()
+        self.binary_asset = RuntimeAsset.make(self.binary_path, self.game_spec.name)
+        self.extra_assets = self.make_extra_assets()
+
+    @property
+    def bins_dir(self):
+        return self.organizer.bins_dir
+
+    def get_binary_path(self):
+        if self.params.binary_path:
+            return self.params.binary_path
+
+        latest = self.organizer.get_latest_binary()
+        if latest is not None:
+            return latest
+
+        bin_name = self.game_spec.name
+        return os.path.join(Repo.root(), f'target/Release/bin/{bin_name}')
+
+    def make_extra_assets(self):
+        assets = []
+        for extra in self.game_spec.extra_runtime_deps:
+            src = os.path.join(Repo.root(), extra)
+            tgt = os.path.join('extra', os.path.basename(extra))
+            assets.append(RuntimeAsset.make(src, tgt))
+        return assets
+
+    def add_asset_metadata_to_reply(self, reply):
+        assets = []
+        for asset in [self.binary_asset] + self.extra_assets:
+            assets.append((asset.tgt_path, asset.sha256))
+        reply['assets'] = assets
+
+    def copy_binary_to_bins_dir(self):
+        src = self.binary_asset.src_path
+        tgt = os.path.join(self.bins_dir, self.binary_asset.sha256)
+        rsync_cmd = ['rsync', '-t', src, tgt]
+        subprocess_util.run(rsync_cmd)
 
     def register_signal_handler(self):
         def signal_handler(sig, frame):
@@ -428,6 +488,7 @@ class TrainingServer:
 
                 if client_type == ClientType.SELF_PLAY_WRAPPER:
                     handler_fn = self.handle_self_play_wrapper_client
+                    self.add_asset_metadata_to_reply(reply)
                 elif client_type == ClientType.SELF_PLAY:
                     handler_fn = self.handle_self_play_client
                 else:
@@ -456,22 +517,9 @@ class TrainingServer:
                 send_json(client_socket, reply)
                 name = f'handler-{str(client_type).split(".")[1]}-{client_id}'
                 threading.Thread(target=handler_fn, name=name, args=(client_data,), daemon=True).start()
-
-                self.setup_done_check()
         except:
             logger.error('Exception in accept_clients():', exc_info=True)
             self._child_thread_error_flag.set()
-
-    def setup_done_check(self):
-        with self._client_data_lock:
-            types = set()
-            for client_data in self._client_data_list:
-                types.add(client_data.client_type)
-
-            if not self._self_play_client_connected:
-                if ClientType.SELF_PLAY_WRAPPER in types:
-                    self._self_play_client_connected = True
-                    self._self_play_client_connected_event.set()
 
     def remove_client(self, client_id: ClientId):
         with self._client_data_lock:
@@ -500,12 +548,31 @@ class TrainingServer:
                     return
 
                 msg_type = msg['type']
-                # TODO
+                if msg_type == 'asset_request':
+                    self.handle_asset_request(msg['asset'], client_data)
+                elif msg_type == 'ready':
+                    self.handle_ready()
         except:
             logger.error(
                 f'Unexpected error in handle_self_play_wrapper_client({client_data}):',
                 exc_info=True)
             self._child_thread_error_flag.set()
+
+    def handle_asset_request(self, tgt, client_data: ClientData):
+        all_assets = [self.binary_asset] + self.extra_assets
+        requested_assets = [a for a in all_assets if a.tgt_path == tgt]
+        if len(requested_assets) != 1:
+            raise ValueError(f'Invalid asset request: {tgt}')
+
+        asset = requested_assets[0]
+        src = asset.src_path
+        send_file(client_data.sock, src)
+
+    def handle_ready(self):
+        with self._client_data_lock:
+            if not self._self_play_client_connected:
+                self._self_play_client_connected = True
+                self._self_play_client_connected_event.set()
 
     def handle_self_play_client(self, client_data: ClientData):
         pause_ack_event = threading.Event()
@@ -593,6 +660,7 @@ class TrainingServer:
     def _run_setup(self):
         logger.info('Performing TrainingServer setup...')
         self.organizer.makedirs()
+        self.copy_binary_to_bins_dir()
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.setsockopt(
             socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

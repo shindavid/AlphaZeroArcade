@@ -128,6 +128,8 @@ class DirectoryOrganizer:
         return DirectoryOrganizer.get_latest_full_subpath(self.models_dir)
 
     def get_latest_binary(self) -> Optional[str]:
+        if not os.path.isdir(self.bins_dir):
+            return None
         bins = [os.path.join(self.bins_dir, b)
                 for b in os.listdir(self.bins_dir)]
         bins = [b for b in bins if os.path.isfile(b)]

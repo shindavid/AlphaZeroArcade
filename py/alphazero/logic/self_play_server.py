@@ -5,7 +5,7 @@ from game_index import get_game_spec
 from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
-from util.socket_util import send_json, recv_json
+from util.socket_util import recv_file, recv_json, send_json
 from util import subprocess_util
 
 from dataclasses import dataclass
@@ -26,7 +26,6 @@ logger = get_logger()
 class SelfPlayServerParams:
     training_server_host: str = 'localhost'
     training_server_port: int = constants.DEFAULT_TRAINING_SERVER_PORT
-    binary_path: str = None
     cuda_device: str = 'cuda:0'
 
     @staticmethod
@@ -34,7 +33,6 @@ class SelfPlayServerParams:
         return SelfPlayServerParams(
             training_server_host=args.training_server_host,
             training_server_port=args.training_server_port,
-            binary_path=args.binary_path,
             cuda_device=args.cuda_device,
         )
 
@@ -49,15 +47,8 @@ class SelfPlayServerParams:
         group.add_argument('--training-server-port', type=int,
                            default=defaults.training_server_port,
                            help='training-server port (default: %(default)s)')
-        group.add_argument('-b', '--binary-path',
-                           help='binary path. By default, if a unique binary is found in the '
-                           'alphazero dir, it will be used. If no binary is found in the alphazero '
-                           'dir, then will use one found in REPO_ROOT/target/Release/bin/. If '
-                           'multiple binaries are found in the alphazero dir, then this option is '
-                           'required.')
         group.add_argument('--cuda-device', default=defaults.cuda_device,
                            help='cuda device (default: %(default)s)')
-
 
 
 class SelfPlayServer:
@@ -74,9 +65,6 @@ class SelfPlayServer:
 
         self._shutdown_code = None
 
-        self._binary_path_set = False
-        self._binary_path = params.binary_path
-
     def register_signal_handler(self):
         def signal_handler(sig, frame):
             logger.info('Detected Ctrl-C.')
@@ -89,58 +77,8 @@ class SelfPlayServer:
         return f'SelfPlayServer({client_id_str})'
 
     @property
-    def bins_dir(self):
-        return self.organizer.bins_dir
-
-    def copy_extras(self):
-        for extra in self.game_spec.extra_runtime_deps:
-            extra_src = os.path.join(Repo.root(), extra)
-            extra_tgt = os.path.join(self.bins_dir, 'extra', os.path.basename(extra))
-            rsync_cmd = ['rsync', '-t', extra_src, extra_tgt]
-            subprocess_util.run(rsync_cmd)
-
-    def copy_binary(self, bin_src):
-        bin_md5 = str(sha256sum(bin_src))
-        bin_tgt = os.path.join(self.bins_dir, bin_md5)
-        rsync_cmd = ['rsync', '-t', bin_src, bin_tgt]
-        subprocess_util.run(rsync_cmd)
-        return bin_tgt
-
-    @property
     def binary_path(self):
-        """
-        TODO: perhaps during the handshake with the training-server, the training-server should send
-        the binary, and the self-play server should run that. This would reduce operational overhead
-        by putting the onus of building and distributing the binary in one spot (the training
-        server).
-        """
-        if self._binary_path_set:
-            return self._binary_path
-
-        self._binary_path_set = True
-        if self._binary_path:
-            bin_tgt = self.copy_binary(self._binary_path)
-            self.copy_extras()
-            logger.info(
-                f'Using cmdline-specified binary {self._binary_path} (copied to {bin_tgt})')
-            self._binary_path = bin_tgt
-            return self._binary_path
-
-        bin_tgt = self.organizer.get_latest_binary()
-        if bin_tgt is None:
-            bin_name = self.game_spec.name
-            bin_src = os.path.join(
-                Repo.root(), f'target/Release/bin/{bin_name}')
-            bin_tgt = self.copy_binary(bin_src)
-            self.copy_extras()
-            self._binary_path = bin_tgt
-            logger.info(f'Using binary {bin_src} (copied to {bin_tgt})')
-        else:
-            self._binary_path = bin_tgt
-            logger.info(f'Using most-recently used binary: {bin_tgt}')
-            self.copy_extras()
-
-        return self._binary_path
+        return os.path.join(Repo.root(), '.runtime', self.game_spec.name)
 
     def run(self):
         training_server_address = (self.training_server_host, self.training_server_port)
@@ -181,6 +119,42 @@ class SelfPlayServer:
 
         self.client_id = data['client_id']
         logger.info(f'Received client id assignment: {self.client_id}')
+
+        runtime_dir = os.path.join(Repo.root(), '.runtime')
+        assets = data['assets']
+        requested_assets = []
+        for tgt, sha256 in assets:
+            loc = os.path.join(runtime_dir, tgt)
+            if not os.path.isfile(loc):
+                requested_assets.append((tgt, sha256))
+                logger.info(f'Requesting asset {tgt} for first time')
+                continue
+
+            if sha256sum(loc) != sha256:
+                requested_assets.append((tgt, sha256))
+                logger.info(f'Re-requesting asset {tgt} due to hash change')
+                continue
+
+            logger.info(f'Asset {tgt} already present')
+
+        for tgt, sha256 in requested_assets:
+            data = {
+                'type': 'asset_request',
+                'asset': tgt,
+                }
+            send_json(self.training_server_socket, data)
+
+            dst = os.path.join(runtime_dir, tgt)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            recv_file(self.training_server_socket, dst)
+            logger.info(f'Received asset {tgt}')
+            if sha256sum(dst) != sha256:
+                raise Exception(f'Hash mismatch for asset {tgt}')
+
+        data = {
+            'type': 'ready',
+        }
+        send_json(self.training_server_socket, data)
 
     def recv_loop(self):
         try:
