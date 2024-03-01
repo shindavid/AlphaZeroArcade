@@ -15,6 +15,7 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
+from concurrent import futures
 import copy
 from dataclasses import dataclass, field
 import math
@@ -480,6 +481,10 @@ class Model(nn.Module):
             print(f'Model successfully loaded!')
         return net
 
+    @staticmethod
+    def _save_model_helper(model, example_input, filename):
+        torch.jit.trace(model, example_input).save(filename)
+
     def save_model(self, filename: str, verbose: bool = False):
         """
         Saves this network to disk, from which it can be loaded either by c++ or by python. Uses the
@@ -508,8 +513,13 @@ class Model(nn.Module):
         clone.eval()
         forward_shape = tuple([1] + list(self.input_shape))
         example_input = torch.zeros(forward_shape)
-        mod = torch.jit.trace(clone, example_input)
-        mod.save(filename)
+
+        # Perform the actual trace/save in a separate process to avoid memory leak
+        # See: https://github.com/pytorch/pytorch/issues/35600
+        with futures.ProcessPoolExecutor() as executor:
+            future = executor.submit(Model._save_model_helper, clone, example_input, filename)
+            futures.wait([future])
+
         if verbose:
             print(f'Model saved to {filename}')
 
