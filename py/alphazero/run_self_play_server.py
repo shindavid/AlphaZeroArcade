@@ -46,7 +46,6 @@ def main():
     logger.info(f'**** Starting self-play-server ****')
 
     server = SelfPlayServer(params, common_params)
-    server.register_signal_handler()
     server.run()
 
 

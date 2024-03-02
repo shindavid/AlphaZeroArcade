@@ -1,7 +1,7 @@
 from alphazero.data.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ChildThreadError, Generation
+from alphazero.logic.custom_types import ChildThreadError, ClientType, Generation
 from alphazero.logic.directory_organizer import DirectoryOrganizer, PathInfo
 from alphazero.logic.learning_params import LearningParams
 from alphazero.logic.net_trainer import NetTrainer
@@ -19,7 +19,6 @@ from util import subprocess_util
 
 from collections import defaultdict
 from dataclasses import dataclass
-from enum import Enum
 import os
 import shutil
 import signal
@@ -86,11 +85,6 @@ class TrainingServerParams:
 
 ClientId = int
 ThreadId = int
-
-
-class ClientType(Enum):
-    SELF_PLAY_WRAPPER = 'self-play-wrapper'
-    SELF_PLAY = 'self-play'
 
 
 @dataclass
@@ -279,7 +273,7 @@ class TrainingServer:
 
         self.wait_for_self_play_client_connection()
 
-        for client_data in self.get_client_data_list(ClientType.SELF_PLAY_WRAPPER):
+        for client_data in self.get_client_data_list(ClientType.SELF_PLAY_SERVER):
             logger.info(f'Requesting {client_data} to launch self-play...')
             send_json(client_data.sock, data)
 
@@ -334,7 +328,7 @@ class TrainingServer:
 
         self.wait_for_self_play_client_connection()
 
-        client_data = self.get_single_client_data(ClientType.SELF_PLAY_WRAPPER)
+        client_data = self.get_single_client_data(ClientType.SELF_PLAY_SERVER)
         logger.info(f'Requesting {client_data} to perform gen-0 self-play...')
         max_rows = self.sampling_params.samples_per_window()
 
@@ -486,7 +480,7 @@ class TrainingServer:
 
                 reply = {'type': 'handshake_ack'}
 
-                if client_type == ClientType.SELF_PLAY_WRAPPER:
+                if client_type == ClientType.SELF_PLAY_SERVER:
                     handler_fn = self.handle_self_play_wrapper_client
                     self.add_asset_metadata_to_reply(reply)
                 elif client_type == ClientType.SELF_PLAY:
