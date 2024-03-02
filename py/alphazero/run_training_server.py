@@ -41,7 +41,6 @@ def main():
     logger.info(f'**** Starting training-server ****')
 
     server = TrainingServer(params, learning_params, sampling_params, common_params)
-    server.register_signal_handler()
     server.run()
 
 

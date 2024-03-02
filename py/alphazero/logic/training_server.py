@@ -21,7 +21,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 import os
 import shutil
-import signal
 import socket
 import sqlite3
 import sys
@@ -144,9 +143,7 @@ class TrainingServer:
         self._master_list_length_for_next_train_loop = None
         self._master_list = PositionListSlice()
 
-        self._shutdown_code = None
         self._child_thread_error_flag = threading.Event()
-
         self._train_ready_event = threading.Event()
         self._train_ready_lock = threading.Lock()
 
@@ -202,13 +199,6 @@ class TrainingServer:
         tgt = os.path.join(self.bins_dir, self.binary_asset.sha256)
         rsync_cmd = ['rsync', '-t', src, tgt]
         subprocess_util.run(rsync_cmd)
-
-    def register_signal_handler(self):
-        def signal_handler(sig, frame):
-            logger.info(f'Detected Ctrl-C in thread {threading.current_thread().name}.')
-            self.shutdown(0)
-
-        signal.signal(signal.SIGINT, signal_handler)
 
     @property
     def model_cfg(self):
@@ -677,23 +667,19 @@ class TrainingServer:
         threading.Thread(target=self.accept_clients, name='accept_clients', daemon=True).start()
 
     def run(self):
+        shutdown_code = 0
         try:
             threading.Thread(target=self.train_loop, name='train_loop', daemon=True).start()
 
             while True:
                 if self._child_thread_error_flag.is_set():
                     logger.info('Child thread error detected, shutting down...')
-                    self.shutdown(1)
-                    return
+                    shutdown_code = 1
+                    break
 
                 time.sleep(1)
-        except KeyboardInterrupt:
-            logger.info('Detected Ctrl-C, shutting down...')
-            self.shutdown(0)
-        except:
-            logger.error('Unexpected error in run():', exc_info=True)
-            logger.info('Shutting down...')
-            self.shutdown(1)
+        finally:
+            self.shutdown(shutdown_code)
 
     def train_loop(self):
         try:
@@ -767,25 +753,10 @@ class TrainingServer:
 
         trainer = NetTrainer(gen, n_minibatches, self.params.cuda_device)
 
-        def disable_signal(worker_id):
-            """
-            Without this, the main process AND the DataLoader worker processes all handle the
-            SIGTERM, which is not desirable.
-
-            Using this function as worker_init_fn in DataLoader seems to disable the SIGTERM
-            handling in the worker processes.
-
-            In theory, the main process should still handle SIGTERM. But for reasons I don't
-            understand, using disable_signal() seems to sometimes disable SIGTERM handling in the
-            main process.
-            """
-            signal.signal(signal.SIGINT, signal.SIG_IGN)
-
         loader = DataLoader(
             dataset,
             batch_size=minibatch_size,
             num_workers=4,
-            worker_init_fn=disable_signal,
             pin_memory=True,
             shuffle=True)
 
@@ -913,12 +884,9 @@ class TrainingServer:
 
         return self._net, self._opt
 
-    def quit(self):
-        logger.info(f'Received quit command')
-        self._shutdown_code = 0
-
     def shutdown(self, code):
+        logger.info(f'Shutting down (rc={code})...')
+
         if self._server_socket:
             self._server_socket.close()
-        logger.info(f'Shut down complete! (code: {code})')
         sys.exit(code)
