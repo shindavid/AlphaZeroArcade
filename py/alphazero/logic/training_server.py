@@ -471,7 +471,7 @@ class TrainingServer:
                 reply = {'type': 'handshake_ack'}
 
                 if client_type == ClientType.SELF_PLAY_SERVER:
-                    handler_fn = self.handle_self_play_wrapper_client
+                    handler_fn = self.handle_self_play_server_client
                     self.add_asset_metadata_to_reply(reply)
                 elif client_type == ClientType.SELF_PLAY:
                     handler_fn = self.handle_self_play_client
@@ -522,7 +522,7 @@ class TrainingServer:
         for pool in [self.clients_db_conn_pool, self.training_db_conn_pool, self.self_play_db_conn_pool]:
             pool.close_connections(thread_id)
 
-    def handle_self_play_wrapper_client(self, client_data: ClientData):
+    def handle_self_play_server_client(self, client_data: ClientData):
         try:
             while True:
                 try:
@@ -538,7 +538,7 @@ class TrainingServer:
                     self.handle_ready()
         except:
             logger.error(
-                f'Unexpected error in handle_self_play_wrapper_client({client_data}):',
+                f'Unexpected error in handle_self_play_server_client({client_data}):',
                 exc_info=True)
             self._child_thread_error_flag.set()
 
