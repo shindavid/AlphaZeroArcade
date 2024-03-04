@@ -29,7 +29,6 @@ import torch
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic import constants
 from alphazero.logic.learning_params import LearningParams
-from alphazero.logic.sample_window_logic import SamplingParams
 from alphazero.logic.self_play_server import SelfPlayServerParams
 from alphazero.logic.loop_controller import LoopControllerParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
@@ -72,7 +71,6 @@ def load_args():
     parser = argparse.ArgumentParser()
 
     CommonParams.add_args(parser)
-    SamplingParams.add_args(parser)
     LearningParams.add_args(parser)
     Params.add_args(parser)
     LoggingParams.add_args(parser)
@@ -110,7 +108,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
     params = params_dict['Params']
     common_params = params_dict['CommonParams']
     learning_params = params_dict['LearningParams']
-    sampling_params = params_dict['SamplingParams']
     logging_params = params_dict['LoggingParams']
 
     cmd = [
@@ -127,7 +124,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
     logging_params.add_to_cmd(cmd)
     common_params.add_to_cmd(cmd)
     learning_params.add_to_cmd(cmd)
-    sampling_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching loop controller: {cmd}')
@@ -137,14 +133,12 @@ def launch_loop_controller(params_dict, cuda_device: int):
 def main():
     args = load_args()
     common_params = CommonParams.create(args)
-    sampling_params = SamplingParams.create(args)
     learning_params = LearningParams.create(args)
     params = Params.create(args)
     logging_params = LoggingParams.create(args)
 
     params_dict = {
         'CommonParams': common_params,
-        'SamplingParams': sampling_params,
         'LearningParams': learning_params,
         'Params': params,
         'LoggingParams': logging_params,
