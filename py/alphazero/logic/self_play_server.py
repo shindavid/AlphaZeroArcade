@@ -38,7 +38,7 @@ class SelfPlayServer(GameServerBase):
     def start_gen0(self, msg):
         assert self.child_process is None
 
-        # TODO: once we change c++ to directly communicate game data to the training-server via TCP,
+        # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir here
         games_base_dir = msg['games_base_dir']
         max_rows = msg['max_rows']
@@ -64,8 +64,8 @@ class SelfPlayServer(GameServerBase):
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
-            '--training-server-hostname', self.training_server_host,
-            '--training-server-port', self.training_server_port,
+            '--loop-controller-hostname', self.loop_controller_host,
+            '--loop-controller-port', self.loop_controller_port,
             '--starting-generation', gen,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -83,7 +83,7 @@ class SelfPlayServer(GameServerBase):
     def start(self, msg):
         assert self.child_process is None
 
-        # TODO: once we change c++ to directly communicate game data to the training-server via TCP,
+        # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir or model here
         games_base_dir = msg['games_base_dir']
         gen = msg['gen']
@@ -105,8 +105,8 @@ class SelfPlayServer(GameServerBase):
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
-            '--training-server-hostname', self.training_server_host,
-            '--training-server-port', self.training_server_port,
+            '--loop-controller-hostname', self.loop_controller_host,
+            '--loop-controller-port', self.loop_controller_port,
             '--starting-generation', gen,
             '--cuda-device', self.cuda_device,
             '--player', '"%s"' % (' '.join(map(str, player_args))),

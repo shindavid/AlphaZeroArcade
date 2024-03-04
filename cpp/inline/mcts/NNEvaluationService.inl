@@ -87,11 +87,11 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
-  if (core::TrainingServerClient::initialized()) {
-    if (core::TrainingServerClient::get()->paused()) {
+  if (core::LoopControllerClient::initialized()) {
+    if (core::LoopControllerClient::get()->paused()) {
       this->paused_ = true;
     }
-    core::TrainingServerClient::get()->add_listener(this);
+    core::LoopControllerClient::get()->add_listener(this);
   }
 }
 
@@ -458,7 +458,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   if (!paused_) return;  // early exit for common case, bypassing lock
 
-  core::TrainingServerClient::get()->notify_pause_received(this);
+  core::LoopControllerClient::get()->notify_pause_received(this);
 
   std::unique_lock lock(pause_mutex_);
   cv_paused_.wait(lock, [&] { return !paused_; });
@@ -476,7 +476,7 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::strin
 
   int64_t timestamp = util::ns_since_epoch();
 
-  core::TrainingServerClient* client = core::TrainingServerClient::get();
+  core::LoopControllerClient* client = core::LoopControllerClient::get();
 
   boost::json::object msg;
   msg["type"] = "metrics";

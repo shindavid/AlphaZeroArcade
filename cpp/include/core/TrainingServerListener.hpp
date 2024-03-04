@@ -7,47 +7,47 @@
 
 namespace core {
 
-enum class TrainingServerInteractionType { kPause, kReloadWeights, kMetricsRequest };
+enum class LoopControllerInteractionType { kPause, kReloadWeights, kMetricsRequest };
 
-class TrainingServerClient;
+class LoopControllerClient;
 
 /*
- * A connection to a training-server can be initiated via core::TrainingServerClient::init(). Once
- * that connection is established, any number of TrainingServerListeners can register with the
- * singleton core::TrainingServerClient.
+ * A connection to a loop-controller can be initiated via core::LoopControllerClient::init(). Once
+ * that connection is established, any number of LoopControllerListeners can register with the
+ * singleton core::LoopControllerClient.
  *
- * When the TrainingServerClient receives a message from the training-server, it engages in various
+ * When the LoopControllerClient receives a message from the loop-controller, it engages in various
  * interactions with the registered listeners. The interaction types are defined in
- * the TrainingServerInteractionType enum. These interaction types are not in general the same as
- * the msg types sent by the training-server.
+ * the LoopControllerInteractionType enum. These interaction types are not in general the same as
+ * the msg types sent by the loop-controller.
  */
-template <TrainingServerInteractionType type>
-class TrainingServerListener {};
+template <LoopControllerInteractionType type>
+class LoopControllerListener {};
 
 template <>
-class TrainingServerListener<TrainingServerInteractionType::kPause> {
+class LoopControllerListener<LoopControllerInteractionType::kPause> {
  public:
-  friend class TrainingServerClient;
+  friend class LoopControllerClient;
 
-  virtual ~TrainingServerListener() = default;
+  virtual ~LoopControllerListener() = default;
   virtual void pause() = 0;
   virtual void unpause() = 0;
 
  private:
-  bool pause_notified_ = false;  // used by TrainingServerClient
+  bool pause_notified_ = false;  // used by LoopControllerClient
 };
 
 template <>
-class TrainingServerListener<TrainingServerInteractionType::kReloadWeights> {
+class LoopControllerListener<LoopControllerInteractionType::kReloadWeights> {
  public:
-  virtual ~TrainingServerListener() = default;
+  virtual ~LoopControllerListener() = default;
   virtual void reload_weights(const std::string& model_filename) = 0;
 };
 
 template <>
-class TrainingServerListener<TrainingServerInteractionType::kMetricsRequest> {
+class LoopControllerListener<LoopControllerInteractionType::kMetricsRequest> {
  public:
-  virtual ~TrainingServerListener() = default;
+  virtual ~LoopControllerListener() = default;
   virtual perf_stats_t get_perf_stats() = 0;
 };
 

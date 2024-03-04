@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/TrainingServerListener.hpp>
+#include <core/LoopControllerListener.hpp>
 #include <core/PerfStats.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
@@ -16,42 +16,42 @@
 namespace core {
 
 /*
- * TrainingServerClient is used to communicate with an external training server. It is to be used as
+ * LoopControllerClient is used to communicate with an external loop controller. It is to be used as
  * a singleton, and can further forward messages to any number of listeners.
  *
  * For now, all messages will be in json format. We can revisit this in the future.
  *
  * Usage:
  *
- * core::TrainingServerClient::Params params;
+ * core::LoopControllerClient::Params params;
  * // set params
- * core::TrainingServerClient::init(params);
+ * core::LoopControllerClient::init(params);
  *
- * core::TrainingServerClient* client = core::TrainingServerClient::get();
+ * core::LoopControllerClient* client = core::LoopControllerClient::get();
  * client->send("abc", 3);
  *
- * To listen to messages from the training-server, implement the TrainingServerListener interface
+ * To listen to messages from the loop-controller, implement the LoopControllerListener interface
  * and subscribe to the client via client->add_listener(listener).
  */
-class TrainingServerClient {
+class LoopControllerClient {
  public:
   struct Params {
     auto make_options_description();
     bool operator==(const Params& other) const = default;
 
-    std::string training_server_hostname = "localhost";
-    io::port_t training_server_port = 0;
+    std::string loop_controller_hostname = "localhost";
+    io::port_t loop_controller_port = 0;
     int starting_generation = 0;
     std::string cuda_device = "cuda:0";
   };
 
-  using PauseListener = TrainingServerListener<TrainingServerInteractionType::kPause>;
-  using ReloadWeightsListener = TrainingServerListener<TrainingServerInteractionType::kReloadWeights>;
-  using MetricsRequestListener = TrainingServerListener<TrainingServerInteractionType::kMetricsRequest>;
+  using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
+  using ReloadWeightsListener = LoopControllerListener<LoopControllerInteractionType::kReloadWeights>;
+  using MetricsRequestListener = LoopControllerListener<LoopControllerInteractionType::kMetricsRequest>;
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
-  static TrainingServerClient* get() { return instance_;  }
+  static LoopControllerClient* get() { return instance_;  }
   bool paused() const { return paused_; }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
@@ -71,8 +71,8 @@ class TrainingServerClient {
   void set_last_games_flush_ts(int64_t ts) { last_games_flush_ts_ = ts; }
 
  private:
-  TrainingServerClient(const Params&);
-  ~TrainingServerClient();
+  LoopControllerClient(const Params&);
+  ~LoopControllerClient();
 
   void send_handshake();
   void recv_handshake();
@@ -84,7 +84,7 @@ class TrainingServerClient {
   void loop();
   bool all_pause_notifications_received() const;
 
-  static TrainingServerClient* instance_;
+  static LoopControllerClient* instance_;
 
   const int64_t proc_start_ts_;
   const std::string cuda_device_;
@@ -94,7 +94,7 @@ class TrainingServerClient {
   std::vector<PauseListener*> pause_listeners_;
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;
-  int client_id_ = -1;  // assigned by training-server
+  int client_id_ = -1;  // assigned by loop-controller
   int cur_generation_;
 
   std::condition_variable pause_cv_;
@@ -105,4 +105,4 @@ class TrainingServerClient {
 
 }  // namespace core
 
-#include <inline/core/TrainingServerClient.inl>
+#include <inline/core/LoopControllerClient.inl>

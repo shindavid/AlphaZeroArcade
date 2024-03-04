@@ -57,8 +57,8 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows")
       .template add_flag<"report-metrics", "do-not-report-metrics">(
-          &report_metrics, "report metrics to training-server periodically",
-          "do not report metrics to training-server");
+          &report_metrics, "report metrics to loop-controller periodically",
+          "do not report metrics to loop-controller");
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -205,11 +205,11 @@ TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& pa
   util::clean_assert(params.games_base_dir.size() > 0,
                      "TrainingDataWriter: games_base_dir must be specified");
 
-  if (TrainingServerClient::initialized()) {
-    if (TrainingServerClient::get()->paused()) {
+  if (LoopControllerClient::initialized()) {
+    if (LoopControllerClient::get()->paused()) {
       this->paused_ = true;
     }
-    TrainingServerClient::get()->add_listener(this);
+    LoopControllerClient::get()->add_listener(this);
   }
   thread_ = new std::thread([&] { loop(); });
 }
@@ -226,7 +226,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     game_queue_t& queue = completed_games_[queue_index_];
     cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
     if (paused_) {
-      core::TrainingServerClient::get()->notify_pause_received(this);
+      core::LoopControllerClient::get()->notify_pause_received(this);
       cv_.wait(lock, [&] { return !paused_; });
     }
     queue_index_ = 1 - queue_index_;
@@ -313,7 +313,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   std::string output_filename = util::create_string("%ld.pt", cur_timestamp);
   std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
-  core::TrainingServerClient* client = core::TrainingServerClient::get();
+  core::LoopControllerClient* client = core::LoopControllerClient::get();
 
   int client_id = client ? client->client_id() : 0;
   int model_generation = client ? client->cur_generation() : 0;
@@ -347,7 +347,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
   auto new_rows_written = rows_written_ + rows;
   bool done = params_.max_rows > 0 && new_rows_written >= params_.max_rows;
 
-  // inform training-server of new file
+  // inform loop-controller of new file
   if (client) {
     bool flush = done || client->ready_for_games_flush(cur_timestamp);
 

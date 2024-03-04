@@ -38,15 +38,15 @@ logger = get_logger()
 
 
 @dataclass
-class TrainingServerParams:
-    port: int = constants.DEFAULT_TRAINING_SERVER_PORT
+class LoopControllerParams:
+    port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
     model_cfg: str = 'default'
     binary_path: str = None
 
     @staticmethod
-    def create(args) -> 'TrainingServerParams':
-        return TrainingServerParams(
+    def create(args) -> 'LoopControllerParams':
+        return LoopControllerParams(
             port=args.port,
             cuda_device=args.cuda_device,
             model_cfg=args.model_cfg,
@@ -55,12 +55,12 @@ class TrainingServerParams:
 
     @staticmethod
     def add_args(parser):
-        defaults = TrainingServerParams()
-        group = parser.add_argument_group('TrainingServer options')
+        defaults = LoopControllerParams()
+        group = parser.add_argument_group('LoopController options')
 
         group.add_argument('--port', type=int,
                            default=defaults.port,
-                           help='TrainingServer port (default: %(default)s)')
+                           help='LoopController port (default: %(default)s)')
         group.add_argument('--cuda-device',
                            default=defaults.cuda_device,
                            help='cuda device used for network training (default: %(default)s)')
@@ -71,7 +71,7 @@ class TrainingServerParams:
                            'the first run for this tag, then target/Release/bin/{game}')
 
     def add_to_cmd(self, cmd: List[str]):
-        defaults = TrainingServerParams()
+        defaults = LoopControllerParams()
         if self.port != defaults.port:
             cmd.extend(['--port', str(self.port)])
         if self.cuda_device != defaults.cuda_device:
@@ -123,8 +123,8 @@ class RuntimeAsset:
         return RuntimeAsset(src_path, tgt_path, str(sha256sum(src_path)))
 
 
-class TrainingServer:
-    def __init__(self, params: TrainingServerParams, learning_params: LearningParams,
+class LoopController:
+    def __init__(self, params: LoopControllerParams, learning_params: LearningParams,
                  sampling_params: SamplingParams, common_params: CommonParams):
         self.organizer = DirectoryOrganizer(common_params)
         self.params = params
@@ -207,7 +207,7 @@ class TrainingServer:
     def __str__(self):
         client_id_str = '???' if self.client_id is None else str(
             self.client_id)
-        return f'TrainingServer({client_id_str})'
+        return f'LoopController({client_id_str})'
 
     def get_latest_checkpoint_info(self) -> Optional[PathInfo]:
         return DirectoryOrganizer.get_latest_info(self.organizer.checkpoints_dir)
@@ -642,7 +642,7 @@ class TrainingServer:
         return n_augmented_positions
 
     def _run_setup(self):
-        logger.info('Performing TrainingServer setup...')
+        logger.info('Performing LoopController setup...')
         self.organizer.makedirs()
         self.copy_binary_to_bins_dir()
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

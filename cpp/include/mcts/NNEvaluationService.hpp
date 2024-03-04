@@ -1,7 +1,7 @@
 #pragma once
 
-#include <core/TrainingServerClient.hpp>
-#include <core/TrainingServerListener.hpp>
+#include <core/LoopControllerClient.hpp>
+#include <core/LoopControllerListener.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/NeuralNet.hpp>
@@ -71,9 +71,9 @@ namespace mcts {
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 class NNEvaluationService
-    : public core::TrainingServerListener<core::TrainingServerInteractionType::kPause>,
-      public core::TrainingServerListener<core::TrainingServerInteractionType::kReloadWeights>,
-      public core::TrainingServerListener<core::TrainingServerInteractionType::kMetricsRequest> {
+    : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
