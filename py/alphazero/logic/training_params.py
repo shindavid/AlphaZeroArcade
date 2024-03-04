@@ -78,7 +78,7 @@ VALID_WINDOW_SIZE_FUNCTIONS = {
 
 
 @dataclass
-class LearningParams:
+class TrainingParams:
     """
     Parameters that control network training.
 
@@ -135,8 +135,8 @@ class LearningParams:
         return self.minibatch_size * self.minibatches_per_epoch
 
     @staticmethod
-    def create(args) -> 'LearningParams':
-        return LearningParams(
+    def create(args) -> 'TrainingParams':
+        return TrainingParams(
             _window_size_function_str=args.window_size_function,
             target_sample_rate=args.target_sample_rate,
             minibatches_per_epoch=args.minibatches_per_epoch,
@@ -148,7 +148,7 @@ class LearningParams:
 
     @staticmethod
     def add_args(parser: argparse.ArgumentParser):
-        defaults = LearningParams()
+        defaults = TrainingParams()
         group = parser.add_argument_group('Learning options')
 
         valid_functions_str = str(list(VALID_WINDOW_SIZE_FUNCTIONS.keys()))
@@ -170,7 +170,7 @@ class LearningParams:
                            help='learning rate (default: %(default)s)')
 
     def add_to_cmd(self, cmd: List[str]):
-        defaults = LearningParams()
+        defaults = TrainingParams()
         if self._window_size_function_str != defaults._window_size_function_str:
             cmd.extend(['--window-size-function', self._window_size_function_str])
         if self.target_sample_rate != defaults.target_sample_rate:

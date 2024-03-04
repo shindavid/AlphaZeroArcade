@@ -17,7 +17,7 @@ Given W (represented by {a, b, r}), at what point can we start sampling the next
 
 This module provides functionality for answering this question.
 """
-from alphazero.logic.learning_params import LearningParams
+from alphazero.logic.training_params import TrainingParams
 
 from dataclasses import dataclass
 
@@ -40,7 +40,7 @@ class Window:
     sample_rate: float
 
 
-def get_required_dataset_size(params: LearningParams, prev_window: Window):
+def get_required_dataset_size(params: TrainingParams, prev_window: Window):
     """
     Returns the minimum dataset size that would permit sampling a new window. This corresponds to
     n in the diagram above. The value of c can be computed from n, via:

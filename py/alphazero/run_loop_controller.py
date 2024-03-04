@@ -5,7 +5,7 @@ import argparse
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.loop_controller import LoopController, LoopControllerParams
-from alphazero.logic.learning_params import LearningParams
+from alphazero.logic.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 
 import os
@@ -19,7 +19,7 @@ def load_args():
 
     CommonParams.add_args(parser)
     LoopControllerParams.add_args(parser)
-    LearningParams.add_args(parser)
+    TrainingParams.add_args(parser)
     LoggingParams.add_args(parser)
 
     return parser.parse_args()
@@ -29,7 +29,7 @@ def main():
     args = load_args()
     common_params = CommonParams.create(args)
     params = LoopControllerParams.create(args)
-    learning_params = LearningParams.create(args)
+    training_params = TrainingParams.create(args)
     logging_params = LoggingParams.create(args)
 
     log_filename = os.path.join(DirectoryOrganizer(common_params).logs_dir, 'loop-controller.log')
@@ -37,7 +37,7 @@ def main():
 
     logger.info(f'**** Starting loop-controller ****')
 
-    server = LoopController(params, learning_params, common_params)
+    server = LoopController(params, training_params, common_params)
     server.run()
 
 

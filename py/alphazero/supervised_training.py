@@ -10,7 +10,7 @@ import game_index
 from net_modules import Model
 from alphazero.data.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer
-from alphazero.logic.learning_params import LearningParams
+from alphazero.logic.training_params import TrainingParams
 
 
 class Args:
@@ -50,11 +50,11 @@ def load_args():
     parser.add_argument('-D', '--cuda-device-str', default='cuda:0', help='cuda device str')
 
     # TODO: CommonParams
-    LearningParams.add_args(parser)
+    TrainingParams.add_args(parser)
 
     args = parser.parse_args()
     Args.load(args)
-    LearningParams.load(args)
+    TrainingParams.load(args)
 
 
 def main():
@@ -69,7 +69,7 @@ def main():
 
     loader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=LearningParams.minibatch_size,
+        batch_size=TrainingParams.minibatch_size,
         num_workers=4,
         pin_memory=True,
         shuffle=True)
@@ -91,10 +91,10 @@ def main():
     net.cuda(Args.cuda_device_str)
     net.train()
 
-    learning_rate = LearningParams.learning_rate
-    weight_decay = LearningParams.weight_decay
+    learning_rate = TrainingParams.learning_rate
+    weight_decay = TrainingParams.weight_decay
     if Args.optimizer == 'SGD':
-        momentum = LearningParams.momentum
+        momentum = TrainingParams.momentum
         optimizer = optim.SGD(net.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     elif Args.optimizer == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -105,7 +105,7 @@ def main():
         optimizer.load_state_dict(checkpoint['opt.state_dict'])
 
     trainer = NetTrainer(
-        LearningParams.minibatches_per_epoch, Args.cuda_device_str)
+        TrainingParams.minibatches_per_epoch, Args.cuda_device_str)
     n_samples_processed = 0
     while epoch < Args.epochs:
         trainer.reset()

@@ -3,7 +3,7 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ChildThreadError, ClientType, Generation
 from alphazero.logic.directory_organizer import DirectoryOrganizer, PathInfo
-from alphazero.logic.learning_params import LearningParams
+from alphazero.logic.training_params import TrainingParams
 from alphazero.logic.net_trainer import NetTrainer
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
 from game_index import get_game_spec
@@ -123,12 +123,12 @@ class RuntimeAsset:
 
 
 class LoopController:
-    def __init__(self, params: LoopControllerParams, learning_params: LearningParams,
+    def __init__(self, params: LoopControllerParams, training_params: TrainingParams,
                  common_params: CommonParams):
         self.organizer = DirectoryOrganizer(common_params)
         self.params = params
         self.game_spec = get_game_spec(common_params.game)
-        self.learning_params = learning_params
+        self.training_params = training_params
 
         self._pause_ack_events: Dict[ClientId, threading.Event] = {}
         self._client_data_list: List[ClientData] = []
@@ -225,8 +225,8 @@ class LoopController:
             cursor.close()
         if row is None:
             # kZero-style initialization of sample window
-            samples_per_window = self.learning_params.samples_per_window()
-            target_sample_rate = self.learning_params.target_sample_rate
+            samples_per_window = self.training_params.samples_per_window()
+            target_sample_rate = self.training_params.target_sample_rate
             return Window(0, samples_per_window, target_sample_rate)
         return Window(*row)
 
@@ -268,7 +268,7 @@ class LoopController:
     def wait_until_enough_training_data(self):
         with self._train_ready_lock:
             self._master_list_length_for_next_train_loop = get_required_dataset_size(
-                self.learning_params, self._last_sample_window)
+                self.training_params, self._last_sample_window)
             if self._master_list_length >= self._master_list_length_for_next_train_loop:
                 return
             self._train_ready_event.clear()
@@ -308,7 +308,7 @@ class LoopController:
             return True
 
         assert gen == 0, gen
-        return n_augmented_positions >= self.learning_params.samples_per_window()
+        return n_augmented_positions >= self.training_params.samples_per_window()
 
     def run_gen0_if_necessary(self):
         if self.is_gen0_complete():
@@ -318,7 +318,7 @@ class LoopController:
 
         client_data = self.get_single_client_data(ClientType.SELF_PLAY_SERVER)
         logger.info(f'Requesting {client_data} to perform gen-0 self-play...')
-        max_rows = self.learning_params.samples_per_window()
+        max_rows = self.training_params.samples_per_window()
 
         data = {
             'type': 'start-gen0',
@@ -731,14 +731,14 @@ class LoopController:
             row = cursor.fetchone()
             n = row[0]
 
-            f = self.learning_params.window_size_function
+            f = self.training_params.window_size_function
             n = row[0]
             c = int(n - f(n))
 
             start = c
             end = n
-            n_minibatches = self.learning_params.minibatches_per_epoch
-            minibatch_size = self.learning_params.minibatch_size
+            n_minibatches = self.training_params.minibatches_per_epoch
+            minibatch_size = self.training_params.minibatch_size
 
             self._master_list.set_bounds(cursor, start, end)
             cursor.close()
@@ -856,9 +856,9 @@ class LoopController:
         self._net.cuda(device=self.params.cuda_device)
         self._net.train()
 
-        learning_rate = self.learning_params.learning_rate
-        momentum = self.learning_params.momentum
-        weight_decay = self.learning_params.weight_decay
+        learning_rate = self.training_params.learning_rate
+        momentum = self.training_params.momentum
+        weight_decay = self.training_params.weight_decay
         self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum,
                               weight_decay=weight_decay)
 
