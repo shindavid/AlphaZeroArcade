@@ -63,7 +63,7 @@ LoopControllerClient::~LoopControllerClient() {
 void LoopControllerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
-  msg["role"] = "self-play";
+  msg["role"] = "self-play-worker";
   msg["start_timestamp"] = proc_start_ts_;
   msg["cuda_device"] = cuda_device_;
   socket_->json_write(msg);

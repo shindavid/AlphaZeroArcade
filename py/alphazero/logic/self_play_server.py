@@ -22,7 +22,7 @@ class SelfPlayServerParams(GameServerBaseParams):
 
 class SelfPlayServer(GameServerBase):
     def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
-        super().__init__(params, common_params, ClientType.SELF_PLAY_SERVER)
+        super().__init__(params, common_params, ClientType.SELF_PLAY_MANAGER)
 
     def handle_msg(self, msg: JsonDict) -> bool:
         msg_type = msg['type']
