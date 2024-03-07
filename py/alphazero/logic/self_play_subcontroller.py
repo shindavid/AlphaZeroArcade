@@ -7,6 +7,7 @@ from util.logging_util import get_logger
 from util.socket_util import recv_json, send_json
 
 from collections import defaultdict
+import logging
 import sqlite3
 import threading
 from typing import Dict
@@ -82,12 +83,16 @@ class SelfPlaySubcontroller:
         try:
             while True:
                 try:
-                    msg = recv_json(client_data.sock)
+                    msg = recv_json(client_data.sock, log_level=logging.NOTSET)
                 except OSError:
                     self.aux_controller.handle_disconnect(client_data)
                     return
 
                 msg_type = msg['type']
+                if msg_type != 'game' and logger.isEnabledFor(logging.DEBUG):
+                    # logging every game is too spammy
+                    logger.debug(f'Received json message: {msg}')
+
                 if msg_type == 'pause_ack':
                     self.aux_controller.handle_pause_ack(client_data)
                 elif msg_type == 'metrics':
