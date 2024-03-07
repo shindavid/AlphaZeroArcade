@@ -53,7 +53,10 @@ class RatingData:
         return (f'RatingData(mcts_gen={self.mcts_gen}, rating={self.rating}, '
                 f'owner={self.owner}, est_rating={self.est_rating}, '
                 f'rating_bounds=({self.rating_lower_bound}, {self.rating_upper_bound}), '
-                f'match_data={self.filtered_match_data()})')
+                f'match_data={dict(self.match_data)})')
+
+    def __repr__(self):
+        return str(self)
 
     def filtered_match_data(self) -> Dict[int, WinLossDrawCounts]:
         """
@@ -341,6 +344,7 @@ class RatingsSubcontroller(NewModelSubscriber):
         send_json(client_data.sock, reply)
 
         self.start()
+        logger.info(f'Starting ratings-recv-loop for {client_data}...')
         threading.Thread(target=self.recv_loop, name='ratings-recv-loop',
                          args=(client_data,), daemon=True).start()
 
@@ -457,7 +461,6 @@ class RatingsSubcontroller(NewModelSubscriber):
         saturated, we return M if M is not in G. If no such number exists, we return None.
         """
         latest_gen = self.organizer.get_latest_generation()
-        logger.debug(f'Getting next gen to rate (latest={latest_gen})...')
         next_gen = None
         if latest_gen > 0:
             next_gen = self._get_next_gen_to_rate_helper(latest_gen)
