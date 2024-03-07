@@ -1,5 +1,5 @@
 add_library(alphazero-lib
-        core/TrainingServerClient.cpp
+        core/LoopControllerClient.cpp
         util/BoostUtil.cpp
         util/CudaUtil.cpp
         util/KeyValueDumper.cpp

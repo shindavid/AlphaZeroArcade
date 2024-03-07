@@ -22,12 +22,12 @@ class SelfPlayServerParams(GameServerBaseParams):
 
 class SelfPlayServer(GameServerBase):
     def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
-        super().__init__(params, common_params, ClientType.SELF_PLAY_SERVER)
+        super().__init__(params, common_params, ClientType.SELF_PLAY_MANAGER)
 
     def handle_msg(self, msg: JsonDict) -> bool:
         msg_type = msg['type']
         if msg_type == 'start-gen0':
-            self.start_gen0(msg)
+            self.run_func_in_new_thread(self.start_gen0, args=(msg,))
         elif msg_type == 'start':
             self.start(msg)
         elif msg_type == 'quit':
@@ -38,7 +38,7 @@ class SelfPlayServer(GameServerBase):
     def start_gen0(self, msg):
         assert self.child_process is None
 
-        # TODO: once we change c++ to directly communicate game data to the training-server via TCP,
+        # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir here
         games_base_dir = msg['games_base_dir']
         max_rows = msg['max_rows']
@@ -64,8 +64,8 @@ class SelfPlayServer(GameServerBase):
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
-            '--training-server-hostname', self.training_server_host,
-            '--training-server-port', self.training_server_port,
+            '--loop-controller-hostname', self.loop_controller_host,
+            '--loop-controller-port', self.loop_controller_port,
             '--starting-generation', gen,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -76,14 +76,15 @@ class SelfPlayServer(GameServerBase):
         log_filename = os.path.join(self.organizer.logs_dir, f'self-play.log')
         with open(log_filename, 'a') as log_file:
             logger.info(f'Running gen-0 self-play: {self_play_cmd}')
-            subprocess_util.run(self_play_cmd, stdout=log_file,
-                                stderr=log_file, check=True)
+            proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
+            self.child_process = proc
+            proc.wait()
             logger.info(f'Gen-0 self-play complete!')
 
     def start(self, msg):
         assert self.child_process is None
 
-        # TODO: once we change c++ to directly communicate game data to the training-server via TCP,
+        # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir or model here
         games_base_dir = msg['games_base_dir']
         gen = msg['gen']
@@ -105,8 +106,8 @@ class SelfPlayServer(GameServerBase):
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
-            '--training-server-hostname', self.training_server_host,
-            '--training-server-port', self.training_server_port,
+            '--loop-controller-hostname', self.loop_controller_host,
+            '--loop-controller-port', self.loop_controller_port,
             '--starting-generation', gen,
             '--cuda-device', self.cuda_device,
             '--player', '"%s"' % (' '.join(map(str, player_args))),

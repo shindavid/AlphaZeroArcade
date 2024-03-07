@@ -10,8 +10,8 @@
 #include <boost/program_options.hpp>
 
 #include <core/AbstractSymmetryTransform.hpp>
-#include <core/TrainingServerClient.hpp>
-#include <core/TrainingServerListener.hpp>
+#include <core/LoopControllerClient.hpp>
+#include <core/LoopControllerListener.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
@@ -26,7 +26,7 @@ namespace core {
  */
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 class TrainingDataWriter
-    : public core::TrainingServerListener<core::TrainingServerInteractionType::kPause> {
+    : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
   struct Params {
     auto make_options_description();

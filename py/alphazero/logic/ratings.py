@@ -28,6 +28,13 @@ class WinLossDrawCounts:
             return 0
         return (2 * self.win + self.draw) / (2 * n)
 
+    def to_json(self):
+        return [self.win, self.loss, self.draw]
+
+    @staticmethod
+    def from_json(l: list):
+        return WinLossDrawCounts(*l)
+
     def __iadd__(self, other):
         self.win += other.win
         self.loss += other.loss
@@ -36,6 +43,9 @@ class WinLossDrawCounts:
 
     def __str__(self):
         return f'W{self.win} L{self.loss} D{self.draw}'
+
+    def __repr__(self):
+        return str(self)
 
 
 class MatchRecord:
@@ -50,6 +60,16 @@ class MatchRecord:
 
     def empty(self) -> bool:
         return len(self.counts) == 0
+
+    def to_json(self):
+        return {str(k): wld.to_json() for k, wld in self.counts.items()}
+
+    @staticmethod
+    def from_json(d: Dict[str, list]):
+        record = MatchRecord()
+        for k, v in d.items():
+            record.counts[int(k)] = WinLossDrawCounts.from_json(v)
+        return record
 
 
 def extract_match_record(stdout: str) -> MatchRecord:

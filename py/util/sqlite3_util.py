@@ -61,8 +61,8 @@ class ConnectionPool:
         thread_name = threading.current_thread().name
         with self._conn_dict_lock:
             conn = self._conn_dict.get(thread_id, None)
-            logger.debug(f"get_connection: db_filename={self._db_filename} thread={thread_name}, conn={conn}")
             if conn is None:
+                logger.debug(f"Creating new connection: db_filename={self._db_filename} thread={thread_name}")
                 conn = self._create_connection()
                 self._conn_dict[thread_id] = conn
             return conn

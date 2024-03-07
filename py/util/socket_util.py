@@ -65,7 +65,9 @@ def recvall(sock: socket.socket, n: int, timeout: Optional[float]=None) -> bytea
     return data
 
 
-def recv_json(sock: socket.socket, timeout: Optional[float] = None) -> Optional[JsonDict]:
+def recv_json(sock: socket.socket,
+              timeout: Optional[float] = None,
+              log_level=logging.DEBUG) -> Optional[JsonDict]:
     """
     Extracts a json message from the socket and returns it as a dict. Assumes that the json message
     is prepended by a 4-byte big-endian integer specifying the length of the message.
@@ -81,8 +83,8 @@ def recv_json(sock: socket.socket, timeout: Optional[float] = None) -> Optional[
 
     data = recvall(sock, length, timeout=timeout)
     msg = json.loads(data.decode())
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f'Received json message: {msg}')
+    if logger.isEnabledFor(log_level):
+        logger.log(log_level, f'Received json message: {msg}')
     return msg
 
 

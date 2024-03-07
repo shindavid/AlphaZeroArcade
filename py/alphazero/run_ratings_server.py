@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-This script serves as a thin wrapper around a c++ binary. It communicates with the training server,
-and upon receiving "start" requests from the training server, will start the c++ binary. From there,
-the c++ binary and the training server communicate directly via TCP.
+This script serves as a thin wrapper around a c++ binary. It communicates with the loop controller,
+and upon receiving "start" requests from the loop controller, will start the c++ binary. From there,
+the c++ binary and the loop controller communicate directly via TCP.
 
 This setup allows us to relaunch the c++ binary process as needed under the hood of a single
 self-play server process. This is useful because sometimes we want certain configuration changes
@@ -39,14 +39,12 @@ def main():
     params = RatingsServerParams.create(args)
     logging_params = LoggingParams.create(args)
 
-    log_filename = os.path.join(DirectoryOrganizer(
-        common_params).logs_dir, 'ratings-server.log')
+    log_filename = os.path.join(DirectoryOrganizer(common_params).logs_dir, 'ratings-server.log')
     configure_logger(filename=log_filename, params=logging_params)
 
     logger.info(f'**** Starting ratings-server ****')
 
     server = RatingsServer(params, common_params)
-    server.register_signal_handler()
     server.run()
 
 

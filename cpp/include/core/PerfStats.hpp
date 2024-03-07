@@ -9,7 +9,7 @@
  * a perf_stats_t object. In theory there can be multiple NNEvaluationService's running in a
  * single process, so we want to aggregate their stats for reporting purposes. This is done by
  * having each mcts::NNEvaluationService implement the PerfTrackable interface, and then having the
- * TrainingServer implement the PerfTracker interface.
+ * LoopController implement the PerfTracker interface.
  */
 namespace core {
 
