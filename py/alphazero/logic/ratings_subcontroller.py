@@ -438,7 +438,8 @@ class RatingsSubcontroller(NewModelSubscriber):
             next_gen = self._get_next_gen_to_rate_helper(latest_gen)
 
         if next_gen is None:
-            self._new_work_available.wait()
+            with self._lock:
+                self._new_work_available.wait()
             next_gen = self._get_next_gen_to_rate(latest_gen)
 
         assert next_gen is not None
