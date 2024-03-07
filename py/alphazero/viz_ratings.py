@@ -216,10 +216,11 @@ class ProgressVisualizer:
 
             x = data[cls.X_VAR_COLUMNS[self.x_var_index]]
             y = data[self.y_variable]
+            self.sources[rating_data.label].data = {'x': x, 'y': y}
 
-            my = max(y)
-            self.max_y = my if self.max_y is None else max(self.max_y, my)
-            self.sources[rating_data.label].data = { 'x': x, 'y': y }
+            for y_var in ('rating', 'rating_smoothed'):
+                my = max(data[y_var])
+                self.max_y = my if self.max_y is None else max(self.max_y, my)
 
     def reload_data(self):
         data_list = get_rating_data_list()
