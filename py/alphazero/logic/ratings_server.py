@@ -8,6 +8,7 @@ from util import subprocess_util
 
 from dataclasses import dataclass
 import subprocess
+import threading
 
 
 logger = get_logger()
@@ -51,13 +52,14 @@ class RatingsServer(GameServerBase):
     def handle_msg(self, msg: JsonDict) -> bool:
         msg_type = msg['type']
         if msg_type == 'match-request':
-            self.handle_match_request(msg)
+            self.run_func_in_new_thread(self.handle_match_request, args=(msg,))
         elif msg_type == 'quit':
             self.quit()
             return True
         return False
 
     def handle_match_request(self, msg: JsonDict):
+        assert self.child_process is None
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
@@ -96,6 +98,7 @@ class RatingsServer(GameServerBase):
         }
 
         send_json(self.loop_controller_socket, data)
+        self.child_process = None
         self.request_work()
 
     @staticmethod

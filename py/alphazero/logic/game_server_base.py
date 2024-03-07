@@ -89,6 +89,23 @@ class GameServerBase:
         finally:
             self.shutdown()
 
+    def run_func(self, func, *, args=(), kwargs=None):
+        """
+        Runs func(*args, **kwargs) in a try/except block. In case of an exception, logs the
+        exception and sets self.shutdown_code to 1.
+        """
+        try:
+            func(*args, **(kwargs or {}))
+        except:
+            logger.error(f'Unexpected error in {func.__name__}():', exc_info=True)
+            self.shutdown_code = 1
+
+    def run_func_in_new_thread(self, func, *, args=(), kwargs=None):
+        """
+        Launches self.run_func(args=args, kwargs=kwargs) in a separate thread.
+        """
+        threading.Thread(target=self.run_func, args=(func, args, kwargs), daemon=True).start()
+
     def error_detection_loop(self):
         while True:
             time.sleep(1)

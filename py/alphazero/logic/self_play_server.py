@@ -27,7 +27,7 @@ class SelfPlayServer(GameServerBase):
     def handle_msg(self, msg: JsonDict) -> bool:
         msg_type = msg['type']
         if msg_type == 'start-gen0':
-            self.start_gen0(msg)
+            self.run_func_in_new_thread(self.start_gen0, args=(msg,))
         elif msg_type == 'start':
             self.start(msg)
         elif msg_type == 'quit':
@@ -76,8 +76,9 @@ class SelfPlayServer(GameServerBase):
         log_filename = os.path.join(self.organizer.logs_dir, f'self-play.log')
         with open(log_filename, 'a') as log_file:
             logger.info(f'Running gen-0 self-play: {self_play_cmd}')
-            subprocess_util.run(self_play_cmd, stdout=log_file,
-                                stderr=log_file, check=True)
+            proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
+            self.child_process = proc
+            proc.wait()
             logger.info(f'Gen-0 self-play complete!')
 
     def start(self, msg):
