@@ -151,7 +151,7 @@ class LoopControlData:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.setblocking(True)
-        self.server_socket.bind(('localhost', self.params.port))
+        self.server_socket.bind(('0.0.0.0', self.params.port))
         self.server_socket.listen()
 
     def get_client_data_list(self, ctype: ClientType) -> List[ClientData]:
