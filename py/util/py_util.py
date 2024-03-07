@@ -1,6 +1,6 @@
-import datetime
 import hashlib
 import inspect
+import math
 import os
 import shutil
 from typing import List, Union
@@ -178,3 +178,15 @@ def find_largest_gap(items: list):
             largest_gap = gap
             largest_gap_pair = (items[i], items[i + 1])
     return largest_gap_pair
+
+
+def get_neighboring_ints_sorted_by_proximity(x: float) -> List[int]:
+    """
+    Given a float x, returns a list of all integers whose distance to x is strictly less than 1,
+    sorted by distance to x.
+    """
+    left = int(math.floor(x))
+    right = int(math.ceil(x))
+    neighbors = list(set([left, right]))
+    neighbors.sort(key=lambda y: abs(x - y))
+    return neighbors

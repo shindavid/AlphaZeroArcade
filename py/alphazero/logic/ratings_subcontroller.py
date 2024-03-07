@@ -5,7 +5,7 @@ from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.loop_control_data import LoopControlData
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
-from util.py_util import find_largest_gap
+from util.py_util import find_largest_gap, get_neighboring_ints_sorted_by_proximity
 from util.socket_util import recv_json, send_json
 from util.sqlite3_util import ConnectionPool
 
@@ -155,32 +155,18 @@ class RatingData:
 
         if self.est_rating is not None:
             if self.rating_lower_bound < self.est_rating < self.rating_upper_bound:
-                est_rating_floor = int(math.floor(self.est_rating))
-                est_rating_ceil = int(math.ceil(self.est_rating))
-
-                if est_rating_floor not in match_data:
-                    return est_rating_floor
-                if est_rating_ceil not in match_data:
-                    return est_rating_ceil
+                candidates = get_neighboring_ints_sorted_by_proximity(self.est_rating)
+                for c in candidates:
+                    if c not in match_data:
+                        return c
                 raise Exception(f'Unexpected state: {self}')
 
         est_rating = self._interpolate_bounds(match_data)
-        left = int(math.floor(est_rating))
-        right = int(math.ceil(est_rating))
-        candidates = set([left, right])
-
-        if len(candidates) == 1:
-            assert left not in match_data, (left, est_rating, self)
-            return left
-
-        closest = round(est_rating)
-        furthest = left if closest == right else right
-
-        if closest not in match_data:
-            return closest
-
-        assert furthest not in match_data, (closest, furthest, est_rating, match_data)
-        return furthest
+        candidates = get_neighboring_ints_sorted_by_proximity(est_rating)
+        for c in candidates:
+            if c not in match_data:
+                return c
+        raise Exception(f'Unexpected state: {self}')
 
 
 RatingDataDict = Dict[Generation, RatingData]
@@ -299,13 +285,13 @@ class RatingsSubcontroller(NewModelSubscriber):
         left = max([g for g in rated_gens if g < gen], default=None)
         right = min([g for g in rated_gens if g > gen], default=None)
 
-        if left is None:
-            return right
-        if right is None:
-            return left
+        left_rating = None if left is None else self._rating_data_dict[left].rating
+        right_rating = None if right is None else self._rating_data_dict[right].rating
 
-        left_rating = self._rating_data_dict[left].rating
-        right_rating = self._rating_data_dict[right].rating
+        if left is None:
+            return right_rating
+        if right is None:
+            return left_rating
 
         left_weight = right - gen
         right_weight = gen - left
