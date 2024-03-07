@@ -474,18 +474,6 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename) {
   util::release_assert(paused_, "%s() called while not paused", __func__);
 
-  int64_t timestamp = util::ns_since_epoch();
-
-  core::LoopControllerClient* client = core::LoopControllerClient::get();
-
-  boost::json::object msg;
-  msg["type"] = "metrics";
-  msg["gen"] = client->cur_generation();
-  msg["timestamp"] = timestamp;
-  msg["metrics"] = client->get_perf_stats().to_json();
-  client->set_last_games_flush_ts(timestamp);
-  client->send(msg);
-
   if (mcts::kEnableDebug) {
     util::ThreadSafePrinter printer;
     printer.printf("Refreshing network weights (%s)...\n", model_filename.c_str());
