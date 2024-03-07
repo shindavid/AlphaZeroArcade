@@ -447,7 +447,6 @@ class RatingsSubcontroller(NewModelSubscriber):
         saturated, we return M if M is not in G. If no such number exists, we return None.
         """
         latest_gen = self.organizer.get_latest_generation()
-        logger.debug(f'Getting next gen to rate, latest_gen={latest_gen}...')
         next_gen = None
         if latest_gen > 0:
             next_gen = self._get_next_gen_to_rate_helper(latest_gen)
@@ -464,6 +463,7 @@ class RatingsSubcontroller(NewModelSubscriber):
         """
         Helper to _get_next_gen_to_rate(). Assumes that latest_gen > 0.
         """
+        logger.debug(f'Getting next gen to rate, latest_gen={latest_gen}...')
         with self._lock:
             taken_gens = [g for g, r in self._rating_data_dict.items() if r.rating is not None or r.owner is not None]
             taken_gens.sort()
@@ -475,8 +475,10 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         assert latest_gen >= max_taken_gen
         latest_gap = latest_gen - max_taken_gen
-        if latest_gap >= 10:
-            logger.debug(f'Large gap, rating latest ({latest_gen})...')
+
+        latest_gap_threshold = 10
+        if latest_gap >= latest_gap_threshold:
+            logger.debug(f'{latest_gap_threshold}+ gap to latest, rating latest ({latest_gen})...')
             return latest_gen
 
         if taken_gens[0] > 1:
@@ -490,6 +492,15 @@ class RatingsSubcontroller(NewModelSubscriber):
             return None
 
         left, right = find_largest_gap(taken_gens)
+        gap = right - left
+        if 2 * latest_gap >= gap:
+            logger.debug(
+                f'Large gap to latest, rating latest '
+                f'(biggest-gap:[{left}, {right}], latest={latest_gen})...')
+            return latest_gen
+        if max(gap, latest_gap) == 1:
+            logger.debug(f'Waiting for new model, all rated (latest={latest_gen})...')
+            return None
         if left + 1 == right:
             if latest_gen > right:
                 logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
@@ -497,4 +508,6 @@ class RatingsSubcontroller(NewModelSubscriber):
             logger.debug(f'Waiting for new model (latest={latest_gen}, n_taken:{n_taken_gens})...')
             return None
 
-        return (left + right) // 2
+        mid = (left + right) // 2
+        logger.debug(f'Rating gen {mid} (biggest-gap:[{left}, {right}], latest={latest_gen})...')
+        return mid
