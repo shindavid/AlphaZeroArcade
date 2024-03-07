@@ -184,7 +184,8 @@ class RatingsSubcontroller(NewModelSubscriber):
         self._owner_dict: Dict[ClientId, RatingData] = {}
 
     def handle_new_model(self, generation: Generation):
-        self._new_work_available.notify_all()
+        with self._lock:
+            self._new_work_available.notify_all()
 
     @property
     def data(self) -> LoopControlData:
