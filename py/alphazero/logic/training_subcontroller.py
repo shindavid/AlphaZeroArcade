@@ -248,6 +248,7 @@ class TrainingSubcontroller:
             self._record_stats(gen, stats)
             self.data.close_db_conns(threading.get_ident())
             self.aux_controller.reload_weights(gen)
+            self.aux_controller.broadcast_new_model(gen)
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
             self.data.signal_error()

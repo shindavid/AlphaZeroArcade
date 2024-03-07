@@ -44,6 +44,7 @@ class GameServerBaseParams:
                            help='loop-controller port (default: %(default)s)')
         group.add_argument('--cuda-device', default=defaults.cuda_device,
                            help='cuda device (default: %(default)s)')
+        return group
 
 
 class GameServerBase:
@@ -70,22 +71,25 @@ class GameServerBase:
     def binary_path(self):
         return os.path.join(Repo.root(), '.runtime', self.game_spec.name)
 
-    def run(self):
+    def init_socket(self):
         loop_controller_address = (self.loop_controller_host, self.loop_controller_port)
         loop_controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         loop_controller_socket.connect(loop_controller_address)
 
         self.loop_controller_socket = loop_controller_socket
+
+    def run(self):
+        self.init_socket()
         try:
             self.send_handshake()
             self.recv_handshake()
 
             threading.Thread(target=self.recv_loop, daemon=True).start()
-            self.main_loop()
+            self.error_detection_loop()
         finally:
             self.shutdown()
 
-    def main_loop(self):
+    def error_detection_loop(self):
         while True:
             time.sleep(1)
             if self.child_process is not None and self.child_process.poll() is not None:
@@ -127,7 +131,7 @@ class GameServerBase:
                 logger.info(f'Re-requesting asset {tgt} due to hash change')
                 continue
 
-            logger.info(f'Asset {tgt} already present')
+            logger.debug(f'Asset {tgt} already present')
 
         for tgt, sha256 in requested_assets:
             data = {
@@ -150,6 +154,7 @@ class GameServerBase:
 
     def recv_loop(self):
         try:
+            self.recv_loop_prelude()
             while True:
                 msg = recv_json(self.loop_controller_socket)
                 if self.handle_msg(msg):
@@ -160,8 +165,7 @@ class GameServerBase:
                 self.shutdown_code = 0
                 return
             else:
-                logger.error(
-                    f'Unexpected error in recv_loop():', exc_info=True)
+                logger.error(f'Unexpected error in recv_loop():', exc_info=True)
                 self.shutdown_code = 1
                 return
         except:
@@ -172,7 +176,17 @@ class GameServerBase:
     @abc.abstractmethod
     def handle_msg(self, msg: JsonDict) -> bool:
         """
-        Handle the message, return True if should break the loop."""
+        Handle the message, return True if should break the loop.
+
+        Must override in subclass.
+        """
+        pass
+
+    def recv_loop_prelude(self):
+        """
+        Override to do any work after the handshake is complete but before the recv-loop
+        starts.
+        """
         pass
 
     def shutdown(self):

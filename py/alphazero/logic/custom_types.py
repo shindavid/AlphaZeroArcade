@@ -1,3 +1,4 @@
+import abc
 from dataclasses import dataclass
 from enum import Enum
 import socket
@@ -15,6 +16,7 @@ class ChildThreadError(Exception):
 class ClientType(Enum):
     SELF_PLAY_MANAGER = 'self-play-manager'
     SELF_PLAY_WORKER = 'self-play-worker'
+    RATINGS_MANAGER = 'ratings-manager'
 
 
 @dataclass
@@ -41,3 +43,9 @@ class ClientData:
                   f'{self.ip_address}:{self.port}', self.cuda_device]
         tokens = [t for t in tokens if t]
         return f'ClientData({", ".join(tokens)})'
+
+
+class NewModelSubscriber(abc.ABC):
+    @abc.abstractmethod
+    def handle_new_model(self, generation: Generation):
+        pass

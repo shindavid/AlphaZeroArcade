@@ -87,3 +87,34 @@ TRAINING_TABLE_CREATE_CMDS = [
 
     """CREATE INDEX training_heads_idx ON training_heads (gen)""",
 ]
+
+
+RATINGS_TABLE_CREATE_CMDS = [
+    """CREATE TABLE IF NOT EXISTS matches (
+            mcts_gen INT,
+            mcts_iters INT,
+            ref_strength INT,
+            mcts_wins INT,
+            draws INT,
+            ref_wins INT
+            )""",
+
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (mcts_gen, mcts_iters, ref_strength)""",
+
+    """CREATE TABLE IF NOT EXISTS ratings (
+            mcts_gen INT,
+            mcts_iters INT,
+            n_games INT,
+            rating FLOAT
+            )""",
+
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (mcts_gen, mcts_iters)""",
+
+    """CREATE TABLE IF NOT EXISTS x_values (
+            mcts_gen INT,
+            n_games INT,
+            runtime FLOAT,
+            n_evaluated_positions BIGINT,
+            n_batches_evaluated INT
+            )""",
+]

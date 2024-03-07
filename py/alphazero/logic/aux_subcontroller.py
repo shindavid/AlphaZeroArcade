@@ -1,4 +1,5 @@
-from alphazero.logic.custom_types import  ClientData, ClientId, ClientType
+from alphazero.logic.custom_types import  ClientData, ClientId, ClientType, Generation, \
+    NewModelSubscriber
 from alphazero.logic.loop_control_data import LoopControlData
 from util.logging_util import get_logger
 from util.socket_util import recv_json, send_file, send_json, JsonDict
@@ -20,7 +21,15 @@ class AuxSubcontroller:
     """
     def __init__(self, data: LoopControlData):
         self.data = data
+        self._new_model_subscribers: List[NewModelSubscriber] = []
         self._pause_ack_events: Dict[ClientId, threading.Event] = defaultdict(threading.Event)
+
+    def subscribe_to_new_model_announcements(self, subscriber: NewModelSubscriber):
+        self._new_model_subscribers.append(subscriber)
+
+    def broadcast_new_model(self, generation: Generation):
+        for subscriber in self._new_model_subscribers:
+            subscriber.handle_new_model(generation)
 
     def handle_disconnect(self, client_data: ClientData):
         logger.info(f'Handling disconnect for {client_data}...')

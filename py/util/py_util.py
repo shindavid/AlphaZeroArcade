@@ -162,3 +162,19 @@ def get_function_arguments(ignore: Union[str, List[str], None]=None):
     del frame
 
     return args
+
+
+def find_largest_gap(items: list):
+    """
+    Given a list of at least 2 items, returns the consecutive pair of items that have the largest
+    gap between them.
+    """
+    assert len(items) >= 2
+    largest_gap = None
+    largest_gap_pair = None
+    for i in range(len(items) - 1):
+        gap = items[i + 1] - items[i]
+        if largest_gap is None or gap > largest_gap:
+            largest_gap = gap
+            largest_gap_pair = (items[i], items[i + 1])
+    return largest_gap_pair

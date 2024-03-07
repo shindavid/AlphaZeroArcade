@@ -39,14 +39,12 @@ def main():
     params = RatingsServerParams.create(args)
     logging_params = LoggingParams.create(args)
 
-    log_filename = os.path.join(DirectoryOrganizer(
-        common_params).logs_dir, 'ratings-server.log')
+    log_filename = os.path.join(DirectoryOrganizer(common_params).logs_dir, 'ratings-server.log')
     configure_logger(filename=log_filename, params=logging_params)
 
     logger.info(f'**** Starting ratings-server ****')
 
     server = RatingsServer(params, common_params)
-    server.register_signal_handler()
     server.run()
 
 

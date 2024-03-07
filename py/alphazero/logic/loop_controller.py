@@ -2,6 +2,7 @@ from alphazero.logic.aux_subcontroller import AuxSubcontroller
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.loop_control_data import LoopControlData, LoopControllerParams
+from alphazero.logic.ratings_subcontroller import RatingsSubcontroller
 from alphazero.logic.self_play_subcontroller import SelfPlaySubcontroller
 from alphazero.logic.training_params import TrainingParams
 from alphazero.logic.training_subcontroller import TrainingSubcontroller
@@ -34,6 +35,7 @@ class LoopController:
         self.aux_subcontroller = AuxSubcontroller(self.data)
         self.training_subcontroller = TrainingSubcontroller(self.aux_subcontroller)
         self.self_play_subcontroller = SelfPlaySubcontroller(self.training_subcontroller)
+        self.ratings_subcontroller = RatingsSubcontroller(self.aux_subcontroller)
 
     @property
     def params(self) -> LoopControllerParams:
@@ -96,6 +98,8 @@ class LoopController:
                     self.self_play_subcontroller.add_self_play_manager(client_data)
                 elif client_type == ClientType.SELF_PLAY_WORKER:
                     self.self_play_subcontroller.add_self_play_worker(client_data)
+                elif client_type == ClientType.RATINGS_MANAGER:
+                    self.ratings_subcontroller.add_ratings_manager(client_data)
                 else:
                     raise Exception(f'Unknown client type: {client_type}')
         except:

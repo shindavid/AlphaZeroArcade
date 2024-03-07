@@ -46,7 +46,7 @@ class SelfPlaySubcontroller:
         }
         self.aux_controller.add_asset_metadata_to_reply(reply)
         send_json(client_data.sock, reply)
-        threading.Thread(target=self.self_play_manager_loop, name='self-play-manager-loop',
+        threading.Thread(target=self.manager_recv_loop, name='self-play-manager-recv-loop',
                             args=(client_data,), daemon=True).start()
 
     def add_self_play_worker(self, client_data: ClientData):
@@ -55,10 +55,10 @@ class SelfPlaySubcontroller:
             'client_id': client_data.client_id,
         }
         send_json(client_data.sock, reply)
-        threading.Thread(target=self.self_play_worker_loop, name='self-play-worker-loop',
+        threading.Thread(target=self.worker_recv_loop, name='self-play-worker-recv-loop',
                             args=(client_data,), daemon=True).start()
 
-    def self_play_manager_loop(self, client_data: ClientData):
+    def manager_recv_loop(self, client_data: ClientData):
         try:
             while True:
                 try:
@@ -78,7 +78,7 @@ class SelfPlaySubcontroller:
                 exc_info=True)
             self.data.signal_error()
 
-    def self_play_worker_loop(self, client_data: ClientData):
+    def worker_recv_loop(self, client_data: ClientData):
         try:
             while True:
                 try:
