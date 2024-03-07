@@ -104,7 +104,7 @@ class GameServerBase:
         """
         Launches self.run_func(args=args, kwargs=kwargs) in a separate thread.
         """
-        threading.Thread(target=self.run_func, args=(func, args, kwargs), daemon=True).start()
+        threading.Thread(target=self.run_func, args=(func,), kwargs=(args, kwargs), daemon=True).start()
 
     def error_detection_loop(self):
         while True:

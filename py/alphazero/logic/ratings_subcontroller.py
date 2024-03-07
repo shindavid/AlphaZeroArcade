@@ -461,6 +461,7 @@ class RatingsSubcontroller(NewModelSubscriber):
         saturated, we return M if M is not in G. If no such number exists, we return None.
         """
         latest_gen = self.organizer.get_latest_generation()
+        logger.debug(f'Getting next gen to rate, latest_gen={latest_gen}...')
         next_gen = None
         if latest_gen > 0:
             next_gen = self._get_next_gen_to_rate_helper(latest_gen)
@@ -468,12 +469,12 @@ class RatingsSubcontroller(NewModelSubscriber):
         if next_gen is None:
             with self._lock:
                 self._new_work_available.wait()
-            next_gen = self._get_next_gen_to_rate(latest_gen)
+            next_gen = self._get_next_gen_to_rate()
 
         assert next_gen is not None
         return next_gen
 
-    def _get_next_gen_to_rate_helper(self, latest_gen) -> Optional[Generation]:
+    def _get_next_gen_to_rate_helper(self, latest_gen: Generation) -> Optional[Generation]:
         """
         Helper to _get_next_gen_to_rate(). Assumes that latest_gen > 0.
         """
@@ -481,6 +482,7 @@ class RatingsSubcontroller(NewModelSubscriber):
             taken_gens = [g for g, r in self._rating_data_dict.items() if r.rating is not None or r.owner is not None]
             taken_gens.sort()
         if not taken_gens:
+            logger.debug(f'No gens yet rated, rating latest ({latest_gen})...')
             return latest_gen
 
         max_taken_gen = taken_gens[-1]
@@ -488,16 +490,25 @@ class RatingsSubcontroller(NewModelSubscriber):
         assert latest_gen >= max_taken_gen
         latest_gap = latest_gen - max_taken_gen
         if latest_gap >= 10:
+            logger.debug(f'Large gap, rating latest ({latest_gen})...')
             return latest_gen
 
         if taken_gens[0] > 1:
+            logger.debug(f'Gen-1 not yet rated, rating it...')
             return 1
 
-        if len(taken_gens) < 2:
+        n_taken_gens = len(taken_gens)
+        if n_taken_gens < 2:
+            assert latest_gen < 2
+            logger.debug(f'Waiting for new model (latest={latest_gen}, n_taken:{n_taken_gens})...')
             return None
 
         left, right = find_largest_gap(taken_gens)
         if left + 1 == right:
+            if latest_gen > right:
+                logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
+                return latest_gen
+            logger.debug(f'Waiting for new model (latest={latest_gen}, n_taken:{n_taken_gens})...')
             return None
 
         return (left + right) // 2
