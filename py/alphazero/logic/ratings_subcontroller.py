@@ -103,24 +103,46 @@ class RatingData:
         """
         Interpolates between the lower and upper bound to estimate the critical strength.
 
+        The interpolation formula is:
+
+        rating = midpoint + spread_factor * adjustment
+
+        where:
+
+        midpoint = 0.5 * (x1 + x2)
+        spread_factor = sqrt(x2 - x1)
+        adjustment = 0.5 * (w1 - w2) / (w1 + w2)
+
+        x1 = rating_lower_bound
+        x2 = rating_upper_bound
+        w1 = (win rate at x1) - 0.5
+        w2 = 0.5 - (win rate at x2)
+
         If lower + 1 == upper, then this estimate is exactly the critical strength, and so serves
-        as the rating.
+        as the exact rating.
         """
         lower_counts = match_data.get(self.rating_lower_bound, WinLossDrawCounts(win=1))
         upper_counts = match_data.get(self.rating_upper_bound, WinLossDrawCounts(loss=1))
 
-        # rating = ((d-1) * (0.5 - w(d)) + d * (w(d-1) - 0.5)) / (w(d-1) - w(d))
-        lower_strength = self.rating_lower_bound
-        upper_strength = self.rating_upper_bound
-        lower_weight = 0.5 - upper_counts.win_rate()
-        upper_weight = lower_counts.win_rate() - 0.5
+        x1 = self.rating_lower_bound
+        x2 = self.rating_upper_bound
+        w1 = lower_counts.win_rate() - 0.5
+        w2 = 0.5 - upper_counts.win_rate()
 
-        assert lower_weight > 0, (match_data, lower_strength)
-        assert upper_weight >= 0, (match_data, upper_strength)
+        assert x2 >= x1 + 1, (x1, x2, match_data)
+        assert w1 >= 0, (w1, x1, match_data)
+        assert w2 > 0, (w2, x2, match_data)
 
-        num = lower_strength * lower_weight + upper_strength * upper_weight
-        den = lower_weight + upper_weight
-        return num / den
+        midpoint = 0.5 * (x1 + x2)
+        spread_factor = math.sqrt(x2 - x1)
+        adjustment = 0.5 * (w1 - w2) / (w1 + w2)
+        strength = midpoint + spread_factor * adjustment
+
+        logger.debug(f'Interpolating bounds for gen={self.mcts_gen} match_data={match_data}: '
+                     f'({x1}: {w1}, {x2}: {w2}) -> {midpoint} + {spread_factor} * {adjustment} = {strength}')
+
+        assert x1 <= strength <= x2, (x1, strength, x2, match_data)
+        return strength
 
     def get_next_strength_to_test(self):
         if self.rating is not None:
