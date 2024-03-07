@@ -349,12 +349,15 @@ class RatingsSubcontroller(NewModelSubscriber):
             rating_data = self._owner_dict.get(client_data.client_id, None)
         if rating_data is None:
             gen = self._get_next_gen_to_rate()
-            rating_data = RatingData(gen, self.min_ref_strength, self.max_ref_strength)
             with self._lock:
-                rating_data.est_rating = self._estimate_rating(gen)
+                rating_data = self._rating_data_dict.get(gen, None)
+                if rating_data is None:
+                    rating_data = RatingData(gen, self.min_ref_strength, self.max_ref_strength)
+                    rating_data.est_rating = self._estimate_rating(gen)
+                    self._rating_data_dict[gen] = rating_data
+
                 rating_data.owner = client_data.client_id
                 self._owner_dict[client_data.client_id] = rating_data
-                self._rating_data_dict[gen] = rating_data
 
         assert rating_data.rating is None
         strength = rating_data.get_next_strength_to_test()
