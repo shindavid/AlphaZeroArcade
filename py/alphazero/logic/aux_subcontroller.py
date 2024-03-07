@@ -21,14 +21,18 @@ class AuxSubcontroller:
     """
     def __init__(self, data: LoopControlData):
         self.data = data
+        self._lock = threading.Lock()
         self._new_model_subscribers: List[NewModelSubscriber] = []
         self._pause_ack_events: Dict[ClientId, threading.Event] = defaultdict(threading.Event)
 
     def subscribe_to_new_model_announcements(self, subscriber: NewModelSubscriber):
-        self._new_model_subscribers.append(subscriber)
+        with self._lock:
+            self._new_model_subscribers.append(subscriber)
 
     def broadcast_new_model(self, generation: Generation):
-        for subscriber in self._new_model_subscribers:
+        with self._lock:
+            subscribers = list(self._new_model_subscribers)
+        for subscriber in subscribers:
             subscriber.handle_new_model(generation)
 
     def handle_disconnect(self, client_data: ClientData):
@@ -76,7 +80,8 @@ class AuxSubcontroller:
         return client_data
 
     def handle_pause_ack(self, client_data: ClientData):
-        self._pause_ack_events[client_data.client_id].set()
+        with self._lock:
+            self._pause_ack_events[client_data.client_id].set()
 
     def pause(self, clients: List[ClientData]):
         if not clients:
@@ -88,7 +93,8 @@ class AuxSubcontroller:
             send_json(client.sock, data)
 
         for client in clients:
-            event = self._pause_ack_events.get(client.client_id)
+            with self._lock:
+                event = self._pause_ack_events[client.client_id]
             event.wait()
             event.clear()
         logger.info('Pause acked!')
