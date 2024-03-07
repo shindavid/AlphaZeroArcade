@@ -5,7 +5,7 @@ from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.loop_control_data import LoopControlData
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
-from util.py_util import find_largest_gap, get_neighboring_ints_sorted_by_proximity
+from util.py_util import find_largest_gap
 from util.socket_util import recv_json, send_json
 from util.sqlite3_util import ConnectionPool
 
@@ -147,25 +147,44 @@ class RatingData:
         assert x1 <= strength <= x2, (x1, strength, x2, match_data)
         return strength
 
+    def _get_candidates(self, est_rating: float, match_data: Dict[int, WinLossDrawCounts]):
+        """
+        Returns a list of candidate strengths to test, from best to worst, measured by distance
+        to est_rating.
+
+        Valid candidates must satisfy:
+
+        1. abs(candidate - est_rating) < 1
+        2. self.rating_lower_bound <= candidate <= self.rating_upper_bound
+        3. candidate not in match_data
+        """
+        left = int(math.floor(est_rating))
+        right = int(math.ceil(est_rating))
+        candidates = list(set([left, right]))
+        candidates = [c for c in candidates if c not in match_data]
+        candidates = [c for c in candidates if self.rating_lower_bound <= c <= self.rating_upper_bound]
+        candidates.sort(key=lambda c: abs(est_rating - c))
+        return candidates
+
     def get_next_strength_to_test(self):
         if self.rating is not None:
             return None
 
+        logger.debug(f'Getting next strength to test for gen={self.mcts_gen}: '
+                     f'est={self.est_rating}, '
+                     f'bounds=({self.rating_lower_bound}, {self.rating_upper_bound})')
+
         match_data = self.filtered_match_data()
 
         if self.est_rating is not None:
-            if self.rating_lower_bound < self.est_rating < self.rating_upper_bound:
-                candidates = get_neighboring_ints_sorted_by_proximity(self.est_rating)
-                for c in candidates:
-                    if c not in match_data:
-                        return c
-                raise Exception(f'Unexpected state: {self}')
+            candidates = self._get_candidates(self.est_rating, match_data)
+            for c in candidates:
+                return c
 
         est_rating = self._interpolate_bounds(match_data)
-        candidates = get_neighboring_ints_sorted_by_proximity(est_rating)
+        candidates = self._get_candidates(est_rating, match_data)
         for c in candidates:
-            if c not in match_data:
-                return c
+            return c
         raise Exception(f'Unexpected state: {self}')
 
 
@@ -495,8 +514,8 @@ class RatingsSubcontroller(NewModelSubscriber):
         gap = right - left
         if 2 * latest_gap >= gap:
             logger.debug(
-                f'Large gap to latest, rating latest '
-                f'(biggest-gap:[{left}, {right}], latest={latest_gen})...')
+                f'Large gap to latest, rating latest={latest_gen} '
+                f'(biggest-gap:[{left}, {right}], latest-gap:[{max_taken_gen}, {latest_gen}])...')
             return latest_gen
         if max(gap, latest_gap) == 1:
             logger.debug(f'Waiting for new model, all rated (latest={latest_gen})...')
