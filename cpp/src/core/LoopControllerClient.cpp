@@ -43,7 +43,12 @@ perf_stats_t LoopControllerClient::get_perf_stats() const {
 }
 
 LoopControllerClient::LoopControllerClient(const Params& params)
-    : proc_start_ts_(util::ns_since_epoch()), cuda_device_(params.cuda_device) {
+    : proc_start_ts_(util::ns_since_epoch())
+    , cuda_device_(params.cuda_device)
+    , role_(params.client_role) {
+  if (role_.empty()) {
+    throw util::CleanException("--client-role must be specified");
+  }
   socket_ = io::Socket::create_client_socket(params.loop_controller_hostname,
                                              params.loop_controller_port);
   cur_generation_ = params.starting_generation;
@@ -63,7 +68,7 @@ LoopControllerClient::~LoopControllerClient() {
 void LoopControllerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
-  msg["role"] = "self-play-worker";
+  msg["role"] = role_;
   msg["start_timestamp"] = proc_start_ts_;
   msg["cuda_device"] = cuda_device_;
   socket_->json_write(msg);
@@ -149,6 +154,8 @@ void LoopControllerClient::loop() {
     if (type == "pause") {
       pause();
       send_pause_ack();
+    } else if (type == "unpause") {
+      unpause();
     } else if (type == "reload_weights") {
       std::string model_filename = msg.at("model_filename").as_string().c_str();
       cur_generation_ = msg.at("generation").as_int64();

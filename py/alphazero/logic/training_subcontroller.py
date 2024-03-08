@@ -237,7 +237,7 @@ class TrainingSubcontroller:
 
             net, optimizer = self.get_net_and_optimizer(loader)
 
-            self.aux_controller.pause_shared_gpu_self_play_clients()
+            self.aux_controller.pause_shared_gpu_workers()
 
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
             stats.dump(logger.info)
@@ -247,8 +247,7 @@ class TrainingSubcontroller:
             self._save_model(gen, net)
             self._record_stats(gen, stats)
             self.data.close_db_conns(threading.get_ident())
-            self.aux_controller.reload_weights(gen)
-            self.aux_controller.broadcast_new_model(gen)
+            self.aux_controller.handle_new_model(gen)
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
             self.data.signal_error()

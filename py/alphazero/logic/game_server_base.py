@@ -6,7 +6,8 @@ from game_index import get_game_spec
 from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
-from util.socket_util import JsonDict, recv_file, recv_json, send_json
+from util.socket_util import JsonDict, SocketRecvException, SocketSendException, recv_file, \
+    recv_json, send_json
 
 import abc
 from dataclasses import dataclass, fields
@@ -86,6 +87,10 @@ class GameServerBase:
 
             threading.Thread(target=self.recv_loop, daemon=True).start()
             self.error_detection_loop()
+        except KeyboardInterrupt:
+            logger.info(f'Caught Ctrl-C')
+        except:
+            logger.error(f'Unexpected error in run():', exc_info=True)
         finally:
             self.shutdown()
 
@@ -165,6 +170,9 @@ class GameServerBase:
             if sha256sum(dst) != sha256:
                 raise Exception(f'Hash mismatch for asset {tgt}')
 
+        self.send_ready()
+
+    def send_ready(self):
         data = {
             'type': 'ready',
         }
@@ -177,15 +185,12 @@ class GameServerBase:
                 msg = recv_json(self.loop_controller_socket)
                 if self.handle_msg(msg):
                     break
-        except ConnectionError as e:
-            if str(e).find('Socket gracefully closed by peer') != -1:
-                logger.info(f'Socket gracefully closed by peer')
-                self.shutdown_code = 0
-                return
-            else:
-                logger.error(f'Unexpected error in recv_loop():', exc_info=True)
-                self.shutdown_code = 1
-                return
+        except SocketRecvException:
+            logger.warn(f'Encountered SocketRecvException in recv_loop()')
+            self.shutdown_code = 0
+        except SocketSendException:
+            logger.warn(f'Encountered SocketSendException in recv_loop()', exc_info=True)
+            self.shutdown_code = 0
         except:
             logger.error(f'Unexpected error in recv_loop():', exc_info=True)
             self.shutdown_code = 1

@@ -1,22 +1,22 @@
-from alphazero.logic.aux_subcontroller import AuxSubcontroller
-from alphazero.logic.custom_types import ClientData
-from alphazero.logic.custom_types import ClientType, Generation
+from alphazero.logic.aux_subcontroller import AuxSubcontroller, NewModelSubscriber
+from alphazero.logic.custom_types import ClientData, ClientId, Generation
 from alphazero.logic.loop_control_data import LoopControlData
 from alphazero.logic.training_subcontroller import TrainingSubcontroller
 from util.logging_util import get_logger
-from util.socket_util import recv_json, send_json
+from util.socket_util import send_json, JsonDict
 
 from collections import defaultdict
 import logging
+import os
 import sqlite3
 import threading
-from typing import Dict
+from typing import Dict, Optional
 
 
 logger = get_logger()
 
 
-class SelfPlaySubcontroller:
+class SelfPlaySubcontroller(NewModelSubscriber):
     """
     Used by the LoopController to manage self-play. The actual self-play is performed in external
     servers; this subcontroller acts as a sort of remote-manager of those servers.
@@ -24,13 +24,26 @@ class SelfPlaySubcontroller:
 
     def __init__(self, training_controller: TrainingSubcontroller):
         self.training_controller = training_controller
+        self.aux_controller.subscribe_to_new_model_announcements(self)
 
-        self._done_event = threading.Event()
-        self._connected = False
-        self._connected_event = threading.Event()
-        self._connected_lock = threading.Lock()
+        self._gen0_owner: Optional[ClientId] = None
+        self._gen0_complete = False
+        self._gen0_lock = threading.Lock()
+        self._gen0_cv = threading.Condition(self._gen0_lock)
+
+        self._gen1_model_trained = False
+        self._gen1_lock = threading.Lock()
+        self._gen1_cv = threading.Condition(self._gen1_lock)
 
         self._pending_game_data = []
+
+    def handle_new_model(self, generation: Generation):
+        if generation > 1:
+            return
+
+        with self._gen1_lock:
+            self._gen1_model_trained = True
+            self._gen1_cv.notify_all()
 
     @property
     def aux_controller(self) -> AuxSubcontroller:
@@ -47,8 +60,9 @@ class SelfPlaySubcontroller:
         }
         self.aux_controller.add_asset_metadata_to_reply(reply)
         send_json(client_data.sock, reply)
-        threading.Thread(target=self.manager_recv_loop, name='self-play-manager-recv-loop',
-                            args=(client_data,), daemon=True).start()
+        self.aux_controller.launch_recv_loop(
+            self.manager_msg_handler, client_data, 'self-play-manager',
+            disconnect_handler=self.handle_manager_disconnect)
 
     def add_self_play_worker(self, client_data: ClientData):
         reply = {
@@ -56,73 +70,109 @@ class SelfPlaySubcontroller:
             'client_id': client_data.client_id,
         }
         send_json(client_data.sock, reply)
-        threading.Thread(target=self.worker_recv_loop, name='self-play-worker-recv-loop',
-                            args=(client_data,), daemon=True).start()
+        self.aux_controller.launch_recv_loop(
+            self.worker_msg_handler, client_data, 'self-play-worker')
 
-    def manager_recv_loop(self, client_data: ClientData):
-        try:
-            while True:
-                try:
-                    msg = recv_json(client_data.sock)
-                except OSError:
-                    self.aux_controller.handle_disconnect(client_data)
-                    return
+    def handle_manager_disconnect(self, client_data: ClientData):
+        with self._gen0_lock:
+            if client_data.client_id == self._gen0_owner:
+                self._gen0_owner = None
+                self._set_gen0_completion(self.num_additional_gen0_positions_needed() == 0)
+                self._gen0_cv.notify_all()
 
-                msg_type = msg['type']
-                if msg_type == 'asset_request':
-                    self.aux_controller.send_asset(msg['asset'], client_data)
-                elif msg_type == 'ready':
-                    self.handle_ready()
-        except:
-            logger.error(
-                f'Unexpected error in SelfPlaySubcontroller.self_play_manager_loop({client_data}):',
-                exc_info=True)
-            self.data.signal_error()
+    def manager_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
+        msg_type = msg['type']
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'self-play-manager received json message: {msg}')
 
-    def worker_recv_loop(self, client_data: ClientData):
-        try:
-            while True:
-                try:
-                    msg = recv_json(client_data.sock, log_level=logging.NOTSET)
-                except OSError:
-                    self.aux_controller.handle_disconnect(client_data)
-                    return
+        if msg_type == 'asset_request':
+            self.aux_controller.send_asset(msg['asset'], client_data)
+        elif msg_type == 'ready':
+            self.handle_ready(client_data)
+        elif msg_type == 'gen0-complete':
+            self.handle_gen0_complete(client_data)
+        return False
 
-                msg_type = msg['type']
-                if msg_type != 'game' and logger.isEnabledFor(logging.DEBUG):
-                    # logging every game is too spammy
-                    logger.debug(f'Received json message: {msg}')
+    def worker_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
+        msg_type = msg['type']
 
-                if msg_type == 'pause_ack':
-                    self.aux_controller.handle_pause_ack(client_data)
-                elif msg_type == 'metrics':
-                    self.handle_metrics(msg, client_data)
-                elif msg_type == 'game':
-                    self.handle_game(msg, client_data)
-                elif msg_type == 'done':
-                    self.aux_controller.handle_disconnect(client_data)
-                    self._done_event.set()
-                    break
-        except:
-            logger.error(
-                f'Unexpected error in SelfPlaySubcontroller.self_play_worker_loop({client_data}):',
-                exc_info=True)
-            self.data.signal_error()
+        if msg_type != 'game' and logger.isEnabledFor(logging.DEBUG):
+            # logging every game is too spammy
+            logger.debug(f'self-play-worker received json message: {msg}')
 
-    def handle_ready(self):
-        with self._connected_lock:
-            if not self._connected:
-                self._connected = True
-                self._connected_event.set()
+        if msg_type == 'pause_ack':
+            self.aux_controller.handle_pause_ack(client_data)
+        elif msg_type == 'metrics':
+            self.handle_metrics(msg, client_data)
+        elif msg_type == 'game':
+            self.handle_game(msg, client_data)
+        elif msg_type == 'done':
+            return True
+        return False
 
-    def launch(self):
-        threading.Thread(target=self.launch_helper, name='self-play-launch').start()
+    def _set_gen0_completion(self, complete: bool):
+        """
+        Assumes self._gen0_lock is already acquired.
+        """
+        if self._gen0_complete:
+            return
 
-    def launch_helper(self):
+        self._gen0_complete = complete
+        if complete:
+            logger.info('Gen-0 self-play complete!')
+
+    def wait_for_gen0_completion(self):
+        with self._gen0_cv:
+            self._gen0_cv.wait_for(lambda: self._gen0_complete)
+
+    def launch_gen0_if_necessary(self, client_data: ClientData):
+        """
+        Launches gen0 if necessary. Returns True if gen0 was launched.
+
+        If gen0 is currently being run by a different client, this blocks until that run is
+        complete.
+
+        Otherwise, if gen0 has not yet been successfully completed, this launches it and returns
+        True. In this case, the call will acquire self._gen0_lock without releasing it.
+
+        Finally, if gen0 has already successfully completed, this returns False.
+        """
+        with self._gen0_lock:
+            self._gen0_cv.wait_for(lambda: self._gen0_owner is None)
+            if self._gen0_complete:
+                return False
+
+            additional_gen0_rows_needed = self.num_additional_gen0_positions_needed()
+            if additional_gen0_rows_needed == 0:
+                self._set_gen0_completion(True)
+                self._gen0_cv.notify_all()
+                return False
+            self._gen0_owner = client_data.client_id
+
+        self.launch_gen0_self_play(client_data, additional_gen0_rows_needed)
+        return True
+
+    def launch_gen0_self_play(self, client_data: ClientData, num_rows: int):
+        logger.info(f'Requesting {client_data} to perform gen-0 self-play...')
+
+        data = {
+            'type': 'start-gen0',
+            'games_base_dir': self.data.organizer.self_play_data_dir,
+            'max_rows': num_rows,
+        }
+
+        send_json(client_data.sock, data)
+
+    def launch_self_play(self, client_data: ClientData):
+        with self._gen1_lock:
+            if not self._gen1_model_trained:
+                self._gen1_model_trained = self.data.organizer.get_latest_generation() >= 1
+                self._gen1_cv.wait_for(lambda: self._gen1_model_trained)
+
         gen = self.data.organizer.get_latest_model_generation()
         model_filename = self.data.organizer.get_model_filename(gen)
-
-        self.wait_for_connection()
+        assert gen > 0, gen
+        assert os.path.isfile(model_filename), model_filename
 
         data = {
             'type': 'start',
@@ -131,14 +181,27 @@ class SelfPlaySubcontroller:
             'model': model_filename,
         }
 
-        for client_data in self.data.get_client_data_list(ClientType.SELF_PLAY_MANAGER):
-            logger.info(f'Requesting {client_data} to launch self-play...')
-            send_json(client_data.sock, data)
+        logger.info(f'Requesting {client_data} to launch self-play...')
+        send_json(client_data.sock, data)
 
-    def is_gen0_complete(self) -> bool:
-        """
-        Returns True if the first generation has been completed, False otherwise.
-        """
+    def handle_ready(self, client_data: ClientData):
+        if self.launch_gen0_if_necessary(client_data):
+            return
+
+        self.launch_self_play(client_data)
+
+    def handle_gen0_complete(self, client_data: ClientData):
+        with self._gen0_lock:
+            assert client_data.client_id == self._gen0_owner
+            assert self.num_additional_gen0_positions_needed() == 0
+            self._gen0_owner = None
+            self._set_gen0_completion(True)
+            self._gen0_cv.notify_all()
+
+        self.launch_self_play(client_data)
+
+    def num_additional_gen0_positions_needed(self) -> int:
+        total_needed = self.data.training_params.samples_per_window()
         with self.data.self_play_db_conn_pool.db_lock:
             cursor = self.data.self_play_db_conn_pool.get_cursor()
             cursor.execute(
@@ -146,42 +209,13 @@ class SelfPlaySubcontroller:
             row = cursor.fetchone()
             cursor.close()
         if row is None:
-            return False
+            return total_needed
         gen, n_augmented_positions = row
         if gen > 0:
-            return True
+            return 0
 
         assert gen == 0, gen
-        return n_augmented_positions >= self.data.training_params.samples_per_window()
-
-    def wait_for_connection(self):
-        if self._connected_event.is_set():
-            return
-
-        logger.info('Waiting for self play client connection...')
-        self._connected_event.wait()
-        logger.info('Self play client connected!')
-
-    def run_gen0_if_necessary(self):
-        if self.is_gen0_complete():
-            return
-
-        self.wait_for_connection()
-
-        client_data = self.data.get_single_client_data(ClientType.SELF_PLAY_MANAGER)
-        logger.info(f'Requesting {client_data} to perform gen-0 self-play...')
-        max_rows = self.data.training_params.samples_per_window()
-
-        data = {
-            'type': 'start-gen0',
-            'games_base_dir': self.data.organizer.self_play_data_dir,
-            'max_rows': max_rows,
-        }
-
-        send_json(client_data.sock, data)
-        self._done_event.wait()
-        self._done_event.clear()
-        logger.info(f'Gen-0 self-play complete!')
+        return max(0, total_needed - n_augmented_positions)
 
     def insert_metrics(self, client_id, gen, timestamp, metrics, cursor):
         cache_hits = metrics['cache_hits']

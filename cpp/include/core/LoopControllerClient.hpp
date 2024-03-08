@@ -41,6 +41,7 @@ class LoopControllerClient {
 
     std::string loop_controller_hostname = "localhost";
     io::port_t loop_controller_port = 0;
+    std::string client_role;  // must be specified if port is specified
     int starting_generation = 0;
     std::string cuda_device = "cuda:0";
   };
@@ -55,6 +56,7 @@ class LoopControllerClient {
   bool paused() const { return paused_; }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
+  const std::string& role() const { return role_; }
 
   template <typename T>
   void add_listener(T* listener);
@@ -88,6 +90,7 @@ class LoopControllerClient {
 
   const int64_t proc_start_ts_;
   const std::string cuda_device_;
+  const std::string role_;
   int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;

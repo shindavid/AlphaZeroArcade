@@ -30,11 +30,15 @@ inline auto LoopControllerClient::Params::make_options_description() {
 
   return desc
       .template add_option<"loop-controller-hostname">(
-          po::value<std::string>(&loop_controller_hostname)->default_value(loop_controller_hostname),
+          po::value<std::string>(&loop_controller_hostname)
+              ->default_value(loop_controller_hostname),
           "loop controller hotsname")
       .template add_option<"loop-controller-port">(
           po::value<io::port_t>(&loop_controller_port)->default_value(loop_controller_port),
           "loop controller port. If unset, then this runs without a loop controller")
+      .template add_option<"client-role">(
+          po::value<std::string>(&client_role)->default_value(client_role),
+          "loop controller client role")
       .template add_option<"starting-generation">(
           po::value<int>(&starting_generation)->default_value(starting_generation),
           "starting generation")

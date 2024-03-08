@@ -2,7 +2,7 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
 from util.logging_util import get_logger
-from util.socket_util import JsonDict
+from util.socket_util import JsonDict, send_json
 from util import subprocess_util
 
 from dataclasses import dataclass
@@ -66,6 +66,7 @@ class SelfPlayServer(GameServerBase):
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
+            '--client-role', ClientType.SELF_PLAY_WORKER.value,
             '--starting-generation', gen,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -79,7 +80,15 @@ class SelfPlayServer(GameServerBase):
             proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
             self.child_process = proc
             proc.wait()
-            logger.info(f'Gen-0 self-play complete!')
+        if proc.returncode:
+            raise Exception(f'Gen-0 self-play failed with return code {proc.returncode}')
+        self.child_process = None
+        logger.info(f'Gen-0 self-play complete!')
+
+        data = {
+            'type': 'gen0-complete',
+        }
+        send_json(self.loop_controller_socket, data)
 
     def start(self, msg):
         assert self.child_process is None
@@ -108,6 +117,7 @@ class SelfPlayServer(GameServerBase):
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
+            '--client-role', ClientType.SELF_PLAY_WORKER.value,
             '--starting-generation', gen,
             '--cuda-device', self.cuda_device,
             '--player', '"%s"' % (' '.join(map(str, player_args))),

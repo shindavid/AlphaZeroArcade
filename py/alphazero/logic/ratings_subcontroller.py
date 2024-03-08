@@ -6,11 +6,11 @@ from alphazero.logic.loop_control_data import LoopControlData
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
-from util.socket_util import recv_json, send_json
+from util.socket_util import send_json, JsonDict
 from util.sqlite3_util import ConnectionPool
 
 from collections import defaultdict
-from dataclasses import dataclass
+import logging
 import math
 import threading
 from typing import Dict, Optional
@@ -209,13 +209,13 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         self._started = False
         self._lock = threading.Lock()
-        self._new_work_available = threading.Condition(self._lock)
+        self._new_work_cv = threading.Condition(self._lock)
         self._rating_data_dict: RatingDataDict = {}
         self._owner_dict: Dict[ClientId, RatingData] = {}
 
     def handle_new_model(self, generation: Generation):
         with self._lock:
-            self._new_work_available.notify_all()
+            self._new_work_cv.notify_all()
 
     @property
     def data(self) -> LoopControlData:
@@ -350,8 +350,9 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         self.start()
         logger.info(f'Starting ratings-recv-loop for {client_data}...')
-        threading.Thread(target=self.recv_loop, name='ratings-recv-loop',
-                         args=(client_data,), daemon=True).start()
+        self.aux_controller.launch_recv_loop(
+            self.manager_msg_handler, client_data, 'ratings-manager',
+            disconnect_handler=self.handle_manager_disconnect)
 
     def send_match_request(self, client_data: ClientData):
         with self._lock:
@@ -380,34 +381,24 @@ class RatingsSubcontroller(NewModelSubscriber):
             }
         send_json(client_data.sock, data)
 
-    def handle_disconnect(self, client_data: ClientData):
-        self.aux_controller.handle_disconnect(client_data)
+    def handle_manager_disconnect(self, client_data: ClientData):
         with self._lock:
             rating_data = self._owner_dict.pop(client_data.client_id, None)
             if rating_data is not None:
                 rating_data.owner = None
 
-    def recv_loop(self, client_data: ClientData):
-        try:
-            while True:
-                try:
-                    msg = recv_json(client_data.sock)
-                except OSError:
-                    self.handle_disconnect(client_data)
-                    return
+    def manager_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
+        msg_type = msg['type']
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'ratings-manager received json message: {msg}')
 
-                msg_type = msg['type']
-                if msg_type == 'asset_request':
-                    self.aux_controller.send_asset(msg['asset'], client_data)
-                elif msg_type == 'work-request':
-                    self.send_match_request(client_data)
-                elif msg_type == 'match-result':
-                    self.handle_match_result(msg, client_data)
-        except:
-            logger.error(
-                f'Unexpected error in RatingsSubcontroller.recv_loop({client_data}):',
-                exc_info=True)
-            self.data.signal_error()
+        if msg_type == 'asset_request':
+            self.aux_controller.send_asset(msg['asset'], client_data)
+        elif msg_type == 'work-request':
+            self.send_match_request(client_data)
+        elif msg_type == 'match-result':
+            self.handle_match_result(msg, client_data)
+        return False
 
     def commit_rating(self, gen: int, rating: float):
         rating_tuple = (gen, N_MCTS_ITERS, N_GAMES, rating)
@@ -472,7 +463,7 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         if next_gen is None:
             with self._lock:
-                self._new_work_available.wait()
+                self._new_work_cv.wait()
             next_gen = self._get_next_gen_to_rate()
 
         assert next_gen is not None

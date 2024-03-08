@@ -17,6 +17,36 @@ class EncodedJson:
     payload: bytes
 
 
+class SocketException(Exception):
+    """
+    The socket module raises a socket.error (an alias for OSError) for failed send/recv operations.
+    This choice can make it difficult for the caller to differentiate between a socket error and a
+    non-socket OSError.
+
+    Therefore, whenever we catch a socket.error during socket.{send*, recv*}() calls, we raise a
+    SocketException instead.
+
+    A typical expected occurrence of this exception is when the socket is closed by the peer.
+    """
+    pass
+
+
+class SocketRecvException(SocketException):
+    """
+    Raised when a socket.recv*() call fails. This is a subclass of SocketException, and is used to
+    differentiate between socket.send*() and socket.recv*() calls.
+    """
+    pass
+
+
+class SocketSendException(SocketException):
+    """
+    Raised when a socket.send*() call fails. This is a subclass of SocketException, and is used to
+    differentiate between socket.send*() and socket.recv*() calls.
+    """
+    pass
+
+
 JsonDict = Dict[str, Any]
 JsonData = Union[JsonDict, EncodedJson]
 
@@ -38,9 +68,7 @@ def recvall(sock: socket.socket, n: int, timeout: Optional[float]=None) -> bytea
     Raises:
     - ValueError if n <= 0, or if socket is in non-blocking mode, or if timeout is not positive
     - socket.timeout if timeout is specified and the socket operation times out.
-    - ConnectionError if the socket was gracefully closed by peer.
-    - ConnectionResetError if the socket was forcefully reset by peer.
-    - OSError if there was an OS-related error.
+    - SocketRecvException if the socket was closed by peer.
     """
     if n <= 0:
         raise ValueError(f"n must be positive, got {n}")
@@ -58,7 +86,7 @@ def recvall(sock: socket.socket, n: int, timeout: Optional[float]=None) -> bytea
         while len(data) < n:
             packet = sock.recv(n - len(data))
             if not packet:
-                raise ConnectionError('Socket gracefully closed by peer')
+                raise SocketRecvException('Socket gracefully closed by peer')
             data.extend(packet)
     finally:
         sock.settimeout(None)
@@ -73,10 +101,7 @@ def recv_json(sock: socket.socket,
     Extracts a json message from the socket and returns it as a dict. Assumes that the json message
     is prepended by a 4-byte big-endian integer specifying the length of the message.
 
-    If a ConnectionError is raised, this means the socket is closed. Catches the exception and
-    returns None in this case.
-
-    Other exceptions are not caught. See recvall() for details on possible exceptions.
+    Calls recvall() under the hood - see recvall() documentation for details on possible exceptions.
     """
 
     data = recvall(sock, 4, timeout=timeout)
@@ -84,8 +109,6 @@ def recv_json(sock: socket.socket,
 
     data = recvall(sock, length, timeout=timeout)
     msg = json.loads(data.decode())
-    if logger.isEnabledFor(log_level):
-        logger.log(log_level, f'Received json message: {msg}')
     return msg
 
 
@@ -99,15 +122,22 @@ def send_json(sock: socket.socket, data: JsonData):
     to send the same message to multiple sockets, or you want to do the encoding outside of a
     mutex).
 
-    Does not do any exception handling; all exceptions raised by sock.send*() are propagated.
+    Logs to debug.
+
+    Raises:
+    - SocketSendException if the socket was closed by peer.
     """
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug(f'Sending json message: {data}')
     if not isinstance(data, EncodedJson):
         data = encode_json(data)
 
-    sock.sendall(data.header)
-    sock.sendall(data.payload)
+    try:
+        sock.sendall(data.header)
+        sock.sendall(data.payload)
+    except socket.error:
+        raise SocketSendException(
+            'socket.sendall() failure during send_json() - socket likely closed by peer')
 
 
 def recv_file(sock: socket.socket, filename: str) -> bytes:
@@ -115,6 +145,8 @@ def recv_file(sock: socket.socket, filename: str) -> bytes:
     Receives a file from the socket. This assumes that the file is prepended by a 4-byte big-endian
     integer specifying the length of the file and a 1-byte bool specifying whether the file is
     executable. The file is written to the given filename.
+
+    Calls recvall() under the hood - see recvall() documentation for details on possible exceptions.
     """
     data = recvall(sock, 4)
     length = int.from_bytes(data, byteorder='big')
@@ -140,7 +172,8 @@ def send_file(sock: socket.socket, filename: str):
     specifying the length of the file, followed by a 1-byte bool specifying whether the file is
     executable, followed by the file itself.
 
-    Does not do any exception handling; all exceptions raised by sock.send*() are propagated.
+    Raises:
+    - SocketSendException if the socket was closed by peer.
     """
     with open(filename, 'rb') as f:
         data = f.read()
@@ -149,16 +182,11 @@ def send_file(sock: socket.socket, filename: str):
     header = n_bytes.to_bytes(4, byteorder='big')
     executable = os.access(filename, os.X_OK)
     logger.debug(f'Sending file {filename} of size {n_bytes} bytes')
-    sock.sendall(header)
-    sock.sendall(executable.to_bytes(1, byteorder='big'))
-    sock.sendall(data)
 
-
-def is_port_open(host, port, timeout_sec=1):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(timeout_sec)
-        try:
-            s.connect((host, port))
-            return True
-        except (socket.timeout, socket.error):
-            return False
+    try:
+        sock.sendall(header)
+        sock.sendall(executable.to_bytes(1, byteorder='big'))
+        sock.sendall(data)
+    except socket.error:
+        raise SocketSendException(
+            'socket.sendall() failure during send_file() - socket likely closed by peer')

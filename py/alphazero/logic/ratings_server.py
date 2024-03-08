@@ -71,7 +71,17 @@ class RatingsServer(GameServerBase):
         ps1 = self.get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.binary_path
-        cmd = f'{binary} -G {n_games} -p {parallelism_factor} --player "{ps1}" --player "{ps2}"'
+        cmd = [
+            binary,
+            '-G', n_games,
+            '--loop-controller-hostname', self.loop_controller_host,
+            '--loop-controller-port', self.loop_controller_port,
+            '--client-role', ClientType.RATINGS_WORKER.value,
+            '-p', parallelism_factor,
+            '--player', f'"{ps1}"',
+            '--player', f'"{ps2}"',
+            ]
+        cmd = ' '.join(map(str, cmd))
 
         mcts_name = RatingsServer.get_mcts_player_name(mcts_gen)
         ref_name = RatingsServer.get_reference_player_name(ref_strength)

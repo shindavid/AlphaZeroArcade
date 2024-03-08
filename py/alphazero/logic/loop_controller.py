@@ -66,16 +66,12 @@ class LoopController:
         try:
             self._run_setup()
 
-            self.self_play_subcontroller.run_gen0_if_necessary()
+            self.self_play_subcontroller.wait_for_gen0_completion()
             self.training_subcontroller.train_gen1_model_if_necessary()
-            self.self_play_subcontroller.launch()
 
             while True:
                 self.training_subcontroller.wait_until_enough_training_data()
                 self.training_subcontroller.train_step()
-
-                # if self._child_thread_error_flag.is_set():
-                #     return
         except:
             logger.error('Unexpected error in main_loop():', exc_info=True)
             self.data.signal_error()
@@ -100,6 +96,8 @@ class LoopController:
                     self.self_play_subcontroller.add_self_play_worker(client_data)
                 elif client_type == ClientType.RATINGS_MANAGER:
                     self.ratings_subcontroller.add_ratings_manager(client_data)
+                elif client_type == ClientType.RATINGS_WORKER:
+                    pass  # nothing to do for now
                 else:
                     raise Exception(f'Unknown client type: {client_type}')
         except:

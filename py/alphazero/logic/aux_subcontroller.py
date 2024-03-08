@@ -2,17 +2,22 @@ from alphazero.logic.custom_types import  ClientData, ClientId, ClientType, Gene
     NewModelSubscriber
 from alphazero.logic.loop_control_data import LoopControlData
 from util.logging_util import get_logger
-from util.socket_util import recv_json, send_file, send_json, JsonDict
+from util.socket_util import recv_json, send_file, send_json, JsonDict, SocketRecvException, \
+    SocketSendException
 from util import subprocess_util
 
 from collections import defaultdict
 import os
 import sqlite3
 import threading
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional
 
 
 logger = get_logger()
+
+
+MsgHandler = Callable[[ClientData, JsonDict], bool]  # return True for loop-break
+DisconnectHandler = Callable[[ClientData], None]
 
 
 class AuxSubcontroller:
@@ -57,6 +62,7 @@ class AuxSubcontroller:
         ip_address, port = addr
 
         msg = recv_json(client_socket)
+        logger.debug(f'Received json message: {msg}')
         assert msg['type'] == 'handshake', f'Expected handshake from client, got {msg}'
         role = msg['role']
         client_type = ClientType(role)
@@ -99,27 +105,45 @@ class AuxSubcontroller:
             event.clear()
         logger.info('Pause acked!')
 
-    def pause_shared_gpu_self_play_clients(self):
-        """
-        TODO: pause ratings clients too
-        """
-        self_play_list = self.data.get_client_data_list(ClientType.SELF_PLAY_WORKER)
-        shared_list = [c for c in self_play_list if c.is_on_localhost() and
-                       c.cuda_device == self.data.params.cuda_device]
-        self.pause(shared_list)
+    def pause_shared_gpu_workers(self):
+        self_play_workers = self.data.get_client_data_list(ClientType.SELF_PLAY_WORKER)
+        ratings_workers = self.data.get_client_data_list(ClientType.RATINGS_WORKER)
+        workers = self_play_workers + ratings_workers
+        gpu_sharing_workers = [c for c in workers if c.is_on_localhost() and
+                               c.cuda_device == self.data.params.cuda_device]
+        self.pause(gpu_sharing_workers)
 
-    def reload_weights(self, generation: int):
+    def handle_new_model(self, generation: Generation):
+        self.reload_weights_for_self_play(generation)
+        self.unpause_ratings_workers(generation)
+        self.broadcast_new_model(generation)
+
+    def reload_weights_for_self_play(self, generation: int):
         clients = self.data.get_client_data_list(ClientType.SELF_PLAY_WORKER)
         if not clients:
             return
 
         model_filename = self.data.organizer.get_model_filename(generation)
-        logger.info('Issuing reload...')
+        logger.info('Issuing reload weights to self play workers...')
 
         data = {
             'type': 'reload_weights',
             'model_filename': model_filename,
             'generation': generation,
+        }
+
+        for client in clients:
+            send_json(client.sock, data)
+
+    def unpause_ratings_workers(self, generation: int):
+        clients = self.data.get_client_data_list(ClientType.RATINGS_WORKER)
+        if not clients:
+            return
+
+        logger.info('Issuing unpause to ratings workers...')
+
+        data = {
+            'type': 'unpause',
         }
 
         for client in clients:
@@ -141,3 +165,51 @@ class AuxSubcontroller:
         self.data.organizer.makedirs()
         self.copy_binary_to_bins_dir()
         self.data.init_server_socket()
+
+    def launch_recv_loop(self, msg_handler: MsgHandler, client_data: ClientData, thread_name: str,
+                         disconnect_handler: Optional[DisconnectHandler]=None):
+        """
+        Launches a daemon thread that loops, receiving json messages from the client and calling
+        msg_handler(client_data, msg) for each message.
+
+        Catches and logs client-disconnection exceptions. Includes a full stack-trace for the more
+        uncommon case where the disconnect is detected during a send operation, and a shorter
+        single-line message for the more common case where the disconnect is detected during a recv
+        operation.
+
+        Signals an error for other types of exceptions; this will cause the entire process to shut
+        down.
+        """
+        threading.Thread(target=self._launch_recv_loop_inner, name=thread_name,
+                         args=(msg_handler, disconnect_handler, client_data, thread_name),
+                         daemon=True).start()
+
+    def _launch_recv_loop_inner(
+            self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
+            client_data: ClientData, thread_name: str):
+        try:
+            while True:
+                msg = recv_json(client_data.sock)
+                if msg_handler(client_data, msg):
+                    break
+        except SocketRecvException:
+            logger.warn(
+                f'Encountered SocketRecvException in {thread_name} (client={client_data}):')
+        except SocketSendException:
+            logger.warn(
+                f'Encountered SocketSendException in {thread_name} (client={client_data}):',
+                exc_info=True)
+        except:
+            logger.error(
+                f'Unexpected error in {thread_name} (client={client_data}):', exc_info=True)
+            self.data.signal_error()
+        finally:
+            try:
+                if disconnect_handler is not None:
+                    disconnect_handler(client_data)
+                self.handle_disconnect(client_data)
+            except:
+                logger.error(
+                    f'Error handling disconnect in {thread_name} (client={client_data}):',
+                    exc_info=True)
+                self.data.signal_error()

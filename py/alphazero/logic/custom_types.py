@@ -17,6 +17,7 @@ class ClientType(Enum):
     SELF_PLAY_MANAGER = 'self-play-manager'
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_MANAGER = 'ratings-manager'
+    RATINGS_WORKER = 'ratings-worker'
 
 
 @dataclass
