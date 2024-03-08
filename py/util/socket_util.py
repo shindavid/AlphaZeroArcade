@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import socket
+import tempfile
 from typing import Any, Dict, Optional, Union
 
 
@@ -122,8 +123,10 @@ def recv_file(sock: socket.socket, filename: str) -> bytes:
     executable = bool(int.from_bytes(data, byteorder='big'))
 
     data = recvall(sock, length)
-    with open(filename, 'wb') as f:
+    tmp_filename = tempfile.mktemp()
+    with open(tmp_filename, 'wb') as f:
         f.write(data)
+    os.rename(tmp_filename, filename)
 
     if executable:
         os.chmod(filename, 0o755)
