@@ -142,7 +142,7 @@ class AuxSubcontroller:
         logger.info('Issuing reload weights to self play workers...')
 
         data = {
-            'type': 'reload_weights',
+            'type': 'reload-weights',
             'model_filename': model_filename,
             'generation': generation,
         }

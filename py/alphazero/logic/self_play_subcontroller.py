@@ -55,7 +55,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
 
     def add_self_play_manager(self, client_data: ClientData):
         reply = {
-            'type': 'handshake_ack',
+            'type': 'handshake-ack',
             'client_id': client_data.client_id,
         }
         self.aux_controller.add_asset_metadata_to_reply(reply)
@@ -66,7 +66,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
 
     def add_self_play_worker(self, client_data: ClientData):
         reply = {
-            'type': 'handshake_ack',
+            'type': 'handshake-ack',
             'client_id': client_data.client_id,
         }
         send_json(client_data.sock, reply)
@@ -85,7 +85,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'self-play-manager received json message: {msg}')
 
-        if msg_type == 'asset_request':
+        if msg_type == 'asset-request':
             self.aux_controller.send_asset(msg['asset'], client_data)
         elif msg_type == 'ready':
             self.handle_ready(client_data)

@@ -81,7 +81,7 @@ void LoopControllerClient::recv_handshake() {
   }
 
   std::string type = msg.at("type").as_string().c_str();
-  util::release_assert(type == "handshake_ack", "Expected handshake_ack, got %s", type.c_str());
+  util::release_assert(type == "handshake-ack", "Expected handshake-ack, got %s", type.c_str());
 
   int64_t client_id = msg.at("client_id").as_int64();
   util::release_assert(client_id >= 0, "Invalid client_id %ld", client_id);
@@ -156,7 +156,7 @@ void LoopControllerClient::loop() {
       send_pause_ack();
     } else if (type == "unpause") {
       unpause();
-    } else if (type == "reload_weights") {
+    } else if (type == "reload-weights") {
       std::string model_filename = msg.at("model_filename").as_string().c_str();
       cur_generation_ = msg.at("generation").as_int64();
       pause();

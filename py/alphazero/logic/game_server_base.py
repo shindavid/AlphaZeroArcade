@@ -134,7 +134,7 @@ class GameServerBase:
 
     def recv_handshake(self):
         data = recv_json(self.loop_controller_socket, timeout=1)
-        assert data['type'] == 'handshake_ack', data
+        assert data['type'] == 'handshake-ack', data
 
         self.client_id = data['client_id']
         logger.info(f'Received client id assignment: {self.client_id}')
@@ -158,7 +158,7 @@ class GameServerBase:
 
         for tgt, sha256 in requested_assets:
             data = {
-                'type': 'asset_request',
+                'type': 'asset-request',
                 'asset': tgt,
             }
             send_json(self.loop_controller_socket, data)
