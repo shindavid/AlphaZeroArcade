@@ -6,6 +6,7 @@ from util.socket_util import JsonDict
 from util import subprocess_util
 
 from dataclasses import dataclass
+import logging
 import os
 import subprocess
 
@@ -25,6 +26,9 @@ class SelfPlayServer(GameServerBase):
         super().__init__(params, common_params, ClientType.SELF_PLAY_MANAGER)
 
     def handle_msg(self, msg: JsonDict) -> bool:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'self-play-manager received json message: {msg}')
+
         msg_type = msg['type']
         if msg_type == 'start-gen0':
             self.run_func_in_new_thread(self.start_gen0, args=(msg,))

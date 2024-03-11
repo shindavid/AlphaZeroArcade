@@ -7,6 +7,7 @@ from util.socket_util import JsonDict
 from util import subprocess_util
 
 from dataclasses import dataclass
+import logging
 import subprocess
 
 
@@ -49,6 +50,9 @@ class RatingsServer(GameServerBase):
         self.request_work()
 
     def handle_msg(self, msg: JsonDict) -> bool:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'ratings-manager received json message: {msg}')
+
         msg_type = msg['type']
         if msg_type == 'match-request':
             self.run_func_in_new_thread(self.handle_match_request, args=(msg,))
