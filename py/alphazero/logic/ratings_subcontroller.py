@@ -417,6 +417,8 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         if msg_type == 'pause_ack':
             self.aux_controller.handle_pause_ack(client_data)
+        elif msg_type == 'done':
+            return True
         return False
 
     def commit_rating(self, gen: int, rating: float):
@@ -516,7 +518,6 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         n_taken_gens = len(taken_gens)
         if n_taken_gens < 2:
-            assert latest_gen < 2
             logger.debug(f'Waiting for new model (latest={latest_gen}, n_taken:{n_taken_gens})...')
             return None
 

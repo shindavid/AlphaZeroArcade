@@ -65,6 +65,12 @@ LoopControllerClient::~LoopControllerClient() {
   delete thread_;
 }
 
+void LoopControllerClient::send_done() {
+  boost::json::object msg;
+  msg["type"] = "done";
+  send(msg);
+}
+
 void LoopControllerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";

@@ -61,6 +61,7 @@ class LoopControllerClient {
   template <typename T>
   void add_listener(T* listener);
 
+  void send_done();
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
   void notify_pause_received(PauseListener* listener);
