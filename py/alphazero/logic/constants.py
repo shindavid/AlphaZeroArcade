@@ -109,12 +109,4 @@ RATINGS_TABLE_CREATE_CMDS = [
             )""",
 
     """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (mcts_gen, mcts_iters)""",
-
-    """CREATE TABLE IF NOT EXISTS x_values (
-            mcts_gen INT,
-            n_games INT,
-            runtime FLOAT,
-            n_evaluated_positions BIGINT,
-            n_batches_evaluated INT
-            )""",
 ]

@@ -88,20 +88,25 @@ class RatingData:
 
         conn = sqlite3.connect(organizer.ratings_db_filename)
         cursor = conn.cursor()
-
         res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? '
                              'ORDER BY mcts_gen', (mcts_iters,))
-
         gen_ratings = res.fetchall()
+        conn.close()
 
-        x_values_columns = ['mcts_gen', 'n_games', 'runtime', 'n_evaluated_positions',
-                            'n_batches_evaluated']
-        res = cursor.execute('SELECT %s FROM x_values ORDER BY mcts_gen' % (
-            ', '.join(x_values_columns)))
-        x_values = res.fetchall()
+        x_select_vars = ['timestamps.gen', 'positions_evaluated', 'batches_evaluated',
+                         'games', 'end_timestamp - start_timestamp']
+        x_select_var_str = ', '.join(x_select_vars)
+
+        x_columns = ['mcts_gen', 'n_evaluated_positions', 'n_batches_evaluated', 'n_games', 'runtime']
+        x_query = f'SELECT {x_select_var_str} FROM self_play_metadata JOIN timestamps USING (gen)'
+
+        conn = sqlite3.connect(organizer.self_play_db_filename)
+        cursor = conn.cursor()
+        x_values = cursor.execute(x_query).fetchall()
+        conn.close()
 
         gen_df = pd.DataFrame(gen_ratings, columns=['mcts_gen', 'rating']).set_index('mcts_gen')
-        x_df = pd.DataFrame(x_values, columns=x_values_columns).set_index('mcts_gen')
+        x_df = pd.DataFrame(x_values, columns=x_columns).set_index('mcts_gen')
 
         if len(x_df['runtime']) > 0:
             # Earlier versions stored runtimes in sec, not ns. This heuristic corrects the
@@ -122,8 +127,6 @@ class RatingData:
             x_df[col] = x_df[col].cumsum()
 
         gen_df = gen_df.join(x_df, how='inner').reset_index()
-
-        conn.close()
 
         tag = common_params.tag
         self.tag = tag

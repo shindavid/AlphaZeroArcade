@@ -230,68 +230,7 @@ class RatingsSubcontroller(NewModelSubscriber):
             if self._started:
                 return
             self._started = True
-
-            # Perform this in a separate thread because we want to use
-            # ConnectionPool.close_connections() without interfering with other subcontrollers.
-            thread = threading.Thread(target=self._start_helper, name='ratings-start', daemon=True)
-            thread.start()
-            thread.join()
-
-    def _start_helper(self):
-        self.dump_x_var_data()
-        self.load_past_data()
-
-    def dump_x_var_data(self):
-        """
-        Transfer self-play metadata from the self-play db to the ratings db.
-        """
-        logger.info(f'Dumping ratings x-data...')
-        conn = self.ratings_db_conn_pool.get_connection()
-        c = conn.cursor()
-
-        mcts_gen_set = set()
-        res = c.execute('SELECT mcts_gen FROM x_values')
-        for gen in res.fetchall():
-            mcts_gen_set.add(gen[0])
-
-        latest_gen = self.organizer.get_latest_generation()
-        full_mcts_gen_set = set(range(1, latest_gen + 1))
-
-        missing_mcts_gen_set = full_mcts_gen_set - mcts_gen_set
-        if not missing_mcts_gen_set:
-            return
-        missing_mcts_gen_list = list(missing_mcts_gen_set)
-
-        placeholders = ', '.join('?' * len(missing_mcts_gen_list))
-        query1 = ('SELECT gen, positions_evaluated, batches_evaluated, games FROM self_play_metadata '
-                  'WHERE gen IN (%s)' % placeholders)
-        query2 = ('SELECT gen, start_timestamp, end_timestamp FROM timestamps '
-                  'WHERE gen IN (%s)' % placeholders)
-
-        with self.data.self_play_db_conn_pool.db_lock:
-            training_db_conn = self.data.self_play_db_conn_pool.get_connection()
-
-            c2 = training_db_conn.cursor()
-            c2.execute(query1, missing_mcts_gen_list)
-            results1 = list(c2.fetchall())
-
-            c2.execute(query2, missing_mcts_gen_list)
-            results2 = list(c2.fetchall())
-
-            self.data.self_play_db_conn_pool.close_connections()
-
-        runtime_dict = defaultdict(int)
-        for gen, start_timestamp, end_timestamp in results2:
-            runtime_dict[gen] += end_timestamp - start_timestamp
-
-        values = []
-        for gen, n_evaluated_positions, n_batches_evaluated, n_games in results1:
-            runtime = runtime_dict[gen]
-            x_value_tuple = (gen, n_games, runtime, n_evaluated_positions, n_batches_evaluated)
-            values.append(x_value_tuple)
-
-        c.executemany('INSERT INTO x_values VALUES (?, ?, ?, ?, ?)', values)
-        conn.commit()
+            self.load_past_data()
 
     def _estimate_rating(self, gen: Generation) -> Optional[float]:
         """
