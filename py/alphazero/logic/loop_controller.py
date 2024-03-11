@@ -97,7 +97,7 @@ class LoopController:
                 elif client_type == ClientType.RATINGS_MANAGER:
                     self.ratings_subcontroller.add_ratings_manager(client_data)
                 elif client_type == ClientType.RATINGS_WORKER:
-                    pass  # nothing to do for now
+                    self.ratings_subcontroller.add_ratings_worker(client_data)
                 else:
                     raise Exception(f'Unknown client type: {client_type}')
         except:

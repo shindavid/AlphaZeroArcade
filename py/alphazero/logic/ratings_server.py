@@ -77,6 +77,7 @@ class RatingsServer(GameServerBase):
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.RATINGS_WORKER.value,
+            '--cuda-device', self.cuda_device,
             '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',

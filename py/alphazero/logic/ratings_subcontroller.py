@@ -354,6 +354,15 @@ class RatingsSubcontroller(NewModelSubscriber):
             self.manager_msg_handler, client_data, 'ratings-manager',
             disconnect_handler=self.handle_manager_disconnect)
 
+    def add_ratings_worker(self, client_data: ClientData):
+        reply = {
+            'type': 'handshake_ack',
+            'client_id': client_data.client_id,
+        }
+        send_json(client_data.sock, reply)
+        self.aux_controller.launch_recv_loop(
+            self.worker_msg_handler, client_data, 'ratings-worker')
+
     def send_match_request(self, client_data: ClientData):
         with self._lock:
             rating_data = self._owner_dict.get(client_data.client_id, None)
@@ -398,6 +407,16 @@ class RatingsSubcontroller(NewModelSubscriber):
             self.send_match_request(client_data)
         elif msg_type == 'match-result':
             self.handle_match_result(msg, client_data)
+        return False
+
+    def worker_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
+        msg_type = msg['type']
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f'self-play-worker received json message: {msg}')
+
+        if msg_type == 'pause_ack':
+            self.aux_controller.handle_pause_ack(client_data)
         return False
 
     def commit_rating(self, gen: int, rating: float):

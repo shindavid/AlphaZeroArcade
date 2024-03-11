@@ -10,7 +10,7 @@ from collections import defaultdict
 import os
 import sqlite3
 import threading
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Set
 
 
 logger = get_logger()
@@ -27,8 +27,9 @@ class AuxSubcontroller:
     def __init__(self, data: LoopControlData):
         self.data = data
         self._lock = threading.Lock()
+        self._pauses_acked_cv = threading.Condition(self._lock)
+        self._pause_set: Set[ClientId] = set()
         self._new_model_subscribers: List[NewModelSubscriber] = []
-        self._pause_ack_events: Dict[ClientId, threading.Event] = defaultdict(threading.Event)
 
     def subscribe_to_new_model_announcements(self, subscriber: NewModelSubscriber):
         with self._lock:
@@ -45,6 +46,8 @@ class AuxSubcontroller:
         self.data.remove_client(client_data.client_id)
         self.data.close_db_conns(threading.get_ident())
         client_data.sock.close()
+        with self._lock:
+            self._pause_set.discard(client_data.client_id)
         logger.info(f'Disconnect complete!')
 
     def send_asset(self, tgt: str, client_data: ClientData):
@@ -85,25 +88,36 @@ class AuxSubcontroller:
         logger.info(f'Accepted client: {client_data}')
         return client_data
 
+    def mark_as_paused(self, client_id: ClientId):
+        with self._lock:
+            self._pause_set.add(client_id)
+
     def handle_pause_ack(self, client_data: ClientData):
         with self._lock:
-            self._pause_ack_events[client_data.client_id].set()
+            self._pause_set.discard(client_data.client_id)
+            if not self._pause_set:
+                self._pauses_acked_cv.notify_all()
 
     def pause(self, clients: List[ClientData]):
+        logger.debug(f'Pausing {len(clients)} shared gpu workers...')
+        logger.debug(f'Clients: {list(map(str, clients))}')
         if not clients:
             return
-        logger.info('Issuing pause...')
         data = {'type': 'pause'}
 
         for client in clients:
-            send_json(client.sock, data)
+            try:
+                self.mark_as_paused(client.client_id)
+                send_json(client.sock, data)
+            except SocketSendException:
+                logger.warn(f'Error sending pause to {client}, ignoring...')
+                self.handle_disconnect(client)
 
-        for client in clients:
-            with self._lock:
-                event = self._pause_ack_events[client.client_id]
-            event.wait()
-            event.clear()
-        logger.info('Pause acked!')
+    def wait_for_pause_acks(self):
+        logger.debug(f'Waiting for pause acks...')
+        with self._pauses_acked_cv:
+            self._pauses_acked_cv.wait_for(lambda: not self._pause_set)
+        logger.debug('All pause acks received!')
 
     def pause_shared_gpu_workers(self):
         self_play_workers = self.data.get_client_data_list(ClientType.SELF_PLAY_WORKER)
@@ -112,6 +126,7 @@ class AuxSubcontroller:
         gpu_sharing_workers = [c for c in workers if c.is_on_localhost() and
                                c.cuda_device == self.data.params.cuda_device]
         self.pause(gpu_sharing_workers)
+        self.wait_for_pause_acks()
 
     def handle_new_model(self, generation: Generation):
         self.reload_weights_for_self_play(generation)
