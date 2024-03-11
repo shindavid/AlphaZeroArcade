@@ -40,12 +40,12 @@ class AuxSubcontroller:
             subscriber.handle_new_model(generation)
 
     def handle_disconnect(self, client_data: ClientData):
+        logger.info(f'Handling disconnect: {client_data}...')
         self.data.remove_client(client_data.client_id)
         self.data.close_db_conns(threading.get_ident())
         client_data.socket.close()
         with self._lock:
             self._pause_set.discard(client_data.client_id)
-        logger.info(f'Disconnected: {client_data}...')
 
     def send_asset(self, tgt: str, client_data: ClientData):
         all_assets = [self.data.binary_asset] + self.data.extra_assets
