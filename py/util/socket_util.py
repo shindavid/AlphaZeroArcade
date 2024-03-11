@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import tempfile
+import threading
 from typing import Any, Dict, Optional, Union
 
 
@@ -190,3 +191,47 @@ def send_file(sock: socket.socket, filename: str):
     except socket.error:
         raise SocketSendException(
             'socket.sendall() failure during send_file() - socket likely closed by peer')
+
+
+class Socket:
+    """
+    A wrapper around a socket.socket object that has read/write mutexes.
+    """
+    def __init__(self, sock: socket.socket):
+        self._sock = sock
+        self._read_mutex = threading.Lock()
+        self._write_mutex = threading.Lock()
+
+    def getsockname(self):
+        return self._sock.getsockname()
+
+    def close(self):
+        self._sock.close()
+
+    def recv_json(self, timeout: Optional[float] = None) -> Optional[JsonDict]:
+        """
+        Mutex-protected call to socket_util.recv_json().
+        """
+        with self._read_mutex:
+            return recv_json(self._sock, timeout=timeout)
+
+    def send_json(self, data: JsonData):
+        """
+        Mutex-protected call to socket_util.send_json().
+        """
+        with self._write_mutex:
+            send_json(self._sock, data)
+
+    def recv_file(self, filename: str):
+        """
+        Mutex-protected call to socket_util.recv_file().
+        """
+        with self._read_mutex:
+            recv_file(self._sock, filename)
+
+    def send_file(self, filename: str):
+        """
+        Mutex-protected call to socket_util.send_file().
+        """
+        with self._write_mutex:
+            send_file(self._sock, filename)

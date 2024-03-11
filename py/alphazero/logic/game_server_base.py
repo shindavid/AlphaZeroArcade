@@ -6,8 +6,7 @@ from game_index import get_game_spec
 from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
-from util.socket_util import JsonDict, SocketRecvException, SocketSendException, recv_file, \
-    recv_json, send_json
+from util.socket_util import JsonDict, Socket, SocketRecvException, SocketSendException
 
 import abc
 from dataclasses import dataclass, fields
@@ -16,6 +15,7 @@ import socket
 import sys
 import threading
 import time
+from typing import Optional
 
 
 logger = get_logger()
@@ -63,7 +63,7 @@ class GameServerBase:
         self.cuda_device = params.cuda_device
         self.client_type = client_type
 
-        self.loop_controller_socket = None
+        self.loop_controller_socket: Optional[Socket] = None
         self.child_process = None
         self.client_id = None
         self.shutdown_code = None
@@ -74,10 +74,10 @@ class GameServerBase:
 
     def init_socket(self):
         loop_controller_address = (self.loop_controller_host, self.loop_controller_port)
-        loop_controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        loop_controller_socket.connect(loop_controller_address)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(loop_controller_address)
 
-        self.loop_controller_socket = loop_controller_socket
+        self.loop_controller_socket = Socket(sock)
 
     def run(self):
         self.init_socket()
@@ -130,10 +130,10 @@ class GameServerBase:
             'start_timestamp': time.time_ns(),
         }
 
-        send_json(self.loop_controller_socket, data)
+        self.loop_controller_socket.send_json(data)
 
     def recv_handshake(self):
-        data = recv_json(self.loop_controller_socket, timeout=1)
+        data = self.loop_controller_socket.recv_json(timeout=1)
         assert data['type'] == 'handshake-ack', data
 
         self.client_id = data['client_id']
@@ -161,11 +161,11 @@ class GameServerBase:
                 'type': 'asset-request',
                 'asset': tgt,
             }
-            send_json(self.loop_controller_socket, data)
+            self.loop_controller_socket.send_json(data)
 
             dst = os.path.join(runtime_dir, tgt)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
-            recv_file(self.loop_controller_socket, dst)
+            self.loop_controller_socket.recv_file(dst)
             logger.info(f'Received asset {tgt}')
             if sha256sum(dst) != sha256:
                 raise Exception(f'Hash mismatch for asset {tgt}')
@@ -176,13 +176,13 @@ class GameServerBase:
         data = {
             'type': 'ready',
         }
-        send_json(self.loop_controller_socket, data)
+        self.loop_controller_socket.send_json(data)
 
     def recv_loop(self):
         try:
             self.recv_loop_prelude()
             while True:
-                msg = recv_json(self.loop_controller_socket)
+                msg = self.loop_controller_socket.recv_json()
                 if self.handle_msg(msg):
                     break
         except SocketRecvException:

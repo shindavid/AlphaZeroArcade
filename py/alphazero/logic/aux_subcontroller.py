@@ -2,15 +2,13 @@ from alphazero.logic.custom_types import  ClientData, ClientId, ClientType, Gene
     NewModelSubscriber
 from alphazero.logic.loop_control_data import LoopControlData
 from util.logging_util import get_logger
-from util.socket_util import recv_json, send_file, send_json, JsonDict, SocketRecvException, \
-    SocketSendException
+from util.socket_util import recv_json, JsonDict, Socket, SocketRecvException, SocketSendException
 from util import subprocess_util
 
-from collections import defaultdict
 import os
 import sqlite3
 import threading
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, List, Optional, Set
 
 
 logger = get_logger()
@@ -45,7 +43,7 @@ class AuxSubcontroller:
         logger.info(f'Handling disconnect for {client_data}...')
         self.data.remove_client(client_data.client_id)
         self.data.close_db_conns(threading.get_ident())
-        client_data.sock.close()
+        client_data.socket.close()
         with self._lock:
             self._pause_set.discard(client_data.client_id)
         logger.info(f'Disconnect complete!')
@@ -58,7 +56,7 @@ class AuxSubcontroller:
 
         asset = requested_assets[0]
         src = asset.src_path
-        send_file(client_data.sock, src)
+        client_data.socket.send_file(src)
 
     def accept_client(self, conn: sqlite3.Connection) -> ClientData:
         client_socket, addr = self.data.server_socket.accept()
@@ -81,7 +79,7 @@ class AuxSubcontroller:
         conn.commit()
 
         client_data = ClientData(
-            client_type, client_id, client_socket, start_timestamp, cuda_device)
+            client_type, client_id, Socket(client_socket), start_timestamp, cuda_device)
 
         self.data.add_client(client_data)
 
@@ -108,7 +106,7 @@ class AuxSubcontroller:
         for client in clients:
             try:
                 self.mark_as_paused(client.client_id)
-                send_json(client.sock, data)
+                client.socket.send_json(data)
             except SocketSendException:
                 logger.warn(f'Error sending pause to {client}, ignoring...')
                 self.handle_disconnect(client)
@@ -148,7 +146,7 @@ class AuxSubcontroller:
         }
 
         for client in clients:
-            send_json(client.sock, data)
+            client.socket.send_json(data)
 
     def unpause_ratings_workers(self, generation: int):
         clients = self.data.get_client_data_list(ClientType.RATINGS_WORKER)
@@ -162,7 +160,7 @@ class AuxSubcontroller:
         }
 
         for client in clients:
-            send_json(client.sock, data)
+            client.socket.send_json(data)
 
     def copy_binary_to_bins_dir(self):
         src = self.data.binary_asset.src_path
@@ -204,7 +202,7 @@ class AuxSubcontroller:
             client_data: ClientData, thread_name: str):
         try:
             while True:
-                msg = recv_json(client_data.sock)
+                msg = client_data.socket.recv_json()
                 if msg_handler(client_data, msg):
                     break
         except SocketRecvException:

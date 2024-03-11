@@ -1,7 +1,8 @@
 import abc
 from dataclasses import dataclass
 from enum import Enum
-import socket
+
+from util.socket_util import Socket
 
 
 Generation = int
@@ -24,17 +25,17 @@ class ClientType(Enum):
 class ClientData:
     client_type: ClientType
     client_id: ClientId
-    sock: socket.socket
+    socket: Socket
     start_timestamp: int
     cuda_device: str  # empty str if no cuda device
 
     @property
     def ip_address(self):
-        return self.sock.getsockname()[0]
+        return self.socket.getsockname()[0]
 
     @property
     def port(self):
-        return self.sock.getsockname()[1]
+        return self.socket.getsockname()[1]
 
     def is_on_localhost(self):
         return self.ip_address == '127.0.0.1'

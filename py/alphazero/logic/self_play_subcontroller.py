@@ -3,7 +3,7 @@ from alphazero.logic.custom_types import ClientData, ClientId, Generation
 from alphazero.logic.loop_control_data import LoopControlData
 from alphazero.logic.training_subcontroller import TrainingSubcontroller
 from util.logging_util import get_logger
-from util.socket_util import send_json, JsonDict
+from util.socket_util import JsonDict
 
 from collections import defaultdict
 import logging
@@ -59,7 +59,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             'client_id': client_data.client_id,
         }
         self.aux_controller.add_asset_metadata_to_reply(reply)
-        send_json(client_data.sock, reply)
+        client_data.socket.send_json(reply)
         self.aux_controller.launch_recv_loop(
             self.manager_msg_handler, client_data, 'self-play-manager',
             disconnect_handler=self.handle_manager_disconnect)
@@ -69,7 +69,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             'type': 'handshake-ack',
             'client_id': client_data.client_id,
         }
-        send_json(client_data.sock, reply)
+        client_data.socket.send_json(reply)
         self.aux_controller.launch_recv_loop(
             self.worker_msg_handler, client_data, 'self-play-worker')
 
@@ -161,7 +161,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             'max_rows': num_rows,
         }
 
-        send_json(client_data.sock, data)
+        client_data.socket.send_json(data)
 
     def launch_self_play(self, client_data: ClientData):
         with self._gen1_lock:
@@ -182,7 +182,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
         }
 
         logger.info(f'Requesting {client_data} to launch self-play...')
-        send_json(client_data.sock, data)
+        client_data.socket.send_json(data)
 
     def handle_ready(self, client_data: ClientData):
         if self.launch_gen0_if_necessary(client_data):

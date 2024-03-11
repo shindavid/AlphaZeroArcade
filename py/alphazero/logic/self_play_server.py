@@ -2,7 +2,7 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
 from util.logging_util import get_logger
-from util.socket_util import JsonDict, send_json
+from util.socket_util import JsonDict
 from util import subprocess_util
 
 from dataclasses import dataclass
@@ -88,7 +88,7 @@ class SelfPlayServer(GameServerBase):
         data = {
             'type': 'gen0-complete',
         }
-        send_json(self.loop_controller_socket, data)
+        self.loop_controller_socket.send_json(data)
 
     def start(self, msg):
         assert self.child_process is None

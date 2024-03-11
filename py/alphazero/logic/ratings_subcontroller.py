@@ -6,7 +6,7 @@ from alphazero.logic.loop_control_data import LoopControlData
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
-from util.socket_util import send_json, JsonDict
+from util.socket_util import JsonDict
 from util.sqlite3_util import ConnectionPool
 
 from collections import defaultdict
@@ -346,7 +346,7 @@ class RatingsSubcontroller(NewModelSubscriber):
             'client_id': client_data.client_id,
         }
         self.aux_controller.add_asset_metadata_to_reply(reply)
-        send_json(client_data.sock, reply)
+        client_data.socket.send_json(reply)
 
         self.start()
         logger.info(f'Starting ratings-recv-loop for {client_data}...')
@@ -359,7 +359,7 @@ class RatingsSubcontroller(NewModelSubscriber):
             'type': 'handshake-ack',
             'client_id': client_data.client_id,
         }
-        send_json(client_data.sock, reply)
+        client_data.socket.send_json(reply)
         self.aux_controller.launch_recv_loop(
             self.worker_msg_handler, client_data, 'ratings-worker')
 
@@ -388,7 +388,7 @@ class RatingsSubcontroller(NewModelSubscriber):
             'n_games': N_GAMES,
             'n_mcts_iters': N_MCTS_ITERS,
             }
-        send_json(client_data.sock, data)
+        client_data.socket.send_json(data)
 
     def handle_manager_disconnect(self, client_data: ClientData):
         with self._lock:

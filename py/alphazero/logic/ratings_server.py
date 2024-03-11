@@ -3,12 +3,11 @@ from alphazero.logic.custom_types import ClientType
 from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
 from alphazero.logic.ratings import extract_match_record
 from util.logging_util import get_logger
-from util.socket_util import JsonDict, send_json
+from util.socket_util import JsonDict
 from util import subprocess_util
 
 from dataclasses import dataclass
 import subprocess
-import threading
 
 
 logger = get_logger()
@@ -44,7 +43,7 @@ class RatingsServer(GameServerBase):
         data = {
             'type': 'work-request',
             }
-        send_json(self.loop_controller_socket, data)
+        self.loop_controller_socket.send_json(data)
 
     def recv_loop_prelude(self):
         self.request_work()
@@ -108,7 +107,7 @@ class RatingsServer(GameServerBase):
             'ref_strength': ref_strength,
         }
 
-        send_json(self.loop_controller_socket, data)
+        self.loop_controller_socket.send_json(data)
         self.child_process = None
         self.request_work()
 
