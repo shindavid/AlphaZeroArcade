@@ -199,8 +199,8 @@ class Socket:
     """
     def __init__(self, sock: socket.socket):
         self._sock = sock
-        self._read_mutex = threading.Lock()
-        self._write_mutex = threading.Lock()
+        self._recv_mutex = threading.Lock()
+        self._send_mutex = threading.Lock()
 
     def getsockname(self):
         return self._sock.getsockname()
@@ -208,30 +208,44 @@ class Socket:
     def close(self):
         self._sock.close()
 
+    def recv_mutex(self):
+        """
+        Returns the recv mutex. This can be used in conjunction with standalone socket_util.recv_*()
+        calls if you want to hold the mutex across multiple calls.
+        """
+        return self._recv_mutex
+
+    def send_mutex(self):
+        """
+        Returns the send mutex. This can be used in conjunction with standalone socket_util.send_*()
+        calls if you want to hold the mutex across multiple calls.
+        """
+        return self._send_mutex
+
     def recv_json(self, timeout: Optional[float] = None) -> Optional[JsonDict]:
         """
         Mutex-protected call to socket_util.recv_json().
         """
-        with self._read_mutex:
+        with self._recv_mutex:
             return recv_json(self._sock, timeout=timeout)
 
     def send_json(self, data: JsonData):
         """
         Mutex-protected call to socket_util.send_json().
         """
-        with self._write_mutex:
+        with self._send_mutex:
             send_json(self._sock, data)
 
     def recv_file(self, filename: str):
         """
         Mutex-protected call to socket_util.recv_file().
         """
-        with self._read_mutex:
+        with self._recv_mutex:
             recv_file(self._sock, filename)
 
     def send_file(self, filename: str):
         """
         Mutex-protected call to socket_util.send_file().
         """
-        with self._write_mutex:
+        with self._send_mutex:
             send_file(self._sock, filename)
