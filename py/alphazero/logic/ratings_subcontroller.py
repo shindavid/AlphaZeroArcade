@@ -516,10 +516,13 @@ class RatingsSubcontroller(NewModelSubscriber):
             logger.debug(f'Gen-1 not yet rated, rating it...')
             return 1
 
-        n_taken_gens = len(taken_gens)
-        if n_taken_gens < 2:
-            logger.debug(f'Waiting for new model (latest={latest_gen}, n_taken:{n_taken_gens})...')
+        if latest_gen == 1:
+            logger.debug(f'Waiting for new model (latest={latest_gen})...')
             return None
+
+        if len(taken_gens) == 1:
+            logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
+            return latest_gen
 
         left, right = find_largest_gap(taken_gens)
         gap = right - left
@@ -535,7 +538,7 @@ class RatingsSubcontroller(NewModelSubscriber):
             if latest_gen > right:
                 logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
                 return latest_gen
-            logger.debug(f'Waiting for new model (latest={latest_gen}, n_taken:{n_taken_gens})...')
+            logger.debug(f'Waiting for new model (latest={latest_gen})...')
             return None
 
         mid = (left + right) // 2
