@@ -89,6 +89,9 @@ def recvall(sock: socket.socket, n: int, timeout: Optional[float]=None) -> bytea
             if not packet:
                 raise SocketRecvException('Socket gracefully closed by peer')
             data.extend(packet)
+    except socket.error:
+        raise SocketRecvException(
+            'socket.recv() failure during recvall() - socket likely closed by peer')
     finally:
         sock.settimeout(None)
 
