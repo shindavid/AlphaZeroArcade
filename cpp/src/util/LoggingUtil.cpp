@@ -21,8 +21,9 @@ void init(const Params& params) {
   namespace keywords = boost::log::keywords;
 
   if (!params.log_filename.empty()) {
-    auto f = params.log_filename.c_str();
-    boost::log::add_file_log(f, keywords::auto_flush = true,
+    boost::log::add_file_log(keywords::file_name = params.log_filename.c_str(),
+                             keywords::auto_flush = true,
+                             keywords::open_mode = std::ios_base::app,
                              keywords::format = "%TimeStamp% %Message%");
   } else {
     boost::log::add_console_log(std::cout, keywords::format = "%TimeStamp% %Message%");
