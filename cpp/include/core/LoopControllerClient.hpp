@@ -62,6 +62,7 @@ class LoopControllerClient {
   template <typename T>
   void add_listener(T* listener);
 
+  void shutdown();
   void send_done();
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
@@ -107,6 +108,7 @@ class LoopControllerClient {
   mutable std::mutex pause_mutex_;
   bool pause_complete_ = false;
   bool paused_ = false;
+  bool shutdown_initiated_ = false;
 };
 
 }  // namespace core

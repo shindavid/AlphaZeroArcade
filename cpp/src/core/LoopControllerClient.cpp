@@ -58,7 +58,13 @@ LoopControllerClient::LoopControllerClient(const Params& params)
   thread_ = new std::thread([this]() { loop(); });
 }
 
-LoopControllerClient::~LoopControllerClient() {
+LoopControllerClient::~LoopControllerClient() { shutdown(); }
+
+void LoopControllerClient::shutdown() {
+  if (shutdown_initiated_) return;
+
+  shutdown_initiated_ = true;
+  send_done();
   socket_->shutdown();
   if (thread_ && thread_->joinable()) {
     thread_->detach();
@@ -158,7 +164,9 @@ void LoopControllerClient::loop() {
   while (true) {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
-      LOG_INFO << "Cmd-server socket closed";
+      if (!shutdown_initiated_) {
+        LOG_INFO << "Cmd-server socket closed";
+      }
       break;
     }
 

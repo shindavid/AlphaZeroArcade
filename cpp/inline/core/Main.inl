@@ -82,7 +82,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
 
     core::LoopControllerClient* client = core::LoopControllerClient::get();
     if (client) {
-      client->send_done();
+      client->shutdown();
     }
   } catch (const util::CleanException& e) {
     std::cerr << "Caught a CleanException: ";
