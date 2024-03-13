@@ -16,7 +16,7 @@ add_definitions(-DNDEBUG)
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
-find_package(Boost COMPONENTS program_options filesystem json REQUIRED)
+find_package(Boost COMPONENTS program_options filesystem json log log_setup REQUIRED)
 
 set(CMAKE_CXX_STANDARD  20)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_FLAGS} -fconcepts-diagnostics-depth=5 -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")

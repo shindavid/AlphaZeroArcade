@@ -87,14 +87,15 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
   search_path_.emplace_back(tree, edge);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id());
+    std::ostringstream ss;
+    ss << thread_id_whitespace();
     if (edge) {
-      printer << __func__ << util::std_array_to_string(edge->action(), "(", ",", ")");
+      ss << __func__ << util::std_array_to_string(edge->action(), "(", ",", ")");
     } else {
-      printer << __func__ << "()";
+      ss << __func__ << "()";
     }
-    printer << " " << search_path_str() << " cp=" << (int)tree->stable_data().current_player
-            << std::endl;
+    ss << " " << search_path_str() << " cp=" << (int)tree->stable_data().current_player;
+    LOG_INFO << ss.str();
   }
 
   const auto& stable_data = tree->stable_data();
@@ -108,8 +109,7 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
 
   if (data.backpropagated_virtual_loss) {
     if (mcts::kEnableDebug) {
-      util::ThreadSafePrinter printer(thread_id());
-      printer << "hit leaf node" << std::endl;
+      LOG_INFO << thread_id_whitespace() << "hit leaf node";
     }
     backprop_with_virtual_undo(evaluation->value_prob_distr());
   } else {
@@ -158,8 +158,7 @@ inline void SearchThread<GameState, Tensorizor>::virtual_backprop() {
   profiler_.record(SearchThreadRegion::kVirtualBackprop);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << std::endl;
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
   for (int i = search_path_.size() - 1; i >= 0; --i) {
@@ -173,8 +172,8 @@ inline void SearchThread<GameState, Tensorizor>::pure_backprop(const ValueArray&
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << " "
+             << value.transpose();
   }
 
   Node* last_node = search_path_.back().node;
@@ -195,8 +194,8 @@ void SearchThread<GameState, Tensorizor>::backprop_with_virtual_undo(const Value
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << " " << value.transpose() << std::endl;
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << " "
+             << value.transpose();
   }
 
   Node* last_node = search_path_.back().node;
@@ -216,8 +215,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void SearchThread<GameState, Tensorizor>::short_circuit_backprop(edge_t* last_edge) {
   // short-circuit
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << std::endl;
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
   last_edge->increment_count();
@@ -259,8 +257,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
   profiler_.record(SearchThreadRegion::kEvaluateUnset);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id_);
-    printer << __func__ << " " << search_path_str() << std::endl;
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
   data->backpropagated_virtual_loss = true;
@@ -340,7 +337,8 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
   PUCT.maxCoeff(&argmax_index);
 
   if (mcts::kEnableDebug) {
-    util::ThreadSafePrinter printer(thread_id());
+    std::ostringstream ss;
+    ss << thread_id_whitespace();
 
     const auto& tree_stats = tree->stats();
     core::seat_index_t cp = tree->stable_data().current_player;
@@ -359,14 +357,14 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     std::vector<std::string> s1_lines;
     boost::split(s1_lines, s1, boost::is_any_of("\n"));
 
-    printer << "real_avg: " << s1_lines[0] << std::endl;
-    printer << "virt_avg: " << s1_lines[1] << std::endl;
+    ss << "real_avg: " << s1_lines[0] << break_plus_thread_id_whitespace();
+    ss << "virt_avg: " << s1_lines[1] << break_plus_thread_id_whitespace();
 
     std::string cp_line = s1_lines[2];
     std::replace(cp_line.begin(), cp_line.end(), '0', ' ');
     std::replace(cp_line.begin(), cp_line.end(), '1', '*');
 
-    printer << "cp:       " << cp_line << std::endl;
+    ss << "cp:       " << cp_line << break_plus_thread_id_whitespace();
 
     using ScalarT = typename PVec::Scalar;
     constexpr int kNumRows1 = PolicyShape::count;
@@ -411,25 +409,27 @@ core::action_index_t SearchThread<GameState, Tensorizor>::get_best_action_index(
     boost::split(s2_lines, s2, boost::is_any_of("\n"));
 
     r = 0;
-    printer << "move:  " << s2_lines[r++] << std::endl;
+    ss << "move:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
     while (r < kNumRows1) {
-      printer << "       " << s2_lines[r++] << std::endl;
+      ss << "       " << s2_lines[r++] << break_plus_thread_id_whitespace();
     }
-    printer << "P:     " << s2_lines[r++] << std::endl;
-    printer << "V:     " << s2_lines[r++] << std::endl;
-    printer << "PW:    " << s2_lines[r++] << std::endl;
-    printer << "PL:    " << s2_lines[r++] << std::endl;
-    printer << "E:     " << s2_lines[r++] << std::endl;
-    printer << "N:     " << s2_lines[r++] << std::endl;
-    printer << "VN:    " << s2_lines[r++] << std::endl;
-    printer << "PUCT:  " << s2_lines[r++] << std::endl;
+    ss << "P:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "V:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "PW:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "PL:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "E:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "N:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "VN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "PUCT:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
 
     std::string argmax_line = s2_lines[r];
     std::replace(argmax_line.begin(), argmax_line.end(), '0', ' ');
     std::replace(argmax_line.begin(), argmax_line.end(), '1', '*');
 
-    printer << "argmax:" << argmax_line << std::endl;
-    printer << "*************" << std::endl;
+    ss << "argmax:" << argmax_line << break_plus_thread_id_whitespace();
+    ss << "*************";
+
+    LOG_INFO << ss.str();
   }
   return argmax_index;
 }

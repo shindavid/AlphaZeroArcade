@@ -3,7 +3,7 @@ from alphazero.logic.custom_types import ClientType
 from alphazero.logic import constants
 from alphazero.logic.directory_organizer import DirectoryOrganizer
 from game_index import get_game_spec
-from util.logging_util import get_logger
+from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
 from util.socket_util import JsonDict, Socket, SocketRecvException, SocketSendException
@@ -26,6 +26,7 @@ class GameServerBaseParams:
     loop_controller_host: str = 'localhost'
     loop_controller_port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
+    log_dir: str = ''
 
     @classmethod
     def create(cls, args):
@@ -45,6 +46,8 @@ class GameServerBaseParams:
                            help='loop-controller port (default: %(default)s)')
         group.add_argument('--cuda-device', default=defaults.cuda_device,
                            help='cuda device (default: %(default)s)')
+        group.add_argument('--log-dir', default=defaults.log_dir,
+                           help='log directory (default: {REPO_ROOT}/logs/{game}/{tag})')
         return group
 
 
@@ -55,18 +58,29 @@ class GameServerBase:
     """
 
     def __init__(self, params: GameServerBaseParams, common_params: CommonParams,
-                 client_type: ClientType):
+                 logging_params: LoggingParams, client_type: ClientType):
         self.organizer = DirectoryOrganizer(common_params)
         self.game_spec = get_game_spec(common_params.game)
-        self.loop_controller_host = params.loop_controller_host
-        self.loop_controller_port = params.loop_controller_port
-        self.cuda_device = params.cuda_device
+        self.tag = common_params.tag
+        self.logging_params = logging_params
+        self.params = params
         self.client_type = client_type
 
         self.loop_controller_socket: Optional[Socket] = None
-        self.child_process = None
         self.client_id = None
         self.shutdown_code = None
+
+    @property
+    def loop_controller_host(self):
+        return self.params.loop_controller_host
+
+    @property
+    def loop_controller_port(self):
+        return self.params.loop_controller_port
+
+    @property
+    def cuda_device(self):
+        return self.params.cuda_device
 
     @property
     def binary_path(self):
@@ -115,11 +129,6 @@ class GameServerBase:
     def error_detection_loop(self):
         while True:
             time.sleep(1)
-            if self.child_process is not None and self.child_process.poll() is not None:
-                if self.child_process.returncode != 0:
-                    logger.error(f'Child process exited with code {self.child_process.returncode}')
-                    self.shutdown_code = 1
-
             if self.shutdown_code is not None:
                 break
 
@@ -132,11 +141,26 @@ class GameServerBase:
 
         self.loop_controller_socket.send_json(data)
 
+    def make_log_filename(self, descr: str, mkdirs=True):
+        log_dir = self.params.log_dir
+        if not log_dir:
+            log_dir = os.path.join(Repo.root(), 'logs', self.game_spec.name, self.tag)
+
+        if mkdirs:
+            os.makedirs(log_dir, exist_ok=True)
+        log_filename = os.path.join(log_dir, f'{descr}.{self.client_id}.log')
+        return log_filename
+
     def recv_handshake(self):
         data = self.loop_controller_socket.recv_json(timeout=1)
         assert data['type'] == 'handshake-ack', data
 
         self.client_id = data['client_id']
+
+        log_filename = self.make_log_filename(self.client_type.value, self.client_id)
+        configure_logger(filename=log_filename, params=self.logging_params)
+
+        logger.info(f'**** Starting {self.client_type.value} ****')
         logger.info(f'Received client id assignment: {self.client_id}')
 
         runtime_dir = os.path.join(Repo.root(), '.runtime')

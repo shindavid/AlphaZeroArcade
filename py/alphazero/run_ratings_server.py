@@ -13,15 +13,8 @@ to increase the number of MCTS simulations.
 import argparse
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.ratings_server import RatingsServer, RatingsServerParams
-from util.logging_util import LoggingParams, configure_logger, get_logger
-
-import os
-
-
-logger = get_logger()
-
+from util.logging_util import LoggingParams
 
 def load_args():
     parser = argparse.ArgumentParser()
@@ -39,12 +32,7 @@ def main():
     params = RatingsServerParams.create(args)
     logging_params = LoggingParams.create(args)
 
-    log_filename = os.path.join(DirectoryOrganizer(common_params).logs_dir, 'ratings-server.log')
-    configure_logger(filename=log_filename, params=logging_params)
-
-    logger.info(f'**** Starting ratings-server ****')
-
-    server = RatingsServer(params, common_params)
+    server = RatingsServer(params, common_params, logging_params)
     server.run()
 
 

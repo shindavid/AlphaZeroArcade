@@ -57,8 +57,8 @@ double parse_expression(const char* expr, const var_bindings_map_t& bindings) {
     te_free(compiled_expr);
     return result;
   } else {
-    printf("%s\n", expr);
-    printf("\t%*s^\nError near here", err - 1, "");
+    fprintf(stderr, "%s\n", expr);
+    fprintf(stderr, "\t%*s^\nError near here", err - 1, "");
     throw util::Exception("%s(\"%s\") failure", __func__, expr);
   }
 }

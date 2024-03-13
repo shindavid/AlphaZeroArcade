@@ -110,6 +110,10 @@ class NNEvaluationService
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;
+
+    std::string thread_id_whitespace() const {
+      return util::make_whitespace(kThreadWhitespaceLength * thread_id);
+    }
   };
 
   struct Response {

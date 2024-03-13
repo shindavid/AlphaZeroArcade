@@ -1,5 +1,6 @@
 #include <util/KeyValueDumper.hpp>
 
+#include <util/LoggingUtil.hpp>
 #include <util/StringUtil.hpp>
 
 namespace util {
@@ -36,7 +37,7 @@ void KeyValueDumper::flush() {
   std::string fmt_str = util::create_string("%%-%ds %%%ds\n", max_key_len, max_value_len);
   const char* fmt = fmt_str.c_str();
   for (const auto& p : instance()->vec_) {
-    printf(fmt, p.first.c_str(), p.second.c_str());
+    LOG_INFO << util::create_string(fmt, p.first.c_str(), p.second.c_str());
   }
   instance()->vec_.clear();
   std::cout.flush();

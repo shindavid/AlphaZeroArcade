@@ -2,7 +2,7 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
 from alphazero.logic.ratings import extract_match_record
-from util.logging_util import get_logger
+from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
 from util import subprocess_util
 
@@ -36,9 +36,11 @@ class RatingsServerParams(GameServerBaseParams):
 
 
 class RatingsServer(GameServerBase):
-    def __init__(self, params: RatingsServerParams, common_params: CommonParams):
-        super().__init__(params, common_params, ClientType.RATINGS_MANAGER)
+    def __init__(self, params: RatingsServerParams, common_params: CommonParams,
+                 logging_params: LoggingParams):
+        super().__init__(params, common_params, logging_params, ClientType.RATINGS_MANAGER)
         self.params = params
+        self._running = False
 
     def request_work(self):
         data = {
@@ -59,10 +61,14 @@ class RatingsServer(GameServerBase):
         elif msg_type == 'quit':
             self.quit()
             return True
+        else:
+            raise Exception(f'Unknown message type: {msg_type}')
         return False
 
     def handle_match_request(self, msg: JsonDict):
-        assert self.child_process is None
+        assert not self._running
+        self._running = True
+
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
@@ -74,6 +80,7 @@ class RatingsServer(GameServerBase):
         ps1 = self.get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.binary_path
+        log_filename = self.make_log_filename('self-play-worker')
         cmd = [
             binary,
             '-G', n_games,
@@ -81,6 +88,7 @@ class RatingsServer(GameServerBase):
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.RATINGS_WORKER.value,
             '--cuda-device', self.cuda_device,
+            '--log-filename', log_filename,
             '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',
@@ -90,19 +98,24 @@ class RatingsServer(GameServerBase):
         mcts_name = RatingsServer.get_mcts_player_name(mcts_gen)
         ref_name = RatingsServer.get_reference_player_name(ref_strength)
 
-        proc = subprocess_util.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.child_process = proc
-        logger.info(f'Running {mcts_name} vs {ref_name} match: {cmd}')
+        proc = subprocess_util.Popen(cmd)
+        logger.info(f'Running {mcts_name} vs {ref_name} match [{proc.pid}]: {cmd}')
+        _, stderr = proc.communicate()
 
-        stdout, _ = proc.communicate()
         if proc.returncode:
-            raise RuntimeError(f'proc exited with code {proc.returncode}')
+            logger.error(f'Cmd failed with return code {proc.returncode}')
+            logger.error(f'stderr:\n{stderr}')
+            raise Exception()
 
-        # NOTE: extracting the match record from the stdout is potentially fragile. Consider
+        # NOTE: extracting the match record from the log is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
+        with open(log_filename, 'r') as f:
+            stdout = f.read()
+
         record = extract_match_record(stdout)
         logger.info(f'Match result: {record.get(0)}')
+        self._running = False
 
         data = {
             'type': 'match-result',
@@ -112,7 +125,6 @@ class RatingsServer(GameServerBase):
         }
 
         self.loop_controller_socket.send_json(data)
-        self.child_process = None
         self.request_work()
 
     @staticmethod

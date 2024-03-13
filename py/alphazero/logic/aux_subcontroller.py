@@ -6,7 +6,6 @@ from util.socket_util import recv_json, JsonDict, Socket, SocketRecvException, S
 from util import subprocess_util
 
 import os
-import sqlite3
 import threading
 from typing import Callable, List, Optional, Set
 
@@ -57,7 +56,8 @@ class AuxSubcontroller:
         src = asset.src_path
         client_data.socket.send_file(src)
 
-    def accept_client(self, conn: sqlite3.Connection) -> ClientData:
+    def accept_client(self) -> ClientData:
+        conn = self.data.clients_db_conn_pool.get_connection()
         client_socket, addr = self.data.server_socket.accept()
         ip_address, port = addr
 
@@ -65,17 +65,39 @@ class AuxSubcontroller:
         logger.debug(f'Received json message: {msg}')
         assert msg['type'] == 'handshake', f'Expected handshake from client, got {msg}'
         role = msg['role']
+        reserved_id = msg.get('reserved_client_id', None)
         client_type = ClientType(role)
 
         start_timestamp = msg['start_timestamp']
         cuda_device = msg.get('cuda_device', '')
+        client_id = None
 
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO clients (ip_address, port, role, start_timestamp, cuda_device) VALUES (?, ?, ?, ?, ?)',
-                       (ip_address, port, role, start_timestamp, cuda_device)
-                       )
-        client_id = cursor.lastrowid
-        conn.commit()
+        with self._lock:
+            cursor = conn.cursor()
+            if reserved_id is not None:
+                # validate that reserved_id is in the clients table
+                cursor.execute('SELECT ip_address, port, role, start_timestamp, cuda_device '
+                               'FROM clients WHERE id = ?', (reserved_id,))
+                row = cursor.fetchone()
+                if row is None:
+                    logger.warn(f'Client requested reserved id {reserved_id} but it was never reserved')
+                elif any([x is not None for x in row]):
+                    logger.warn(f'Client requested reserved id {reserved_id} but it is already in use')
+                else:
+                    cursor.execute("""
+                        UPDATE clients
+                        SET ip_address = ?, port = ?, role = ?, start_timestamp = ?, cuda_device = ?
+                        WHERE id = ?
+                    """, (ip_address, port, role, start_timestamp, cuda_device, reserved_id))
+                    client_id = reserved_id
+
+            if client_id is None:
+                cursor.execute('INSERT INTO clients (ip_address, port, role, start_timestamp, cuda_device) VALUES (?, ?, ?, ?, ?)',
+                            (ip_address, port, role, start_timestamp, cuda_device)
+                            )
+                client_id = cursor.lastrowid
+
+            conn.commit()
 
         client_data = ClientData(
             client_type, client_id, Socket(client_socket), start_timestamp, cuda_device)

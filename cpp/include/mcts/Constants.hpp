@@ -47,6 +47,7 @@ struct NNEvaluationServiceRegion {
   };
 };
 
+constexpr int kThreadWhitespaceLength = 50;  // for debug printing alignment
 constexpr bool kEnableProfiling = IS_MACRO_ENABLED(PROFILE_MCTS);
 constexpr bool kEnableVerboseProfiling = IS_MACRO_ENABLED(PROFILE_MCTS_VERBOSE);
 constexpr bool kEnableDebug = IS_MACRO_ENABLED(MCTS_DEBUG);

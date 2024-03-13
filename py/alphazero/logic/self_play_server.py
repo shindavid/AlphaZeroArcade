@@ -1,7 +1,7 @@
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
-from util.logging_util import get_logger
+from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
 from util import subprocess_util
 
@@ -22,8 +22,10 @@ class SelfPlayServerParams(GameServerBaseParams):
 
 
 class SelfPlayServer(GameServerBase):
-    def __init__(self, params: SelfPlayServerParams, common_params: CommonParams):
-        super().__init__(params, common_params, ClientType.SELF_PLAY_MANAGER)
+    def __init__(self, params: SelfPlayServerParams, common_params: CommonParams,
+                 logging_params: LoggingParams):
+        super().__init__(params, common_params, logging_params, ClientType.SELF_PLAY_MANAGER)
+        self._running = False
 
     def handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
@@ -33,14 +35,17 @@ class SelfPlayServer(GameServerBase):
         if msg_type == 'start-gen0':
             self.run_func_in_new_thread(self.start_gen0, args=(msg,))
         elif msg_type == 'start':
-            self.start(msg)
+            self.run_func_in_new_thread(self.start, args=(msg,))
         elif msg_type == 'quit':
             self.quit()
             return True
+        else:
+            raise Exception(f'Unknown message type: {msg_type}')
         return False
 
     def start_gen0(self, msg):
-        assert self.child_process is None
+        assert not self._running
+        self._running = True
 
         # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir here
@@ -65,6 +70,7 @@ class SelfPlayServer(GameServerBase):
             '--copy-from=MCTS',
         ]
 
+        log_filename = self.make_log_filename('self-play-worker-gen0')
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
@@ -72,22 +78,25 @@ class SelfPlayServer(GameServerBase):
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
             '--starting-generation', gen,
+            '--log-filename', log_filename,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        log_filename = os.path.join(self.organizer.logs_dir, f'self-play.log')
-        with open(log_filename, 'a') as log_file:
-            logger.info(f'Running gen-0 self-play: {self_play_cmd}')
-            proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
-            self.child_process = proc
-            proc.wait()
+        proc = subprocess_util.Popen(self_play_cmd)
+        logger.info(f'Running gen-0 self-play [{proc.pid}]: {self_play_cmd}')
+        logger.info(f'Log: {log_filename}')
+        _, stderr = proc.communicate()
+
         if proc.returncode:
-            raise Exception(f'Gen-0 self-play failed with return code {proc.returncode}')
-        self.child_process = None
+            logger.error(f'Gen-0 self-play failed with return code {proc.returncode}')
+            logger.error(f'stderr:\n{stderr}')
+            raise Exception()
+
         logger.info(f'Gen-0 self-play complete!')
+        self._running = False
 
         data = {
             'type': 'gen0-complete',
@@ -95,7 +104,8 @@ class SelfPlayServer(GameServerBase):
         self.loop_controller_socket.send_json(data)
 
     def start(self, msg):
-        assert self.child_process is None
+        assert not self._running
+        self._running = True
 
         # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir or model here
@@ -116,6 +126,7 @@ class SelfPlayServer(GameServerBase):
             '--copy-from=MCTS',
         ]
 
+        log_filename = self.make_log_filename('self-play-worker')
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
@@ -124,14 +135,21 @@ class SelfPlayServer(GameServerBase):
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
             '--starting-generation', gen,
             '--cuda-device', self.cuda_device,
+            '--log-filename', log_filename,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        log_filename = os.path.join(self.organizer.logs_dir, f'self-play.log')
-        log_file = open(log_filename, 'a')
-        proc = subprocess_util.Popen(self_play_cmd, stdout=log_file, stderr=subprocess.STDOUT)
-        self.child_process = proc
+        proc = subprocess_util.Popen(self_play_cmd)
         logger.info(f'Running self-play [{proc.pid}]: {self_play_cmd}')
+        logger.info(f'Log: {log_filename}')
+        _, stderr = proc.communicate()
+
+        if proc.returncode:
+            logger.error(f'Self-play failed with return code {proc.returncode}')
+            logger.error(f'stderr:\n{stderr}')
+            raise Exception()
+
+        assert False, 'Should not get here'
