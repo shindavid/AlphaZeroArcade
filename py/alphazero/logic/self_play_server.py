@@ -25,6 +25,7 @@ class SelfPlayServer(GameServerBase):
     def __init__(self, params: SelfPlayServerParams, common_params: CommonParams,
                  logging_params: LoggingParams):
         super().__init__(params, common_params, logging_params, ClientType.SELF_PLAY_MANAGER)
+        self._running = False
 
     def handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
@@ -35,7 +36,8 @@ class SelfPlayServer(GameServerBase):
             worker_client_id = self.reserve_worker_client_id()
             self.run_func_in_new_thread(self.start_gen0, args=(msg, worker_client_id))
         elif msg_type == 'start':
-            self.start(msg)
+            worker_client_id = self.reserve_worker_client_id()
+            self.run_func_in_new_thread(self.start, args=(msg, worker_client_id))
         elif msg_type == 'quit':
             self.quit()
             return True
@@ -44,6 +46,9 @@ class SelfPlayServer(GameServerBase):
         return False
 
     def start_gen0(self, msg, worker_client_id):
+        assert not self._running
+        self._running = True
+
         # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir here
         games_base_dir = msg['games_base_dir']
@@ -83,27 +88,27 @@ class SelfPlayServer(GameServerBase):
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        with subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE) as proc:
-            logger.info(f'Running gen-0 self-play [{proc.pid}]: {self_play_cmd}')
-            logger.info(f'Log: {log_filename}')
+        proc = subprocess_util.Popen(self_play_cmd)
+        logger.info(f'Running gen-0 self-play [{proc.pid}]: {self_play_cmd}')
+        logger.info(f'Log: {log_filename}')
+        _, stderr = proc.communicate()
 
         if proc.returncode:
             logger.error(f'Gen-0 self-play failed with return code {proc.returncode}')
-            logger.error(f'stderr:')
-            for line in proc.stderr:
-                logger.error(line)
+            logger.error(f'stderr:\n{stderr}')
             raise Exception()
 
         logger.info(f'Gen-0 self-play complete!')
+        self._running = False
 
         data = {
             'type': 'gen0-complete',
         }
         self.loop_controller_socket.send_json(data)
 
-    def start(self, msg):
-        assert self.child_process is None
-        worker_client_id = self.reserve_worker_client_id()
+    def start(self, msg, worker_client_id):
+        assert not self._running
+        self._running = True
 
         # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir or model here
@@ -141,8 +146,14 @@ class SelfPlayServer(GameServerBase):
 
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
-        proc = subprocess_util.Popen(self_play_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-
-        self.child_process = proc
+        proc = subprocess_util.Popen(self_play_cmd)
         logger.info(f'Running self-play [{proc.pid}]: {self_play_cmd}')
         logger.info(f'Log: {log_filename}')
+        _, stderr = proc.communicate()
+
+        if proc.returncode:
+            logger.error(f'Self-play failed with return code {proc.returncode}')
+            logger.error(f'stderr:\n{stderr}')
+            raise Exception()
+
+        assert False, 'Should not get here'

@@ -26,7 +26,7 @@ class GameServerBaseParams:
     loop_controller_host: str = 'localhost'
     loop_controller_port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
-    log_dir: str = os.path.join(Repo.root(), 'logs')
+    log_dir: str = ''
 
     @classmethod
     def create(cls, args):
@@ -47,7 +47,7 @@ class GameServerBaseParams:
         group.add_argument('--cuda-device', default=defaults.cuda_device,
                            help='cuda device (default: %(default)s)')
         group.add_argument('--log-dir', default=defaults.log_dir,
-                           help='log directory (default: %(default)s)')
+                           help='log directory (default: {REPO_ROOT}/logs/{game}/{tag})')
         return group
 
 
@@ -67,7 +67,6 @@ class GameServerBase:
         self.client_type = client_type
 
         self.loop_controller_socket: Optional[Socket] = None
-        self.child_process = None
         self.client_id = None
         self.shutdown_code = None
 
@@ -130,14 +129,6 @@ class GameServerBase:
     def error_detection_loop(self):
         while True:
             time.sleep(1)
-            if self.child_process is not None and self.child_process.poll() is not None:
-                if self.child_process.returncode != 0:
-                    logger.error(f'Child process exited with code {self.child_process.returncode}')
-                    logger.error(f'stderr:')
-                    for line in self.child_process.stderr:
-                        logger.error(line)
-                    self.shutdown_code = 1
-
             if self.shutdown_code is not None:
                 break
 
@@ -163,10 +154,12 @@ class GameServerBase:
 
     def make_log_filename(self, descr: str, client_id, mkdirs=True):
         log_dir = self.params.log_dir
-        full_log_dir = os.path.join(log_dir, self.game_spec.name, self.tag)
+        if not log_dir:
+            log_dir = os.path.join(Repo.root(), 'logs', self.game_spec.name, self.tag)
+
         if mkdirs:
-            os.makedirs(full_log_dir, exist_ok=True)
-        log_filename = os.path.join(full_log_dir, f'{descr}.{client_id}.log')
+            os.makedirs(log_dir, exist_ok=True)
+        log_filename = os.path.join(log_dir, f'{descr}.{client_id}.log')
         return log_filename
 
     def recv_handshake(self):
