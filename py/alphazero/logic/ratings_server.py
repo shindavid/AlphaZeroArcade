@@ -2,7 +2,7 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
 from alphazero.logic.ratings import extract_match_record
-from util.logging_util import get_logger
+from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
 from util import subprocess_util
 
@@ -36,8 +36,9 @@ class RatingsServerParams(GameServerBaseParams):
 
 
 class RatingsServer(GameServerBase):
-    def __init__(self, params: RatingsServerParams, common_params: CommonParams):
-        super().__init__(params, common_params, ClientType.RATINGS_MANAGER)
+    def __init__(self, params: RatingsServerParams, common_params: CommonParams,
+                 logging_params: LoggingParams):
+        super().__init__(params, common_params, logging_params, ClientType.RATINGS_MANAGER)
         self.params = params
 
     def request_work(self):
@@ -55,14 +56,18 @@ class RatingsServer(GameServerBase):
 
         msg_type = msg['type']
         if msg_type == 'match-request':
-            self.run_func_in_new_thread(self.handle_match_request, args=(msg,))
+            worker_client_id = self.reserve_worker_client_id()
+            self.run_func_in_new_thread(self.handle_match_request, args=(msg, worker_client_id))
         elif msg_type == 'quit':
             self.quit()
             return True
+        else:
+            raise Exception(f'Unknown message type: {msg_type}')
         return False
 
-    def handle_match_request(self, msg: JsonDict):
+    def handle_match_request(self, msg: JsonDict, worker_client_id):
         assert self.child_process is None
+
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
@@ -74,13 +79,16 @@ class RatingsServer(GameServerBase):
         ps1 = self.get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.binary_path
+        log_filename = self.make_log_filename('self-play-worker', worker_client_id)
         cmd = [
             binary,
             '-G', n_games,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.RATINGS_WORKER.value,
+            '--reserved-client-id', worker_client_id,
             '--cuda-device', self.cuda_device,
+            '--log-filename', log_filename,
             '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',

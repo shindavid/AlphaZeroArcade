@@ -1,5 +1,3 @@
-from util.logging_util import get_logger
-
 from dataclasses import dataclass
 import json
 import logging
@@ -9,8 +7,6 @@ import tempfile
 import threading
 from typing import Any, Dict, Optional, Union
 
-
-logger = get_logger()
 
 @dataclass
 class EncodedJson:
@@ -131,8 +127,6 @@ def send_json(sock: socket.socket, data: JsonData):
     Raises:
     - SocketSendException if the socket was closed by peer.
     """
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f'Sending json message: {data}')
     if not isinstance(data, EncodedJson):
         data = encode_json(data)
 
@@ -167,8 +161,6 @@ def recv_file(sock: socket.socket, filename: str) -> bytes:
     if executable:
         os.chmod(filename, 0o755)
 
-    logger.debug(f'Received file {filename} of size {length} bytes (executable: {executable})')
-
 
 def send_file(sock: socket.socket, filename: str):
     """
@@ -185,7 +177,6 @@ def send_file(sock: socket.socket, filename: str):
     n_bytes = len(data)
     header = n_bytes.to_bytes(4, byteorder='big')
     executable = os.access(filename, os.X_OK)
-    logger.debug(f'Sending file {filename} of size {n_bytes} bytes')
 
     try:
         sock.sendall(header)

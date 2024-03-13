@@ -26,7 +26,7 @@ class LoopController:
 
     - TrainingSubcontroller: manages training of the neural network
     - SelfPlaySubcontroller: manages self-play games
-    - (TODO) RatingsSubcontroller: manages rating games
+    - RatingsSubcontroller: manages rating games
     - AuxSubcontroller: shared by other subcontrollers for various tasks
     """
     def __init__(self, params: LoopControllerParams, training_params: TrainingParams,
@@ -85,9 +85,8 @@ class LoopController:
         Loop that checks for new clients. For each new client, spawns a thread to handle it.
         """
         try:
-            conn = self.data.clients_db_conn_pool.get_connection()
             while True:
-                client_data = self.aux_subcontroller.accept_client(conn)
+                client_data = self.aux_subcontroller.accept_client()
                 client_type = client_data.client_type
 
                 if client_type == ClientType.SELF_PLAY_MANAGER:

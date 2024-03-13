@@ -28,6 +28,7 @@ import torch
 
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic import constants
+from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.training_params import TrainingParams
 from alphazero.logic.self_play_server import SelfPlayServerParams
 from alphazero.logic.loop_controller import LoopControllerParams
@@ -84,12 +85,14 @@ def launch_self_play_server(params_dict, cuda_device: int):
     params = params_dict['Params']
     common_params = params_dict['CommonParams']
     logging_params = params_dict['LoggingParams']
+    organizer = DirectoryOrganizer(common_params)
 
     cuda_device = f'cuda:{cuda_device}'
 
     cmd = [
         'py/alphazero/run_self_play_server.py',
         '--cuda-device', cuda_device,
+        '--log-dir', organizer.logs_dir,
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])

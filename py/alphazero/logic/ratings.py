@@ -79,21 +79,32 @@ def extract_match_record(stdout: str) -> MatchRecord:
     Looks for this text:
 
     ...
+    2024-03-13 14:10:09.131334 All games complete!
+    2024-03-13 14:10:09.131368 pid=0 name=Perfect-21 W51 L49 D0 [51]
+    2024-03-13 14:10:09.131382 pid=1 name=MCTS-C-100 W49 L51 D0 [49]
+    ...
+
+    OR:
+
+    ...
     All games complete!
-    pid=0 name=foo W40 L24 D0 [40]
-    pid=1 name=bar W24 L40 D0 [24]
+    pid=0 name=Perfect-21 W51 L49 D0 [51]
+    pid=1 name=MCTS-C-100 W49 L51 D0 [49]
     ...
     """
     record = MatchRecord()
     for line in stdout.splitlines():
         tokens = line.split()
-        if len(tokens) > 1 and tokens[0].startswith('pid=') and tokens[0][4:].isdigit():
-            player_id = int_parse(tokens[0], 'pid=')
-            win = int_parse(tokens[-4], 'W')
-            loss = int_parse(tokens[-3], 'L')
-            draw = int_parse(tokens[-2], 'D')
-            counts = WinLossDrawCounts(win, loss, draw)
-            record.update(player_id, counts)
+        skip_list = [0, 2]  # hacky way to test for the two possible formats
+        for skip in skip_list:
+            if len(tokens) > skip and tokens[skip].startswith('pid=') and tokens[skip][4:].isdigit():
+                player_id = int_parse(tokens[skip], 'pid=')
+                win = int_parse(tokens[skip + 2], 'W')
+                loss = int_parse(tokens[skip + 3], 'L')
+                draw = int_parse(tokens[skip + 4], 'D')
+                counts = WinLossDrawCounts(win, loss, draw)
+                record.update(player_id, counts)
+                break
 
     assert not record.empty(), stdout
     counts1 = record.get(0)

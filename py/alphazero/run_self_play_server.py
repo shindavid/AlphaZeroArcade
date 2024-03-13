@@ -11,17 +11,10 @@ between generations. For example, gen-0 does not use a model, and in later gener
 to increase the number of MCTS simulations.
 """
 import argparse
-from dataclasses import dataclass
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.directory_organizer import DirectoryOrganizer
 from alphazero.logic.self_play_server import SelfPlayServer, SelfPlayServerParams
-from util.logging_util import LoggingParams, configure_logger, get_logger
-
-import os
-
-
-logger = get_logger()
+from util.logging_util import LoggingParams
 
 
 def load_args():
@@ -40,12 +33,7 @@ def main():
     params = SelfPlayServerParams.create(args)
     logging_params = LoggingParams.create(args)
 
-    log_filename = os.path.join(DirectoryOrganizer(common_params).logs_dir, 'self-play-server.log')
-    configure_logger(filename=log_filename, params=logging_params)
-
-    logger.info(f'**** Starting self-play-server ****')
-
-    server = SelfPlayServer(params, common_params)
+    server = SelfPlayServer(params, common_params, logging_params)
     server.run()
 
 

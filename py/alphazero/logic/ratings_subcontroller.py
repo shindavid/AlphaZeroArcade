@@ -342,6 +342,8 @@ class RatingsSubcontroller(NewModelSubscriber):
 
         if msg_type == 'asset-request':
             self.aux_controller.send_asset(msg['asset'], client_data)
+        elif msg_type == 'reserve-worker-client-id':
+            self.aux_controller.handle_worker_client_id_reservation(client_data)
         elif msg_type == 'work-request':
             self.send_match_request(client_data)
         elif msg_type == 'match-result':
