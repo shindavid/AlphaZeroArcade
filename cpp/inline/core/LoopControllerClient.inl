@@ -42,6 +42,9 @@ inline auto LoopControllerClient::Params::make_options_description() {
       .template add_option<"starting-generation">(
           po::value<int>(&starting_generation)->default_value(starting_generation),
           "starting generation")
+      .template add_option<"reserved-client-id">(
+          po::value<int64_t>(&reserved_client_id)->default_value(reserved_client_id),
+          "reserved client id")
       .template add_option<"cuda-device">(
           po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device");
 }
