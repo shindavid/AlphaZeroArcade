@@ -43,7 +43,6 @@ class LoopControllerClient {
     io::port_t loop_controller_port = 0;
     std::string client_role;  // must be specified if port is specified
     int starting_generation = 0;
-    int64_t reserved_client_id = -1;
     std::string cuda_device = "cuda:0";
   };
 
@@ -94,7 +93,6 @@ class LoopControllerClient {
   const int64_t proc_start_ts_;
   const std::string cuda_device_;
   const std::string role_;
-  const int64_t reserved_client_id_;
   int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;

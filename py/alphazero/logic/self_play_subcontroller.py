@@ -87,8 +87,6 @@ class SelfPlaySubcontroller(NewModelSubscriber):
 
         if msg_type == 'asset-request':
             self.aux_controller.send_asset(msg['asset'], client_data)
-        elif msg_type == 'reserve-worker-client-id':
-            self.aux_controller.handle_worker_client_id_reservation(client_data)
         elif msg_type == 'ready':
             self.handle_ready(client_data)
         elif msg_type == 'gen0-complete':

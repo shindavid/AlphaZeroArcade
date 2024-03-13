@@ -57,8 +57,7 @@ class RatingsServer(GameServerBase):
 
         msg_type = msg['type']
         if msg_type == 'match-request':
-            worker_client_id = self.reserve_worker_client_id()
-            self.run_func_in_new_thread(self.handle_match_request, args=(msg, worker_client_id))
+            self.run_func_in_new_thread(self.handle_match_request, args=(msg,))
         elif msg_type == 'quit':
             self.quit()
             return True
@@ -66,7 +65,7 @@ class RatingsServer(GameServerBase):
             raise Exception(f'Unknown message type: {msg_type}')
         return False
 
-    def handle_match_request(self, msg: JsonDict, worker_client_id):
+    def handle_match_request(self, msg: JsonDict):
         assert not self._running
         self._running = True
 
@@ -81,14 +80,13 @@ class RatingsServer(GameServerBase):
         ps1 = self.get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.binary_path
-        log_filename = self.make_log_filename('self-play-worker', worker_client_id)
+        log_filename = self.make_log_filename('self-play-worker')
         cmd = [
             binary,
             '-G', n_games,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.RATINGS_WORKER.value,
-            '--reserved-client-id', worker_client_id,
             '--cuda-device', self.cuda_device,
             '--log-filename', log_filename,
             '-p', parallelism_factor,

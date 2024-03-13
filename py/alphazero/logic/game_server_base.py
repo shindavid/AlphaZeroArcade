@@ -141,25 +141,14 @@ class GameServerBase:
 
         self.loop_controller_socket.send_json(data)
 
-    def reserve_worker_client_id(self):
-        logger.debug(f'Requesting worker client id assignment...')
-        data = {
-            'type': 'reserve-worker-client-id',
-        }
-        self.loop_controller_socket.send_json(data)
-
-        msg = self.loop_controller_socket.recv_json()
-        assert msg['type'] == 'worker-client-id-assignment', msg
-        return msg['worker_client_id']
-
-    def make_log_filename(self, descr: str, client_id, mkdirs=True):
+    def make_log_filename(self, descr: str, mkdirs=True):
         log_dir = self.params.log_dir
         if not log_dir:
             log_dir = os.path.join(Repo.root(), 'logs', self.game_spec.name, self.tag)
 
         if mkdirs:
             os.makedirs(log_dir, exist_ok=True)
-        log_filename = os.path.join(log_dir, f'{descr}.{client_id}.log')
+        log_filename = os.path.join(log_dir, f'{descr}.{self.client_id}.log')
         return log_filename
 
     def recv_handshake(self):

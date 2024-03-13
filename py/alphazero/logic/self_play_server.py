@@ -33,11 +33,9 @@ class SelfPlayServer(GameServerBase):
 
         msg_type = msg['type']
         if msg_type == 'start-gen0':
-            worker_client_id = self.reserve_worker_client_id()
-            self.run_func_in_new_thread(self.start_gen0, args=(msg, worker_client_id))
+            self.run_func_in_new_thread(self.start_gen0, args=(msg,))
         elif msg_type == 'start':
-            worker_client_id = self.reserve_worker_client_id()
-            self.run_func_in_new_thread(self.start, args=(msg, worker_client_id))
+            self.run_func_in_new_thread(self.start, args=(msg,))
         elif msg_type == 'quit':
             self.quit()
             return True
@@ -45,7 +43,7 @@ class SelfPlayServer(GameServerBase):
             raise Exception(f'Unknown message type: {msg_type}')
         return False
 
-    def start_gen0(self, msg, worker_client_id):
+    def start_gen0(self, msg):
         assert not self._running
         self._running = True
 
@@ -72,14 +70,13 @@ class SelfPlayServer(GameServerBase):
             '--copy-from=MCTS',
         ]
 
-        log_filename = self.make_log_filename('self-play-worker-gen0', worker_client_id)
+        log_filename = self.make_log_filename('self-play-worker-gen0')
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
-            '--reserved-client-id', worker_client_id,
             '--starting-generation', gen,
             '--log-filename', log_filename,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
@@ -106,7 +103,7 @@ class SelfPlayServer(GameServerBase):
         }
         self.loop_controller_socket.send_json(data)
 
-    def start(self, msg, worker_client_id):
+    def start(self, msg):
         assert not self._running
         self._running = True
 
@@ -129,14 +126,13 @@ class SelfPlayServer(GameServerBase):
             '--copy-from=MCTS',
         ]
 
-        log_filename = self.make_log_filename('self-play-worker', worker_client_id)
+        log_filename = self.make_log_filename('self-play-worker')
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
-            '--reserved-client-id', worker_client_id,
             '--starting-generation', gen,
             '--cuda-device', self.cuda_device,
             '--log-filename', log_filename,

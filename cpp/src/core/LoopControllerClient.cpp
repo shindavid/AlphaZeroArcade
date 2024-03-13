@@ -45,8 +45,7 @@ perf_stats_t LoopControllerClient::get_perf_stats() const {
 LoopControllerClient::LoopControllerClient(const Params& params)
     : proc_start_ts_(util::ns_since_epoch())
     , cuda_device_(params.cuda_device)
-    , role_(params.client_role)
-    , reserved_client_id_(params.reserved_client_id) {
+    , role_(params.client_role) {
   if (role_.empty()) {
     throw util::CleanException("--client-role must be specified");
   }
@@ -84,9 +83,6 @@ void LoopControllerClient::send_handshake() {
   msg["role"] = role_;
   msg["start_timestamp"] = proc_start_ts_;
   msg["cuda_device"] = cuda_device_;
-  if (reserved_client_id_ >= 0) {
-    msg["reserved_client_id"] = reserved_client_id_;
-  }
   socket_->json_write(msg);
 }
 
@@ -101,10 +97,6 @@ void LoopControllerClient::recv_handshake() {
 
   int64_t client_id = msg.at("client_id").as_int64();
   util::release_assert(client_id >= 0, "Invalid client_id %ld", client_id);
-
-  if (reserved_client_id_ >= 0 && client_id != reserved_client_id_) {
-    LOG_WARN << "Reserved client_id " << reserved_client_id_ << " not honored, got " << client_id;
-  }
 
   client_id_ = client_id;
 }

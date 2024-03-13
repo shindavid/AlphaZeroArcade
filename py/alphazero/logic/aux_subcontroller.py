@@ -46,20 +46,6 @@ class AuxSubcontroller:
         with self._lock:
             self._pause_set.discard(client_data.client_id)
 
-    def handle_worker_client_id_reservation(self, client_data: ClientId):
-        conn = self.data.clients_db_conn_pool.get_connection()
-        cursor = conn.cursor()
-        with self._lock:
-            cursor.execute("INSERT INTO clients DEFAULT VALUES")
-            client_id = cursor.lastrowid
-            conn.commit()
-
-        data = {
-            'type': 'worker-client-id-assignment',
-            'worker_client_id': client_id,
-            }
-        client_data.socket.send_json(data)
-
     def send_asset(self, tgt: str, client_data: ClientData):
         all_assets = [self.data.binary_asset] + self.data.extra_assets
         requested_assets = [a for a in all_assets if a.tgt_path == tgt]
