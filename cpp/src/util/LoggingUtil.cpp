@@ -22,7 +22,8 @@ void init(const Params& params) {
 
   if (!params.log_filename.empty()) {
     auto f = params.log_filename.c_str();
-    boost::log::add_file_log(f, keywords::format = "%TimeStamp% %Message%");
+    boost::log::add_file_log(f, keywords::auto_flush = true,
+                             keywords::format = "%TimeStamp% %Message%");
   } else {
     boost::log::add_console_log(std::cout, keywords::format = "%TimeStamp% %Message%");
   }
