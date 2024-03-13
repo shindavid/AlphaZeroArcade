@@ -96,9 +96,8 @@ void LoopControllerClient::recv_handshake() {
   int64_t client_id = msg.at("client_id").as_int64();
   util::release_assert(client_id >= 0, "Invalid client_id %ld", client_id);
 
-  if (reserved_client_id_ >= 0) {
-    util::release_assert(client_id == reserved_client_id_,
-                         "Expected client_id %ld, got %ld", reserved_client_id_, client_id);
+  if (reserved_client_id_ >= 0 && client_id != reserved_client_id_) {
+    LOG_WARN << "Reserved client_id " << reserved_client_id_ << " not honored, got " << client_id;
   }
 
   client_id_ = client_id;
