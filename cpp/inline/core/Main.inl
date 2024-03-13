@@ -1,5 +1,7 @@
 #include <core/Main.hpp>
 
+#include <util/LoggingUtil.hpp>
+
 template <typename PlayerFactory>
 auto Main<PlayerFactory>::Args::make_options_description() {
   namespace po = boost::program_options;
@@ -28,6 +30,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     namespace po2 = boost_util::program_options;
 
     Args args;
+    util::logging::Params log_params;
     core::LoopControllerClient::Params loop_controller_params;
     typename GameServerProxy::Params game_server_proxy_params;
     typename GameServer::Params game_server_params = get_default_game_server_params();
@@ -36,6 +39,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     auto desc = raw_desc.template add_option<"help", 'h'>("help")
                     .template add_option<"help-full">("help with no-op flags included")
                     .add(args.make_options_description())
+                    .add(log_params.make_options_description())
                     .add(loop_controller_params.make_options_description())
                     .add(game_server_params.make_options_description())
                     .add(game_server_proxy_params.make_options_description());
@@ -52,7 +56,9 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       return 0;
     }
 
-    std::cout << util::TimestampPrefix::get() << "Starting process " << getpid() << std::endl;
+    util::logging::init(log_params);
+
+    LOG_INFO << "Starting process " << getpid();
 
     if (loop_controller_params.loop_controller_port > 0) {
       core::LoopControllerClient::init(loop_controller_params);

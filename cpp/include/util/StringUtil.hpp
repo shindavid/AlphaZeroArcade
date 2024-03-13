@@ -14,6 +14,8 @@
 
 namespace util {
 
+inline std::string make_whitespace(size_t n) { return std::string(n, ' '); }
+
 constexpr uint64_t str_hash(const char* c);
 
 /*

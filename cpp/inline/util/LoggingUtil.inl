@@ -1,37 +1,31 @@
 #include <util/LoggingUtil.hpp>
 
+#include <util/BoostUtil.hpp>
+
+#include <boost/program_options.hpp>
+
 #include <chrono>
 #include <ctime>
 #include <iostream>
 
 namespace util {
 
-inline ThreadSafePrinter::ThreadSafePrinter(int thread_id, bool print_timestamp)
-    : thread_id_(thread_id), print_timestamp_(print_timestamp), lock_(mutex_) {}
+namespace logging {
 
-inline ThreadSafePrinter::~ThreadSafePrinter() { release(); }
+inline auto Params::make_options_description() {
+  namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
 
-inline void ThreadSafePrinter::release() {
-  if (lock_.owns_lock()) {
-    lock_.unlock();
-  }
+  po2::options_description desc("Logging options");
+
+  return desc
+      .template add_option<"log-filename">(
+          po::value<std::string>(&log_filename),
+          "log filename. If specified, logs to the file. Otherwise, logs to stdout")
+      .template add_flag<"debug", "no-debug">(&debug, "enable debug logging",
+                                              "disable debug logging");
 }
 
-template <typename T>
-inline ThreadSafePrinter& ThreadSafePrinter::operator<<(const T& t) {
-  validate_lock();
-  if (line_start_) {
-    print_timestamp();
-    line_start_ = false;
-  }
-  std::cout << t;
-  return *this;
-}
-
-inline void ThreadSafePrinter::validate_lock() const {
-  if (!lock_.owns_lock()) {
-    throw std::runtime_error("ThreadSafePrinter: lock not held");
-  }
-}
+}  // namespace logging
 
 }  // namespace util

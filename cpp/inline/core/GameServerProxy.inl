@@ -133,9 +133,7 @@ GameServerProxy<GameState>::PlayerThread::~PlayerThread() {
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame& payload) {
   if (kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_,
-                   (int)player_id_);
+    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   game_id_t game_id = payload.game_id;
   player_name_array_t player_names;
@@ -150,9 +148,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateChange& payload) {
   if (kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_,
-                   (int)player_id_);
+    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -166,9 +162,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateCh
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
   if (kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_,
-                   (int)player_id_);
+    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -182,9 +176,7 @@ void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const Action
 template <GameStateConcept GameState>
 void GameServerProxy<GameState>::PlayerThread::handle_end_game(const EndGame& payload) {
   if (kEnableDebug) {
-    util::ThreadSafePrinter printer;
-    printer.printf("%s() game_thread:%d player:%d\n", __func__, (int)game_thread_id_,
-                   (int)player_id_);
+    LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   const char* buf = payload.dynamic_size_section.buf;
 
@@ -220,9 +212,7 @@ void GameServerProxy<GameState>::PlayerThread::run() {
   while (true) {
     std::unique_lock lock(mutex_);
     if (kEnableDebug) {
-      util::ThreadSafePrinter printer;
-      printer.printf("%s() loop game_thread:%d player:%d\n", __func__, (int)game_thread_id_,
-                     (int)player_id_);
+      LOG_INFO << __func__ << "() loop game_thread:" << game_thread_id_ << " player:" << player_id_;
     }
     cv_.wait(lock, [&] { return !active_ || ready_to_get_action_; });
     if (!active_) break;

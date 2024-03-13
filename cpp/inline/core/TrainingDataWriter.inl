@@ -183,12 +183,12 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::pause() {
-  std::cout << util::TimestampPrefix::get() << "TrainingDataWriter pause() " << std::endl;
+  LOG_INFO << "TrainingDataWriter pause()";
   std::unique_lock lock(mutex_);
   paused_ = true;
   lock.unlock();
   cv_.notify_one();
-  std::cout << util::TimestampPrefix::get() << "TrainingDataWriter pause() - complete!" << std::endl;
+  LOG_INFO << "TrainingDataWriter pause() - complete!";
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>

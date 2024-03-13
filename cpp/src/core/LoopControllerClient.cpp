@@ -159,13 +159,12 @@ void LoopControllerClient::loop() {
   while (true) {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
-      std::cout << "Cmd-server socket closed" << std::endl;
+      LOG_INFO << "Cmd-server socket closed";
       break;
     }
 
     std::string type = msg.at("type").as_string().c_str();
-    std::cout << util::TimestampPrefix::get() << "LoopControllerClient handling - " << type
-              << std::endl;
+    LOG_INFO << "LoopControllerClient handling - " << type;
     if (type == "pause") {
       pause();
       send_pause_ack();
@@ -184,8 +183,7 @@ void LoopControllerClient::loop() {
     } else {
       throw util::Exception("Unknown loop-controller message type %s", type.c_str());
     }
-    std::cout << util::TimestampPrefix::get() << "LoopControllerClient " << type
-              << " handling complete" << std::endl;
+    LOG_INFO << "LoopControllerClient " << type << " handling complete";
   }
 }
 

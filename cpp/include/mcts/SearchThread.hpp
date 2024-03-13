@@ -53,6 +53,13 @@ class SearchThread {
   ~SearchThread();
 
   int thread_id() const { return thread_id_; }
+  std::string thread_id_whitespace() const {
+    return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
+  }
+  std::string break_plus_thread_id_whitespace() const {
+    int n = util::logging::kTimestampPrefixLength + kThreadWhitespaceLength * thread_id_;
+    return "\n" + util::make_whitespace(n);
+  }
 
   void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 

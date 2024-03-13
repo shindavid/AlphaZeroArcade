@@ -1,5 +1,11 @@
 #include <util/LoggingUtil.hpp>
 
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/utility/setup/file.hpp>
+#include <boost/log/utility/setup/console.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+
 #include <chrono>
 #include <cstdarg>
 #include <ctime>
@@ -7,58 +13,25 @@
 
 namespace util {
 
-TimestampPrefix* TimestampPrefix::instance_ = nullptr;
-std::mutex ThreadSafePrinter::mutex_;
+namespace logging {
 
-TimestampPrefix* TimestampPrefix::instance() {
-  if (!instance_) {
-    instance_ = new TimestampPrefix();
+// TODO: Change logging to use nanosecond precision
+void init(const Params& params) {
+  namespace trivial = boost::log::trivial;
+  namespace keywords = boost::log::keywords;
+
+  if (!params.log_filename.empty()) {
+    auto f = params.log_filename.c_str();
+    boost::log::add_file_log(f, keywords::format = "%TimeStamp% %Message%");
+  } else {
+    boost::log::add_console_log(std::cout, keywords::format = "%TimeStamp% %Message%");
   }
-  return instance_;
-}
-
-const char* TimestampPrefix::get() {
-  char* buf = instance()->buf_;
-
-  auto now = std::chrono::system_clock::now();
-  auto now_c = std::chrono::system_clock::to_time_t(now);
-  buf += std::strftime(buf, buf_size, "%H:%M:%S", std::localtime(&now_c));
-
-  auto now_ns =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()) % 1000000000LL;
-  std::sprintf(buf, ".%09d ", (int)now_ns.count());
-
-  return instance()->buf_;
-}
-
-int ThreadSafePrinter::printf(const char* format, ...) {
-  validate_lock();
-  line_start_ = true;
-  int ret = print_timestamp();
-  va_list args;
-  va_start(args, format);
-  ret += vprintf(format, args);
-  va_end(args);
-  std::cout.flush();
-  return ret;
-}
-
-ThreadSafePrinter& ThreadSafePrinter::operator<<(std_endl_t f) {
-  validate_lock();
-  f(std::cout);
-  line_start_ = true;
-  return *this;
-}
-
-int ThreadSafePrinter::print_timestamp() const {
-  int out = 0;
-  if (print_timestamp_) {
-    out += ::printf("%s", TimestampPrefix::get());
+  if (params.debug) {
+    boost::log::core::get()->set_filter(trivial::severity >= trivial::debug);
   }
-
-  std::string s(thread_id_ * kWhitespacePrefixLength, ' ');
-  out += ::printf("%s", s.c_str());
-  return out;
+  boost::log::add_common_attributes();
 }
+
+}  // namespace logging
 
 }  // namespace util
