@@ -1,11 +1,11 @@
-from alphazero.logic.aux_subcontroller import AuxSubcontroller
+from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
-from alphazero.logic.loop_control_data import LoopControlData, LoopControllerParams
-from alphazero.logic.ratings_subcontroller import RatingsSubcontroller
-from alphazero.logic.self_play_subcontroller import SelfPlaySubcontroller
+from alphazero.servers.loop_control.loop_control_data import LoopControlData, LoopControllerParams
+from alphazero.servers.loop_control.subcontrols.ratings_subcontroller import RatingsSubcontroller
+from alphazero.servers.loop_control.subcontrols.self_play_subcontroller import SelfPlaySubcontroller
 from alphazero.logic.training_params import TrainingParams
-from alphazero.logic.training_subcontroller import TrainingSubcontroller
+from alphazero.servers.loop_control.subcontrols.training_subcontroller import TrainingSubcontroller
 from util.logging_util import get_logger
 
 

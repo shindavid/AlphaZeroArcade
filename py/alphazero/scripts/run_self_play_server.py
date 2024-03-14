@@ -13,7 +13,7 @@ to increase the number of MCTS simulations.
 import argparse
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.self_play_server import SelfPlayServer, SelfPlayServerParams
+from alphazero.servers.self_play.self_play_server import SelfPlayServer, SelfPlayServerParams
 from util.logging_util import LoggingParams
 
 

@@ -1,7 +1,7 @@
-from alphazero.logic.aux_subcontroller import AuxSubcontroller, NewModelSubscriber
+from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller, NewModelSubscriber
 from alphazero.logic.custom_types import ClientData, ClientId, Generation
-from alphazero.logic.loop_control_data import LoopControlData
-from alphazero.logic.training_subcontroller import TrainingSubcontroller
+from alphazero.servers.loop_control.loop_control_data import LoopControlData
+from alphazero.servers.loop_control.subcontrols.training_subcontroller import TrainingSubcontroller
 from util.logging_util import get_logger
 from util.socket_util import JsonDict
 

@@ -3,8 +3,8 @@
 import argparse
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.directory_organizer import DirectoryOrganizer
-from alphazero.logic.loop_controller import LoopController, LoopControllerParams
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
 from alphazero.logic.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 

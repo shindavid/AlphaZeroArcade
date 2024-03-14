@@ -5,20 +5,15 @@ Use this script to visualize the progress of one or more alphazero runs.
 
 Usage:
 
-cd py;
-
-./alphazero/main_loop.py -g <GAME> -t <TAG>
+HOST1: ./py/alphazero/scripts/run_local.py -g <GAME> -t <TAG>
 
 While the above is running, launch the following, preferably from a different machine:
 
-./alphazero/compute_ratings.py -g <GAME> -t <TAG> -D
+HOST2: ./py/alphazero/scripts/run_ratings_server.py -g <GAME> -t <TAG> --loop-controller-host HOST1
 
-Alternatively, if you don't have enough hardware, stop the main loop before running the above. You
-don't need daemon mode (-D) in this case.
+To visualize:
 
-While the above is running, launch the visualizer:
-
-./alphazero/viz_ratings.py -g <GAME> -t <TAG>
+./py/alphazero/scripts/viz_ratings.py -g <GAME> -t <TAG>
 
 If you have multiple main-loops (running or completed), you can pass a comma-separated list of tags
 for the -t option for both compute_ratings.py and viz_ratings.py. Or, you can leave out -t
@@ -42,7 +37,7 @@ import pandas as pd
 from scipy.signal import savgol_filter
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import game_index
 
 

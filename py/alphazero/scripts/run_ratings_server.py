@@ -13,7 +13,7 @@ to increase the number of MCTS simulations.
 import argparse
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.ratings_server import RatingsServer, RatingsServerParams
+from alphazero.servers.ratings.ratings_server import RatingsServer, RatingsServerParams
 from util.logging_util import LoggingParams
 
 def load_args():

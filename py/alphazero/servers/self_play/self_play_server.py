@@ -1,6 +1,6 @@
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
-from alphazero.logic.game_server_base import GameServerBase, GameServerBaseParams
+from alphazero.servers.game_server_base import GameServerBase, GameServerBaseParams
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
 from util import subprocess_util

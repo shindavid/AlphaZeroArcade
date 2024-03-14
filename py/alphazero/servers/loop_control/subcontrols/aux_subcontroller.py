@@ -1,6 +1,6 @@
 from alphazero.logic.custom_types import ClientData, ClientId, ClientType, Generation, \
     NewModelSubscriber
-from alphazero.logic.loop_control_data import LoopControlData
+from alphazero.servers.loop_control.loop_control_data import LoopControlData
 from util.logging_util import get_logger
 from util.socket_util import recv_json, send_file, send_json, JsonDict, Socket, \
     SocketRecvException, SocketSendException

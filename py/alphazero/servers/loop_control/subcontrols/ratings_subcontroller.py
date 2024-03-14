@@ -1,8 +1,8 @@
-from alphazero.logic.aux_subcontroller import AuxSubcontroller
+from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientData, ClientId, Generation, NewModelSubscriber
-from alphazero.logic.directory_organizer import DirectoryOrganizer
-from alphazero.logic.loop_control_data import LoopControlData
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.loop_control_data import LoopControlData
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
