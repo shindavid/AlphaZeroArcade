@@ -90,6 +90,7 @@ class RatingsServer(GameServerBase):
             '--cuda-device', self.cuda_device,
             '--log-filename', log_filename,
             '--weights-request-generation', mcts_gen,
+            '--do-not-report-metrics',
             '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',

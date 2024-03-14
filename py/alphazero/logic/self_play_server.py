@@ -54,7 +54,6 @@ class SelfPlayServer(GameServerBase):
             '--type=MCTS-T',
             '--name=MCTS',
             '--games-base-dir', games_base_dir,
-            '--do-not-report-metrics',
             '--max-rows', max_rows,
             '--no-model',
 
@@ -76,6 +75,7 @@ class SelfPlayServer(GameServerBase):
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
             '--log-filename', log_filename,
+            '--do-not-report-metrics',
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
