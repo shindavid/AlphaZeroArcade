@@ -21,7 +21,7 @@ inline auto Params::make_options_description() {
   return desc
       .template add_option<"log-filename">(
           po::value<std::string>(&log_filename),
-          "log filename. If specified, logs to the file. Otherwise, logs to stdout")
+          "log filename. If specified, logs to the file in addition to stdout")
       .template add_flag<"debug", "no-debug">(&debug, "enable debug logging",
                                               "disable debug logging");
 }

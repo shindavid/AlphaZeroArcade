@@ -100,21 +100,19 @@ class RatingsServer(GameServerBase):
 
         proc = subprocess_util.Popen(cmd)
         logger.info(f'Running {mcts_name} vs {ref_name} match [{proc.pid}]: {cmd}')
-        _, stderr = proc.communicate()
+        stdout, stderr = proc.communicate()
 
         if proc.returncode:
             logger.error(f'Cmd failed with return code {proc.returncode}')
             logger.error(f'stderr:\n{stderr}')
             raise Exception()
 
-        # NOTE: extracting the match record from the log is potentially fragile. Consider
+        # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
-        with open(log_filename, 'r') as f:
-            stdout = f.read()
-
         record = extract_match_record(stdout)
         logger.info(f'Match result: {record.get(0)}')
+
         self._running = False
 
         data = {
