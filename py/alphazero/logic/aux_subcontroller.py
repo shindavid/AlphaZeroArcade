@@ -119,7 +119,7 @@ class AuxSubcontroller:
                 self._pauses_acked_cv.notify_all()
 
     def pause(self, clients: List[ClientData]):
-        logger.debug(f'Pausing {len(clients)} shared gpu workers...')
+        logger.debug(f'Pausing {len(clients)} clients...')
         logger.debug(f'Clients: {list(map(str, clients))}')
         if not clients:
             return
@@ -155,7 +155,7 @@ class AuxSubcontroller:
         if not clients:
             return
 
-        logger.info(f'Issuing reload weights (gen={gen})...')
+        logger.debug(f'Issuing reload weights (gen={gen})...')
 
         data = {
             'type': 'reload-weights',
@@ -168,13 +168,14 @@ class AuxSubcontroller:
                 send_json(client.socket.native_socket(), data)
                 send_file(client.socket.native_socket(), model_filename)
 
-        logger.info('Reload weights complete!')
+        logger.debug('Reload weights complete!')
 
     def unpause(self, clients: List[ClientData]):
         if not clients:
             return
 
-        logger.info('Issuing unpause...')
+        logger.debug(f'Unpausing {len(clients)} clients...')
+        logger.debug(f'Clients: {list(map(str, clients))}')
 
         data = {
             'type': 'unpause',

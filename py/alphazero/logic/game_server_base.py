@@ -192,14 +192,6 @@ class GameServerBase:
             if sha256sum(dst) != sha256:
                 raise Exception(f'Hash mismatch for asset {tgt}')
 
-        self.send_ready()
-
-    def send_ready(self):
-        data = {
-            'type': 'ready',
-        }
-        self.loop_controller_socket.send_json(data)
-
     def recv_loop(self):
         try:
             self.recv_loop_prelude()

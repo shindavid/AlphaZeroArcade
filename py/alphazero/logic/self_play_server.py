@@ -41,6 +41,12 @@ class SelfPlayServer(GameServerBase):
             raise Exception(f'Unknown message type: {msg_type}')
         return False
 
+    def recv_loop_prelude(self):
+        data = {
+            'type': 'ready',
+        }
+        self.loop_controller_socket.send_json(data)
+
     def start_gen0(self, msg):
         assert not self._running
         self._running = True
