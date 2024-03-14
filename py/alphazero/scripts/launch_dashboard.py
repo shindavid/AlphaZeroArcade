@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.repo_util import Repo
 
 from bokeh.embed import components, server_document
