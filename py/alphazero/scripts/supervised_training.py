@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 
-import game_index
+import games.index as game_index
 from net_modules import Model
 from alphazero.logic.position_dataset import GamesDataset
 from alphazero.logic.net_trainer import NetTrainer

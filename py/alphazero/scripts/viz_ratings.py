@@ -38,7 +38,7 @@ from scipy.signal import savgol_filter
 
 from alphazero.logic.common_params import CommonParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-import game_index
+import games.index as game_index
 
 
 class Params:

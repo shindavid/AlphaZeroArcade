@@ -3,7 +3,7 @@ from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientData, ClientId, ClientType, ThreadId
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.training_params import TrainingParams
-from game_index import get_game_spec
+from games.index import get_game_spec
 from util.logging_util import get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
