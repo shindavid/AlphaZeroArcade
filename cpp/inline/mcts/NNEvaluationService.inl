@@ -26,7 +26,7 @@ NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tenso
   }
   NNEvaluationService* instance = it->second;
   if (instance->params_ != params) {
-    throw util::Exception("Conflicting NNEvaluationService::create() calls");
+    throw util::CleanException("Conflicting NNEvaluationService::create() calls");
   }
   return instance;
 }

@@ -24,7 +24,7 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   if (mcts::kEnableProfiling) {
     auto profiling_dir = params_.profiling_dir();
     if (profiling_dir.empty()) {
-      throw util::Exception(
+      throw util::CleanException(
           "Required: --mcts-profiling-dir. Alternatively, add entry for 'mcts_profiling_dir' in "
           "config.txt");
     }
@@ -38,10 +38,10 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
     }
   }
   if (num_search_threads() < 1) {
-    throw util::Exception("num_search_threads must be positive (%d)", num_search_threads());
+    throw util::CleanException("num_search_threads must be positive (%d)", num_search_threads());
   }
   if (params.enable_pondering && num_search_threads() == 1) {
-    throw util::Exception("pondering mode does not work with only 1 search thread");
+    throw util::CleanException("pondering mode does not work with only 1 search thread");
   }
   shared_data_.active_search_threads.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
@@ -246,8 +246,8 @@ void Manager<GameState, Tensorizor>::init_profiling_dir(const std::string& profi
   static std::string pdir;
   if (!pdir.empty()) {
     if (pdir == profiling_dir) return;
-    throw util::Exception("Two different mcts profiling dirs used: %s and %s", pdir.c_str(),
-                          profiling_dir.c_str());
+    throw util::CleanException("Two different mcts profiling dirs used: %s and %s", pdir.c_str(),
+                               profiling_dir.c_str());
   }
   pdir = profiling_dir;
 
