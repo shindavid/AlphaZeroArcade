@@ -502,6 +502,13 @@ void NNEvaluationService<GameState, Tensorizor>::pause() {
   std::unique_lock lock(pause_mutex_);
   paused_ = true;
   if (!net_.loaded()) {
+    // This happens when the pause is issued during startup, when the model weights are lazily
+    // loaded from the loop controller. In this case, we need to explicitly call
+    // notify_pause_received() here, since the normal path to this call occurrs inside loop(),
+    // which is not yet running in the lazy load case.
+    //
+    // Failing to call notify_pause_received() calls LoopControllerClient to get stuck inside
+    // pause().
     core::LoopControllerClient::get()->notify_pause_received(this);
   }
   LOG_INFO << "NNEvaluationService: pause complete!";
