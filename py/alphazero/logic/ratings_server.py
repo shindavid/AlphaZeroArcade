@@ -132,7 +132,17 @@ class RatingsServer(GameServerBase):
     def get_mcts_player_str(self, gen: int, n_mcts_iters: int, n_search_threads: int):
         name = RatingsServer.get_mcts_player_name(gen)
         model = self.organizer.get_model_filename(gen)
-        return f'--type=MCTS-C --name={name} -i {n_mcts_iters} -m {model} -n {n_search_threads}'
+
+        player_args = [
+            '--type=MCTS-C',
+            '--name', name,
+            '-i', n_mcts_iters,
+            '-m', model,
+            '-n', n_search_threads,
+            '--cuda-device', self.cuda_device,
+        ]
+
+        return ' '.join(map(str, player_args))
 
     @staticmethod
     def get_reference_player_name(strength: int):
@@ -143,4 +153,11 @@ class RatingsServer(GameServerBase):
         family = self.game_spec.reference_player_family
         type_str = family.type_str
         strength_param = family.strength_param
-        return f'--type={type_str} --name={name} {strength_param}={strength}'
+
+        player_args = [
+            '--type', type_str,
+            '--name', name,
+            strength_param, strength,
+        ]
+
+        return ' '.join(map(str, player_args))
