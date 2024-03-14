@@ -1,6 +1,6 @@
 import argparse
 
-from alphazero.game_spec import GameSpec
+from games.game_spec import GameSpec
 from games.connect4.spec import Connect4
 from games.othello.spec import Othello
 from games.tictactoe.spec import TicTacToe

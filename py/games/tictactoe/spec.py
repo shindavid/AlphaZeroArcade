@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import math
 
-from alphazero.game_spec import GameSpec, ReferencePlayerFamily
+from games.game_spec import GameSpec, ReferencePlayerFamily
 from net_modules import ModelConfig, ModuleSpec
 from util.torch_util import Shape
 
