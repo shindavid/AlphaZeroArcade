@@ -46,7 +46,10 @@ inline auto LoopControllerClient::Params::make_options_description() {
       .template add_option<"weights-request-generation">(
           po::value<int>(&weights_request_generation)->default_value(weights_request_generation),
           "if specified, requests this specific generation from the loop controller whenever "
-          "requesting weights");
+          "requesting weights")
+      .template add_flag<"report-metrics", "do-not-report-metrics">(
+          &report_metrics, "report metrics to loop-controller periodically",
+          "do not report metrics to loop-controller");
 }
 
 template <typename T>

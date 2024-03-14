@@ -55,10 +55,7 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
           "{games-base-dir}/gen-{generation}/{timestamp}.pt")
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
-          "if specified, kill process after writing this many rows")
-      .template add_flag<"report-metrics", "do-not-report-metrics">(
-          &report_metrics, "report metrics to loop-controller periodically",
-          "do not report metrics to loop-controller");
+          "if specified, kill process after writing this many rows");
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
@@ -360,7 +357,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     msg["flush"] = flush;
 
     if (flush) {
-      if (params_.report_metrics) {
+      if (client->report_metrics()) {
         msg["metrics"] = client->get_perf_stats().to_json();
       }
       client->set_last_games_flush_ts(cur_timestamp);

@@ -34,7 +34,6 @@ class TrainingDataWriter
 
     std::string games_base_dir;
     int64_t max_rows = 0;
-    bool report_metrics = true;
   };
 
   using GameState = GameState_;

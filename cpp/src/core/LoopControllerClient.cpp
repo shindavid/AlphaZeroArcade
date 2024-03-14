@@ -25,8 +25,8 @@ void LoopControllerClient::init(const Params& params) {
 void LoopControllerClient::request_weights() {
   boost::json::object msg;
   msg["type"] = "weights-request";
-  if (weights_request_generation_ >= 0) {
-    msg["gen"] = weights_request_generation_;
+  if (params_.weights_request_generation >= 0) {
+    msg["gen"] = params_.weights_request_generation;
   }
   send(msg);
 }
@@ -53,11 +53,9 @@ perf_stats_t LoopControllerClient::get_perf_stats() const {
 }
 
 LoopControllerClient::LoopControllerClient(const Params& params)
-    : proc_start_ts_(util::ns_since_epoch())
-    , cuda_device_(params.cuda_device)
-    , role_(params.client_role)
-    , weights_request_generation_(params.weights_request_generation) {
-  if (role_.empty()) {
+    : params_(params)
+    , proc_start_ts_(util::ns_since_epoch()) {
+  if (role().empty()) {
     throw util::CleanException("--client-role must be specified");
   }
   socket_ = io::Socket::create_client_socket(params.loop_controller_hostname,
@@ -90,9 +88,9 @@ void LoopControllerClient::send_done() {
 void LoopControllerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";
-  msg["role"] = role_;
+  msg["role"] = role();
   msg["start_timestamp"] = proc_start_ts_;
-  msg["cuda_device"] = cuda_device_;
+  msg["cuda_device"] = cuda_device();
   socket_->json_write(msg);
 }
 
@@ -135,6 +133,10 @@ void LoopControllerClient::pause() {
 }
 
 void LoopControllerClient::send_metrics() {
+  if (!params_.report_metrics) {
+    return;
+  }
+
   LOG_INFO << "LoopControllerClient: sending metrics...";
   int64_t timestamp = util::ns_since_epoch();
 

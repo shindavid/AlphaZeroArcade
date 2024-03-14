@@ -45,6 +45,7 @@ class LoopControllerClient {
     std::string client_role;  // must be specified if port is specified
     std::string cuda_device = "cuda:0";
     int weights_request_generation = -1;
+    bool report_metrics = true;
   };
 
   using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
@@ -57,7 +58,9 @@ class LoopControllerClient {
   bool paused() const { return paused_; }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
-  const std::string& role() const { return role_; }
+  const std::string& role() const { return params_.client_role; }
+  const std::string& cuda_device() const { return params_.cuda_device; }
+  bool report_metrics() const { return params_.report_metrics; }
 
   template <typename T>
   void add_listener(T* listener);
@@ -92,10 +95,8 @@ class LoopControllerClient {
 
   static LoopControllerClient* instance_;
 
+  const Params params_;
   const int64_t proc_start_ts_;
-  const std::string cuda_device_;
-  const std::string role_;
-  const int weights_request_generation_;
   int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;
