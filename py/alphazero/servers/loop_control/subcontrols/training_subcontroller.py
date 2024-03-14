@@ -1,4 +1,4 @@
-from alphazero.data.position_dataset import PositionDataset, PositionListSlice
+from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller
 from alphazero.logic.custom_types import ChildThreadError, Generation
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
