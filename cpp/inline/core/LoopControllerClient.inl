@@ -43,7 +43,9 @@ inline auto LoopControllerClient::Params::make_options_description() {
           po::value<int>(&starting_generation)->default_value(starting_generation),
           "starting generation")
       .template add_option<"cuda-device">(
-          po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device");
+          po::value<std::string>(&cuda_device)->default_value(cuda_device),
+          "cuda device to register to the loop controller. Usually you need to specify this again "
+          "for the MCTS player(s)");
 }
 
 template <typename T>

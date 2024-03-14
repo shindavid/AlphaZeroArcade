@@ -19,7 +19,9 @@ inline auto NNEvaluationServiceParams::make_options_description() {
           po::value<std::string>(&model_filename),
           "model filename. If not specified, a uniform model is implicitly used")
       .template add_option<"cuda-device">(
-          po::value<std::string>(&cuda_device)->default_value(cuda_device), "cuda device")
+          po::value<std::string>(&cuda_device)->default_value(cuda_device),
+          "cuda device to use for nn evals. Usually you need to specify this again outside the "
+          "--player string to register the device to the loop controller")
       .template add_option<"batch-size-limit", 'b'>(
           po::value<int>(&batch_size_limit)->default_value(batch_size_limit), "batch size limit")
       .template add_option<"nn-eval-timeout-ns">(
