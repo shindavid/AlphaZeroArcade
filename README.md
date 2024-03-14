@@ -63,11 +63,11 @@ generate self-play games, sending them back to the loop controller to incorporat
 You can launch this loop on your local machine, using one self-play server, for the game of your choice, with a command like this:
 
 ```
-./py/alphazero/main_loop.py --game tictactoe --tag my-first-run
+./py/alphazero/scripts/run_local.py --game tictactoe --tag my-first-run
 ```
 or using aliases,
 ```
-./py/alphazero/main_loop.py -g tictactoe -t my-first-run
+./py/alphazero/scripts/run_local.py -g tictactoe -t my-first-run
 ```
 
 Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory 

@@ -6,7 +6,7 @@ import subprocess
 import sys
 from typing import List
 
-from game_index import GAME_SPECS_BY_NAME
+from games.index import GAME_SPECS_BY_NAME
 
 
 def run(cmd: str, print_cmd=True):

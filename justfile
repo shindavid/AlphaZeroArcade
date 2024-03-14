@@ -23,14 +23,6 @@ setup-lambda hostname:
 goto hostname:
   ssh -t {{hostname}} 'cd AlphaZeroArcade && just shell'
 
-# generate repo configuration file
-genconfig:
-  #!/bin/bash
-  echo "" > config.txt
-  echo "#c4.solver_dir = /home/dshin/checkouts/connect4  # connect4 solver dir" >> config.txt
-  echo "libtorch_dir = {{repodir}}/extra_deps/libtorch" >> config.txt
-  echo "alphazero_dir = {{repodir}}/data" >> config.txt
-
 # train connect-4
 train_c4 tag *extra:
-  ./py/alphazero/main_loop.py -g c4 -t {{tag}} {{extra}}
+  ./py/alphazero/scripts/run_local.py -g c4 -t {{tag}} {{extra}}

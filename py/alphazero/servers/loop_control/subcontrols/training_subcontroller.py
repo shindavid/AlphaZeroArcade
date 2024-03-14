@@ -1,8 +1,8 @@
-from alphazero.data.position_dataset import PositionDataset, PositionListSlice
-from alphazero.logic.aux_subcontroller import AuxSubcontroller
+from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
+from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller
 from alphazero.logic.custom_types import ChildThreadError, Generation
-from alphazero.logic.directory_organizer import DirectoryOrganizer
-from alphazero.logic.loop_control_data import LoopControlData
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.loop_control_data import LoopControlData
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
 from net_modules import Model

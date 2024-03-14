@@ -13,15 +13,14 @@ to increase the number of MCTS simulations.
 import argparse
 
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.self_play_server import SelfPlayServer, SelfPlayServerParams
+from alphazero.servers.ratings.ratings_server import RatingsServer, RatingsServerParams
 from util.logging_util import LoggingParams
-
 
 def load_args():
     parser = argparse.ArgumentParser()
 
     CommonParams.add_args(parser)
-    SelfPlayServerParams.add_args(parser)
+    RatingsServerParams.add_args(parser)
     LoggingParams.add_args(parser)
 
     return parser.parse_args()
@@ -30,10 +29,10 @@ def load_args():
 def main():
     args = load_args()
     common_params = CommonParams.create(args)
-    params = SelfPlayServerParams.create(args)
+    params = RatingsServerParams.create(args)
     logging_params = LoggingParams.create(args)
 
-    server = SelfPlayServer(params, common_params, logging_params)
+    server = RatingsServer(params, common_params, logging_params)
     server.run()
 
 

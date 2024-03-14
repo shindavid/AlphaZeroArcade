@@ -1,6 +1,6 @@
-from alphazero.logic.custom_types import  ClientData, ClientId, ClientType, Generation, \
+from alphazero.logic.custom_types import ClientData, ClientId, ClientType, Generation, \
     NewModelSubscriber
-from alphazero.logic.loop_control_data import LoopControlData
+from alphazero.servers.loop_control.loop_control_data import LoopControlData
 from util.logging_util import get_logger
 from util.socket_util import recv_json, send_file, send_json, JsonDict, Socket, \
     SocketRecvException, SocketSendException
@@ -22,6 +22,7 @@ class AuxSubcontroller:
     """
     Shared by other subcontrollers for various functionality.
     """
+
     def __init__(self, data: LoopControlData):
         self.data = data
         self._lock = threading.Lock()
@@ -81,9 +82,11 @@ class AuxSubcontroller:
                                'FROM clients WHERE id = ?', (reserved_id,))
                 row = cursor.fetchone()
                 if row is None:
-                    logger.warn(f'Client requested reserved id {reserved_id} but it was never reserved')
+                    logger.warn(
+                        f'Client requested reserved id {reserved_id} but it was never reserved')
                 elif any([x is not None for x in row]):
-                    logger.warn(f'Client requested reserved id {reserved_id} but it is already in use')
+                    logger.warn(
+                        f'Client requested reserved id {reserved_id} but it is already in use')
                 else:
                     cursor.execute("""
                         UPDATE clients
@@ -94,8 +97,8 @@ class AuxSubcontroller:
 
             if client_id is None:
                 cursor.execute('INSERT INTO clients (ip_address, port, role, start_timestamp, cuda_device) VALUES (?, ?, ?, ?, ?)',
-                            (ip_address, port, role, start_timestamp, cuda_device)
-                            )
+                               (ip_address, port, role, start_timestamp, cuda_device)
+                               )
                 client_id = cursor.lastrowid
 
             conn.commit()
@@ -202,7 +205,7 @@ class AuxSubcontroller:
         self.data.init_server_socket()
 
     def launch_recv_loop(self, msg_handler: MsgHandler, client_data: ClientData, thread_name: str,
-                         disconnect_handler: Optional[DisconnectHandler]=None):
+                         disconnect_handler: Optional[DisconnectHandler] = None):
         """
         Launches a daemon thread that loops, receiving json messages from the client and calling
         msg_handler(client_data, msg) for each message.

@@ -1,4 +1,4 @@
-import game_index
+import games.index as game_index
 from util.py_util import is_valid_path_component
 
 import argparse

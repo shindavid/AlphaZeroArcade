@@ -1,7 +1,7 @@
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic import constants
-from game_index import get_game_spec
+from games.index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo

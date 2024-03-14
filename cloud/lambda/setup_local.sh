@@ -19,5 +19,3 @@ fi
 # build docker container
 ./docker/build.sh
 
-# generate build config
-./docker/shell just genconfig

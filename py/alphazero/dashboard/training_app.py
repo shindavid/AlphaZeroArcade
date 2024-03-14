@@ -13,7 +13,7 @@ Within the flask app, you would leave out the --show. You may also need one of t
 --allow-websocket-origin=localhost:5007
 """
 from alphazero.logic.common_params import CommonParams
-from alphazero.logic.directory_organizer import DirectoryOrganizer
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
 import argparse
 from bokeh.io import curdoc
