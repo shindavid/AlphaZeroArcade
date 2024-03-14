@@ -16,12 +16,10 @@ int NNEvaluationService<GameState, Tensorizor>::instance_count_ = 0;
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tensorizor>::create(
     const NNEvaluationServiceParams& params) {
-  boost::filesystem::path model_file_path(params.model_filename);
-
-  auto it = instance_map_.find(model_file_path);
+  auto it = instance_map_.find(params.model_filename);
   if (it == instance_map_.end()) {
     auto instance = new NNEvaluationService(params);
-    instance_map_[model_file_path] = instance;
+    instance_map_[params.model_filename] = instance;
     return instance;
   }
   NNEvaluationService* instance = it->second;
@@ -36,6 +34,8 @@ void NNEvaluationService<GameState, Tensorizor>::connect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
   num_connections_++;
   if (thread_) return;
+
+  load_initial_weights_if_necessary();
   thread_ = new std::thread([&] { this->loop(); });
 }
 
@@ -66,12 +66,14 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
     : instance_id_(instance_count_++),
       params_(params),
-      net_(params.model_filename, params.cuda_device),
       batch_data_(params.batch_size_limit),
       full_input_(util::to_std_array<int64_t>(params.batch_size_limit,
                                               eigen_util::to_int64_std_array_v<InputShape>)),
       cache_(params.cache_size),
       timeout_duration_(params.nn_eval_timeout_ns) {
+  if (!params.model_filename.empty()) {
+    net_.load_weights(params.model_filename.c_str(), params.cuda_device);
+  }
   auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
                                                  eigen_util::to_int64_std_array_v<InputShape>);
   auto policy_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
@@ -92,6 +94,12 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
       this->paused_ = true;
     }
     core::LoopControllerClient::get()->add_listener(this);
+  } else {
+    if (!net_.loaded()) {
+      throw util::CleanException(
+          "MCTS player configured without --model-filename/-m and without "
+          "--no-model, but --loop-controller-* options not specified");
+    }
   }
 }
 
@@ -459,37 +467,54 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   cv_paused_.wait(lock, [&] { return !paused_; });
   lock.unlock();
 
-  LOG_INFO << "Resuming...";
+  LOG_INFO << "NNEvaluationService: resuming...";
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights(const std::string& model_filename) {
+void NNEvaluationService<GameState, Tensorizor>::load_initial_weights_if_necessary() {
+  LOG_INFO << "NNEvaluationService: load_initial_weights_if_necessary()";
+  std::unique_lock<std::mutex> lock(net_weights_mutex_);
+  if (net_.loaded()) return;
+
+  LOG_INFO << "NNEvaluationService: requesting weights...";
+  core::LoopControllerClient::get()->request_weights();
+  cv_net_weights_.wait(lock, [&] { return net_.loaded(); });
+  LOG_INFO << "NNEvaluationService: weights loaded!";
+}
+
+template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstream& ss) {
+  LOG_INFO << "NNEvaluationService: reloading network weights...";
   util::release_assert(paused_, "%s() called while not paused", __func__);
+  std::unique_lock lock1(net_weights_mutex_);
+  net_.load_weights(ss, params_.cuda_device);
+  cv_net_weights_.notify_all();
+  lock1.unlock();
 
-  LOG_INFO << "Reloading network weights...";
-  new (&net_) core::NeuralNet(model_filename, params_.cuda_device);
-
-  LOG_INFO << "Clearing network cache...";
-  std::unique_lock lock(cache_mutex_);
+  LOG_INFO << "NNEvaluationService: clearing network cache...";
+  std::unique_lock lock2(cache_mutex_);
   cache_.clear();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::pause() {
-  LOG_INFO << "NNEvaluationService pause()";
+  LOG_INFO << "NNEvaluationService: pausing";
   std::unique_lock lock(pause_mutex_);
   paused_ = true;
-  LOG_INFO << "NNEvaluationService pause() - complete!";
+  if (!net_.loaded()) {
+    core::LoopControllerClient::get()->notify_pause_received(this);
+  }
+  LOG_INFO << "NNEvaluationService: pause complete!";
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::unpause() {
-  LOG_INFO << "NNEvaluationService unpause()";
+  LOG_INFO << "NNEvaluationService: unpausing";
   std::unique_lock lock(pause_mutex_);
   paused_ = false;
   lock.unlock();
   cv_paused_.notify_all();
-  LOG_INFO << "NNEvaluationService unpause() -complete!";
+  LOG_INFO << "NNEvaluationService: unpause complete!";
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

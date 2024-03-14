@@ -346,19 +346,29 @@ class RatingsSubcontroller(NewModelSubscriber):
             self.send_match_request(client_data)
         elif msg_type == 'match-result':
             self.handle_match_result(msg, client_data)
+        else:
+            logger.warn(f'ratings-manager: unknown message type: {msg}')
         return False
 
     def worker_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
         msg_type = msg['type']
 
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'self-play-worker received json message: {msg}')
+            logger.debug(f'ratings-worker received json message: {msg}')
 
-        if msg_type == 'pause_ack':
+        if msg_type == 'pause-ack':
             self.aux_controller.handle_pause_ack(client_data)
+        elif msg_type == 'weights-request':
+            self.handle_weights_request(msg, client_data)
         elif msg_type == 'done':
             return True
+        else:
+            logger.warn(f'ratings-worker: unknown message type: {msg}')
         return False
+
+    def handle_weights_request(self, msg: JsonDict, client_data: ClientData):
+        gen = msg['gen']
+        self.aux_controller.reload_weights([client_data], gen)
 
     def commit_rating(self, gen: int, rating: float):
         rating_tuple = (gen, N_MCTS_ITERS, N_GAMES, rating)

@@ -154,18 +154,25 @@ class LoopControlData:
         self.server_socket.bind(('0.0.0.0', self.params.port))
         self.server_socket.listen()
 
-    def get_client_data_list(self, ctype: ClientType) -> List[ClientData]:
+    def get_clients(self, ctype: ClientType, shared_gpu: bool=False) -> List[ClientData]:
         """
         Returns a list of all client datas of the given type.
+
+        If shared_gpu is True, then only localhost clients that are using the same cuda device
+        are returned.
         """
         with self._client_data_lock:
-            return [c for c in self._client_data_list if c.client_type == ctype]
+            clients = [c for c in self._client_data_list if c.client_type == ctype]
+        if shared_gpu:
+            clients = [c for c in clients if c.is_on_localhost() and
+                        c.cuda_device == self.params.cuda_device]
+        return clients
 
     def get_single_client_data(self, ctype: ClientType) -> ClientData:
         """
         Returns a single client data of the given type.
         """
-        data_list = self.get_client_data_list(ctype)
+        data_list = self.get_clients(ctype)
         assert len(data_list) > 0, f'No clients of type {ctype} connected'
         return data_list[0]
 

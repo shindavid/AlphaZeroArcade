@@ -196,6 +196,9 @@ class Socket:
         self._recv_mutex = threading.Lock()
         self._send_mutex = threading.Lock()
 
+    def native_socket(self) -> socket.socket:
+        return self._sock
+
     def getsockname(self):
         return self._sock.getsockname()
 

@@ -31,12 +31,15 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
     init_profiling_dir(profiling_dir.string());
   }
 
-  if (!params.model_filename.empty()) {
+  if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params);
     if (mcts::kEnableProfiling) {
       nn_eval_service_->set_profiling_dir(params.profiling_dir());
     }
+  } else if (!params.model_filename.empty()) {
+    throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }
+
   if (num_search_threads() < 1) {
     throw util::CleanException("num_search_threads must be positive (%d)", num_search_threads());
   }

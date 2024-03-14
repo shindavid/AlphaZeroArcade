@@ -80,7 +80,7 @@ class RatingsServer(GameServerBase):
         ps1 = self.get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.binary_path
-        log_filename = self.make_log_filename('self-play-worker')
+        log_filename = self.make_log_filename('ratings-worker')
         cmd = [
             binary,
             '-G', n_games,
@@ -89,6 +89,7 @@ class RatingsServer(GameServerBase):
             '--client-role', ClientType.RATINGS_WORKER.value,
             '--cuda-device', self.cuda_device,
             '--log-filename', log_filename,
+            '--weights-request-generation', mcts_gen,
             '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',
@@ -131,13 +132,11 @@ class RatingsServer(GameServerBase):
 
     def get_mcts_player_str(self, gen: int, n_mcts_iters: int, n_search_threads: int):
         name = RatingsServer.get_mcts_player_name(gen)
-        model = self.organizer.get_model_filename(gen)
 
         player_args = [
             '--type=MCTS-C',
             '--name', name,
             '-i', n_mcts_iters,
-            '-m', model,
             '-n', n_search_threads,
             '--cuda-device', self.cuda_device,
         ]

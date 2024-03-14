@@ -91,6 +91,8 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             self.handle_ready(client_data)
         elif msg_type == 'gen0-complete':
             self.handle_gen0_complete(client_data)
+        else:
+            logger.warn(f'self-play-manager: unknown message type: {msg}')
         return False
 
     def worker_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
@@ -100,15 +102,23 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             # logging every game is too spammy
             logger.debug(f'self-play-worker received json message: {msg}')
 
-        if msg_type == 'pause_ack':
+        if msg_type == 'pause-ack':
             self.aux_controller.handle_pause_ack(client_data)
+        elif msg_type == 'weights-request':
+            self.handle_weights_request(client_data)
         elif msg_type == 'metrics':
             self.handle_metrics(msg, client_data)
         elif msg_type == 'game':
             self.handle_game(msg, client_data)
         elif msg_type == 'done':
             return True
+        else:
+            logger.warn(f'self-play-worker: unknown message type: {msg}')
         return False
+
+    def handle_weights_request(self, client_data: ClientData):
+        gen = self.data.organizer.get_latest_model_generation()
+        self.aux_controller.reload_weights([client_data], gen)
 
     def _set_gen0_completion(self, complete: bool):
         """
@@ -176,9 +186,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
 
         data = {
             'type': 'start',
-            'gen': gen,
             'games_base_dir': self.data.organizer.self_play_data_dir,
-            'model': model_filename,
         }
 
         logger.info(f'Requesting {client_data} to launch self-play...')

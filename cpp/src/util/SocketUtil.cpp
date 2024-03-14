@@ -54,6 +54,28 @@ bool Socket::json_read(boost::json::value* data) {
   return true;
 }
 
+bool Socket::recv_file_bytes(std::stringstream& ss) {
+  std::unique_lock lock(read_mutex_);
+
+  uint32_t length;
+  if (!read_helper(&length, sizeof(length), "Could not recv_file_bytes length from socket")) {
+    return false;
+  }
+  length = ntohl(length);  // ensure correct byte order
+
+  char dummy;  // socket_util.send_file() sends an executable byte, which we don't care about
+  if (!read_helper(&dummy, sizeof(dummy), "Could not recv_file_bytes exec-bit from socket")) {
+    return false;
+  }
+
+  std::vector<char> buffer(length);
+  if (!read_helper(buffer.data(), length, "Could not recv_file_bytes from socket")) {
+    return false;
+  }
+  ss.write(buffer.data(), length);
+  return true;
+}
+
 void Socket::shutdown() {
   if (active_) {
     ::shutdown(fd_, SHUT_RDWR);

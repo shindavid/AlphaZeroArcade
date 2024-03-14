@@ -4,6 +4,7 @@
 
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -85,6 +86,22 @@ class Socket {
    * Deserializes those bytes into a json object, and returns true.
    */
   bool json_read(boost::json::value* data);
+
+  /*
+   * Thread-safe convenience method for reading a file from the socket. Extends the provided
+   * stringstream with the file bytes.
+   *
+   * The file is assumed to have been sent by the send_file() method from the python file
+   * py/util/socket_util.py. See that file for data format details.
+   *
+   * Returns false if the socket has been closed.
+   *
+   * NOTE: This is inefficient currently in that it copies the file bytes into a vector before
+   * copying them into the stringstream. I use a stringstream because that is ultimately what we
+   * need to pass to torch::load() (or so I think!), and I didn't see an obvious way to avoid the
+   * intermediate vector given this requirement. There is probably a better way to do this.
+   */
+  bool recv_file_bytes(std::stringstream& ss);
 
   void shutdown();
 

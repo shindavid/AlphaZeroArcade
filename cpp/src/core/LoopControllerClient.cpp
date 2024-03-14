@@ -22,7 +22,17 @@ void LoopControllerClient::init(const Params& params) {
   instance_ = new LoopControllerClient(params);
 }
 
+void LoopControllerClient::request_weights() {
+  boost::json::object msg;
+  msg["type"] = "weights-request";
+  if (weights_request_generation_ >= 0) {
+    msg["gen"] = weights_request_generation_;
+  }
+  send(msg);
+}
+
 void LoopControllerClient::notify_pause_received(PauseListener* listener) {
+  LOG_INFO << "LoopControllerClient: received pause notification";
   std::unique_lock lock(pause_mutex_);
   listener->pause_notified_ = true;
   pause_complete_ = all_pause_notifications_received();
@@ -45,13 +55,13 @@ perf_stats_t LoopControllerClient::get_perf_stats() const {
 LoopControllerClient::LoopControllerClient(const Params& params)
     : proc_start_ts_(util::ns_since_epoch())
     , cuda_device_(params.cuda_device)
-    , role_(params.client_role) {
+    , role_(params.client_role)
+    , weights_request_generation_(params.weights_request_generation) {
   if (role_.empty()) {
     throw util::CleanException("--client-role must be specified");
   }
   socket_ = io::Socket::create_client_socket(params.loop_controller_hostname,
                                              params.loop_controller_port);
-  cur_generation_ = params.starting_generation;
   send_handshake();
   recv_handshake();
   thread_ = new std::thread([this]() { loop(); });
@@ -103,7 +113,11 @@ void LoopControllerClient::recv_handshake() {
 
 void LoopControllerClient::pause() {
   std::unique_lock lock(pause_mutex_);
-  if (paused_) return;
+  if (paused_) {
+    LOG_INFO << "LoopControllerClient: skipping pause (already paused)";
+    return;
+  }
+  LOG_INFO << "LoopControllerClient: pausing...";
   paused_ = true;
   pause_complete_ = pause_listeners_.empty();
   lock.unlock();
@@ -117,9 +131,11 @@ void LoopControllerClient::pause() {
 
   lock.lock();
   pause_cv_.wait(lock, [this]() { return pause_complete_; });
+  LOG_INFO << "LoopControllerClient: pause complete!";
 }
 
 void LoopControllerClient::send_metrics() {
+  LOG_INFO << "LoopControllerClient: sending metrics...";
   int64_t timestamp = util::ns_since_epoch();
 
   boost::json::object msg;
@@ -134,20 +150,22 @@ void LoopControllerClient::send_metrics() {
 
 void LoopControllerClient::send_pause_ack() {
   boost::json::object msg;
-  msg["type"] = "pause_ack";
+  msg["type"] = "pause-ack";
   socket_->json_write(msg);
 }
 
 void LoopControllerClient::unpause() {
+  LOG_INFO << "LoopControllerClient: unpausing...";
   for (auto listener : pause_listeners_) {
     listener->unpause();
   }
   paused_ = false;
 }
 
-void LoopControllerClient::reload_weights(const std::string& model_filename) {
+void LoopControllerClient::reload_weights(std::stringstream& ss) {
+  LOG_INFO << "LoopControllerClient: reloading weights...";
   for (auto listener : reload_weights_listeners_) {
-    listener->reload_weights(model_filename);
+    listener->reload_weights(ss);
   }
 }
 
@@ -157,24 +175,34 @@ void LoopControllerClient::loop() {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
       if (!shutdown_initiated_) {
-        LOG_INFO << "Cmd-server socket closed";
+        LOG_INFO << "LoopControllerClient: cmd-server socket closed, breaking";
       }
       break;
     }
 
     std::string type = msg.at("type").as_string().c_str();
-    LOG_INFO << "LoopControllerClient handling - " << type;
+    LOG_INFO << "LoopControllerClient: handling - " << msg;
     if (type == "pause") {
       pause();
       send_pause_ack();
     } else if (type == "unpause") {
       unpause();
     } else if (type == "reload-weights") {
-      std::string model_filename = msg.at("model_filename").as_string().c_str();
-      cur_generation_ = msg.at("generation").as_int64();
+      int64_t generation = msg.at("generation").as_int64();
+
+      // reload-weights msg will be immediately followed by a file transfer
+      std::stringstream ss;
+      if (!socket_->recv_file_bytes(ss)) {
+        if (!shutdown_initiated_) {
+          LOG_INFO << "LoopControllerClient: cmd-server socket closed, breaking";
+        }
+        break;
+      }
+
       pause();
       send_metrics();
-      reload_weights(model_filename);
+      cur_generation_ = generation;
+      reload_weights(ss);
       unpause();
     } else if (type == "quit") {
       // TODO: add actual quit logic
@@ -182,7 +210,7 @@ void LoopControllerClient::loop() {
     } else {
       throw util::Exception("Unknown loop-controller message type %s", type.c_str());
     }
-    LOG_INFO << "LoopControllerClient " << type << " handling complete";
+    LOG_INFO << "LoopControllerClient: " << type << " handling complete";
   }
 }
 

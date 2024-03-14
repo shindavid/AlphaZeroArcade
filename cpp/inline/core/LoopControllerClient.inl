@@ -39,13 +39,14 @@ inline auto LoopControllerClient::Params::make_options_description() {
       .template add_option<"client-role">(
           po::value<std::string>(&client_role)->default_value(client_role),
           "loop controller client role")
-      .template add_option<"starting-generation">(
-          po::value<int>(&starting_generation)->default_value(starting_generation),
-          "starting generation")
       .template add_option<"cuda-device">(
           po::value<std::string>(&cuda_device)->default_value(cuda_device),
           "cuda device to register to the loop controller. Usually you need to specify this again "
-          "for the MCTS player(s)");
+          "for the MCTS player(s)")
+      .template add_option<"weights-request-generation">(
+          po::value<int>(&weights_request_generation)->default_value(weights_request_generation),
+          "if specified, requests this specific generation from the loop controller whenever "
+          "requesting weights");
 }
 
 template <typename T>

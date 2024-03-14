@@ -20,8 +20,7 @@ void init(const Params& params) {
   namespace trivial = boost::log::trivial;
   namespace keywords = boost::log::keywords;
 
-  boost::log::add_console_log(std::cout, keywords::auto_flush = true,
-                              keywords::format = "%TimeStamp% %Message%");
+  boost::log::add_console_log(std::cout, keywords::format = "%TimeStamp% %Message%");
 
   if (!params.log_filename.empty()) {
     boost::log::add_file_log(keywords::file_name = params.log_filename.c_str(),

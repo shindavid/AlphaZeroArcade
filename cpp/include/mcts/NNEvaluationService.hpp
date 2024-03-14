@@ -17,6 +17,7 @@
 #include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
+#include <sstream>
 #include <vector>
 
 namespace mcts {
@@ -122,11 +123,10 @@ class NNEvaluationService
   };
 
   /*
-   * Constructs an evaluation thread and returns it.
+   * Constructs an evaluation service and returns it.
    *
-   * If another thread with the given model_filename has already been create()'d, then returns that.
-   * If that returned thread does not match the thread parameters (batch_size, nn_eval_timeout_ns,
-   * cache_size), then raises an exception.
+   * If another service with the same model_filename has already been create()'d, then returns that.
+   * In this case, validates taht the parameters match the existing service.
    */
   static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
@@ -163,7 +163,7 @@ class NNEvaluationService
   core::perf_stats_t get_perf_stats() override;
 
  private:
-  using instance_map_t = std::map<boost::filesystem::path, NNEvaluationService*>;
+  using instance_map_t = std::map<std::string, NNEvaluationService*>;
   using cache_key_t = util::HashablePair<GameState, core::symmetry_index_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
@@ -187,7 +187,8 @@ class NNEvaluationService
   void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
 
   void wait_for_unpause();
-  void reload_weights(const std::string& model_filename) override;
+  void load_initial_weights_if_necessary();
+  void reload_weights(std::stringstream&) override;
   void pause() override;
   void unpause() override;
   void wait_until_batch_ready();
@@ -234,9 +235,11 @@ class NNEvaluationService
   std::thread* thread_ = nullptr;
   std::mutex cache_mutex_;
   std::mutex connection_mutex_;
+  std::mutex net_weights_mutex_;
 
   std::condition_variable cv_service_loop_;
   std::condition_variable cv_evaluate_;
+  std::condition_variable cv_net_weights_;
 
   core::NeuralNet net_;
 

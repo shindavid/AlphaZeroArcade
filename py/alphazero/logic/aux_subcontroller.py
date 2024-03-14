@@ -2,7 +2,8 @@ from alphazero.logic.custom_types import  ClientData, ClientId, ClientType, Gene
     NewModelSubscriber
 from alphazero.logic.loop_control_data import LoopControlData
 from util.logging_util import get_logger
-from util.socket_util import recv_json, JsonDict, Socket, SocketRecvException, SocketSendException
+from util.socket_util import recv_json, send_file, send_json, JsonDict, Socket, \
+    SocketRecvException, SocketSendException
 from util import subprocess_util
 
 import os
@@ -139,42 +140,41 @@ class AuxSubcontroller:
         logger.debug('All pause acks received!')
 
     def pause_shared_gpu_workers(self):
-        self_play_workers = self.data.get_client_data_list(ClientType.SELF_PLAY_WORKER)
-        ratings_workers = self.data.get_client_data_list(ClientType.RATINGS_WORKER)
+        self_play_workers = self.data.get_clients(ClientType.SELF_PLAY_WORKER, shared_gpu=True)
+        ratings_workers = self.data.get_clients(ClientType.RATINGS_WORKER, shared_gpu=True)
         workers = self_play_workers + ratings_workers
-        gpu_sharing_workers = [c for c in workers if c.is_on_localhost() and
-                               c.cuda_device == self.data.params.cuda_device]
-        self.pause(gpu_sharing_workers)
+        self.pause(workers)
         self.wait_for_pause_acks()
 
-    def handle_new_model(self, generation: Generation):
-        self.reload_weights_for_self_play(generation)
-        self.unpause_ratings_workers(generation)
-        self.broadcast_new_model(generation)
+    def handle_new_model(self, gen: Generation):
+        self.reload_weights(self.data.get_clients(ClientType.SELF_PLAY_WORKER), gen)
+        self.unpause(self.data.get_clients(ClientType.RATINGS_WORKER, shared_gpu=True))
+        self.broadcast_new_model(gen)
 
-    def reload_weights_for_self_play(self, generation: int):
-        clients = self.data.get_client_data_list(ClientType.SELF_PLAY_WORKER)
+    def reload_weights(self, clients: List[ClientData], gen: int):
         if not clients:
             return
 
-        model_filename = self.data.organizer.get_model_filename(generation)
-        logger.info('Issuing reload weights to self play workers...')
+        logger.info(f'Issuing reload weights (gen={gen})...')
 
         data = {
             'type': 'reload-weights',
-            'model_filename': model_filename,
-            'generation': generation,
+            'generation': gen,
         }
 
+        model_filename = self.data.organizer.get_model_filename(gen)
         for client in clients:
-            client.socket.send_json(data)
+            with client.socket.send_mutex():
+                send_json(client.socket.native_socket(), data)
+                send_file(client.socket.native_socket(), model_filename)
 
-    def unpause_ratings_workers(self, generation: int):
-        clients = self.data.get_client_data_list(ClientType.RATINGS_WORKER)
+        logger.info('Reload weights complete!')
+
+    def unpause(self, clients: List[ClientData]):
         if not clients:
             return
 
-        logger.info('Issuing unpause to ratings workers...')
+        logger.info('Issuing unpause...')
 
         data = {
             'type': 'unpause',

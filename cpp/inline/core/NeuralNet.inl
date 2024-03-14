@@ -2,9 +2,11 @@
 
 namespace core {
 
-inline NeuralNet::NeuralNet(const boost::filesystem::path& path, const std::string& cuda_device)
-    : module_(torch::jit::load(path.c_str())) {
+template <typename Value>
+inline void NeuralNet::load_weights(Value&& value, const std::string& cuda_device) {
+  new (&module_) torch::jit::script::Module(torch::jit::load(value));
   module_.to(at::Device(cuda_device));
+  loaded_ = true;
 }
 
 inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy,

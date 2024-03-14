@@ -17,7 +17,11 @@ inline auto NNEvaluationServiceParams::make_options_description() {
   return desc
       .template add_option<"model-filename", 'm'>(
           po::value<std::string>(&model_filename),
-          "model filename. If not specified, a uniform model is implicitly used")
+          "model filename. If not specified, use an implicit uniform model if --no-model is set. "
+          "If neither --model-filename nor --no-model are set, then will receive model from "
+          "loop-controller")
+      .template add_flag<"no-model", "use-model">(
+          &no_model, "No model (uniform evals)", "Use model for evals")
       .template add_option<"cuda-device">(
           po::value<std::string>(&cuda_device)->default_value(cuda_device),
           "cuda device to use for nn evals. Usually you need to specify this again outside the "

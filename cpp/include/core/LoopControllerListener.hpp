@@ -3,6 +3,8 @@
 #include <core/PerfStats.hpp>
 #include <util/Exception.hpp>
 
+#include <sstream>
+
 #include <boost/json.hpp>
 
 namespace core {
@@ -41,7 +43,7 @@ template <>
 class LoopControllerListener<LoopControllerInteractionType::kReloadWeights> {
  public:
   virtual ~LoopControllerListener() = default;
-  virtual void reload_weights(const std::string& model_filename) = 0;
+  virtual void reload_weights(std::stringstream&) = 0;
 };
 
 template <>

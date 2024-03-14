@@ -1,7 +1,6 @@
 from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic import constants
-from alphazero.logic.directory_organizer import DirectoryOrganizer
 from game_index import get_game_spec
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.py_util import sha256sum
@@ -59,7 +58,6 @@ class GameServerBase:
 
     def __init__(self, params: GameServerBaseParams, common_params: CommonParams,
                  logging_params: LoggingParams, client_type: ClientType):
-        self.organizer = DirectoryOrganizer(common_params)
         self.game_spec = get_game_spec(common_params.game)
         self.tag = common_params.tag
         self.logging_params = logging_params

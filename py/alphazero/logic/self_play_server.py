@@ -7,8 +7,6 @@ from util import subprocess_util
 
 from dataclasses import dataclass
 import logging
-import os
-import subprocess
 
 
 logger = get_logger()
@@ -51,7 +49,6 @@ class SelfPlayServer(GameServerBase):
         # we will no longer need games_base_dir here
         games_base_dir = msg['games_base_dir']
         max_rows = msg['max_rows']
-        gen = 0
 
         player_args = [
             '--type=MCTS-T',
@@ -59,6 +56,7 @@ class SelfPlayServer(GameServerBase):
             '--games-base-dir', games_base_dir,
             '--do-not-report-metrics',
             '--max-rows', max_rows,
+            '--no-model',
 
             # for gen-0, sample more positions and use fewer iters per game, so we finish faster
             '--num-full-iters', 100,
@@ -77,7 +75,6 @@ class SelfPlayServer(GameServerBase):
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
-            '--starting-generation', gen,
             '--log-filename', log_filename,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -110,14 +107,11 @@ class SelfPlayServer(GameServerBase):
         # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
         # we will no longer need games_base_dir or model here
         games_base_dir = msg['games_base_dir']
-        gen = msg['gen']
-        model = msg['model']
 
         player_args = [
             '--type=MCTS-T',
             '--name=MCTS',
             '--games-base-dir', games_base_dir,
-            '-m', model,
             '--cuda-device', self.cuda_device,
         ]
 
@@ -133,7 +127,6 @@ class SelfPlayServer(GameServerBase):
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
-            '--starting-generation', gen,
             '--cuda-device', self.cuda_device,
             '--log-filename', log_filename,
             '--player', '"%s"' % (' '.join(map(str, player_args))),

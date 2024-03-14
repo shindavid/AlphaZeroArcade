@@ -9,6 +9,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -42,8 +43,8 @@ class LoopControllerClient {
     std::string loop_controller_hostname = "localhost";
     io::port_t loop_controller_port = 0;
     std::string client_role;  // must be specified if port is specified
-    int starting_generation = 0;
     std::string cuda_device = "cuda:0";
+    int weights_request_generation = -1;
   };
 
   using PauseListener = LoopControllerListener<LoopControllerInteractionType::kPause>;
@@ -65,6 +66,7 @@ class LoopControllerClient {
   void send_done();
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
+  void request_weights();
   void notify_pause_received(PauseListener* listener);
   perf_stats_t get_perf_stats() const;
 
@@ -84,7 +86,7 @@ class LoopControllerClient {
   void send_metrics();
   void send_pause_ack();
   void unpause();
-  void reload_weights(const std::string& model_filename);
+  void reload_weights(std::stringstream&);
   void loop();
   bool all_pause_notifications_received() const;
 
@@ -93,6 +95,7 @@ class LoopControllerClient {
   const int64_t proc_start_ts_;
   const std::string cuda_device_;
   const std::string role_;
+  const int weights_request_generation_;
   int64_t last_games_flush_ts_ = 0;
   io::Socket* socket_;
   std::thread* thread_;
@@ -100,7 +103,7 @@ class LoopControllerClient {
   std::vector<ReloadWeightsListener*> reload_weights_listeners_;
   std::vector<MetricsRequestListener*> metrics_request_listeners_;
   int client_id_ = -1;  // assigned by loop-controller
-  int cur_generation_;
+  int cur_generation_ = 0;
 
   std::condition_variable pause_cv_;
   mutable std::mutex pause_mutex_;

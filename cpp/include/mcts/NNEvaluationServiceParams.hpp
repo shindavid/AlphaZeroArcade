@@ -18,6 +18,7 @@ struct NNEvaluationServiceParams {
   bool operator==(const NNEvaluationServiceParams& other) const = default;
 
   std::string model_filename;
+  bool no_model = false;
   std::string cuda_device = "cuda:0";
   int batch_size_limit = 216;
   int64_t nn_eval_timeout_ns = util::us_to_ns(250);
