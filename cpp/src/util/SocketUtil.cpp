@@ -34,6 +34,35 @@ void Socket::json_write(const boost::json::value& json) {
   write_helper(json_str.c_str(), json_str.size(), "Could not json_write to socket");
 }
 
+void Socket::send_file_bytes(const std::stringstream& ss) {
+  std::string data = ss.str();
+  uint32_t length = htonl(static_cast<uint32_t>(data.size()));
+  bool exec_bit = false;
+
+  std::unique_lock lock(write_mutex_);
+  write_helper(&length, sizeof(length), "Could not send_file_bytes length to socket");
+  write_helper(&exec_bit, sizeof(exec_bit), "Could not send_file_bytes exec-bit to socket");
+  write_helper(data.c_str(), data.size(), "Could not send_file_bytes to socket");
+}
+
+void Socket::json_write_and_send_file_bytes(const boost::json::value& json,
+                                            const std::stringstream& ss) {
+  std::string json_str = boost::json::serialize(json);
+  uint32_t length = htonl(static_cast<uint32_t>(json_str.size()));
+
+  std::string data = ss.str();
+  uint32_t length2 = htonl(static_cast<uint32_t>(data.size()));
+  bool exec_bit = false;
+
+  std::unique_lock lock(write_mutex_);
+  write_helper(&length, sizeof(length), "Could not json_write length to socket");
+  write_helper(json_str.c_str(), json_str.size(), "Could not json_write to socket");
+
+  write_helper(&length2, sizeof(length2), "Could not send_file_bytes length to socket");
+  write_helper(&exec_bit, sizeof(exec_bit), "Could not send_file_bytes exec-bit to socket");
+  write_helper(data.c_str(), data.size(), "Could not send_file_bytes to socket");
+}
+
 bool Socket::json_read(boost::json::value* data) {
   std::unique_lock lock(read_mutex_);
 

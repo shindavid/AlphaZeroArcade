@@ -276,6 +276,13 @@ class SelfPlaySubcontroller(NewModelSubscriber):
         rows = msg['rows']
         flush = msg['flush']
 
+        # json msg is immediately followed by the game file
+        game_dir = os.path.join(self.data.organizer.self_play_data_dir, f'client-{client_id}',
+                                f'gen-{gen}')
+        os.makedirs(game_dir, exist_ok=True)  # Is this susceptible to race conditions?
+        game_filename = os.path.join(game_dir, f'{end_timestamp}.pt')
+        client_data.socket.recv_file(game_filename)
+
         self._pending_game_data.append(
             (client_id, gen, start_timestamp, end_timestamp, rows))
 

@@ -51,15 +51,11 @@ class SelfPlayServer(GameServerBase):
         assert not self._running
         self._running = True
 
-        # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
-        # we will no longer need games_base_dir here
-        games_base_dir = msg['games_base_dir']
         max_rows = msg['max_rows']
 
         player_args = [
             '--type=MCTS-T',
             '--name=MCTS',
-            '--games-base-dir', games_base_dir,
             '--max-rows', max_rows,
             '--no-model',
 
@@ -110,14 +106,9 @@ class SelfPlayServer(GameServerBase):
         assert not self._running
         self._running = True
 
-        # TODO: once we change c++ to directly communicate game data to the loop-controller via TCP,
-        # we will no longer need games_base_dir or model here
-        games_base_dir = msg['games_base_dir']
-
         player_args = [
             '--type=MCTS-T',
             '--name=MCTS',
-            '--games-base-dir', games_base_dir,
             '--cuda-device', self.cuda_device,
         ]
 

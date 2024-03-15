@@ -67,6 +67,7 @@ class LoopControllerClient {
 
   void shutdown();
   void send_done();
+  void send_with_file(const boost::json::value& msg, std::stringstream& ss);
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
   void request_weights();
