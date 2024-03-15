@@ -22,17 +22,18 @@ altogether to process all tags you have ever used for the given game.
 The visualizer will show a graph based on the rating data generated so-far by compute_ratings.py.
 """
 import argparse
+from collections import defaultdict
 import os
 import pipes
 import sqlite3
 import sys
-from collections import defaultdict
 from typing import List, Optional
 
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup, Button
 from bokeh.palettes import Category20
 from bokeh.plotting import figure, curdoc
+import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 
@@ -80,6 +81,7 @@ def load_args():
 class RatingData:
     def __init__(self, common_params: CommonParams, mcts_iters: int):
         organizer = DirectoryOrganizer(common_params)
+        game_spec = game_index.get_game_spec(common_params.game)
 
         conn = sqlite3.connect(organizer.ratings_db_filename)
         cursor = conn.cursor()
@@ -114,7 +116,8 @@ class RatingData:
         y = gen_df['rating']
         if len(gen_df) > window_length:
             y2 = savgol_filter(y, window_length=window_length, polyorder=2)
-            gen_df['rating_smoothed'] = y2
+            max_strength = game_spec.reference_player_family.max_strength
+            gen_df['rating_smoothed'] = np.minimum(y2, max_strength)
         else:
             gen_df['rating_smoothed'] = y
 
