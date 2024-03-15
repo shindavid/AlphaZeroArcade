@@ -26,7 +26,6 @@ class LoopControllerParams:
     port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
     model_cfg: str = 'default'
-    binary_path: str = None
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -34,7 +33,6 @@ class LoopControllerParams:
             port=args.port,
             cuda_device=args.cuda_device,
             model_cfg=args.model_cfg,
-            binary_path=args.binary_path,
         )
 
     @staticmethod
@@ -50,9 +48,6 @@ class LoopControllerParams:
                            help='cuda device used for network training (default: %(default)s)')
         group.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
                            help='model config (default: %(default)s)')
-        group.add_argument('-b', '--binary-path',
-                           help='binary path. Default: last-used binary for this tag. If this is '
-                           'the first run for this tag, then target/Release/bin/{game}')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
@@ -62,19 +57,6 @@ class LoopControllerParams:
             cmd.extend(['--cuda-device', self.cuda_device])
         if self.model_cfg != defaults.model_cfg:
             cmd.extend(['--model-cfg', self.model_cfg])
-        if self.binary_path:
-            cmd.extend(['--binary-path', self.binary_path])
-
-
-@dataclass
-class RuntimeAsset:
-    src_path: str
-    tgt_path: str
-    sha256: str
-
-    @staticmethod
-    def make(src_path: str, tgt_path: str):
-        return RuntimeAsset(src_path, tgt_path, str(sha256sum(src_path)))
 
 
 class LoopControlData:
@@ -90,10 +72,6 @@ class LoopControlData:
 
         self.organizer = DirectoryOrganizer(common_params)
         self.game_spec = get_game_spec(common_params.game)
-
-        self.binary_path = self._get_binary_path()
-        self.binary_asset = RuntimeAsset.make(self.binary_path, self.game_spec.name)
-        self.extra_assets = self._make_extra_assets()
 
         self.clients_db_conn_pool = ConnectionPool(
             self.organizer.clients_db_filename, constants.CLIENTS_TABLE_CREATE_CMDS)
@@ -120,31 +98,8 @@ class LoopControlData:
         return self._child_thread_error_flag.is_set()
 
     @property
-    def bins_dir(self):
-        return self.organizer.bins_dir
-
-    @property
     def model_cfg(self):
         return self.params.model_cfg
-
-    def _get_binary_path(self):
-        if self.params.binary_path:
-            return self.params.binary_path
-
-        latest = self.organizer.get_latest_binary()
-        if latest is not None:
-            return latest
-
-        bin_name = self.game_spec.name
-        return os.path.join(Repo.root(), f'target/Release/bin/{bin_name}')
-
-    def _make_extra_assets(self):
-        assets = []
-        for extra in self.game_spec.extra_runtime_deps:
-            src = os.path.join(Repo.root(), extra)
-            tgt = os.path.join('extra', os.path.basename(extra))
-            assets.append(RuntimeAsset.make(src, tgt))
-        return assets
 
     def init_server_socket(self):
         # TODO: retry-loop on bind() in case of temporary EADDRINUSE

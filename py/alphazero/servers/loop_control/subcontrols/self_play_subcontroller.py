@@ -58,7 +58,6 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             'type': 'handshake-ack',
             'client_id': client_data.client_id,
         }
-        self.aux_controller.add_asset_metadata_to_reply(reply)
         client_data.socket.send_json(reply)
         self.aux_controller.launch_recv_loop(
             self.manager_msg_handler, client_data, 'self-play-manager',
@@ -85,9 +84,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'self-play-manager received json message: {msg}')
 
-        if msg_type == 'asset-request':
-            self.aux_controller.send_asset(msg['asset'], client_data)
-        elif msg_type == 'ready':
+        if msg_type == 'ready':
             self.handle_ready(client_data)
         elif msg_type == 'gen0-complete':
             self.handle_gen0_complete(client_data)
