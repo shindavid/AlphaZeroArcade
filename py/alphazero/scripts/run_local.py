@@ -156,7 +156,7 @@ def main():
 
     procs = []
     try:
-        procs.append(('Training', launch_loop_controller(params_dict, 0)))
+        procs.append(('Loop-controller', launch_loop_controller(params_dict, 0)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         procs.append(('Self-play', launch_self_play_server(params_dict, n-1)))
 
