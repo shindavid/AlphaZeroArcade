@@ -52,15 +52,23 @@ You can then run for example `target/Release/bin/tictactoe -h` to get a list of 
 
 ### The AlphaZero loop
 
-The below figure summarizes the server architecture:
+A highly experienced graphic artist was hired to create the below figure, which summarizes the server architecture:
 
-![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/39e891fc-c2c1-42eb-a28d-551ac70698e6)
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/8349eaee-6cc2-4ad7-9fca-dcc8db973ab7)
 
-The loop controller manages the entire loop. It continuously trains a neural network, and periodically sends snapshots
-of the network weights to one or more self-play servers. The self-play servers use the current network weights to
-generate self-play games, sending them back to the loop controller to incorporate into its training.
+The loop controller manages the entire loop. It uses its GPU to continuously trains a neural network. It periodically
+sends snapshots of the network weights over TCP to one or more self-play servers. The self-play servers use the
+current network weights to generate self-play games, sending them back to the loop controller over TCP. The loop
+controller in return writes those games to disk, along with associated metadata to an sqlite3 database, and
+incorporates that data into its continuous training.
 
-You can launch this loop on your local machine, using one self-play server, for the game of your choice, with a command like this:
+One or more ratings servers can also participate. The loop controller sends model weights to the ratings servers,
+along with requests to test those weights in specific matchups against a game-specific family of reference agents.
+The ratings servers performs these matches and then send back match results (win/loss/draw counts). The loop controller
+writes the results to its database, and computes ratings based on the results. These ratings, along with various
+self-play and training metrics, can be viewed using the web dashboard.
+
+You can launch this loop on your local machine for the game of your choice, with a command like this:
 
 ```
 ./py/alphazero/scripts/run_local.py --game tictactoe --tag my-first-run
