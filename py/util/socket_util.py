@@ -144,6 +144,12 @@ def recv_file(sock: socket.socket, filename: str) -> bytes:
     integer specifying the length of the file and a 1-byte bool specifying whether the file is
     executable. The file is written to the given filename.
 
+    The file write is done in two steps: first, the file is written to a temporary file, and then
+    it is renamed to the final filename. This is to ensure that the file write is atomic. It takes
+    advantage of the fact that os.rename() is atomic on POSIX systems. Note that this assumes that
+    the final filename is on the same filesystem as the temporary file. This condition is not
+    checked.
+
     Calls recvall() under the hood - see recvall() documentation for details on possible exceptions.
     """
     data = recvall(sock, 4)
@@ -153,9 +159,11 @@ def recv_file(sock: socket.socket, filename: str) -> bytes:
     executable = bool(int.from_bytes(data, byteorder='big'))
 
     data = recvall(sock, length)
-    tmp_filename = tempfile.mktemp()
-    with open(tmp_filename, 'wb') as f:
-        f.write(data)
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        tmp_file.write(data)
+        tmp_filename = tmp_file.name
+
     os.rename(tmp_filename, filename)
 
     if executable:
