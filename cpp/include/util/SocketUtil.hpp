@@ -66,6 +66,25 @@ class Socket {
   void json_write(const boost::json::value& json);
 
   /*
+   * Thread-safe convenience method for writing the bytes of a stringstream to the socket.
+   *
+   * The format matches that of the send_file() method from the python file
+   * py/util/socket_util.py. See that file for data format details. The executable bit is set to 0.
+   * This means that the receiving end can use the recv_file() method to get the sent bytes.
+   *
+   * NOTE: This is inefficient currently in that it copies the stringstream bytes into a temporary
+   * buffer before sending to the socket. There is probably a better way to do this.
+   */
+  void send_file_bytes(const std::stringstream& ss);
+
+  /*
+   * Does json_write(json) and then send_file_bytes(ss), all under one mutex lock.
+   *
+   * The inefficiency noted in send_file_bytes() applies here as well.
+   */
+  void json_write_and_send_file_bytes(const boost::json::value& json, const std::stringstream& ss);
+
+  /*
    * Thread-safe read from socket.
    *
    * If the socket has been closed, then returns false.

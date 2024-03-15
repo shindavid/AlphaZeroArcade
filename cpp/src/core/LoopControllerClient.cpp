@@ -85,6 +85,10 @@ void LoopControllerClient::send_done() {
   send(msg);
 }
 
+void LoopControllerClient::send_with_file(const boost::json::value& msg, std::stringstream& ss) {
+  socket_->json_write_and_send_file_bytes(msg, ss);
+}
+
 void LoopControllerClient::send_handshake() {
   boost::json::object msg;
   msg["type"] = "handshake";

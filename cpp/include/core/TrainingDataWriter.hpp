@@ -32,7 +32,6 @@ class TrainingDataWriter
     auto make_options_description();
     bool operator==(const Params& other) const = default;
 
-    std::string games_base_dir;
     int64_t max_rows = 0;
   };
 
@@ -157,7 +156,7 @@ class TrainingDataWriter
   ~TrainingDataWriter();
 
   void loop();
-  bool write_to_file(const GameData* data);  // return true if this is last file
+  bool send(const GameData* data);  // return true if this is last game
 
   Params params_;
   std::thread* thread_;
@@ -168,7 +167,6 @@ class TrainingDataWriter
   int queue_index_ = 0;
   bool closed_ = false;
   bool paused_ = false;
-  const boost::filesystem::path games_base_dir_;
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;

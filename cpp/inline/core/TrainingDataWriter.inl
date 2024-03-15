@@ -13,14 +13,6 @@
 
 namespace core {
 
-namespace detail {
-
-inline boost::filesystem::path make_games_sub_dir(int client_id, int model_generation) {
-  return util::create_string("client-%d/gen-%d", client_id, model_generation);
-}
-
-}  // namespace detail
-
 template <bool ApplySymmetry>
 struct AuxTargetHelper {};
 
@@ -49,10 +41,6 @@ auto TrainingDataWriter<GameState_, Tensorizor_>::Params::make_options_descripti
 
   po2::options_description desc("TrainingDataWriter options");
   return desc
-      .template add_option<"games-base-dir", 'D'>(
-          po::value<std::string>(&games_base_dir),
-          "base directory for games files. This is fixed. Game files look like "
-          "{games-base-dir}/gen-{generation}/{timestamp}.pt")
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
           "if specified, kill process after writing this many rows");
@@ -198,10 +186,7 @@ void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
-    : params_(params), games_base_dir_(params.games_base_dir) {
-  util::clean_assert(params.games_base_dir.size() > 0,
-                     "TrainingDataWriter: games_base_dir must be specified");
-
+    : params_(params) {
   if (LoopControllerClient::initialized()) {
     if (LoopControllerClient::get()->paused()) {
       this->paused_ = true;
@@ -229,14 +214,14 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameData_sptr& data : queue) {
-      if (write_to_file(data.get())) break;
+      if (send(data.get())) break;
     }
     queue.clear();
   }
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
-bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* data) {
+bool TrainingDataWriter<GameState_, Tensorizor_>::send(const GameData* data) {
   int total_rows = 0;
   for (const DataChunk& chunk : data->chunks()) {
     total_rows += chunk.rows();
@@ -307,22 +292,11 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
 
   int64_t start_timestamp = data->start_timestamp();
   int64_t cur_timestamp = util::ns_since_epoch();
-  std::string output_filename = util::create_string("%ld.pt", cur_timestamp);
-  std::string tmp_output_filename = util::create_string(".%s", output_filename.c_str());
 
   core::LoopControllerClient* client = core::LoopControllerClient::get();
+  util::release_assert(client, "TrainingDataWriter: no LoopControllerClient");
 
-  int client_id = client ? client->client_id() : 0;
   int model_generation = client ? client->cur_generation() : 0;
-
-  boost::filesystem::path games_sub_dir = detail::make_games_sub_dir(client_id, model_generation);
-  boost::filesystem::path full_games_dir = games_base_dir_ / games_sub_dir;
-  boost::filesystem::path output_path = full_games_dir / output_filename;
-  boost::filesystem::path tmp_output_path = full_games_dir / tmp_output_filename;
-
-  if (!boost::filesystem::exists(full_games_dir)) {
-    boost::filesystem::create_directories(full_games_dir);
-  }
 
   using tensor_map_t = std::map<std::string, torch::Tensor>;
 
@@ -337,33 +311,28 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::write_to_file(const GameData* 
     tensor_map[AuxTarget::kName] = std::get<i>(aux_targets);
   });
 
-  // write-then-mv to avoid race-conditions with partially-written files
-  torch_util::save(tensor_map, tmp_output_path.string());
-  std::filesystem::rename(tmp_output_path.c_str(), output_path.c_str());
+  std::stringstream ss;
+  torch_util::save(tensor_map, ss);
 
   auto new_rows_written = rows_written_ + rows;
   bool done = params_.max_rows > 0 && new_rows_written >= params_.max_rows;
+  bool flush = done || client->ready_for_games_flush(cur_timestamp);
 
-  // inform loop-controller of new file
-  if (client) {
-    bool flush = done || client->ready_for_games_flush(cur_timestamp);
+  boost::json::object msg;
+  msg["type"] = "game";
+  msg["gen"] = model_generation;
+  msg["start_timestamp"] = start_timestamp;
+  msg["end_timestamp"] = cur_timestamp;
+  msg["rows"] = rows;
+  msg["flush"] = flush;
 
-    boost::json::object msg;
-    msg["type"] = "game";
-    msg["gen"] = model_generation;
-    msg["start_timestamp"] = start_timestamp;
-    msg["end_timestamp"] = cur_timestamp;
-    msg["rows"] = rows;
-    msg["flush"] = flush;
-
-    if (flush) {
-      if (client->report_metrics()) {
-        msg["metrics"] = client->get_perf_stats().to_json();
-      }
-      client->set_last_games_flush_ts(cur_timestamp);
+  if (flush) {
+    if (client->report_metrics()) {
+      msg["metrics"] = client->get_perf_stats().to_json();
     }
-    client->send(msg);
+    client->set_last_games_flush_ts(cur_timestamp);
   }
+  client->send_with_file(msg, ss);
 
   rows_written_ = new_rows_written;
   if (done) {
