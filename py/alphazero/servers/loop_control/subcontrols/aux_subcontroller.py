@@ -48,16 +48,6 @@ class AuxSubcontroller:
         with self._lock:
             self._pause_set.discard(client_data.client_id)
 
-    def send_asset(self, tgt: str, client_data: ClientData):
-        all_assets = [self.data.binary_asset] + self.data.extra_assets
-        requested_assets = [a for a in all_assets if a.tgt_path == tgt]
-        if len(requested_assets) != 1:
-            raise ValueError(f'Invalid asset request: {tgt}')
-
-        asset = requested_assets[0]
-        src = asset.src_path
-        client_data.socket.send_file(src)
-
     def accept_client(self) -> ClientData:
         conn = self.data.clients_db_conn_pool.get_connection()
         client_socket, addr = self.data.server_socket.accept()
@@ -187,21 +177,8 @@ class AuxSubcontroller:
         for client in clients:
             client.socket.send_json(data)
 
-    def copy_binary_to_bins_dir(self):
-        src = self.data.binary_asset.src_path
-        tgt = os.path.join(self.data.organizer.bins_dir, self.data.binary_asset.sha256)
-        rsync_cmd = ['rsync', '-t', src, tgt]
-        subprocess_util.run(rsync_cmd)
-
-    def add_asset_metadata_to_reply(self, reply: JsonDict):
-        assets = []
-        for asset in [self.data.binary_asset] + self.data.extra_assets:
-            assets.append((asset.tgt_path, asset.sha256))
-        reply['assets'] = assets
-
     def setup(self):
         self.data.organizer.makedirs()
-        self.copy_binary_to_bins_dir()
         self.data.init_server_socket()
 
     def launch_recv_loop(self, msg_handler: MsgHandler, client_data: ClientData, thread_name: str,

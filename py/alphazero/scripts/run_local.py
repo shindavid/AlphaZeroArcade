@@ -96,6 +96,8 @@ def launch_self_play_server(params_dict, cuda_device: int):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
+    if default_self_play_server_params.binary_path != params.binary_path:
+        cmd.extend(['--binary-path', params.binary_path])
 
     common_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
@@ -121,8 +123,6 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--port', str(params.port)])
     if default_loop_controller_params.model_cfg != params.model_cfg:
         cmd.extend(['--model-cfg', params.model_cfg])
-    if default_loop_controller_params.binary_path != params.binary_path:
-        cmd.extend(['--binary-path', params.binary_path])
 
     logging_params.add_to_cmd(cmd)
     common_params.add_to_cmd(cmd)

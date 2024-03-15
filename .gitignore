@@ -32,7 +32,5 @@ output
 .ipynb_checkpoints/
 Untitled*.ipynb
 
-# runtime
-.runtime
 logs
 

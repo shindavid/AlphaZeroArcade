@@ -26,6 +26,7 @@ class GameServerBaseParams:
     loop_controller_port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
     log_dir: str = ''
+    binary_path: str = None
 
     @classmethod
     def create(cls, args):
@@ -47,6 +48,8 @@ class GameServerBaseParams:
                            help='cuda device (default: %(default)s)')
         group.add_argument('--log-dir', default=defaults.log_dir,
                            help='log directory (default: {REPO_ROOT}/logs/{game}/{tag})')
+        group.add_argument('-b', '--binary-path',
+                           help='binary path. Default: target/Release/bin/{game}')
         return group
 
 
@@ -82,7 +85,9 @@ class GameServerBase:
 
     @property
     def binary_path(self):
-        return os.path.join(Repo.root(), '.runtime', self.game_spec.name)
+        if self.params.binary_path:
+            return self.params.binary_path
+        return os.path.join(Repo.root(), 'target/Release/bin', self.game_spec.name)
 
     def init_socket(self):
         loop_controller_address = (self.loop_controller_host, self.loop_controller_port)
@@ -160,37 +165,6 @@ class GameServerBase:
 
         logger.info(f'**** Starting {self.client_type.value} ****')
         logger.info(f'Received client id assignment: {self.client_id}')
-
-        runtime_dir = os.path.join(Repo.root(), '.runtime')
-        assets = data['assets']
-        requested_assets = []
-        for tgt, sha256 in assets:
-            loc = os.path.join(runtime_dir, tgt)
-            if not os.path.isfile(loc):
-                requested_assets.append((tgt, sha256))
-                logger.info(f'Requesting asset {tgt} for first time')
-                continue
-
-            if sha256sum(loc) != sha256:
-                requested_assets.append((tgt, sha256))
-                logger.info(f'Re-requesting asset {tgt} due to hash change')
-                continue
-
-            logger.debug(f'Asset {tgt} already present')
-
-        for tgt, sha256 in requested_assets:
-            data = {
-                'type': 'asset-request',
-                'asset': tgt,
-            }
-            self.loop_controller_socket.send_json(data)
-
-            dst = os.path.join(runtime_dir, tgt)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            self.loop_controller_socket.recv_file(dst)
-            logger.info(f'Received asset {tgt}')
-            if sha256sum(dst) != sha256:
-                raise Exception(f'Hash mismatch for asset {tgt}')
 
     def recv_loop(self):
         try:

@@ -284,7 +284,6 @@ class RatingsSubcontroller(NewModelSubscriber):
             'type': 'handshake-ack',
             'client_id': client_data.client_id,
         }
-        self.aux_controller.add_asset_metadata_to_reply(reply)
         client_data.socket.send_json(reply)
 
         self.start()
@@ -340,9 +339,7 @@ class RatingsSubcontroller(NewModelSubscriber):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'ratings-manager received json message: {msg}')
 
-        if msg_type == 'asset-request':
-            self.aux_controller.send_asset(msg['asset'], client_data)
-        elif msg_type == 'work-request':
+        if msg_type == 'work-request':
             self.send_match_request(client_data)
         elif msg_type == 'match-result':
             self.handle_match_result(msg, client_data)
