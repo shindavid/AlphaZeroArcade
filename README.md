@@ -82,12 +82,6 @@ If you have multiple GPU's on your machine, this command will dedicate separate 
 to your self-play server. Otherwise, the two servers will share the same GPU, with the self-play paused during the
 train steps. This shared-GPU setup is slower.
 
-Note: currently, the above server diagram is a slightly idealized picture. The current implementation actually
-assumes that self-play servers reside on the same machine as the loop controller. The self-play servers write
-their game data directly to the filesystem. We will eventually make the self-play servers communicate the game
-data to the loop controller via TCP, with the loop controller doing to the filesystem write. Doing so will
-allow for the self-play servers to run on arbitrary machines, as the diagram implies.
-
 ### Measuring Progress
 
 You can manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above tictactoe
