@@ -121,7 +121,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
         gen = self.data.organizer.get_latest_model_generation()
         self.aux_controller.reload_weights([client_data], gen)
 
-    def _set_gen0_completion(self, complete: bool):
+    def _set_gen0_completion(self, complete: bool, log=True):
         """
         Assumes self._gen0_lock is already acquired.
         """
@@ -129,10 +129,11 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             return
 
         self._gen0_complete = complete
-        if complete:
+        if complete and log:
             logger.info('Gen-0 self-play complete!')
 
     def wait_for_gen0_completion(self):
+        self._set_gen0_completion(self.num_additional_gen0_positions_needed() == 0, log=False)
         with self._gen0_cv:
             self._gen0_cv.wait_for(lambda: self._gen0_complete)
 
