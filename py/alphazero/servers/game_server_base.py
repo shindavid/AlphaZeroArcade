@@ -231,7 +231,7 @@ class GameServerBase:
         if proc.returncode:
             logger.error(f'Process failed with return code {proc.returncode}')
             for line in stderr_buffer:
-                logger.error(line)
+                logger.error(line.strip())
             raise Exception()
 
     def _forward_output_thread(self, src: str, stream, q: queue.Queue, buf=None):
