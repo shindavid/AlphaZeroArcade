@@ -34,7 +34,7 @@ BASE_DIR/  # $output_dir/game/tag/
         ...
 """
 from alphazero.logic.custom_types import Generation
-from alphazero.logic.common_params import RunParams
+from alphazero.logic.run_params import RunParams
 
 import os
 from typing import List, Optional

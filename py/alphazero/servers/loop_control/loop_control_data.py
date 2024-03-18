@@ -1,4 +1,4 @@
-from alphazero.logic.common_params import RunParams
+from alphazero.logic.run_params import RunParams
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientData, ClientId, ClientType, ThreadId
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer

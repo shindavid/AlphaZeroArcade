@@ -2,7 +2,7 @@
 
 import argparse
 
-from alphazero.logic.common_params import RunParams
+from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
 from alphazero.logic.training_params import TrainingParams

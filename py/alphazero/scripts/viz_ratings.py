@@ -37,7 +37,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 
-from alphazero.logic.common_params import RunParams
+from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 

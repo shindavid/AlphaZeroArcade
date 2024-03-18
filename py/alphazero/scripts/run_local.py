@@ -26,7 +26,7 @@ import time
 
 import torch
 
-from alphazero.logic.common_params import RunParams
+from alphazero.logic.run_params import RunParams
 from alphazero.logic import constants
 from alphazero.logic.training_params import TrainingParams
 from alphazero.servers.self_play.self_play_server import SelfPlayServerParams

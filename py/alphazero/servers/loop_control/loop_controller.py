@@ -1,5 +1,5 @@
 from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller
-from alphazero.logic.common_params import RunParams
+from alphazero.logic.run_params import RunParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.training_params import TrainingParams
 from alphazero.servers.loop_control.loop_control_data import LoopControlData, LoopControllerParams
