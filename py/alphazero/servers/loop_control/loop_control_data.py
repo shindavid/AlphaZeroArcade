@@ -1,4 +1,4 @@
-from alphazero.logic.common_params import CommonParams
+from alphazero.logic.common_params import RunParams
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientData, ClientId, ClientType, ThreadId
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -62,13 +62,13 @@ class LoopControlData:
     """
 
     def __init__(self, params: LoopControllerParams, training_params: TrainingParams,
-                 common_params: CommonParams):
+                 run_params: RunParams):
         self.params = params
         self.training_params = training_params
-        self.common_params = common_params
+        self.run_params = run_params
 
-        self.organizer = DirectoryOrganizer(common_params)
-        self.game_spec = get_game_spec(common_params.game)
+        self.organizer = DirectoryOrganizer(run_params)
+        self.game_spec = get_game_spec(run_params.game)
 
         self.clients_db_conn_pool = ConnectionPool(
             self.organizer.clients_db_filename, constants.CLIENTS_TABLE_CREATE_CMDS)
@@ -85,6 +85,10 @@ class LoopControlData:
 
         self._client_data_list: List[ClientData] = []
         self._client_data_lock = threading.Lock()
+
+    @property
+    def game(self) -> str:
+        return self.run_params.game
 
     def add_client(self, client_data: ClientData):
         with self._client_data_lock:

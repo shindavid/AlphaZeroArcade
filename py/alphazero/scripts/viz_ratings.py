@@ -37,14 +37,14 @@ import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 
-from alphazero.logic.common_params import CommonParams
+from alphazero.logic.common_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 
 
 class Params:
     launch: bool
-    alphazero_dir: str
+    output_dir: str
     game: str
     tags: Optional[List[str]]
     mcts_iters_list: List[int]
@@ -53,7 +53,7 @@ class Params:
     @staticmethod
     def load(args):
         Params.launch = bool(args.launch)
-        Params.alphazero_dir = args.alphazero_dir
+        Params.output_dir = args.output_dir
         Params.game = args.game
         Params.tags = [t for t in args.tag.split(',') if t] if args.tag else None
         Params.mcts_iters_list = [] if not args.mcts_iters else \
@@ -68,7 +68,7 @@ class Params:
                             'comma-separated (e.g. "300,3000")')
         parser.add_argument('-p', '--port', type=int, default=5006,
                             help='bokeh port (default: %(default)s)')
-        CommonParams.add_args(parser)
+        RunParams.add_args(parser)
 
 
 def load_args():
@@ -79,9 +79,9 @@ def load_args():
 
 
 class RatingData:
-    def __init__(self, common_params: CommonParams, mcts_iters: int):
-        organizer = DirectoryOrganizer(common_params)
-        game_spec = game_index.get_game_spec(common_params.game)
+    def __init__(self, run_params: RunParams, mcts_iters: int):
+        organizer = DirectoryOrganizer(run_params)
+        game_spec = game_index.get_game_spec(run_params.game)
 
         conn = sqlite3.connect(organizer.ratings_db_filename)
         cursor = conn.cursor()
@@ -126,15 +126,15 @@ class RatingData:
 
         gen_df = gen_df.join(x_df, how='inner').reset_index()
 
-        tag = common_params.tag
+        tag = run_params.tag
         self.tag = tag
         self.mcts_iters = mcts_iters
         self.gen_df = gen_df
         self.label = f'{tag} (i={mcts_iters})'
 
 
-def make_rating_data_list(common_params: CommonParams) -> List[RatingData]:
-    organizer = DirectoryOrganizer(common_params)
+def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
+    organizer = DirectoryOrganizer(run_params)
     db_filename = organizer.ratings_db_filename
     if not os.path.exists(db_filename):
         return []
@@ -149,13 +149,13 @@ def make_rating_data_list(common_params: CommonParams) -> List[RatingData]:
     if Params.mcts_iters_list:
         mcts_iters_list = [m for m in mcts_iters_list if m in Params.mcts_iters_list]
 
-    return [RatingData(common_params, m) for m in mcts_iters_list]
+    return [RatingData(run_params, m) for m in mcts_iters_list]
 
 
 def get_rating_data_list():
     tags = Params.tags
     if not tags:
-        game_dir = os.path.join(Params.alphazero_dir, Params.game)
+        game_dir = os.path.join(Params.output_dir, Params.game)
 
         tags = os.listdir(game_dir)
         # sort tags by mtime:
@@ -164,8 +164,8 @@ def get_rating_data_list():
 
     data_list = []
     for tag in tags:
-        common_params = CommonParams(alphazero_dir=Params.alphazero_dir, game=Params.game, tag=tag)
-        data_list.extend(make_rating_data_list(common_params))
+        run_params = RunParams(output_dir=Params.output_dir, game=Params.game, tag=tag)
+        data_list.extend(make_rating_data_list(run_params))
 
     return data_list
 

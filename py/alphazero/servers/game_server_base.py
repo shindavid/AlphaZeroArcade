@@ -1,9 +1,8 @@
-from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic import constants
+from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import LoggingParams, QueueStream, configure_logger, get_logger
-from util.py_util import sha256sum
 from util.repo_util import Repo
 from util.socket_util import JsonDict, Socket, SocketRecvException, SocketSendException
 
@@ -58,10 +57,10 @@ class GameServerBase:
     interacting with the LoopController and for running games.
     """
 
-    def __init__(self, params: GameServerBaseParams, common_params: CommonParams,
-                 logging_params: LoggingParams, client_type: ClientType):
-        self.game_spec = get_game_spec(common_params.game)
-        self.tag = common_params.tag
+    def __init__(self, params: GameServerBaseParams, logging_params: LoggingParams,
+                 client_type: ClientType):
+        self._game = None
+        self._game_spec = None
         self.logging_params = logging_params
         self.params = params
         self.client_type = client_type
@@ -72,6 +71,18 @@ class GameServerBase:
 
         self._shutdown_lock = threading.Lock()
         self._shutdown_code = -1
+
+    @property
+    def game(self) -> str:
+        if self._game is None:
+            raise ValueError('game not set')
+        return self._game
+
+    @property
+    def game_spec(self) -> GameSpec:
+        if self._game_spec is None:
+            self._game_spec = get_game_spec(self.game)
+        return self._game_spec
 
     @property
     def loop_controller_host(self):
@@ -241,6 +252,7 @@ class GameServerBase:
         assert data['type'] == 'handshake-ack', data
 
         self.client_id = data['client_id']
+        self._game = data['game']
 
         configure_logger(params=self.logging_params, queue_stream=self.logging_queue)
         threading.Thread(target=self.log_loop, daemon=True, args=(self.logging_queue.log_queue,),

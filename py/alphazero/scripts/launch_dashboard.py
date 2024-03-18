@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from alphazero.logic.common_params import CommonParams
+from alphazero.logic.common_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.repo_util import Repo
 
@@ -50,7 +50,7 @@ class Params:
 def load_args():
     parser = argparse.ArgumentParser()
 
-    CommonParams.add_args(parser)
+    RunParams.add_args(parser)
     Params.add_args(parser)
 
     return parser.parse_args()
@@ -61,7 +61,7 @@ GLOBALS = {}
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
-    common_params = GLOBALS['common_params']
+    run_params = GLOBALS['run_params']
     params = GLOBALS['params']
 
     # training_db_filename = organizer.training_db_filename
@@ -83,7 +83,7 @@ def dashboard():
     else:
         logs = []
 
-    title = f'{common_params.game} {common_params.tag} Dashboard'
+    title = f'{run_params.game} {run_params.tag} Dashboard'
 
     bokeh_server_url = f'http://localhost:{params.bokeh_port}/training_app'
     script = server_document(bokeh_server_url)
@@ -98,10 +98,10 @@ def dashboard():
 
 def main():
     args = load_args()
-    common_params = CommonParams.create(args)
+    run_params = RunParams.create(args)
     params = Params.create(args)
     GLOBALS['params'] = params
-    GLOBALS['common_params'] = common_params
+    GLOBALS['run_params'] = run_params
 
     os.chdir(Repo.root())
     bokeh_cmd = ['bokeh', 'serve',
@@ -110,7 +110,7 @@ def main():
                  '--port', str(params.bokeh_port),
                  'py/alphazero/dashboard/training_app.py', '--args',
                  ]
-    common_params.add_to_cmd(bokeh_cmd)
+    run_params.add_to_cmd(bokeh_cmd)
     print(' '.join(map(pipes.quote, bokeh_cmd)))
     p = subprocess.Popen(bokeh_cmd)
     try:

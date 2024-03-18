@@ -1,4 +1,3 @@
-from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.servers.game_server_base import GameServerBase, GameServerBaseParams
 from util.logging_util import LoggingParams, get_logger
@@ -20,9 +19,8 @@ class SelfPlayServerParams(GameServerBaseParams):
 
 
 class SelfPlayServer(GameServerBase):
-    def __init__(self, params: SelfPlayServerParams, common_params: CommonParams,
-                 logging_params: LoggingParams):
-        super().__init__(params, common_params, logging_params, ClientType.SELF_PLAY_MANAGER)
+    def __init__(self, params: SelfPlayServerParams, logging_params: LoggingParams):
+        super().__init__(params, logging_params, ClientType.SELF_PLAY_MANAGER)
         self._running = False
 
     def handle_msg(self, msg: JsonDict) -> bool:

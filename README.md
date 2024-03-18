@@ -81,39 +81,38 @@ or using aliases,
 Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory 
 
 ```
-$A0A_ALPHAZERO_DIR/tictactoe/my-first-run/
+$A0A_OUTPUT_DIR/tictactoe/my-first-run/
 ```
 
-where `$A0A_ALPHAZERO_DIR` is an environment variable configured during env setup.
+where `$A0A_OUTPUT_DIR` is an environment variable configured during env setup.
 
-If you have multiple GPU's on your machine, this command will dedicate separate GPU's to your loop controller and
-to your self-play server. Otherwise, the two servers will share the same GPU, with the self-play paused during the
-train steps. This shared-GPU setup is slower.
+This command will use cuda device 0 by default for the loop-controller. For the self-play server, it will use cuda
+device 1 if you have multiple GPU's, and cuda device 0 otherwise. In this latter case, the controller will pause
+the self-play games during train steps.
 
 ### Measuring Progress
 
 You can manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above tictactoe
-example, this can be done by something like:
+example, you can do this with a command like:
 
 ```
-./target/Release/bin/tictactoe --player "--type=TUI" --player "--type=MCTS-C -m $A0A_ALPHAZERO_DIR/tictactoe/my-first-run/models/gen-10.ptj"
+./target/Release/bin/tictactoe --player "--type=TUI" --player "--type=MCTS-C -m $A0A_OUTPUT_DIR/tictactoe/my-first-run/models/gen-10.ptj"
 ```
 
-For something more systematic, you want to run the MCTS agents against a family of reference agents. For this, you can run:
+For something more systematic, you want to run a ratings server:
 
 ```
-./py/alphazero/compute_ratings.py -D -g tictactoe -t my-first-run
+./py/alphazero/scripts/run_ratings_server.py
 ```
 
-This launches a process that continuously run matches between the produced family of MCTS agents against a family of
-reference agents, storing match results and estimated ratings into an sqlite3 database. This process too uses a GPU,
-so if you don't have a free GPU on your machine, it is recommended to run it while the main loop is not running, or
-to run it on a separate machine (your `${alphazero_dir}` should then be on a network-mounted filesystem).
+This will use cuda device 0 by default. If this will clash with a currently running server, you may have issues.
+If you only have a single GPU, you will need to manually share it, by running `run_loop_controller.py` and then
+switching back and forth between running `run_ratings_server.py` and `run_self_play_server.py` as desired.
 
-TODO: run `compute_ratings.py` as a client of the train server, sending results over TCP, with the train server
-writing to a database, so that the filesystem/database dependence is localized to the train server.
+TODO: provide something out-of-the-box that will let all 3 servers run and reasonably share resources on a single
+single-GPU machine.
 
-To then visualize the data, you can run:
+Once enough ratings games have been run, you can visualize ratings progress via:
 
 ```
 ./py/alphazero/viz_ratings.py -g tictactoe -t my-first-run

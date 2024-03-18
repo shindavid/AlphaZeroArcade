@@ -26,9 +26,8 @@ import time
 
 import torch
 
-from alphazero.logic.common_params import CommonParams
+from alphazero.logic.common_params import RunParams
 from alphazero.logic import constants
-from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.logic.training_params import TrainingParams
 from alphazero.servers.self_play.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.loop_controller import LoopControllerParams
@@ -71,7 +70,7 @@ class Params:
 def load_args():
     parser = argparse.ArgumentParser()
 
-    CommonParams.add_args(parser)
+    RunParams.add_args(parser)
     TrainingParams.add_args(parser)
     Params.add_args(parser)
     LoggingParams.add_args(parser)
@@ -83,9 +82,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
     default_self_play_server_params = SelfPlayServerParams()
 
     params = params_dict['Params']
-    common_params = params_dict['CommonParams']
     logging_params = params_dict['LoggingParams']
-    organizer = DirectoryOrganizer(common_params)
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -98,7 +95,6 @@ def launch_self_play_server(params_dict, cuda_device: int):
     if default_self_play_server_params.binary_path != params.binary_path:
         cmd.extend(['--binary-path', params.binary_path])
 
-    common_params.add_to_cmd(cmd)
     logging_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
@@ -110,7 +106,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     default_loop_controller_params = LoopControllerParams()
 
     params = params_dict['Params']
-    common_params = params_dict['CommonParams']
+    run_params = params_dict['RunParams']
     training_params = params_dict['TrainingParams']
     logging_params = params_dict['LoggingParams']
 
@@ -124,7 +120,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--model-cfg', params.model_cfg])
 
     logging_params.add_to_cmd(cmd)
-    common_params.add_to_cmd(cmd)
+    run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd)
 
     cmd = ' '.join(map(quote, cmd))
@@ -134,13 +130,13 @@ def launch_loop_controller(params_dict, cuda_device: int):
 
 def main():
     args = load_args()
-    common_params = CommonParams.create(args)
+    run_params = RunParams.create(args)
     training_params = TrainingParams.create(args)
     params = Params.create(args)
     logging_params = LoggingParams.create(args)
 
     params_dict = {
-        'CommonParams': common_params,
+        'RunParams': run_params,
         'TrainingParams': training_params,
         'Params': params,
         'LoggingParams': logging_params,
@@ -157,7 +153,7 @@ def main():
     try:
         procs.append(('Loop-controller', launch_loop_controller(params_dict, 0)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
-        procs.append(('Self-play', launch_self_play_server(params_dict, n-1)))
+        procs.append(('Self-play', launch_self_play_server(params_dict, min(1, n-1))))
 
         loop = True
         while loop:

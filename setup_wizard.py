@@ -180,36 +180,27 @@ def setup_libtorch(env_sh_lines):
     env_sh_lines.append(f'export A0A_LIBTORCH_DIR={expanded_location}')
 
 
-def setup_alphazero_dir(env_sh_lines):
+def setup_output_dir(env_sh_lines):
     """
-    Request user to set the AlphaZeroArcade directory.
+    Request user to set the output directory.
     """
     print('*' * 80)
     print('Alphazero runs write (a lot of) data to disk. Please specify a directory where')
     print('that data will be written. If you have a fast SSD, it is recommended to use that')
     print('for the data directory.')
     print('')
+    print('If you are only using this checkout to run a self-play or ratings server, and not ')
+    print('for a loop-controller, then your choice here does not matter.')
 
-    default_alphazero_dir = os.environ.get('A0A_ALPHAZERO_DIR', None)
-    if default_alphazero_dir is None:
-        prompt = 'Please enter the location of your AlphaZeroArcade data directory: '
-    else:
-        prompt = f'Please enter the location of your AlphaZeroArcade data directory [{default_alphazero_dir}]: '
-    while True:
-        alphazero_dir = input(prompt).strip()
-        if not alphazero_dir:
-            alphazero_dir = default_alphazero_dir
-            if not alphazero_dir:
-                continue
+    cwd = os.getcwd()
+    default_output_dir = os.environ.get('A0A_OUTPUT_DIR', os.path.join(cwd, 'output'))
+    prompt = f'Please enter the location of your output directory [{default_output_dir}]: '
+    output_dir = input(prompt).strip()
+    if not output_dir:
+        output_dir = default_output_dir
 
-        expanded_alphazero_dir = os.path.expanduser(alphazero_dir)
-        if not os.path.isdir(expanded_alphazero_dir):
-            print_red(f'Directory {alphazero_dir} does not exist.')
-            continue
-
-        break
-
-    env_sh_lines.append(f'export A0A_ALPHAZERO_DIR={expanded_alphazero_dir}')
+    expanded_output_dir = os.path.expanduser(output_dir)
+    env_sh_lines.append(f'export A0A_OUTPUT_DIR={expanded_output_dir}')
 
 
 def setup_local_python_imports(conda_env):
@@ -250,7 +241,7 @@ def main():
         cuda_check()
         conda_env = setup_conda(env_sh_lines)
         setup_libtorch(env_sh_lines)
-        setup_alphazero_dir(env_sh_lines)
+        setup_output_dir(env_sh_lines)
         setup_local_python_imports(conda_env)
         build_extra_deps()
         write_env_sh(env_sh_lines)

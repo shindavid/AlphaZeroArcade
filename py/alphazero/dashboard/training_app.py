@@ -12,7 +12,7 @@ Within the flask app, you would leave out the --show. You may also need one of t
 --allow-websocket-origin=127.0.0.1:5000
 --allow-websocket-origin=localhost:5007
 """
-from alphazero.logic.common_params import CommonParams
+from alphazero.logic.common_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
 import argparse
@@ -32,7 +32,7 @@ SIZING_MODE = 'fixed'
 
 def load_args():
     parser = argparse.ArgumentParser()
-    CommonParams.add_args(parser)
+    RunParams.add_args(parser)
     return parser.parse_args()
 
 
@@ -48,8 +48,8 @@ class TrainingVisualizer:
     X_VARS = list(X_VAR_DICT.keys())
     X_VAR_COLUMNS = list(X_VAR_DICT.values())
 
-    def __init__(self, common_params: CommonParams):
-        organizer = DirectoryOrganizer(common_params)
+    def __init__(self, run_params: RunParams):
+        organizer = DirectoryOrganizer(run_params)
 
         conn = sqlite3.connect(organizer.training_db_filename)
         c = conn.cursor()
@@ -378,9 +378,9 @@ class TrainingVisualizer:
 
 def main():
     args = load_args()
-    common_params = CommonParams.create(args)
-    viz = TrainingVisualizer(common_params)
-    curdoc().title = f'{common_params.game} {common_params.tag} Dashboard'
+    run_params = RunParams.create(args)
+    viz = TrainingVisualizer(run_params)
+    curdoc().title = f'{run_params.game} {run_params.tag} Dashboard'
     curdoc().add_root(viz.root)
 
 

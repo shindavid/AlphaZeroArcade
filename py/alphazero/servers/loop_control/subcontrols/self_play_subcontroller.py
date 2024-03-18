@@ -57,6 +57,7 @@ class SelfPlaySubcontroller(NewModelSubscriber):
         reply = {
             'type': 'handshake-ack',
             'client_id': client_data.client_id,
+            'game': self.data.game,
         }
         client_data.socket.send_json(reply)
         self.aux_controller.launch_recv_loop(

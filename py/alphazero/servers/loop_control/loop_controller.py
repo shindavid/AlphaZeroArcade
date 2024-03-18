@@ -1,5 +1,5 @@
 from alphazero.servers.loop_control.subcontrols.aux_subcontroller import AuxSubcontroller
-from alphazero.logic.common_params import CommonParams
+from alphazero.logic.common_params import RunParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic.training_params import TrainingParams
 from alphazero.servers.loop_control.loop_control_data import LoopControlData, LoopControllerParams
@@ -30,8 +30,8 @@ class LoopController:
     - AuxSubcontroller: shared by other subcontrollers for various tasks
     """
     def __init__(self, params: LoopControllerParams, training_params: TrainingParams,
-                 common_params: CommonParams):
-        self.data = LoopControlData(params, training_params, common_params)
+                 run_params: RunParams):
+        self.data = LoopControlData(params, training_params, run_params)
         self.aux_subcontroller = AuxSubcontroller(self.data)
         self.training_subcontroller = TrainingSubcontroller(self.aux_subcontroller)
         self.self_play_subcontroller = SelfPlaySubcontroller(self.training_subcontroller)

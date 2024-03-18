@@ -1,4 +1,3 @@
-from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.servers.game_server_base import GameServerBase, GameServerBaseParams
 from alphazero.logic.ratings import extract_match_record
@@ -36,9 +35,8 @@ class RatingsServerParams(GameServerBaseParams):
 
 
 class RatingsServer(GameServerBase):
-    def __init__(self, params: RatingsServerParams, common_params: CommonParams,
-                 logging_params: LoggingParams):
-        super().__init__(params, common_params, logging_params, ClientType.RATINGS_MANAGER)
+    def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
+        super().__init__(params, logging_params, ClientType.RATINGS_MANAGER)
         self.params = params
         self._running = False
 
