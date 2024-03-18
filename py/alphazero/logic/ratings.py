@@ -1,5 +1,5 @@
 import collections
-from typing import Dict
+from typing import Dict, List, Union
 
 import numpy as np
 
@@ -72,7 +72,7 @@ class MatchRecord:
         return record
 
 
-def extract_match_record(stdout: str) -> MatchRecord:
+def extract_match_record(stdout: Union[List[str], str]) -> MatchRecord:
     """
     Parses the stdout of the c++ binary that runs the matches.
 
@@ -93,7 +93,8 @@ def extract_match_record(stdout: str) -> MatchRecord:
     ...
     """
     record = MatchRecord()
-    for line in stdout.splitlines():
+    lines = stdout.splitlines() if isinstance(stdout, str) else stdout
+    for line in lines:
         tokens = line.split()
         skip_list = [0, 2]  # hacky way to test for the two possible formats
         for skip in skip_list:

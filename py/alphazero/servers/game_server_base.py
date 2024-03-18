@@ -2,7 +2,7 @@ from alphazero.logic.common_params import CommonParams
 from alphazero.logic.custom_types import ClientType
 from alphazero.logic import constants
 from games.index import get_game_spec
-from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.logging_util import LoggingParams, QueueStream, configure_logger, get_logger
 from util.py_util import sha256sum
 from util.repo_util import Repo
 from util.socket_util import JsonDict, Socket, SocketRecvException, SocketSendException
@@ -10,7 +10,9 @@ from util.socket_util import JsonDict, Socket, SocketRecvException, SocketSendEx
 import abc
 from dataclasses import dataclass, fields
 import os
+import queue
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -25,7 +27,6 @@ class GameServerBaseParams:
     loop_controller_host: str = 'localhost'
     loop_controller_port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
-    log_dir: str = ''
     binary_path: str = None
 
     @classmethod
@@ -46,8 +47,6 @@ class GameServerBaseParams:
                            help='loop-controller port (default: %(default)s)')
         group.add_argument('--cuda-device', default=defaults.cuda_device,
                            help='cuda device (default: %(default)s)')
-        group.add_argument('--log-dir', default=defaults.log_dir,
-                           help='log directory (default: {REPO_ROOT}/logs/{game}/{tag})')
         group.add_argument('-b', '--binary-path',
                            help='binary path. Default: target/Release/bin/{game}')
         return group
@@ -67,6 +66,7 @@ class GameServerBase:
         self.params = params
         self.client_type = client_type
 
+        self.logging_queue = QueueStream()
         self.loop_controller_socket: Optional[Socket] = None
         self.client_id = None
         self.shutdown_code = None
@@ -144,15 +144,80 @@ class GameServerBase:
 
         self.loop_controller_socket.send_json(data)
 
-    def make_log_filename(self, descr: str, mkdirs=True):
-        log_dir = self.params.log_dir
-        if not log_dir:
-            log_dir = os.path.join(Repo.root(), 'logs', self.game_spec.name, self.tag)
+    def log_loop(self, q: queue.Queue, src: Optional[str]=None):
+        try:
+            while True:
+                line = q.get()
+                if line is None:
+                    break
 
-        if mkdirs:
-            os.makedirs(log_dir, exist_ok=True)
-        log_filename = os.path.join(log_dir, f'{descr}.{self.client_id}.log')
-        return log_filename
+                data = {
+                    'type': 'log',
+                    'line': line,
+                    }
+                if src is not None:
+                    data['src'] = src
+                self.loop_controller_socket.send_json(data)
+        except:
+            logger.error(f'Unexpected error in log_loop():', exc_info=True)
+            self.shutdown_code = 1
+
+    def forward_output(self, src: str, proc: subprocess.Popen, stdout_buffer=None):
+        """
+        Accepts a subprocess.Popen object and forwards its stdout and stderr to the loop controller
+        for remote logging. Assumes that the proc was constructed with stdout=subprocess.PIPE and
+        stderr=subprocess.PIPE.
+
+        If stdout_buffer is provided, captures the stdout lines in the buffer.
+
+        Note that the relative ordering of stdout and stderr lines is not guaranteed when
+        forwarding. This should not be a big deal, since typically proc itself has non-deterministic
+        ordering of stdout vs stderr lines.
+
+        Waits for the process to return. Checks the error code and logs the stderr if the process
+        returns a non-zero error code.
+        """
+        proc_log_queue = queue.Queue()
+        stderr_buffer = []
+
+        stdout_thread = threading.Thread(target=self._forward_output_thread, daemon=True,
+                                         args=(src, proc.stdout, proc_log_queue, stdout_buffer),
+                                         name=f'{src}-forward-stdout')
+        stderr_thread = threading.Thread(target=self._forward_output_thread, daemon=True,
+                                         args=(src, proc.stderr, proc_log_queue, stderr_buffer),
+                                         name=f'{src}-forward-stderr')
+        forward_thread = threading.Thread(target=self.log_loop, daemon=True,
+                                          args=(proc_log_queue, src),
+                                          name=f'{src}-log-loop')
+
+        stdout_thread.start()
+        stderr_thread.start()
+        forward_thread.start()
+
+        stdout_thread.join()
+        stderr_thread.join()
+
+        proc_log_queue.put(None)
+        forward_thread.join()
+        proc.wait()
+
+        if proc.returncode:
+            logger.error(f'Process failed with return code {proc.returncode}')
+            for line in stderr_buffer:
+                logger.error(line)
+            raise Exception()
+
+    def _forward_output_thread(self, src: str, stream, q: queue.Queue, buf=None):
+        try:
+            for line in stream:
+                if line is None:
+                    break
+                q.put(line)
+                if buf is not None:
+                    buf.append(line)
+        except:
+            logger.error(f'Unexpected error in _forward_output_thread({src}):', exc_info=True)
+            self.shutdown_code = 1
 
     def recv_handshake(self):
         data = self.loop_controller_socket.recv_json(timeout=1)
@@ -160,8 +225,9 @@ class GameServerBase:
 
         self.client_id = data['client_id']
 
-        log_filename = self.make_log_filename(self.client_type.value, self.client_id)
-        configure_logger(filename=log_filename, params=self.logging_params)
+        configure_logger(params=self.logging_params, queue_stream=self.logging_queue)
+        threading.Thread(target=self.log_loop, daemon=True, args=(self.logging_queue.log_queue,),
+                         name='log-loop').start()
 
         logger.info(f'**** Starting {self.client_type.value} ****')
         logger.info(f'Received client id assignment: {self.client_id}')

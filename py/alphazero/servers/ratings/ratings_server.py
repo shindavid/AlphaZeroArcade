@@ -80,7 +80,6 @@ class RatingsServer(GameServerBase):
         ps1 = self.get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
         ps2 = self.get_reference_player_str(ref_strength)
         binary = self.binary_path
-        log_filename = self.make_log_filename('ratings-worker')
         cmd = [
             binary,
             '-G', n_games,
@@ -88,7 +87,6 @@ class RatingsServer(GameServerBase):
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.RATINGS_WORKER.value,
             '--cuda-device', self.cuda_device,
-            '--log-filename', log_filename,
             '--weights-request-generation', mcts_gen,
             '--do-not-report-metrics',
             '-p', parallelism_factor,
@@ -102,17 +100,13 @@ class RatingsServer(GameServerBase):
 
         proc = subprocess_util.Popen(cmd)
         logger.info(f'Running {mcts_name} vs {ref_name} match [{proc.pid}]: {cmd}')
-        stdout, stderr = proc.communicate()
-
-        if proc.returncode:
-            logger.error(f'Cmd failed with return code {proc.returncode}')
-            logger.error(f'stderr:\n{stderr}')
-            raise Exception()
+        stdout_buffer = []
+        self.forward_output('ratings-worker', proc, stdout_buffer)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the
         # loop-controller. Doing so would better match how the self-play server works.
-        record = extract_match_record(stdout)
+        record = extract_match_record(stdout_buffer)
         logger.info(f'Match result: {record.get(0)}')
 
         self._running = False

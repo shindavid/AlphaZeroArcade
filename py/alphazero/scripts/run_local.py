@@ -92,7 +92,6 @@ def launch_self_play_server(params_dict, cuda_device: int):
     cmd = [
         'py/alphazero/scripts/run_self_play_server.py',
         '--cuda-device', cuda_device,
-        '--log-dir', organizer.logs_dir,
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])

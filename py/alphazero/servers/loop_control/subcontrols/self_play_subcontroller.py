@@ -81,10 +81,12 @@ class SelfPlaySubcontroller(NewModelSubscriber):
 
     def manager_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if logger.isEnabledFor(logging.DEBUG):
+        if msg_type != 'log' and logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'self-play-manager received json message: {msg}')
 
-        if msg_type == 'ready':
+        if msg_type == 'log':
+            self.aux_controller.handle_log(msg, client_data)
+        elif msg_type == 'ready':
             self.handle_ready(client_data)
         elif msg_type == 'gen0-complete':
             self.handle_gen0_complete(client_data)
@@ -99,7 +101,9 @@ class SelfPlaySubcontroller(NewModelSubscriber):
             # logging every game is too spammy
             logger.debug(f'self-play-worker received json message: {msg}')
 
-        if msg_type == 'pause-ack':
+        if msg_type == 'log':
+            self.aux_controller.handle_log(msg, client_data)
+        elif msg_type == 'pause-ack':
             self.aux_controller.handle_pause_ack(client_data)
         elif msg_type == 'weights-request':
             self.handle_weights_request(client_data)
