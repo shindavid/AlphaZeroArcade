@@ -5,17 +5,14 @@ from alphazero.servers.loop_control.directory_organizer import DirectoryOrganize
 from alphazero.logic.training_params import TrainingParams
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.py_util import sha256sum
-from util.repo_util import Repo
 from util.sqlite3_util import ConnectionPool
 
 
 from dataclasses import dataclass
-import os
 import socket
 import sys
 import threading
-from typing import List
+from typing import Callable, List
 
 
 logger = get_logger()
@@ -82,6 +79,8 @@ class LoopControlData:
 
         self.server_socket = None
 
+        self._shutdown_actions = []
+        self._shutdown_in_progress = False
         self._child_thread_error_flag = threading.Event()
 
         self._client_data_list: List[ClientData] = []
@@ -131,12 +130,21 @@ class LoopControlData:
         assert len(data_list) > 0, f'No clients of type {ctype} connected'
         return data_list[0]
 
+    def active(self):
+        return not self._shutdown_in_progress
+
     def shutdown(self, code):
+        self._shutdown_in_progress = True
         logger.info(f'Shutting down (rc={code})...')
 
+        for action in self._shutdown_actions:
+            action()
         if self.server_socket:
             self.server_socket.close()
         sys.exit(code)
+
+    def register_shutdown_action(self, action: Callable[[], None]):
+        self._shutdown_actions.append(action)
 
     def remove_client(self, client_id: ClientId):
         with self._client_data_lock:

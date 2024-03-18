@@ -31,12 +31,15 @@ class TrainingSubcontroller:
     def __init__(self, aux_controller: AuxSubcontroller):
         self.aux_controller = aux_controller
 
+        self._trainer = None
         self._net = None
         self._opt = None
         self._cuda_device = self.data.params.cuda_device
 
         self._ready_event = threading.Event()
         self._lock = threading.Lock()
+
+        self.data.register_shutdown_action(self.shutdown)
 
         # These members are initialized lazily, so that we don't need to read the database until we
         # actually need the data.
@@ -52,6 +55,12 @@ class TrainingSubcontroller:
     @property
     def organizer(self) -> DirectoryOrganizer:
         return self.data.organizer
+
+    def shutdown(self):
+        with self._lock:
+            if self._trainer is not None:
+                logger.info('Closing DataLoader...')
+                self._trainer.shutdown()
 
     def setup(self):
         self._last_sample_window = self._load_last_sample_window()
@@ -208,25 +217,32 @@ class TrainingSubcontroller:
         Uses a separate thread to ensure that the DataLoader is properly cleaned up after the
         train step is complete.
         """
-        thread = threading.Thread(target=self._train_step_helper, name='train_step', daemon=True)
+        gen = self.data.organizer.get_latest_model_generation() + 1
+        self.extend_master_list()
+
+        dataset = PositionDataset(self.data.organizer.base_dir, self._master_list_slice)
+
+        logger.info('******************************')
+        logger.info(f'Train gen:{gen}')
+        dataset.announce_sampling(logger.info)
+
+        n_minibatches = self.data.training_params.minibatches_per_epoch
+
+        trainer = NetTrainer(gen, n_minibatches, self.data.params.cuda_device)
+        with self._lock:
+            self._trainer = trainer
+
+        thread = threading.Thread(target=self._train_step_helper, name='train_step', daemon=True,
+                                  args=(dataset, trainer, gen))
         thread.start()
         thread.join()
 
-    def _train_step_helper(self):
+        with self._lock:
+            self._trainer = None
+
+    def _train_step_helper(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
         try:
-            gen = self.data.organizer.get_latest_model_generation() + 1
-            self.extend_master_list()
-
-            dataset = PositionDataset(self.data.organizer.base_dir, self._master_list_slice)
-
-            logger.info('******************************')
-            logger.info(f'Train gen:{gen}')
-            dataset.announce_sampling(logger.info)
-
-            n_minibatches = self.data.training_params.minibatches_per_epoch
             minibatch_size = self.data.training_params.minibatch_size
-
-            trainer = NetTrainer(gen, n_minibatches, self.data.params.cuda_device)
 
             loader = DataLoader(
                 dataset,
@@ -240,6 +256,10 @@ class TrainingSubcontroller:
             self.aux_controller.pause_shared_gpu_workers()
 
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
+            if stats is None:
+                # happens in premature-shutdown case
+                return
+
             stats.dump(logger.info)
             logger.info(f'Gen {gen} training complete')
             trainer.dump_timing_stats(logger.info)

@@ -162,6 +162,8 @@ class AuxSubcontroller:
         self_play_workers = self.data.get_clients(ClientType.SELF_PLAY_WORKER, shared_gpu=True)
         ratings_workers = self.data.get_clients(ClientType.RATINGS_WORKER, shared_gpu=True)
         workers = self_play_workers + ratings_workers
+        if not workers:
+            return
         self.pause(workers)
         self.wait_for_pause_acks()
 

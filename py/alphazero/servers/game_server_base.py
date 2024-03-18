@@ -158,6 +158,9 @@ class GameServerBase:
                 if src is not None:
                     data['src'] = src
                 self.loop_controller_socket.send_json(data)
+        except SocketSendException:
+            logger.warn(f'Server appears to have disconnected, shutting down...')
+            self.shutdown_code = 0
         except:
             logger.error(f'Unexpected error in log_loop():', exc_info=True)
             self.shutdown_code = 1

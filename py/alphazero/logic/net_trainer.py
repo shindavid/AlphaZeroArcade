@@ -5,11 +5,11 @@ from torch import optim
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.position_dataset import PositionDataset
 from net_modules import Head, Model
-from learning_targets import LearningTarget
 from util.torch_util import apply_mask
 
 
 import time
+from typing import Optional
 
 
 class EvaluationResults:
@@ -133,6 +133,7 @@ class TrainingStats:
 class NetTrainer:
     def __init__(self, gen: Generation, n_minibatches_to_process: int=-1,
                  py_cuda_device_str: str='cuda:0'):
+        self._shutdown_in_progress = False
         self.gen = gen
         self.n_minibatches_to_process = n_minibatches_to_process
         self.py_cuda_device_str = py_cuda_device_str
@@ -142,16 +143,21 @@ class NetTrainer:
         self.for_loop_time = 0
         self.t0 = time.time()
 
+    def shutdown(self):
+        self._shutdown_in_progress = True
+
     def do_training_epoch(self,
                           loader: torch.utils.data.DataLoader,
                           net: Model,
                           optimizer: optim.Optimizer,
-                          dataset: PositionDataset) -> TrainingStats:
+                          dataset: PositionDataset) -> Optional[TrainingStats]:
         """
         Performs a training epoch by processing data from loader. Stops when either
         self.n_minibatches_to_process minibatch updates have been performed or until all the data in
         loader has been processed, whichever comes first. If self.n_minibatches_to_process is
         negative, that is treated like infinity.
+
+        If a separate thread calls self.shutdown(), then this exits prematurely and returns None
         """
         dataset.set_key_order(net.target_names)
 
@@ -165,6 +171,8 @@ class NetTrainer:
         n_samples = 0
         stats = TrainingStats(self.gen, loader.batch_size, window_start, window_end, net)
         for data in loader:
+            if self._shutdown_in_progress:
+                return None
             t1 = time.time()
             inputs = data[0]
             labels_list = data[1:]
@@ -200,6 +208,8 @@ class NetTrainer:
             self.for_loop_time += t2 - t1
             if stats.n_minibatches_processed == self.n_minibatches_to_process:
                 break
+            if self._shutdown_in_progress:
+                return None
 
         end_ts = time.time_ns()
 

@@ -73,6 +73,8 @@ class LoopController:
                     break
 
                 time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info('Caught Ctrl-C')
         finally:
             self.data.shutdown(shutdown_code)
 
@@ -83,7 +85,7 @@ class LoopController:
             self.self_play_subcontroller.wait_for_gen0_completion()
             self.training_subcontroller.train_gen1_model_if_necessary()
 
-            while True:
+            while self.data.active():
                 self.training_subcontroller.wait_until_enough_training_data()
                 self.training_subcontroller.train_step()
         except:
