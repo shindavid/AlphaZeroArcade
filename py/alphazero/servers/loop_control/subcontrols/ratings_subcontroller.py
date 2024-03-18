@@ -336,10 +336,12 @@ class RatingsSubcontroller(NewModelSubscriber):
 
     def manager_msg_handler(self, client_data: ClientData, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if logger.isEnabledFor(logging.DEBUG):
+        if msg_type != 'log' and logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'ratings-manager received json message: {msg}')
 
-        if msg_type == 'work-request':
+        if msg_type == 'log':
+            self.aux_controller.handle_log(msg, client_data)
+        elif msg_type == 'work-request':
             self.send_match_request(client_data)
         elif msg_type == 'match-result':
             self.handle_match_result(msg, client_data)
@@ -353,7 +355,9 @@ class RatingsSubcontroller(NewModelSubscriber):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'ratings-worker received json message: {msg}')
 
-        if msg_type == 'pause-ack':
+        if msg_type == 'log':
+            self.aux_controller.handle_log(msg, client_data)
+        elif msg_type == 'pause-ack':
             self.aux_controller.handle_pause_ack(client_data)
         elif msg_type == 'weights-request':
             self.handle_weights_request(msg, client_data)

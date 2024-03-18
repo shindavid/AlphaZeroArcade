@@ -69,14 +69,12 @@ class SelfPlayServer(GameServerBase):
             '--copy-from=MCTS',
         ]
 
-        log_filename = self.make_log_filename('self-play-worker-gen0')
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
-            '--log-filename', log_filename,
             '--do-not-report-metrics',
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -86,13 +84,7 @@ class SelfPlayServer(GameServerBase):
 
         proc = subprocess_util.Popen(self_play_cmd)
         logger.info(f'Running gen-0 self-play [{proc.pid}]: {self_play_cmd}')
-        logger.info(f'Log: {log_filename}')
-        _, stderr = proc.communicate()
-
-        if proc.returncode:
-            logger.error(f'Gen-0 self-play failed with return code {proc.returncode}')
-            logger.error(f'stderr:\n{stderr}')
-            raise Exception()
+        self.forward_output('gen0-self-play-worker', proc)
 
         logger.info(f'Gen-0 self-play complete!')
         self._running = False
@@ -117,7 +109,6 @@ class SelfPlayServer(GameServerBase):
             '--copy-from=MCTS',
         ]
 
-        log_filename = self.make_log_filename('self-play-worker')
         self_play_cmd = [
             self.binary_path,
             '-G', 0,
@@ -125,7 +116,6 @@ class SelfPlayServer(GameServerBase):
             '--loop-controller-port', self.loop_controller_port,
             '--client-role', ClientType.SELF_PLAY_WORKER.value,
             '--cuda-device', self.cuda_device,
-            '--log-filename', log_filename,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
         ]
@@ -134,12 +124,5 @@ class SelfPlayServer(GameServerBase):
 
         proc = subprocess_util.Popen(self_play_cmd)
         logger.info(f'Running self-play [{proc.pid}]: {self_play_cmd}')
-        logger.info(f'Log: {log_filename}')
-        _, stderr = proc.communicate()
-
-        if proc.returncode:
-            logger.error(f'Self-play failed with return code {proc.returncode}')
-            logger.error(f'stderr:\n{stderr}')
-            raise Exception()
-
+        self.forward_output('self-play-worker', proc)
         assert False, 'Should not get here'

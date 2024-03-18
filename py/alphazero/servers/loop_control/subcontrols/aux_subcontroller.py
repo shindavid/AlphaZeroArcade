@@ -29,6 +29,22 @@ class AuxSubcontroller:
         self._pauses_acked_cv = threading.Condition(self._lock)
         self._pause_set: Set[ClientId] = set()
         self._new_model_subscribers: List[NewModelSubscriber] = []
+        self._log_files = dict()
+
+    def get_log_file(self, src: str, client_id: ClientId):
+        key = (src, client_id)
+        with self._lock:
+            f = self._log_files.get(key, None)
+            if f is not None:
+                return f
+            log_dir = os.path.join(self.data.organizer.logs_dir, src)
+            os.makedirs(log_dir, exist_ok=True)
+            filename = os.path.join(log_dir, f'{src}.{client_id}.log')
+            f = open(filename, 'a')
+            self._log_files[key] = f
+
+        logger.info(f'Opened log file: {filename}')
+        return f
 
     def subscribe_to_new_model_announcements(self, subscriber: NewModelSubscriber):
         with self._lock:
@@ -40,6 +56,13 @@ class AuxSubcontroller:
         for subscriber in subscribers:
             subscriber.handle_new_model(generation)
 
+    def handle_log(self, msg: JsonDict, client_data: ClientData):
+        line = msg['line']
+        src = msg.get('src', client_data.client_type.value)
+        f = self.get_log_file(src, client_data.client_id)
+        f.write(line)
+        f.flush()
+
     def handle_disconnect(self, client_data: ClientData):
         logger.info(f'Handling disconnect: {client_data}...')
         self.data.remove_client(client_data.client_id)
@@ -47,6 +70,9 @@ class AuxSubcontroller:
         client_data.socket.close()
         with self._lock:
             self._pause_set.discard(client_data.client_id)
+            f = self._log_files.pop(client_data.client_id, None)
+        if f is not None:
+            f.close()
 
     def accept_client(self) -> ClientData:
         conn = self.data.clients_db_conn_pool.get_connection()
