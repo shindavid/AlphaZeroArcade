@@ -184,7 +184,7 @@ def main():
             if not os.path.isdir(extra_dir):
                 os.makedirs(extra_dir)
             cp_loc = os.path.join(extra_dir, os.path.basename(dep))
-            run(f'cp {dep_loc} {cp_loc}', print_cmd=False)
+            run(f'rsync {dep_loc} {cp_loc}', print_cmd=False)
             print(f'Extra dependency:', cp_loc)
 
     for b in bins:
