@@ -69,7 +69,9 @@ class GameServerBase:
         self.logging_queue = QueueStream()
         self.loop_controller_socket: Optional[Socket] = None
         self.client_id = None
-        self.shutdown_code = None
+
+        self._shutdown_lock = threading.Lock()
+        self._shutdown_code = -1
 
     @property
     def loop_controller_host(self):
@@ -96,6 +98,17 @@ class GameServerBase:
 
         self.loop_controller_socket = Socket(sock)
 
+    def _set_shutdown_code(self, code, func, *args, **kwargs):
+        """
+        If code is greater than the current shutdown code, sets the shutdown code to code and calls
+        func(*args, **kwargs).
+        """
+        with self._shutdown_lock:
+            if self._shutdown_code >= code:
+                return
+            self._shutdown_code = code
+        func(*args, **kwargs)
+
     def run(self):
         self.init_socket()
         try:
@@ -119,8 +132,8 @@ class GameServerBase:
         try:
             func(*args, **(kwargs or {}))
         except:
-            logger.error(f'Unexpected error in {func.__name__}():', exc_info=True)
-            self.shutdown_code = 1
+            self._set_shutdown_code(1, logger.error, f'Unexpected error in {func.__name__}():',
+                                    exc_info=True)
 
     def run_func_in_new_thread(self, func, *, args=(), kwargs=None):
         """
@@ -132,7 +145,7 @@ class GameServerBase:
     def error_detection_loop(self):
         while True:
             time.sleep(1)
-            if self.shutdown_code is not None:
+            if self._shutdown_code >= 0:
                 break
 
     def send_handshake(self):
@@ -159,11 +172,11 @@ class GameServerBase:
                     data['src'] = src
                 self.loop_controller_socket.send_json(data)
         except SocketSendException:
-            logger.warn(f'Server appears to have disconnected, shutting down...')
-            self.shutdown_code = 0
+            self._set_shutdown_code(
+                0, logger.warn, f'Loop controller appears to have disconnected, shutting down...')
         except:
-            logger.error(f'Unexpected error in log_loop():', exc_info=True)
-            self.shutdown_code = 1
+            self._set_shutdown_code(1, logger.error, f'Unexpected error in log_loop():',
+                                    exc_info=True)
 
     def forward_output(self, src: str, proc: subprocess.Popen, stdout_buffer=None):
         """
@@ -219,8 +232,9 @@ class GameServerBase:
                 if buf is not None:
                     buf.append(line)
         except:
-            logger.error(f'Unexpected error in _forward_output_thread({src}):', exc_info=True)
-            self.shutdown_code = 1
+            self._set_shutdown_code(1, logger.error,
+                                    f'Unexpected error in _forward_output_thread({src}):',
+                                    exc_info=True)
 
     def recv_handshake(self):
         data = self.loop_controller_socket.recv_json(timeout=1)
@@ -243,15 +257,17 @@ class GameServerBase:
                 if self.handle_msg(msg):
                     break
         except SocketRecvException:
-            logger.warn(f'Encountered SocketRecvException in recv_loop()')
-            self.shutdown_code = 0
+            self._set_shutdown_code(0, logger.warn,
+                                    'Encountered SocketRecvException in recv_loop(). '
+                                    'Loop controller likely shut down.')
         except SocketSendException:
-            logger.warn(f'Encountered SocketSendException in recv_loop()', exc_info=True)
-            self.shutdown_code = 0
+            # Include exc_info in send-case because it's a bit more unexpected
+            self._set_shutdown_code(0, logger.warn,
+                                    'Encountered SocketSendException in recv_loop(). '
+                                    'Loop controller likely shut down.', exc_info=True)
         except:
-            logger.error(f'Unexpected error in recv_loop():', exc_info=True)
-            self.shutdown_code = 1
-            return
+            self._set_shutdown_code(1, logger.error,
+                                    f'Unexpected error in recv_loop():', exc_info=True)
 
     @abc.abstractmethod
     def handle_msg(self, msg: JsonDict) -> bool:
@@ -270,7 +286,7 @@ class GameServerBase:
         pass
 
     def shutdown(self):
-        code = self.shutdown_code if self.shutdown_code is not None else 0
+        code = max(0, self._shutdown_code)
         logger.info(f'Shutting down (rc={code})...')
         if self.loop_controller_socket:
             self.loop_controller_socket.close()
@@ -278,4 +294,4 @@ class GameServerBase:
 
     def quit(self):
         logger.info(f'Received quit command')
-        self.shutdown_code = 0
+        self._shutdown_code = 0
