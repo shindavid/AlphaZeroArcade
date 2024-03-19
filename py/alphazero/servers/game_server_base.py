@@ -164,6 +164,7 @@ class GameServerBase:
             'type': 'handshake',
             'role': self.client_type.value,
             'start_timestamp': time.time_ns(),
+            'cuda_device': self.cuda_device,
         }
 
         self.loop_controller_socket.send_json(data)
