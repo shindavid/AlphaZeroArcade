@@ -168,15 +168,14 @@ void LoopControllerClient::unpause() {
   paused_ = false;
 }
 
-void LoopControllerClient::reload_weights(std::stringstream& ss) {
+void LoopControllerClient::reload_weights(std::stringstream& ss, const std::string& cuda_device) {
   LOG_INFO << "LoopControllerClient: reloading weights...";
   for (auto listener : reload_weights_listeners_) {
-    listener->reload_weights(ss);
+    listener->reload_weights(ss, cuda_device);
   }
 }
 
 void LoopControllerClient::loop() {
-  // TODO: heartbeat checking to make sure server is still alive
   while (true) {
     boost::json::value msg;
     if (!socket_->json_read(&msg)) {
@@ -194,6 +193,10 @@ void LoopControllerClient::loop() {
     } else if (type == "unpause") {
       unpause();
     } else if (type == "reload-weights") {
+      std::string cuda_device = this->cuda_device();
+      if (msg.as_object().contains("cuda_device")) {
+        cuda_device = msg.at("cuda_device").as_string().c_str();
+      }
       int64_t generation = msg.at("generation").as_int64();
 
       // reload-weights msg will be immediately followed by a file transfer
@@ -208,7 +211,7 @@ void LoopControllerClient::loop() {
       pause();
       send_metrics();
       cur_generation_ = generation;
-      reload_weights(ss);
+      reload_weights(ss, cuda_device);
       unpause();
     } else if (type == "quit") {
       // TODO: add actual quit logic

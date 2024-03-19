@@ -483,11 +483,12 @@ void NNEvaluationService<GameState, Tensorizor>::load_initial_weights_if_necessa
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstream& ss) {
+void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstream& ss,
+                                                                const std::string& cuda_device) {
   LOG_INFO << "NNEvaluationService: reloading network weights...";
   util::release_assert(paused_, "%s() called while not paused", __func__);
   std::unique_lock lock1(net_weights_mutex_);
-  net_.load_weights(ss, params_.cuda_device);
+  net_.load_weights(ss, cuda_device);
   cv_net_weights_.notify_all();
   lock1.unlock();
 

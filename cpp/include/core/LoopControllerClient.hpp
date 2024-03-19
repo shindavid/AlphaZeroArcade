@@ -90,7 +90,7 @@ class LoopControllerClient {
   void send_metrics();
   void send_pause_ack();
   void unpause();
-  void reload_weights(std::stringstream&);
+  void reload_weights(std::stringstream&, const std::string& cuda_device);
   void loop();
   bool all_pause_notifications_received() const;
 
