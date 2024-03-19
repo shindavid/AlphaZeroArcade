@@ -2,6 +2,7 @@ import abc
 from dataclasses import dataclass
 from enum import Enum
 
+from alphazero.logic import constants
 from util.socket_util import Socket
 
 
@@ -38,7 +39,10 @@ class ClientData:
         return self.socket.getsockname()[1]
 
     def is_on_localhost(self):
-        return self.ip_address == '127.0.0.1'
+        return self.ip_address == constants.LOCALHOST_IP
+
+    def gpu_key(self):
+        return (self.ip_address, self.cuda_device)
 
     def __str__(self):
         tokens = [str(self.client_type), str(self.client_id),

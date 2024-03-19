@@ -90,6 +90,21 @@ class AuxSubcontroller:
         cuda_device = msg.get('cuda_device', '')
         client_id = None
 
+        existing_clients = self.data.get_clients(client_type)
+        clashing_clients = [c for c in existing_clients if c.gpu_key() == (ip_address, cuda_device)]
+        if clashing_clients:
+            client = clashing_clients[0]
+            logger.warn(f'Client {client_type} with same cuda device already connected: {client}')
+
+            reply = {
+                'type': 'handshake-ack',
+                'rejection': 'server of same type/cuda-device from same ip already connected',
+            }
+            tmp_socket = Socket(client_socket)
+            tmp_socket.send_json(reply)
+            tmp_socket.close()
+            return
+
         with self._lock:
             cursor = conn.cursor()
             if reserved_id is not None:

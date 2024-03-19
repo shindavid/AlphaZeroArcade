@@ -251,6 +251,10 @@ class GameServerBase:
         data = self.loop_controller_socket.recv_json(timeout=1)
         assert data['type'] == 'handshake-ack', data
 
+        rejection = data.get('rejected', None)
+        if rejection is not None:
+            raise Exception(f'Handshake rejected: {rejection}')
+
         self.client_id = data['client_id']
         self._game = data['game']
 
