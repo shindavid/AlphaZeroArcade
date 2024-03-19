@@ -21,19 +21,24 @@ can be summarized as follows:
 
 * 1 GPU setup *
 
-Self-play and training alternates. Every N generations, both are paused, and the ratings server
-rates one generation. When the ratings server is done, self-play and training resume their
-alternating schedule.
+Self-play and training run concurrently, sharing the single GPU, with self-play paused whenever
+training is running. The ratings server starts paused. Every N generations, the ratings server wakes
+up to rate one generation. During this time, both the self-play and training servers are paused.
+When the ratings server is done, it goes back to sleep, and the self-play/training servers resume
+their concurrent runs. N defaults to 10.
 
 * 2 GPU setup *
 
-Self-play and training run simultaneously. Every N generations, the ratings server rates one
-generation, during which time self-play and training switch to an alternating schedule. When the
-ratings server is done, self-play and training resume their simultaneous schedule.
+Self-play and training run concurrently on separate GPU's, without pausing. The ratings server
+starts paused. Every N generations, the ratings server wakes up to rate one generation. During this
+time, the self-play server switches over to share the training server's GPU, and they run
+concurrently, sharing the single GPU, with self-play paused whenever training is running. When the
+ratings server is done, it goes back to sleep, the self-play server moves back to its own GPU, and
+the self-play and training servers resume their concurrent runs. N defaults to 10.
 
 * 3+ GPU setup *
 
-Self-play, training, and ratings all run simultaneously.
+Self-play, training, and ratings all run concurrently without interfering with each other.
 """
 import argparse
 from dataclasses import dataclass
