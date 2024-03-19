@@ -1,21 +1,39 @@
 #!/usr/bin/env python3
 
 """
-An AlphaZero run has 2 components:
+An AlphaZero run has 3 components:
 
-1. self-play server(s): generates training data
-2. loop controller: trains the neural net from the training data
+1. loop controller: trains neural net from training data
+2. self-play server(s): uses neural net to generate training data
+3. [optional] ratings server(s): evaluates neural net against reference agents
 
-There is only one loop controller per run, while there can be multiple self-play servers.
-All the servers can run on the same machine, or on different machines - communication between them
-is done via TCP.
+These have corresponding launcher scripts in py/alphazero/scripts/:
 
-This script launches 2 servers on the local machine: one loop controller and one self-play server.
-This is useful for dev/testing purposes. By default, the script detects if the local machine has
-multiple GPU's or not. If there is a single GPU, then the system is configured to pause the
-self-play server whenever a train loop is active.
+- run_loop_controller.py
+- run_self_play_server.py
+- run_ratings_server.py
 
-For standard production runs, you may want multiple self-play servers, on different machines.
+This script launches 1 server of each type on the local machine, using the above launcher scripts.
+Although this is convenient, this setup comes at a cost, particularly if the local machine has fewer
+than 3 GPU's. In that case, the different servers need to pause at various points to avoid GPU
+contention. The pausing/unpausing logic is all handled automatically by the loop controller, and
+can be summarized as follows:
+
+* 1 GPU setup *
+
+Self-play and training alternates. Every N generations, both are paused, and the ratings server
+rates one generation. When the ratings server is done, self-play and training resume their
+alternating schedule.
+
+* 2 GPU setup *
+
+Self-play and training run simultaneously. Every N generations, the ratings server rates one
+generation, during which time self-play and training switch to an alternating schedule. When the
+ratings server is done, self-play and training resume their simultaneous schedule.
+
+* 3+ GPU setup *
+
+Self-play, training, and ratings all run simultaneously.
 """
 import argparse
 from dataclasses import dataclass
