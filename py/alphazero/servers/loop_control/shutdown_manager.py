@@ -23,6 +23,7 @@ class ShutdownManager:
                 self._shutdown_code = return_code
             else:
                 self._shutdown_code = max(self._shutdown_code, return_code)
+            self._cond.notify_all()
 
     def active(self):
         with self._lock:
