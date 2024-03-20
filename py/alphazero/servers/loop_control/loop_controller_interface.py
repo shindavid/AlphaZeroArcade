@@ -6,7 +6,7 @@ from alphazero.logic.custom_types import ClientConnection, ClientRole, Disconnec
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
-from util.sqlite3_util import ConnectionPool
+from util.sqlite3_util import DatabaseConnectionPool
 
 import abc
 import socket
@@ -51,19 +51,19 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractproperty
-    def clients_db_conn_pool(self) -> ConnectionPool:
+    def clients_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
     @abc.abstractproperty
-    def self_play_db_conn_pool(self) -> ConnectionPool:
+    def self_play_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
     @abc.abstractproperty
-    def training_db_conn_pool(self) -> ConnectionPool:
+    def training_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
     @property
-    def ratings_db_conn_pool(self) -> ConnectionPool:
+    def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
     @abc.abstractmethod

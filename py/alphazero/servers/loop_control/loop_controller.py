@@ -19,7 +19,7 @@ from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
-from util.sqlite3_util import ConnectionPool
+from util.sqlite3_util import DatabaseConnectionPool
 
 
 import socket
@@ -100,19 +100,19 @@ class LoopController(LoopControllerInterface):
         return self._training_params
 
     @property
-    def clients_db_conn_pool(self) -> ConnectionPool:
+    def clients_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.clients_db_conn_pool
 
     @property
-    def self_play_db_conn_pool(self) -> ConnectionPool:
+    def self_play_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.self_play_db_conn_pool
 
     @property
-    def training_db_conn_pool(self) -> ConnectionPool:
+    def training_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.training_db_conn_pool
 
     @property
-    def ratings_db_conn_pool(self) -> ConnectionPool:
+    def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.ratings_db_conn_pool
 
     def get_connections(self, role: ClientRole,

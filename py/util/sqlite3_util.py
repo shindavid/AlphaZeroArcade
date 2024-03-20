@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 logger = get_logger()
 
 
-class ConnectionPool:
+class DatabaseConnectionPool:
     """
     This class is used to manage connections to a sqlite3 database in a multi-threaded environment.
     It should be constructed in the main thread. Subsequently spawned threads can call
