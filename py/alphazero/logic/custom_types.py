@@ -12,9 +12,9 @@ ThreadId = int
 
 
 class ClientRole(Enum):
-    SELF_PLAY_MANAGER = 'self-play-manager'
+    SELF_PLAY_SERVER = 'self-play-server'
     SELF_PLAY_WORKER = 'self-play-worker'
-    RATINGS_MANAGER = 'ratings-manager'
+    RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
 
 

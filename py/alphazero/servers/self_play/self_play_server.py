@@ -20,12 +20,12 @@ class SelfPlayServerParams(GameServerBaseParams):
 
 class SelfPlayServer(GameServerBase):
     def __init__(self, params: SelfPlayServerParams, logging_params: LoggingParams):
-        super().__init__(params, logging_params, ClientRole.SELF_PLAY_MANAGER)
+        super().__init__(params, logging_params, ClientRole.SELF_PLAY_SERVER)
         self._running = False
 
     def handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'self-play-manager received json message: {msg}')
+            logger.debug(f'self-play-server received json message: {msg}')
 
         msg_type = msg['type']
         if msg_type == 'start-gen0':

@@ -132,11 +132,11 @@ class LoopController(LoopControllerInterface):
         """
         client_role = conn.client_role
 
-        if client_role == ClientRole.SELF_PLAY_MANAGER:
+        if client_role == ClientRole.SELF_PLAY_SERVER:
             self._self_play_manager.add_server(conn)
         elif client_role == ClientRole.SELF_PLAY_WORKER:
             self._self_play_manager.add_worker(conn)
-        elif client_role == ClientRole.RATINGS_MANAGER:
+        elif client_role == ClientRole.RATINGS_SERVER:
             self._ratings_manager.add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
             self._ratings_manager.add_worker(conn)

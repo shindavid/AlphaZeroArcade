@@ -36,7 +36,7 @@ class RatingsServerParams(GameServerBaseParams):
 
 class RatingsServer(GameServerBase):
     def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
-        super().__init__(params, logging_params, ClientRole.RATINGS_MANAGER)
+        super().__init__(params, logging_params, ClientRole.RATINGS_SERVER)
         self.params = params
         self._running = False
 
@@ -51,7 +51,7 @@ class RatingsServer(GameServerBase):
 
     def handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'ratings-manager received json message: {msg}')
+            logger.debug(f'ratings-server received json message: {msg}')
 
         msg_type = msg['type']
         if msg_type == 'match-request':
