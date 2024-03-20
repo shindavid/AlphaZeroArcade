@@ -1,4 +1,4 @@
-from alphazero.logic.custom_types import ClientType
+from alphazero.logic.custom_types import ClientRole
 from alphazero.servers.game_server_base import GameServerBase, GameServerBaseParams
 from alphazero.logic.ratings import extract_match_record
 from util.logging_util import LoggingParams, get_logger
@@ -36,7 +36,7 @@ class RatingsServerParams(GameServerBaseParams):
 
 class RatingsServer(GameServerBase):
     def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
-        super().__init__(params, logging_params, ClientType.RATINGS_MANAGER)
+        super().__init__(params, logging_params, ClientRole.RATINGS_MANAGER)
         self.params = params
         self._running = False
 
@@ -83,7 +83,7 @@ class RatingsServer(GameServerBase):
             '-G', n_games,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
-            '--client-role', ClientType.RATINGS_WORKER.value,
+            '--client-role', ClientRole.RATINGS_WORKER.value,
             '--cuda-device', self.cuda_device,
             '--weights-request-generation', mcts_gen,
             '--do-not-report-metrics',

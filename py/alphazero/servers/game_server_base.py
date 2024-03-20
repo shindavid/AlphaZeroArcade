@@ -1,4 +1,4 @@
-from alphazero.logic.custom_types import ClientType
+from alphazero.logic.custom_types import ClientRole
 from alphazero.logic import constants
 from games.game_spec import GameSpec
 from games.index import get_game_spec
@@ -58,7 +58,7 @@ class GameServerBase:
     """
 
     def __init__(self, params: GameServerBaseParams, logging_params: LoggingParams,
-                 client_type: ClientType):
+                 client_type: ClientRole):
         self._game = None
         self._game_spec = None
         self.logging_params = logging_params

@@ -1,9 +1,9 @@
-import abc
 from dataclasses import dataclass
 from enum import Enum
+from typing import Callable
 
 from alphazero.logic import constants
-from util.socket_util import Socket
+from util.socket_util import JsonDict, Socket
 
 
 Generation = int
@@ -11,11 +11,7 @@ ClientId = int
 ThreadId = int
 
 
-class ChildThreadError(Exception):
-    pass
-
-
-class ClientType(Enum):
+class ClientRole(Enum):
     SELF_PLAY_MANAGER = 'self-play-manager'
     SELF_PLAY_WORKER = 'self-play-worker'
     RATINGS_MANAGER = 'ratings-manager'
@@ -23,8 +19,14 @@ class ClientType(Enum):
 
 
 @dataclass
-class ClientData:
-    client_type: ClientType
+class GpuInfo:
+    ip_address: str
+    device: str
+
+
+@dataclass
+class ClientConnection:
+    client_role: ClientRole
     client_id: ClientId
     socket: Socket
     start_timestamp: int
@@ -38,20 +40,20 @@ class ClientData:
     def port(self):
         return self.socket.getsockname()[1]
 
+    @property
+    def client_gpu_info(self):
+        return GpuInfo(self.ip_address, self.cuda_device)
+
     def is_on_localhost(self):
         return self.ip_address == constants.LOCALHOST_IP
 
-    def gpu_key(self):
-        return (self.ip_address, self.cuda_device)
-
     def __str__(self):
-        tokens = [str(self.client_type), str(self.client_id),
+        tokens = [str(self.client_role), str(self.client_id),
                   f'{self.ip_address}:{self.port}', self.cuda_device]
         tokens = [t for t in tokens if t]
-        return f'ClientData({", ".join(tokens)})'
+        return f'ClientConnection({", ".join(tokens)})'
 
 
-class NewModelSubscriber(abc.ABC):
-    @abc.abstractmethod
-    def handle_new_model(self, generation: Generation):
-        pass
+ShutdownAction = Callable[[], None]
+MsgHandler = Callable[[ClientConnection, JsonDict], bool]  # return True for loop-break
+DisconnectHandler = Callable[[ClientConnection], None]

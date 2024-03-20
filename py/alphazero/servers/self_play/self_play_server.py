@@ -1,4 +1,4 @@
-from alphazero.logic.custom_types import ClientType
+from alphazero.logic.custom_types import ClientRole
 from alphazero.servers.game_server_base import GameServerBase, GameServerBaseParams
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
@@ -20,7 +20,7 @@ class SelfPlayServerParams(GameServerBaseParams):
 
 class SelfPlayServer(GameServerBase):
     def __init__(self, params: SelfPlayServerParams, logging_params: LoggingParams):
-        super().__init__(params, logging_params, ClientType.SELF_PLAY_MANAGER)
+        super().__init__(params, logging_params, ClientRole.SELF_PLAY_MANAGER)
         self._running = False
 
     def handle_msg(self, msg: JsonDict) -> bool:
@@ -72,7 +72,7 @@ class SelfPlayServer(GameServerBase):
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
-            '--client-role', ClientType.SELF_PLAY_WORKER.value,
+            '--client-role', ClientRole.SELF_PLAY_WORKER.value,
             '--do-not-report-metrics',
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
@@ -112,7 +112,7 @@ class SelfPlayServer(GameServerBase):
             '-G', 0,
             '--loop-controller-hostname', self.loop_controller_host,
             '--loop-controller-port', self.loop_controller_port,
-            '--client-role', ClientType.SELF_PLAY_WORKER.value,
+            '--client-role', ClientRole.SELF_PLAY_WORKER.value,
             '--cuda-device', self.cuda_device,
             '--player', '"%s"' % (' '.join(map(str, player_args))),
             '--player', '"%s"' % (' '.join(map(str, player2_args))),
