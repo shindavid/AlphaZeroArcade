@@ -37,20 +37,6 @@ class LoopController:
         self.self_play_subcontroller = SelfPlaySubcontroller(self.training_subcontroller)
         self.ratings_subcontroller = RatingsSubcontroller(self.aux_subcontroller)
 
-        # Currently, there appears to be a rare situation where the controller deadlocks. The
-        # below block of code makes it so that we can send a SIGUSR1 signal to the controller
-        # process to dump a per-thread stack trace, which can be useful for debugging.
-        #
-        # Cmd to send signal:
-        #
-        # $ kill -SIGUSR1 <pid>
-        #
-        # Once we determine the cause of the deadlock, we can remove this block of code.
-        import faulthandler
-        import signal
-        faulthandler.register(signal.SIGUSR1.value)
-        faulthandler.enable()
-
     @property
     def params(self) -> LoopControllerParams:
         return self.data.params
