@@ -1,5 +1,6 @@
-from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuInfo
 from .loop_controller_interface import LoopControllerInterface
+
+from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuInfo
 from util.logging_util import get_logger
 from util.socket_util import recv_json, Socket
 

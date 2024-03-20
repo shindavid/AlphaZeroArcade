@@ -1,5 +1,6 @@
-from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
 from .loop_controller_interface import LoopControllerInterface
+
+from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
 from util.logging_util import get_logger
 from util.socket_util import JsonDict
 

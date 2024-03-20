@@ -1,8 +1,9 @@
+from .loop_controller_interface import LoopControllerInterface
+
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
-from .loop_controller_interface import LoopControllerInterface
 from net_modules import Model
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename

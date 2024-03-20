@@ -1,6 +1,7 @@
+from .loop_controller_interface import LoopControllerInterface
+
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ThreadId
-from .loop_controller_interface import LoopControllerInterface
 from util.sqlite3_util import DatabaseConnectionPool
 
 
