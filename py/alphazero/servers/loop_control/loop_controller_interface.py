@@ -2,7 +2,7 @@ from .directory_organizer import DirectoryOrganizer
 from .params import LoopControllerParams
 
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
-    Generation, GpuInfo, MsgHandler, ShutdownAction
+    Generation, GpuId, MsgHandler, ShutdownAction
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
@@ -31,7 +31,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractproperty
-    def training_gpu_info(self) -> GpuInfo:
+    def training_gpu_id(self) -> GpuId:
         pass
 
     @abc.abstractproperty
@@ -68,7 +68,7 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def get_connections(self, role: ClientRole,
-                        gpu_info: Optional[GpuInfo]=None) -> List[ClientConnection]:
+                        gpu_id: Optional[GpuId]=None) -> List[ClientConnection]:
         pass
 
     @abc.abstractmethod
@@ -109,7 +109,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def pause_workers(self, gpu_info: GpuInfo):
+    def pause_workers(self, gpu_id: GpuId):
         pass
 
     @abc.abstractmethod

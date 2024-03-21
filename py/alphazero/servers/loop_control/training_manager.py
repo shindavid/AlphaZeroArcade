@@ -248,7 +248,7 @@ class TrainingManager:
 
             net, optimizer = self._get_net_and_optimizer(loader)
 
-            self._controller.pause_workers(self._controller.training_gpu_info)
+            self._controller.pause_workers(self._controller.training_gpu_id)
 
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
             if stats is None:

@@ -19,7 +19,7 @@ class ClientRole(Enum):
 
 
 @dataclass
-class GpuInfo:
+class GpuId:
     ip_address: str
     device: str
 
@@ -36,17 +36,17 @@ class ClientConnection:
     client_id: ClientId
     socket: Socket
     start_timestamp: int
-    client_gpu_info: GpuInfo
+    client_gpu_id: GpuId
 
     @property
     def ip_address(self):
-        return self.client_gpu_info.ip_address
+        return self.client_gpu_id.ip_address
 
     def is_on_localhost(self):
         return self.ip_address == constants.LOCALHOST_IP
 
     def __str__(self):
-        return f'Conn({self.client_id}, {self.client_role.value}, {self.client_gpu_info})'
+        return f'Conn({self.client_id}, {self.client_role.value}, {self.client_gpu_id})'
 
     def __repr__(self):
         return str(self)

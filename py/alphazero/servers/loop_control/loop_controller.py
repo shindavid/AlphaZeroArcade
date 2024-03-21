@@ -11,7 +11,7 @@ from .training_manager import TrainingManager
 from .worker_manager import WorkerManager
 
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuInfo, \
+from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuId, \
     DisconnectHandler, Generation, MsgHandler, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.training_params import TrainingParams
@@ -46,7 +46,7 @@ class LoopController(LoopControllerInterface):
         self._game_spec = get_game_spec(run_params.game)
         self._params = params
         self._training_params = training_params
-        self._training_gpu_info = GpuInfo(constants.LOCALHOST_IP, params.cuda_device)
+        self._training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
         self._organizer = DirectoryOrganizer(run_params)
 
@@ -80,8 +80,8 @@ class LoopController(LoopControllerInterface):
         return self._socket
 
     @property
-    def training_gpu_info(self) -> GpuInfo:
-        return self._training_gpu_info
+    def training_gpu_id(self) -> GpuId:
+        return self._training_gpu_id
 
     @property
     def game_spec(self) -> GameSpec:
@@ -116,8 +116,8 @@ class LoopController(LoopControllerInterface):
         return self._database_connection_manager.ratings_db_conn_pool
 
     def get_connections(self, role: ClientRole,
-                        gpu_info: Optional[GpuInfo]=None) -> List[ClientConnection]:
-        return self._client_connection_manager.get(role, gpu_info)
+                        gpu_id: Optional[GpuId]=None) -> List[ClientConnection]:
+        return self._client_connection_manager.get(role, gpu_id)
 
     def register_shutdown_action(self, action: ShutdownAction):
         self._shutdown_manager.register(action)
@@ -178,8 +178,8 @@ class LoopController(LoopControllerInterface):
     def reload_weights(self, conns: List[ClientConnection], gen: Generation):
         self._worker_manager.reload_weights(conns, gen)
 
-    def pause_workers(self, gpu_info: GpuInfo):
-        self._worker_manager.pause(gpu_info)
+    def pause_workers(self, gpu_id: GpuId):
+        self._worker_manager.pause(gpu_id)
 
     def handle_pause_ack(self, conn: ClientConnection):
         self._worker_manager.handle_pause_ack(conn)

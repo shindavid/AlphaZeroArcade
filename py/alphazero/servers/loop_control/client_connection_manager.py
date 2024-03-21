@@ -1,6 +1,6 @@
 from .loop_controller_interface import LoopControllerInterface
 
-from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuInfo
+from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuId
 from util.logging_util import get_logger
 from util.socket_util import recv_json, Socket
 
@@ -17,16 +17,16 @@ class ClientConnectionManager:
         self._connections: List[ClientConnection] = []
         self._lock = threading.Lock()
 
-    def get(self, role: ClientRole, gpu_info: Optional[GpuInfo]=None) -> List[ClientConnection]:
+    def get(self, role: ClientRole, gpu_id: Optional[GpuId]=None) -> List[ClientConnection]:
         """
-        Returns a list of all connections that match the given type/gpu_info.
+        Returns a list of all connections that match the given type/gpu_id.
         """
         with self._lock:
             conns = list(self._connections)
 
         conns = [c for c in conns if c.client_role == role]
-        if gpu_info is not None:
-            conns = [c for c in conns if c.client_gpu_info == gpu_info]
+        if gpu_id is not None:
+            conns = [c for c in conns if c.client_gpu_id == gpu_id]
         return conns
 
     def remove(self, conn: ClientConnection):
@@ -62,8 +62,8 @@ class ClientConnectionManager:
         start_timestamp = msg['start_timestamp']
         cuda_device = msg.get('cuda_device', '')
 
-        gpu_info = GpuInfo(ip_address, cuda_device)
-        clashing_conns = self.get(client_role, gpu_info)
+        gpu_id = GpuId(ip_address, cuda_device)
+        clashing_conns = self.get(client_role, gpu_id)
         if clashing_conns:
             logger.warn(f'Rejecting connection due to role/gpu clash: {clashing_conns[0]}')
 
@@ -85,7 +85,7 @@ class ClientConnectionManager:
             db_conn.commit()
 
         conn = ClientConnection(client_role, client_id, Socket(client_socket), start_timestamp,
-                                gpu_info)
+                                gpu_id)
 
         with self._lock:
             self._connections.append(conn)

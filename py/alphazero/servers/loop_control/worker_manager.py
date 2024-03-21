@@ -1,6 +1,6 @@
 from .loop_controller_interface import LoopControllerInterface
 
-from alphazero.logic.custom_types import ClientConnection, ClientId, ClientRole, Generation, GpuInfo
+from alphazero.logic.custom_types import ClientConnection, ClientId, ClientRole, Generation, GpuId
 from util.logging_util import get_logger
 from util.socket_util import send_json, send_file, SocketSendException
 
@@ -34,13 +34,13 @@ class WorkerManager:
             if not self._pause_set:
                 self._pauses_acked_cv.notify_all()
 
-    def pause(self, gpu_info: GpuInfo):
+    def pause(self, gpu_id: GpuId):
         """
-        Issues a pause command to all workers registered with the given gpu_info. Wait for the
+        Issues a pause command to all workers registered with the given gpu_id. Wait for the
         workers to acknowledge the pause command before returning.
         """
-        self_play_workers = self._controller.get_connections(ClientRole.SELF_PLAY_WORKER, gpu_info)
-        ratings_workers = self._controller.get_connections(ClientRole.RATINGS_WORKER, gpu_info)
+        self_play_workers = self._controller.get_connections(ClientRole.SELF_PLAY_WORKER, gpu_id)
+        ratings_workers = self._controller.get_connections(ClientRole.RATINGS_WORKER, gpu_id)
         workers = self_play_workers + ratings_workers
         if not workers:
             return
@@ -72,9 +72,9 @@ class WorkerManager:
 
         Additionally unpauses ratings workers that may have been paused.
         """
-        gpu_info = self._controller.training_gpu_info
+        gpu_id = self._controller.training_gpu_id
         self.reload_weights(self._controller.get_connections(ClientRole.SELF_PLAY_WORKER), gen)
-        self._issue_unpause(self._controller.get_connections(ClientRole.RATINGS_WORKER, gpu_info))
+        self._issue_unpause(self._controller.get_connections(ClientRole.RATINGS_WORKER, gpu_id))
 
     def _issue_unpause(self, conns: List[ClientConnection]):
         if not conns:
