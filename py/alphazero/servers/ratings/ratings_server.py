@@ -99,7 +99,7 @@ class RatingsServer(GameServerBase):
         proc = subprocess_util.Popen(cmd)
         logger.info(f'Running {mcts_name} vs {ref_name} match [{proc.pid}]: {cmd}')
         stdout_buffer = []
-        self.forward_output('ratings-worker', proc, stdout_buffer)
+        self.forward_output('ratings-worker', proc, stdout_buffer, close_remote_log=False)
 
         # NOTE: extracting the match record from stdout is potentially fragile. Consider
         # changing this to have the c++ process directly communicate its win/loss data to the

@@ -101,6 +101,10 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
+        pass
+
+    @abc.abstractmethod
     def reload_weights(self, conns: List[ClientConnection], gen: Generation):
         pass
 

@@ -190,7 +190,8 @@ class GameServerBase:
             self._set_shutdown_code(1, logger.error, f'Unexpected error in log_loop():',
                                     exc_info=True)
 
-    def forward_output(self, src: str, proc: subprocess.Popen, stdout_buffer=None):
+    def forward_output(self, src: str, proc: subprocess.Popen, stdout_buffer=None,
+                       close_remote_log=True):
         """
         Accepts a subprocess.Popen object and forwards its stdout and stderr to the loop controller
         for remote logging. Assumes that the proc was constructed with stdout=subprocess.PIPE and
@@ -228,6 +229,13 @@ class GameServerBase:
         proc_log_queue.put(None)
         forward_thread.join()
         proc.wait()
+
+        data = {
+            'type': 'worker-exit',
+            'src': src,
+            'close_log': close_remote_log,
+        }
+        self.loop_controller_socket.send_json(data)
 
         if proc.returncode:
             logger.error(f'Process failed with return code {proc.returncode}')

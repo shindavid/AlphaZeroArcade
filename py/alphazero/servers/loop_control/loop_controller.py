@@ -172,6 +172,9 @@ class LoopController(LoopControllerInterface):
     def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
         self._remote_logging_manager.handle_log_msg(msg, conn)
 
+    def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
+        self._remote_logging_manager.close_log_file(msg, conn.client_id)
+
     def reload_weights(self, conns: List[ClientConnection], gen: Generation):
         self._worker_manager.reload_weights(conns, gen)
 

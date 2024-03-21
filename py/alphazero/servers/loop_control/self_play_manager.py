@@ -80,6 +80,8 @@ class SelfPlayManager:
             self._controller.handle_log_msg(msg, conn)
         elif msg_type == 'ready':
             self._handle_ready(conn)
+        elif msg_type == 'worker-exit':
+            self._controller.handle_worker_exit(msg, conn)
         elif msg_type == 'gen0-complete':
             self._handle_gen0_complete(conn)
         else:

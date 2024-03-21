@@ -4,41 +4,42 @@ from alphazero.logic.custom_types import ClientConnection, ClientId
 from util.logging_util import get_logger
 from util.socket_util import JsonDict
 
+from collections import defaultdict
+import io
 import os
 import threading
+from typing import Dict
 
 
 logger = get_logger()
+
+
+File = io.TextIOWrapper
 
 
 class RemoteLoggingManager:
     """
     The clients that connect to LoopController are configured to forward their logged messages to
     the loop controller. This manager handles those messages by writing them to files.
-
-    TODO: change _log_files to be a dict of (parent-)client-id -> src -> file. Then, on (parent)
-    disconnects, we can close all the files for that client-id. For worker-disconnects, we can have
-    the parent explicitly send a message to the loop controller to close the log file. As it stands
-    now, we don't have a good way to close log files when the owning process disconnects.
     """
     def __init__(self, controller: LoopControllerInterface):
         self._controller = controller
         self._lock = threading.Lock()
-        self._log_files = dict()
+        self._log_files: Dict[ClientId, Dict[str, File]] = defaultdict(dict)
 
     def get_log_file(self, src: str, client_id: ClientId):
-        key = (src, client_id)
         with self._lock:
-            f = self._log_files.get(key, None)
+            subdict = self._log_files[client_id]
+            f = subdict.get(src, None)
             if f is not None:
                 return f
             log_dir = os.path.join(self._controller.organizer.logs_dir, src)
             os.makedirs(log_dir, exist_ok=True)
             filename = os.path.join(log_dir, f'{src}.{client_id}.log')
             f = open(filename, 'a')
-            self._log_files[key] = f
+            subdict[src] = f
 
-        logger.info(f'Opened log file: {filename}')
+        logger.debug(f'Opened log file: {filename}')
         return f
 
     def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
@@ -49,7 +50,30 @@ class RemoteLoggingManager:
         f.flush()
 
     def handle_disconnect(self, conn: ClientConnection):
-        """
-        TODO: implement me. See TODO at top of class.
-        """
-        pass
+        with self._lock:
+            subdict = self._log_files.pop(conn.client_id, None)
+
+        if subdict is None:
+            return
+        for f in subdict.values():
+            f.close()
+            logger.debug(f'Closed log file: {f.name}')
+
+    def close_log_file(self, msg: JsonDict, client_id: ClientId):
+        close_log = msg['close_log']
+        if not close_log:
+            return
+
+        src = msg['src']
+        with self._lock:
+            subdict = self._log_files.get(client_id, None)
+            if subdict is None:
+                return
+            f = subdict.pop(src, None)
+            if f is None:
+                return
+            if not subdict:
+                self._log_files.pop(client_id)
+
+        f.close()
+        logger.debug(f'Closed log file: {f.name}')

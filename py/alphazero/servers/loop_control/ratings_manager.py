@@ -97,6 +97,8 @@ class RatingsManager:
 
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
+        elif msg_type == 'worker-exit':
+            self._controller.handle_worker_exit(msg, conn)
         elif msg_type == 'work-request':
             self._send_match_request(conn)
         elif msg_type == 'match-result':
