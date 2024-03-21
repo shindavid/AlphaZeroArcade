@@ -42,7 +42,8 @@ class ClientConnectionManager:
         try:
             while True:
                 conn = self._add_connection()
-                self._controller.handle_new_client_connnection(conn)
+                if conn is not None:
+                    self._controller.handle_new_client_connnection(conn)
         except:
             logger.error('Exception in accept_connections():', exc_info=True)
             self._controller.request_shutdown(1)
@@ -64,7 +65,7 @@ class ClientConnectionManager:
         gpu_info = GpuInfo(ip_address, cuda_device)
         clashing_conns = self.get(client_role, gpu_info)
         if clashing_conns:
-            logger.warn(f'Rejection connection due to role/gpu clash: {clashing_conns[0]}')
+            logger.warn(f'Rejecting connection due to role/gpu clash: {clashing_conns[0]}')
 
             reply = {
                 'type': 'handshake-ack',
@@ -73,7 +74,7 @@ class ClientConnectionManager:
             tmp_socket = Socket(client_socket)
             tmp_socket.send_json(reply)
             tmp_socket.close()
-            return
+            return None
 
         with self._lock:
             cursor = db_conn.cursor()
@@ -84,7 +85,7 @@ class ClientConnectionManager:
             db_conn.commit()
 
         conn = ClientConnection(client_role, client_id, Socket(client_socket), start_timestamp,
-                                cuda_device)
+                                gpu_info)
 
         with self._lock:
             self._connections.append(conn)

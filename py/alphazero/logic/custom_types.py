@@ -23,6 +23,12 @@ class GpuInfo:
     ip_address: str
     device: str
 
+    def __str__(self):
+        return f'Gpu({self.device}@{self.ip_address})'
+
+    def __repr__(self) -> str:
+        return str(self)
+
 
 @dataclass
 class ClientConnection:
@@ -30,28 +36,20 @@ class ClientConnection:
     client_id: ClientId
     socket: Socket
     start_timestamp: int
-    cuda_device: str  # empty str if no cuda device
+    client_gpu_info: GpuInfo
 
     @property
     def ip_address(self):
-        return self.socket.getsockname()[0]
-
-    @property
-    def port(self):
-        return self.socket.getsockname()[1]
-
-    @property
-    def client_gpu_info(self):
-        return GpuInfo(self.ip_address, self.cuda_device)
+        return self.client_gpu_info.ip_address
 
     def is_on_localhost(self):
         return self.ip_address == constants.LOCALHOST_IP
 
     def __str__(self):
-        tokens = [str(self.client_role), str(self.client_id),
-                  f'{self.ip_address}:{self.port}', self.cuda_device]
-        tokens = [t for t in tokens if t]
-        return f'ClientConnection({", ".join(tokens)})'
+        return f'Conn({self.client_id}, {self.client_role.value}, {self.client_gpu_info})'
+
+    def __repr__(self):
+        return str(self)
 
 
 ShutdownAction = Callable[[], None]
