@@ -19,6 +19,10 @@ class GpuContentionManager:
 
     This manager upholds this priority through a combination of pause commands and locking
     mechanisms.
+
+    If this priority scheme starves all ratings servers for too long, then one ratings server's
+    priority is temporarily elevated. As an optimization, if this would leave a GPU temporarily
+    idle, then other servers are shifted around to fill the gap.
     """
     def __init__(self, controller: LoopControllerInterface):
         self._controller = controller

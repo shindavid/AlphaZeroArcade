@@ -14,31 +14,8 @@ These have corresponding launcher scripts in py/alphazero/scripts/:
 - run_ratings_server.py
 
 This script launches 1 server of each type on the local machine, using the above launcher scripts.
-Although this is convenient, this setup comes at a cost, particularly if the local machine has fewer
-than 3 GPU's. In that case, the different servers need to pause at various points to avoid GPU
-contention. The pausing/unpausing logic is all handled automatically by the loop controller, and
-can be summarized as follows:
-
-* 1 GPU setup *
-
-Self-play and training run concurrently, sharing the single GPU, with self-play paused whenever
-training is running. The ratings server starts paused. Every N generations, the ratings server wakes
-up to rate one generation. During this time, both the self-play and training servers are paused.
-When the ratings server is done, it goes back to sleep, and the self-play/training servers resume
-their concurrent runs. N defaults to 10.
-
-* 2 GPU setup *
-
-Self-play and training run concurrently on separate GPU's, without pausing. The ratings server
-starts paused. Every N generations, the ratings server wakes up to rate one generation. During this
-time, the self-play server switches over to share the training server's GPU, and they run
-concurrently, sharing the single GPU, with self-play paused whenever training is running. When the
-ratings server is done, it goes back to sleep, the self-play server moves back to its own GPU, and
-the self-play and training servers resume their concurrent runs. N defaults to 10.
-
-* 3+ GPU setup *
-
-Self-play, training, and ratings all run concurrently without interfering with each other.
+If the local machine does not have enough GPU's to dedicate one to each server, then the servers
+share the GPU's, managing contention via GpuContentionManager.
 """
 import argparse
 from dataclasses import dataclass
