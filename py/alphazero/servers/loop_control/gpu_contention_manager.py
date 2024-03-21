@@ -11,12 +11,14 @@ from typing import List, Set
 logger = get_logger()
 
 
-class WorkerManager:
+class GpuContentionManager:
     """
-    There are two types of external worker clients: SELF_PLAY_WORKER and RATINGS_WORKER. Generally,
-    the interactions with these workers are handled by SelfPlayManager and RatingsManager,
-    respectively. However, there are some interactions that are common to both types of workers.
-    This class handles those common interactions.
+    Manages contention for GPUs. Generally, the priority goes:
+
+    training > self-play > ratings
+
+    This manager upholds this priority through a combination of pause commands and locking
+    mechanisms.
     """
     def __init__(self, controller: LoopControllerInterface):
         self._controller = controller
@@ -48,6 +50,12 @@ class WorkerManager:
         self._wait_for_pause_acks()
 
     def reload_weights(self, conns: List[ClientConnection], gen: Generation):
+        """
+        Reloads weights for the given list of workers. The act of reloading unpauses those workers.
+
+        This method lives in the GpuContentionManager because unpausing is a part of
+        contention management.
+        """
         if not conns:
             return
 
@@ -69,8 +77,10 @@ class WorkerManager:
     def handle_new_model(self, gen: Generation):
         """
         Reloads weights for all self-play workers. The act of reloading unpauses those workers.
-
         Additionally unpauses ratings workers that may have been paused.
+
+        This method lives in the GpuContentionManager because unpausing is a part of
+        contention management.
         """
         gpu_id = self._controller.training_gpu_id
         self.reload_weights(self._controller.get_connections(ClientRole.SELF_PLAY_WORKER), gen)

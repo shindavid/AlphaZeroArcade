@@ -8,7 +8,7 @@ from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
 from .shutdown_manager import ShutdownManager
 from .training_manager import TrainingManager
-from .worker_manager import WorkerManager
+from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuId, \
@@ -56,7 +56,7 @@ class LoopController(LoopControllerInterface):
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_manager = RatingsManager(self)
-        self._worker_manager = WorkerManager(self)
+        self._gpu_contention_manager = GpuContentionManager(self)
         self._remote_logging_manager = RemoteLoggingManager(self)
 
         # TODO: move these into managers
@@ -165,7 +165,7 @@ class LoopController(LoopControllerInterface):
         self._training_manager.handle_new_self_play_positions(n_augmented_positions)
 
     def handle_new_model(self, gen: Generation):
-        self._worker_manager.handle_new_model(gen)
+        self._gpu_contention_manager.handle_new_model(gen)
         self._self_play_manager.handle_new_model(gen)
         self._ratings_manager.handle_new_model(gen)
 
@@ -176,13 +176,13 @@ class LoopController(LoopControllerInterface):
         self._remote_logging_manager.close_log_file(msg, conn.client_id)
 
     def reload_weights(self, conns: List[ClientConnection], gen: Generation):
-        self._worker_manager.reload_weights(conns, gen)
+        self._gpu_contention_manager.reload_weights(conns, gen)
 
     def pause_workers(self, gpu_id: GpuId):
-        self._worker_manager.pause(gpu_id)
+        self._gpu_contention_manager.pause(gpu_id)
 
     def handle_pause_ack(self, conn: ClientConnection):
-        self._worker_manager.handle_pause_ack(conn)
+        self._gpu_contention_manager.handle_pause_ack(conn)
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
@@ -219,7 +219,7 @@ class LoopController(LoopControllerInterface):
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
         self._remote_logging_manager.handle_disconnect(conn)
-        self._worker_manager.handle_disconnect(conn)
+        self._gpu_contention_manager.handle_disconnect(conn)
         conn.socket.close()
 
     def _init_socket(self):
