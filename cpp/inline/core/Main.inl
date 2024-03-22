@@ -64,6 +64,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       core::LoopControllerClient::init(loop_controller_params);
     }
 
+    core::LoopControllerClient* client = core::LoopControllerClient::get();
     if (game_server_proxy_params.remote_port) {
       GameServerProxy proxy(game_server_proxy_params);
 
@@ -77,10 +78,12 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
       for (const auto& pgs : player_factory.parse(args.player_strs)) {
         server.register_player(pgs.seat, pgs.generator);
       }
+      if (client) {
+        client->start();
+      }
       server.run();
     }
 
-    core::LoopControllerClient* client = core::LoopControllerClient::get();
     if (client) {
       client->shutdown();
     }

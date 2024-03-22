@@ -65,6 +65,7 @@ class LoopControllerClient {
   template <typename T>
   void add_listener(T* listener);
 
+  void start();
   void shutdown();
   void send_done();
   void send_with_file(const boost::json::value& msg, std::stringstream& ss);

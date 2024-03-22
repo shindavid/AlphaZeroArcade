@@ -62,10 +62,13 @@ LoopControllerClient::LoopControllerClient(const Params& params)
                                              params.loop_controller_port);
   send_handshake();
   recv_handshake();
-  thread_ = new std::thread([this]() { loop(); });
 }
 
 LoopControllerClient::~LoopControllerClient() { shutdown(); }
+
+void LoopControllerClient::start() {
+  thread_ = new std::thread([this]() { loop(); });
+}
 
 void LoopControllerClient::shutdown() {
   if (shutdown_initiated_) return;
@@ -146,6 +149,11 @@ void LoopControllerClient::send_metrics() {
     return;
   }
 
+  perf_stats_t stats = get_perf_stats();
+  if (stats.empty()) {
+    return;
+  }
+
   LOG_INFO << "LoopControllerClient: sending metrics...";
   int64_t timestamp = util::ns_since_epoch();
 
@@ -153,7 +161,7 @@ void LoopControllerClient::send_metrics() {
   msg["type"] = "metrics";
   msg["gen"] = cur_generation_;
   msg["timestamp"] = timestamp;
-  msg["metrics"] = get_perf_stats().to_json();
+  msg["metrics"] = stats.to_json();
 
   set_last_games_flush_ts(timestamp);
   send(msg);
@@ -213,11 +221,9 @@ void LoopControllerClient::loop() {
         break;
       }
 
-      pause();
       send_metrics();
       cur_generation_ = generation;
       reload_weights(ss, cuda_device);
-      unpause();
     } else if (type == "quit") {
       // TODO: add actual quit logic
       break;

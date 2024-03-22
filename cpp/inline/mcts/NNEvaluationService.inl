@@ -89,10 +89,8 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
+  paused_ = !net_.loaded();
   if (core::LoopControllerClient::initialized()) {
-    if (core::LoopControllerClient::get()->paused()) {
-      this->paused_ = true;
-    }
     core::LoopControllerClient::get()->add_listener(this);
   } else {
     if (!net_.loaded()) {
