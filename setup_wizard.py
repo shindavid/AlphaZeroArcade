@@ -224,7 +224,7 @@ def write_env_sh(env_sh_lines):
     print('*' * 80)
     print_green('Setup wizard completed successfully!')
     print('')
-    print('Please make sure to run the following whenever you start a new shell:')
+    print('Please run the following:')
     print('')
     print('    source env_setup.sh')
 
