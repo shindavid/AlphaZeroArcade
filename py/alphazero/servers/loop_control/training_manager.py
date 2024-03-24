@@ -62,12 +62,13 @@ class TrainingManager:
         with self._lock:
             self._master_list_length_for_next_train_loop = get_required_dataset_size(
                 training_params, self._last_sample_window)
+            logger.info(f'Waiting for more training data... (current={self._master_list_length}, '
+                        f'needed={self._master_list_length_for_next_train_loop})')
             if self._master_list_length >= self._master_list_length_for_next_train_loop:
                 return
             self._ready_event.clear()
 
         # TODO: progress-bar (use module tqdm)
-        logger.info('Waiting for more training data...')
         self._ready_event.wait()
 
     def train_gen1_model_if_necessary(self):
