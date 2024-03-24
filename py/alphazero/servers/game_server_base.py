@@ -230,12 +230,15 @@ class GameServerBase:
         forward_thread.join()
         proc.wait()
 
-        data = {
-            'type': 'worker-exit',
-            'src': src,
-            'close_log': close_remote_log,
-        }
-        self.loop_controller_socket.send_json(data)
+        try:
+            data = {
+                'type': 'worker-exit',
+                'src': src,
+                'close_log': close_remote_log,
+            }
+            self.loop_controller_socket.send_json(data)
+        except SocketSendException:
+            pass
 
         if proc.returncode:
             logger.error(f'Process failed with return code {proc.returncode}')
