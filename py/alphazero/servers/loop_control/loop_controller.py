@@ -3,6 +3,7 @@ from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
 from .params import LoopControllerParams
 from .loop_controller_interface import LoopControllerInterface
+from .network_weights_broadcaster import NetworkWeightsBroadcaster
 from .ratings_manager import RatingsManager
 from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
@@ -11,7 +12,7 @@ from .training_manager import TrainingManager
 from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ClientConnection, ClientRole, GpuId, \
+from alphazero.logic.custom_types import ClientConnection, ClientRole, ClientRoleOrRoles, GpuId, \
     DisconnectHandler, Generation, MsgHandler, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.training_params import TrainingParams
@@ -22,9 +23,11 @@ from util.socket_util import JsonDict, SocketRecvException, SocketSendException
 from util.sqlite3_util import DatabaseConnectionPool
 
 
+import faulthandler
+import signal
 import socket
 import threading
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 logger = get_logger()
@@ -56,10 +59,11 @@ class LoopController(LoopControllerInterface):
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_manager = RatingsManager(self)
+        self._network_weights_broadcaster = NetworkWeightsBroadcaster(self)
         self._gpu_contention_manager = GpuContentionManager(self)
         self._remote_logging_manager = RemoteLoggingManager(self)
 
-        # TODO: move these into managers
+        faulthandler.register(signal.SIGUSR1, all_threads=True)
 
     def run(self):
         """
@@ -115,9 +119,15 @@ class LoopController(LoopControllerInterface):
     def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.ratings_db_conn_pool
 
-    def get_connections(self, role: ClientRole,
-                        gpu_id: Optional[GpuId]=None) -> List[ClientConnection]:
-        return self._client_connection_manager.get(role, gpu_id)
+    def get_connections(self, gpu_id: Optional[GpuId] = None,
+                        role: Optional[ClientRoleOrRoles] = None) -> List[ClientConnection]:
+        return self._client_connection_manager.get(gpu_id, role)
+
+    def acquire_training_gpu_lock(self):
+        self._gpu_contention_manager.acquire_training_gpu_lock()
+
+    def release_training_gpu_lock(self):
+        self._gpu_contention_manager.release_training_gpu_lock()
 
     def register_shutdown_action(self, action: ShutdownAction):
         self._shutdown_manager.register(action)
@@ -164,10 +174,16 @@ class LoopController(LoopControllerInterface):
     def handle_new_self_play_positions(self, n_augmented_positions: int):
         self._training_manager.handle_new_self_play_positions(n_augmented_positions)
 
+    def start_worker(self, conn: ClientConnection, gen: Generation):
+        self._gpu_contention_manager.start_worker(conn, gen)
+
     def handle_new_model(self, gen: Generation):
-        self._gpu_contention_manager.handle_new_model(gen)
-        self._self_play_manager.handle_new_model(gen)
-        self._ratings_manager.handle_new_model(gen)
+        self._gpu_contention_manager.update_latest_gen(gen)
+        self._gpu_contention_manager.pause_workers(role=ClientRole.SELF_PLAY_WORKER)
+        self._network_weights_broadcaster.broadcast_to_self_play_workers(gen)
+        self._gpu_contention_manager.unpause_waiting_workers()
+        self._self_play_manager.notify_of_new_model(gen)
+        self._ratings_manager.notify_of_new_model()
 
     def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
         self._remote_logging_manager.handle_log_msg(msg, conn)
@@ -175,14 +191,17 @@ class LoopController(LoopControllerInterface):
     def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
         self._remote_logging_manager.close_log_file(msg, conn.client_id)
 
-    def reload_weights(self, conns: List[ClientConnection], gen: Generation):
-        self._gpu_contention_manager.reload_weights(conns, gen)
-
-    def pause_workers(self, gpu_id: GpuId):
-        self._gpu_contention_manager.pause(gpu_id)
+    def broadcast_weights(self, conns: List[ClientConnection], gen: Generation):
+        self._network_weights_broadcaster.broadcast(conns, gen)
 
     def handle_pause_ack(self, conn: ClientConnection):
         self._gpu_contention_manager.handle_pause_ack(conn)
+
+    def handle_unpause_ack(self, conn: ClientConnection):
+        self._gpu_contention_manager.handle_unpause_ack(conn)
+
+    def notify_of_new_rating(self):
+        self._gpu_contention_manager.notify_of_new_rating()
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
@@ -236,6 +255,7 @@ class LoopController(LoopControllerInterface):
             logger.info('Performing LoopController setup...')
             self._organizer.makedirs()
             self._init_socket()
+            self._gpu_contention_manager.setup()
             self._training_manager.setup()
             self._client_connection_manager.start()
 

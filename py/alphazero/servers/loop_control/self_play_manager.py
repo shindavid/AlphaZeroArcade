@@ -55,7 +55,7 @@ class SelfPlayManager:
         self._controller.launch_recv_loop(
             self._worker_msg_handler, conn, 'self-play-worker')
 
-    def handle_new_model(self, generation: Generation):
+    def notify_of_new_model(self, generation: Generation):
         if generation > 1:
             return
 
@@ -99,6 +99,8 @@ class SelfPlayManager:
             self._controller.handle_log_msg(msg, conn)
         elif msg_type == 'pause-ack':
             self._controller.handle_pause_ack(conn)
+        elif msg_type == 'unpause-ack':
+            self._controller.handle_unpause_ack(conn)
         elif msg_type == 'weights-request':
             self._handle_weights_request(conn)
         elif msg_type == 'metrics':
@@ -342,4 +344,4 @@ class SelfPlayManager:
 
     def _handle_weights_request(self, conn: ClientConnection):
         gen = self._controller.organizer.get_latest_model_generation()
-        self._controller.reload_weights([conn], gen)
+        self._controller.start_worker(conn, gen)

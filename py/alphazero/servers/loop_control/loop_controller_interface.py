@@ -1,7 +1,7 @@
 from .directory_organizer import DirectoryOrganizer
 from .params import LoopControllerParams
 
-from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
+from alphazero.logic.custom_types import ClientConnection, ClientRoleOrRoles, DisconnectHandler, \
     Generation, GpuId, MsgHandler, ShutdownAction
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
@@ -67,8 +67,16 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_connections(self, role: ClientRole,
-                        gpu_id: Optional[GpuId]=None) -> List[ClientConnection]:
+    def get_connections(self, gpu_id: Optional[GpuId] = None,
+                        role: Optional[ClientRoleOrRoles] = None) -> List[ClientConnection]:
+        pass
+
+    @abc.abstractmethod
+    def acquire_training_gpu_lock(self):
+        pass
+
+    @abc.abstractmethod
+    def release_training_gpu_lock(self):
         pass
 
     @abc.abstractmethod
@@ -93,6 +101,10 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def start_worker(self, conn: ClientConnection, gen: Generation):
+        pass
+
+    @abc.abstractmethod
     def handle_new_model(self, gen: Generation):
         pass
 
@@ -105,13 +117,17 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def reload_weights(self, conns: List[ClientConnection], gen: Generation):
-        pass
-
-    @abc.abstractmethod
-    def pause_workers(self, gpu_id: GpuId):
+    def broadcast_weights(self, conns: List[ClientConnection], gen: Generation):
         pass
 
     @abc.abstractmethod
     def handle_pause_ack(self, conn: ClientConnection):
+        pass
+
+    @abc.abstractmethod
+    def handle_unpause_ack(self, conn: ClientConnection):
+        pass
+
+    @abc.abstractmethod
+    def notify_of_new_rating(self):
         pass

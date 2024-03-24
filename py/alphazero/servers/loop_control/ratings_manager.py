@@ -51,7 +51,10 @@ class RatingsManager:
         self._controller.launch_recv_loop(
             self._worker_msg_handler, conn, 'ratings-worker')
 
-    def handle_new_model(self, gen: Generation):
+    def notify_of_new_model(self):
+        """
+        Notify manager that there is new work to do.
+        """
         with self._lock:
             self._new_work_cv.notify_all()
 
@@ -100,7 +103,7 @@ class RatingsManager:
         elif msg_type == 'worker-exit':
             self._controller.handle_worker_exit(msg, conn)
         elif msg_type == 'work-request':
-            self._send_match_request(conn)
+            self._handle_work_request(conn)
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
         else:
@@ -117,6 +120,8 @@ class RatingsManager:
             self._controller.handle_log_msg(msg, conn)
         elif msg_type == 'pause-ack':
             self._controller.handle_pause_ack(conn)
+        elif msg_type == 'unpause-ack':
+            self._controller.handle_unpause_ack(conn)
         elif msg_type == 'weights-request':
             self._handle_weights_request(msg, conn)
         elif msg_type == 'done':
@@ -125,7 +130,7 @@ class RatingsManager:
             logger.warn(f'ratings-worker: unknown message type: {msg}')
         return False
 
-    def _send_match_request(self, conn: ClientConnection):
+    def _handle_work_request(self, conn: ClientConnection):
         with self._lock:
             rating_data = self._owner_dict.get(conn.client_id, None)
         if rating_data is None:
@@ -175,9 +180,12 @@ class RatingsManager:
             if rating is not None:
                 self._commit_rating(mcts_gen, rating)
 
+        if rating is not None:
+            self._controller.notify_of_new_rating()
+
     def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
         gen = msg['gen']
-        self._controller.reload_weights([conn], gen)
+        self._controller.start_worker(conn, gen)
 
     def _estimate_rating(self, gen: Generation) -> Optional[float]:
         """

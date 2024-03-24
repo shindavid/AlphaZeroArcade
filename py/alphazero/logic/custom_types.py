@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
+from typing import Callable, Union
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket
@@ -17,8 +17,30 @@ class ClientRole(Enum):
     RATINGS_SERVER = 'ratings-server'
     RATINGS_WORKER = 'ratings-worker'
 
+    @staticmethod
+    def worker_roles():
+        return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
 
-@dataclass
+
+ClientRoleOrRoles = Union[ClientRole, tuple[ClientRole]]
+
+
+class Domain(Enum):
+    TRAINING = 'training'
+    SELF_PLAY = 'self-play'
+    RATINGS = 'ratings'
+
+    @staticmethod
+    def from_role(role: ClientRole):
+        if role in (ClientRole.SELF_PLAY_SERVER, ClientRole.SELF_PLAY_WORKER):
+            return Domain.SELF_PLAY
+        elif role in (ClientRole.RATINGS_SERVER, ClientRole.RATINGS_WORKER):
+            return Domain.RATINGS
+        else:
+            raise ValueError(f'Unexpected role: {role}')
+
+
+@dataclass(frozen=True)
 class GpuId:
     ip_address: str
     device: str
@@ -30,8 +52,9 @@ class GpuId:
         return str(self)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ClientConnection:
+    client_domain: Domain
     client_role: ClientRole
     client_id: ClientId
     socket: Socket

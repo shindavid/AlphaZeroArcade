@@ -249,9 +249,10 @@ class TrainingManager:
 
             net, optimizer = self._get_net_and_optimizer(loader)
 
-            self._controller.pause_workers(self._controller.training_gpu_id)
-
+            self._controller.acquire_training_gpu_lock()
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
+            self._controller.release_training_gpu_lock()
+
             if stats is None:
                 # happens in premature-shutdown case
                 return
