@@ -168,29 +168,38 @@ void TrainingDataWriter<GameState_, Tensorizor_>::shut_down() {
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::pause() {
-  LOG_INFO << "TrainingDataWriter pause()";
+  LOG_INFO << "TrainingDataWriter: pausing";
   std::unique_lock lock(mutex_);
+  if (paused_) {
+    LOG_INFO << "TrainingDataWriter: handle_pause_receipt (already paused)";
+    core::LoopControllerClient::get()->handle_pause_receipt();
+    return;
+  }
   paused_ = true;
   lock.unlock();
   cv_.notify_one();
-  LOG_INFO << "TrainingDataWriter pause() - complete!";
+  LOG_INFO << "TrainingDataWriter: pause complete!";
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 void TrainingDataWriter<GameState_, Tensorizor_>::unpause() {
+  LOG_INFO << "TrainingDataWriter: unpausing";
   std::unique_lock lock(mutex_);
+  if (!paused_) {
+    LOG_INFO << "TrainingDataWriter: handle_unpause_receipt (already unpaused)";
+    core::LoopControllerClient::get()->handle_unpause_receipt();
+    return;
+  }
   paused_ = false;
   lock.unlock();
   cv_.notify_one();
+  LOG_INFO << "TrainingDataWriter: unpause complete!";
 }
 
 template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
 TrainingDataWriter<GameState_, Tensorizor_>::TrainingDataWriter(const Params& params)
     : params_(params) {
   if (LoopControllerClient::initialized()) {
-    if (LoopControllerClient::get()->paused()) {
-      this->paused_ = true;
-    }
     LoopControllerClient::get()->add_listener(this);
   }
   thread_ = new std::thread([&] { loop(); });
@@ -208,8 +217,11 @@ void TrainingDataWriter<GameState_, Tensorizor_>::loop() {
     game_queue_t& queue = completed_games_[queue_index_];
     cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
     if (paused_) {
-      core::LoopControllerClient::get()->notify_pause_received(this);
+      LOG_INFO << "TrainingDataWriter: handle_pause_receipt";
+      core::LoopControllerClient::get()->handle_pause_receipt();
       cv_.wait(lock, [&] { return !paused_; });
+      LOG_INFO << "TrainingDataWriter: handle_unpause_receipt";
+      core::LoopControllerClient::get()->handle_unpause_receipt();
     }
     queue_index_ = 1 - queue_index_;
     lock.unlock();

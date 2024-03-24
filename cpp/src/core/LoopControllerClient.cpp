@@ -31,15 +31,23 @@ void LoopControllerClient::request_weights() {
   send(msg);
 }
 
-void LoopControllerClient::notify_pause_received(PauseListener* listener) {
-  LOG_INFO << "LoopControllerClient: received pause notification";
-  std::unique_lock lock(pause_mutex_);
-  listener->pause_notified_ = true;
-  pause_complete_ = all_pause_notifications_received();
+void LoopControllerClient::handle_pause_receipt() {
+  std::unique_lock lock(receipt_mutex_);
+  pause_receipt_count_++;
 
-  if (pause_complete_) {
+  if (pause_receipt_count_ == pause_listeners_.size()) {
     lock.unlock();
-    pause_cv_.notify_all();
+    receipt_cv_.notify_all();
+  }
+}
+
+void LoopControllerClient::handle_unpause_receipt() {
+  std::unique_lock lock(receipt_mutex_);
+  unpause_receipt_count_++;
+
+  if (unpause_receipt_count_ == pause_listeners_.size()) {
+    lock.unlock();
+    receipt_cv_.notify_all();
   }
 }
 
@@ -121,29 +129,6 @@ void LoopControllerClient::recv_handshake() {
   client_id_ = client_id;
 }
 
-void LoopControllerClient::pause() {
-  std::unique_lock lock(pause_mutex_);
-  if (paused_) {
-    LOG_INFO << "LoopControllerClient: skipping pause (already paused)";
-    return;
-  }
-  LOG_INFO << "LoopControllerClient: pausing...";
-  paused_ = true;
-  pause_complete_ = pause_listeners_.empty();
-  lock.unlock();
-
-  for (auto listener : pause_listeners_) {
-    listener->pause_notified_ = false;
-  }
-  for (auto listener : pause_listeners_) {
-    listener->pause();
-  }
-
-  lock.lock();
-  pause_cv_.wait(lock, [this]() { return pause_complete_; });
-  LOG_INFO << "LoopControllerClient: pause complete!";
-}
-
 void LoopControllerClient::send_metrics() {
   if (!params_.report_metrics) {
     return;
@@ -173,19 +158,49 @@ void LoopControllerClient::send_pause_ack() {
   socket_->json_write(msg);
 }
 
+void LoopControllerClient::send_unpause_ack() {
+  boost::json::object msg;
+  msg["type"] = "unpause-ack";
+  socket_->json_write(msg);
+}
+
+void LoopControllerClient::pause() {
+  LOG_INFO << "LoopControllerClient: pausing...";
+  pause_receipt_count_ = 0;
+
+  for (auto listener : pause_listeners_) {
+    listener->pause();
+  }
+}
+
 void LoopControllerClient::unpause() {
   LOG_INFO << "LoopControllerClient: unpausing...";
+  unpause_receipt_count_ = 0;
+
   for (auto listener : pause_listeners_) {
     listener->unpause();
   }
-  paused_ = false;
 }
 
 void LoopControllerClient::reload_weights(std::stringstream& ss, const std::string& cuda_device) {
   LOG_INFO << "LoopControllerClient: reloading weights...";
+
   for (auto listener : reload_weights_listeners_) {
     listener->reload_weights(ss, cuda_device);
   }
+}
+
+void LoopControllerClient::wait_for_pause_receipts() {
+  LOG_INFO << "LoopControllerClient: waiting for pause receipts...";
+  std::unique_lock lock(receipt_mutex_);
+  receipt_cv_.wait(lock, [this]() { return pause_receipt_count_ == pause_listeners_.size(); });
+  LOG_INFO << "LoopControllerClient: pause receipts received!";
+}
+
+void LoopControllerClient::wait_for_unpause_receipts() {
+  std::unique_lock lock(receipt_mutex_);
+  receipt_cv_.wait(lock, [this]() { return unpause_receipt_count_ == pause_listeners_.size(); });
+  LOG_INFO << "LoopControllerClient: unpause receipts received!";
 }
 
 void LoopControllerClient::loop() {
@@ -202,9 +217,12 @@ void LoopControllerClient::loop() {
     LOG_INFO << "LoopControllerClient: handling - " << msg;
     if (type == "pause") {
       pause();
+      wait_for_pause_receipts();
       send_pause_ack();
     } else if (type == "unpause") {
       unpause();
+      wait_for_unpause_receipts();
+      send_unpause_ack();
     } else if (type == "reload-weights") {
       std::string cuda_device = this->cuda_device();
       if (msg.as_object().contains("cuda_device")) {
@@ -232,15 +250,6 @@ void LoopControllerClient::loop() {
     }
     LOG_INFO << "LoopControllerClient: " << type << " handling complete";
   }
-}
-
-bool LoopControllerClient::all_pause_notifications_received() const {
-  for (auto listener : pause_listeners_) {
-    if (!listener->pause_notified_) {
-      return false;
-    }
-  }
-  return true;
 }
 
 }  // namespace core

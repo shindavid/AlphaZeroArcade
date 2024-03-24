@@ -55,7 +55,6 @@ class LoopControllerClient {
   static void init(const Params&);
   static bool initialized() { return instance_;  }
   static LoopControllerClient* get() { return instance_;  }
-  bool paused() const { return paused_; }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
   const std::string& role() const { return params_.client_role; }
@@ -72,7 +71,8 @@ class LoopControllerClient {
   void send(const boost::json::value& msg) { socket_->json_write(msg); }
 
   void request_weights();
-  void notify_pause_received(PauseListener* listener);
+  void handle_pause_receipt();
+  void handle_unpause_receipt();
   perf_stats_t get_perf_stats() const;
 
   int64_t get_last_games_flush_ts() const { return last_games_flush_ts_; }
@@ -87,13 +87,15 @@ class LoopControllerClient {
 
   void send_handshake();
   void recv_handshake();
-  void pause();
   void send_metrics();
   void send_pause_ack();
+  void send_unpause_ack();
+  void pause();
   void unpause();
   void reload_weights(std::stringstream&, const std::string& cuda_device);
+  void wait_for_pause_receipts();
+  void wait_for_unpause_receipts();
   void loop();
-  bool all_pause_notifications_received() const;
 
   static LoopControllerClient* instance_;
 
@@ -108,10 +110,10 @@ class LoopControllerClient {
   int client_id_ = -1;  // assigned by loop-controller
   int cur_generation_ = 0;
 
-  std::condition_variable pause_cv_;
-  mutable std::mutex pause_mutex_;
-  bool pause_complete_ = false;
-  bool paused_ = false;
+  std::condition_variable receipt_cv_;
+  mutable std::mutex receipt_mutex_;
+  size_t pause_receipt_count_ = 0;
+  size_t unpause_receipt_count_ = 0;
   bool shutdown_initiated_ = false;
 };
 

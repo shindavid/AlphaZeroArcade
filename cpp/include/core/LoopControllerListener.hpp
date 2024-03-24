@@ -34,9 +34,6 @@ class LoopControllerListener<LoopControllerInteractionType::kPause> {
   virtual ~LoopControllerListener() = default;
   virtual void pause() = 0;
   virtual void unpause() = 0;
-
- private:
-  bool pause_notified_ = false;  // used by LoopControllerClient
 };
 
 template <>

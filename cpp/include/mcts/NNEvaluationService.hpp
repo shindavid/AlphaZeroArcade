@@ -271,6 +271,8 @@ class NNEvaluationService
   bool session_ended_ = false;
   int num_connections_ = 0;
 
+  bool initial_weights_loaded_ = false;
+  bool skip_next_pause_receipt_ = false;
   bool paused_ = false;
   std::mutex pause_mutex_;
   std::condition_variable cv_paused_;
