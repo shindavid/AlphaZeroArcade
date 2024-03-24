@@ -152,6 +152,10 @@ class GpuContentionManager:
             for domain in (Domain.SELF_PLAY, Domain.RATINGS):
                 if not any(c.client_domain == domain for c in conns):
                     table[domain] = UsageState.UNUSED
+                elif table[domain] == UsageState.RUNNING_HIGH_PRIORITY:
+                    table[domain] = UsageState.WAITING_HIGH_PRIORITY
+                elif table[domain] == UsageState.RUNNING_LOW_PRIORITY:
+                    table[domain] = UsageState.WAITING_LOW_PRIORITY
 
             if table.unused():
                 subdict.pop(gpu_id.device)
@@ -319,9 +323,10 @@ class GpuContentionManager:
 
         with self._lock:
             table = self._gpu_usage_dict[gpu_id.ip_address][gpu_id.device]
-            assert table[Domain.RATINGS] == UsageState.UNUSED, (conn, table)
+            assert not table[Domain.RATINGS].is_running(), (conn, table)
 
-            table[Domain.RATINGS] = UsageState.WAITING_LOW_PRIORITY
+            if not table[Domain.RATINGS].is_waiting():
+                table[Domain.RATINGS] = UsageState.WAITING_LOW_PRIORITY
             logger.debug(f'Starting ratings ({conn}) - pausing...')
             self._issue_pause([conn])
             self._cond.wait_for(lambda: len(self._pending_pause_ack_set) == 0)
