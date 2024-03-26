@@ -76,7 +76,7 @@ def setup_conda(env_sh_lines):
     """
     Checks first that conda is installed.
 
-    Request user to select a conda environment name, using "AlphaZeroArcade" as the default.
+    Request user to select a conda environment name, using "A0A" as the default.
     If the environment does not exist, create it
     """
 
@@ -92,7 +92,7 @@ def setup_conda(env_sh_lines):
     print(f'Existing conda environments: {", ".join(conda_envs)}')
     print('')
 
-    default_env_name = os.environ.get('A0A_CONDA_ENV', 'AlphaZeroArcade')
+    default_env_name = os.environ.get('A0A_CONDA_ENV', 'A0A')
     env_name = input(f'Enter conda environment name [{default_env_name}]: ')
     if not env_name:
         env_name = default_env_name
