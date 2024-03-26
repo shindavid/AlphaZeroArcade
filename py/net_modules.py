@@ -27,6 +27,7 @@ from torch import nn as nn
 from torch.nn import functional as F
 
 from learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
+from util.repo_util import Repo
 from util.torch_util import Shape
 
 
@@ -511,26 +512,14 @@ class Model(nn.Module):
         forward_shape = tuple([1] + list(self.input_shape))
         example_input = torch.zeros(forward_shape)
 
-        script = """
-import pickle
-import sys
-import torch
-
-pickle_filename = sys.argv[1]
-output_filename = sys.argv[2]
-with open(pickle_filename, 'rb') as f:
-    clone, example_input = pickle.load(f)
-
-torch.jit.trace(clone, example_input).save(output_filename)
-"""
-
         # Perform the actual trace/save in a separate process to avoid memory leak
         # See: https://github.com/pytorch/pytorch/issues/35600
-        with tempfile.TemporaryFile(mode='wb') as pickle_file:
+        with tempfile.NamedTemporaryFile(mode='wb', delete=False) as pickle_file:
             pickle.dump((clone, example_input), pickle_file)
             pickle_file.close()
 
-            cmd = f'python -c "{script}" {pickle_file.name} {filename}'
+            script = os.path.join(Repo.root(), 'py/alphazero/scripts/jit_tracer.py')
+            cmd = f'python {script} {pickle_file.name} {filename}'
             rc = os.system(cmd)
             assert rc == 0, f'Error saving model to {filename}'
 
