@@ -15,11 +15,12 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
-from concurrent import futures
 import copy
 from dataclasses import dataclass, field
 import math
 import os
+import pickle
+import tempfile
 from typing import Any, Callable, Dict, List, Optional, Union
 import torch
 from torch import nn as nn
@@ -481,10 +482,6 @@ class Model(nn.Module):
             print(f'Model successfully loaded!')
         return net
 
-    @staticmethod
-    def _save_model_helper(model, example_input, filename):
-        torch.jit.trace(model, example_input).save(filename)
-
     def save_model(self, filename: str, verbose: bool = False):
         """
         Saves this network to disk, from which it can be loaded either by c++ or by python. Uses the
@@ -514,11 +511,28 @@ class Model(nn.Module):
         forward_shape = tuple([1] + list(self.input_shape))
         example_input = torch.zeros(forward_shape)
 
+        script = """
+import pickle
+import sys
+import torch
+
+pickle_filename = sys.argv[1]
+output_filename = sys.argv[2]
+with open(pickle_filename, 'rb') as f:
+    clone, example_input = pickle.load(f)
+
+torch.jit.trace(clone, example_input).save(output_filename)
+"""
+
         # Perform the actual trace/save in a separate process to avoid memory leak
         # See: https://github.com/pytorch/pytorch/issues/35600
-        with futures.ProcessPoolExecutor() as executor:
-            future = executor.submit(Model._save_model_helper, clone, example_input, filename)
-            futures.wait([future])
+        with tempfile.TemporaryFile(mode='wb') as pickle_file:
+            pickle.dump((clone, example_input), pickle_file)
+            pickle_file.close()
+
+            cmd = f'python -c "{script}" {pickle_file.name} {filename}'
+            rc = os.system(cmd)
+            assert rc == 0, f'Error saving model to {filename}'
 
         if verbose:
             print(f'Model saved to {filename}')
