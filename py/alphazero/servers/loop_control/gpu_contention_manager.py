@@ -67,11 +67,28 @@ class UsageTable:
     def unused(self) -> bool:
         return all(state == UsageState.UNUSED for state in self._states.values())
 
+    def waiting_count(self) -> int:
+        return sum(state.is_waiting() for state in self._states.values())
+
     def running_count(self) -> int:
         return sum(state.is_running() for state in self._states.values())
 
     def high_priority_count(self) -> int:
         return sum(state.is_high_priority() for state in self._states.values())
+
+    def update_from_waiting_to_running(self, conn: ClientConnection):
+        if self[conn.client_domain] == UsageState.WAITING_LOW_PRIORITY:
+            self[conn.client_domain] = UsageState.RUNNING_LOW_PRIORITY
+        elif self[conn.client_domain] == UsageState.WAITING_HIGH_PRIORITY:
+            self[conn.client_domain] = UsageState.RUNNING_HIGH_PRIORITY
+        else:
+            raise ValueError(f'Unexpected state: table={self}, conn={conn}')
+
+    def downgrade_priority(self, domain: Domain):
+        if self[domain] == UsageState.RUNNING_HIGH_PRIORITY:
+            self[domain] = UsageState.RUNNING_LOW_PRIORITY
+        elif self[domain] == UsageState.WAITING_HIGH_PRIORITY:
+            self[domain] = UsageState.WAITING_LOW_PRIORITY
 
 
 IpAddress = str
@@ -207,7 +224,6 @@ class GpuContentionManager:
                 table = self._gpu_usage_dict[gpu_id.ip_address][gpu_id.device]
                 worker = self._get_worker_to_unpause(table, workers)
                 if worker is not None:
-                    table[worker.client_domain] = UsageState.RUNNING_LOW_PRIORITY
                     self._issue_unpause([worker])
                     self._cond.wait_for(lambda: len(self._pending_unpause_ack_set) == 0)
 
@@ -237,8 +253,7 @@ class GpuContentionManager:
             self._pending_unpause_ack_set.discard(conn.client_id)
             table = self._gpu_usage_dict[gpu_id.ip_address][gpu_id.device]
 
-            assert not table[conn.client_domain].is_high_priority(), (conn, table)
-            table[conn.client_domain] = UsageState.RUNNING_LOW_PRIORITY
+            table.update_from_waiting_to_running(conn)
             self._cond.notify_all()
 
     def update_latest_gen(self, gen: Generation):
@@ -254,10 +269,7 @@ class GpuContentionManager:
         with self._lock:
             for subdict in self._gpu_usage_dict.values():
                 for table in subdict.values():
-                    if table[Domain.RATINGS] == UsageState.RUNNING_HIGH_PRIORITY:
-                        table[Domain.RATINGS] = UsageState.RUNNING_LOW_PRIORITY
-                    elif table[Domain.RATINGS] == UsageState.WAITING_HIGH_PRIORITY:
-                        table[Domain.RATINGS] = UsageState.WAITING_LOW_PRIORITY
+                    table.downgrade_priority(Domain.RATINGS)
 
     def _start_worker_helper(self, conn: ClientConnection, gen: Generation):
         try:
@@ -310,7 +322,6 @@ class GpuContentionManager:
                 return
 
             logger.debug(f'Starting self-play ({conn}) - unpausing...')
-            table[Domain.SELF_PLAY] = UsageState.RUNNING_LOW_PRIORITY
             self._issue_unpause([conn])
             self._cond.wait_for(lambda: len(self._pending_unpause_ack_set) == 0)
             self._cond.notify_all()
@@ -339,8 +350,8 @@ class GpuContentionManager:
             logger.debug(f'Starting ratings ({conn}) - reloading weights...')
             self._controller.broadcast_weights([conn], gen)
 
-            logger.debug(f'Starting ratings ({conn}) - waiting for 0 running or high-priority...')
-            self._cond.wait_for(lambda: table.running_count() == 0 or
+            logger.debug(f'Starting ratings ({conn}) - waiting for 1 running/waiting or high-priority...')
+            self._cond.wait_for(lambda: table.running_count() + table.waiting_count() == 1 or
                                 table[Domain.RATINGS] == UsageState.WAITING_HIGH_PRIORITY)
 
            # make sure table is still there (disconnect could have happened)
@@ -348,8 +359,7 @@ class GpuContentionManager:
             if table is None:
                 return
 
-            if table.running_count() > 0:
-                assert table[Domain.RATINGS] == UsageState.WAITING_HIGH_PRIORITY, (conn, table)
+            if table[Domain.RATINGS] == UsageState.WAITING_HIGH_PRIORITY:
                 logger.debug(f'Starting ratings ({conn}) - high-priority case!')
                 self.pause_workers(gpu_id, ClientRole.SELF_PLAY_WORKER, lock=False)
                 logger.debug(f'Starting ratings ({conn}) - waiting for 0 running...')
@@ -361,7 +371,6 @@ class GpuContentionManager:
                     return
 
             logger.debug(f'Starting ratings ({conn}) - unpausing...')
-            table[Domain.RATINGS] = UsageState.RUNNING_LOW_PRIORITY
             self._issue_unpause([conn])
             self._cond.wait_for(lambda: len(self._pending_unpause_ack_set) == 0)
             self._cond.notify_all()
