@@ -20,9 +20,7 @@ class NeuralNet {
   /*
    * value is passed to torch::jit::load(). See torch::jit::load() API for details.
    *
-   * This does NOT move the model to the GPU. Use activate() to do that.
-   *
-   * Requires that the net was deactivated before calling this function.
+   * After this call, the model will be on the CPU. Use activate() to move it to the GPU.
    */
   template<typename Value>
   void load_weights(Value&& value, const std::string& cuda_device);

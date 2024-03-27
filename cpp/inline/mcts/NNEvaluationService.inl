@@ -464,6 +464,7 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
     LOG_INFO << "NNEvaluationService: skipping handle_pause_receipt";
     skip_next_pause_receipt_ = false;
   } else {
+    net_.deactivate();
     LOG_INFO << "NNEvaluationService: handle_pause_receipt";
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
@@ -511,8 +512,8 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::pause() {
   LOG_INFO << "NNEvaluationService: pausing";
   std::unique_lock lock(pause_mutex_);
-  net_.deactivate();
   if (paused_) {
+    net_.deactivate();
     LOG_INFO << "NNEvaluationService: handle_pause_receipt (already paused)";
     core::LoopControllerClient::get()->handle_pause_receipt();
     return;
@@ -520,8 +521,9 @@ void NNEvaluationService<GameState, Tensorizor>::pause() {
   paused_ = true;
 
   if (!initial_weights_loaded_) {
-    LOG_INFO << "NNEvaluationService: handle_pause_receipt (skip next)";
+    net_.deactivate();
     skip_next_pause_receipt_ = true;
+    LOG_INFO << "NNEvaluationService: handle_pause_receipt (skip next)";
     core::LoopControllerClient::get()->handle_pause_receipt();
   }
   LOG_INFO << "NNEvaluationService: pause complete!";
