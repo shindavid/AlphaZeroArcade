@@ -511,6 +511,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::pause() {
   LOG_INFO << "NNEvaluationService: pausing";
   std::unique_lock lock(pause_mutex_);
+  net_.deactivate();
   if (paused_) {
     LOG_INFO << "NNEvaluationService: handle_pause_receipt (already paused)";
     core::LoopControllerClient::get()->handle_pause_receipt();
@@ -533,6 +534,7 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::unpause() {
   LOG_INFO << "NNEvaluationService: unpausing";
   std::unique_lock lock(pause_mutex_);
+  net_.activate();
   if (!paused_) {
     LOG_INFO << "NNEvaluationService: handle_unpause_receipt (already unpaused)";
     core::LoopControllerClient::get()->handle_unpause_receipt();
