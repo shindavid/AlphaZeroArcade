@@ -2,14 +2,14 @@ from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
 from util.logging_util import get_logger
-from util.socket_util import JsonDict
+from util.socket_util import JsonDict, SocketSendException
 
 from collections import defaultdict
 import logging
 import os
 import sqlite3
 import threading
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
 
 
 logger = get_logger()
@@ -22,18 +22,18 @@ class SelfPlayManager:
         self._gen0_owner: Optional[ClientId] = None
         self._gen0_complete = False
         self._gen0_lock = threading.Lock()
-        self._gen0_cv = threading.Condition(self._gen0_lock)
+        self._gen0_cond = threading.Condition(self._gen0_lock)
 
         self._gen1_model_trained = False
         self._gen1_lock = threading.Lock()
-        self._gen1_cv = threading.Condition(self._gen1_lock)
+        self._gen1_cond = threading.Condition(self._gen1_lock)
 
         self._pending_game_data = []
 
     def wait_for_gen0_completion(self):
         self._set_gen0_completion(self._num_additional_gen0_positions_needed() == 0, log=False)
-        with self._gen0_cv:
-            self._gen0_cv.wait_for(lambda: self._gen0_complete)
+        with self._gen0_cond:
+            self._gen0_cond.wait_for(lambda: self._gen0_complete)
 
     def add_server(self, conn: ClientConnection):
         reply = {
@@ -47,13 +47,15 @@ class SelfPlayManager:
             disconnect_handler=self._handle_server_disconnect)
 
     def add_worker(self, conn: ClientConnection):
+        conn.aux['ack_cond'] = threading.Condition()
         reply = {
             'type': 'handshake-ack',
             'client_id': conn.client_id,
         }
         conn.socket.send_json(reply)
         self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'self-play-worker')
+            self._worker_msg_handler, conn, 'self-play-worker',
+            disconnect_handler=self._handle_worker_disconnect)
 
     def notify_of_new_model(self, generation: Generation):
         if generation > 1:
@@ -61,14 +63,22 @@ class SelfPlayManager:
 
         with self._gen1_lock:
             self._gen1_model_trained = True
-            self._gen1_cv.notify_all()
+            self._gen1_cond.notify_all()
 
     def _handle_server_disconnect(self, conn: ClientConnection):
         with self._gen0_lock:
             if conn.client_id == self._gen0_owner:
                 self._gen0_owner = None
                 self._set_gen0_completion(self._num_additional_gen0_positions_needed() == 0)
-                self._gen0_cv.notify_all()
+                self._gen0_cond.notify_all()
+
+    def _handle_worker_disconnect(self, conn: ClientConnection):
+        cond = conn.aux['ack_cond']
+        with cond:
+            conn.aux.pop('pending_pause_ack', None)
+            conn.aux.pop('pending_unpause_ack', None)
+            cond.notify_all()
+        self._controller.release_gpu_lock(conn.client_domain, conn.client_gpu_id)
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
@@ -98,9 +108,9 @@ class SelfPlayManager:
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
         elif msg_type == 'pause-ack':
-            self._controller.handle_pause_ack(conn)
+            self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
-            self._controller.handle_unpause_ack(conn)
+            self._handle_unpause_ack(conn)
         elif msg_type == 'weights-request':
             self._handle_weights_request(conn)
         elif msg_type == 'metrics':
@@ -137,14 +147,14 @@ class SelfPlayManager:
         Finally, if gen0 has already successfully completed, this returns False.
         """
         with self._gen0_lock:
-            self._gen0_cv.wait_for(lambda: self._gen0_owner is None)
+            self._gen0_cond.wait_for(lambda: self._gen0_owner is None)
             if self._gen0_complete:
                 return False
 
             additional_gen0_rows_needed = self._num_additional_gen0_positions_needed()
             if additional_gen0_rows_needed == 0:
                 self._set_gen0_completion(True)
-                self._gen0_cv.notify_all()
+                self._gen0_cond.notify_all()
                 return False
             self._gen0_owner = conn.client_id
 
@@ -166,7 +176,7 @@ class SelfPlayManager:
         with self._gen1_lock:
             if not self._gen1_model_trained:
                 self._gen1_model_trained = organizer.get_latest_model_generation() >= 1
-                self._gen1_cv.wait_for(lambda: self._gen1_model_trained)
+                self._gen1_cond.wait_for(lambda: self._gen1_model_trained)
 
         gen = organizer.get_latest_model_generation()
         model_filename = organizer.get_model_filename(gen)
@@ -186,13 +196,74 @@ class SelfPlayManager:
 
         self._launch_self_play(conn)
 
+    def _manage_worker(self, conn: ClientConnection):
+        try:
+            domain = conn.client_domain
+            gpu_id = conn.client_gpu_id
+            self._controller.mark_as_idle(domain, gpu_id)
+            while conn.active:
+                self._pause(conn)
+                self._controller.acquire_gpu_lock(domain, gpu_id)
+                self._update_weights(conn)
+                self._unpause(conn)
+                self._controller.wait_until_gpu_priority_lost(domain, gpu_id)
+        except SocketSendException:
+            logger.warn(f'Error sending to {conn} - worker likely disconnected')
+        except:
+            logger.error(f'Unexpected error managing {conn}', exc_info=True)
+            self._controller.request_shutdown(1)
+
+    def _pause(self, conn: ClientConnection):
+        logger.debug(f'Pausing {conn}...')
+        data = {
+            'type': 'pause',
+        }
+        conn.aux['pending_pause_ack'] = True
+        conn.socket.send_json(data)
+
+        cond = conn.aux['ack_cond']
+        with cond:
+            cond.wait_for(lambda: 'pending_pause_ack' not in conn.aux)
+
+        logger.debug(f'Pause of {conn} complete!')
+
+    def _unpause(self, conn: ClientConnection):
+        logger.debug(f'Unpausing {conn}...')
+        data = {
+            'type': 'unpause',
+        }
+        conn.aux['pending_unpause_ack'] = True
+        conn.socket.send_json(data)
+
+        cond = conn.aux['ack_cond']
+        with cond:
+            cond.wait_for(lambda: 'pending_unpause_ack' not in conn.aux)
+
+        logger.debug(f'Unpause of {conn} complete!')
+
+    def _handle_pause_ack(self, conn: ClientConnection):
+        cond = conn.aux['ack_cond']
+        with cond:
+            conn.aux.pop('pending_pause_ack', None)
+            cond.notify_all()
+
+    def _handle_unpause_ack(self, conn: ClientConnection):
+        cond = conn.aux['ack_cond']
+        with cond:
+            conn.aux.pop('pending_unpause_ack', None)
+            cond.notify_all()
+
+    def _update_weights(self, conn: ClientConnection):
+        gen = self._controller.latest_gen()
+        self._controller.broadcast_weights([conn], gen)
+
     def _handle_gen0_complete(self, conn: ClientConnection):
         with self._gen0_lock:
             assert conn.client_id == self._gen0_owner
             assert self._num_additional_gen0_positions_needed() == 0
             self._gen0_owner = None
             self._set_gen0_completion(True)
-            self._gen0_cv.notify_all()
+            self._gen0_cond.notify_all()
 
         self._launch_self_play(conn)
 
@@ -343,5 +414,6 @@ class SelfPlayManager:
         return n_augmented_positions
 
     def _handle_weights_request(self, conn: ClientConnection):
-        gen = self._controller.organizer.get_latest_model_generation()
-        self._controller.start_worker(conn, gen)
+        thread = threading.Thread(target=self._manage_worker, args=(conn,),
+                                  daemon=True, name=f'manage-self-play-worker')
+        thread.start()

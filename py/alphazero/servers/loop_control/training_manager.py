@@ -1,6 +1,6 @@
 from .loop_controller_interface import LoopControllerInterface
 
-from alphazero.logic.custom_types import Generation
+from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
@@ -48,7 +48,12 @@ class TrainingManager:
         # then update it manually whenever we add new games to the database.
         self._master_list_length: Optional[int] = None
 
+        self._latest_gen: Generation = 0
+
         self._master_list_slice = PositionListSlice()
+
+    def latest_gen(self) -> Generation:
+        return self._latest_gen
 
     def setup(self):
         """
@@ -56,6 +61,7 @@ class TrainingManager:
         """
         self._last_sample_window = self._load_last_sample_window()
         self._master_list_length = self._fetch_num_total_augmented_positions()
+        self._latest_gen = self._controller.organizer.get_latest_model_generation()
 
     def wait_until_enough_training_data(self):
         training_params = self._controller.training_params
@@ -75,12 +81,8 @@ class TrainingManager:
         """
         Conditionally calls train_step() for generation 1.
         """
-        gen = 1
-        model_filename = self._controller.organizer.get_model_filename(gen)
-        if os.path.isfile(model_filename):
-            return
-
-        self.train_step()
+        if self._latest_gen == 0:
+            self.train_step()
 
     def train_step(self):
         """
@@ -249,12 +251,13 @@ class TrainingManager:
 
             net, optimizer = self._get_net_and_optimizer(loader)
 
-            self._controller.acquire_training_gpu_lock()
+            gpu_id = self._controller.training_gpu_id
+            self._controller.acquire_gpu_lock(Domain.TRAINING, gpu_id)
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
-            self._controller.release_training_gpu_lock()
 
             if stats is None:
-                # happens in premature-shutdown case
+                # Happens in premature-shutdown case. No need to release training gpu lock since
+                # the whole process is shutting down.
                 return
 
             stats.dump(logger.info)
@@ -263,6 +266,7 @@ class TrainingManager:
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
+            self._controller.release_gpu_lock(Domain.TRAINING, gpu_id)
             self._controller.handle_new_model(gen)
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
@@ -319,5 +323,6 @@ class TrainingManager:
         net.save_model(tmp_model_filename)
         os.rename(tmp_checkpoint_filename, checkpoint_filename)
         os.rename(tmp_model_filename, model_filename)
+        self._latest_gen = gen
         logger.info(f'Checkpoint saved: {checkpoint_filename}')
         logger.info(f'Model saved: {model_filename}')

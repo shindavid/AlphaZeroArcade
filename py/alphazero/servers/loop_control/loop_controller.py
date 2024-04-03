@@ -12,8 +12,8 @@ from .training_manager import TrainingManager
 from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ClientConnection, ClientRole, ClientRoleOrRoles, GpuId, \
-    DisconnectHandler, Generation, MsgHandler, ShutdownAction
+from alphazero.logic.custom_types import ClientConnection, ClientRole, ClientRoleOrRoles, Domain, \
+    DisconnectHandler, Generation, GpuId, MsgHandler, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
@@ -119,6 +119,9 @@ class LoopController(LoopControllerInterface):
     def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
         return self._database_connection_manager.ratings_db_conn_pool
 
+    def latest_gen(self) -> Generation:
+        return self._training_manager.latest_gen()
+
     def get_connections(self, gpu_id: Optional[GpuId] = None,
                         role: Optional[ClientRoleOrRoles] = None) -> List[ClientConnection]:
         return self._client_connection_manager.get(gpu_id, role)
@@ -128,6 +131,18 @@ class LoopController(LoopControllerInterface):
 
     def release_training_gpu_lock(self):
         self._gpu_contention_manager.release_training_gpu_lock()
+
+    def acquire_gpu_lock(self, domain: Domain, gpu_id: GpuId):
+        self._gpu_contention_manager.acquire_gpu_lock(domain, gpu_id)
+
+    def release_gpu_lock(self, domain: Domain, gpu_id: GpuId):
+        self._gpu_contention_manager.release_gpu_lock(domain, gpu_id)
+
+    def mark_as_idle(self, domain: Domain, gpu_id: GpuId):
+        self._gpu_contention_manager.mark_as_idle(domain, gpu_id)
+
+    def wait_until_gpu_priority_lost(self, domain: Domain, gpu_id: GpuId):
+        self._gpu_contention_manager.wait_until_gpu_priority_lost(domain, gpu_id)
 
     def register_shutdown_action(self, action: ShutdownAction):
         self._shutdown_manager.register(action)
@@ -174,14 +189,10 @@ class LoopController(LoopControllerInterface):
     def handle_new_self_play_positions(self, n_augmented_positions: int):
         self._training_manager.handle_new_self_play_positions(n_augmented_positions)
 
-    def start_worker(self, conn: ClientConnection, gen: Generation):
-        self._gpu_contention_manager.start_worker(conn, gen)
-
     def handle_new_model(self, gen: Generation):
-        self._gpu_contention_manager.update_latest_gen(gen)
-        self._gpu_contention_manager.pause_workers(role=ClientRole.SELF_PLAY_WORKER)
-        self._network_weights_broadcaster.broadcast_to_self_play_workers(gen)
-        self._gpu_contention_manager.unpause_waiting_workers()
+        # self._gpu_contention_manager.pause_workers(role=ClientRole.SELF_PLAY_WORKER)
+        # self._network_weights_broadcaster.broadcast_to_self_play_workers(gen)
+        # self._gpu_contention_manager.unpause_waiting_workers()
         self._self_play_manager.notify_of_new_model(gen)
         self._ratings_manager.notify_of_new_model()
 
@@ -235,10 +246,10 @@ class LoopController(LoopControllerInterface):
 
     def _handle_disconnect(self, conn: ClientConnection):
         logger.info(f'Handling disconnect: {conn}...')
+        conn.active = False
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
         self._remote_logging_manager.handle_disconnect(conn)
-        self._gpu_contention_manager.handle_disconnect(conn)
         conn.socket.close()
 
     def _init_socket(self):

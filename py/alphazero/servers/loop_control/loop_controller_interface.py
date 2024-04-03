@@ -2,7 +2,7 @@ from .directory_organizer import DirectoryOrganizer
 from .params import LoopControllerParams
 
 from alphazero.logic.custom_types import ClientConnection, ClientRoleOrRoles, DisconnectHandler, \
-    Generation, GpuId, MsgHandler, ShutdownAction
+    Domain, Generation, GpuId, MsgHandler, ShutdownAction
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
@@ -62,8 +62,12 @@ class LoopControllerInterface(abc.ABC):
     def training_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
-    @property
+    @abc.abstractproperty
     def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
+        pass
+
+    @abc.abstractmethod
+    def latest_gen(self) -> Generation:
         pass
 
     @abc.abstractmethod
@@ -77,6 +81,22 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def release_training_gpu_lock(self):
+        pass
+
+    @abc.abstractmethod
+    def acquire_gpu_lock(self, domain: Domain, gpu_id: GpuId):
+        pass
+
+    @abc.abstractmethod
+    def release_gpu_lock(self, domain: Domain, gpu_id: GpuId):
+        pass
+
+    @abc.abstractmethod
+    def mark_as_idle(self, domain: Domain, gpu_id: GpuId):
+        pass
+
+    @abc.abstractmethod
+    def wait_until_gpu_priority_lost(self, domain: Domain, gpu_id: GpuId):
         pass
 
     @abc.abstractmethod
@@ -98,10 +118,6 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def handle_new_self_play_positions(self, n_augmented_positions: int):
-        pass
-
-    @abc.abstractmethod
-    def start_worker(self, conn: ClientConnection, gen: Generation):
         pass
 
     @abc.abstractmethod

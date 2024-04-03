@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Union
+from typing import Callable, List, Union
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket
@@ -39,6 +39,10 @@ class Domain(Enum):
         else:
             raise ValueError(f'Unexpected role: {role}')
 
+    @staticmethod
+    def others(d: 'Domain') -> List['Domain']:
+        return [d2 for d2 in Domain if d2 != d]
+
 
 @dataclass(frozen=True)
 class GpuId:
@@ -52,7 +56,7 @@ class GpuId:
         return str(self)
 
 
-@dataclass(frozen=True)
+@dataclass
 class ClientConnection:
     client_domain: Domain
     client_role: ClientRole
@@ -60,6 +64,8 @@ class ClientConnection:
     socket: Socket
     start_timestamp: int
     client_gpu_id: GpuId
+    active: bool = True
+    aux: dict = field(default_factory=dict)  # maintain arbitrary state
 
     @property
     def ip_address(self):
