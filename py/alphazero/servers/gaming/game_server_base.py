@@ -1,5 +1,5 @@
 from alphazero.logic.custom_types import ClientRole
-from alphazero.logic import constants
+from alphazero.servers.gaming.base_params import BaseParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import LoggingParams, QueueStream, configure_logger, get_logger
@@ -7,7 +7,6 @@ from util.repo_util import Repo
 from util.socket_util import JsonDict, Socket, SocketRecvException, SocketSendException
 
 import abc
-from dataclasses import dataclass, fields
 import os
 import queue
 import socket
@@ -21,42 +20,13 @@ from typing import Optional
 logger = get_logger()
 
 
-@dataclass
-class GameServerBaseParams:
-    loop_controller_host: str = 'localhost'
-    loop_controller_port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
-    cuda_device: str = 'cuda:0'
-    binary_path: str = None
-
-    @classmethod
-    def create(cls, args):
-        kwargs = {f.name: getattr(args, f.name) for f in fields(cls)}
-        return cls(**kwargs)
-
-    @staticmethod
-    def add_args_helper(group):
-        defaults = GameServerBaseParams()
-
-        group.add_argument('--loop-controller-host', type=str,
-                           default=defaults.loop_controller_host,
-                           help='loop-controller host (default: %(default)s)')
-        group.add_argument('--loop-controller-port', type=int,
-                           default=defaults.loop_controller_port,
-                           help='loop-controller port (default: %(default)s)')
-        group.add_argument('--cuda-device', default=defaults.cuda_device,
-                           help='cuda device (default: %(default)s)')
-        group.add_argument('-b', '--binary-path',
-                           help='binary path. Default: target/Release/bin/{game}')
-        return group
-
-
 class GameServerBase:
     """
     Common base class for SelfPlayServer and RatingsServer. Contains shared logic for
     interacting with the LoopController and for running games.
     """
 
-    def __init__(self, params: GameServerBaseParams, logging_params: LoggingParams,
+    def __init__(self, params: BaseParams, logging_params: LoggingParams,
                  client_type: ClientRole):
         self._game = None
         self._game_spec = None

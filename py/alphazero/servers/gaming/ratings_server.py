@@ -1,11 +1,12 @@
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.ratings import extract_match_record
-from alphazero.servers.gaming.game_server_base import GameServerBase, GameServerBaseParams
+from alphazero.servers.gaming.base_params import BaseParams
+from alphazero.servers.gaming.game_server_base import GameServerBase
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
 from util import subprocess_util
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import logging
 
 
@@ -13,9 +14,14 @@ logger = get_logger()
 
 
 @dataclass
-class RatingsServerParams(GameServerBaseParams):
+class RatingsServerParams(BaseParams):
     n_search_threads: int = 4
     parallelism_factor: int = 100
+
+    @staticmethod
+    def create(args) -> 'RatingsServerParams':
+        kwargs = {f.name: getattr(args, f.name) for f in fields(RatingsServerParams)}
+        return RatingsServerParams(**kwargs)
 
     @staticmethod
     def add_args(parser, omit_base=False):
@@ -23,7 +29,7 @@ class RatingsServerParams(GameServerBaseParams):
 
         group = parser.add_argument_group(f'RatingsServer options')
         if not omit_base:
-            GameServerBaseParams.add_args_helper(group)
+            BaseParams.add_base_args(group)
 
         group.add_argument('-n', '--n-search-threads', type=int, default=defaults.n_search_threads,
                            help='num search threads per game (default: %(default)s)')

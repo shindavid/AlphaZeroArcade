@@ -1,10 +1,11 @@
 from alphazero.logic.custom_types import ClientRole
-from alphazero.servers.gaming.game_server_base import GameServerBase, GameServerBaseParams
+from alphazero.servers.gaming.base_params import BaseParams
+from alphazero.servers.gaming.game_server_base import GameServerBase
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict
 from util import subprocess_util
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import logging
 
 
@@ -12,11 +13,16 @@ logger = get_logger()
 
 
 @dataclass
-class SelfPlayServerParams(GameServerBaseParams):
+class SelfPlayServerParams(BaseParams):
+    @staticmethod
+    def create(args) -> 'SelfPlayServerParams':
+        kwargs = {f.name: getattr(args, f.name) for f in fields(SelfPlayServerParams)}
+        return SelfPlayServerParams(**kwargs)
+
     @staticmethod
     def add_args(parser):
         group = parser.add_argument_group(f'SelfPlayServer options')
-        GameServerBaseParams.add_args_helper(group)
+        BaseParams.add_base_args(group)
 
 
 class SelfPlayServer(GameServerBase):
