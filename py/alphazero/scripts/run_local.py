@@ -27,7 +27,6 @@ import time
 import torch
 
 from alphazero.logic.run_params import RunParams
-from alphazero.logic import constants
 from alphazero.logic.training_params import TrainingParams
 from alphazero.servers.self_play.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
@@ -39,29 +38,31 @@ from util import subprocess_util
 logger = get_logger()
 
 
+default_loop_controller_params = LoopControllerParams()
+default_self_play_server_params = SelfPlayServerParams()
+
+
 @dataclass
 class Params:
-    port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
+    port: int = default_loop_controller_params.port
+    model_cfg: str = default_loop_controller_params.model_cfg
+    target_rating_rate: float = default_loop_controller_params.target_rating_rate
     binary_path: str = None
-    model_cfg: str = 'default'
 
     @staticmethod
     def create(args) -> 'Params':
         return Params(
             port=args.port,
-            binary_path=args.binary_path,
             model_cfg=args.model_cfg,
+            target_rating_rate=args.target_rating_rate,
+            binary_path=args.binary_path,
             )
 
     @staticmethod
     def add_args(parser):
         defaults = Params()
 
-        parser.add_argument('--port', type=int,
-                            default=defaults.port,
-                            help='LoopController port (default: %(default)s)')
-        parser.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
-                            help='model config (default: %(default)s)')
+        LoopControllerParams.add_args(parser, include_cuda_device=False)
         parser.add_argument('-b', '--binary-path',
                             help='binary path. Default: last-used binary for this tag. If this is '
                             'the first run for this tag, then target/Release/bin/{game}')
@@ -79,7 +80,6 @@ def load_args():
 
 
 def launch_self_play_server(params_dict, cuda_device: int):
-    default_self_play_server_params = SelfPlayServerParams()
 
     params = params_dict['Params']
     logging_params = params_dict['LoggingParams']
@@ -103,8 +103,6 @@ def launch_self_play_server(params_dict, cuda_device: int):
 
 
 def launch_loop_controller(params_dict, cuda_device: int):
-    default_loop_controller_params = LoopControllerParams()
-
     params = params_dict['Params']
     run_params = params_dict['RunParams']
     training_params = params_dict['TrainingParams']
@@ -118,6 +116,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--port', str(params.port)])
     if default_loop_controller_params.model_cfg != params.model_cfg:
         cmd.extend(['--model-cfg', params.model_cfg])
+    if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
+        cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
 
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)

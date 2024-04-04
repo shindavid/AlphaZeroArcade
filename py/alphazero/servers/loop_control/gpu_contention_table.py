@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from alphazero.logic.custom_types import Domain
+from alphazero.logic.custom_types import Domain, GpuId
 import threading
 from typing import Dict
 
@@ -48,7 +48,8 @@ class GpuContentionTable:
 
     If ratings have been starved for too long, then ratings is temporarily elevated to priority 4.
     """
-    def __init__(self):
+    def __init__(self, gpu_id: GpuId):
+        self._gpu_id = gpu_id
         self._states: Dict[Domain, DomainState] = {
             Domain.TRAINING: DomainState(3),
             Domain.SELF_PLAY: DomainState(2),
@@ -57,6 +58,10 @@ class GpuContentionTable:
 
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
+
+    @property
+    def gpu_id(self) -> GpuId:
+        return self._gpu_id
 
     def active(self, domain: Domain) -> bool:
         """
@@ -92,19 +97,6 @@ class GpuContentionTable:
             state.management_status = ManagementStatus.INACTIVE
             state.lock_status = LockStatus.RELEASED
             self._cond.notify_all()
-
-    def solely_dedicated_to(self, domain: Domain) -> bool:
-        with self._lock:
-            if self._states[domain].lock_status == LockStatus.UNUSED:
-                return False
-            for d in Domain.others(domain):
-                if self._states[d].lock_status != LockStatus.UNUSED:
-                    return False
-            return True
-
-    def unused(self) -> bool:
-        with self._lock:
-            return all(state.lock_status == LockStatus.UNUSED for state in self._states.values())
 
     def ratings_prioritized(self) -> bool:
         with self._lock:
@@ -228,10 +220,11 @@ class GpuContentionTable:
         return False
 
     def __str__(self):
+        g = self._gpu_id
         t = self._states[Domain.TRAINING]
         s = self._states[Domain.SELF_PLAY]
         r = self._states[Domain.RATINGS]
-        return f'LockTable(training={t}, self-play={s}, ratings={r})'
+        return f'LockTable(gpu_id={g}, training={t}, self-play={s}, ratings={r})'
 
     def __repr__(self) -> str:
         return str(self)

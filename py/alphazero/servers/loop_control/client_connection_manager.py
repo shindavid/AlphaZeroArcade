@@ -1,12 +1,11 @@
 from .loop_controller_interface import LoopControllerInterface
 
-from alphazero.logic.custom_types import ClientConnection, ClientRole, ClientRoleOrRoles, Domain, \
-    GpuId
+from alphazero.logic.custom_types import ClientConnection, ClientRole, Domain, GpuId
 from util.logging_util import get_logger
 from util.socket_util import recv_json, Socket
 
 import threading
-from typing import List, Optional
+from typing import List
 
 
 logger = get_logger()
@@ -17,19 +16,6 @@ class ClientConnectionManager:
         self._controller = controller
         self._connections: List[ClientConnection] = []
         self._lock = threading.Lock()
-
-    def get(self, gpu_id: Optional[GpuId]=None,
-            role: Optional[ClientRoleOrRoles]=None) -> List[ClientConnection]:
-        with self._lock:
-            conns = list(self._connections)
-
-        if gpu_id is not None:
-            conns = [c for c in conns if c.client_gpu_id == gpu_id]
-        if role is not None:
-            if isinstance(role, ClientRole):
-                role = (role, )
-            conns = [c for c in conns if c.client_role in role]
-        return conns
 
     def remove(self, conn: ClientConnection):
         with self._lock:
@@ -65,7 +51,7 @@ class ClientConnectionManager:
         cuda_device = msg.get('cuda_device', '')
 
         gpu_id = GpuId(ip_address, cuda_device)
-        clashing_conns = self.get(gpu_id, client_role)
+        clashing_conns = self._get_connections(gpu_id, client_role)
         if clashing_conns:
             logger.warn(f'Rejecting connection due to role/gpu clash: {clashing_conns[0]}')
 
@@ -97,3 +83,9 @@ class ClientConnectionManager:
         func = logger.debug if conn.client_role == ClientRole.RATINGS_WORKER else logger.info
         func(f'Added connection: {conn}')
         return conn
+
+    def _get_connections(self, gpu_id: GpuId, role: ClientRole) -> List[ClientConnection]:
+        with self._lock:
+            conns = list(self._connections)
+
+        return [c for c in conns if c.client_gpu_id == gpu_id and c.client_role == role]

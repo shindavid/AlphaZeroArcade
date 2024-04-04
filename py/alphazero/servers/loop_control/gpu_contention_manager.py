@@ -24,47 +24,44 @@ class GpuContentionManager:
     def __init__(self, controller: LoopControllerInterface):
         self._controller = controller
         self._table_lock = threading.Lock()
-        self._table: GpuContentionTableDict = defaultdict(lambda: defaultdict(GpuContentionTable))
+        self._table: GpuContentionTableDict = defaultdict(dict)
 
         table = self.get_gpu_lock_table(controller.training_gpu_id)
         table.activate(Domain.TRAINING)
 
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         with self._table_lock:
-            return self._table[gpu_id.ip_address][gpu_id.device]
+            subtable = self._table[gpu_id.ip_address]
+            table = subtable.get(gpu_id.device, None)
+            if table is None:
+                table = GpuContentionTable(gpu_id)
+                subtable[gpu_id.device] = table
+            return table
 
     def set_ratings_priority(self, elevate: bool):
         with self._table_lock:
-            currently_elevated: List[GpuContentionTable] = []
-            gpus_used_for_ratings: List[GpuId] = []
-            for ip_address, subdict in self._table.items():
-                for cuda_device, table in subdict.items():
-                    if table.active(Domain.RATINGS):
-                        gpu_id = GpuId(ip_address, cuda_device)
-                        gpus_used_for_ratings.append(gpu_id)
-                        if table.ratings_prioritized():
-                            currently_elevated.append(table)
+            all_tables: List[GpuContentionTable] = []
+            for subdict in self._table.values():
+                for table in subdict.values():
+                    all_tables.append(table)
 
-            if not gpus_used_for_ratings:
-                return
+        ratings_tables = [table for table in all_tables if table.active(Domain.RATINGS)]
+        if not ratings_tables:
+            return
 
-            assert len(currently_elevated) <= 1, currently_elevated
-            if not elevate:
-                for table in currently_elevated:
-                    table.deprioritize_ratings()
-                return
-            elif len(currently_elevated) == 1:
-                # elevated table already exists, just keep it
-                return
+        currently_elevated = [table for table in ratings_tables if table.ratings_prioritized()]
+        assert len(currently_elevated) <= 1, currently_elevated
+        if not elevate:
+            for table in currently_elevated:
+                table.deprioritize_ratings()
+            return
+        elif len(currently_elevated) == 1:
+            # elevated table already exists, just keep it
+            return
 
-            training_gpu_id = self._controller.training_gpu_id
-            preferred_gpu_ids = [gpu_id for gpu_id in gpus_used_for_ratings if
-                                 gpu_id != training_gpu_id]
-            if preferred_gpu_ids:
-                gpu_id = preferred_gpu_ids[0]
-            else:
-                gpu_id = training_gpu_id
+        ratings_tables.sort(key=lambda table:
+                            (table.active(Domain.TRAINING), table.active(Domain.SELF_PLAY)))
 
-            table = self._table[gpu_id.ip_address][gpu_id.device]
-            logger.debug(f'Prioritizing ratings for {gpu_id} [{table}]')
-            table.prioritize_ratings()
+        table = ratings_tables[0]
+        logger.debug(f'Prioritizing ratings for {table}')
+        table.prioritize_ratings()

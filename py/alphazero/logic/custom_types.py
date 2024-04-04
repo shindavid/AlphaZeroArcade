@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, List, Union
+from typing import Callable, List
 
 from alphazero.logic import constants
 from util.socket_util import JsonDict, Socket
@@ -20,9 +20,6 @@ class ClientRole(Enum):
     @staticmethod
     def worker_roles():
         return (ClientRole.SELF_PLAY_WORKER, ClientRole.RATINGS_WORKER)
-
-
-ClientRoleOrRoles = Union[ClientRole, tuple[ClientRole]]
 
 
 class Domain(Enum):
