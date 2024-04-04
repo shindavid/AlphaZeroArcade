@@ -3,7 +3,6 @@ from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
 from .params import LoopControllerParams
 from .loop_controller_interface import LoopControllerInterface
-from .network_weights_broadcaster import NetworkWeightsBroadcaster
 from .ratings_manager import RatingsManager
 from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
@@ -12,14 +11,15 @@ from .training_manager import TrainingManager
 from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
-from alphazero.logic.custom_types import ClientConnection, ClientRole, ClientRoleOrRoles, Domain, \
-    DisconnectHandler, Generation, GpuId, MsgHandler, ShutdownAction
+from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
+    Generation, GpuId, MsgHandler, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.socket_util import JsonDict, SocketRecvException, SocketSendException
+from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
+    send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
 
@@ -27,7 +27,7 @@ import faulthandler
 import signal
 import socket
 import threading
-from typing import List, Optional, Union
+from typing import List, Optional
 
 
 logger = get_logger()
@@ -59,7 +59,6 @@ class LoopController(LoopControllerInterface):
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_manager = RatingsManager(self)
-        self._network_weights_broadcaster = NetworkWeightsBroadcaster(self)
         self._gpu_contention_manager = GpuContentionManager(self)
         self._remote_logging_manager = RemoteLoggingManager(self)
 
@@ -122,10 +121,6 @@ class LoopController(LoopControllerInterface):
     def latest_gen(self) -> Generation:
         return self._training_manager.latest_gen()
 
-    def get_connections(self, gpu_id: Optional[GpuId] = None,
-                        role: Optional[ClientRoleOrRoles] = None) -> List[ClientConnection]:
-        return self._client_connection_manager.get(gpu_id, role)
-
     def get_gpu_lock_table(self, gpu_id: GpuId):
         return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
@@ -175,9 +170,6 @@ class LoopController(LoopControllerInterface):
         self._training_manager.handle_new_self_play_positions(n_augmented_positions)
 
     def handle_new_model(self):
-        # self._gpu_contention_manager.pause_workers(role=ClientRole.SELF_PLAY_WORKER)
-        # self._network_weights_broadcaster.broadcast_to_self_play_workers(gen)
-        # self._gpu_contention_manager.unpause_waiting_workers()
         self._self_play_manager.notify_of_new_model()
         self._ratings_manager.notify_of_new_model()
 
@@ -188,7 +180,23 @@ class LoopController(LoopControllerInterface):
         self._remote_logging_manager.close_log_file(msg, conn.client_id)
 
     def broadcast_weights(self, conns: List[ClientConnection], gen: Generation):
-        self._network_weights_broadcaster.broadcast(conns, gen)
+        if not conns:
+            return
+
+        logger.debug(f'Broadcasting weights (gen={gen}) to {conns}')
+
+        data = {
+            'type': 'reload-weights',
+            'generation': gen,
+        }
+
+        model_filename = self.organizer.get_model_filename(gen)
+        for conn in conns:
+            with conn.socket.send_mutex():
+                send_json(conn.socket.native_socket(), data)
+                send_file(conn.socket.native_socket(), model_filename)
+
+        logger.debug('Weights broadcast complete!')
 
     def set_ratings_priority(self, elevate: bool):
         self._gpu_contention_manager.set_ratings_priority(elevate)

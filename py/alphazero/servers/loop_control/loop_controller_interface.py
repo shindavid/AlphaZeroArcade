@@ -1,8 +1,8 @@
 from .directory_organizer import DirectoryOrganizer
 from .params import LoopControllerParams
 
-from alphazero.logic.custom_types import ClientConnection, ClientRoleOrRoles, DisconnectHandler, \
-    Domain, Generation, GpuId, MsgHandler, ShutdownAction
+from alphazero.logic.custom_types import ClientConnection, DisconnectHandler, Generation, GpuId, \
+    MsgHandler, ShutdownAction
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
@@ -68,11 +68,6 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def latest_gen(self) -> Generation:
-        pass
-
-    @abc.abstractmethod
-    def get_connections(self, gpu_id: Optional[GpuId] = None,
-                        role: Optional[ClientRoleOrRoles] = None) -> List[ClientConnection]:
         pass
 
     @abc.abstractmethod

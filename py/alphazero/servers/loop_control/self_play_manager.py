@@ -10,7 +10,7 @@ import logging
 import os
 import sqlite3
 import threading
-from typing import Dict, Optional, Set
+from typing import Dict, Optional
 
 
 logger = get_logger()
