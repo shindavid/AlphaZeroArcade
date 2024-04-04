@@ -126,23 +126,8 @@ class LoopController(LoopControllerInterface):
                         role: Optional[ClientRoleOrRoles] = None) -> List[ClientConnection]:
         return self._client_connection_manager.get(gpu_id, role)
 
-    def acquire_training_gpu_lock(self):
-        self._gpu_contention_manager.acquire_training_gpu_lock()
-
-    def release_training_gpu_lock(self):
-        self._gpu_contention_manager.release_training_gpu_lock()
-
-    def acquire_gpu_lock(self, domain: Domain, gpu_id: GpuId):
-        self._gpu_contention_manager.acquire_gpu_lock(domain, gpu_id)
-
-    def release_gpu_lock(self, domain: Domain, gpu_id: GpuId):
-        self._gpu_contention_manager.release_gpu_lock(domain, gpu_id)
-
-    def mark_as_idle(self, domain: Domain, gpu_id: GpuId):
-        self._gpu_contention_manager.mark_as_idle(domain, gpu_id)
-
-    def wait_until_gpu_priority_lost(self, domain: Domain, gpu_id: GpuId):
-        self._gpu_contention_manager.wait_until_gpu_priority_lost(domain, gpu_id)
+    def get_gpu_lock_table(self, gpu_id: GpuId):
+        return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
     def register_shutdown_action(self, action: ShutdownAction):
         self._shutdown_manager.register(action)
@@ -189,11 +174,11 @@ class LoopController(LoopControllerInterface):
     def handle_new_self_play_positions(self, n_augmented_positions: int):
         self._training_manager.handle_new_self_play_positions(n_augmented_positions)
 
-    def handle_new_model(self, gen: Generation):
+    def handle_new_model(self):
         # self._gpu_contention_manager.pause_workers(role=ClientRole.SELF_PLAY_WORKER)
         # self._network_weights_broadcaster.broadcast_to_self_play_workers(gen)
         # self._gpu_contention_manager.unpause_waiting_workers()
-        self._self_play_manager.notify_of_new_model(gen)
+        self._self_play_manager.notify_of_new_model()
         self._ratings_manager.notify_of_new_model()
 
     def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
@@ -205,14 +190,8 @@ class LoopController(LoopControllerInterface):
     def broadcast_weights(self, conns: List[ClientConnection], gen: Generation):
         self._network_weights_broadcaster.broadcast(conns, gen)
 
-    def handle_pause_ack(self, conn: ClientConnection):
-        self._gpu_contention_manager.handle_pause_ack(conn)
-
-    def handle_unpause_ack(self, conn: ClientConnection):
-        self._gpu_contention_manager.handle_unpause_ack(conn)
-
-    def notify_of_new_rating(self):
-        self._gpu_contention_manager.notify_of_new_rating()
+    def set_ratings_priority(self, elevate: bool):
+        self._gpu_contention_manager.set_ratings_priority(elevate)
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
@@ -235,6 +214,7 @@ class LoopController(LoopControllerInterface):
             self._shutdown_manager.request_shutdown(1)
         finally:
             try:
+                conn.active = False
                 if disconnect_handler is not None:
                     disconnect_handler(conn)
                 self._handle_disconnect(conn)
@@ -245,8 +225,8 @@ class LoopController(LoopControllerInterface):
                 self._shutdown_manager.request_shutdown(1)
 
     def _handle_disconnect(self, conn: ClientConnection):
-        logger.info(f'Handling disconnect: {conn}...')
-        conn.active = False
+        func = logger.debug if conn.client_role == ClientRole.RATINGS_WORKER else logger.info
+        func(f'Handling disconnect: {conn}...')
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
         self._remote_logging_manager.handle_disconnect(conn)
@@ -266,7 +246,6 @@ class LoopController(LoopControllerInterface):
             logger.info('Performing LoopController setup...')
             self._organizer.makedirs()
             self._init_socket()
-            self._gpu_contention_manager.setup()
             self._training_manager.setup()
             self._client_connection_manager.start()
 

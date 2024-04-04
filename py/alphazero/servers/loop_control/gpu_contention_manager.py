@@ -1,3 +1,4 @@
+from .gpu_contention_table import GpuContentionTable, LockStatus
 from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import ClientConnection, ClientId, ClientRole, \
@@ -6,143 +7,11 @@ from util.logging_util import get_logger
 from util.socket_util import send_json, send_file, SocketSendException
 
 from collections import defaultdict
-from enum import Enum
 import threading
 from typing import Dict, List, Optional, Set
 
 
 logger = get_logger()
-
-
-class DomainStatus(Enum):
-    UNUSED = 'unused'
-    IDLE = 'idle'
-    REQUESTING_LOCK = 'requesting-lock'
-    LOCK_ACQUIRED = 'locked'
-    RELEASING_LOCK = 'releasing-lock'
-
-
-class LockTable:
-    """
-    Represents the lock status of a GPU.
-
-    At any given time, only one domain (training, self-play, ratings) can hold the lock on a GPU.
-
-    The lock is awarded to the domain that has the current highest priority.
-
-    Default priority values (higher values = higher priority):
-
-    training = 3
-    self-play = 2
-    ratings = 1
-
-    If ratings have been starved for too long, then ratings is temporarily elevated to priority 4.
-    """
-    def __init__(self):
-        self._states = {
-            Domain.TRAINING: DomainStatus.UNUSED,
-            Domain.SELF_PLAY: DomainStatus.UNUSED,
-            Domain.RATINGS: DomainStatus.UNUSED,
-            }
-
-        self._priorities = {
-            Domain.TRAINING: 3,
-            Domain.SELF_PLAY: 2,
-            Domain.RATINGS: 1,
-            }
-
-        self._lock = threading.Lock()
-        self._cond = threading.Condition(self._lock)
-
-    def unused(self) -> bool:
-        return all(state == DomainStatus.UNUSED for state in self._states.values())
-
-    def prioritize_ratings(self):
-        self._priorities[Domain.RATINGS] = 4
-
-    def deprioritize_ratings(self):
-        self._priorities[Domain.RATINGS] = 1
-
-    def acquire_lock(self, domain: Domain):
-        with self._lock:
-            assert self._states[domain] != DomainStatus.LOCK_ACQUIRED, self
-            self._states[domain] = DomainStatus.REQUESTING_LOCK
-            self._cond.notify_all()
-            self._cond.wait_for(lambda: self._has_priority(domain))
-
-            notify = False
-            for d in Domain.others(domain):
-                if self._states[d] == DomainStatus.LOCK_ACQUIRED:
-                    self._states[d] = DomainStatus.RELEASING_LOCK
-                    notify = True
-            if notify:
-                self._cond.notify_all()
-
-            self._cond.wait_for(lambda: self._ready_to_acquire_lock(domain))
-            self._states[domain] = DomainStatus.LOCK_ACQUIRED
-            self._cond.notify_all()
-
-    def release_lock(self, domain: Domain):
-        with self._lock:
-            self._states[domain] = DomainStatus.UNUSED
-            self._cond.notify_all()
-            # self._cond.wait_for(lambda: not self._lock_acquisition_pending())
-
-    def _lock_acquisition_pending(self) -> bool:
-        assert self._lock.locked(), 'LockTable must be locked'
-
-        if DomainStatus.LOCK_ACQUIRED in self._states.values():
-            return False
-        if DomainStatus.REQUESTING_LOCK in self._states.values():
-            return True
-        return False
-
-    def _ready_to_acquire_lock(self, domain: Domain) -> bool:
-        assert self._lock.locked(), 'LockTable must be locked'
-
-        for d in Domain.others(domain):
-            if self._states[d] in (DomainStatus.LOCK_ACQUIRED, DomainStatus.RELEASING_LOCK):
-                return False
-        return self._has_priority(domain)
-
-    def _has_priority(self, domain: Domain) -> bool:
-        """
-        If another non-{unused/idle} domain has higher priority, then return False. Otherwise,
-        returns True.
-        """
-        assert self._lock.locked(), 'LockTable must be locked'
-
-        for d in Domain.others(domain):
-            if self._priorities[d] > self._priorities[domain]:
-                if self._states[d] not in (DomainStatus.UNUSED, DomainStatus.IDLE):
-                    return False
-
-        return True
-
-    def wait_until_priority_lost(self, domain: Domain):
-        with self._lock:
-            self._cond.wait_for(lambda: not self._has_priority(domain))
-
-    def set_status(self, domain: Domain, status: DomainStatus):
-        with self._lock:
-            self._states[domain] = status
-            self._cond.notify_all()
-
-    # def get_status(self, domain: Domain) -> DomainStatus:
-    #     return self._states[domain]
-
-    def __str__(self):
-        ts = self._states[Domain.TRAINING].value
-        ss = self._states[Domain.SELF_PLAY].value
-        rs = self._states[Domain.RATINGS].value
-
-        tp = self._priorities[Domain.TRAINING]
-        sp = self._priorities[Domain.SELF_PLAY]
-        rp = self._priorities[Domain.RATINGS]
-        return f'LockTable(training={ts}@{tp}, self-play={ss}@{sp}, ratings={rs}@{rp})'
-
-    def __repr__(self) -> str:
-        return str(self)
 
 
 # class UsageState(Enum):
@@ -224,7 +93,7 @@ class LockTable:
 
 IpAddress = str
 CudaDevice = str
-LockTableDict = Dict[IpAddress, Dict[CudaDevice, LockTable]]
+GpuContentionTableDict = Dict[IpAddress, Dict[CudaDevice, GpuContentionTable]]
 
 
 class GpuContentionManager:
@@ -234,38 +103,70 @@ class GpuContentionManager:
     def __init__(self, controller: LoopControllerInterface):
         self._controller = controller
         self._table_lock = threading.Lock()
-        self._latest_gen: Optional[Generation] = None
-        self._pending_pause_ack_set: Set[ClientId] = set()
-        self._pending_unpause_ack_set: Set[ClientId] = set()
-        self._ratings_high_priority_deadline: Optional[Generation] = None
-        self._lock_table_dict: LockTableDict = defaultdict(lambda: defaultdict(LockTable))
+        self._table: GpuContentionTableDict = defaultdict(lambda: defaultdict(GpuContentionTable))
 
-    def setup(self):
-        self._latest_gen = self._controller.organizer.get_latest_model_generation()
-        self._calc_ratings_high_priority_deadline()
+        table = self.get_gpu_lock_table(controller.training_gpu_id)
+        table.activate(Domain.TRAINING)
 
-        table = self._get_table(self._controller.training_gpu_id)
-        table.set_status(Domain.TRAINING, DomainStatus.IDLE)
+    def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
+        with self._table_lock:
+            return self._table[gpu_id.ip_address][gpu_id.device]
 
-    def acquire_gpu_lock(self, domain: Domain, gpu_id: GpuId):
-        table = self._get_table(gpu_id)
-        logger.debug(f'Acquiring GPU lock ({domain}, {gpu_id})...: {table}')
-        table.acquire_lock(domain)
-        logger.debug(f'Acquired GPU lock ({domain}, {gpu_id})!: {table}')
+    # def acquire_gpu_lock(self, domain: Domain, gpu_id: GpuId):
+    #     table = self._get_table(gpu_id)
+    #     logger.debug(f'Acquiring GPU lock ({domain}, {gpu_id})...: {table}')
+    #     table.acquire_lock(domain)
+    #     logger.debug(f'Acquired GPU lock ({domain}, {gpu_id})!: {table}')
 
-    def release_gpu_lock(self, domain: Domain, gpu_id: GpuId):
-        table = self._get_table(gpu_id)
-        logger.debug(f'Releasing GPU lock ({domain}, {gpu_id})...: {table}')
-        table.release_lock(domain)
-        logger.debug(f'Released GPU lock ({domain}, {gpu_id})!: {table}')
+    # def release_gpu_lock(self, domain: Domain, gpu_id: GpuId):
+    #     table = self._get_table(gpu_id)
+    #     logger.debug(f'Releasing GPU lock ({domain}, {gpu_id})...: {table}')
+    #     table.release_lock(domain)
+    #     logger.debug(f'Released GPU lock ({domain}, {gpu_id})!: {table}')
 
-    def mark_as_idle(self, domain: Domain, gpu_id: GpuId):
-        table = self._get_table(gpu_id)
-        table.set_status(domain, DomainStatus.IDLE)
+    # def mark_as_idle(self, domain: Domain, gpu_id: GpuId):
+    #     table = self._get_table(gpu_id)
+    #     table.set_status(domain, LockStatus.RELEASED)
 
-    def wait_until_gpu_priority_lost(self, domain: Domain, gpu_id: GpuId):
-        table = self._get_table(gpu_id)
-        table.wait_until_priority_lost(domain)
+    # def wait_until_gpu_priority_lost(self, domain: Domain, gpu_id: GpuId):
+    #     table = self._get_table(gpu_id)
+    #     table.wait_until_priority_lost(domain)
+
+    def set_ratings_priority(self, elevate: bool):
+        with self._table_lock:
+            currently_elevated: List[GpuContentionTable] = []
+            gpus_used_for_ratings: List[GpuId] = []
+            for ip_address, subdict in self._table.items():
+                for cuda_device, table in subdict.items():
+                    if table.active(Domain.RATINGS):
+                        gpu_id = GpuId(ip_address, cuda_device)
+                        gpus_used_for_ratings.append(gpu_id)
+                        if table.ratings_prioritized():
+                            currently_elevated.append(table)
+
+            if not gpus_used_for_ratings:
+                return
+
+            assert len(currently_elevated) <= 1, currently_elevated
+            if not elevate:
+                for table in currently_elevated:
+                    table.deprioritize_ratings()
+                return
+            elif len(currently_elevated) == 1:
+                # elevated table already exists, just keep it
+                return
+
+            training_gpu_id = self._controller.training_gpu_id
+            preferred_gpu_ids = [gpu_id for gpu_id in gpus_used_for_ratings if
+                                 gpu_id != training_gpu_id]
+            if preferred_gpu_ids:
+                gpu_id = preferred_gpu_ids[0]
+            else:
+                gpu_id = training_gpu_id
+
+            table = self._table[gpu_id.ip_address][gpu_id.device]
+            logger.debug(f'Prioritizing ratings for {gpu_id} [{table}]')
+            table.prioritize_ratings()
 
     # def update_latest_gen(self, gen: Generation):
     #     """
@@ -282,9 +183,9 @@ class GpuContentionManager:
     #             for table in subdict.values():
     #                 table.downgrade_priority(Domain.RATINGS)
 
-    def _calc_ratings_high_priority_deadline(self):
-        deadline = self._latest_gen + self._controller.params.rating_block_rate
-        self._ratings_high_priority_deadline = deadline
+    # def _calc_ratings_high_priority_deadline(self):
+    #     deadline = self._latest_gen + self._controller.params.rating_block_rate
+    #     self._ratings_high_priority_deadline = deadline
 
     # def _elevate_ratings_priority_if_necessary(self):
     #     """
@@ -347,9 +248,9 @@ class GpuContentionManager:
     #     table = self._gpu_usage_dict[training_gpu_id.ip_address][training_gpu_id.device]
     #     table[Domain.RATINGS] = UsageState.WAITING_HIGH_PRIORITY
 
-    def _get_table(self, gpu_id: GpuId) -> LockTable:
-        with self._table_lock:
-            return self._lock_table_dict[gpu_id.ip_address][gpu_id.device]
+    # def _get_table(self, gpu_id: GpuId) -> GpuContentionTable:
+    #     with self._table_lock:
+    #         return self._table[gpu_id.ip_address][gpu_id.device]
 
     # def _acquire_lock(self, gpu_id: GpuId, domain: Domain):
     #     assert self._lock.locked(), 'Lock must be held'

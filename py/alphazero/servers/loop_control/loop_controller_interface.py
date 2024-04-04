@@ -76,27 +76,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def acquire_training_gpu_lock(self):
-        pass
-
-    @abc.abstractmethod
-    def release_training_gpu_lock(self):
-        pass
-
-    @abc.abstractmethod
-    def acquire_gpu_lock(self, domain: Domain, gpu_id: GpuId):
-        pass
-
-    @abc.abstractmethod
-    def release_gpu_lock(self, domain: Domain, gpu_id: GpuId):
-        pass
-
-    @abc.abstractmethod
-    def mark_as_idle(self, domain: Domain, gpu_id: GpuId):
-        pass
-
-    @abc.abstractmethod
-    def wait_until_gpu_priority_lost(self, domain: Domain, gpu_id: GpuId):
+    def get_gpu_lock_table(self, gpu_id: GpuId):
         pass
 
     @abc.abstractmethod
@@ -121,7 +101,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def handle_new_model(self, gen: Generation):
+    def handle_new_model(self):
         pass
 
     @abc.abstractmethod
@@ -137,13 +117,5 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def handle_pause_ack(self, conn: ClientConnection):
-        pass
-
-    @abc.abstractmethod
-    def handle_unpause_ack(self, conn: ClientConnection):
-        pass
-
-    @abc.abstractmethod
-    def notify_of_new_rating(self):
+    def set_ratings_priority(self, elevate: bool):
         pass

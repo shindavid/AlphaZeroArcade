@@ -40,14 +40,14 @@ class RatingsServer(GameServerBase):
         self.params = params
         self._running = False
 
-    def request_work(self):
+    def send_ready(self):
         data = {
-            'type': 'work-request',
+            'type': 'ready',
             }
         self.loop_controller_socket.send_json(data)
 
     def recv_loop_prelude(self):
-        self.request_work()
+        self.send_ready()
 
     def handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
@@ -117,7 +117,7 @@ class RatingsServer(GameServerBase):
         }
 
         self.loop_controller_socket.send_json(data)
-        self.request_work()
+        self.send_ready()
 
     @staticmethod
     def get_mcts_player_name(gen: int):

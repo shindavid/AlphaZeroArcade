@@ -1,3 +1,4 @@
+from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 from .rating_data import N_GAMES, N_MCTS_ITERS, RatingData, RatingDataDict
 
@@ -5,14 +6,21 @@ from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap
-from util.socket_util import JsonDict
+from util.socket_util import JsonDict, SocketSendException
 
+from enum import Enum
 import logging
 import threading
 from typing import Dict, Optional
 
 
 logger = get_logger()
+
+
+class ServerStatus(Enum):
+    DISCONNECTED = 'disconnected'
+    BLOCKED = 'blocked'
+    READY = 'ready'
 
 
 class RatingsManager:
@@ -24,9 +32,8 @@ class RatingsManager:
 
         self._started = False
         self._lock = threading.Lock()
-        self._new_work_cv = threading.Condition(self._lock)
+        self._new_work_cond = threading.Condition(self._lock)
         self._rating_data_dict: RatingDataDict = {}
-        self._owner_dict: Dict[ClientId, RatingData] = {}
 
     def add_server(self, conn: ClientConnection):
         reply = {
@@ -36,27 +43,54 @@ class RatingsManager:
         }
         conn.socket.send_json(reply)
 
+        conn.aux['status_cond'] = threading.Condition()
+        conn.aux['status'] = ServerStatus.BLOCKED
+
         self._start()
         logger.info(f'Starting ratings-recv-loop for {conn}...')
         self._controller.launch_recv_loop(
             self._server_msg_handler, conn, 'ratings-server',
             disconnect_handler=self._handle_server_disconnect)
 
+        thread = threading.Thread(target=self._manage_server, args=(conn,),
+                                  daemon=True, name=f'manage-self-play-server')
+        thread.start()
+
     def add_worker(self, conn: ClientConnection):
+        conn.aux['ack_cond'] = threading.Condition()
+
         reply = {
             'type': 'handshake-ack',
             'client_id': conn.client_id,
         }
         conn.socket.send_json(reply)
         self._controller.launch_recv_loop(
-            self._worker_msg_handler, conn, 'ratings-worker')
+            self._worker_msg_handler, conn, 'ratings-worker',
+            disconnect_handler=self._handle_worker_disconnect)
 
     def notify_of_new_model(self):
         """
         Notify manager that there is new work to do.
         """
+        self._set_priority()
         with self._lock:
-            self._new_work_cv.notify_all()
+            self._new_work_cond.notify_all()
+
+    def _set_priority(self):
+        latest_gen = self._controller.latest_gen()
+        dict_len = len(self._rating_data_dict)
+        rating_in_progress = any(r.rating is None for r in self._rating_data_dict.values())
+
+        target_rate = self._controller.params.target_rating_rate
+        num = dict_len + (0 if rating_in_progress else 1)
+        den = max(1, latest_gen)
+        current_rate = num / den
+
+        elevate = current_rate < target_rate
+        logger.debug(f'Ratings elevate-priority:{elevate} (latest={latest_gen}, '
+                     f'dict_len={dict_len}, in_progress={rating_in_progress} '
+                     f'current={current_rate:.2f}, target={target_rate:.2f})')
+        self._controller.set_ratings_priority(elevate)
 
     def _start(self):
         with self._lock:
@@ -86,11 +120,115 @@ class RatingsManager:
             if data.rating is None:
                 data.est_rating = self._estimate_rating(gen)
 
+        self._set_priority()
+
     def _handle_server_disconnect(self, conn: ClientConnection):
+        gen = conn.aux.pop('gen', None)
+        if gen is not None:
+            with self._lock:
+                rating_data = self._rating_data_dict.get(gen, None)
+                if rating_data is not None:
+                    rating_data.owner = None
+
+        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        table.deactivate(conn.client_domain)
+
+        status_cond: threading.Condition = conn.aux['status_cond']
+        with status_cond:
+            conn.aux['status'] = ServerStatus.DISCONNECTED
+            status_cond.notify_all()
+
+    def _handle_worker_disconnect(self, conn: ClientConnection):
+        cond: threading.Condition = conn.aux['ack_cond']
+        with cond:
+            conn.aux.pop('pending_pause_ack', None)
+            conn.aux.pop('pending_unpause_ack', None)
+            cond.notify_all()
+
+        # We set the management status to DEACTIVATING, rather than INACTIVE, here, so that the
+        # worker loop breaks while the server loop continues.
+        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        table.mark_as_deactivating(conn.client_domain)
+
+    def _wait_for_unblock(self, conn: ClientConnection) -> ServerStatus:
+        """
+        The server status is initially BLOCKED. This function waits until that status is
+        changed (either to READY or DISCONNECTED). After waiting, it resets the status to
+        BLOCKED, and returns what the status was changed to.
+        """
+        status_cond: threading.Condition = conn.aux['status_cond']
+        with status_cond:
+            status_cond.wait_for(lambda: conn.aux['status'] != ServerStatus.BLOCKED)
+            status = conn.aux['status']
+            conn.aux['status'] = ServerStatus.BLOCKED
+            return status
+
+    def _wait_until_work_exists(self):
         with self._lock:
-            rating_data = self._owner_dict.pop(conn.client_id, None)
-            if rating_data is not None:
-                rating_data.owner = None
+            self._new_work_cond.wait_for(
+                lambda: len(self._rating_data_dict) < self._controller.latest_gen())
+
+    def _get_rating_data(self, conn: ClientConnection, gen: Generation) -> RatingData:
+        with self._lock:
+            rating_data = self._rating_data_dict.get(gen, None)
+            if rating_data is None:
+                rating_data = RatingData(gen, self._min_ref_strength, self._max_ref_strength)
+                rating_data.est_rating = self._estimate_rating(gen)
+                self._rating_data_dict[gen] = rating_data
+                self._set_priority()
+
+            rating_data.owner = conn.client_id
+            return rating_data
+
+    def _send_match_request(self, conn: ClientConnection):
+        gen = conn.aux.get('gen', None)
+        if gen is None:
+            gen = self._get_next_gen_to_rate()
+            conn.aux['gen'] = gen
+
+        rating_data = self._get_rating_data(conn, gen)
+        assert rating_data.rating is None
+        strength = rating_data.get_next_strength_to_test()
+        assert strength is not None
+
+        data = {
+            'type': 'match-request',
+            'mcts_gen': rating_data.mcts_gen,
+            'ref_strength': strength,
+            'n_games': N_GAMES,
+            'n_mcts_iters': N_MCTS_ITERS,
+        }
+        conn.socket.send_json(data)
+
+    def _manage_server(self, conn: ClientConnection):
+        try:
+            domain = conn.client_domain
+            gpu_id = conn.client_gpu_id
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            table.activate(domain)
+
+            # NOTE: the worker loop breaks when the table becomes DEACTIVATING, while this loop
+            # only breaks when the table becomes INACTIVE. It is important then to use
+            # (not inactive) in the below loop-condition, rather than (active).
+            while not table.inactive(domain):
+                status = self._wait_for_unblock(conn)
+                if status == ServerStatus.DISCONNECTED:
+                    break
+                if conn.aux.get('gen', None) is None:
+                    self._wait_until_work_exists()
+
+                table.activate(domain)
+                if not table.acquire_lock(domain):
+                    break
+                self._send_match_request(conn)
+
+                # We do not release the lock here. The lock is released either when a gen is
+                # fully rated, or when the server disconnects.
+        except SocketSendException:
+            logger.warn(f'Error sending to {conn} - server likely disconnected')
+        except:
+            logger.error(f'Unexpected error managing {conn}', exc_info=True)
+            self._controller.request_shutdown(1)
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
@@ -102,8 +240,8 @@ class RatingsManager:
             self._controller.handle_log_msg(msg, conn)
         elif msg_type == 'worker-exit':
             self._controller.handle_worker_exit(msg, conn)
-        elif msg_type == 'work-request':
-            self._handle_work_request(conn)
+        elif msg_type == 'ready':
+            self._handle_ready(conn)
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
         else:
@@ -119,9 +257,9 @@ class RatingsManager:
         if msg_type == 'log':
             self._controller.handle_log_msg(msg, conn)
         elif msg_type == 'pause-ack':
-            self._controller.handle_pause_ack(conn)
+            self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
-            self._controller.handle_unpause_ack(conn)
+            self._handle_unpause_ack(conn)
         elif msg_type == 'weights-request':
             self._handle_weights_request(msg, conn)
         elif msg_type == 'done':
@@ -130,32 +268,11 @@ class RatingsManager:
             logger.warn(f'ratings-worker: unknown message type: {msg}')
         return False
 
-    def _handle_work_request(self, conn: ClientConnection):
-        with self._lock:
-            rating_data = self._owner_dict.get(conn.client_id, None)
-        if rating_data is None:
-            gen = self._get_next_gen_to_rate()
-            with self._lock:
-                rating_data = self._rating_data_dict.get(gen, None)
-                if rating_data is None:
-                    rating_data = RatingData(gen, self._min_ref_strength, self._max_ref_strength)
-                    rating_data.est_rating = self._estimate_rating(gen)
-                    self._rating_data_dict[gen] = rating_data
-
-                rating_data.owner = conn.client_id
-                self._owner_dict[conn.client_id] = rating_data
-
-        assert rating_data.rating is None
-        strength = rating_data.get_next_strength_to_test()
-        assert strength is not None
-        data = {
-            'type': 'match-request',
-            'mcts_gen': rating_data.mcts_gen,
-            'ref_strength': strength,
-            'n_games': N_GAMES,
-            'n_mcts_iters': N_MCTS_ITERS,
-        }
-        conn.socket.send_json(data)
+    def _handle_ready(self, conn: ClientConnection):
+        status_cond: threading.Condition = conn.aux['status_cond']
+        with status_cond:
+            conn.aux['status'] = ServerStatus.READY
+            status_cond.notify_all()
 
     def _handle_match_result(self, msg: JsonDict, conn: ClientConnection):
         mcts_gen = msg['mcts_gen']
@@ -166,13 +283,13 @@ class RatingsManager:
         with self._lock:
             rating_data = self._rating_data_dict[mcts_gen]
             assert rating_data.owner == conn.client_id
-            assert self._owner_dict[conn.client_id] is rating_data
+            assert conn.aux.get('gen', None) == mcts_gen
             rating_data.add_result(ref_strength, record)
 
             updated_record = rating_data.match_data[ref_strength]
             rating = rating_data.rating
             if rating is not None:
-                self._owner_dict.pop(conn.client_id)
+                conn.aux.pop('gen')
                 rating_data.owner = None
 
         with self._controller.ratings_db_conn_pool.db_lock:
@@ -181,11 +298,80 @@ class RatingsManager:
                 self._commit_rating(mcts_gen, rating)
 
         if rating is not None:
-            self._controller.notify_of_new_rating()
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+            table.release_lock(conn.client_domain)
 
     def _handle_weights_request(self, msg: JsonDict, conn: ClientConnection):
         gen = msg['gen']
-        self._controller.start_worker(conn, gen)
+        thread = threading.Thread(target=self._manage_worker, args=(gen, conn),
+                                  daemon=True, name=f'manage-ratings-worker')
+        thread.start()
+
+    def _manage_worker(self, gen: Generation, conn: ClientConnection):
+        try:
+            domain = conn.client_domain
+            gpu_id = conn.client_gpu_id
+
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            self._pause(conn)
+            self._update_weights(gen, conn)
+
+            while table.active(domain):
+                if not table.acquire_lock(domain):
+                    break
+                self._unpause(conn)
+                if table.wait_for_lock_expiry(domain):
+                    self._pause(conn)
+                    table.release_lock(domain)
+        except SocketSendException:
+            logger.warn(f'Error sending to {conn} - worker likely disconnected')
+        except:
+            logger.error(f'Unexpected error managing {conn}', exc_info=True)
+            self._controller.request_shutdown(1)
+
+    def _pause(self, conn: ClientConnection):
+        logger.debug(f'Pausing {conn}...')
+        data = {
+            'type': 'pause',
+        }
+        conn.aux['pending_pause_ack'] = True
+        conn.socket.send_json(data)
+
+        cond: threading.Condition = conn.aux['ack_cond']
+        with cond:
+            cond.wait_for(lambda: 'pending_pause_ack' not in conn.aux)
+
+        logger.debug(f'Pause of {conn} complete!')
+
+    def _unpause(self, conn: ClientConnection):
+        logger.debug(f'Unpausing {conn}...')
+        data = {
+            'type': 'unpause',
+        }
+        conn.aux['pending_unpause_ack'] = True
+        conn.socket.send_json(data)
+
+        cond: threading.Condition = conn.aux['ack_cond']
+        with cond:
+            cond.wait_for(lambda: 'pending_unpause_ack' not in conn.aux)
+
+        logger.debug(f'Unpause of {conn} complete!')
+
+    def _handle_pause_ack(self, conn: ClientConnection):
+        cond = conn.aux['ack_cond']
+        with cond:
+            conn.aux.pop('pending_pause_ack', None)
+            cond.notify_all()
+
+    def _handle_unpause_ack(self, conn: ClientConnection):
+        cond = conn.aux['ack_cond']
+        with cond:
+            conn.aux.pop('pending_unpause_ack', None)
+            cond.notify_all()
+
+    def _update_weights(self, gen: Generation, conn: ClientConnection):
+        self._controller.broadcast_weights([conn], gen)
+        conn.aux['gen'] = gen
 
     def _estimate_rating(self, gen: Generation) -> Optional[float]:
         """
@@ -236,7 +422,8 @@ class RatingsManager:
 
     def _get_next_gen_to_rate(self) -> Generation:
         """
-        Returns the next generation to rate
+        Returns the next generation to rate. Assumes that there is at least one generation that has
+        not been rated and is not currently being rated.
 
         Description of selection algorithm:
 
@@ -249,29 +436,15 @@ class RatingsManager:
         Otherwise, if 1 is not in G, then we return 1.
 
         Finally, we find the largest gap in G, and return the midpoint of that gap. If G is fully
-        saturated, we return M if M is not in G. If no such number exists, we return None.
+        saturated, we return M, which cannot be in G due to the above assumption.
         """
-        latest_gen = self._controller.organizer.get_latest_model_generation()
-        next_gen = None
-        if latest_gen > 0:
-            next_gen = self._get_next_gen_to_rate_helper(latest_gen)
+        latest_gen = self._controller.latest_gen()
+        assert latest_gen > 0, latest_gen
 
-        if next_gen is None:
-            with self._lock:
-                self._new_work_cv.wait()
-            next_gen = self._get_next_gen_to_rate()
-
-        assert next_gen is not None
-        return next_gen
-
-    def _get_next_gen_to_rate_helper(self, latest_gen: Generation) -> Optional[Generation]:
-        """
-        Helper to _get_next_gen_to_rate(). Assumes that latest_gen > 0.
-        """
         logger.debug(f'Getting next gen to rate, latest_gen={latest_gen}...')
         with self._lock:
-            taken_gens = [g for g, r in self._rating_data_dict.items(
-            ) if r.rating is not None or r.owner is not None]
+            taken_gens = [g for g, r in self._rating_data_dict.items()
+                          if r.rating is not None or r.owner is not None]
             taken_gens.sort()
         if not taken_gens:
             logger.debug(f'No gens yet rated, rating latest ({latest_gen})...')
@@ -291,9 +464,7 @@ class RatingsManager:
             logger.debug(f'Gen-1 not yet rated, rating it...')
             return 1
 
-        if latest_gen == 1:
-            logger.debug(f'Waiting for new model (latest={latest_gen})...')
-            return None
+        assert latest_gen != 1, latest_gen
 
         if len(taken_gens) == 1:
             logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
@@ -306,15 +477,13 @@ class RatingsManager:
                 f'Large gap to latest, rating latest={latest_gen} '
                 f'(biggest-gap:[{left}, {right}], latest-gap:[{max_taken_gen}, {latest_gen}])...')
             return latest_gen
-        if max(gap, latest_gap) == 1:
-            logger.debug(f'Waiting for new model, all rated (latest={latest_gen})...')
-            return None
+
+        assert max(gap, latest_gap) > 1, (gap, latest_gap)
+
         if left + 1 == right:
-            if latest_gen > right:
-                logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
-                return latest_gen
-            logger.debug(f'Waiting for new model (latest={latest_gen})...')
-            return None
+            assert latest_gen > right, (latest_gen, right)
+            logger.debug(f'No existing gaps, rating latest ({latest_gen})...')
+            return latest_gen
 
         mid = (left + right) // 2
         logger.debug(f'Rating gen {mid} (biggest-gap:[{left}, {right}], latest={latest_gen})...')

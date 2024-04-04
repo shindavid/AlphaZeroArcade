@@ -1,3 +1,4 @@
+from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import ClientConnection, ClientId, Generation
@@ -57,8 +58,9 @@ class SelfPlayManager:
             self._worker_msg_handler, conn, 'self-play-worker',
             disconnect_handler=self._handle_worker_disconnect)
 
-    def notify_of_new_model(self, generation: Generation):
-        if generation > 1:
+    def notify_of_new_model(self):
+        gen = self._controller.latest_gen()
+        if gen > 1:
             return
 
         with self._gen1_lock:
@@ -73,12 +75,14 @@ class SelfPlayManager:
                 self._gen0_cond.notify_all()
 
     def _handle_worker_disconnect(self, conn: ClientConnection):
-        cond = conn.aux['ack_cond']
+        cond: threading.Condition = conn.aux['ack_cond']
         with cond:
             conn.aux.pop('pending_pause_ack', None)
             conn.aux.pop('pending_unpause_ack', None)
             cond.notify_all()
-        self._controller.release_gpu_lock(conn.client_domain, conn.client_gpu_id)
+
+        table: GpuContentionTable = self._controller.get_gpu_lock_table(conn.client_gpu_id)
+        table.deactivate(conn.client_domain)
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
@@ -200,13 +204,19 @@ class SelfPlayManager:
         try:
             domain = conn.client_domain
             gpu_id = conn.client_gpu_id
-            self._controller.mark_as_idle(domain, gpu_id)
-            while conn.active:
-                self._pause(conn)
-                self._controller.acquire_gpu_lock(domain, gpu_id)
-                self._update_weights(conn)
+
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            table.activate(domain)
+            self._pause(conn)
+
+            while table.active(domain):
+                if not table.acquire_lock(domain):
+                    break
+                self._refresh_weights_if_needed(conn)
                 self._unpause(conn)
-                self._controller.wait_until_gpu_priority_lost(domain, gpu_id)
+                if table.wait_for_lock_expiry(domain):
+                    self._pause(conn)
+                    table.release_lock(domain)
         except SocketSendException:
             logger.warn(f'Error sending to {conn} - worker likely disconnected')
         except:
@@ -221,7 +231,7 @@ class SelfPlayManager:
         conn.aux['pending_pause_ack'] = True
         conn.socket.send_json(data)
 
-        cond = conn.aux['ack_cond']
+        cond: threading.Condition = conn.aux['ack_cond']
         with cond:
             cond.wait_for(lambda: 'pending_pause_ack' not in conn.aux)
 
@@ -235,7 +245,7 @@ class SelfPlayManager:
         conn.aux['pending_unpause_ack'] = True
         conn.socket.send_json(data)
 
-        cond = conn.aux['ack_cond']
+        cond: threading.Condition = conn.aux['ack_cond']
         with cond:
             cond.wait_for(lambda: 'pending_unpause_ack' not in conn.aux)
 
@@ -253,9 +263,11 @@ class SelfPlayManager:
             conn.aux.pop('pending_unpause_ack', None)
             cond.notify_all()
 
-    def _update_weights(self, conn: ClientConnection):
+    def _refresh_weights_if_needed(self, conn: ClientConnection):
         gen = self._controller.latest_gen()
-        self._controller.broadcast_weights([conn], gen)
+        if conn.aux.get('gen', None) != gen:
+            self._controller.broadcast_weights([conn], gen)
+            conn.aux['gen'] = gen
 
     def _handle_gen0_complete(self, conn: ClientConnection):
         with self._gen0_lock:

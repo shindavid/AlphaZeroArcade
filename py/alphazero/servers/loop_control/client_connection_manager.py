@@ -94,5 +94,6 @@ class ClientConnectionManager:
         with self._lock:
             self._connections.append(conn)
 
-        logger.info(f'Added connection: {conn}')
+        func = logger.debug if conn.client_role == ClientRole.RATINGS_WORKER else logger.info
+        func(f'Added connection: {conn}')
         return conn

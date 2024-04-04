@@ -1,3 +1,4 @@
+from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import Domain, Generation
@@ -252,7 +253,8 @@ class TrainingManager:
             net, optimizer = self._get_net_and_optimizer(loader)
 
             gpu_id = self._controller.training_gpu_id
-            self._controller.acquire_gpu_lock(Domain.TRAINING, gpu_id)
+            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            table.acquire_lock(Domain.TRAINING)
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
 
             if stats is None:
@@ -266,8 +268,8 @@ class TrainingManager:
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
-            self._controller.release_gpu_lock(Domain.TRAINING, gpu_id)
-            self._controller.handle_new_model(gen)
+            table.release_lock(Domain.TRAINING)
+            self._controller.handle_new_model()
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
             self._controller.request_shutdown(1)
