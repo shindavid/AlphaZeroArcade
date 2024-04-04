@@ -6,9 +6,8 @@ and upon receiving "start" requests from the loop controller, will start the c++
 the c++ binary and the loop controller communicate directly via TCP.
 
 This setup allows us to relaunch the c++ binary process as needed under the hood of a single
-self-play server process. This is useful because sometimes we want certain configuration changes
-between generations. For example, gen-0 does not use a model, and in later generations we may want
-to increase the number of MCTS simulations.
+ratings server process. This is useful because it allows us to launch each matchup requested by
+the loop controller as a separate c++ binary process.
 """
 import argparse
 
