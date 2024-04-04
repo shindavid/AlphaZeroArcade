@@ -34,9 +34,8 @@ class GameServerBaseParams:
         return cls(**kwargs)
 
     @staticmethod
-    def add_args_helper(parser, server_name: str):
+    def add_args_helper(group):
         defaults = GameServerBaseParams()
-        group = parser.add_argument_group(f'{server_name} options')
 
         group.add_argument('--loop-controller-host', type=str,
                            default=defaults.loop_controller_host,

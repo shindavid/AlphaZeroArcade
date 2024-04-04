@@ -22,10 +22,12 @@ class RatingsServerParams(GameServerBaseParams):
     parallelism_factor: int = 100
 
     @staticmethod
-    def add_args(parser):
+    def add_args(parser, omit_base=False):
         defaults = RatingsServerParams()
 
-        group = GameServerBaseParams.add_args_helper(parser, 'RatingsServer')
+        group = parser.add_argument_group(f'RatingsServer options')
+        if not omit_base:
+            GameServerBaseParams.add_args_helper(group)
 
         group.add_argument('-n', '--n-search-threads', type=int, default=defaults.n_search_threads,
                            help='num search threads per game (default: %(default)s)')

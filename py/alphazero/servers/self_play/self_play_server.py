@@ -15,7 +15,8 @@ logger = get_logger()
 class SelfPlayServerParams(GameServerBaseParams):
     @staticmethod
     def add_args(parser):
-        GameServerBaseParams.add_args_helper(parser, 'SelfPlayServer')
+        group = parser.add_argument_group(f'SelfPlayServer options')
+        GameServerBaseParams.add_args_helper(group)
 
 
 class SelfPlayServer(GameServerBase):
