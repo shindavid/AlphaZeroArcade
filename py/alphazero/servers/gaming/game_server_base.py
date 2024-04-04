@@ -1,4 +1,5 @@
 from alphazero.logic.custom_types import ClientRole
+from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.servers.gaming.base_params import BaseParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
@@ -34,12 +35,10 @@ class GameServerBase:
         self.params = params
         self.client_type = client_type
 
+        self.shutdown_manager = ShutdownManager()
         self.logging_queue = QueueStream()
         self.loop_controller_socket: Optional[Socket] = None
         self.client_id = None
-
-        self._shutdown_lock = threading.Lock()
-        self._shutdown_code = -1
 
     @property
     def game(self) -> str:
@@ -77,56 +76,7 @@ class GameServerBase:
         sock.connect(loop_controller_address)
 
         self.loop_controller_socket = Socket(sock)
-
-    def _set_shutdown_code(self, code, func, *args, **kwargs):
-        """
-        If code is greater than the current shutdown code, sets the shutdown code to code and calls
-        func(*args, **kwargs).
-        """
-        with self._shutdown_lock:
-            if self._shutdown_code >= code:
-                return
-            self._shutdown_code = code
-        func(*args, **kwargs)
-
-    def run(self):
-        self.init_socket()
-        try:
-            self.send_handshake()
-            self.recv_handshake()
-
-            threading.Thread(target=self.recv_loop, daemon=True).start()
-            self.error_detection_loop()
-        except KeyboardInterrupt:
-            logger.info(f'Caught Ctrl-C')
-        except:
-            logger.error(f'Unexpected error in run():', exc_info=True)
-        finally:
-            self.shutdown()
-
-    def run_func(self, func, *, args=(), kwargs=None):
-        """
-        Runs func(*args, **kwargs) in a try/except block. In case of an exception, logs the
-        exception and sets self.shutdown_code to 1.
-        """
-        try:
-            func(*args, **(kwargs or {}))
-        except:
-            self._set_shutdown_code(1, logger.error, f'Unexpected error in {func.__name__}():',
-                                    exc_info=True)
-
-    def run_func_in_new_thread(self, func, *, args=(), kwargs=None):
-        """
-        Launches self.run_func(args=args, kwargs=kwargs) in a separate thread.
-        """
-        kwargs = {'args': args, 'kwargs': kwargs}
-        threading.Thread(target=self.run_func, args=(func,), kwargs=kwargs, daemon=True).start()
-
-    def error_detection_loop(self):
-        while True:
-            time.sleep(1)
-            if self._shutdown_code >= 0:
-                break
+        self.shutdown_manager.register(lambda: self.loop_controller_socket.close())
 
     def send_handshake(self):
         data = {
@@ -153,11 +103,11 @@ class GameServerBase:
                     data['src'] = src
                 self.loop_controller_socket.send_json(data)
         except SocketSendException:
-            self._set_shutdown_code(
-                0, logger.warn, f'Loop controller appears to have disconnected, shutting down...')
+            logger.warn('Loop controller appears to have disconnected, shutting down...')
+            self.shutdown_manager.request_shutdown(0)
         except:
-            self._set_shutdown_code(1, logger.error, f'Unexpected error in log_loop():',
-                                    exc_info=True)
+            logger.error(f'Unexpected error in log_loop(src={src}):', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
 
     def forward_output(self, src: str, proc: subprocess.Popen, stdout_buffer=None,
                        close_remote_log=True):
@@ -224,9 +174,8 @@ class GameServerBase:
                 if buf is not None:
                     buf.append(line)
         except:
-            self._set_shutdown_code(1, logger.error,
-                                    f'Unexpected error in _forward_output_thread({src}):',
-                                    exc_info=True)
+            logger.error(f'Unexpected error in _forward_output_thread({src}):', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
 
     def recv_handshake(self):
         data = self.loop_controller_socket.recv_json(timeout=1)
@@ -254,17 +203,17 @@ class GameServerBase:
                 if self.handle_msg(msg):
                     break
         except SocketRecvException:
-            self._set_shutdown_code(0, logger.warn,
-                                    'Encountered SocketRecvException in recv_loop(). '
-                                    'Loop controller likely shut down.')
+            logger.warn('Encountered SocketRecvException in recv_loop(). '
+                        'Loop controller likely shut down.')
+            self.shutdown_manager.request_shutdown(0)
         except SocketSendException:
             # Include exc_info in send-case because it's a bit more unexpected
-            self._set_shutdown_code(0, logger.warn,
-                                    'Encountered SocketSendException in recv_loop(). '
-                                    'Loop controller likely shut down.', exc_info=True)
+            logger.warn('Encountered SocketSendException in recv_loop(). '
+                        'Loop controller likely shut down.', exc_info=True)
+            self.shutdown_manager.request_shutdown(0)
         except:
-            self._set_shutdown_code(1, logger.error,
-                                    f'Unexpected error in recv_loop():', exc_info=True)
+            logger.error(f'Unexpected error in recv_loop():', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
 
     @abc.abstractmethod
     def handle_msg(self, msg: JsonDict) -> bool:
@@ -282,13 +231,6 @@ class GameServerBase:
         """
         pass
 
-    def shutdown(self):
-        code = max(0, self._shutdown_code)
-        logger.info(f'Shutting down (rc={code})...')
-        if self.loop_controller_socket:
-            self.loop_controller_socket.close()
-        sys.exit(code)
-
     def quit(self):
         logger.info(f'Received quit command')
-        self._shutdown_code = 0
+        self.shutdown_manager.request_shutdown(0)

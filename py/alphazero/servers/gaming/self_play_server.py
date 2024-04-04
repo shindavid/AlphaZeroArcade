@@ -7,6 +7,7 @@ from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
+import threading
 
 
 logger = get_logger()
@@ -30,15 +31,36 @@ class SelfPlayServer(GameServerBase):
         super().__init__(params, logging_params, ClientRole.SELF_PLAY_SERVER)
         self._running = False
 
+    def run(self):
+        try:
+            threading.Thread(target=self._main_loop, name='main_loop', daemon=True).start()
+            self.shutdown_manager.wait_for_shutdown_request()
+        except KeyboardInterrupt:
+            logger.info('Caught Ctrl-C')
+        finally:
+            self.shutdown_manager.shutdown()
+
+    def _main_loop(self):
+        try:
+            self.init_socket()
+            self.shutdown_manager.register(lambda: self.loop_controller_socket.close())
+            self.send_handshake()
+            self.recv_handshake()
+
+            threading.Thread(target=self.recv_loop, daemon=True).start()
+        except:
+            logger.error('Unexpected error in main_loop():', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
+
     def handle_msg(self, msg: JsonDict) -> bool:
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'self-play-server received json message: {msg}')
 
         msg_type = msg['type']
         if msg_type == 'start-gen0':
-            self.run_func_in_new_thread(self.start_gen0, args=(msg,))
+            self._handle_start_gen0(msg)
         elif msg_type == 'start':
-            self.run_func_in_new_thread(self.start, args=(msg,))
+            self._handle_start()
         elif msg_type == 'quit':
             self.quit()
             return True
@@ -52,7 +74,19 @@ class SelfPlayServer(GameServerBase):
         }
         self.loop_controller_socket.send_json(data)
 
-    def start_gen0(self, msg):
+    def _handle_start_gen0(self, msg: JsonDict):
+        thread = threading.Thread(target=self._start_gen0, args=(msg,),
+                                  daemon=True, name=f'start-gen0')
+        thread.start()
+
+    def _start_gen0(self, msg: JsonDict):
+        try:
+            self._start_gen0_helper(msg)
+        except:
+            logger.error(f'Error in start_gen0:', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
+
+    def _start_gen0_helper(self, msg):
         assert not self._running
         self._running = True
 
@@ -99,7 +133,18 @@ class SelfPlayServer(GameServerBase):
         }
         self.loop_controller_socket.send_json(data)
 
-    def start(self, msg):
+    def _handle_start(self):
+        thread = threading.Thread(target=self._start, daemon=True, name=f'start')
+        thread.start()
+
+    def _start(self):
+        try:
+            self._start_helper()
+        except:
+            logger.error(f'Error in start:', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
+
+    def _start_helper(self):
         assert not self._running
         self._running = True
 

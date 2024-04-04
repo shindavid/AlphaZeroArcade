@@ -8,6 +8,7 @@ from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
+import threading
 
 
 logger = get_logger()
@@ -41,8 +42,28 @@ class RatingsServerParams(BaseParams):
 class RatingsServer(GameServerBase):
     def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
         super().__init__(params, logging_params, ClientRole.RATINGS_SERVER)
-        self.params = params
         self._running = False
+
+    def run(self):
+        try:
+            threading.Thread(target=self._main_loop, name='main_loop', daemon=True).start()
+            self.shutdown_manager.wait_for_shutdown_request()
+        except KeyboardInterrupt:
+            logger.info('Caught Ctrl-C')
+        finally:
+            self.shutdown_manager.shutdown()
+
+    def _main_loop(self):
+        try:
+            self.init_socket()
+            self.shutdown_manager.register(lambda: self.loop_controller_socket.close())
+            self.send_handshake()
+            self.recv_handshake()
+
+            threading.Thread(target=self.recv_loop, daemon=True).start()
+        except:
+            logger.error('Unexpected error in main_loop():', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
 
     def send_ready(self):
         data = {
@@ -59,7 +80,7 @@ class RatingsServer(GameServerBase):
 
         msg_type = msg['type']
         if msg_type == 'match-request':
-            self.run_func_in_new_thread(self.handle_match_request, args=(msg,))
+            self._handle_match_request(msg)
         elif msg_type == 'quit':
             self.quit()
             return True
@@ -67,7 +88,19 @@ class RatingsServer(GameServerBase):
             raise Exception(f'Unknown message type: {msg_type}')
         return False
 
-    def handle_match_request(self, msg: JsonDict):
+    def _handle_match_request(self, msg: JsonDict):
+        thread = threading.Thread(target=self._run_match, args=(msg,),
+                                  daemon=True, name=f'run-match')
+        thread.start()
+
+    def _run_match(self, msg: JsonDict):
+        try:
+            self._run_match_helper(msg)
+        except:
+            logger.error(f'Unexpected error in run-match:', exc_info=True)
+            self.shutdown_manager.request_shutdown(1)
+
+    def _run_match_helper(self, msg: JsonDict):
         assert not self._running
         self._running = True
 

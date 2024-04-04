@@ -7,7 +7,6 @@ from .loop_controller_interface import LoopControllerInterface
 from .ratings_manager import RatingsManager
 from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
-from .shutdown_manager import ShutdownManager
 from .training_manager import TrainingManager
 from .gpu_contention_manager import GpuContentionManager
 
@@ -15,6 +14,7 @@ from alphazero.logic import constants
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
     Generation, GpuId, MsgHandler, ShutdownAction
 from alphazero.logic.run_params import RunParams
+from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.logic.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
