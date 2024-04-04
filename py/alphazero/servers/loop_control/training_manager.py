@@ -252,8 +252,8 @@ class TrainingManager:
 
             net, optimizer = self._get_net_and_optimizer(loader)
 
-            gpu_id = self._controller.training_gpu_id
-            table: GpuContentionTable = self._controller.get_gpu_lock_table(gpu_id)
+            table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
+            logger.debug(f'Training table: {table}')
             table.acquire_lock(Domain.TRAINING)
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
 

@@ -1,6 +1,7 @@
 from .client_connection_manager import ClientConnectionManager
 from .database_connection_manager import DatabaseConnectionManager
 from .directory_organizer import DirectoryOrganizer
+from .gpu_contention_table import GpuContentionTable
 from .params import LoopControllerParams
 from .loop_controller_interface import LoopControllerInterface
 from .ratings_manager import RatingsManager
@@ -49,7 +50,7 @@ class LoopController(LoopControllerInterface):
         self._game_spec = get_game_spec(run_params.game)
         self._params = params
         self._training_params = training_params
-        self._training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
+        self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
         self._organizer = DirectoryOrganizer(run_params)
 
@@ -83,8 +84,8 @@ class LoopController(LoopControllerInterface):
         return self._socket
 
     @property
-    def training_gpu_id(self) -> GpuId:
-        return self._training_gpu_id
+    def default_training_gpu_id(self) -> GpuId:
+        return self._default_training_gpu_id
 
     @property
     def game_spec(self) -> GameSpec:
@@ -121,7 +122,10 @@ class LoopController(LoopControllerInterface):
     def latest_gen(self) -> Generation:
         return self._training_manager.latest_gen()
 
-    def get_gpu_lock_table(self, gpu_id: GpuId):
+    def get_gpu_lock_table_for_training(self) -> GpuContentionTable:
+        return self._gpu_contention_manager.get_gpu_lock_table_for_training()
+
+    def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
     def register_shutdown_action(self, action: ShutdownAction):

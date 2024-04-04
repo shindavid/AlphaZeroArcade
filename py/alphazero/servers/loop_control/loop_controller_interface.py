@@ -1,4 +1,5 @@
 from .directory_organizer import DirectoryOrganizer
+from .gpu_contention_table import GpuContentionTable
 from .params import LoopControllerParams
 
 from alphazero.logic.custom_types import ClientConnection, DisconnectHandler, Generation, GpuId, \
@@ -31,7 +32,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractproperty
-    def training_gpu_id(self) -> GpuId:
+    def default_training_gpu_id(self) -> GpuId:
         pass
 
     @abc.abstractproperty
@@ -71,7 +72,11 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def get_gpu_lock_table(self, gpu_id: GpuId):
+    def get_gpu_lock_table_for_training(self) -> GpuContentionTable:
+        pass
+
+    @abc.abstractmethod
+    def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         pass
 
     @abc.abstractmethod

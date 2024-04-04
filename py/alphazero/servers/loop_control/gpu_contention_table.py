@@ -63,6 +63,14 @@ class GpuContentionTable:
     def gpu_id(self) -> GpuId:
         return self._gpu_id
 
+    def has_highest_priority(self, domain: Domain) -> bool:
+        with self._lock:
+            p = self._states[domain].priority
+            for d in Domain.others(domain):
+                if self._states[d].priority > p:
+                    return False
+            return True
+
     def active(self, domain: Domain) -> bool:
         """
         Returns True iff the management status of the domain is ACTIVE.

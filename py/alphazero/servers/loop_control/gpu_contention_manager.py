@@ -26,8 +26,32 @@ class GpuContentionManager:
         self._table_lock = threading.Lock()
         self._table: GpuContentionTableDict = defaultdict(dict)
 
-        table = self.get_gpu_lock_table(controller.training_gpu_id)
+        table = self.get_gpu_lock_table(controller.default_training_gpu_id)
         table.activate(Domain.TRAINING)
+
+    def get_gpu_lock_table_for_training(self) -> GpuContentionTable:
+        """
+        By default, gets the lock table for the default training GPU.
+
+        However, if a different domain currently claims higher priority for that GPU, and if
+        there is a second GPU on this host for which the TRAINING domain has higher priority, then
+        that second GPU's lock table is returned instead.
+
+        This switcheroo should only kick-in in the case where the 3 domains (TRAINING, SELF_PLAY,
+        RATINGS) are competing for 2 GPUs on the same machine. Without the switcheroo, one GPU
+        can inefficiently remain idle.
+        """
+        gpu_id = self._controller.default_training_gpu_id
+        with self._table_lock:
+            subtable = self._table[gpu_id.ip_address]
+            table = subtable[gpu_id.device]
+            if not table.has_highest_priority(Domain.TRAINING):
+                for other_table in subtable.values():
+                    if other_table.gpu_id != gpu_id:
+                        assert other_table.has_highest_priority(Domain.TRAINING), other_table
+                        logger.debug(f'Performing training switcheroo: {table} -> {other_table}')
+                        return other_table
+            return table
 
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         with self._table_lock:
