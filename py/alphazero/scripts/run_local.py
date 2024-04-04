@@ -28,8 +28,8 @@ import torch
 
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.training_params import TrainingParams
-from alphazero.servers.ratings.ratings_server import RatingsServerParams
-from alphazero.servers.self_play.self_play_server import SelfPlayServerParams
+from alphazero.servers.gaming.ratings_server import RatingsServerParams
+from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.repo_util import Repo
