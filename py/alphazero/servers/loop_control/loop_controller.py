@@ -63,6 +63,11 @@ class LoopController(LoopControllerInterface):
         self._gpu_contention_manager = GpuContentionManager(self)
         self._remote_logging_manager = RemoteLoggingManager(self)
 
+        # This line allows us to generate a per-thread stack trace by externally running:
+        #
+        # kill -s SIGUSR1 <pid>
+        #
+        # This is useful for diagnosing deadlocks.
         faulthandler.register(signal.SIGUSR1, all_threads=True)
 
     def run(self):

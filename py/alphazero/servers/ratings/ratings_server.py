@@ -7,13 +7,9 @@ from util import subprocess_util
 
 from dataclasses import dataclass
 import logging
-import subprocess
 
 
 logger = get_logger()
-
-
-N_GAMES = 100
 
 
 @dataclass

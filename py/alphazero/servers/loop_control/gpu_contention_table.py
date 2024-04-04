@@ -10,7 +10,6 @@ class LockStatus(Enum):
     RELEASED = 'released'
     ACQUIRING = 'acquiring'
     ACQUIRED = 'acquired'
-    RELEASING = 'releasing'
 
 
 class ManagementStatus(Enum):
@@ -38,7 +37,8 @@ class GpuContentionTable:
 
     At any given time, only one domain (training, self-play, ratings) can hold the lock on a GPU.
 
-    The lock is awarded to the domain that has the current highest priority.
+    If multiple domains want to acquire the lock, it is awarded to the domain that has the current
+    highest priority.
 
     Default priority values (higher values = higher priority):
 
@@ -206,7 +206,7 @@ class GpuContentionTable:
         state = self._states[domain]
         for d in Domain.others(domain):
             s = self._states[d]
-            if s.lock_status in (LockStatus.ACQUIRED, LockStatus.RELEASING):
+            if s.lock_status == LockStatus.ACQUIRED:
                 return False
             if s.priority > state.priority and s.lock_status == LockStatus.ACQUIRING:
                 return False

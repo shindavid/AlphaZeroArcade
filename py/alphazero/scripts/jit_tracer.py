@@ -1,5 +1,10 @@
 """
 Called from Model.save_model() in net_modules.py
+
+Calling torch.jit.trace(...).save(...) directly in net_modules.py results in a memory leak. Hence
+this workaround.
+
+See: https://github.com/pytorch/pytorch/issues/35600
 """
 
 import pickle
