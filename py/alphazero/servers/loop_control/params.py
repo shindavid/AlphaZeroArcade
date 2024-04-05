@@ -33,7 +33,7 @@ class LoopControllerParams:
                            help='LoopController port (default: %(default)s)')
         group.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
                            help='model config (default: %(default)s)')
-        group.add_argument('-r', '--target-rating-rate', type=float,
+        group.add_argument('-R', '--target-rating-rate', type=float,
                            default=defaults.target_rating_rate,
                            help='target pct of generations that we want to rate. Ignored if at '
                            'least one rating server is using a dedicated GPU. Otherwise this '

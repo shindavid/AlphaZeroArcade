@@ -39,6 +39,9 @@ inline auto LoopControllerClient::Params::make_options_description() {
       .template add_option<"client-role">(
           po::value<std::string>(&client_role)->default_value(client_role),
           "loop controller client role")
+      .template add_option<"ratings-tag">(
+          po::value<std::string>(&ratings_tag)->default_value(ratings_tag),
+          "ratings tag (only relevant if client_role == ratings-worker)")
       .template add_option<"cuda-device">(
           po::value<std::string>(&cuda_device)->default_value(cuda_device),
           "cuda device to register to the loop controller. Usually you need to specify this again "

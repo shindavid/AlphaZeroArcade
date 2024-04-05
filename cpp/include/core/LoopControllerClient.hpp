@@ -43,6 +43,7 @@ class LoopControllerClient {
     std::string loop_controller_hostname = "localhost";
     io::port_t loop_controller_port = 0;
     std::string client_role;  // must be specified if port is specified
+    std::string ratings_tag;
     std::string cuda_device = "cuda:0";
     int weights_request_generation = -1;
     bool report_metrics = true;
@@ -59,6 +60,7 @@ class LoopControllerClient {
   int cur_generation() const { return cur_generation_; }
   const std::string& role() const { return params_.client_role; }
   const std::string& cuda_device() const { return params_.cuda_device; }
+  const std::string& ratings_tag() const { return params_.ratings_tag; }
   bool report_metrics() const { return params_.report_metrics; }
 
   template <typename T>

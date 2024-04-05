@@ -35,13 +35,15 @@ class SessionData:
         sock.connect(addr)
         self._socket = Socket(sock)
 
-    def send_handshake(self, role: ClientRole):
+    def send_handshake(self, role: ClientRole, aux: Optional[dict] = None):
         data = {
             'type': 'handshake',
             'role': role.value,
             'start_timestamp': time.time_ns(),
             'cuda_device': self._params.cuda_device,
         }
+        if aux is not None:
+            data['aux'] = aux
 
         self.socket.send_json(data)
 

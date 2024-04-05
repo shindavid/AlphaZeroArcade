@@ -1,6 +1,6 @@
 from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
-from .rating_data import N_GAMES, N_MCTS_ITERS, RatingData, RatingDataDict
+from .rating_data import N_GAMES, RatingData, RatingDataDict, RatingTag
 
 from alphazero.logic.custom_types import ClientConnection, Generation
 from alphazero.logic.ratings import WinLossDrawCounts
@@ -11,7 +11,7 @@ from util.socket_util import JsonDict, SocketSendException
 from enum import Enum
 import logging
 import threading
-from typing import Dict, Optional
+from typing import Optional
 
 
 logger = get_logger()
@@ -24,7 +24,11 @@ class ServerStatus(Enum):
 
 
 class RatingsManager:
-    def __init__(self, controller: LoopControllerInterface):
+    """
+    A separate RatingsManager is created for each rating-tag.
+    """
+    def __init__(self, controller: LoopControllerInterface, tag: RatingTag):
+        self._tag = tag
         self._controller = controller
 
         self._min_ref_strength = controller.game_spec.reference_player_family.min_strength
@@ -103,8 +107,8 @@ class RatingsManager:
         logger.info(f'Loading past ratings data...')
         conn = self._controller.ratings_db_conn_pool.get_connection()
         c = conn.cursor()
-        res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE mcts_iters = ?',
-                        (N_MCTS_ITERS,))
+        res = c.execute('SELECT mcts_gen, ref_strength, mcts_wins, draws, ref_wins FROM matches WHERE tag = ?',
+                        (self._tag,))
 
         for mcts_gen, ref_strength, mcts_wins, draws, ref_wins in res.fetchall():
             if mcts_gen not in self._rating_data_dict:
@@ -196,7 +200,6 @@ class RatingsManager:
             'mcts_gen': rating_data.mcts_gen,
             'ref_strength': strength,
             'n_games': N_GAMES,
-            'n_mcts_iters': N_MCTS_ITERS,
         }
         conn.socket.send_json(data)
 
@@ -403,7 +406,7 @@ class RatingsManager:
         """
         Assumes that ratings_db_conn_pool.db_lock is held.
         """
-        rating_tuple = (gen, N_MCTS_ITERS, N_GAMES, rating)
+        rating_tuple = (self._tag, gen, N_GAMES, rating)
 
         conn = self._controller.ratings_db_conn_pool.get_connection()
         c = conn.cursor()
@@ -415,7 +418,7 @@ class RatingsManager:
         Assumes that ratings_db_conn_pool.db_lock is held.
         """
         conn = self._controller.ratings_db_conn_pool.get_connection()
-        match_tuple = (mcts_gen, N_MCTS_ITERS, ref_strength, counts.win, counts.draw, counts.loss)
+        match_tuple = (self._tag, mcts_gen, ref_strength, counts.win, counts.draw, counts.loss)
         c = conn.cursor()
         c.execute('REPLACE INTO matches VALUES (?, ?, ?, ?, ?, ?)', match_tuple)
         conn.commit()

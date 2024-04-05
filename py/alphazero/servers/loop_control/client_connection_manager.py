@@ -49,6 +49,7 @@ class ClientConnectionManager:
 
         start_timestamp = msg['start_timestamp']
         cuda_device = msg.get('cuda_device', '')
+        aux = msg.get('aux', None)
 
         gpu_id = GpuId(ip_address, cuda_device)
         clashing_conns = self._get_connections(gpu_id, client_role)
@@ -76,6 +77,11 @@ class ClientConnectionManager:
 
         conn = ClientConnection(domain, client_role, client_id, Socket(client_socket),
                                 start_timestamp, gpu_id)
+
+        if aux is not None:
+            assert isinstance(aux, dict), (aux, type(aux))
+            assert all(isinstance(k, str) for k in aux.keys()), aux
+            conn.aux.update(aux)
 
         with self._lock:
             self._connections.append(conn)

@@ -17,15 +17,6 @@ This script launches 1 server of each type on the local machine, using the above
 If the local machine does not have enough GPU's to dedicate one to each server, then the servers
 share the GPU's, managing contention via GpuContentionManager.
 """
-import argparse
-from dataclasses import dataclass
-import os
-from pipes import quote
-import subprocess
-import time
-
-import torch
-
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.training_params import TrainingParams
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
@@ -34,6 +25,16 @@ from alphazero.servers.loop_control.params import LoopControllerParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.repo_util import Repo
 from util import subprocess_util
+
+import argparse
+from dataclasses import dataclass, fields
+import os
+from pipes import quote
+import subprocess
+import time
+from typing import Optional
+
+import torch
 
 
 logger = get_logger()
@@ -49,20 +50,16 @@ class Params:
     port: int = default_loop_controller_params.port
     model_cfg: str = default_loop_controller_params.model_cfg
     target_rating_rate: float = default_loop_controller_params.target_rating_rate
+    rating_tag: str = ''
+    n_mcts_iters: Optional[int] = None
     n_search_threads: int = default_ratings_server_params.n_search_threads
     parallelism_factor: int = default_ratings_server_params.parallelism_factor
     binary_path: str = None
 
     @staticmethod
     def create(args) -> 'Params':
-        return Params(
-            port=args.port,
-            model_cfg=args.model_cfg,
-            target_rating_rate=args.target_rating_rate,
-            n_search_threads=args.n_search_threads,
-            parallelism_factor=args.parallelism_factor,
-            binary_path=args.binary_path,
-        )
+        kwargs = {f.name: getattr(args, f.name) for f in fields(Params)}
+        return Params(**kwargs)
 
     @staticmethod
     def add_args(parser):
@@ -122,6 +119,10 @@ def launch_ratings_server(params_dict, cuda_device: int):
         cmd.extend(['--loop_controller_port', str(params.port)])
     if default_ratings_server_params.binary_path != params.binary_path:
         cmd.extend(['--binary-path', params.binary_path])
+    if default_ratings_server_params.rating_tag != params.rating_tag:
+        cmd.extend(['--rating-tag', params.rating_tag])
+    if default_ratings_server_params.n_mcts_iters != params.n_mcts_iters:
+        cmd.extend(['--n-mcts-iters', str(params.n_mcts_iters)])
     if default_ratings_server_params.n_search_threads != params.n_search_threads:
         cmd.extend(['--n_search_threads', str(params.n_search_threads)])
     if default_ratings_server_params.parallelism_factor != params.parallelism_factor:

@@ -11,7 +11,7 @@ from util import subprocess_util
 from dataclasses import dataclass, fields
 import logging
 import threading
-import time
+from typing import Optional
 
 
 logger = get_logger()
@@ -19,6 +19,8 @@ logger = get_logger()
 
 @dataclass
 class RatingsServerParams(BaseParams):
+    rating_tag: str = ''
+    n_mcts_iters: Optional[int] = None
     n_search_threads: int = 4
     parallelism_factor: int = 100
 
@@ -35,6 +37,14 @@ class RatingsServerParams(BaseParams):
         if not omit_base:
             BaseParams.add_base_args(group)
 
+        group.add_argument('-r', '--rating-tag', default=defaults.rating_tag,
+                           help='ratings tag. Loop controller collates ratings by this str. It is '
+                           'the responsibility of the user to make sure that the same '
+                           'binary/params are used across different RatingsServer processes '
+                           'sharing the same rating-tag. (default: "%(default)s")')
+        group.add_argument('-i', '--n-mcts-iters', type=int, default=defaults.n_mcts_iters,
+                            help='num MCTS iters per move. Uses game-specific default if not '
+                            'specified')
         group.add_argument('-n', '--n-search-threads', type=int, default=defaults.n_search_threads,
                            help='num search threads per game (default: %(default)s)')
         group.add_argument('-p', '--parallelism-factor', type=int,
@@ -45,6 +55,7 @@ class RatingsServerParams(BaseParams):
 class RatingsServer:
     def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
         self._params = params
+        self._n_mcts_iters = params.n_mcts_iters
         self._session_data = SessionData(params)
         self._shutdown_manager = ShutdownManager()
         self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
@@ -76,10 +87,14 @@ class RatingsServer:
         self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
-        self._session_data.send_handshake(ClientRole.RATINGS_SERVER)
+        aux = { 'tag': self._params.rating_tag, }
+        self._session_data.send_handshake(ClientRole.RATINGS_SERVER, aux=aux)
 
     def _recv_handshake(self):
         self._session_data.recv_handshake(ClientRole.RATINGS_SERVER, self._log_forwarder)
+
+        if self._n_mcts_iters is None:
+            self._n_mcts_iters = self._session_data.game_spec.n_mcts_iters_for_ratings_matches
 
     def _recv_loop(self):
         try:
@@ -142,7 +157,7 @@ class RatingsServer:
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
-        n_mcts_iters = msg['n_mcts_iters']
+        n_mcts_iters = self._n_mcts_iters
 
         n_search_threads = self._params.n_search_threads
         parallelism_factor = self._params.parallelism_factor
@@ -156,6 +171,7 @@ class RatingsServer:
             '--loop-controller-hostname', self._params.loop_controller_host,
             '--loop-controller-port', self._params.loop_controller_port,
             '--client-role', ClientRole.RATINGS_WORKER.value,
+            '--ratings-tag', f'"{self._params.rating_tag}"',
             '--cuda-device', self._params.cuda_device,
             '--weights-request-generation', mcts_gen,
             '--do-not-report-metrics',

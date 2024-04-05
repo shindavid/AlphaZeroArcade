@@ -67,3 +67,9 @@ class GameSpec(abc.ABC):
         The reference player family for this game, if any.
         """
         return None
+
+    @abc.abstractproperty
+    def n_mcts_iters_for_ratings_matches(self) -> int:
+        """
+        The number of MCTS iterations to use for rating matches.
+        """

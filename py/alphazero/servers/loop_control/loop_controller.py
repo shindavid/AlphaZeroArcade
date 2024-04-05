@@ -4,6 +4,7 @@ from .directory_organizer import DirectoryOrganizer
 from .gpu_contention_table import GpuContentionTable
 from .params import LoopControllerParams
 from .loop_controller_interface import LoopControllerInterface
+from .rating_data import RatingTag
 from .ratings_manager import RatingsManager
 from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
@@ -28,7 +29,7 @@ import faulthandler
 import signal
 import socket
 import threading
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 
 logger = get_logger()
@@ -59,7 +60,7 @@ class LoopController(LoopControllerInterface):
         self._database_connection_manager = DatabaseConnectionManager(self)
         self._training_manager = TrainingManager(self)
         self._self_play_manager = SelfPlayManager(self)
-        self._ratings_manager = RatingsManager(self)
+        self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
         self._remote_logging_manager = RemoteLoggingManager(self)
 
@@ -151,9 +152,9 @@ class LoopController(LoopControllerInterface):
         elif client_role == ClientRole.SELF_PLAY_WORKER:
             self._self_play_manager.add_worker(conn)
         elif client_role == ClientRole.RATINGS_SERVER:
-            self._ratings_manager.add_server(conn)
+            self._get_ratings_manager(conn.aux['tag']).add_server(conn)
         elif client_role == ClientRole.RATINGS_WORKER:
-            self._ratings_manager.add_worker(conn)
+            self._get_ratings_manager(conn.aux['tag']).add_worker(conn)
         else:
             raise Exception(f'Unknown client type: {client_role}')
 
@@ -180,7 +181,8 @@ class LoopController(LoopControllerInterface):
 
     def handle_new_model(self):
         self._self_play_manager.notify_of_new_model()
-        self._ratings_manager.notify_of_new_model()
+        for manager in self._ratings_managers.values():
+            manager.notify_of_new_model()
 
     def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
         self._remote_logging_manager.handle_log_msg(msg, conn)
@@ -209,6 +211,11 @@ class LoopController(LoopControllerInterface):
 
     def set_ratings_priority(self, elevate: bool):
         self._gpu_contention_manager.set_ratings_priority(elevate)
+
+    def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
+        if tag not in self._ratings_managers:
+            self._ratings_managers[tag] = RatingsManager(self, tag)
+        return self._ratings_managers[tag]
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,

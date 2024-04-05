@@ -92,22 +92,22 @@ TRAINING_TABLE_CREATE_CMDS = [
 
 RATINGS_TABLE_CREATE_CMDS = [
     """CREATE TABLE IF NOT EXISTS matches (
+            tag TEXT,
             mcts_gen INT,
-            mcts_iters INT,
             ref_strength INT,
             mcts_wins INT,
             draws INT,
             ref_wins INT
             )""",
 
-    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (mcts_gen, mcts_iters, ref_strength)""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON matches (tag, mcts_gen, ref_strength)""",
 
     """CREATE TABLE IF NOT EXISTS ratings (
+            tag TEXT,
             mcts_gen INT,
-            mcts_iters INT,
             n_games INT,
             rating FLOAT
             )""",
 
-    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (mcts_gen, mcts_iters)""",
+    """CREATE UNIQUE INDEX IF NOT EXISTS lookup ON ratings (tag, mcts_gen)""",
 ]

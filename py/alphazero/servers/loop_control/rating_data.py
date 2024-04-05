@@ -10,15 +10,16 @@ from typing import Dict, Optional
 logger = get_logger()
 
 
-"""
-For now, hard-coding these constants.
+RatingTag = str
 
-If we want to make the configurable in the future, we may want the ability to configure them for a
-running loop controller without requiring a restart. That would require some additional
-infrastructure.
+
+"""
+For now, hard-coding this constant.
+
+If we want to make the configurable in the future, we have to decide whether it will be configurable
+from the loop-controller side or from the ratings-server side.
 """
 N_GAMES = 100
-N_MCTS_ITERS = 1600
 
 
 class RatingData:
