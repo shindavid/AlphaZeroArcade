@@ -56,7 +56,7 @@ A highly experienced graphic artist was hired to create the below figure, which 
 
 ![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/8349eaee-6cc2-4ad7-9fca-dcc8db973ab7)
 
-The loop controller manages the entire loop. It uses its GPU to continuously trains a neural network. It periodically
+The loop controller manages the entire loop. It uses its GPU to continuously train a neural network. It periodically
 sends snapshots of the network weights over TCP to one or more self-play servers. The self-play servers use the
 current network weights to generate self-play games, sending them back to the loop controller over TCP. The loop
 controller in return writes those games to disk, along with associated metadata to an sqlite3 database, and
@@ -77,6 +77,7 @@ or using aliases,
 ```
 ./py/alphazero/scripts/run_local.py -g tictactoe -t my-first-run
 ```
+This launches one instance of each the 3 server types (loop-controller, self-play, ratings).
 
 Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory 
 
@@ -86,36 +87,19 @@ $A0A_OUTPUT_DIR/tictactoe/my-first-run/
 
 where `$A0A_OUTPUT_DIR` is an environment variable configured during env setup.
 
-This command will use cuda device 0 by default for the loop-controller. For the self-play server, it will use cuda
-device 1 if you have multiple GPU's, and cuda device 0 otherwise. In this latter case, the controller will pause
-the self-play games during train steps.
+By default, `run_local.py` will detect the number of available cuda devices on the local machine, and allocate
+the GPU's across the servers in an optimal manner. If 1 or more GPU's are shared by multiple servers, the
+loop-controller carefully orchestrates the entire process, pausing and unpausing components as needed to ensure
+that the GPU's stay fully utilized, without the components thrashing with each other or getting starved indefinitely.
 
 ### Measuring Progress
 
-You can manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above tictactoe
-example, you can do this with a command like:
+When you run a ratings-server, either explicitly, or via the above `run_local.py` command, a series of matches are
+played between different generations of the MCTS agent against a game-specific _reference family_ of agents. The
+results of these matches are stored in a database, and can be visualized via:
 
 ```
-./target/Release/bin/tictactoe --player "--type=TUI" --player "--type=MCTS-C -m $A0A_OUTPUT_DIR/tictactoe/my-first-run/models/gen-10.ptj"
-```
-
-For something more systematic, you want to run a ratings server:
-
-```
-./py/alphazero/scripts/run_ratings_server.py
-```
-
-This will use cuda device 0 by default. If this will clash with a currently running server, you may have issues.
-If you only have a single GPU, you will need to manually share it, by running `run_loop_controller.py` and then
-switching back and forth between running `run_ratings_server.py` and `run_self_play_server.py` as desired.
-
-TODO: provide something out-of-the-box that will let all 3 servers run and reasonably share resources on a single
-single-GPU machine.
-
-Once enough ratings games have been run, you can visualize ratings progress via:
-
-```
-./py/alphazero/viz_ratings.py -g tictactoe -t my-first-run
+./py/alphazero/scripts/viz_ratings.py -g tictactoe -t my-first-run
 ```
 
 This will launch an interactive bokeh plot in your web-browser.
@@ -132,6 +116,14 @@ against a 13-ply exhaustive tree-search agent. Given that each player makes a ma
 exhaustive tree-search represents perfect-play, meaning that the dashed line at y=21 represents perfect play. The above
 plot thus indicates that the system attains optimal results against perfect play within 5 hours (i.e., it always wins as
 first player against perfect play).
+
+You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above tictactoe
+example, you can do this with a command like:
+
+```
+./target/Release/bin/tictactoe --player "--type=TUI" \
+  --player "--type=MCTS-C -m $A0A_OUTPUT_DIR/tictactoe/my-first-run/models/gen-10.pt"
+```
 
 ## C++ Overview
 
@@ -159,8 +151,8 @@ later in the list.
   * `AbstractPlayer`: abstract class for a player that can play a game
   * `GameServer`: runs a series of games between players (which can optionally join from other processes)
 * `mcts`: generic MCTS implementation
-* `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory. There is a
-  `generic/` subdirectory which contains generic player implementations that can be used by other games.
+* `games`: game-specific types and players. Each game (e.g., connect4, othello) has its own subdirectory
+* `generic_players`: generic player implementations that can be used for any game
 
 ### Game Types as C++ Template Parameters
 
