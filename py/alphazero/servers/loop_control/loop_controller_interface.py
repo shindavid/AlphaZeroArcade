@@ -80,6 +80,10 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def reset_self_play_locks(self):
+        pass
+
+    @abc.abstractmethod
     def register_shutdown_action(self, action: ShutdownAction):
         pass
 

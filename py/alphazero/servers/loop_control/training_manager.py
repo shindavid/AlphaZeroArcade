@@ -268,6 +268,7 @@ class TrainingManager:
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
+            self._controller.reset_self_play_locks()
             table.release_lock(Domain.TRAINING)
             self._controller.handle_new_model()
         except:

@@ -1,7 +1,7 @@
+from alphazero.logic.custom_types import Domain, GpuId
+
 from dataclasses import dataclass
 from enum import Enum
-
-from alphazero.logic.custom_types import Domain, GpuId
 import threading
 from typing import Dict
 
@@ -23,6 +23,9 @@ class DomainState:
     priority: int
     lock_status: LockStatus = LockStatus.RELEASED
     management_status: ManagementStatus = ManagementStatus.INACTIVE
+
+    def clone(self) -> 'DomainState':
+        return DomainState(self.priority, self.lock_status, self.management_status)
 
     def __str__(self):
         return f'{self.lock_status.value}/{self.management_status.value}@{self.priority}'
@@ -153,17 +156,7 @@ class GpuContentionTable:
            voluntarily releases the lock or decreases its priority.
         """
         with self._lock:
-            if self._states[domain].lock_status == LockStatus.ACQUIRED:
-                return True
-            self._states[domain].lock_status = LockStatus.ACQUIRING
-            self._cond.notify_all()
-            self._cond.wait_for(
-                lambda: self._lock_available(domain) or not self._active(domain))
-            active = self._active(domain)
-            lock_status = LockStatus.ACQUIRED if active else LockStatus.RELEASED
-            self._states[domain].lock_status = lock_status
-            self._cond.notify_all()
-            return active
+            return self._acquire_lock(domain)
 
     def release_lock(self, domain: Domain):
         with self._lock:
@@ -188,6 +181,29 @@ class GpuContentionTable:
             self._cond.wait_for(lambda: not self._active(domain) or self._lock_expired(domain))
             return self._active(domain)
 
+    def reset_self_play_lock(self):
+        """
+        If SELF_PLAY currently holds the lock, then execute these steps:
+
+        1. Set TRAINING to ACQUIRING/ACTIVE/max-priority
+        2. Wait until SELF_PLAY is not ACQUIRED
+        3. Reset TRAINING to original state
+
+        This will cause all self-play-workers to pause, refresh weights, and then unpause. See
+        SelfPlayManager._manage_worker() for details.
+        """
+        with self._lock:
+            if self._states[Domain.SELF_PLAY].lock_status != LockStatus.ACQUIRED:
+                return
+            training_state = self._states[Domain.TRAINING].clone()
+            self._states[Domain.TRAINING].priority = 100
+            self._states[Domain.TRAINING].management_status = ManagementStatus.ACTIVE
+            self._acquire_lock(Domain.TRAINING)
+            self._cond.wait_for(
+                lambda: self._states[Domain.SELF_PLAY].lock_status != LockStatus.ACQUIRED)
+            self._states[Domain.TRAINING] = training_state  # reset to original state
+            self._cond.notify_all()
+
     def _active(self, domain: Domain) -> bool:
         assert self._lock.locked(), 'LockTable must be locked'
         return self._states[domain].management_status == ManagementStatus.ACTIVE
@@ -195,6 +211,19 @@ class GpuContentionTable:
     def _inactive(self, domain: Domain) -> bool:
         assert self._lock.locked(), 'LockTable must be locked'
         return self._states[domain].management_status == ManagementStatus.INACTIVE
+
+    def _acquire_lock(self, domain: Domain) -> bool:
+        assert self._lock.locked(), 'LockTable must be locked'
+        if self._states[domain].lock_status == LockStatus.ACQUIRED:
+            return True
+        self._states[domain].lock_status = LockStatus.ACQUIRING
+        self._cond.notify_all()
+        self._cond.wait_for(lambda: self._lock_available(domain) or not self._active(domain))
+        active = self._active(domain)
+        lock_status = LockStatus.ACQUIRED if active else LockStatus.RELEASED
+        self._states[domain].lock_status = lock_status
+        self._cond.notify_all()
+        return active
 
     def _lock_available(self, domain: Domain) -> bool:
         """

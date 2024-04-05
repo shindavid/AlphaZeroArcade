@@ -63,12 +63,7 @@ class GpuContentionManager:
             return table
 
     def set_ratings_priority(self, elevate: bool):
-        with self._table_lock:
-            all_tables: List[GpuContentionTable] = []
-            for subdict in self._table.values():
-                for table in subdict.values():
-                    all_tables.append(table)
-
+        all_tables = self._get_all_tables()
         ratings_tables = [table for table in all_tables if table.active(Domain.RATINGS)]
         if not ratings_tables:
             return
@@ -89,3 +84,23 @@ class GpuContentionManager:
         table = ratings_tables[0]
         logger.debug(f'Prioritizing ratings for {table}')
         table.prioritize_ratings()
+
+    def reset_self_play_locks(self):
+        """
+        On all GPU's where self-play is holding the lock, temporarily mark training as acquiring
+        the lock, and then immediately mark training as inactive again.
+
+        This forces self-play to release and reacquire the lock. This causes the self-play workers
+        to refresh to the latest model - see SelfPlayManager._manage_worker() for details.
+        """
+        all_tables = self._get_all_tables()
+        for table in all_tables:
+            table.reset_self_play_lock()
+
+    def _get_all_tables(self) -> List[GpuContentionTable]:
+        with self._table_lock:
+            all_tables: List[GpuContentionTable] = []
+            for subdict in self._table.values():
+                for table in subdict.values():
+                    all_tables.append(table)
+            return all_tables

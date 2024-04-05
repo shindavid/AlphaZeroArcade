@@ -133,6 +133,9 @@ class LoopController(LoopControllerInterface):
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
+    def reset_self_play_locks(self):
+        self._gpu_contention_manager.reset_self_play_locks()
+
     def register_shutdown_action(self, action: ShutdownAction):
         self._shutdown_manager.register(action)
 
