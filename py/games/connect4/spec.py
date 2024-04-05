@@ -88,6 +88,7 @@ class Connect4Spec(GameSpec):
     }
     default_model_config = 'b19_c64'
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
+    n_mcts_iters_for_ratings_matches = 100
 
 
 Connect4 = Connect4Spec()

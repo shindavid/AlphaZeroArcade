@@ -18,8 +18,12 @@ Given W (represented by {a, b, r}), at what point can we start sampling the next
 This module provides functionality for answering this question.
 """
 from alphazero.logic.training_params import TrainingParams
+from util.logging_util import get_logger
 
 from dataclasses import dataclass
+
+
+logger = get_logger()
 
 
 @dataclass
@@ -82,7 +86,7 @@ def get_required_dataset_size(params: TrainingParams, prev_window: Window):
 
     lo = b
 
-    # print(f'DEBUG a={a} b={b} r={r} s={s} t={t} lhs={lhs} rhs(lo)={rhs(lo)}')
+    logger.debug(f'get_required_dataset_size() a={a} b={b} r={r} s={s} t={t} lhs={lhs} rhs(lo)={rhs(lo)}')
     if lhs <= rhs(lo):
         return b
 

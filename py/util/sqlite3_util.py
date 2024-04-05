@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 logger = get_logger()
 
 
-class ConnectionPool:
+class DatabaseConnectionPool:
     """
     This class is used to manage connections to a sqlite3 database in a multi-threaded environment.
     It should be constructed in the main thread. Subsequently spawned threads can call
@@ -62,7 +62,8 @@ class ConnectionPool:
         with self._conn_dict_lock:
             conn = self._conn_dict.get(thread_id, None)
             if conn is None:
-                logger.debug(f"Creating new connection: db_filename={self._db_filename} thread={thread_name}")
+                n = len(self._conn_dict) + 1
+                logger.debug(f"Creating new connection: db_filename={self._db_filename} thread={thread_name} ({n})")
                 conn = self._create_connection()
                 self._conn_dict[thread_id] = conn
             return conn

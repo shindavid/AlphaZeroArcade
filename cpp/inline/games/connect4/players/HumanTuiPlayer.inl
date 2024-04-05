@@ -7,13 +7,12 @@ namespace c4 {
 
 inline HumanTuiPlayer::HumanTuiPlayer(bool cheat_mode) {
   if (cheat_mode) {
-    oracle_ = new PerfectOracle();
+    oracle_ = PerfectOracle::get_instance();
     move_history_ = new PerfectOracle::MoveHistory();
   }
 }
 
 inline HumanTuiPlayer::~HumanTuiPlayer() {
-  if (oracle_) delete oracle_;
   if (move_history_) delete move_history_;
 }
 

@@ -92,6 +92,7 @@ class OthelloSpec(GameSpec):
     }
     default_model_config = 'b19_c64'
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
+    n_mcts_iters_for_ratings_matches = 400
 
 
 Othello = OthelloSpec()

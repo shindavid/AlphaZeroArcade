@@ -188,7 +188,7 @@ class NNEvaluationService
 
   void wait_for_unpause();
   void load_initial_weights_if_necessary();
-  void reload_weights(std::stringstream&) override;
+  void reload_weights(std::stringstream&, const std::string& cuda_device) override;
   void pause() override;
   void unpause() override;
   void wait_until_batch_ready();
@@ -271,6 +271,8 @@ class NNEvaluationService
   bool session_ended_ = false;
   int num_connections_ = 0;
 
+  bool initial_weights_loaded_ = false;
+  bool skip_next_pause_receipt_ = false;
   bool paused_ = false;
   std::mutex pause_mutex_;
   std::condition_variable cv_paused_;

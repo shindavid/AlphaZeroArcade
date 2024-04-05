@@ -1,70 +1,75 @@
 #!/usr/bin/env python3
 
 """
-An AlphaZero run has 2 components:
+An AlphaZero run has 3 components:
 
-1. self-play server(s): generates training data
-2. loop controller: trains the neural net from the training data
+1. loop controller: trains neural net from training data
+2. self-play server(s): uses neural net to generate training data
+3. [optional] ratings server(s): evaluates neural net against reference agents
 
-There is only one loop controller per run, while there can be multiple self-play servers.
-All the servers can run on the same machine, or on different machines - communication between them
-is done via TCP.
+These have corresponding launcher scripts in py/alphazero/scripts/:
 
-This script launches 2 servers on the local machine: one loop controller and one self-play server.
-This is useful for dev/testing purposes. By default, the script detects if the local machine has
-multiple GPU's or not. If there is a single GPU, then the system is configured to pause the
-self-play server whenever a train loop is active.
+- run_loop_controller.py
+- run_self_play_server.py
+- run_ratings_server.py
 
-For standard production runs, you may want multiple self-play servers, on different machines.
+This script launches 1 server of each type on the local machine, using the above launcher scripts.
+If the local machine does not have enough GPU's to dedicate one to each server, then the servers
+share the GPU's, managing contention via GpuContentionManager.
 """
+from alphazero.logic.run_params import RunParams
+from alphazero.logic.training_params import TrainingParams
+from alphazero.servers.gaming.ratings_server import RatingsServerParams
+from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
+from alphazero.servers.loop_control.params import LoopControllerParams
+from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.repo_util import Repo
+from util import subprocess_util
+
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import os
 from pipes import quote
 import subprocess
 import time
+from typing import Optional
 
 import torch
-
-from alphazero.logic.run_params import RunParams
-from alphazero.logic import constants
-from alphazero.logic.training_params import TrainingParams
-from alphazero.servers.self_play.self_play_server import SelfPlayServerParams
-from alphazero.servers.loop_control.loop_controller import LoopControllerParams
-from util.logging_util import LoggingParams, configure_logger, get_logger
-from util.repo_util import Repo
-from util import subprocess_util
 
 
 logger = get_logger()
 
 
+default_loop_controller_params = LoopControllerParams()
+default_self_play_server_params = SelfPlayServerParams()
+default_ratings_server_params = RatingsServerParams()
+
+
 @dataclass
 class Params:
-    port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
+    port: int = default_loop_controller_params.port
+    model_cfg: str = default_loop_controller_params.model_cfg
+    target_rating_rate: float = default_loop_controller_params.target_rating_rate
+    rating_tag: str = ''
+    n_mcts_iters: Optional[int] = None
+    n_search_threads: int = default_ratings_server_params.n_search_threads
+    parallelism_factor: int = default_ratings_server_params.parallelism_factor
     binary_path: str = None
-    model_cfg: str = 'default'
 
     @staticmethod
     def create(args) -> 'Params':
-        return Params(
-            port=args.port,
-            binary_path=args.binary_path,
-            model_cfg=args.model_cfg,
-            )
+        kwargs = {f.name: getattr(args, f.name) for f in fields(Params)}
+        return Params(**kwargs)
 
     @staticmethod
     def add_args(parser):
-        defaults = Params()
+        LoopControllerParams.add_args(parser, include_cuda_device=False)
+        RatingsServerParams.add_args(parser, omit_base=True)
 
-        parser.add_argument('--port', type=int,
-                            default=defaults.port,
-                            help='LoopController port (default: %(default)s)')
-        parser.add_argument('-m', '--model-cfg', default=defaults.model_cfg,
-                            help='model config (default: %(default)s)')
-        parser.add_argument('-b', '--binary-path',
-                            help='binary path. Default: last-used binary for this tag. If this is '
-                            'the first run for this tag, then target/Release/bin/{game}')
+        group = parser.add_argument_group('SelfPlayServer/RatingsServer options')
+        group.add_argument('-b', '--binary-path',
+                           help='binary path. Default: last-used binary for this tag. If this is '
+                           'the first run for this tag, then target/Release/bin/{game}')
 
 
 def load_args():
@@ -79,8 +84,6 @@ def load_args():
 
 
 def launch_self_play_server(params_dict, cuda_device: int):
-    default_self_play_server_params = SelfPlayServerParams()
-
     params = params_dict['Params']
     logging_params = params_dict['LoggingParams']
 
@@ -102,9 +105,37 @@ def launch_self_play_server(params_dict, cuda_device: int):
     return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
-def launch_loop_controller(params_dict, cuda_device: int):
-    default_loop_controller_params = LoopControllerParams()
+def launch_ratings_server(params_dict, cuda_device: int):
+    params = params_dict['Params']
+    logging_params = params_dict['LoggingParams']
 
+    cuda_device = f'cuda:{cuda_device}'
+
+    cmd = [
+        'py/alphazero/scripts/run_ratings_server.py',
+        '--cuda-device', cuda_device,
+    ]
+    if default_ratings_server_params.loop_controller_port != params.port:
+        cmd.extend(['--loop_controller_port', str(params.port)])
+    if default_ratings_server_params.binary_path != params.binary_path:
+        cmd.extend(['--binary-path', params.binary_path])
+    if default_ratings_server_params.rating_tag != params.rating_tag:
+        cmd.extend(['--rating-tag', params.rating_tag])
+    if default_ratings_server_params.n_mcts_iters != params.n_mcts_iters:
+        cmd.extend(['--n-mcts-iters', str(params.n_mcts_iters)])
+    if default_ratings_server_params.n_search_threads != params.n_search_threads:
+        cmd.extend(['--n_search_threads', str(params.n_search_threads)])
+    if default_ratings_server_params.parallelism_factor != params.parallelism_factor:
+        cmd.extend(['--parallelism_factor', str(params.parallelism_factor)])
+
+    logging_params.add_to_cmd(cmd)
+
+    cmd = ' '.join(map(quote, cmd))
+    logger.info(f'Launching ratings server: {cmd}')
+    return subprocess_util.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+def launch_loop_controller(params_dict, cuda_device: int):
     params = params_dict['Params']
     run_params = params_dict['RunParams']
     training_params = params_dict['TrainingParams']
@@ -118,6 +149,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--port', str(params.port)])
     if default_loop_controller_params.model_cfg != params.model_cfg:
         cmd.extend(['--model-cfg', params.model_cfg])
+    if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
+        cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
 
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)
@@ -149,11 +182,25 @@ def main():
     n = torch.cuda.device_count()
     assert n > 0, 'No GPU found'
 
+    if n == 1:
+        loop_controller_gpu = 0
+        self_play_gpu = 0
+        ratings_gpu = 0
+    elif n == 2:
+        loop_controller_gpu = 0
+        self_play_gpu = 1
+        ratings_gpu = 0
+    else:
+        loop_controller_gpu = 0
+        self_play_gpu = 1
+        ratings_gpu = 2
+
     procs = []
     try:
-        procs.append(('Loop-controller', launch_loop_controller(params_dict, 0)))
+        procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
-        procs.append(('Self-play', launch_self_play_server(params_dict, min(1, n-1))))
+        procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
+        procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
 
         loop = True
         while loop:

@@ -16,6 +16,7 @@ namespace core {
 struct perf_stats_t {
   perf_stats_t& operator+=(const perf_stats_t& other);
   boost::json::object to_json() const;
+  bool empty() const { return cache_hits + cache_misses == 0; }
 
   int64_t cache_hits = 0;
   int64_t cache_misses = 0;

@@ -133,7 +133,7 @@ def send_json(sock: socket.socket, data: JsonData):
     try:
         sock.sendall(data.header)
         sock.sendall(data.payload)
-    except socket.error:
+    except (socket.error, BrokenPipeError):
         raise SocketSendException(
             'socket.sendall() failure during send_json() - socket likely closed by peer')
 
@@ -190,7 +190,7 @@ def send_file(sock: socket.socket, filename: str):
         sock.sendall(header)
         sock.sendall(executable.to_bytes(1, byteorder='big'))
         sock.sendall(data)
-    except socket.error:
+    except (socket.error, BrokenPipeError):
         raise SocketSendException(
             'socket.sendall() failure during send_file() - socket likely closed by peer')
 

@@ -15,17 +15,19 @@ post-activation residual blocks. We follow KataGo and use pre-activation through
 KataGo paper: https://arxiv.org/pdf/1902.10565.pdf
 AlphaGo Zero paper: https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
 """
-from concurrent import futures
 import copy
 from dataclasses import dataclass, field
 import math
 import os
+import pickle
+import tempfile
 from typing import Any, Callable, Dict, List, Optional, Union
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
 from learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
+from util.repo_util import Repo
 from util.torch_util import Shape
 
 
@@ -481,10 +483,6 @@ class Model(nn.Module):
             print(f'Model successfully loaded!')
         return net
 
-    @staticmethod
-    def _save_model_helper(model, example_input, filename):
-        torch.jit.trace(model, example_input).save(filename)
-
     def save_model(self, filename: str, verbose: bool = False):
         """
         Saves this network to disk, from which it can be loaded either by c++ or by python. Uses the
@@ -516,9 +514,14 @@ class Model(nn.Module):
 
         # Perform the actual trace/save in a separate process to avoid memory leak
         # See: https://github.com/pytorch/pytorch/issues/35600
-        with futures.ProcessPoolExecutor() as executor:
-            future = executor.submit(Model._save_model_helper, clone, example_input, filename)
-            futures.wait([future])
+        with tempfile.NamedTemporaryFile(mode='wb', delete=False) as pickle_file:
+            pickle.dump((clone, example_input), pickle_file)
+            pickle_file.close()
+
+            script = os.path.join(Repo.root(), 'py/alphazero/scripts/jit_tracer.py')
+            cmd = f'python {script} {pickle_file.name} {filename}'
+            rc = os.system(cmd)
+            assert rc == 0, f'Error saving model to {filename}'
 
         if verbose:
             print(f'Model saved to {filename}')

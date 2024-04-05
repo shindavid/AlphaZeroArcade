@@ -35,7 +35,6 @@ void NNEvaluationService<GameState, Tensorizor>::connect() {
   num_connections_++;
   if (thread_) return;
 
-  load_initial_weights_if_necessary();
   thread_ = new std::thread([&] { this->loop(); });
 }
 
@@ -89,10 +88,8 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
 
+  initial_weights_loaded_ = net_.loaded();
   if (core::LoopControllerClient::initialized()) {
-    if (core::LoopControllerClient::get()->paused()) {
-      this->paused_ = true;
-    }
     core::LoopControllerClient::get()->add_listener(this);
   } else {
     if (!net_.loaded()) {
@@ -286,6 +283,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::loop() {
   while (active()) {
+    load_initial_weights_if_necessary();
     wait_for_unpause();
     wait_until_batch_ready();
     wait_for_first_reservation();
@@ -459,40 +457,54 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
-  if (!paused_) return;  // early exit for common case, bypassing lock
-
-  core::LoopControllerClient::get()->notify_pause_received(this);
+  if (!skip_next_pause_receipt_ && !paused_) return;  // early exit for common case, bypassing lock
 
   std::unique_lock lock(pause_mutex_);
+  if (skip_next_pause_receipt_) {
+    LOG_INFO << "NNEvaluationService: skipping handle_pause_receipt";
+    skip_next_pause_receipt_ = false;
+  } else {
+    net_.deactivate();
+    LOG_INFO << "NNEvaluationService: handle_pause_receipt";
+    core::LoopControllerClient::get()->handle_pause_receipt();
+  }
   cv_paused_.wait(lock, [&] { return !paused_; });
   lock.unlock();
 
-  LOG_INFO << "NNEvaluationService: resuming...";
+  LOG_INFO << "NNEvaluationService: handle_unpause_receipt";
+  core::LoopControllerClient::get()->handle_unpause_receipt();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::load_initial_weights_if_necessary() {
-  LOG_INFO << "NNEvaluationService: load_initial_weights_if_necessary()";
-  std::unique_lock<std::mutex> lock(net_weights_mutex_);
-  if (net_.loaded()) return;
+  if (initial_weights_loaded_) return;
+
+  // LOG_INFO << "NNEvaluationService: load_init_weights_if_necessary() - waiting for pause...";
+  // std::unique_lock pause_lock(pause_mutex_);
+  // cv_paused_.wait(pause_lock, [&] { return paused_; });
+  // pause_lock.unlock();
 
   LOG_INFO << "NNEvaluationService: requesting weights...";
+
   core::LoopControllerClient::get()->request_weights();
-  cv_net_weights_.wait(lock, [&] { return net_.loaded(); });
+  std::unique_lock<std::mutex> net_weights_lock(net_weights_mutex_);
+  cv_net_weights_.wait(net_weights_lock, [&] { return initial_weights_loaded_; });
   LOG_INFO << "NNEvaluationService: weights loaded!";
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstream& ss) {
+void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstream& ss,
+                                                                const std::string& cuda_device) {
   LOG_INFO << "NNEvaluationService: reloading network weights...";
   util::release_assert(paused_, "%s() called while not paused", __func__);
-  std::unique_lock lock1(net_weights_mutex_);
-  net_.load_weights(ss, params_.cuda_device);
+  std::unique_lock net_weights_lock(net_weights_mutex_);
+  net_.load_weights(ss, cuda_device);
+  initial_weights_loaded_ = true;
+  net_weights_lock.unlock();
   cv_net_weights_.notify_all();
-  lock1.unlock();
 
   LOG_INFO << "NNEvaluationService: clearing network cache...";
-  std::unique_lock lock2(cache_mutex_);
+  std::unique_lock cache_lock(cache_mutex_);
   cache_.clear();
 }
 
@@ -500,24 +512,36 @@ template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> T
 void NNEvaluationService<GameState, Tensorizor>::pause() {
   LOG_INFO << "NNEvaluationService: pausing";
   std::unique_lock lock(pause_mutex_);
+  if (paused_) {
+    net_.deactivate();
+    LOG_INFO << "NNEvaluationService: handle_pause_receipt (already paused)";
+    core::LoopControllerClient::get()->handle_pause_receipt();
+    return;
+  }
   paused_ = true;
-  if (!net_.loaded()) {
-    // This happens when the pause is issued during startup, when the model weights are lazily
-    // loaded from the loop controller. In this case, we need to explicitly call
-    // notify_pause_received() here, since the normal path to this call occurrs inside loop(),
-    // which is not yet running in the lazy load case.
-    //
-    // Failing to call notify_pause_received() calls LoopControllerClient to get stuck inside
-    // pause().
-    core::LoopControllerClient::get()->notify_pause_received(this);
+
+  if (!initial_weights_loaded_) {
+    net_.deactivate();
+    skip_next_pause_receipt_ = true;
+    LOG_INFO << "NNEvaluationService: handle_pause_receipt (skip next)";
+    core::LoopControllerClient::get()->handle_pause_receipt();
   }
   LOG_INFO << "NNEvaluationService: pause complete!";
+
+  lock.unlock();
+  cv_paused_.notify_all();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::unpause() {
   LOG_INFO << "NNEvaluationService: unpausing";
   std::unique_lock lock(pause_mutex_);
+  net_.activate();
+  if (!paused_) {
+    LOG_INFO << "NNEvaluationService: handle_unpause_receipt (already unpaused)";
+    core::LoopControllerClient::get()->handle_unpause_receipt();
+    return;
+  }
   paused_ = false;
   lock.unlock();
   cv_paused_.notify_all();

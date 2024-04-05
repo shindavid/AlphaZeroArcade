@@ -34,16 +34,13 @@ class LoopControllerListener<LoopControllerInteractionType::kPause> {
   virtual ~LoopControllerListener() = default;
   virtual void pause() = 0;
   virtual void unpause() = 0;
-
- private:
-  bool pause_notified_ = false;  // used by LoopControllerClient
 };
 
 template <>
 class LoopControllerListener<LoopControllerInteractionType::kReloadWeights> {
  public:
   virtual ~LoopControllerListener() = default;
-  virtual void reload_weights(std::stringstream&) = 0;
+  virtual void reload_weights(std::stringstream&, const std::string& cuda_device) = 0;
 };
 
 template <>

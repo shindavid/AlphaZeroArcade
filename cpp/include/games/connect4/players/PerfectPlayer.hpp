@@ -1,7 +1,5 @@
 #pragma once
 
-#include <mutex>
-
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
 #include <boost/program_options.hpp>
@@ -14,6 +12,9 @@
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/GameState.hpp>
 
+#include <mutex>
+#include <vector>
+
 namespace c4 {
 
 class PerfectOracle {
@@ -21,6 +22,9 @@ class PerfectOracle {
   using GameStateTypes = core::GameStateTypes<c4::GameState>;
   using ActionMask = GameStateTypes::ActionMask;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
+
+  static constexpr int kNumClientsPerOracle = 16;
+  using oracle_vec_t = std::vector<PerfectOracle*>;
 
   class MoveHistory {
    public:
@@ -64,16 +68,22 @@ class PerfectOracle {
     std::string get_overlay() const;
   };
 
-  PerfectOracle();
-  ~PerfectOracle();
+  static PerfectOracle* get_instance();
 
   QueryResult query(MoveHistory& history);
 
  private:
+  PerfectOracle();
+  ~PerfectOracle();
+
+  static oracle_vec_t oracles_;
+  static std::mutex static_mutex_;
+
   std::mutex mutex_;
   boost::process::ipstream out_;
   boost::process::opstream in_;
   boost::process::child* proc_ = nullptr;
+  int client_count_ = 0;
 };
 
 class PerfectPlayer : public Player {
@@ -102,7 +112,7 @@ class PerfectPlayer : public Player {
  private:
   const Params params_;
 
-  PerfectOracle oracle_;
+  PerfectOracle* oracle_;
   PerfectOracle::MoveHistory move_history_;
 };
 

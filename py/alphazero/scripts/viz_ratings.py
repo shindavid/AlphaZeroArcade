@@ -37,6 +37,7 @@ import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 
+from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
@@ -47,7 +48,7 @@ class Params:
     output_dir: str
     game: str
     tags: Optional[List[str]]
-    mcts_iters_list: List[int]
+    rating_tags: Optional[List[str]]
     port: int
 
     @staticmethod
@@ -56,16 +57,16 @@ class Params:
         Params.output_dir = args.output_dir
         Params.game = args.game
         Params.tags = [t for t in args.tag.split(',') if t] if args.tag else None
-        Params.mcts_iters_list = [] if not args.mcts_iters else \
-            [int(s) for s in args.mcts_iters.split(',')]
+        Params.rating_tags = None if args.tag is None else args.rating_tag.split(',')
         Params.tag = args.tag
         Params.port = args.port
 
     @staticmethod
     def add_args(parser):
         parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
-        parser.add_argument('-i', '--mcts-iters', help='mcts-iters values to include (default: all), '
-                            'comma-separated (e.g. "300,3000")')
+        parser.add_argument('-r', '--rating-tag', help='rating tags to include (default: all), '
+                            'comma-separated (e.g. "tag1,tag2"). Note that empty-string is the '
+                            'default tag, so use "" or ",tag" to specify that tag.')
         parser.add_argument('-p', '--port', type=int, default=5006,
                             help='bokeh port (default: %(default)s)')
         RunParams.add_args(parser)
@@ -79,14 +80,14 @@ def load_args():
 
 
 class RatingData:
-    def __init__(self, run_params: RunParams, mcts_iters: int):
+    def __init__(self, run_params: RunParams, rating_tag: RatingTag):
         organizer = DirectoryOrganizer(run_params)
         game_spec = game_index.get_game_spec(run_params.game)
 
         conn = sqlite3.connect(organizer.ratings_db_filename)
         cursor = conn.cursor()
-        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE mcts_iters = ? '
-                             'ORDER BY mcts_gen', (mcts_iters,))
+        res = cursor.execute('SELECT mcts_gen, rating FROM ratings WHERE tag = ? '
+                             'ORDER BY mcts_gen', (rating_tag,))
         gen_ratings = res.fetchall()
         conn.close()
 
@@ -128,9 +129,11 @@ class RatingData:
 
         tag = run_params.tag
         self.tag = tag
-        self.mcts_iters = mcts_iters
+        self.rating_tag = rating_tag
         self.gen_df = gen_df
-        self.label = f'{tag} (i={mcts_iters})'
+        self.label = tag
+        if rating_tag:
+            self.label = f'{tag}:{rating_tag}'
 
 
 def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
@@ -141,15 +144,15 @@ def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
 
     conn = sqlite3.connect(db_filename)
     cursor = conn.cursor()
-    # find all distinct mcts_iters values from ratings table:
-    res = cursor.execute('SELECT DISTINCT mcts_iters FROM ratings')
-    mcts_iters_list = [r[0] for r in res.fetchall()]
+    # find all distinct rating_tag's from ratings table:
+    res = cursor.execute('SELECT DISTINCT tag FROM ratings')
+    rating_tags = [r[0] for r in res.fetchall()]
     conn.close()
 
-    if Params.mcts_iters_list:
-        mcts_iters_list = [m for m in mcts_iters_list if m in Params.mcts_iters_list]
+    if Params.rating_tags:
+        rating_tags = [t for t in rating_tags if t in Params.rating_tags]
 
-    return [RatingData(run_params, m) for m in mcts_iters_list]
+    return [RatingData(run_params, t) for t in rating_tags]
 
 
 def get_rating_data_list():

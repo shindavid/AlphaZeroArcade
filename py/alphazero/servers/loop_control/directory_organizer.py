@@ -113,8 +113,5 @@ class DirectoryOrganizer:
         info = DirectoryOrganizer.get_latest_info(self.models_dir)
         return 0 if info is None else info.generation
 
-    def get_latest_generation(self) -> Generation:
-        return self.get_latest_model_generation()
-
     def get_latest_model_filename(self) -> Optional[str]:
         return DirectoryOrganizer.get_latest_full_subpath(self.models_dir)
