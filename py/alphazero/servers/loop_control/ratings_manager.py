@@ -1,8 +1,8 @@
 from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
-from .rating_data import N_GAMES, RatingData, RatingDataDict, RatingTag
+from .rating_data import N_GAMES, RatingData, RatingDataDict
 
-from alphazero.logic.custom_types import ClientConnection, Generation
+from alphazero.logic.custom_types import ClientConnection, Generation, RatingTag
 from alphazero.logic.ratings import WinLossDrawCounts
 from util.logging_util import get_logger
 from util.py_util import find_largest_gap

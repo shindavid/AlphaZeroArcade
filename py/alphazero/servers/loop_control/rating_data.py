@@ -10,9 +10,6 @@ from typing import Dict, Optional
 logger = get_logger()
 
 
-RatingTag = str
-
-
 """
 For now, hard-coding this constant.
 

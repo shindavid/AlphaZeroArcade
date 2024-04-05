@@ -9,6 +9,7 @@ from util.socket_util import JsonDict, Socket
 Generation = int
 ClientId = int
 ThreadId = int
+RatingTag = str
 
 
 class ClientRole(Enum):
