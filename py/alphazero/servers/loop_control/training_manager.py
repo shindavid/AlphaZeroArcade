@@ -137,9 +137,10 @@ class TrainingManager:
             cursor.close()
         if row is None:
             # kZero-style initialization of sample window
-            samples_per_window = self._controller.training_params.samples_per_window()
-            target_sample_rate = self._controller.training_params.target_sample_rate
-            return Window(0, samples_per_window, target_sample_rate)
+            # samples_per_window = self._controller.training_params.samples_per_window()
+            # target_sample_rate = self._controller.training_params.target_sample_rate
+            # return Window(0, samples_per_window, target_sample_rate)
+            return Window(0, 0, 0)
         return Window(*row)
 
     def _fetch_num_total_augmented_positions(self) -> int:
@@ -286,8 +287,7 @@ class TrainingManager:
         start_ts = stats.start_ts
         end_ts = stats.end_ts
 
-        window = construct_window(
-            self._last_sample_window, window_start, window_end, n_samples)
+        window = construct_window(self._last_sample_window, window_start, window_end, n_samples)
         self._last_sample_window = window
 
         head_data = []
