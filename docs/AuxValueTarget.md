@@ -1,7 +1,7 @@
 This document explores the possibility of adding an auxiliary value target, that predicts the network's
 own `V` prediction for the children of the current node.
 
-# Idea 1: Auxiliary Value Target
+## Idea 1: Auxiliary Value Target
 
 Currently, for a given node `n`, the network predicts a scalar value `V(n)` and a policy distribution `P(n)`.
 
@@ -15,7 +15,7 @@ By itself, this aux-target might provide a regularizing effect that improves lea
 similarly to how the opponent-response-policy aux-target improves learning. However, we expect this
 auxiliary head to have value in other ways - read on!
 
-# Idea 2: Use Auxiliary Value Target Predictions Instead of FPU
+## Idea 2: Use Auxiliary Value Target Predictions Instead of FPU
 
 In PUCT evaluations, when `N(c) == 0`, the `Q(c)` term is undefined. MCTS implementations thus typically employ
 an FPU (First Play Urgency) policy that provides a value for this undefined `Q(c)` term. It is known that 
@@ -24,7 +24,7 @@ AlphaZero can be quite sensitive to FPU policy, so many projects expend signific
 Instead of an unprincipled FPU policy, how about we use `V_c(n)` as the `Q(c)` term when `N(c) == 0`?
 This is the principled choice, as it is prediction of what `Q(c) ` will be after 1 visit to `c`.
 
-# Idea 3 (Stochastic AlphaZero only): MCTS Backpropagation Denoising
+## Idea 3 (Stochastic AlphaZero only): MCTS Backpropagation Denoising
 
 When backpropagating a value during _stochastic_ MCTS, apply an additive chance-correction to the 
 value when traversing edges corresponding to chance-events. If the edge connects parent `n` to child `c`,
@@ -73,7 +73,7 @@ should be equivalent, and as `P` approaches perfection, `Q(c)` should also be eq
 Our proposed choice of `mu` and `V_c(n)` guarantees that the correction adjustment
 is zero-meaned, even if the network is imperfect.
 
-# Idea 4 (Stochastic AlphaZero only): Value Target Denoising
+## Idea 4 (Stochastic AlphaZero only): Value Target Denoising
 
 Continuing with our above example, the self-play game might reach node `n`, and then `c`, 
 ultimately resulting in a final game outcome of `z=0.3`. This result was better than expected at 
@@ -91,7 +91,7 @@ corrects the value target according to that predicted delta. A difference is tha
 `Q` for this prediction while this idea uses aux value. Again, as suggested above, we can consider
 replacing `V_c(n)` with `Q(c)`, which would unify the ideas.
 
-# Idea 5 (Stochastic AlphaZero only): Auxiliary Value Target Regularization at Chance Nodes
+## Idea 5 (Stochastic AlphaZero only): Auxiliary Value Target Regularization at Chance Nodes
 
 If the network is consistent with itself at chance nodes, the value at the parent should equal the 
 expected value of the children. The aux value head predicts the value of each child. This 
@@ -103,7 +103,7 @@ allows us to add a loss term that encourages this equality:
 
 where `E_c` is an expectation taken with respect to the chance node's distribution for `c`.
 
-# Idea 6 - Auxiliary Value Target Regularization at Non-Chance Nodes
+## Idea 6 - Auxiliary Value Target Regularization at Non-Chance Nodes
 
 At non-chance nodes, there is a different form of consistency that we can expect.
 The value of the parent should equal the value of the child representing the opponent's
