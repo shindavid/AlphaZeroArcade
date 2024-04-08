@@ -81,4 +81,7 @@ as part of the input. In general games, an appropriate representation of the gam
 that allows for a tractable neural network output layer representation.
 
 Now, the proper way to do the descent, selection, and backpropagation steps in the ISMCTS setting is a bit tricky.
-The MO-ISMCTS algorithm described by Cowling et al is actually not sound. See [here](MO_ISMCTS_soundness.md) for details.
+The MO-ISMCTS algorithm described by Cowling et al is actually not sound (see [here](MO_ISMCTS_soundness.md) for details).
+
+Briefly, we require parallel trees for each possible point-of-view (POV), and hidden information should not leak
+across different POV's. TODO: describe more details
