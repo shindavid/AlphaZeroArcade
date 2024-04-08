@@ -82,6 +82,70 @@ that allows for a tractable neural network output layer representation.
 
 Now, the proper way to do the descent, selection, and backpropagation steps in the ISMCTS setting is a bit tricky.
 The MO-ISMCTS algorithm described by Cowling et al is actually not sound (see [here](MO_ISMCTS_soundness.md) for details).
-
 Briefly, we require parallel trees for each possible point-of-view (POV), and hidden information should not leak
 across different POV's. TODO: describe more details
+
+## Convergence to Equilibrium
+
+If we play self-play games using ISMCTS with `n` visits, and train P, V and H on the complete resultant set of 
+self-play data, can we expect convergence to Nash Equilibrium, as `n` approaches infinity?
+
+Formally, if we imagine the combined weights of the P, V, and H networks to be a point in `R^d`, then the generations
+of training yields a path-like sequence of points in `R^d`: `x_1, x_2, ...`. The game's Nash equilibrium is some subset `NE` of `R^d`.
+Does `x_i` have a limit, and if so, is that limit in `NE`?
+
+Here is a soft-proof that the answer is yes.
+
+The proof entails 3 parts:
+
+1. **(Idempotence)**: If currently at equilibrium, we will stay there.
+2. **(Non-Complacency)**: If not currently at equilibrium, we cannot stay there.
+3. **(Limit-existence)**: The limit of `x_i` must exist.
+
+These 3 assertions clearly prove our desired result. Let us prove them in turn.
+
+### Idempotence
+
+Suppose that P, V, and H are at equilibrium.
+
+The PUCT formula is:
+
+```
+PUCT(a) = Q(a) + c * P(a) * sqrt(sum(N)) / (1 + N(a))
+```
+
+The idempotence requirement means that as the number of iterations approaches infinity, the distribution of `N`
+should approach the same shape as `P`. 
+
+By standard properties of Nash equilibria, the assumption of equilibrium translates to the following: 
+`P(a) == 0` for all a not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
+of `v_max`.
+
+If `V` is accurate, as presumbed by the equilibrium hypothesis, then `Q(a)` at actions in `S` should converge
+towards `v_max`, while `Q(a)` at actions not in `S` should converge towards values less than `v_max`. Since
+`Q` dominates the equation as `N(a)` approach infinity, the proportion of `N` on actions not in `S`
+should approach 0. It remains to show that the ratio `N(a_i) / N(a_j)` approaches `P(a_i) / P(a_j)`
+for all `a_i, a_j` in `S`.
+
+To see this, we can plug `a_i` and `a_j` into the `PUCT` equation, and set PUCT values equal. The `Q(a)`, 
+`c`, and `sqrt(sum(N))` terms all cancel, leaving us with:
+
+```
+P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
+```
+
+This is enough. We can make the convergence better by replacing the `(1 + N(a))` term in the PUCT formula with
+`max(1, N(a))`.
+
+Note that it is important that we disable root softmax temperature for this to proof to work.
+
+### Non-Complacency
+
+Suppose P, V and H are not at equilibrium. Then, there are game states at which they produce non-equilibrium estimates.
+ISMCTS should then produce a policy at one or more nodes that exploits these misestimates, and the resultant
+self-play data should cause a drift in `R^d`.
+
+### Limit-existence
+
+If the limit does not exist, then the `x_i` necessarily follow a cyclical path. If we train on the full self-play
+dataset, however, an infinite cyclical path is not possible; we must eventually fall into the path's interior.
