@@ -36,8 +36,9 @@ A common objection to applying a tree-search algorithm to games of imperfect inf
 is that in imperfect information games, you cannot analyze a subtree of the game in isolation. 
 This is because the value of a node in the game tree is dependent on the policy that got to that point in the tree.
 
-Well...that’s only _partially_ true. It is true that the worst-case value of the node against the set 
-of _all possible_ adversary policies is dependent on the policy that got to that point in the tree. 
+Well...that’s only _partially_ true. It is true that the value of the node against the 
+_worst case_ adversary policy is dependent on the policy that got to that point in the tree. This is because
+the optimal counter-policy is dependent on the entire game-tree, not just this subtree.
 However, against any given _fixed_ adversary policy, the value is independent of this previous policy.
 So, if we hold the adversary policy fixed, a tree-search subroutine like MCTS could still act as a
 policy improvement operator.
