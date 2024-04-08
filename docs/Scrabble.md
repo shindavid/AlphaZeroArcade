@@ -62,16 +62,20 @@ In perfect information settings, each node of an MCTS tree represents a full gam
 In imperfect information settings, each node instead presents an _information set_. This is the
 part of the game state that is visible to the acting player.
 
+This 2023 [post](https://www.frontiersin.org/articles/10.3389/frai.2023.1014561/full)
+provides a comprehensive survey of various approaches, including a 
+2012 [paper](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf) by Cowling et al that
+introduces Multiple-Observer Information Set MCTS (MO-ISMCTS), which serves as the starting point of
+our planned implementation.
+
 Obtaining a policy (P) and value (V) estimate at the root of the tree, when we are the current
 acting player, is straightforward: train a neural network that takes as input the public game state together
 with our private information. The big question is how to handle non-root nodes. Recursing at the next
 level of the tree is not straightforward, because we are missing the private information of our opponent.
 Without that, we cannot construct a proper input to pass to the network, and so cannot obtain a P and V estimate.
 
-We thus need to instantiate the private information of our opponent. In prior approaches, such as
-Multiple-Observer Information Set MCTS (MO-ISMCTS), introduced by Cowling et al in 2012
-([paper](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf)), this instantiation was
-performed by sampling uniformly randomly, which is not sound. Instead, we will train a _hidden-state_ neural network (H)
+We thus need to instantiate the private information of our opponent. MO-ISMCTS does this by sampling
+uniformly randomly, which is not sound. Instead, we will train a _hidden-state_ neural network (H)
 that learns to sample the hidden state of the game (the opponent's rack in Scrabble). H will accept the same inputs
 as P and V, and will be trained on self-play games using the actual racks as training targets.
 
