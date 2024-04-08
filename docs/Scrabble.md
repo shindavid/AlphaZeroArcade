@@ -118,7 +118,7 @@ The idempotence requirement means that as the number of iterations approaches in
 should approach the same shape as `P`. 
 
 By standard properties of Nash equilibria, the assumption of equilibrium translates to the following: 
-`P(a) == 0` for all a not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
+`P(a) == 0` for all `a` not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
 of `v_max`.
 
 If `V` is accurate, as presumbed by the equilibrium hypothesis, then `Q(a)` at actions in `S` should converge
@@ -137,7 +137,7 @@ P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
 This is enough. We can make the convergence better by replacing the `(1 + N(a))` term in the PUCT formula with
 `max(1, N(a))`.
 
-Note that it is important that we disable root softmax temperature for this to proof to work.
+Note that it is important that we disable root softmax temperature for this proof to work.
 
 ### Non-Complacency
 
