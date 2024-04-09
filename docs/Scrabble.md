@@ -38,7 +38,9 @@ This is because the value of a node in the game tree is dependent on the policy 
 
 Well...that’s only _partially_ true. It is true that the value of the node against the 
 _worst case_ adversary policy is dependent on the policy that got to that point in the tree. This is because
-the optimal counter-policy is dependent on the entire game-tree, not just this subtree.
+given a policy `P` and its optimal counter-policy `Q`,
+`Q`'s behavior at a node `N` is dependent on `P`'s behavior across the _entire_ game-tree, 
+rather than just on `P`'s behavior in the subtree rooted at `N`.
 However, against any given _fixed_ adversary policy, the value is independent of this previous policy.
 So, if we hold the adversary policy fixed, a tree-search subroutine like MCTS could still act as a
 policy improvement operator.
@@ -62,10 +64,9 @@ In perfect information settings, each node of an MCTS tree represents a full gam
 In imperfect information settings, each node instead presents an _information set_. This is the
 part of the game state that is visible to the acting player.
 
-This 2023 [post](https://www.frontiersin.org/articles/10.3389/frai.2023.1014561/full)
-provides a comprehensive survey of various approaches, including a 
-2012 [paper](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf) by Cowling et al that
-introduces Multiple-Observer Information Set MCTS (MO-ISMCTS), which serves as the starting point of
+[Blüml et al, 2023](https://www.frontiersin.org/articles/10.3389/frai.2023.1014561/full)
+provides a comprehensive survey of various approaches, including Multiple-Observer Information Set MCTS (MO-ISMCTS)
+([Cowling et al, 2012](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf)), which serves as the starting point of
 our planned implementation.
 
 Obtaining a policy (P) and value (V) estimate at the root of the tree, when we are the current
