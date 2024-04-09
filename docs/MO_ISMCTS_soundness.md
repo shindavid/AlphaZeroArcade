@@ -16,7 +16,7 @@ The subtler problem is that this setup permits an inappropriate "leakage" of pri
 To illustrate, suppose Alice and Bob are the two players playing Scrabble, with Alice to act at the root.
 In this board state, the "X" tile is a critical tile, and Alice happens to hold it. Bob of course does not know this.
 Suppose MO-ISMCTS selects a non-X move for Alice on her turn, to arrive at a node, `B`, for Bob’s turn. On the
-children of `B`, we are back at Alice's turn. At these children of B, MO-ISMCTS dictates that we use Alice's tree, for which we Alice's
+children of `B`, we are back at Alice's turn. At these children of B, MO-ISMCTS dictates that we use Alice's tree, for which Alice's
 rack contains the known X-tile. The selection step will choose X-moves often, and this will be reflected in the
 backpropagated values back to B. PUCT is likely to favor blocking X-plays at B, with a degree of certainty that
 Bob should not have. The fact that Alice has an "X" has "leaked" to Bob.
