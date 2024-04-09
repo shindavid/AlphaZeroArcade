@@ -143,7 +143,11 @@ P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
 This is enough. We can make the convergence better by replacing the `(1 + N(a))` term in the PUCT formula with
 `max(1, N(a))`.
 
-Note that it is important that we disable root softmax temperature for this proof to work.
+Some practicalities should be noted. Root softmax temperature must be disabled for this proof to work.
+Dirichlet noise also breaks the analysis. Finally, move-temperature has the potential to make the agent
+act with non-equilibrium frequencies. It is unclear if this last point will cause theoretical problems during
+self-play, but certainly during competitive play, failure to act with equilibrium frequencies will lead to an
+exploitable agent. Later, we will investigate how to deal with these issues practically.
 
 ### Non-Complacency
 
