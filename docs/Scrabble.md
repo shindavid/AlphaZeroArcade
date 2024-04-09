@@ -106,7 +106,7 @@ The proof entails 3 parts:
 
 1. **(Idempotence)**: If currently at equilibrium, we will stay there.
 2. **(Non-Complacency)**: If not currently at equilibrium, we cannot stay there.
-3. **(Limit-existence)**: The limit of `x_i` must exist.
+3. **(Limit-Existence)**: The limit of `x_i` must exist.
 
 These 3 assertions clearly prove our desired result. Let us prove them in turn.
 
@@ -155,7 +155,7 @@ Suppose P, V and H are not at equilibrium. Then, there are game states at which 
 ISMCTS should then produce a policy at one or more nodes that exploits these misestimates, and the resultant
 self-play data should cause a drift in `R^d`.
 
-### Limit-existence
+### Limit-Existence
 
 If the limit does not exist, then the `x_i` necessarily follow a cyclical path. If we train on the full self-play
 dataset, however, an infinite cyclical path is not possible; we must eventually fall into the path's interior.
