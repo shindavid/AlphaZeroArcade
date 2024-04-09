@@ -1,0 +1,124 @@
+/* styles.css */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 200px;
+  overflow: auto;
+  border-right: 1px solid #ccc;
+  background-color: lightgrey;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  font-family: Arial, sans-serif; /* Modern, sans-serif font */
+  font-size: 18px; /* Larger font size */
+}
+
+.sidebar a {
+  display: block;
+  padding: 10px;
+  color: #333; /* Dark grey color */
+  text-align: left;
+}
+
+.sidebar a.active {
+  background-color: #007BFF; /* Change background color of active link */
+  color: white; /* Change text color to white for better contrast */
+  cursor: default;
+  pointer-events: none;
+}
+
+.sidebar-section p {
+  margin: 0;
+  padding: 10px;
+}
+
+.sidebar-section a {
+  padding-left: 20px;
+}
+
+.descriptor {
+  padding: 10px;
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  color: #666; /* Lighter color for non-clickable descriptor */
+}
+
+.sublink {
+  margin-left: 20px; /* Add left margin for indentation */
+  padding: 10px;
+  text-decoration: none;
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  color: #333;
+}
+
+.sublink:hover {
+  color: #007BFF;
+  text-decoration: underline;
+}
+
+.main-content {
+  margin-left: 200px;
+  padding: 20px;
+}
+
+.displayed {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
+.search-bar {
+  padding: 10px;
+  font-size: 18px;
+}
+
+.search-bar input {
+  font-size: 18px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.autocomplete-results {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0;
+  position: absolute;
+  background: white;
+  z-index: 99;
+  max-height: 100px;
+  overflow-y: auto;
+  width: 90%;
+  box-sizing: content-box;
+}
+
+.autocomplete-results div {
+  cursor: pointer;
+  padding: 2px;
+}
+
+.autocomplete-results div:hover {
+  background-color: #f1f1f1; /* change this to the color you want for the hover effect */
+}
+
+.selected-tags {
+  margin-top: 100px;
+}
+
+.selected-tags div {
+  display: inline-block;
+  background-color: #f1f1f1;
+  border-radius: 20px;
+  padding: 5px 10px;
+  margin: 5px;
+}
+
+.selected-tags button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}

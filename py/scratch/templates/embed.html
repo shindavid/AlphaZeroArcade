@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>Bokeh Plot</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ bokeh_css }}">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  </head>
+
+  <body>
+
+    <div class="sidebar">
+
+      <div class="sidebar-section">
+        <p>Training</p>
+        {% for item in training_data %}
+          <a href="#" class="sidebar-link {% if loop.first %}active{% endif %}"
+          data-plot-id="training_{{item[0]}}">
+            {{item[0]}}
+          </a>
+        {% endfor %}
+      </div>
+
+      <a href="#" class="sidebar-link" data-plot-id="self_play">Self-Play</a>
+      <a href="#" class="sidebar-link" data-plot-id="ratings">Ratings</a>
+
+      <div class="search-bar">
+        <input type="text" id="tag-input" placeholder="Add tag">
+        <div id="autocomplete-results" class="autocomplete-results empty"></div>
+      </div>
+      <div id="selected-tags" class="selected-tags"></div>
+
+    </div>
+
+    <div class="main-content">
+      {% for item in training_data %}
+        <div id="training_{{item[0]}}"
+        class="bokeh-plot {% if loop.first %}displayed{% else %}hidden{% endif %}">
+          {{ item[1]|safe }}
+        </div>
+      {% endfor %}
+      <div id="self_play" class="bokeh-plot hidden">{{ self_play|safe }}</div>
+      <div id="ratings" class="bokeh-plot hidden">{{ ratings|safe }}</div>
+    </div>
+
+    <script>
+      var sidebarLinks = document.querySelectorAll('.sidebar-link');
+      sidebarLinks.forEach(function(link) {
+        link.addEventListener('click', function(event) {
+          event.preventDefault();
+
+          // Hide all plots
+          var plots = document.querySelectorAll('.bokeh-plot');
+          plots.forEach(function(plot) {
+            plot.style.display = 'none';
+          });
+
+          // Show the clicked plot
+          var plotId = event.target.getAttribute('data-plot-id');
+          var plot = document.getElementById(plotId);
+          plot.style.display = 'block';
+
+          // Remove the 'active' class from all links
+          sidebarLinks.forEach(function(link) {
+            link.classList.remove('active');
+          });
+          // Add the 'active' class to the clicked link
+          this.classList.add('active');
+        });
+      });
+
+      window.onload = function() {
+        var tags = {{ tags|tojson|safe }};
+        var selectedTags = {{ init_tags|tojson|safe }};
+
+        function autocomplete(event) {
+          var input = document.getElementById("tag-input");
+          var autocompleteResults = document.getElementById("autocomplete-results");
+          autocompleteResults.innerHTML = '';
+          var tag = input.value;
+          if (event.type === "keyup" && event.keyCode === 13 && tags.includes(tag) && !selectedTags.includes(tag)) {
+            selectedTags.push(tag);
+            displayTags();
+            input.value = '';
+          } else {
+            var matchedTags = tags.filter(function(t) {
+              return t.startsWith(tag) && !selectedTags.includes(t);  // Exclude tags that are already selected
+            });
+            matchedTags.forEach(function(t) {
+              var result = document.createElement("div");
+              result.textContent = t;
+              result.onclick = function() {
+                selectedTags.push(t);
+                displayTags();
+                autocompleteResults.innerHTML = '';
+              };
+              autocompleteResults.appendChild(result);
+            });
+          }
+        }
+
+        function displayTags() {
+          var container = document.getElementById("selected-tags");
+          container.innerHTML = '';
+          selectedTags.forEach(function(tag) {
+            var tagElement = document.createElement("div");
+            tagElement.textContent = tag;
+            var removeButton = document.createElement("button");
+            removeButton.textContent = "x";
+            removeButton.onclick = function() {
+              var index = selectedTags.indexOf(tag);
+              selectedTags.splice(index, 1);
+              displayTags();
+            };
+            tagElement.appendChild(removeButton);
+            container.appendChild(tagElement);
+          });
+
+          updatePlots();
+        }
+
+        function updatePlots() {
+          console.log('updatePlots()')
+          console.log(selectedTags);
+          // Make the AJAX call
+          $.ajax({
+            url: '/update_plots',
+            method: 'POST',
+            data: {
+              tags: selectedTags
+            },
+            success: function(response) {
+              // Update each plot with its new content
+              for (var plotId in response) {
+                var plotContent = response[plotId];
+                $('#' + plotId).html(plotContent);
+              }
+            }
+          });
+        }
+
+        displayTags();
+
+        var tagInput = document.getElementById("tag-input");
+        tagInput.addEventListener("keyup", autocomplete);
+        tagInput.addEventListener("focus", autocomplete);
+        tagInput.addEventListener("blur", function() {
+          setTimeout(function() {
+            document.getElementById("autocomplete-results").innerHTML = '';
+          }, 200);
+        });
+      }
+    </script>
+  </body>
+
+</html>
