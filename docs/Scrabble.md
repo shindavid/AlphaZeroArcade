@@ -28,6 +28,10 @@ Grandmaster Kenji Matsumoto has detailed the weaknesses of Quackle on this [page
 - Equity estimation is ignorant of board dynamics.
 - Equity maximization fails to navigate the expectation-vs-variance tradeoff.
 
+This excellent [video](https://youtu.be/oBmnpNwqE48?si=LG_PQzKs3VDRP1TW&t=335) by world-class Scrabble player Will Anderson
+illustrates a situation where Quackle performs poorly, discussing in detail the AI mechanics described above. The
+relevant section starts at 5:35 (link starts there) and ends at 7:04.
+
 A principled, game-theoretically-sound approach, that converges towards the game’s Nash Equilibrium, should naturally overcome all these shortcomings.
 
 ## Tree Search in Imperfect Information Games
@@ -60,14 +64,24 @@ long-term improvement towards equilibrium _across_ generations?
 
 ## Information Set MCTS (ISMCTS)
 
-In perfect information settings, each node of an MCTS tree represents a full game state.
-In imperfect information settings, each node instead presents an _information set_. This is the
-part of the game state that is visible to the acting player.
+In perfect information settings, each node of an MCTS tree represents a full game state. In imperfect
+information settings, the acting agent lacks visibility into all hidden information, and so cannot
+construct such a tree.
 
 [Blüml et al, 2023](https://www.frontiersin.org/articles/10.3389/frai.2023.1014561/full)
-provides a comprehensive survey of various approaches, including Multiple-Observer Information Set MCTS (MO-ISMCTS)
-([Cowling et al, 2012](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf)), which serves as the starting point of
-our planned implementation.
+provides a comprehensive survey of various workarounds. Broadly, there are two approaches:
+
+1. _Determinize_ the game by instantiating the hidden information, learn a policy for this game using
+perfect-information tree-search techniques, and then somehow construct a strategy for the true
+imperfect-information game out of that policy.
+
+2. Construct an _information set_ MCTS (ISMCTS) tree, where each node instead represents an _information set_. This is the
+part of the game state that is visible to the acting player. Devise tree search mechanics that operate
+on this tree.
+
+Of the second category of approaches, there is Multiple-Observer Information Set MCTS (MO-ISMCTS),
+introduced by [Cowling et al, 2012](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf).
+This serves as the starting point of our planned implementation.
 
 Obtaining a policy (P) and value (V) estimate at the root of the tree, when we are the current
 acting player, is straightforward: train a neural network that takes as input the public game state together
@@ -77,19 +91,26 @@ Without that, we cannot construct a proper input to pass to the network, and so 
 
 We thus need to instantiate the private information of our opponent. MO-ISMCTS does this by sampling
 uniformly randomly, which is not sound. Instead, we will train a _hidden-state_ neural network (H)
-that learns to sample the hidden state of the game (the opponent's rack in Scrabble). H will accept the same inputs
-as P and V, and will be trained on self-play games using the actual racks as training targets.
+that learns to sample the hidden state of the game. In Scrabble, you can consider the opponent's entire rack as
+the hidden state, or you can consider just the tiles left on the opponent's rack after their move, but before
+they replenish their rack with random tiles from the bag (in Scrabble parlance, the _leave_). We choose to
+use leaves rather than entire racks, as the training targets will be sharper without the diluting
+effect of the uniform random bag replenishment.
 
-There are `>1e7` possible racks in Scrabble, and outputting a logit distribution over all of them is likely unwieldy. 
-Instead, we can have H sample the rack `t` tiles at a time, which only requires an output logic layer of size `27^t`.
-We can sample the entire 7-tile rack by performing `ceil(7/t)` queries to H, including the partially produced rack
+H will accept the same inputs as P and V, and will be trained on self-play games using the actual leaves as training targets.
+
+There are `>1e7` possible leaves in Scrabble, and outputting a logit distribution over all of them is likely unwieldy. 
+Instead, we can have H sample the leave `t` tiles at a time, which only requires an output logic layer of size `27^t`.
+We can sample the entire `T`-tile leave by performing `ceil(T/t)` queries to H, including the partially produced rack
 as part of the input. In general games, an appropriate representation of the game's hidden state should be chosen
 that allows for a tractable neural network output layer representation.
 
 Now, the proper way to do the descent, selection, and backpropagation steps in the ISMCTS setting is a bit tricky.
-The MO-ISMCTS algorithm described by Cowling et al is actually not sound (see [here](MO_ISMCTS_soundness.md) for details).
-Briefly, we require parallel trees for each possible point-of-view (POV), and hidden information should not leak
-across different POV's. TODO: describe more details
+The MO-ISMCTS algorithm described by Cowling et al, besides not sampling the hidden state soundly, also has
+an issue with inadvertently leaking private information between players during the tree search (see [here](MO_ISMCTS_soundness.md) for a detailed description of the issue).
+To address this issue, we will devise a new ISMCTS variant that entails a recursive spawning of trees to be processed in parallel as we
+descend the tree. We may name this variant _Inception_ ISMCTS, as this recursive spawning is reminiscent of the 
+2010 film [Inception](https://en.wikipedia.org/wiki/Inception).
 
 ## Convergence to Equilibrium
 
