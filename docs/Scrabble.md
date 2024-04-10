@@ -81,7 +81,8 @@ on this tree.
 
 Of the second category of approaches, there is Multiple-Observer Information Set MCTS (MO-ISMCTS),
 introduced by [Cowling et al, 2012](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf).
-This serves as the starting point of our planned implementation.
+This serves as the starting point of our planned implementation. We wish to extend it to use AlphaZero
+mechanics.
 
 Obtaining a policy (P) and value (V) estimate at the root of the tree, when we are the current
 acting player, is straightforward: train a neural network that takes as input the public game state together
