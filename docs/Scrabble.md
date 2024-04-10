@@ -28,9 +28,9 @@ Grandmaster Kenji Matsumoto has detailed the weaknesses of Quackle on this [page
 - Equity estimation is ignorant of board dynamics.
 - Equity maximization fails to navigate the expectation-vs-variance tradeoff.
 
-This excellent [video](https://youtu.be/oBmnpNwqE48?si=LG_PQzKs3VDRP1TW&t=335) by world-class Scrabble player Will Anderson
+This excellent [video](https://youtu.be/oBmnpNwqE48?si=LG_PQzKs3VDRP1TW&t=276) by world-class Scrabble player Will Anderson
 illustrates a situation where Quackle performs poorly, discussing in detail the AI mechanics described above. The
-relevant section starts at 5:35 (link starts there) and ends at 7:04.
+relevant section starts at 4:36 (link starts there) and ends at 7:04.
 
 A principled, game-theoretically-sound approach, that converges towards the game’s Nash Equilibrium, should naturally overcome all these shortcomings.
 
