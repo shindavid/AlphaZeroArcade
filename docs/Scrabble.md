@@ -110,17 +110,17 @@ Now, the proper way to do the descent, selection, and backpropagation steps in t
 The MO-ISMCTS algorithm described by Cowling et al, besides not sampling the hidden state soundly, also has
 an issue with inadvertently leaking private information between players during the tree search (see [here](MO_ISMCTS_soundness.md) for a detailed description of the issue).
 To address this issue, we will devise a new ISMCTS variant that entails a recursive spawning of trees to be processed in parallel as we
-descend the tree. We may name this variant _Inception_ ISMCTS, as this recursive spawning is reminiscent of the 
-2010 film [Inception](https://en.wikipedia.org/wiki/Inception).
+descend the tree. We will tentatively name this variant _Inception_ ISMCTS (I-ISMCTS), as this recursive spawning is reminiscent of the 
+2010 film [Inception](https://en.wikipedia.org/wiki/Inception). TODO: provide details of I-ISMCTS.
 
 ## Convergence to Equilibrium
 
-If we play self-play games using ISMCTS with `n` visits, and train P, V and H on the complete resultant set of 
+If we play self-play games using I-ISMCTS with `n` visits, and train P, V and H on the complete resultant set of 
 self-play data, can we expect convergence to Nash Equilibrium, as `n` approaches infinity?
 
 Formally, if we imagine the combined weights of the P, V, and H networks to be a point in `R^d`, then the generations
-of training yields a path-like sequence of points in `R^d`: `x_1, x_2, ...`. The game's Nash equilibrium is some subset `NE` of `R^d`.
-Does `x_i` have a limit, and if so, is that limit in `NE`?
+of training yields a path-like sequence of points in `R^d`: `x_1, x_2, ...`. There is some subset `NE` of `R^d`
+representing the game's Nash equilibria. Does `x_i` have a limit, and if so, is that limit in `NE`?
 
 Here is a soft-proof that the answer is yes.
 
