@@ -181,3 +181,7 @@ self-play data should cause a drift in `R^d`.
 
 If the limit does not exist, then the `x_i` necessarily follow a cyclical path. If we train on the full self-play
 dataset, however, an infinite cyclical path is not possible; we must eventually fall into the path's interior.
+
+## TODO
+
+TODO: more details
