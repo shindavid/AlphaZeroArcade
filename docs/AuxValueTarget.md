@@ -22,7 +22,7 @@ an FPU (First Play Urgency) policy that provides a value for this undefined `Q(c
 AlphaZero can be quite sensitive to FPU policy, so many projects expend significant effort to tune FPU parameters.
 
 Instead of an unprincipled FPU policy, how about we use `V_c(n)` as the `Q(c)` term when `N(c) == 0`?
-This is the principled choice, as it is prediction of what `Q(c) ` will be after 1 visit to `c`.
+This is the principled choice, as it is prediction of what `Q(c)` will be after 1 visit to `c`.
 
 ## Idea 3 (Stochastic AlphaZero only): MCTS Backpropagation Denoising
 
@@ -50,13 +50,13 @@ V_e(n) = 0.7
 
 The average of these is `mu = 0.5`.
 
-Let's say we are backpropagating a value of 0.22 through c. The chance-correction here would be:
+Let's say we are backpropagating a value of 0.22 through `c`. The chance-correction here would be:
 
 ```
 mu - V_c(n) = 0.5 - 0.2 = 0.3
 ```
 
-So we would backpropagate `0.22` to `c`, but `0.22 + 0.3 = 0.52` to `n` and to `n`’s ancestors.
+So we would backpropagate `0.22` to `c`, but `0.22 + 0.3 = 0.52` to `n` and to `n`'s ancestors.
 
 The idea here is that sampling `c` was bad luck: `0.3` worth of bad luck, to be precise.
 It’s unfair to our running measurement of `n`'s quality to penalize it for that bad luck. 
@@ -66,12 +66,13 @@ we actually obtained evidence that `c` is _better_ than initially believed, and 
 and this idea removes that penalty.
 
 Note that in the correction term of `mu - V_c(n)`, we can consider replacing `mu` with `V(n)` or
-`Q(n)`, and we can consider replacing `V_c(n)` with `V(c)` or `Q(c)`. As `V`
-approaches perfection, `V(n)` and `mu` should be equivalent, and as `P` approaches perfection,
-`Q(n)` should also be equivalent. Similarly, as `V` approaches perfection, `V_c(n)` and `V(c)`
+`Q(n)`, and we can consider replacing `V_c(n)` with `V(c)` or `Q(c)`. As `V` and `V_c`
+approach perfection, `V(n)` and `mu` should be equivalent, and as `P` approaches perfection,
+`Q(n)` should also be equivalent. Similarly, as `V` and `V_c` approach perfection, `V_c(n)` and `V(c)`
 should be equivalent, and as `P` approaches perfection, `Q(c)` should also be equivalent.
 Our proposed choice of `mu` and `V_c(n)` guarantees that the correction adjustment
-is zero-meaned, even if the network is imperfect.
+is zero-meaned, even if the network is imperfect. Without this zero-mean guarantee, the adjustment
+may introduce a bias, and it is unclear what the impact of that bias may be.
 
 ## Idea 4 (Stochastic AlphaZero only): Value Target Denoising
 
@@ -89,7 +90,7 @@ zero-temperature-move is the same thing: experiencing a chance event that causes
 deviate from expectation. Deblundering similarly predicts the delta that the chance event induced and 
 corrects the value target according to that predicted delta. A difference is that deblundering uses 
 `Q` for this prediction while this idea uses aux value. Again, as suggested above, we can consider
-replacing `V_c(n)` with `Q(c)`, which would unify the ideas.
+replacing `V_c(n)` with `Q(c)`, which represents a sort of unification of the ideas.
 
 ## Idea 5 (Stochastic AlphaZero only): Auxiliary Value Target Regularization at Chance Nodes
 
