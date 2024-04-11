@@ -1,5 +1,4 @@
 from bokeh.embed import server_document
-from bokeh.io import curdoc
 from bokeh.plotting import figure
 from bokeh.server.server import Server
 from bokeh.themes import Theme
@@ -7,7 +6,7 @@ from flask import Flask, jsonify, render_template, request, session
 from tornado.ioloop import IOLoop
 
 import argparse
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import secrets
 from threading import Thread
 from typing import List
@@ -52,6 +51,7 @@ params = Params.create(parser.parse_args())
 
 bokeh_port = params.bokeh_port
 flask_port = params.flask_port
+theme = Theme(filename="static/theme.yaml")
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -68,7 +68,7 @@ def training_policy(doc):
     plot = figure(title=f"Training - Policy ({tag_str})")
     plot.line([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], line_color="blue")
     doc.add_root(plot)
-    doc.theme = Theme(filename="theme.yaml")
+    doc.theme = theme
 
 
 def training_value(doc):
@@ -80,7 +80,7 @@ def training_value(doc):
     plot = figure(title=f"Training - Value ({tag_str})")
     plot.line([1, 2, 3, 4, 5], [6, 9, 2, 1, 5], line_color="blue")
     doc.add_root(plot)
-    doc.theme = Theme(filename="theme.yaml")
+    doc.theme = theme
 
 
 def training_combined(doc):
@@ -92,7 +92,7 @@ def training_combined(doc):
     plot = figure(title=f"Training - Combined ({tag_str})")
     plot.line([1, 2, 3, 4, 5], [6, 3, 2, 3, 3], line_color="blue")
     doc.add_root(plot)
-    doc.theme = Theme(filename="theme.yaml")
+    doc.theme = theme
 
 
 def self_play(doc):
@@ -104,7 +104,7 @@ def self_play(doc):
     plot = figure(title=f"Self-Play ({tag_str})")
     plot.line([1, 2, 3, 4, 5], [5, 4, 3, 2, 1], line_color="red")
     doc.add_root(plot)
-    doc.theme = Theme(filename="theme.yaml")
+    doc.theme = theme
 
 
 def ratings(doc):
@@ -116,7 +116,7 @@ def ratings(doc):
     plot = figure(title=f"Ratings ({tag_str})")
     plot.line([1, 2, 3, 4, 5], [2, 3, 4, 5, 6], line_color="green")
     doc.add_root(plot)
-    doc.theme = Theme(filename="theme.yaml")
+    doc.theme = theme
 
 
 class Documents:
@@ -163,7 +163,7 @@ def bkapp_page():
     tags = session.get('tags', params.tags)
     docs = Documents(tags)
     data = docs.get_base_data()
-    return render_template("embed.html", template="Flask", **data)
+    return render_template("dashboard.html", template="Flask", **data)
 
 
 @app.route('/update_plots', methods=['POST'])
