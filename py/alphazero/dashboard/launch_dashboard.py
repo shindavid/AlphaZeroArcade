@@ -1,4 +1,4 @@
-from alphazero.dashboard.ratings import create_ratings_figure
+from alphazero.dashboard.ratings_figure import create_ratings_figure
 from alphazero.logic.run_params import RunParams
 
 from bokeh.embed import server_document
