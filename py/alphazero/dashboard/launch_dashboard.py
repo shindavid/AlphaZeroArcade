@@ -1,3 +1,6 @@
+from alphazero.dashboard.ratings import create_ratings_figure
+from alphazero.logic.run_params import RunParams
+
 from bokeh.embed import server_document
 from bokeh.plotting import figure
 from bokeh.server.server import Server
@@ -7,6 +10,7 @@ from tornado.ioloop import IOLoop
 
 import argparse
 from dataclasses import dataclass
+import os
 import secrets
 from threading import Thread
 from typing import List
@@ -16,38 +20,37 @@ from typing import List
 class Params:
     bokeh_port: int = 5012
     flask_port: int = 8002
-    tag_str: str = ''
     debug: bool = False
-
-    @property
-    def tags(self) -> List[str]:
-        return self.tag_str.split(',')
 
     @staticmethod
     def create(args) -> 'Params':
         return Params(
             bokeh_port=args.bokeh_port,
             flask_port=args.flask_port,
-            tag_str=args.tags,
             debug=bool(args.debug),
         )
 
     @staticmethod
     def add_args(parser):
+        group = parser.add_argument_group('Flaskh/Bokeh options')
+
         defaults = Params()
-        parser.add_argument('--bokeh-port', type=int, default=defaults.bokeh_port,
-                            help='bokeh port (default: %(default)s)')
-        parser.add_argument('--flask-port', type=int, default=defaults.flask_port,
-                            help='flask port (default: %(default)s)')
-        parser.add_argument('-t', '--tags', default=defaults.tag_str,
-                            help='comma-separated list of tags')
-        parser.add_argument('--debug', action='store_true', help='debug mode')
+        group.add_argument('--bokeh-port', type=int, default=defaults.bokeh_port,
+                           help='bokeh port (default: %(default)s)')
+        group.add_argument('--flask-port', type=int, default=defaults.flask_port,
+                           help='flask port (default: %(default)s)')
+        group.add_argument('--debug', action='store_true', help='debug mode')
 
 
 
 parser = argparse.ArgumentParser()
+
+RunParams.add_args(parser, multiple_tags=True)
 Params.add_args(parser)
-params = Params.create(parser.parse_args())
+
+args = parser.parse_args()
+run_params = RunParams.create(args, require_tag=False)
+params = Params.create(args)
 
 bokeh_port = params.bokeh_port
 flask_port = params.flask_port
@@ -57,6 +60,27 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
 if params.debug:
     app.debug = True
+
+game_dir = os.path.join(run_params.output_dir, run_params.game)
+if not os.path.isdir(game_dir):
+    raise ValueError(f'Directory does not exist: {game_dir}')
+
+all_tags = [d for d in os.listdir(game_dir) if os.path.isdir(os.path.join(game_dir, d))]
+if not all_tags:
+    raise ValueError(f'No directories found in {game_dir}')
+
+if run_params.tag:
+    tags = run_params.tag.split(',')
+    for tag in tags:
+        if not tag:
+            raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
+        path = os.path.join(run_params.output_dir, run_params.game, tag)
+        if not os.path.isdir(path):
+            raise ValueError(f'Directory does not exist: {path}')
+else:
+    tags = all_tags
+
+default_tags = tags
 
 
 def training_policy(doc):
@@ -109,17 +133,12 @@ def self_play(doc):
 
 def ratings(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-    if not tag_str:
-        return
-    tags = tag_str.split(',')
-
-    plot = figure(title=f"Ratings ({tag_str})")
-    plot.line([1, 2, 3, 4, 5], [2, 3, 4, 5, 6], line_color="green")
-    doc.add_root(plot)
+    tags = [t for t in tag_str.split(',') if t]
+    doc.add_root(create_ratings_figure(run_params.output_dir, run_params.game, tags))
     doc.theme = theme
 
 
-class Documents:
+class DocumentCollection:
     def __init__(self, tags: List[str]):
         tag_str = ','.join(tags)
 
@@ -143,7 +162,7 @@ class Documents:
             'training_data': self.training_data,
             'self_play': self.self_play,
             'ratings': self.ratings,
-            'tags': ['apple', 'banana', 'cherry', 'date', 'elderberry'],
+            'tags': all_tags,
             'init_tags': self.tags,
         }
 
@@ -160,17 +179,21 @@ class Documents:
 @app.route('/', methods=['GET'])
 def bkapp_page():
     # Get the tags from the session
-    tags = session.get('tags', params.tags)
-    docs = Documents(tags)
+    tags = session.get('tags', default_tags)
+    docs = DocumentCollection(tags)
     data = docs.get_base_data()
     return render_template("dashboard.html", template="Flask", **data)
 
 
 @app.route('/update_plots', methods=['POST'])
 def update_plots():
-    tags = list(request.form.lists())[0][1]  # I don't get it, but this works
+    form_lists = list(request.form.lists())
+    if not form_lists:
+        tags = []
+    else:
+        tags = form_lists[0][1]  # I don't get it, but this works
     session['tags'] = tags
-    docs = Documents(tags)
+    docs = DocumentCollection(tags)
     data = docs.get_update_data()
     return jsonify(data)
 
@@ -197,7 +220,10 @@ def bk_worker():
     server.io_loop.start()
 
 
-Thread(target=bk_worker).start()
+def main():
+    Thread(target=bk_worker).start()
+    app.run(port=flask_port)
+
 
 if __name__ == '__main__':
-    app.run(port=flask_port)
+    main()

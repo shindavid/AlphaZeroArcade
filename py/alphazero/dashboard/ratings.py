@@ -1,82 +1,36 @@
-#!/usr/bin/env python3
-
 """
-Use this script to visualize the progress of one or more alphazero runs.
-
-Usage:
-
-HOST1: ./py/alphazero/scripts/run_local.py -g <GAME> -t <TAG>
-
-While the above is running, launch the following, preferably from a different machine:
-
-HOST2: ./py/alphazero/scripts/run_ratings_server.py -g <GAME> -t <TAG> --loop-controller-host HOST1
-
-To visualize:
-
-./py/alphazero/scripts/viz_ratings.py -g <GAME> -t <TAG>
-
-If you have multiple main-loops (running or completed), you can pass a comma-separated list of tags
-for the -t option for both compute_ratings.py and viz_ratings.py. Or, you can leave out -t
-altogether to process all tags you have ever used for the given game.
-
-The visualizer will show a graph based on the rating data generated so-far by compute_ratings.py.
+Used by launch_dashboard.py to create a ratings plot.
 """
-import argparse
-from collections import defaultdict
-import os
-import pipes
-import sqlite3
-import sys
-from typing import List, Optional
-
-from bokeh.layouts import column, row
-from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup, Button
-from bokeh.palettes import Category20
-from bokeh.plotting import figure, curdoc
-import numpy as np
-import pandas as pd
-from scipy.signal import savgol_filter
-
 from alphazero.logic.custom_types import RatingTag
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 import games.index as game_index
 
+from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource, Span, RadioGroup, CheckboxGroup, Button
+from bokeh.palettes import Category20
+from bokeh.plotting import figure
+import numpy as np
+import pandas as pd
+from scipy.signal import savgol_filter
 
-class Params:
-    launch: bool
-    output_dir: str
-    game: str
-    tags: Optional[List[str]]
-    rating_tags: Optional[List[str]]
-    port: int
-
-    @staticmethod
-    def load(args):
-        Params.launch = bool(args.launch)
-        Params.output_dir = args.output_dir
-        Params.game = args.game
-        Params.tags = [t for t in args.tag.split(',') if t] if args.tag else None
-        Params.rating_tags = None if args.tag is None else args.rating_tag.split(',')
-        Params.tag = args.tag
-        Params.port = args.port
-
-    @staticmethod
-    def add_args(parser):
-        parser.add_argument('--launch', action='store_true', help=argparse.SUPPRESS)
-        parser.add_argument('-r', '--rating-tag', help='rating tags to include (default: all), '
-                            'comma-separated (e.g. "tag1,tag2"). Note that empty-string is the '
-                            'default tag, so use "" or ",tag" to specify that tag.')
-        parser.add_argument('-p', '--port', type=int, default=5006,
-                            help='bokeh port (default: %(default)s)')
-        RunParams.add_args(parser)
+from collections import defaultdict
+import os
+import sqlite3
+from typing import List
 
 
-def load_args():
-    parser = argparse.ArgumentParser()
-    Params.add_args(parser)
-    args = parser.parse_args()
-    Params.load(args)
+WIDTH = 800
+HEIGHT = 600
+
+
+def create_ratings_figure(output_dir: str, game: str, tags: List[str]):
+    if not tags:
+        # return a simple bokeh plot with a message
+        return figure(title='Please select a tag', width=WIDTH, height=HEIGHT)
+    data_list = get_rating_data_list(output_dir, game, tags)
+    viz = ProgressVisualizer(game, data_list)
+    return viz.root
 
 
 class RatingData:
@@ -149,16 +103,12 @@ def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
     rating_tags = [r[0] for r in res.fetchall()]
     conn.close()
 
-    if Params.rating_tags:
-        rating_tags = [t for t in rating_tags if t in Params.rating_tags]
-
     return [RatingData(run_params, t) for t in rating_tags]
 
 
-def get_rating_data_list():
-    tags = Params.tags
+def get_rating_data_list(output_dir: str, game: str, tags: List[str]):
     if not tags:
-        game_dir = os.path.join(Params.output_dir, Params.game)
+        game_dir = os.path.join(output_dir, game)
 
         tags = os.listdir(game_dir)
         # sort tags by mtime:
@@ -167,7 +117,7 @@ def get_rating_data_list():
 
     data_list = []
     for tag in tags:
-        run_params = RunParams(output_dir=Params.output_dir, game=Params.game, tag=tag)
+        run_params = RunParams(output_dir=output_dir, game=game, tag=tag)
         data_list.extend(make_rating_data_list(run_params))
 
     return data_list
@@ -186,12 +136,13 @@ class ProgressVisualizer:
     X_VARS = list(X_VAR_DICT.keys())
     X_VAR_COLUMNS = list(X_VAR_DICT.values())
 
-    def __init__(self, data_list: List[RatingData]):
+    def __init__(self, game: str, data_list: List[RatingData]):
+        self.game = game
         self.y_variable = 'rating_smoothed'
         self.x_var_index = 0
         self.sources = defaultdict(ColumnDataSource)
 
-        game = game_index.get_game_spec(Params.game)
+        game = game_index.get_game_spec(game)
         self.y_limit = game.reference_player_family.max_strength
 
         self.plotted_labels = set()
@@ -276,8 +227,8 @@ class ProgressVisualizer:
             x_range = [self.min_x_dict[col], self.max_x_dict[col]]
             y_range = [0, self.max_y+1]
 
-        title = f'{Params.game} Alphazero Ratings'
-        plot = figure(height=600, width=800, title=title, x_range=x_range, y_range=y_range,
+        title = f'{self.game} Alphazero Ratings'
+        plot = figure(width=WIDTH, height=HEIGHT, title=title, x_range=x_range, y_range=y_range,
                       y_axis_label='Rating', x_axis_label=cls.X_VARS[self.x_var_index],
                       active_scroll='xwheel_zoom',
                       tools='pan,box_zoom,xwheel_zoom,reset,save')
@@ -328,22 +279,3 @@ class ProgressVisualizer:
         inputs = column(plot, row(column(checkbox_group, reload_button, realign_button),
                                   radio_group))
         return plot, inputs
-
-
-def main():
-    load_args()
-
-    if not Params.launch:
-        script = os.path.abspath(__file__)
-        args = ' '.join(map(pipes.quote, sys.argv[1:] + ['--launch']))
-        cmd = f'bokeh serve --port {Params.port} --show {script} --args {args}'
-        sys.exit(os.system(cmd))
-    else:
-        data_list = get_rating_data_list()
-        viz = ProgressVisualizer(data_list)
-
-        curdoc().title = Params.game
-        curdoc().add_root(viz.root)
-
-
-main()
