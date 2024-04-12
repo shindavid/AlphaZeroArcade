@@ -1,5 +1,6 @@
 from alphazero.dashboard.ratings_figure import create_ratings_figure
 from alphazero.logic.run_params import RunParams
+from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
 from bokeh.embed import server_document
 from bokeh.plotting import figure
@@ -12,6 +13,7 @@ import argparse
 from dataclasses import dataclass
 import os
 import secrets
+import sqlite3
 from threading import Thread
 from typing import List
 
@@ -69,6 +71,29 @@ all_tags = [d for d in os.listdir(game_dir) if os.path.isdir(os.path.join(game_d
 if not all_tags:
     raise ValueError(f'No directories found in {game_dir}')
 
+
+all_training_heads = []
+for tag in all_tags:
+    rp = RunParams(run_params.output_dir, run_params.game, tag)
+    directory_organizer = DirectoryOrganizer(rp)
+    training_db_filename = directory_organizer.training_db_filename
+    if not os.path.isfile(training_db_filename):
+        continue
+
+    conn = sqlite3.connect(training_db_filename)
+    c = conn.cursor()
+
+    # get unique head_name values from table training_heads:
+    c.execute('SELECT DISTINCT head_name FROM training_heads')
+    heads = [r[0] for r in c.fetchall()]
+
+    for h in heads:
+        if h not in all_training_heads:
+            all_training_heads.append(h)
+
+    conn.close()
+
+
 if run_params.tag:
     tags = run_params.tag.split(',')
     for tag in tags:
@@ -83,28 +108,19 @@ else:
 default_tags = tags
 
 
-def training_policy(doc):
-    tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-    if not tag_str:
-        return
-    tags = tag_str.split(',')
+def training(head: str):
+    def training_inner(doc):
+        tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
+        if not tag_str:
+            return
+        tags = tag_str.split(',')
 
-    plot = figure(title=f"Training - Policy ({tag_str})")
-    plot.line([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], line_color="blue")
-    doc.add_root(plot)
-    doc.theme = theme
+        plot = figure(title=f"Training - {head} ({tag_str})")
+        plot.line([1, 2, 3, 4, 5], [6, 3, 2, 3, 3], line_color="blue")
+        doc.add_root(plot)
+        doc.theme = theme
 
-
-def training_value(doc):
-    tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-    if not tag_str:
-        return
-    tags = tag_str.split(',')
-
-    plot = figure(title=f"Training - Value ({tag_str})")
-    plot.line([1, 2, 3, 4, 5], [6, 9, 2, 1, 5], line_color="blue")
-    doc.add_root(plot)
-    doc.theme = theme
+    return training_inner
 
 
 def training_combined(doc):
@@ -113,8 +129,8 @@ def training_combined(doc):
         return
     tags = tag_str.split(',')
 
-    plot = figure(title=f"Training - Combined ({tag_str})")
-    plot.line([1, 2, 3, 4, 5], [6, 3, 2, 3, 3], line_color="blue")
+    plot = figure(title=f"Training - combined ({tag_str})")
+    plot.line([1, 2, 3, 4, 5], [5, 4, 2, 6, 1], line_color="red")
     doc.add_root(plot)
     doc.theme = theme
 
@@ -142,11 +158,12 @@ class DocumentCollection:
     def __init__(self, tags: List[str]):
         tag_str = ','.join(tags)
 
-        training_heads = ['policy', 'value', 'combined']
-
-        training_data = [(head, server_document(f'http://localhost:{bokeh_port}/training_{head}',
-                                                arguments={'tags': tag_str}))
-                        for head in training_heads]
+        training_data = [
+            (head, server_document(f'http://localhost:{bokeh_port}/training_head_{head}',
+                                   arguments={'tags': tag_str}))
+                                   for head in all_training_heads]
+        training_combined = server_document(f'http://localhost:{bokeh_port}/training_combined',
+                                            arguments={'tags': tag_str})
         self_play = server_document(f'http://localhost:{bokeh_port}/self_play',
                                     arguments={'tags': tag_str})
         ratings = server_document(f'http://localhost:{bokeh_port}/ratings',
@@ -154,12 +171,14 @@ class DocumentCollection:
 
         self.tags = tags
         self.training_data = training_data
+        self.training_combined = training_combined
         self.self_play = self_play
         self.ratings = ratings
 
     def get_base_data(self):
         return {
             'training_data': self.training_data,
+            'training_combined': self.training_combined,
             'self_play': self.self_play,
             'ratings': self.ratings,
             'tags': all_tags,
@@ -167,13 +186,14 @@ class DocumentCollection:
         }
 
     def get_update_data(self):
-        return {
-            'training_policy': self.training_data[0][1],
-            'training_value': self.training_data[1][1],
-            'training_combined': self.training_data[2][1],
+        d = {
+            'training_combined': self.training_combined,
             'self_play': self.self_play,
             'ratings': self.ratings,
-        }
+            }
+        for h, head in enumerate(all_training_heads):
+            d[f'training_head_{head}'] = self.training_data[h][1]
+        return d
 
 
 @app.route('/', methods=['GET'])
@@ -200,12 +220,12 @@ def update_plots():
 
 def bk_worker():
     apps = {
-        '/training_policy': training_policy,
-        '/training_value': training_value,
-        '/training_combined': training_combined,
         '/self_play': self_play,
         '/ratings': ratings,
     }
+
+    for head in all_training_heads:
+        apps[f'/training_head_{head}'] = training(head)
 
     allow_list = [
         f"localhost:{bokeh_port}",
