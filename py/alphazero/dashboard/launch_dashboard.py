@@ -1,4 +1,4 @@
-from alphazero.dashboard.ratings_figure import create_ratings_figure
+from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
