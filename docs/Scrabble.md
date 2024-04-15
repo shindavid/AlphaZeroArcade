@@ -88,8 +88,8 @@ an imperfect-information one.
 part of the game state that is visible to the acting player. Devise tree search mechanics that operate
 on this tree.
 
-Of the second category of approaches, there is Multiple-Observer Information Set MCTS (MO-ISMCTS),
-introduced by [Cowling et al, 2012](https://eprints.whiterose.ac.uk/75048/1/CowlingPowleyWhitehouse2012.pdf).
+Of the second category of approaches, there is Many Tree Information Set MCTS (MT-ISMCTS),
+introduced by [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf).
 This serves as the starting point of our planned implementation. We wish to extend it to use AlphaZero
 mechanics.
 
@@ -99,8 +99,9 @@ with our private information. The big question is how to handle non-root nodes. 
 level of the tree is not straightforward, because we are missing the private information of our opponent.
 Without that, we cannot construct a proper input to pass to the network, and so cannot obtain a P and V estimate.
 
-We thus need to instantiate the private information of our opponent. MO-ISMCTS does this by sampling
-uniformly randomly, which is not sound. Instead, we will train a _hidden-state_ neural network (H)
+We thus need to instantiate the private information of our opponent. [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
+describe a variety of approaches to do this sampling, with accompanying experimental results. Their work predates AlphaGo/AlphaZero.
+We will take the natural AlphaZero-inspired approach: train a _hidden-state_ neural network (H)
 that learns to sample the hidden state of the game. Note that in principle, H can be computed exactly from P via
 Bayes' Rule, but this computation can be expensive. So H can be considered an alternate representation of P that we
 use for computational tractability.
@@ -117,16 +118,9 @@ We can sample the entire `T`-tile leave by performing `ceil(T/t)` queries to H, 
 as part of the input. In general games, an appropriate representation of the game's hidden state should be chosen
 that allows for a tractable neural network output layer representation.
 
-Now, the proper way to do the descent, selection, and backpropagation steps in the ISMCTS setting is a bit tricky.
-The MO-ISMCTS algorithm described by Cowling et al, besides not sampling the hidden state soundly, also has
-an issue with inadvertently leaking private information between players during the tree search (see [here](MO_ISMCTS_soundness.md) for a detailed description of the issue).
-To address this issue, we will devise a new ISMCTS variant that entails a recursive spawning of trees to be processed in parallel as we
-descend the tree. We will tentatively name this variant _Inception_ ISMCTS (I-ISMCTS), as this recursive spawning is reminiscent of the 
-2010 film [Inception](https://en.wikipedia.org/wiki/Inception). TODO: provide details of I-ISMCTS.
-
 ## Convergence to Equilibrium
 
-If we play self-play games using I-ISMCTS with `n` visits, and train P, V and H on the complete resultant set of 
+If we play self-play games using MT-ISMCTS with `n` visits, and train P, V and H on the complete resultant set of 
 self-play data, can we expect convergence to Nash Equilibrium, as `n` approaches infinity?
 
 Formally, if we imagine the combined weights of the P, V, and H networks to be a point in `R^d`, then the generations
@@ -184,9 +178,12 @@ exploitable agent. Later, we will investigate how to deal with these issues prac
 
 ### Non-Complacency
 
-Suppose P, V and H are not at equilibrium. Then, there are game states at which they produce non-equilibrium estimates.
-ISMCTS should then produce a policy at one or more nodes that exploits these misestimates, and the resultant
-self-play data should cause a drift in `R^d`.
+Suppose P, V and H are not at equilibrium. Then, there are game states at which they produce non-equilibrium estimates
+(in other words, where P/V/H produce misestimates). Of these non-equilibrium states, choose a node `n` that is closest to
+a terminal game state. This means that `n` is misestimated while all descendants of `n` are correctly estimated.
+
+The networks cannot converge to this state, since `MT-ISMCTS` will produce a policy that exploits the
+misestimates at `n`, and this exploitation corresponds to a difference between `P` and `N` that will cause network drift.
 
 ### Limit-Existence
 
@@ -198,6 +195,6 @@ here purely for theoretical arguments.)
 
 (This part of the psuedo-proof is questionable.)
 
-## TODO
+## Details
 
 TODO: more details
