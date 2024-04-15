@@ -276,7 +276,7 @@ so passing the masks as a network input should not represent a significant extra
 
 In standard AlphaZero MCTS, when you reach a leaf node `n`, you obtain a V estimate from the network, and backpropagate
 that estimate up the tree. We can instead do a shallow rollout from `n`, down to some descendant `d`, and then
-instead generate our estimate at `d` and backpropagate that estimate to `n` (and `n`'s ancestors). The descent
+instead generate our estimate at `d` and backpropagate that estimate from `n` to the tree root. The descent
 from `n` to `d` can be done by sampling from `P` (and `H` and the bag) at each step. This generalizes Quackle's
 Monte Carlo sampling mechanics.
 
