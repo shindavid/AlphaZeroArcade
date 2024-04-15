@@ -50,10 +50,11 @@ This is because the value of a node in the game tree is dependent on the policy 
 
 Well...that’s only _partially_ true. It is true that the value of the node against the 
 _worst case_ adversary policy is dependent on the policy that got to that point in the tree. This is because
-given a policy `P` and its optimal counter-policy `Q`,
-`Q`'s behavior at a node `N` is dependent on `P`'s behavior across the _entire_ game-tree, 
+given a policy `P`, the behavior of its optimal counter-policy, `counter(P)`,
+at a node `N` is dependent on `P`'s behavior across the _entire_ game-tree, 
 rather than just on `P`'s behavior in the subtree rooted at `N`.
-However, against any given _fixed_ adversary policy, the value is independent of this previous policy.
+However, against any given _fixed_ adversary policy, the value is independent of the behavior of `P`
+outside of the subtree rooted at `N`.
 So, if we hold the adversary policy fixed, a tree-search subroutine like MCTS could still act as a
 policy improvement operator.
 
