@@ -197,4 +197,102 @@ here purely for theoretical arguments.)
 
 ## Details
 
-TODO: more details
+### Action Representation
+
+The number of possible moves in Scrabble can be large. One natural candidate move representation is of size 15 * 15 * 2 * 7! > 2e7.
+The move location is encoded by the (15, 15), the direction (horizontal or vertical) by the 2, and the ordering of tiles
+by the 7! = 840. This omits the letter-instantiation of the blank tiles, which technically can add another factor of 26^2.
+
+Besides this number being too large to reasonably use for an output logit layer, asking the network to learn to encode
+size-7 permutations is a tall task.
+
+We can instead adopt an approach that has been proven to work in other high-branching-factor games like Arimaa: decompose the
+move into _submoves_, and reformulate the game rules so that the current player takes multiple turns in a row. In Scrabble,
+we can for example decompose a real move into multiple submoves:
+
+1. Choose a board location + direction (15, 15, 2)
+2. Choose tile 1 (53)
+3. Choose tile 2 (53)
+4. ...
+
+The 53 here represents the 26 standard tiles and the 26 possible ways to play a blank tile, plus an extra 1 to indicate
+a null-terminator. This reduces the output layer size to a much more manageable size, while also eliminating the need for the network to
+learn permutation encodings.
+
+(We omit pass/exchange moves here for simplicity of exposition.)
+
+However, this decomposition has an undesirable property. To illustrate, consider holding a rack of `AEFINTS` in the starting
+position of the game. The bingo `8D FAINEST` is the best play. But this shares the same tree-prefix as the move `8D FATES`
+(specifically, they share the location/direction of `8D` and the first two tiles of `FA`). So the MCTS backpropagation step
+for the move `8D FAINEST` ends up incentivizing the move `8D FATES`, when the two moves don't have anything to do with each
+other.
+
+More broadly, a good move decomposition scheme ideally has the property that if a move is good, then other moves that
+share a decomposed-prefix are also likely to be good.
+
+We can improve the decomposition scheme by instead making the number of tiles in the move part of submove 1:
+
+1. Choose a board location + direction **+ move-size** (15, 15, 2, 7)
+2. Choose tile 1 (52)
+3. Choose tile 2 (52)
+4. ...
+
+In this scheme, `8D FAINEST` and `8D FATES` no longer share a decomposed-prefix.
+
+We can also consider merging tile-selections to be two-at-a-time, to decrease the number of submoves. 52^2 is still 
+completely manageable, and doing this merge reduces the number of network evaluations that would be needed.
+
+There may be other decomposition schemes that are better than this one. For example, the **point-value** of the
+play may serve a similar purpose as move-size, but generalize better. Experimentation is needed.
+
+### Network Requerying Optimization
+
+Repeatedly querying the network to generate a move in chunks, or to sample the hidden information in chunks, makes MCTS substantially
+costlier. It may be possible to mitigate this by decomposing the network into two subnetworks.
+The first, costlier subnetwork produces some compact internal representation.
+The second, cheaper subnetwork, accepts this internal representation as input, along with the partially produced
+output, and produces the next part of the output. Rather than querying a single expensive network `k` times, then, we
+query an expensive subnetwork once, and a cheap subnetwork `k` times.
+
+The Epinet ([Osband et al, 2023](https://arxiv.org/pdf/2107.08924.pdf)) has an architecture like this, although
+their motivation is different from ours.
+
+### Legal Move Mask
+
+In Scrabble, it may be difficult for the network to learn the set of legal moves in a given position. Doing this
+perfectly demands memorizing the entire lexicon, and it is unlikely the network can learn this through self-play,
+given that many words are unlikely to come up even once over the course of, say, 1 billion self-play games.
+
+We can consider helping the network along by first computing a mask of legal (sub-)moves, and then passing
+that mask as part of the input. The network should quickly learn that it should only place output mass on
+(sub-)moves where the mask is 1, and that moves where the mask is 1 should be considered when evaluating the
+value of the current position.
+
+The [GADDAG](https://en.wikipedia.org/wiki/GADDAG) data structure supports efficient calculation of a mask of all legal
+moves given a board and a rack. We need to compute GADDAG masks anyways to mask network policy outputs,
+so passing the masks as a network input should not represent a significant extra cost.
+
+### Leaf Rollouts
+
+In standard AlphaZero MCTS, when you reach a leaf node `n`, you obtain a V estimate from the network, and backpropagate
+that estimate up the tree. We can instead do a shallow rollout from `n`, down to some descendant `d`. The descent
+from `n` to `d` can be done by sampling from `P` (and `H` and the bag) at each step. This generalizes Quackle's
+Monte Carlo sampling mechanics.
+
+Without these leaf rollouts, we are dependent on V making accurate estimates. In general, for V to be perfect,
+the network requires a representation of the entire lexicon, which runs into the problems mentioned above. If
+the current/projected game state involves rare words that the network's implicit internal lexicon does not yet know,
+V could be deficient. Rollouts help us smoothen out this problem, since the moves along the rollout will be appropriately
+informed by GADDAG-calculated move masks.
+
+A downside of these leaf rollouts is that the randomness of the `H`-sampling and the bag-replenishing from `n` to `d`
+can introduce noise to the leaf evaluation. This can be mitigated by _MCTS Backpropagation Denoising_,
+a new idea of ours that is described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md).
+
+### Shared Network Representation
+
+Ideally, P, V, and H are all separate heads of one neural network, so that they benefit from a shared internal
+representation. It is unclear how to support this sort of architecture efficiently, given the planned chunk-wise
+sampling of H. Do we simply produce P and V outputs each time we sample H, and just discard them?
+
+For now, the plan is to have H as a separate network. We can explore different architectures in the future.
