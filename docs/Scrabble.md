@@ -83,7 +83,7 @@ provides a comprehensive survey of various workarounds. Broadly, there are two a
 learn a policy for this game using perfect-information tree-search techniques, and then somehow convert the perfect-information strategy into
 an imperfect-information one.
 
-3. Construct an _information set_ MCTS (ISMCTS) tree, where each node instead represents an _information set_. This is the
+3. Construct an _information set_ MCTS (ISMCTS) tree, where each node represents an _information set_. This is the
 part of the game state that is visible to the acting player. Devise tree search mechanics that operate
 on this tree.
 
@@ -100,15 +100,18 @@ Without that, we cannot construct a proper input to pass to the network, and so 
 
 We thus need to instantiate the private information of our opponent. MO-ISMCTS does this by sampling
 uniformly randomly, which is not sound. Instead, we will train a _hidden-state_ neural network (H)
-that learns to sample the hidden state of the game. In Scrabble, you can consider the opponent's entire rack as
-the hidden state, or you can consider just the leave. We choose to
+that learns to sample the hidden state of the game. Note that in principle, H can be computed exactly from P via
+Bayes' Rule, but this computation can be expensive. So H can be considered an alternate representation of P that we
+use for computational tractability.
+
+In Scrabble, you can consider the opponent's entire rack as the hidden state, or you can consider just the leave. We choose to
 use leaves rather than entire racks, as the training targets will be sharper without the diluting
 effect of the uniform random bag replenishment.
 
 H will accept the same inputs as P and V, and will be trained on self-play games using the actual leaves as training targets.
 
 There are `>1e7` possible leaves in Scrabble, and outputting a logit distribution over all of them is likely unwieldy. 
-Instead, we can have H sample the leave `t` tiles at a time, which only requires an output logic layer of size `27^t`.
+Instead, we can have H sample the leave `t` tiles at a time, which only requires an output logit layer of size `27^t`.
 We can sample the entire `T`-tile leave by performing `ceil(T/t)` queries to H, including the partially produced rack
 as part of the input. In general games, an appropriate representation of the game's hidden state should be chosen
 that allows for a tractable neural network output layer representation.
@@ -170,7 +173,7 @@ P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
 ```
 
 This is enough. We can make the convergence better by replacing the `(1 + N(a))` term in the PUCT formula with
-`max(1, N(a))`.
+`max(c, N(a))` for some fixed constant `0 < c < 1`.
 
 Some practicalities should be noted. Root softmax temperature must be disabled for this proof to work.
 Dirichlet noise also breaks the analysis. Finally, move-temperature has the potential to make the agent
