@@ -280,7 +280,7 @@ instead generate and backpropagate an estimate at `d`. The descent
 from `n` to `d` can be done by sampling from `P` (and `H` and the bag) at each step. This generalizes Quackle's
 Monte Carlo sampling mechanics.
 
-Without these leaf rollouts, we are dependent on V making accurate estimates. In general, for V to be perfect,
+Without these leaf rollouts, we may be overly sensitive to inaccuracies in V. In general, for V to be perfect,
 the network requires a representation of the entire lexicon, which runs into the problems mentioned above. If
 the current/projected game state involves rare words that the network's implicit internal lexicon does not yet know,
 V could be deficient. Rollouts help us smoothen out this problem, since the moves along the rollout will be appropriately
