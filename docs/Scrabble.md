@@ -288,7 +288,7 @@ informed by GADDAG-calculated move masks.
 
 A downside of these leaf rollouts is that the randomness of the `H`-sampling and the bag-replenishing from `n` to `d`
 can introduce noise to the leaf evaluation. This can be mitigated by _MCTS Backpropagation Denoising_,
-a new idea of ours that is described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md).
+a new idea of ours that is described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising).
 
 ### Shared Network Representation
 
