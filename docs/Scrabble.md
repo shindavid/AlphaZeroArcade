@@ -21,7 +21,7 @@ Grandmaster Kenji Matsumoto has detailed the weaknesses of this approach on this
 
 - The AI has poor long-term planning, not willing to hold strong tiles for multiple turns.
 - The uniform random assumption of the opponent’s rack is naive. In reality an opponent’s play gives us important information about their likely remaining tiles.
-- Equity estimation is ignorant of board dynamics.
+- The leave-estimator is ignorant of board dynamics.
 - Equity maximization fails to navigate the expectation-vs-variance tradeoff.
 
 This excellent [video](https://youtu.be/oBmnpNwqE48?si=LG_PQzKs3VDRP1TW&t=276) by world-class Scrabble player Will Anderson
@@ -100,7 +100,7 @@ level of the tree is not straightforward, because we are missing the private inf
 Without that, we cannot construct a proper input to pass to the network, and so cannot obtain a P and V estimate.
 
 We thus need to instantiate the private information of our opponent. [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
-describe a variety of approaches to sample this information, with accompanying experimental results. Their work predates AlphaGo/AlphaZero.
+propose a variety of approaches to sample this information, with accompanying experimental results. Their work predates AlphaGo/AlphaZero.
 We will take the natural AlphaZero-inspired approach: train a _hidden-state_ neural network (H)
 that learns to sample the hidden state of the game. Note that in principle, H can be computed exactly from P via
 Bayes' Rule, but this computation can be expensive. So H can be considered an alternate representation of P that we
