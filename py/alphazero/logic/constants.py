@@ -87,6 +87,8 @@ TRAINING_TABLE_CREATE_CMDS = [
             )""",
 
     """CREATE INDEX training_heads_idx ON training_heads (gen)""",
+
+    """CREATE INDEX training_heads_idx2 ON training_heads (head_name)""",
 ]
 
 

@@ -1,0 +1,15 @@
+attrs:
+    Plot:
+        background_fill_color: "#DDDDDD"
+        outline_line_color: white
+        toolbar_location: above
+        height: 800
+        width: 1000
+    Grid:
+        grid_line_dash: [6, 4]
+        grid_line_color: white
+    Axis:
+        axis_label_text_font_size: "16pt"  # Increase font size of axis labels
+        major_label_text_font_size: "12pt"  # Increase font size of axis ticks
+    Title:
+        text_font_size: "20pt"  # Increase font size of title
