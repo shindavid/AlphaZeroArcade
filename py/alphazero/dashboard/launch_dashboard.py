@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from alphazero.dashboard.training_app import create_training_figure, create_combined_training_figure
 from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.logic.run_params import RunParams
@@ -45,7 +46,6 @@ class Params:
         group.add_argument('--debug', action='store_true', help='debug mode')
 
 
-
 parser = argparse.ArgumentParser()
 
 RunParams.add_args(parser, multiple_tags=True)
@@ -57,7 +57,9 @@ params = Params.create(args)
 
 bokeh_port = params.bokeh_port
 flask_port = params.flask_port
-theme = Theme(filename="static/theme.yaml")
+
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+theme = Theme(filename=os.path.join(cur_dir, "static/theme.yaml"))
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
