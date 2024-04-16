@@ -100,8 +100,8 @@ level of the tree is not straightforward, because we are missing the private inf
 Without that, we cannot construct a proper input to pass to the network, and so cannot obtain a P and V estimate.
 
 We thus need to instantiate the private information of our opponent. [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
-propose a variety of approaches to sample this information, with accompanying experimental results. Their work predates AlphaGo/AlphaZero.
-We will modify this to use AlphaZero mechanics in the natural way: train a _hidden-state_ neural network (H)
+propose a variety of approaches to sample this information, with accompanying experimental results. 
+Instead of adopting one of their proposed approaches, we will instead use an AlphaZero-inspired approach: train a _hidden-state_ neural network (H)
 that learns to sample the hidden state of the game. Note that in principle, H can be computed exactly from P via
 Bayes' Rule, but this computation can be expensive. So H can be considered an alternate representation of P that we
 use for computational tractability.
