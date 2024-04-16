@@ -2,6 +2,7 @@
 from alphazero.dashboard.training_plotting import create_training_figure, \
     create_combined_training_figure
 from alphazero.dashboard.rating_plotting import create_ratings_figure
+from alphazero.dashboard.self_play_plotting import create_self_play_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
@@ -137,13 +138,8 @@ def training(doc):
 
 def self_play(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-    if not tag_str:
-        return
-    tags = tag_str.split(',')
-
-    plot = figure(title=f"Self-Play ({tag_str})")
-    plot.line([1, 2, 3, 4, 5], [5, 4, 3, 2, 1], line_color="red")
-    doc.add_root(plot)
+    tags = [t for t in tag_str.split(',') if t]
+    doc.add_root(create_self_play_figure(run_params.output_dir, run_params.game, tags))
     doc.theme = theme
 
 
