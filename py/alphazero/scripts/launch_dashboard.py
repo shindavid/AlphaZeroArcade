@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from alphazero.dashboard.training_app import create_training_figure, create_combined_training_figure
+from alphazero.dashboard.training_plotting import create_training_figure, \
+    create_combined_training_figure
 from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
