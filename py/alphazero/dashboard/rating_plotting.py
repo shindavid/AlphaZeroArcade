@@ -15,10 +15,9 @@ import numpy as np
 import pandas as pd
 from scipy.signal import savgol_filter
 
-from collections import defaultdict
 import os
 import sqlite3
-from typing import List
+from typing import Dict, List
 
 
 def create_ratings_figure(output_dir: str, game: str, tags: List[str]):
@@ -26,7 +25,7 @@ def create_ratings_figure(output_dir: str, game: str, tags: List[str]):
         return figure(title='No data available')
     data_list = get_rating_data_list(output_dir, game, tags)
     plotter = RatingPlotter(game, data_list)
-    return plotter.root
+    return plotter.figure
 
 
 class RatingData:
@@ -98,7 +97,7 @@ class RatingPlotter:
 
         self.x_var_selector = XVarSelector([rd.gen_df for rd in data_list])
         self.y_variable = 'rating_smoothed'
-        self.sources = defaultdict(ColumnDataSource)
+        self.sources: Dict[str, ColumnDataSource] = {}
 
         game = game_index.get_game_spec(game)
         self.y_limit = game.reference_player_family.max_strength
@@ -106,7 +105,7 @@ class RatingPlotter:
         self.plotted_labels = set()
         self.max_y = 0
         self.load(data_list)
-        self.plot, self.root = self.make_plot_and_root()
+        self.figure = self.make_figure()
 
     def load(self, data_list: List[RatingData]):
         self.data_list = data_list
@@ -133,7 +132,7 @@ class RatingPlotter:
             source = self.sources[label]
             plot.line('x', 'y', source=source, line_color=color, legend_label=label)
 
-    def make_plot_and_root(self):
+    def make_figure(self):
         y_range = [0, self.max_y+1]
         title = f'{self.game} Alphazero Ratings'
         plot = figure(title=title, x_range=[0, 1], y_range=y_range, y_axis_label='Rating',
@@ -151,10 +150,9 @@ class RatingPlotter:
         plot.legend.click_policy = 'hide'
 
         checkbox_group = self.make_checkbox_group()
-        radio_group = self.x_var_selector.create_radio_group(plot, list(self.sources.values()))
+        radio_group = self.x_var_selector.create_radio_group([plot], list(self.sources.values()))
 
-        inputs = column(plot, row(checkbox_group, radio_group))
-        return plot, inputs
+        return column(plot, row(checkbox_group, radio_group))
 
     def make_checkbox_group(self):
         checkbox_group = CheckboxGroup(labels=['Smoothed'], active=[0])

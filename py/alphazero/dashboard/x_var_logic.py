@@ -7,7 +7,7 @@ changes.
 """
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 
-from bokeh.models import ColumnDataSource, RadioGroup
+from bokeh.models import BasicTickFormatter, ColumnDataSource, CustomJSTickFormatter, RadioGroup
 from bokeh.plotting import figure
 import pandas as pd
 
@@ -104,23 +104,23 @@ class XVarSelector:
         plot.x_range.start = self._min_x_dict[x_col]
         plot.x_range.end = self._max_x_dict[x_col]
 
-    def create_radio_group(self, plot: figure, sources: List[ColumnDataSource]) -> RadioGroup:
+    def create_radio_group(self, plots: List[figure], sources: List[ColumnDataSource]) -> RadioGroup:
         labels = [x_var.label for x_var in X_VARS]
         radio_group = RadioGroup(labels=labels, active=self.x_index)
 
         def update_data(attr, old, new):
             x_index = radio_group.active
-            self.set_x_index(x_index, plot, sources)
+            self.set_x_index(x_index, plots, sources)
 
         radio_group.on_change('active', update_data)
         return radio_group
 
-    def set_x_index(self, x_index: int, plot: figure, sources: List[ColumnDataSource]):
+    def set_x_index(self, x_index: int, plots: List[figure], sources: List[ColumnDataSource]):
         """
         Performs the following:
 
         1. Sets the x-variable to the given index
-        2. Updates the axis-label and x-range of plot
+        2. Updates the axis-label and x-range of each plot in plots
         3. Updates source.data['x'] for each source in sources
         """
         prev_x_index = self._x_index
@@ -135,18 +135,34 @@ class XVarSelector:
         if prev_x_index == x_index:
             return
 
-        plot.xaxis.axis_label = self.x_label
-        start = plot.x_range.start
-        end = plot.x_range.end
         prev_x_min = self._min_x_dict[prev_x_col]
         prev_x_max = self._max_x_dict[prev_x_col]
         prev_x_width = prev_x_max - prev_x_min
 
-        if prev_x_width > 0:
-            start_pct = (start - prev_x_min) / prev_x_width
-            end_pct = (end - prev_x_min) / prev_x_width
-            x_min = self._min_x_dict[x_col]
-            x_max = self._max_x_dict[x_col]
-            x_width = x_max - x_min
-            plot.x_range.start = x_min + start_pct * x_width
-            plot.x_range.end = x_min + end_pct * x_width
+        for plot in plots:
+            plot.xaxis.axis_label = self.x_label
+            start = plot.x_range.start
+            end = plot.x_range.end
+            if prev_x_width > 0:
+                start_pct = (start - prev_x_min) / prev_x_width
+                end_pct = (end - prev_x_min) / prev_x_width
+                x_min = self._min_x_dict[x_col]
+                x_max = self._max_x_dict[x_col]
+                x_width = x_max - x_min
+                plot.x_range.start = x_min + start_pct * x_width
+                plot.x_range.end = x_min + end_pct * x_width
+
+            if x_col == 'runtime':
+                plot.xaxis.formatter = CustomJSTickFormatter(code="""
+                    var total_seconds = tick;
+                    var days = Math.floor(total_seconds / 86400);
+                    var hours = Math.floor((total_seconds % 86400) / 3600);
+                    var minutes = Math.floor((total_seconds % 3600) / 60);
+                    if (days > 0) {
+                        return days + "d " + hours + "h " + minutes + "m";
+                    } else {
+                        return hours + "h " + minutes + "m";
+                    }
+                """)
+            else:
+                plot.xaxis.formatter = BasicTickFormatter()

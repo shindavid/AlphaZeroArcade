@@ -60,6 +60,10 @@ class DirectoryOrganizer:
         game = args.game
         tag = args.tag
 
+        self.output_dir = output_dir
+        self.game = game
+        self.tag = tag
+
         self.base_dir = os.path.join(output_dir, game, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')

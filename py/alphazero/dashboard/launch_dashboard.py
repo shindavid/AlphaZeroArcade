@@ -1,3 +1,4 @@
+from alphazero.dashboard.training_app import create_training_figure, create_combined_training_figure
 from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
@@ -108,30 +109,20 @@ else:
 default_tags = tags
 
 
-def training(head: str):
+def training_head(head: str):
     def training_inner(doc):
         tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-        if not tag_str:
-            return
-        tags = tag_str.split(',')
-
-        plot = figure(title=f"Training - {head} ({tag_str})")
-        plot.line([1, 2, 3, 4, 5], [6, 3, 2, 3, 3], line_color="blue")
-        doc.add_root(plot)
+        tags = [t for t in tag_str.split(',') if t]
+        doc.add_root(create_training_figure(run_params.output_dir, run_params.game, tags, head))
         doc.theme = theme
 
     return training_inner
 
 
-def training_combined(doc):
+def training(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
-    if not tag_str:
-        return
-    tags = tag_str.split(',')
-
-    plot = figure(title=f"Training - combined ({tag_str})")
-    plot.line([1, 2, 3, 4, 5], [5, 4, 2, 6, 1], line_color="red")
-    doc.add_root(plot)
+    tags = [t for t in tag_str.split(',') if t]
+    doc.add_root(create_combined_training_figure(run_params.output_dir, run_params.game, tags))
     doc.theme = theme
 
 
@@ -158,11 +149,11 @@ class DocumentCollection:
     def __init__(self, tags: List[str]):
         tag_str = ','.join(tags)
 
-        training_data = [
-            (head, server_document(f'http://localhost:{bokeh_port}/training_head_{head}',
+        training_heads = [
+            (head, server_document(f'http://localhost:{bokeh_port}/training_{head}',
                                    arguments={'tags': tag_str}))
                                    for head in all_training_heads]
-        training_combined = server_document(f'http://localhost:{bokeh_port}/training_combined',
+        training = server_document(f'http://localhost:{bokeh_port}/training',
                                             arguments={'tags': tag_str})
         self_play = server_document(f'http://localhost:{bokeh_port}/self_play',
                                     arguments={'tags': tag_str})
@@ -170,15 +161,15 @@ class DocumentCollection:
                                 arguments={'tags': tag_str})
 
         self.tags = tags
-        self.training_data = training_data
-        self.training_combined = training_combined
+        self.training_heads = training_heads
+        self.training = training
         self.self_play = self_play
         self.ratings = ratings
 
     def get_base_data(self):
         return {
-            'training_data': self.training_data,
-            'training_combined': self.training_combined,
+            'training_heads': self.training_heads,
+            'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
             'tags': all_tags,
@@ -187,12 +178,12 @@ class DocumentCollection:
 
     def get_update_data(self):
         d = {
-            'training_combined': self.training_combined,
+            'training': self.training,
             'self_play': self.self_play,
             'ratings': self.ratings,
             }
         for h, head in enumerate(all_training_heads):
-            d[f'training_head_{head}'] = self.training_data[h][1]
+            d[f'training_{head}'] = self.training_heads[h][1]
         return d
 
 
@@ -220,12 +211,13 @@ def update_plots():
 
 def bk_worker():
     apps = {
+        '/training': training,
         '/self_play': self_play,
         '/ratings': ratings,
     }
 
     for head in all_training_heads:
-        apps[f'/training_head_{head}'] = training(head)
+        apps[f'/training_{head}'] = training_head(head)
 
     allow_list = [
         f"localhost:{bokeh_port}",

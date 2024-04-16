@@ -14,11 +14,10 @@
 
     <div class="sidebar">
 
+      <a href="#" class="sidebar-link active" data-plot-id="training">Training</a>
       <div class="sidebar-section">
-        <p>Training</p>
-        {% for item in training_data %}
-          <a href="#" class="sidebar-link {% if loop.first %}active{% endif %}"
-          data-plot-id="training_{{item[0]}}">
+        {% for item in training_heads %}
+          <a href="#" class="sidebar-link" data-plot-id="training_{{item[0]}}">
             {{item[0]}}
           </a>
         {% endfor %}
@@ -36,9 +35,9 @@
     </div>
 
     <div class="main-content">
-      {% for item in training_data %}
-        <div id="training_{{item[0]}}"
-        class="bokeh-plot {% if loop.first %}displayed{% else %}hidden{% endif %}">
+      <div id="training" class="bokeh-plot displayed">{{ training|safe }}</div>
+      {% for item in training_heads %}
+        <div id="training_{{item[0]}}" class="bokeh-plot hidden">
           {{ item[1]|safe }}
         </div>
       {% endfor %}
@@ -83,7 +82,7 @@
           var tag = input.value;
           if (event.type === "keyup" && event.keyCode === 13 && tags.includes(tag) && !selectedTags.includes(tag)) {
             selectedTags.push(tag);
-            displayTags();
+            displayTags(true);
             input.value = '';
           } else {
             var matchedTags = tags.filter(function(t) {
@@ -94,7 +93,7 @@
               result.textContent = t;
               result.onclick = function() {
                 selectedTags.push(t);
-                displayTags();
+                displayTags(true);
                 autocompleteResults.innerHTML = '';
               };
               autocompleteResults.appendChild(result);
@@ -102,7 +101,7 @@
           }
         }
 
-        function displayTags() {
+        function displayTags(update) {
           var container = document.getElementById("selected-tags");
           container.innerHTML = '';
           selectedTags.forEach(function(tag) {
@@ -113,13 +112,15 @@
             removeButton.onclick = function() {
               var index = selectedTags.indexOf(tag);
               selectedTags.splice(index, 1);
-              displayTags();
+              displayTags(true);
             };
             tagElement.appendChild(removeButton);
             container.appendChild(tagElement);
           });
 
-          updatePlots();
+          if (update) {
+            updatePlots();
+          }
         }
 
         function updatePlots() {
@@ -142,7 +143,7 @@
           });
         }
 
-        displayTags();
+        displayTags(false);
 
         var tagInput = document.getElementById("tag-input");
         tagInput.addEventListener("keyup", autocomplete);
