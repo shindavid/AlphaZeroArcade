@@ -11,6 +11,12 @@ The implementation aims to incorporate as many state-of-the-art ideas and techni
 In particular, it borrows heavily from [KataGo](https://github.com/lightvector/KataGo). Eventually, it hopes to work
 just-as-well as KataGo does for go, while minimizing go-specific details in its implementation.
 
+The framework also aims to support games that have one or more of the following characteristics:
+
+* Imperfect information
+* Randomness
+* `p` players for any `p >= 1`
+
 ## Getting Started
 
 ### Env setup
@@ -94,17 +100,17 @@ that the GPU's stay fully utilized, without the components thrashing with each o
 
 ### Measuring Progress
 
-When you run a ratings-server, either explicitly, or via the above `run_local.py` command, a series of matches are
-played between different generations of the MCTS agent against a game-specific _reference family_ of agents. The
-results of these matches are stored in a database, and can be visualized via:
+During-or-after a run of the loop-controller, you can launch a web dashboard to track the progress of your run:
 
 ```
-./py/alphazero/scripts/viz_ratings.py -g tictactoe -t my-first-run
+./py/alphazero/scripts/launch_dashboard.py -g tictactoe -t my-first-run --open-in-browser
 ```
 
-This will launch an interactive bokeh plot in your web-browser.
+This launches an interactive dashboard in your web browser, which currently looks like this:
 
-Here is an example plot for the game of Connect4:
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/663d1585-5fdd-4a5f-bcae-91d211559466)
+
+The "Ratings" item in the sidebar shows a plot like this:
 
 ![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/a8c1edb8-425e-4634-803f-086801aa59cd)
 
