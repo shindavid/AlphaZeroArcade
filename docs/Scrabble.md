@@ -155,7 +155,7 @@ By standard properties of Nash equilibria, the assumption of equilibrium transla
 `P(a) == 0` for all `a` not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
 of `v_max`.
 
-If `V` is accurate, as presumbed by the equilibrium hypothesis, then `Q(a)` at actions in `S` should converge
+If `V` is accurate, as presumed by the equilibrium hypothesis, then `Q(a)` at actions in `S` should converge
 towards `v_max`, while `Q(a)` at actions not in `S` should converge towards values less than `v_max`. Since
 `Q` dominates the equation as `N(a)` approach infinity, the proportion of `N` on actions not in `S`
 should approach 0. It remains to show that the ratio `N(a_i) / N(a_j)` approaches `P(a_i) / P(a_j)`
