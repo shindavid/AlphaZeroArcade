@@ -179,9 +179,9 @@ exploitable agent. Later, we will investigate how to deal with these issues prac
 
 ### Non-Complacency
 
-Suppose P, V and H are not at equilibrium. Then, there are game states at which they produce non-equilibrium estimates
-(in other words, where P/V/H produce misestimates). Of these non-equilibrium states, choose a node `n` that is closest to
-a terminal game state. This means that `n` is misestimated while all descendants of `n` are correctly estimated.
+Suppose P, V and H are not at equilibrium. Then, there are game states at which they produce estimates that
+are not at equilibrium with respect to their estimates at their descendants. Of these misestimated states,
+choose a node `n` that is closest to a terminal game state.
 
 The networks cannot converge to this state, since `MT-ISMCTS` will produce a policy that exploits the
 misestimates at `n`, and this exploitation corresponds to a difference between `P` and `N` that will cause network drift.
