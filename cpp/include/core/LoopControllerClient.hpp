@@ -45,6 +45,7 @@ class LoopControllerClient {
     std::string client_role;  // must be specified if port is specified
     std::string ratings_tag;
     std::string cuda_device = "cuda:0";
+    int manager_id = -1;
     int weights_request_generation = -1;
     bool report_metrics = true;
   };

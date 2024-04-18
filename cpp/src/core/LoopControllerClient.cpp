@@ -111,6 +111,9 @@ void LoopControllerClient::send_handshake() {
     aux["tag"] = ratings_tag();
     msg["aux"] = aux;
   }
+  if (params_.manager_id >= 0) {
+    msg["manager_id"] = params_.manager_id;
+  }
   socket_->json_write(msg);
 }
 
