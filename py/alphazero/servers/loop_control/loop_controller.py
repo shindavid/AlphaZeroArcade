@@ -276,7 +276,7 @@ class LoopController(LoopControllerInterface):
             self._client_connection_manager.start()
 
             self._self_play_manager.wait_for_gen0_completion()
-            self._training_manager.train_gen1_model_if_necessary()
+            self._training_manager.train_initial_generations()
 
             while True:
                 self._training_manager.wait_until_enough_training_data()

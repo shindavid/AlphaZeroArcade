@@ -15,7 +15,7 @@ f(n) = n^0.75, where n = |M|.
 This module provides a class, GamesDatasetGenerator, that tracks the master sequence M. This class
 produces GamesDataset objects, which correspond to a window W of M.
 """
-from typing import List
+from util.torch_util import Shape
 
 import numpy as np
 import os
@@ -23,7 +23,7 @@ import sqlite3
 import torch
 from torch.utils.data import Dataset
 
-from util.torch_util import Shape
+from typing import List, Optional
 
 
 pos_dtype = np.dtype([('client_id', 'i4'),
@@ -38,6 +38,10 @@ class PositionListSlice:
         self._start_index = 0  # index of master list, corresponds to self._positions[0]
         self._end_index = 0  # index of master list
         self._last_game_id = -1
+        self._max_forked_client_id = -1
+
+    def set_max_forked_client_id(self, max_forked_client_id: int):
+        self._max_forked_client_id = max_forked_client_id
 
     def __len__(self):
         return self._end_index - self._start_index
@@ -53,9 +57,17 @@ class PositionListSlice:
     def end_index(self):
         return self._end_index
 
-    def _get_positions(self, c: sqlite3.Cursor):
-        c.execute("""SELECT id, client_id, gen, end_timestamp, augmented_positions
-                  FROM games WHERE id > ?""", (self._last_game_id,))
+    @property
+    def max_forked_client_id(self):
+        return self._max_forked_client_id
+
+    def _get_positions(self, c: sqlite3.Cursor, gen: Optional[int]):
+        if gen is None:
+            c.execute("""SELECT id, client_id, gen, end_timestamp, augmented_positions
+                        FROM games WHERE id > ?""", (self._last_game_id,))
+        else:
+            c.execute("""SELECT id, client_id, gen, end_timestamp, augmented_positions
+                    FROM games WHERE id > ? AND gen < ?""", (self._last_game_id, gen))
         for row in c:
             game_id, client_id, gen, end_timestamp, augmented_positions = row
             assert game_id >= self._last_game_id, (game_id, self._last_game_id)
@@ -63,11 +75,11 @@ class PositionListSlice:
             for pos_index in range(augmented_positions):
                 yield (client_id, gen, end_timestamp, pos_index)
 
-    def set_bounds(self, cursor: sqlite3.Cursor, start: int, end:int):
+    def set_bounds(self, cursor: sqlite3.Cursor, start: int, end: int, gen: Optional[int]=None):
         assert start >= self._start_index, (start, end, self._start_index)
         assert 0 <= start < end, (start, end, self._start_index)
 
-        positions = np.fromiter(self._get_positions(cursor), dtype=pos_dtype)
+        positions = np.fromiter(self._get_positions(cursor, gen), dtype=pos_dtype)
         self._positions = np.concatenate([self._positions, positions])
 
         n_rows_to_cut = start - self._start_index
@@ -77,8 +89,9 @@ class PositionListSlice:
 
 
 class PositionDataset(Dataset):
-    def __init__(self, base_dir: str, positions: PositionListSlice):
+    def __init__(self, base_dir: str, forked_base_dir: Optional[str], positions: PositionListSlice):
         self._base_dir = base_dir
+        self._forked_base_dir = forked_base_dir
         self._positions = positions
         self._key_order: List[str] = []
 
@@ -149,7 +162,9 @@ class PositionDataset(Dataset):
         self._key_order = ['input'] + target_names
 
     def _get_filename(self, client_id: int, gen: int, end_ts: int) -> str:
-        return os.path.join(self._base_dir, 'self-play-data', f'client-{client_id}',
+        use_forked_dir = client_id <= self._positions.max_forked_client_id
+        base_dir = self._forked_base_dir if use_forked_dir else self._base_dir
+        return os.path.join(base_dir, 'self-play-data', f'client-{client_id}',
                             f'gen-{gen}', f'{end_ts}.pt')
 
     def __len__(self):

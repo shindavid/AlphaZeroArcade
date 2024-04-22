@@ -87,3 +87,23 @@ class DatabaseConnectionPool:
 
         conn = sqlite3.connect(self._db_filename)
         return conn
+
+
+def copy_db(source_filename: str, target_filename: str, where_clause: str):
+    conn = sqlite3.connect(source_filename)
+    conn.execute(f"ATTACH DATABASE '{target_filename}' AS target_db")
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table'")
+    tables = cursor.fetchall()
+
+    for table, sql in tables:
+        if table == 'sqlite_sequence':
+            continue
+
+        sql_target = sql.replace('CREATE TABLE', 'CREATE TABLE target_db.')
+        conn.execute(sql_target)
+        conn.execute(f"INSERT INTO target_db.{table} SELECT * FROM main.{table} WHERE {where_clause}")
+
+    conn.commit()
+    conn.close()
