@@ -90,20 +90,33 @@ class DatabaseConnectionPool:
 
 
 def copy_db(source_filename: str, target_filename: str, where_clause: str):
+    logger.info(f"Copying database from {source_filename} to {target_filename} "
+                f"with where clause: {where_clause}")
     conn = sqlite3.connect(source_filename)
     conn.execute(f"ATTACH DATABASE '{target_filename}' AS target_db")
 
     cursor = conn.cursor()
-    cursor.execute("SELECT name, sql FROM sqlite_master WHERE type='table'")
-    tables = cursor.fetchall()
 
-    for table, sql in tables:
+    # First, copy tables
+    cursor.execute(f'SELECT name, sql FROM sqlite_master WHERE type="table"')
+    for table, sql in cursor.fetchall():
         if table == 'sqlite_sequence':
             continue
 
+        logger.info(f"Copying table {table}...")
         sql_target = sql.replace('CREATE TABLE', 'CREATE TABLE target_db.')
         conn.execute(sql_target)
-        conn.execute(f"INSERT INTO target_db.{table} SELECT * FROM main.{table} WHERE {where_clause}")
+        conn.execute(
+            f"INSERT INTO target_db.{table} SELECT * FROM main.{table} WHERE {where_clause}")
+
+    # Next, copy triggers
+    cursor.execute(f'SELECT name, sql FROM sqlite_master WHERE type="trigger"')
+    for name, sql in cursor.fetchall():
+        logger.info(f"Copying trigger {name}...")
+        sql_target = sql.replace('CREATE TRIGGER ', f'CREATE TRIGGER target_db.')
+        conn.execute(sql_target)
 
     conn.commit()
     conn.close()
+
+    logger.info('Database copy complete.')
