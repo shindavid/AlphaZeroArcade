@@ -25,11 +25,23 @@ class SelfPlayManager:
         self._gen0_lock = threading.Lock()
         self._gen0_cond = threading.Condition(self._gen0_lock)
 
+        self._retrain_needed = False
+        self._retrain_lock = threading.Lock()
+        self._retrain_cond = threading.Condition(self._retrain_lock)
+
         self._gen1_model_trained = False
         self._gen1_lock = threading.Lock()
         self._gen1_cond = threading.Condition(self._gen1_lock)
 
         self._pending_game_data = []
+
+    def setup(self):
+        self._retrain_needed = self._controller.organizer.requires_retraining()
+
+    def signal_retraining_complete(self):
+        with self._retrain_lock:
+            self._retrain_needed = False
+            self._retrain_cond.notify_all()
 
     def wait_for_gen0_completion(self):
         self._set_gen0_completion(self._num_additional_gen0_positions_needed() == 0, log=False)
@@ -43,9 +55,11 @@ class SelfPlayManager:
             'game': self._controller.game_spec.name,
         }
         conn.socket.send_json(reply)
+
         self._controller.launch_recv_loop(
             self._server_msg_handler, conn, 'self-play-server',
-            disconnect_handler=self._handle_server_disconnect)
+            disconnect_handler=self._handle_server_disconnect,
+            preamble=self._wait_until_retrain_not_needed)
 
     def add_worker(self, conn: ClientConnection):
         conn.aux['ack_cond'] = threading.Condition()
@@ -66,6 +80,10 @@ class SelfPlayManager:
         with self._gen1_lock:
             self._gen1_model_trained = True
             self._gen1_cond.notify_all()
+
+    def _wait_until_retrain_not_needed(self):
+        with self._retrain_lock:
+            self._retrain_cond.wait_for(lambda: not self._retrain_needed)
 
     def _handle_server_disconnect(self, conn: ClientConnection):
         with self._gen0_lock:

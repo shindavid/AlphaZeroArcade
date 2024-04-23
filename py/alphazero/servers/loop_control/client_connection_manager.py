@@ -15,6 +15,7 @@ class ClientConnectionManager:
     def __init__(self, controller: LoopControllerInterface):
         self._controller = controller
         self._connections: List[ClientConnection] = []
+        self._manager_id_to_worker_id_map = {}
         self._lock = threading.Lock()
 
     def remove(self, conn: ClientConnection):
@@ -50,9 +51,13 @@ class ClientConnectionManager:
         start_timestamp = msg['start_timestamp']
         cuda_device = msg.get('cuda_device', '')
         aux = msg.get('aux', None)
+        manager_id = msg.get('manager_id', None)
+        client_id = self._manager_id_to_worker_id_map.get(manager_id, None)
 
         gpu_id = GpuId(ip_address, cuda_device)
-        clashing_conns = self._get_connections(gpu_id, client_role)
+        with self._lock:
+            conns = list(self._connections)
+        clashing_conns = [c for c in conns if c.client_gpu_id == gpu_id and c.client_role == role]
         if clashing_conns:
             logger.warn(f'Rejecting connection due to role/gpu clash: {clashing_conns[0]}')
 
@@ -65,13 +70,57 @@ class ClientConnectionManager:
             tmp_socket.close()
             return None
 
+        if client_id in [c.client_id for c in conns]:
+            logger.warn(f'Rejecting connection due to bad client-id reuse: {manager_id}, {client_id}, {conns}')
+
+            reply = {
+                'type': 'handshake-ack',
+                'rejection': 'illegal reuse of client-id',
+            }
+            tmp_socket = Socket(client_socket)
+            tmp_socket.send_json(reply)
+            tmp_socket.close()
+            return None
+
         with self._lock:
-            cursor = db_conn.cursor()
-            cursor.execute('INSERT INTO clients (ip_address, port, role, start_timestamp, cuda_device) VALUES (?, ?, ?, ?, ?)',
-                            (ip_address, port, role, start_timestamp, cuda_device)
-                            )
-            client_id = cursor.lastrowid
-            db_conn.commit()
+            if client_id is None:
+                cursor = db_conn.cursor()
+                cursor.execute('INSERT INTO clients (ip_address, port, role, start_timestamp, '
+                               'cuda_device) VALUES (?, ?, ?, ?, ?)',
+                               (ip_address, port, role, start_timestamp, cuda_device))
+                client_id = cursor.lastrowid
+                cursor.close()
+                db_conn.commit()
+
+                if manager_id is not None:
+                    self._manager_id_to_worker_id_map[manager_id] = client_id
+            else:
+                # Reuse client-id from previous connection.
+
+                cursor = db_conn.cursor()
+                cursor.execute('SELECT ip_address, role, cuda_device FROM clients WHERE id = ?',
+                               (client_id,))
+                row = cursor.fetchone()
+                cursor.close()
+
+                assert row is not None, client_id
+
+                # Validate that ip_address, port, role, cuda_device match
+                actual_tuple = tuple(row)
+                expected_tuple = (ip_address, role, cuda_device)
+                if actual_tuple != expected_tuple:
+                    logger.error(f'Client id {client_id} already exists with different attributes: '
+                                 f'{actual_tuple}, {expected_tuple}')
+
+                    reply = {
+                        'type': 'handshake-ack',
+                        'rejection': 'worker attributes changed since last connection',
+                        }
+                    tmp_socket = Socket(client_socket)
+                    tmp_socket.send_json(reply)
+                    tmp_socket.close()
+                    return None
+
 
         domain = Domain.from_role(client_role)
 
@@ -89,9 +138,3 @@ class ClientConnectionManager:
         func = logger.debug if conn.client_role == ClientRole.RATINGS_WORKER else logger.info
         func(f'Added connection: {conn}')
         return conn
-
-    def _get_connections(self, gpu_id: GpuId, role: ClientRole) -> List[ClientConnection]:
-        with self._lock:
-            conns = list(self._connections)
-
-        return [c for c in conns if c.client_gpu_id == gpu_id and c.client_role == role]

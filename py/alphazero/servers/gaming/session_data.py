@@ -1,7 +1,7 @@
 from .base_params import BaseParams
 from .log_forwarder import LogForwarder
 
-from alphazero.logic.custom_types import ClientRole
+from alphazero.logic.custom_types import ClientId, ClientRole
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
@@ -28,6 +28,7 @@ class SessionData:
         self._game = None
         self._game_spec = None
         self._socket: Optional[Socket] = None
+        self._client_id: Optional[ClientId] = None
 
     def init_socket(self):
         addr = (self._params.loop_controller_host, self._params.loop_controller_port)
@@ -57,6 +58,7 @@ class SessionData:
 
         client_id = data['client_id']
         self._game = data['game']
+        self._client_id = client_id
 
         log_forwarder.launch()
         logger.info(f'**** Starting {role.value} ****')
@@ -67,6 +69,12 @@ class SessionData:
         if self._socket is None:
             raise ValueError('loop controller socket not initialized')
         return self._socket
+
+    @property
+    def client_id(self) -> ClientId:
+        if self._client_id is None:
+            raise ValueError('client id not set')
+        return self._client_id
 
     @property
     def game(self) -> str:

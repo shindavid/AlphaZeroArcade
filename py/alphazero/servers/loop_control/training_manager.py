@@ -64,6 +64,10 @@ class TrainingManager:
         self._master_list_length = self._fetch_num_total_augmented_positions()
         self._latest_gen = self._controller.organizer.get_latest_model_generation()
 
+        if self._controller.organizer.fork_info is not None:
+            max_forked_client_id = self._controller.organizer.fork_info.max_client_id
+            self._master_list_slice.set_max_forked_client_id(max_forked_client_id)
+
     def wait_until_enough_training_data(self):
         training_params = self._controller.training_params
         with self._lock:
@@ -78,14 +82,17 @@ class TrainingManager:
         # TODO: progress-bar (use module tqdm)
         self._ready_event.wait()
 
+    def retrain_models(self):
+        if self._controller.organizer.fork_info is not None:
+            n_retrain_gens = len(self._controller.organizer.fork_info.train_windows)
+            while self._latest_gen < n_retrain_gens:
+                self.train_step(retrain_from_fork=True)
+
     def train_gen1_model_if_necessary(self):
-        """
-        Conditionally calls train_step() for generation 1.
-        """
         if self._latest_gen == 0:
             self.train_step()
 
-    def train_step(self):
+    def train_step(self, retrain_from_fork=False):
         """
         Performs a train step.
 
@@ -93,10 +100,16 @@ class TrainingManager:
         train step is complete.
         """
         organizer = self._controller.organizer
-        gen = organizer.get_latest_model_generation() + 1
-        self._extend_master_list()
+        fork_info = organizer.fork_info
 
-        dataset = PositionDataset(organizer.base_dir, self._master_list_slice)
+        forked_base_dir = None if fork_info is None else fork_info.forked_base_dir
+        gen = organizer.get_latest_model_generation() + 1
+        if retrain_from_fork:
+            self._extend_master_list_from_fork(gen)
+        else:
+            self._extend_master_list()
+
+        dataset = PositionDataset(organizer.base_dir, forked_base_dir, self._master_list_slice)
 
         logger.info('******************************')
         logger.info(f'Train gen:{gen}')
@@ -151,13 +164,15 @@ class TrainingManager:
                            ORDER BY id DESC LIMIT 1""")
             row = cursor.fetchone()
             cursor.close()
-        if row is None:
-            return 0
-        return row[0]
+        if row is not None:
+            return row[0]
+
+        return 0
 
     def _extend_master_list(self):
-        with self._controller.self_play_db_conn_pool.db_lock:
-            cursor = self._controller.self_play_db_conn_pool.get_cursor()
+        pool = self._controller.self_play_db_conn_pool
+        with pool.db_lock:
+            cursor = pool.get_cursor()
             cursor.execute(
                 """SELECT cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1""")
             row = cursor.fetchone()
@@ -171,6 +186,15 @@ class TrainingManager:
             end = n
 
             self._master_list_slice.set_bounds(cursor, start, end)
+            cursor.close()
+
+    def _extend_master_list_from_fork(self, gen):
+        start, end = self._controller.organizer.fork_info.train_windows[gen]
+
+        pool = self._controller.self_play_db_conn_pool
+        with pool.db_lock:
+            cursor = pool.get_cursor()
+            self._master_list_slice.set_bounds(cursor, start, end, gen)
             cursor.close()
 
     def _load_last_checkpoint(self):

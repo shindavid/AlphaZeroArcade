@@ -171,6 +171,7 @@ class RatingsServer:
             '--loop-controller-hostname', self._params.loop_controller_host,
             '--loop-controller-port', self._params.loop_controller_port,
             '--client-role', ClientRole.RATINGS_WORKER.value,
+            '--manager-id', self._session_data.client_id,
             '--ratings-tag', f'"{self._params.rating_tag}"',
             '--cuda-device', self._params.cuda_device,
             '--weights-request-generation', mcts_gen,

@@ -19,7 +19,13 @@ class DatabaseConnectionManager:
             organizer.ratings_db_filename, constants.RATINGS_TABLE_CREATE_CMDS)
 
     def _pools(self):
-        return [self.clients_db_conn_pool, self.self_play_db_conn_pool, self.training_db_conn_pool]
+        pools = [
+            self.clients_db_conn_pool,
+            self.self_play_db_conn_pool,
+            self.training_db_conn_pool,
+            self.ratings_db_conn_pool,
+        ]
+        return pools
 
     def close_db_conns(self, thread_id: ThreadId):
         for pool in self._pools():

@@ -46,6 +46,9 @@ inline auto LoopControllerClient::Params::make_options_description() {
           po::value<std::string>(&cuda_device)->default_value(cuda_device),
           "cuda device to register to the loop controller. Usually you need to specify this again "
           "for the MCTS player(s)")
+      .template add_option<"manager-id">(
+          po::value<int>(&manager_id)->default_value(manager_id),
+          "if specified, indicates the client-id of the manager of this process")
       .template add_option<"weights-request-generation">(
           po::value<int>(&weights_request_generation)->default_value(weights_request_generation),
           "if specified, requests this specific generation from the loop controller whenever "
