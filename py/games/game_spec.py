@@ -54,13 +54,6 @@ class GameSpec(abc.ABC):
         """
         return {}
 
-    @abc.abstractproperty
-    def default_model_config(self) -> str:
-        """
-        The default model configuration for this game.
-        """
-        pass
-
     @property
     def reference_player_family(self) -> Optional[ReferencePlayerFamily]:
         """

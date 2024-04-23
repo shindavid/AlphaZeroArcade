@@ -13,7 +13,7 @@ NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-def b19_c64(input_shape: Shape):
+def b7_c64(input_shape: Shape):
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_shape = (NUM_COLUMNS, )
@@ -39,20 +39,6 @@ def b19_c64(input_shape: Shape):
 
             ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block10', c_trunk, c_mid]),
-
-            ModuleSpec(type='ResBlock', args=['block11', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block12', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block13', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block14', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block15', c_trunk, c_mid]),
-
-            ModuleSpec(type='ResBlock', args=['block16', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block18', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
         ],
 
         heads=[
@@ -83,10 +69,9 @@ class Connect4Spec(GameSpec):
     extra_runtime_deps = ['extra_deps/connect4/c4solver',
                           'extra_deps/connect4/7x6.book']
     model_configs = {
-        'default': b19_c64,
-        'b19_c64': b19_c64,
+        'default': b7_c64,
+        'b7_c64': b7_c64,
     }
-    default_model_config = 'b19_c64'
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
     n_mcts_iters_for_ratings_matches = 100
 
