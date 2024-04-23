@@ -112,6 +112,9 @@ class DirectoryOrganizer:
         if os.path.isfile(self.fork_info_filename):
             self.fork_info = ForkInfo.load(self.fork_info_filename)
 
+    def requires_retraining(self):
+        return self.fork_info is not None and len(self.fork_info.train_windows) > 0
+
     def makedirs(self):
         os.makedirs(self.base_dir, exist_ok=True)
         os.makedirs(self.databases_dir, exist_ok=True)

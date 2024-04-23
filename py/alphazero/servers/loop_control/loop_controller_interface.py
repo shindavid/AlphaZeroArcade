@@ -11,7 +11,7 @@ from util.sqlite3_util import DatabaseConnectionPool
 
 import abc
 import socket
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 
 class LoopControllerInterface(abc.ABC):
@@ -97,7 +97,8 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def launch_recv_loop(self, msg_handler: MsgHandler, conn: ClientConnection, thread_name: str,
-                         disconnect_handler: Optional[DisconnectHandler] = None):
+                         disconnect_handler: Optional[DisconnectHandler] = None,
+                         preamble: Optional[Callable[[], None]] = None):
         pass
 
     @abc.abstractmethod

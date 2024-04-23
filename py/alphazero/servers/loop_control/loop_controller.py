@@ -28,7 +28,7 @@ import faulthandler
 import signal
 import socket
 import threading
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 
 logger = get_logger()
@@ -161,7 +161,8 @@ class LoopController(LoopControllerInterface):
             raise Exception(f'Unknown client type: {client_role}')
 
     def launch_recv_loop(self, msg_handler: MsgHandler, conn: ClientConnection, thread_name: str,
-                         disconnect_handler: Optional[DisconnectHandler] = None):
+                         disconnect_handler: Optional[DisconnectHandler] = None,
+                         preamble: Optional[Callable[[], None]] = None):
         """
         Launches a daemon thread that loops, receiving json messages from conn and calling
         msg_handler(conn, msg) for each message.
@@ -175,7 +176,7 @@ class LoopController(LoopControllerInterface):
         down.
         """
         threading.Thread(target=self._launch_recv_loop_inner, name=thread_name,
-                         args=(msg_handler, disconnect_handler, conn, thread_name),
+                         args=(msg_handler, disconnect_handler, conn, thread_name, preamble),
                          daemon=True).start()
 
     def handle_new_self_play_positions(self, n_augmented_positions: int):
@@ -221,8 +222,10 @@ class LoopController(LoopControllerInterface):
 
     def _launch_recv_loop_inner(
             self, msg_handler: MsgHandler, disconnect_handler: DisconnectHandler,
-            conn: ClientConnection, thread_name: str):
+            conn: ClientConnection, thread_name: str, preamble: Optional[Callable[[], None]]):
         try:
+            if preamble is not None:
+                preamble()
             while True:
                 msg = conn.socket.recv_json()
                 if msg_handler(conn, msg):
@@ -272,11 +275,16 @@ class LoopController(LoopControllerInterface):
             logger.info('Performing LoopController setup...')
             self._organizer.makedirs()
             self._init_socket()
+            self._self_play_manager.setup()
             self._training_manager.setup()
             self._client_connection_manager.start()
 
-            self._self_play_manager.wait_for_gen0_completion()
-            self._training_manager.train_initial_generations()
+            if self._organizer.requires_retraining():
+                self._training_manager.retrain_models()
+                self._self_play_manager.signal_retraining_complete()
+            else:
+                self._self_play_manager.wait_for_gen0_completion()
+                self._training_manager.train_gen1_model_if_necessary()
 
             while True:
                 self._training_manager.wait_until_enough_training_data()

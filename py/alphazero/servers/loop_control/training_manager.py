@@ -63,6 +63,7 @@ class TrainingManager:
         self._last_sample_window = self._load_last_sample_window()
         self._master_list_length = self._fetch_num_total_augmented_positions()
         self._latest_gen = self._controller.organizer.get_latest_model_generation()
+
         if self._controller.organizer.fork_info is not None:
             max_forked_client_id = self._controller.organizer.fork_info.max_client_id
             self._master_list_slice.set_max_forked_client_id(max_forked_client_id)
@@ -81,11 +82,13 @@ class TrainingManager:
         # TODO: progress-bar (use module tqdm)
         self._ready_event.wait()
 
-    def train_initial_generations(self):
+    def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
-            for _ in range(len(self._controller.organizer.fork_info.train_windows)):
+            n_retrain_gens = len(self._controller.organizer.fork_info.train_windows)
+            while self._latest_gen < n_retrain_gens:
                 self.train_step(retrain_from_fork=True)
 
+    def train_gen1_model_if_necessary(self):
         if self._latest_gen == 0:
             self.train_step()
 
