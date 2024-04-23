@@ -108,7 +108,7 @@ propose a variety of approaches to sample this information, with accompanying ex
 Instead of adopting one of their proposed approaches, we will instead use an AlphaZero-inspired approach: train a _hidden-state_ neural network (H)
 that learns to sample the hidden state of the game. Note that in principle, H can be computed exactly from P via
 Bayes' Rule, but this computation can be expensive. So H can be considered an alternate representation of P that we
-use for computational tractability.
+use to avoid an expensive online Bayes' Rule calculation.
 
 In Scrabble, you can consider the opponent's entire rack as the hidden state, or you can consider just the leave. We choose to
 use leaves rather than entire racks, as the training targets will be sharper without the diluting
