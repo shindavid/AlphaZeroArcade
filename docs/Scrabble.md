@@ -199,6 +199,16 @@ here purely for theoretical arguments.)
 
 (This part of the psuedo-proof is questionable.)
 
+### Experiments
+
+We have done some simple ISMCTS experiments in the game of Kuhn Poker and validated some of the above theory.
+When starting at equilibrium, ISMCTS acts close to an idempotent operator. When starting at non-equilibrium, repeated
+applications of ISMCTS leads to a path that spirals around and converges to equilibrium. The MCTS Backpropagation Denoising
+technique described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising)
+appears to be critical to making this work.
+
+TODO: make a page describing the Kuhn poker experiments and link to it here.
+
 ## Details
 
 ### Action Representation
@@ -292,8 +302,8 @@ V could be deficient. Rollouts help us smoothen out this problem, since the move
 informed by GADDAG-calculated move masks.
 
 A downside of these leaf rollouts is that the randomness of the `H`-sampling and the bag-replenishing from `n` to `d`
-can introduce noise to the leaf evaluation. This can be mitigated by _MCTS Backpropagation Denoising_,
-a new idea of ours that is described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising).
+can introduce noise to the leaf evaluation. This can be mitigated by the MCTS Backpropagation Denoising technique
+described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising).
 
 ### Shared Network Representation
 
