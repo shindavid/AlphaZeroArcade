@@ -72,6 +72,15 @@ auto sample(const Tensor& tensor) {
 }
 
 template <FixedTensorConcept Tensor>
+bool normalize(Tensor& tensor, double eps) {
+  auto s = sum(tensor);
+  if (s < eps) return false;
+
+  tensor = tensor / s;
+  return true;
+}
+
+template <FixedTensorConcept Tensor>
 void randomly_zero_out(Tensor& tensor, int n) {
   using Shape = extract_shape_t<Tensor>;
   constexpr size_t N = Shape::total_size;

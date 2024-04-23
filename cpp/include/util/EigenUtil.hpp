@@ -287,6 +287,15 @@ template <FixedTensorConcept Tensor>
 auto sample(const Tensor& tensor);
 
 /*
+ * Divides tensor by its sum.
+ *
+ * If the sum is less than eps, then tensor is left unchanged and returns false. Otherwise,
+ * returns true.
+ */
+template <FixedTensorConcept Tensor>
+bool normalize(Tensor& tensor, double eps=1e-8);
+
+/*
  * Uniformly randomly picks n nonzero elements of tensor and sets them to zero.
  *
  * Requires that tensor contains at least n nonzero elements.

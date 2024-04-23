@@ -89,13 +89,6 @@ struct GameStateTypes {
   static void validate_action(const Action& action, const ActionMask& valid_actions);
 
   /*
-   * Rescales policy to sum to 1.
-   *
-   * If policy is all zeros, then policy is altered to be uniformly positive where mask is true.
-   */
-  static void normalize(const ActionMask& mask, PolicyTensor& policy);
-
-  /*
    * Provides variable bindings, so that we can specify certain config variables as expressions of
    * game parameters. See util/Math.hpp
    *

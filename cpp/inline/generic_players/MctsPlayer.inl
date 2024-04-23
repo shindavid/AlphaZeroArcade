@@ -168,7 +168,9 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
     eigen_util::randomly_zero_out(valid_actions_subset,
                                   eigen_util::count(valid_actions_subset) / 2);
     GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions_subset, policy);
-    GameStateTypes::normalize(valid_actions_subset, policy);
+    if (!eigen_util::normalize(policy)) {
+      policy = valid_actions_subset.template cast<torch_util::dtype>();
+    }
   } else {
     policy = mcts_results->counts;
   }
@@ -176,12 +178,13 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
   if (search_mode != kRawPolicy) {
     float temp = move_temperature_.value();
     if (temp != 0) {
+      eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
       policy = policy.pow(1.0 / temp);
     } else {
       /*
        * This is awkward, but I couldn't get a simpler incantation to work. I want to do:
        *
-       * policiy = (policy == policy.maximum()).template cast<torch_util::dtype>();
+       * policy = (policy == policy.maximum()).template cast<torch_util::dtype>();
        *
        * But the above doesn't work.
        */
@@ -192,14 +195,14 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
     }
   }
 
-  if (eigen_util::sum(policy) == 0) {
-    // This happens if MCTS proves that the position is losing. In this case we just choose a random
-    // valid action.
+  if (!eigen_util::normalize(policy)) {
+    // This can happen if MCTS proves that the position is losing. In this case we just choose a
+    // random valid action.
     policy = valid_actions.template cast<torch_util::dtype>();
+    eigen_util::normalize(policy);
   }
 
   if (verbose_info_) {
-    policy = policy / eigen_util::sum(policy);
     GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->action_policy);
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;

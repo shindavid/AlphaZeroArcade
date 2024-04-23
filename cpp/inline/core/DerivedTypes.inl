@@ -129,16 +129,6 @@ void GameStateTypes<GameState>::validate_action(const Action& action,
 }
 
 template <typename GameState>
-void GameStateTypes<GameState>::normalize(const ActionMask& mask, PolicyTensor& policy) {
-  dtype sum = eigen_util::sum(policy);
-  if (!sum) {
-    policy = mask.template cast<dtype>();
-    sum = eigen_util::sum(policy);
-  }
-  policy = policy / sum;
-}
-
-template <typename GameState>
 math::var_bindings_map_t GameStateTypes<GameState>::get_var_bindings() {
   math::var_bindings_map_t bindings;
   bindings["b"] = kMaxNumLocalActions;
