@@ -44,19 +44,9 @@ Noteworthy options:
 
     group = parser
 
-    env_var = 'A0A_OUTPUT_DIR'
-    default_output_dir = os.environ.get(env_var, None)
-
-    if default_output_dir is None:
-        print(f'Environment variable {env_var} is not set. Please run '
-              f'"source env_setup.sh" from repo root.')
-        sys.exit(0)
-
     game_index.add_parser_argument(group, '-g', '--game')
     group.add_argument('-f', '--from-tag', help='tag to fork from')
     group.add_argument('-t', '--to-tag', help='tag to fork to')
-    group.add_argument('--output-dir', default=default_output_dir,
-                        help=f'alphazero directory (default: ${env_var}=%(default)s)')
     group.add_argument('--hard-fork', action='store_true',
                        help='copies self-play data from the previous run. By default, '
                        'the new run will still point to the previous run for self-play data.')
@@ -83,8 +73,8 @@ def main():
 
     assert game_index.is_valid_game_name(args.game), f'Invalid game name: {args.game}'
 
-    from_params = RunParams(args.output_dir, args.game, args.from_tag)
-    to_params = RunParams(args.output_dir, args.game, args.to_tag)
+    from_params = RunParams(args.game, args.from_tag)
+    to_params = RunParams(args.game, args.to_tag)
 
     from_organizer = DirectoryOrganizer(from_params)
     to_organizer = DirectoryOrganizer(to_params)

@@ -6,5 +6,5 @@ from bokeh.plotting import figure
 from typing import List
 
 
-def create_self_play_figure(output_dir: str, game: str, tags: List[str]):
+def create_self_play_figure(game: str, tags: List[str]):
     return figure(title='TODO: show self-play metrics')

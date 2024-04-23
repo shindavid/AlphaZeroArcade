@@ -26,10 +26,10 @@ import sqlite3
 from typing import Dict, List, Optional
 
 
-def create_training_figure(output_dir: str, game: str, tags: List[str], head: str):
+def create_training_figure(game: str, tags: List[str], head: str):
     head_data_list: List[HeadData] = []
     for tag in tags:
-        run_params = RunParams(output_dir, game, tag)
+        run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params)
 
         conn = sqlite3.connect(organizer.training_db_filename)
@@ -49,10 +49,10 @@ def create_training_figure(output_dir: str, game: str, tags: List[str], head: st
     return plotter.figure
 
 
-def create_combined_training_figure(output_dir: str, game: str, tags: List[str]):
+def create_combined_training_figure(game: str, tags: List[str]):
     head_data_list: List[HeadData] = []
     for tag in tags:
-        run_params = RunParams(output_dir, game, tag)
+        run_params = RunParams(game, tag)
         organizer = DirectoryOrganizer(run_params)
 
         conn = sqlite3.connect(organizer.training_db_filename)

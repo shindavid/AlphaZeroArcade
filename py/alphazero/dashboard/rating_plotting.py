@@ -20,10 +20,10 @@ import sqlite3
 from typing import Dict, List
 
 
-def create_ratings_figure(output_dir: str, game: str, tags: List[str]):
+def create_ratings_figure(game: str, tags: List[str]):
     if not tags:
         return figure(title='No data available')
-    data_list = get_rating_data_list(output_dir, game, tags)
+    data_list = get_rating_data_list(game, tags)
     plotter = RatingPlotter(game, data_list)
     return plotter.figure
 
@@ -82,10 +82,10 @@ def make_rating_data_list(run_params: RunParams) -> List[RatingData]:
     return [rd for rd in data_list if rd.valid]
 
 
-def get_rating_data_list(output_dir: str, game: str, tags: List[str]):
+def get_rating_data_list(game: str, tags: List[str]):
     data_list = []
     for tag in tags:
-        run_params = RunParams(output_dir=output_dir, game=game, tag=tag)
+        run_params = RunParams(game=game, tag=tag)
         data_list.extend(make_rating_data_list(run_params))
 
     return data_list

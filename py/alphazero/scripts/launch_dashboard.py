@@ -5,6 +5,7 @@ from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.dashboard.self_play_plotting import create_self_play_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from util.env_util import get_output_dir
 
 from bokeh.embed import server_document
 from bokeh.plotting import figure
@@ -74,7 +75,7 @@ app.secret_key = secrets.token_hex(16)
 if params.debug:
     app.debug = True
 
-game_dir = os.path.join(run_params.output_dir, run_params.game)
+game_dir = os.path.join(get_output_dir(), run_params.game)
 if not os.path.isdir(game_dir):
     raise ValueError(f'Directory does not exist: {game_dir}')
 
@@ -85,7 +86,7 @@ if not all_tags:
 
 all_training_heads = []
 for tag in all_tags:
-    rp = RunParams(run_params.output_dir, run_params.game, tag)
+    rp = RunParams(run_params.game, tag)
     directory_organizer = DirectoryOrganizer(rp)
     training_db_filename = directory_organizer.training_db_filename
     if not os.path.isfile(training_db_filename):
@@ -110,7 +111,7 @@ if run_params.tag:
     for tag in tags:
         if not tag:
             raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
-        path = os.path.join(run_params.output_dir, run_params.game, tag)
+        path = os.path.join(get_output_dir(), run_params.game, tag)
         if not os.path.isdir(path):
             raise ValueError(f'Directory does not exist: {path}')
 else:
@@ -123,7 +124,7 @@ def training_head(head: str):
     def training_inner(doc):
         tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
         tags = [t for t in tag_str.split(',') if t]
-        doc.add_root(create_training_figure(run_params.output_dir, run_params.game, tags, head))
+        doc.add_root(create_training_figure(run_params.game, tags, head))
         doc.theme = theme
 
     return training_inner
@@ -132,21 +133,21 @@ def training_head(head: str):
 def training(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
     tags = [t for t in tag_str.split(',') if t]
-    doc.add_root(create_combined_training_figure(run_params.output_dir, run_params.game, tags))
+    doc.add_root(create_combined_training_figure(run_params.game, tags))
     doc.theme = theme
 
 
 def self_play(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
     tags = [t for t in tag_str.split(',') if t]
-    doc.add_root(create_self_play_figure(run_params.output_dir, run_params.game, tags))
+    doc.add_root(create_self_play_figure(run_params.game, tags))
     doc.theme = theme
 
 
 def ratings(doc):
     tag_str = doc.session_context.request.arguments.get('tags')[0].decode()
     tags = [t for t in tag_str.split(',') if t]
-    doc.add_root(create_ratings_figure(run_params.output_dir, run_params.game, tags))
+    doc.add_root(create_ratings_figure(run_params.game, tags))
     doc.theme = theme
 
 
