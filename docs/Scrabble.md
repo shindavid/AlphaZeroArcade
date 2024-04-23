@@ -246,8 +246,9 @@ In this scheme, `8D FAINEST` and `8D FATES` no longer share a decomposed-prefix.
 We can also consider merging tile-selections to be two-at-a-time, to decrease the number of submoves. 52^2 is still 
 completely manageable, and doing this merge reduces the number of network evaluations that would be needed.
 
-There may be other decomposition schemes that are better than this one. For example, the **point-value** of the
-play may serve a similar purpose as move-size, but generalize better. Experimentation is needed.
+There may be other decomposition schemes that are better than this one. For example, we can first choose the subset of
+letters to be used (there are 2^7 = 128 possibilities), followed by the location, followed by the individual tiles.
+It could be better to join the subset and the location, for a size of (128, 15, 15). Experimentation is needed.
 
 ### Network Requerying Optimization
 
