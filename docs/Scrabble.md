@@ -77,137 +77,18 @@ long-term improvement towards equilibrium _across_ generations?
 
 ## Information Set MCTS (ISMCTS)
 
-In perfect information settings, each node of an MCTS tree represents a full game state. In imperfect
-information settings, the acting agent lacks visibility into all hidden information, and so cannot
-construct such a tree.
+We have devised a version of MCTS that, when used in an AlphaZero loop, is guaranteed to yield
+policy convergences towards Nash Equilibrium. See [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/ISMCTS.md)
 
-[Blüml et al, 2023](https://www.frontiersin.org/articles/10.3389/frai.2023.1014561/full)
-provides a comprehensive survey of various workarounds. Broadly, there are two approaches:
-
-1. _Determinize_ the game by converting the imperfect information game into a perfect information one,
-learn a policy for this game using perfect-information tree-search techniques, and then somehow convert the perfect-information strategy into
-an imperfect-information one.
-
-3. Construct an _information set_ MCTS (ISMCTS) tree, where each node represents an _information set_. This is the
-part of the game state that is visible to the acting player. Devise tree search mechanics that operate
-on this tree.
-
-Of the second category of approaches, there is Many Tree Information Set MCTS (MT-ISMCTS),
-introduced by [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf).
-This serves as the starting point of our planned implementation. We wish to extend it to use AlphaZero
-mechanics.
-
-Obtaining a policy (P) and value (V) estimate at the root of the tree, when we are the current
-acting player, is straightforward: train a neural network that takes as input the public game state together
-with our private information. The big question is how to handle non-root nodes. Recursing at the next
-level of the tree is not straightforward, because we are missing the private information of our opponent.
-Without that, we cannot construct a proper input to pass to the network, and so cannot obtain a P and V estimate.
-
-We thus need to instantiate the private information of our opponent. [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
-propose a variety of approaches to sample this information, with accompanying experimental results. 
-Instead of adopting one of their proposed approaches, we will instead use an AlphaZero-inspired approach: train a _hidden-state_ neural network (H)
-that learns to sample the hidden state of the game. Note that in principle, H can be computed exactly from P via
-Bayes' Rule, but this computation can be expensive. So H can be considered an alternate representation of P that we
-use to avoid an expensive online Bayes' Rule calculation.
-
+In this version of MCTS, we require a hidden-state-network, `H`, that samples the hidden state of the game.
 In Scrabble, you can consider the opponent's entire rack as the hidden state, or you can consider just the leave. We choose to
 use leaves rather than entire racks, as the training targets will be sharper without the diluting
 effect of the uniform random bag replenishment.
 
-H will accept the same inputs as P and V, and will be trained on self-play games using the actual leaves as training targets.
-
 There are `>1e7` possible leaves in Scrabble, and outputting a logit distribution over all of them is likely unwieldy. 
 Instead, we can have H sample the leave `t` tiles at a time, which only requires an output logit layer of size `27^t`.
 We can sample the entire `T`-tile leave by performing `ceil(T/t)` queries to H, including the partially produced rack
-as part of the input. In general games, an appropriate representation of the game's hidden state should be chosen
-that allows for a tractable neural network output layer representation.
-
-## Convergence to Equilibrium
-
-If we play self-play games using MT-ISMCTS with `n` visits, and train P, V and H on the complete resultant set of 
-self-play data, can we expect convergence to Nash Equilibrium, as `n` approaches infinity?
-
-Formally, if we imagine the combined weights of the P, V, and H networks to be a point in `R^d`, then the generations
-of training yields a path-like sequence of points in `R^d`: `x_1, x_2, ...`. There is some subset `NE` of `R^d`
-representing the game's Nash equilibria. Does `x_i` have a limit, and if so, is that limit in `NE`?
-
-Here is a soft-proof that the answer is yes.
-
-The proof entails 3 parts:
-
-1. **(Idempotence)**: If currently at equilibrium, we will stay there.
-2. **(Non-Complacency)**: If not currently at equilibrium, we cannot stay there.
-3. **(Limit-Existence)**: The limit of `x_i` must exist.
-
-These 3 assertions clearly prove our desired result. Let us prove them in turn.
-
-### Idempotence
-
-Suppose that P, V, and H are at equilibrium.
-
-The PUCT formula is:
-
-```
-PUCT(a) = Q(a) + c * P(a) * sqrt(sum(N)) / (1 + N(a))
-```
-
-The idempotence requirement means that as the number of iterations approaches infinity, the distribution of `N`
-should approach the same shape as `P`. 
-
-By standard properties of Nash equilibria, the assumption of equilibrium translates to the following: 
-`P(a) == 0` for all `a` not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
-of `v_max`.
-
-If `V` is accurate, as presumed by the equilibrium hypothesis, then `Q(a)` at actions in `S` should converge
-towards `v_max`, while `Q(a)` at actions not in `S` should converge towards values less than `v_max`. Since
-`Q` dominates the equation as `N(a)` approach infinity, the proportion of `N` on actions not in `S`
-should approach 0. It remains to show that the ratio `N(a_i) / N(a_j)` approaches `P(a_i) / P(a_j)`
-for all `a_i, a_j` in `S`.
-
-To see this, we can plug `a_i` and `a_j` into the `PUCT` equation, and set PUCT values equal. The `Q(a)`, 
-`c`, and `sqrt(sum(N))` terms all cancel, leaving us with:
-
-```
-P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
-```
-
-This is enough. We can make the convergence better by replacing the `(1 + N(a))` term in the PUCT formula with
-`max(c, N(a))` for some fixed constant `0 < c < 1`.
-
-Some practicalities should be noted. Root softmax temperature must be disabled for this proof to work.
-Dirichlet noise also breaks the analysis. Finally, move-temperature has the potential to make the agent
-act with non-equilibrium frequencies. It is unclear if this last point will cause theoretical problems during
-self-play, but certainly during competitive play, failure to act with equilibrium frequencies will lead to an
-exploitable agent. Later, we will investigate how to deal with these issues practically.
-
-### Non-Complacency
-
-Suppose P, V and H are not at equilibrium. Then, there are game states at which they produce estimates that
-are not at equilibrium with respect to their estimates at their descendants. Of these misestimated states,
-choose a node `n` that is closest to a terminal game state.
-
-The networks cannot converge to this state, since `MT-ISMCTS` will produce a policy that exploits the
-misestimates at `n`, and this exploitation corresponds to a difference between `P` and `N` that will cause network drift.
-
-### Limit-Existence
-
-If the limit does not exist, then the `x_i` necessarily follow a cyclical path. If we use the entire self-play
-dataset as the experience buffer, however, an infinite cyclical path is not possible; we must eventually fall into the path's interior.
-
-(Using the entire self-play dataset as the experience buffer is neither practical not desirable; we consider that
-here purely for theoretical arguments.)
-
-(This part of the psuedo-proof is questionable.)
-
-### Experiments
-
-We have done some simple ISMCTS experiments in the game of Kuhn Poker and validated some of the above theory.
-When starting at equilibrium, ISMCTS acts close to an idempotent operator. When starting at non-equilibrium, repeated
-applications of ISMCTS leads to a path that spirals around and converges to equilibrium. The MCTS Backpropagation Denoising
-technique described [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising)
-appears to be critical to making this work.
-
-TODO: make a page describing the Kuhn poker experiments and link to it here.
+as part of the input.
 
 ## Details
 
