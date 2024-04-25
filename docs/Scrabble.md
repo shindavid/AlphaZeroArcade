@@ -78,7 +78,7 @@ long-term improvement towards equilibrium _across_ generations?
 ## Information Set MCTS (ISMCTS)
 
 We have devised a version of MCTS that, when used in an AlphaZero loop, is guaranteed to yield
-policy convergences towards Nash Equilibrium. See [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/ISMCTS.md)
+policy convergences towards Nash Equilibrium. See [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/Nash-ISMCTS.md)
 
 In this version of MCTS, we require a hidden-state-network, `H`, that samples the hidden state of the game.
 In Scrabble, you can consider the opponent's entire rack as the hidden state, or you can consider just the leave. We choose to
