@@ -1,6 +1,6 @@
 # Nash Information Set Monte Carlo Tree Search (Nash-ISMCTS)
 
-## Background
+## Background: Many Tree ISMCTS (MT-ISMCTS)
 
 In perfect information settings, each node of an MCTS tree represents a full game state. In imperfect
 information settings, the acting agent lacks visibility into all hidden information, and so cannot
@@ -61,12 +61,18 @@ some of the details of the MCTS mechanics were different from what they would be
 implementation:
 
 - Leaf values were obtained via random rollout rather than via a neural network evaluation
-- The action-selection criterion did not incorporate a policiy prior, and used a different formula
+- The action-selection criterion did not incorporate a policy prior, and used a different formula
 from PUCT.
 
 ## Hidden State Model
 
-An important detail omitted in the above is the SAMPLE step. How should Alice sample Bob's hidden information?
+We will now build up towards our modified version of MT-ISMCTS, which we will call _Nash-ISMCTS_.
+We start with the obvious AlphaZero-based modernizations:
+
+- Replace random rollouts with value network (`V`) evaluations
+- Incorporate a policy network (`P`) and use PUCT as the action selection criterion.
+
+An important detail omitted in our description of MT-ISMCTS is the SAMPLE step. How should Alice sample Bob's hidden information?
 [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
 propose a variety of approaches to sample this information, with accompanying experimental results.
 Instead of adopting one of their proposed approaches, we will instead use an
@@ -76,44 +82,33 @@ Bayes' Rule, but this computation can be expensive. So `H` can be considered an 
 use to avoid an expensive online Bayes' Rule calculation.
 
 `H` will accept the same inputs as `P` and `V`, and will be trained on self-play games using the actual values of the hidden state
-as training targets.
+as training targets. This should result in an unbiased `H` as long as the self-play games are played according to
+the policy `P`. We can approximately enforce this by being careful with move temperature mechanics; more on this later.
 
 In some games, the size of the hidden state space can be intractably large. In Scrabble, for instance, there are about 3e7
 possible racks. Rather than modeling the policy as a single logit distribution over entire space, we can have `H`
 generate samples in chunks, similar to how an LLM samples sentences one token at a time. In Scrabble, we can
 generate a hidden rack one letter at a time, limiting the output to a size-27 logit layer.
 
-## Theoretical Convergence to Equilibrium
+## Equilibrium-Idempotence
 
-If we play self-play games using MT-ISMCTS with `n` visits, and train `P`, `V` and `H` on the complete resultant set of 
-self-play data, can we expect convergence to Nash Equilibrium, as `n` approaches infinity?
+If we play self-play games using Nash-ISMCTS with `n` visits, and train `P`, `V` and `H` on the resultant set of 
+self-play data, can we expect convergence to Nash Equilibrium, as `n` and the number of self-play games approache infinity?
 
-Formally, if we imagine the combined weights of the `P`, `V`, and `H` networks to be a point in `R^d`, then the generations
-of training yields a path-like sequence of points in `R^d`: `x_1, x_2, ...`. There is some subset `NE` of `R^d`
-representing the game's Nash equilibria. Does `x_i` have a limit, and if so, is that limit in `NE`?
+Unfortunately, the answer is likely no, as the resultant dynamic system will exhibit unstable chaotic behavior. However,
+in analyzing some of the properties of this dynamic system, we can obtain some useful insights that will help us
+design a more sound version.
 
-Here is a soft-proof that the answer is yes.
+We start with a theoretically interesting property of the system: if `P`, `V`, and `H` exactly match Nash Equilibrium,
+then the visit distribution `N` produced by Nash-ISMCTS will approach `P` as `n` approaches infinity. When viewing
+MCTS as an operator mapping policies to policies, we can say that Nash-ISMCTS is idempotent at equilibrium, or that
+it exhibits _equilibrium-idempotence_.
 
-The proof entails 3 parts:
-
-1. **(Equilibrium-Idempotence)**: If currently at equilibrium, we will stay there.
-2. **(Non-Complacency)**: If not currently at equilibrium, we cannot stay there.
-3. **(Limit-Existence)**: The limit of `x_i` must exist.
-
-These 3 assertions clearly prove our desired result. Let us prove them in turn.
-
-#### Equilibrium-Idempotence
-
-Suppose that `P`, `V`, and `H` are at equilibrium.
-
-The PUCT formula is:
+To see this, note that the PUCT formula is:
 
 ```
 PUCT(a) = Q(a) + c * P(a) * sqrt(sum(N)) / (1 + N(a))
 ```
-
-The idempotence requirement means that as the number of iterations approaches infinity, the distribution of `N`
-should approach the same shape as `P`. 
 
 By standard properties of Nash equilibria, the assumption of equilibrium translates to the following: 
 `P(a) == 0` for all `a` not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
@@ -132,33 +127,7 @@ To see this, we can plug `a_i` and `a_j` into the `PUCT` equation, and set PUCT 
 P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
 ```
 
-This is enough. We can make the convergence better by replacing the `(1 + N(a))` term in the PUCT formula with
-`max(c, N(a))` for some fixed constant `0 < c < 1`.
-
-Some practicalities should be noted. Root softmax temperature must be disabled for this proof to work.
-Dirichlet noise also breaks the analysis. Finally, move-temperature has the potential to make the agent
-act with non-equilibrium frequencies. It is unclear if this last point will cause theoretical problems during
-self-play, but certainly during competitive play, failure to act with equilibrium frequencies will lead to an
-exploitable agent. Later, we will investigate how to deal with these issues practically.
-
-#### Non-Complacency
-
-Suppose `P`, `V` and `H` are not at equilibrium. Then, there are game states at which they produce estimates that
-are not at equilibrium with respect to their estimates at their descendants. Of these misestimated states,
-choose a node `n` that is closest to a terminal game state.
-
-The networks cannot converge to this state, since `MT-ISMCTS` will produce a policy that exploits the
-misestimates at `n`, and this exploitation corresponds to a difference between `P` and `N` that will cause network drift.
-
-#### Limit-Existence
-
-If the limit does not exist, then the `x_i` necessarily follow a cyclical path. If we use the entire self-play
-dataset as the experience buffer, however, an infinite cyclical path is not possible; we must eventually fall into the path's interior.
-
-(Using the entire self-play dataset as the experience buffer is neither practical not desirable; we consider that
-here purely for theoretical arguments.)
-
-(This part of the psuedo-proof is questionable.)
+This demonstrates the required ratio limit, and thus proves the claimed property of equilibrium-idempotence.
 
 ## Practical Convergence to Equilibrium
 
