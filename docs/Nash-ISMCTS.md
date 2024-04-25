@@ -162,6 +162,9 @@ at random, selecting `i` with probability proportional to `P(i)`.
 It is not difficult to show that this criterion guarantees equilibrium-idempotence, even after applying small perturbations
 to `H` or `V`, thus resolving the problematic instability.
 
-## Experiments
+## TODO
 
-TODO: Describe Kuhn poker experiments validating the theory described here.
+- Describe Kuhn poker experiments validating the theory described here.
+- Clean up "most promising remedy" description above as the de-facto definition of Nash-ISMCTS.
+- Clarify that Q is always an expectation of Q of children, and that we use this formulation instead of more traditional backpropagation formulation.
+- Luck-corrections, move-temperature mechanics
