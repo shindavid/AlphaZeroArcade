@@ -1,4 +1,4 @@
-# Information Set Monte Carlo Tree Search
+# Nash Information Set Monte Carlo Tree Search (Nash-ISMCTS)
 
 ## Background
 
@@ -13,7 +13,7 @@ provides a comprehensive survey of various workarounds. Broadly, there are two a
 learn a policy for this game using perfect-information tree-search techniques, and then somehow
 convert the perfect-information strategy into an imperfect-information one.
 
-3. Construct an _information set_ MCTS (ISMCTS) tree, where each node represents an _information set_. This is the
+2. Construct an _information set_ MCTS (ISMCTS) tree, where each node represents an _information set_. This is the
 part of the game state that is visible to the acting player. Devise tree search mechanics that operate
 on this tree.
 
@@ -23,46 +23,54 @@ This will serve as the starting point of our planned implementation.
 
 Here is an illustration of MT-ISMCTS mechanics:
 
-![ISMCTS2](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/31141cd9-431f-443d-88b5-7480cb1203ba)
+![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/b3dca415-e51c-485f-b7f0-d8871f6b8940)
 
-In the above, we have a tree, `T`, with root node `a`. There are two players in this game, `P1`
-and `P2`. Each node of the tree contains two symbols, representing `P1`'s private information, followed by
-`P2`'s private information.
+The above diagram depicts a game with two players. The first player is Alice, and the second player is Bob.
+Red nodes correspond to information sets where it is Alice's turn, and blue nodes correspond to information
+sets where it is Bob's turn. Each node contains two symbols, representing Alice's private information
+and Bob's private information, respectively.
 
-At `a`, it is `P1`' action. `P1` has private information `x`, and `P2`'s private information is unknown.
-`P1` acts at `a` via PUCT, to arrive at node `b`. Here, we want to
-simulate `P2`'s action, but that action is dependent on `P2`'s private information, which we
-do not have. Thus, we sample `P2`'s private information according to some hidden-state policy `H`.
-This sampling results in node `d`, where `P2`'s hidden information is instantiated to `z`.
+Let us start at the top left red node labeled `x?`. It is Alice's turn. The node is contained in a red
+tree, which indicates that the calculations are from Alice's point-of-view (POV). She performs her action
+according to an action selection criterion (ACT). Here, she selects the right action, along the edge
+labeled `N_b`.
 
-At `d`, to further descend down the tree, we need to model `P2`'s decision. To do this, we
-spawn a new tree, `U`, and recursively perform the same mechanics. At `f`, the root of this spawned tree,
-we mask `P1`'s private information to model `P2`'s POV. We perform PUCT as we did at `a`, leading to
-node `g`.
+Alice now wishes to simulate Bob's action, as would typically be the next step in standard MCTS. However,
+without Bob's private information, Alice cannot simulate his action. Thus, Alice _samples_ Bob's
+private information, according to some belief distribution. Here, she samples that his hidden
+information is `z`.
 
-Back in the original tree `T`, we obtain the PUCT-selected-action at `f`, and use that action
-to continue descending to node `e`.
+She is now able to simulate Bob's action. However, she must account for the fact that Bob does not know
+Alice's private information. She thus _spawns_ a new tree, from Bob's POV. This tree is colored blue, to
+indicate that it corresponds to Bob's POV. The root of this node is labeled `?z`, to reflect the fact that
+Bob knows his private information and does not know Alice's information. The simulation of Bob's action
+recursively repeats the same procedure that we started with.
 
-Repeating this entire procedure leads to visit distributions at the children of `b`. Those distributions
-can be combined to yield a visit distribution at `b` itself, which yields combined children of `b` of the
-form `x?`, at which the same overall routine performed at `a` can be repeated, to go arbitrarily
-deep into the game-tree within `T`.
+Bob's recursive application of this procedure can itself spawn a new tree from the already-spawned tree,
+represented by the third tree in the diagram. And this recursive spawning can continue indefinitely.
 
-It is important to note that the `Q` values at `e` and `g` will be different. The `e` values reflect
-the known information of `P1`, while the `g` values do not. The `Q` values obtained in `U` are
-irrelevant to `T`; only the action-selections are of interest.
+This repeated spawning is important. In Alice's simulation of Bob's thinking, she must conceive of him
+as an agent that believes Alice can have non-`x` hidden-states, optimizing his action accordingly. The
+`Q` values relevant to her decision-making should reflect her own known hidden information of `x`, but
+the `Q` values relevant to Bob's decision-making should not. Furthermore, her simulation of Bob's thinking
+is an agent that is simulating her own thinking. The simulated-Alice within Alice's simulation of Bob
+must potentially have non-`x` states. And so forth.
 
-This description of MT-ISMCTS is slightly anachronistic, as [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
-predates AlphaGo/AlphaZero. PUCT was not the favored selection criterion at the time, and leaf
-evaluations were performed by random rollouts, rather than via neural network evaluations. The
-important part here is the mechanics of tree-spawning.
+As [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf) predated AlphaGo/AlphaZero,
+some of the details of the MCTS mechanics were different from what they would be in a more modern
+implementation:
+
+- Leaf values were obtained via random rollout rather than via a neural network evaluation
+- The action-selection criterion did not incorporate a policiy prior, and used a different formula
+from PUCT.
 
 ## Hidden State Model
 
-An important detail omitted in the above is the hidden-state-sampling policy `H`. [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
+An important detail omitted in the above is the SAMPLE step. How should Alice sample Bob's hidden information?
+[Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
 propose a variety of approaches to sample this information, with accompanying experimental results.
 Instead of adopting one of their proposed approaches, we will instead use an
-AlphaZero-inspired approach: train a _hidden-state_ neural network
+AlphaZero-inspired approach: train a _hidden-state_ neural network `H`
 that learns to sample the hidden state of the game. Note that in principle, `H` can be computed exactly from `P` via
 Bayes' Rule, but this computation can be expensive. So `H` can be considered an alternate representation of `P` that we
 use to avoid an expensive online Bayes' Rule calculation.
