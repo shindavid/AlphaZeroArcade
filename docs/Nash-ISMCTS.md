@@ -194,7 +194,7 @@ $c_{\mathrm{PUCT}}$, and $\sqrt{\sum N}$ terms all cancel, leaving us with:
 
 This demonstrates the required ratio limit, and thus proves the claimed property of equilibrium-idempotence.
 
-## From AlphaZero-MCTS to Nash-MCTS
+## From AlphaZero-ISMCTS to Nash-ISMCTS
 
 The theoretical argument above demonstrates that if we are at equilibrium, then A-ISMCTS will
 converge towards an idempotent operator. However, we must be _exactly_ at equilibrium. If $V$ or $H$ are off by
