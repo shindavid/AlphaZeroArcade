@@ -224,13 +224,13 @@ When PUCT intervals overlap, the acting player is indifferent between two or mor
 nearly identical (exploration-incentive-adjusted) utilities. However, the opposing player may be far from
 indifferent with respect to those action choices!
 
-As an example, consider a poker game between Alice and Bob. Bob holds a medium-strength hand and is facing a bet
-from Alice. Based on the bet size and his belief about Alice's cards, he finds himself indifferent between the
-choices of calling and folding, believing them to have equal expected value. Alice, however, happens to have a bluff
-in this specific situation. She is not indifferent to whether Bob calls or folds.
+As an example, consider a poker game between Alice and Bob. Alice holds a medium-strength hand and is facing a bet
+from Bob. Based on the bet size and her belief about Bob's cards, she finds herself indifferent between the
+choices of calling and folding, believing them to have equal expected value. Bob, however, happens to have a bluff
+in this specific situation. _He_ is not indifferent to whether Alice calls or folds.
 
-In perfect information games, we do not have this problem, since if Bob is indifferent between two or more choices, Alice
-is equally indifferent.
+In perfect information games, we do not have this asymmetry, since if Alice is indifferent between two or more choices, Bob
+will be equally indifferent.
 
 In Nash-ISMCTS, when we sample a specific action $a$ in the overlapping-intervals case, this increments $N(a)$, which has a
 direct impact on the parent $Q$ evaluation:
@@ -270,7 +270,7 @@ Here:
 
 When calculating $Q$ for SAMPLE nodes, we sometimes require $Q$ values from children that may not have been expanded.
 Descending to each child and querying $V$ could be costly. Instead, we add
-an auxiliary network head, the _child-value_ head ($V_c(n)$). This produces a vector of values, whose length
+an auxiliary network head, the _child-value_ head, $V_c(n)$. This produces a vector of values, whose length
 is equal to the number of children of the current node $n$. It is trained to predict the network's own
 evaluation of $V$ at $n$'s children.
 
