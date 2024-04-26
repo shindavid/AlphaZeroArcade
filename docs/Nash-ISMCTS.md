@@ -24,8 +24,8 @@ not the policy you want to converge to if you want to do well against other poli
 
 Despite this cautionary example, the fact is, other proven approaches like CFR and R-NaD operate similarly:
 on any given generation, they assume a fixed adversary policy and perform a policy-improvement operator with
-respect to that _fixed_ policy. Doing so yields a _sequence_ of policy-pairs, and as the policies in the pair
-iteratively improve against each other, this _sequence_ (or, the _average_ of the sequence)
+respect to that _fixed_ policy. Doing so yields a _sequence_ of policies, and as the policies
+iteratively improve, this _sequence_ (or, the _average_ of the sequence)
 converges towards equilibrium.
 
 So, can MCTS, in the AlphaZero context, similarly serve as a policy-improvement operator that, despite
