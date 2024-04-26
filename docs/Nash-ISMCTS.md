@@ -110,6 +110,17 @@ is the action policy at $n$, which is simply the child visit distribution ($N$).
 
 (see [here](https://github.com/lightvector/KataGo/blob/master/docs/GraphSearch.md) for an excellent derivation)
 
+We will use this alternate formulation.
+
+In standard MCTS, all nodes are action nodes, and for action nodes, there is no difference in the formulations.
+
+In ISMCTS, however, some nodes are sampling nodes, for which there _is_ a difference. If the sampling distribution is
+30% - 70% between actions $a$ and $b$, the formula will yield $0.3 * Q(a) + 0.7 * Q(b)$, regardless of how many
+times we happened to sample $a$ vs $b$. This helps decrease variance by mitigating random noise from $H$-sampling.
+
+Later, we will modify the expectation-computation at action nodes as well, in an effort to mitigate random noise
+from indifferent actions.
+
 ## Equilibrium-Idempotence
 
 Let us call this ISMCTS variant imbued with AlphaZero mechanics _AlphaZero-ISMCTS_, or A-ISMCTS. This is not yet
