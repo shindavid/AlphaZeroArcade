@@ -1,5 +1,8 @@
 # Nash Information Set Monte Carlo Tree Search (Nash-ISMCTS)
 
+This document describes _Nash Information Set Monte Carlo Tree Search_. Nash-ISMCTS is our MCTS-variant,
+which can be applied in imperfect information games to approximate a game's Nash equilibrium.
+
 ## Background: Many Tree ISMCTS (MT-ISMCTS)
 
 In perfect information settings, each node of an MCTS tree represents a full game state. In imperfect
@@ -66,8 +69,7 @@ from PUCT.
 
 ## Hidden State Model
 
-We will now build up towards our modified version of MT-ISMCTS, which we will call _Nash-ISMCTS_.
-We start with the obvious AlphaZero-based modernizations:
+In order to build towards Nash-ISMCTS, we will imbue MT-ISMCTS with AlphaZero-mechanics in the natural way:
 
 - Replace random rollouts with value network (`V`) evaluations
 - Incorporate a policy network (`P`) and use PUCT as the action selection criterion.
@@ -83,16 +85,37 @@ use to avoid an expensive online Bayes' Rule calculation.
 
 `H` will accept the same inputs as `P` and `V`, and will be trained on self-play games using the actual values of the hidden state
 as training targets. This should result in an unbiased `H` as long as the self-play games are played according to
-the policy `P`. We can approximately enforce this by being careful with move temperature mechanics; more on this later.
+the policy `P`. We can approximately enforce this by being careful with move selection mechanics, under the
+assumption that `P` has converged; more on this later.
 
 In some games, the size of the hidden state space can be intractably large. In Scrabble, for instance, there are about 3e7
 possible racks. Rather than modeling the policy as a single logit distribution over entire space, we can have `H`
 generate samples in chunks, similar to how an LLM samples sentences one token at a time. In Scrabble, we can
-generate a hidden rack one letter at a time, limiting the output to a size-27 logit layer.
+generate a hidden rack one letter at a time, limiting the output to a size-27 logit layer. In Stratego, we can generate
+the hidden piece identities one piece at a time.
+
+## Q calculations
+
+The traditional formulation of MCTS maintains a $Q$ value at each node $n$, which corresponds to the running average of
+the utility values sampled in the subtree rooted at $n$.
+
+It turns out that there is an equivalent formulation:
+
+```math
+Q(n) = \mathbb{E}_{c \sim C(n)}[Q(c)]
+```
+
+Here, $C(n)$ denotes the children of $n$. If $n$ is an action node, the distribution dictating the selection of $c$ from $C(n)$
+is the action policy at $n$, which is simply the child visit distribution ($N$).
+
+(see [here](https://github.com/lightvector/KataGo/blob/master/docs/GraphSearch.md) for an excellent derivation)
 
 ## Equilibrium-Idempotence
 
-If we play self-play games using Nash-ISMCTS with `n` visits, and train `P`, `V` and `H` on the resultant set of 
+Let us call this ISMCTS variant imbued with AlphaZero mechanics _AlphaZero-ISMCTS_, or A-ISMCTS. This is not yet
+our final Nash-ISMCTS.
+
+If we play self-play games using A-ISMCTS with `n` visits, and train `P`, `V` and `H` on the resultant set of 
 self-play data, can we expect convergence to Nash Equilibrium, as `n` and the number of self-play games approache infinity?
 
 Unfortunately, the answer is likely no, as the resultant dynamic system will exhibit unstable chaotic behavior. However,
@@ -100,7 +123,7 @@ in analyzing some of the properties of this dynamic system, we can obtain some u
 design a more sound version.
 
 We start with a theoretically interesting property of the system: if `P`, `V`, and `H` exactly match Nash Equilibrium,
-then the visit distribution `N` produced by Nash-ISMCTS will approach `P` as `n` approaches infinity. When viewing
+then the visit distribution `N` produced by A-ISMCTS will approach `P` as `n` approaches infinity. When viewing
 MCTS as an operator mapping policies to policies, we can say that Nash-ISMCTS is idempotent at equilibrium, or that
 it exhibits _equilibrium-idempotence_.
 
