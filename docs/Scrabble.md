@@ -45,42 +45,13 @@ algorithm can work across all phases of the game, with no need for endgame speci
 function is difficult" are exactly the reasons that Alpha-beta pruning failed at go, and AlphaZero was the answer there. If
 this hope turns out be misplaced, we will later explore endgame specializations.
 
-## Tree Search in Imperfect Information Games
+## Nash Information Set MCTS (Nash-ISMCTS)
 
-A common objection to applying a tree-search algorithm to games of imperfect information
-is that in imperfect information games, you cannot analyze a subtree of the game in isolation. 
-This is because the value of a node in the game tree is dependent on the policy that got to that point in the tree.
+We have devised a variant of MCTS that, when used in an AlphaZero loop, is guaranteed to yield
+approximate policy convergence towards Nash Equilibrium. We have named this variant _Nash-ISMCTS_. 
+See [here](Nash-ISMCTS.md) for a full description.
 
-Well...that’s only _partially_ true. It is true that the value of the node against the 
-_worst case_ adversary policy is dependent on the policy that got to that point in the tree. This is because
-given a policy `P`, the behavior of its optimal counter-policy, `counter(P)`,
-at a node `N` is dependent on `P`'s behavior across the _entire_ game-tree, 
-rather than just on `P`'s behavior in the subtree rooted at `N`.
-However, against any given _fixed_ adversary policy, the value is independent of the behavior of `P`
-outside of the subtree rooted at `N`.
-So, if we hold the adversary policy fixed, a tree-search subroutine like MCTS could still act as a
-policy improvement operator.
-
-This begs the question: what good is policy improvement against some given _fixed_ policy? In rock-paper-scissor,
-against a fixed 100%-rock opponent, iterated policy improvement will lead you to the 100%-paper strategy. That is
-not the policy you want to converge to if you want to do well against other policies.
-
-Despite this cautionary example, the fact is, other proven approaches like CFR and R-NaD operate similarly:
-on any given generation, they assume a fixed adversary policy and perform a policy-improvement operator with
-respect to that _fixed_ policy. Doing so yields a _sequence_ of policy-pairs, and as the policies in the pair
-iteratively improve against each other, this _sequence_ (or, the _average_ of the sequence)
-converges towards equilibrium.
-
-So, can MCTS, in the AlphaZero context, similarly serve as a policy-improvement operator that, despite
-only representing an improvement against a fixed-opponent-policy _within_ a generation, represents a
-long-term improvement towards equilibrium _across_ generations?
-
-## Information Set MCTS (ISMCTS)
-
-We have devised a version of MCTS that, when used in an AlphaZero loop, is guaranteed to yield
-policy convergences towards Nash Equilibrium. See [here](https://github.com/shindavid/AlphaZeroArcade/blob/main/docs/Nash-ISMCTS.md)
-
-In this version of MCTS, we require a hidden-state-network, `H`, that samples the hidden state of the game.
+In Nash-MCTS, we require a hidden-state-network, `H`, that samples the hidden state of the game.
 In Scrabble, you can consider the opponent's entire rack as the hidden state, or you can consider just the leave. We choose to
 use leaves rather than entire racks, as the training targets will be sharper without the diluting
 effect of the uniform random bag replenishment.
