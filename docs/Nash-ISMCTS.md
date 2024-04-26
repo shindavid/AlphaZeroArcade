@@ -179,7 +179,7 @@ such a guarantee, it is difficult to trust that AlphaZero will result in long-te
 networks are produced, it is difficult to trust that policy collapse won't happen at test time, due to using an
 excessive number of visits.
 
-To remedy this problem, we add uncertainty about $H$. At a given SAMPLE node, $H$ produces a
+To remedy this problem, we inject uncertainty into our usage of $H$. At a given SAMPLE node, $H$ produces a
 sampling distribution $h$, over $k$ possible hidden states. This can be represented as a point in the 
 $k$-simplex, $\Delta_k$. Rather than assuming that $h$ is the exact true sampling distribution, we will
 relax our belief and assume instead that the true sampling distribution falls
@@ -205,7 +205,9 @@ producing PUCT intervals. Here is how we adjust the selection mechanics:
 
 - Otherwise, the PUCT interval containing the maximum value of the interval-union intersects
 $m\geq1$ other intervals. Choose randomly among the actions corresponding to those $(m+1)$ intervals, with each such action $a$
-chosen with probability proportional to the prior $P(a)$. We call this the _mixing distribution_.
+chosen with probability proportional to the _raw_ prior $P(a)$. We call this the _mixing distribution_.
+We emphasize _raw_ here to specify that if perturbations like softmax temperature or
+Dirichlet noise are applied, we do _not_ want them to influence the mixing distribution.
 
 If $\epsilon=0$, this reduces to A-MCTS, and incurs the previously described instability.
 For $\epsilon>0$, however, as long as $N_{\epsilon}(h)$ contains the true equilibrium
@@ -281,7 +283,7 @@ prior section, which similarly requires $Q$ values for children that may not hav
 that, $V_c$ can be used in the standard PUCT formula in place of $Q$ for unvisited nodes. This effectively
 serves as an alternate FPU policy, and can be applied in standard MCTS in perfect information games as well.
 
-### Move temperature
+### Move selection
 
 If our policy prior $P$ is near-equilibrium, then Nash-ISMCTS will produce a near-equilibrium posterior policy
 $\pi$. In order for the AlphaZero loop to work properly, the self-play agents must act according to $\pi$.
@@ -295,16 +297,22 @@ and at test time.
 We therefore need a more sophisticated move selection scheme - one that acts like a temperature=1 scheme
 among the optimal actions, but which acts like a low-temperature scheme for the low-quality actions.
 
-To this end, we apply an LCB-like mechanism. In LCB, the final $Q(a)$ is combined with its associated $N(a)$
-to produce a confidence-interval around $Q(a)$, of the form $[Q(a) - \sigma(N(a)), Q(a) + \sigma(N(a))]$, for some
-decreasing positive-valued function $\sigma$. We identify the interval whose lower bound is greatest, and
-select that action. (LCB stands for "lower confidence bound".)
+To this end, we adapt the Lower Confidence Bound (LCB) mechanism. In LCB,
+the final $Q(a)$ is combined with its associated $N(a)$ to produce a confidence-interval
+around $Q(a)$, of the form $I(a) = [Q(a) - \sigma(N(a)), Q(a) + \sigma(N(a))]$, for some
+decreasing positive-valued function $\sigma$. The action $a$ whose lower bound $\mathrm{min}_I I(a)$ is
+greatest is identified, and all actions $b$ such that $I(b)$ is strictly less than $I(a)$ are
+discarded. Only the remaining actions are candidates for move selection.
 
+In our case, our $Q(a)$ is already an interval, so our confidence interval takes the form,
 
+```math
+I(a) = [\mathrm{min}(Q(a)) - \sigma(N(a)), \mathrm{max}(Q(a)) + \sigma(N(a))]
+```
+
+With this alternate interval definition, we apply the same filtering mechanism. Then, we select
+among the remaining actions proportionally to $N$ (i.e., using a temperature of 1).
 
 ## TODO
 
-- Describe Kuhn poker experiments validating the theory described here.
-- Clean up "most promising remedy" description above as the de-facto definition of Nash-ISMCTS.
-- Clarify that Q is always an expectation of Q of children, and that we use this formulation instead of more traditional backpropagation formulation.
-- Luck-corrections, move-temperature mechanics
+Describe Kuhn poker experiments.
