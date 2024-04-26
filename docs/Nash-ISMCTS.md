@@ -33,19 +33,19 @@ Red nodes correspond to information sets where it is Alice's turn, and blue node
 sets where it is Bob's turn. Each node contains two symbols, representing Alice's private information
 and Bob's private information, respectively.
 
-Let us start at the top left red node labeled `x?`. It is Alice's turn. The node is contained in a red
+Let us start at the top left red node labeled $x?$. It is Alice's turn. The node is contained in a red
 tree, which indicates that the calculations are from Alice's point-of-view (POV). She performs her action
 according to an action selection criterion (ACT). Here, she selects the right action, along the edge
-labeled `N_b`.
+labeled $N_b$.
 
 Alice now wishes to simulate Bob's action, as would typically be the next step in standard MCTS. However,
 without Bob's private information, Alice cannot simulate his action. Thus, Alice _samples_ Bob's
 private information, according to some belief distribution. Here, she samples that his hidden
-information is `z`.
+information is $z$.
 
 She is now able to simulate Bob's action. However, she must account for the fact that Bob does not know
 Alice's private information. She thus _spawns_ a new tree, from Bob's POV. This tree is colored blue, to
-indicate that it corresponds to Bob's POV. The root of this node is labeled `?z`, to reflect the fact that
+indicate that it corresponds to Bob's POV. The root of this node is labeled $?z$, to reflect the fact that
 Bob knows his private information and does not know Alice's information. The simulation of Bob's action
 recursively repeats the same procedure that we started with.
 
@@ -53,11 +53,11 @@ Bob's recursive application of this procedure can itself spawn a new tree from t
 represented by the third tree in the diagram. And this recursive spawning can continue indefinitely.
 
 This repeated spawning is important. In Alice's simulation of Bob's thinking, she must conceive of him
-as an agent that believes Alice can have non-`x` hidden-states, optimizing his action accordingly. The
-`Q` values relevant to her decision-making should reflect her own known hidden information of `x`, but
-the `Q` values relevant to Bob's decision-making should not. Furthermore, her simulation of Bob's thinking
+as an agent that believes Alice can have non-$x$ hidden-states, optimizing his action accordingly. The
+$Q$ values relevant to her decision-making should reflect her own known hidden information of $x$, but
+the $Q$ values relevant to Bob's decision-making should not. Furthermore, her simulation of Bob's thinking
 is an agent that is simulating her own thinking. The simulated-Alice within Alice's simulation of Bob
-must potentially have non-`x` states. And so forth.
+must potentially have non-$x$ states, so they cannot use the $Q$ values in the original-tree. And so forth.
 
 As [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf) predated AlphaGo/AlphaZero,
 some of the details of the MCTS mechanics were different from what they would be in a more modern
@@ -71,28 +71,29 @@ from PUCT.
 
 In order to build towards Nash-ISMCTS, we will imbue MT-ISMCTS with AlphaZero-mechanics in the natural way:
 
-- Replace random rollouts with value network (`V`) evaluations
-- Incorporate a policy network (`P`) and use PUCT as the action selection criterion.
+- Replace random rollouts with value network ($V$) evaluations
+- Incorporate a policy network ($P$) and use PUCT as the action selection criterion.
 
 An important detail omitted in our description of MT-ISMCTS is the SAMPLE step. How should Alice sample Bob's hidden information?
 [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf)
 propose a variety of approaches to sample this information, with accompanying experimental results.
 Instead of adopting one of their proposed approaches, we will instead use an
-AlphaZero-inspired approach: train a _hidden-state_ neural network `H`
-that learns to sample the hidden state of the game. Note that in principle, `H` can be computed exactly from `P` via
-Bayes' Rule, but this computation can be expensive. So `H` can be considered an alternate representation of `P` that we
+AlphaZero-inspired approach: train a _hidden-state_ neural network $H$
+that learns to sample the hidden state of the game. Note that in principle, $H$ can be computed exactly from $P$ via
+Bayes' Rule, but this computation can be expensive. So $H$ can be considered an alternate representation of $P$ that we
 use to avoid an expensive online Bayes' Rule calculation.
 
-`H` will accept the same inputs as `P` and `V`, and will be trained on self-play games using the actual values of the hidden state
-as training targets. This should result in an unbiased `H` as long as the self-play games are played according to
-the policy `P`. We can approximately enforce this by being careful with move selection mechanics, under the
-assumption that `P` has converged; more on this later.
+$H$ will accept the same inputs as $P$ and $V$, and will be trained on self-play games using the actual values of the hidden state
+as training targets. This should result in an unbiased $H$ as long as the self-play games are played according to
+the policy $P$. We can approximately enforce this by being careful with move selection mechanics (such as
+move temperature), under the assumption that $P$ has converged; more on this later.
 
-In some games, the size of the hidden state space can be intractably large. In Scrabble, for instance, there are about 3e7
-possible racks. Rather than modeling the policy as a single logit distribution over entire space, we can have `H`
-generate samples in chunks, similar to how an LLM samples sentences one token at a time. In Scrabble, we can
-generate a hidden rack one letter at a time, limiting the output to a size-27 logit layer. In Stratego, we can generate
-the hidden piece identities one piece at a time.
+In some games, the size of the hidden state space can be intractably large. Rather than representing
+the hidden state policy as a flat distribution over the entire space, we can split the
+single SAMPLE node into a sequence of multiple SAMPLE nodes, each generating a piece of the hidden state.
+This is similar to how an LLM samples sentences one word at a time. In Scrabble, we can
+generate a hidden set of tiles one letter at a time, limiting the output of the $H$ network to a size-27 logit layer.
+In Stratego, we can generate the hidden piece identities one piece at a time.
 
 ## Q calculations
 
@@ -106,11 +107,10 @@ Q(n) = \mathbb{E}_{c \sim C(n)}[Q(c)]
 ```
 
 Here, $C(n)$ denotes the children of $n$. If $n$ is an action node, the distribution dictating the selection of $c$ from $C(n)$
-is the action policy at $n$, which is simply the child visit distribution ($N$).
+is the action policy at $n$, which is simply the child visit distribution ($N$). See 
+[here](https://github.com/lightvector/KataGo/blob/master/docs/GraphSearch.md) for an excellent derivation.
 
-(see [here](https://github.com/lightvector/KataGo/blob/master/docs/GraphSearch.md) for an excellent derivation)
-
-We will use this alternate formulation.
+**We will use this alternate formulation.**
 
 In standard MCTS, all nodes are action nodes, and for action nodes, there is no difference in the formulations.
 
@@ -126,75 +126,181 @@ from indifferent actions.
 Let us call this ISMCTS variant imbued with AlphaZero mechanics _AlphaZero-ISMCTS_, or A-ISMCTS. This is not yet
 our final Nash-ISMCTS.
 
-If we play self-play games using A-ISMCTS with `n` visits, and train `P`, `V` and `H` on the resultant set of 
-self-play data, can we expect convergence to Nash Equilibrium, as `n` and the number of self-play games approache infinity?
+Suppose we play $G$ self-play games using A-ISMCTS and train $P$, $V$, and $H$ on the resultant set of 
+self-play data. Will the policy produced by running A-ISMCTS with the resultant $P$, $V$, and $H$, for $n$ visits,
+converge towards Nash Equilibrium, as $G$ and $n$ approach infinity?
 
-Unfortunately, the answer is likely no, as the resultant dynamic system will exhibit unstable chaotic behavior. However,
-in analyzing some of the properties of this dynamic system, we can obtain some useful insights that will help us
-design a more sound version.
+Unfortunately, the answer is no, as the resultant dynamic system will exhibit unstable chaotic behavior. However,
+in analyzing some of the properties of this dynamic system, we can obtain some useful insights that will motivate
+our more sound version.
 
-We start with a theoretically interesting property of the system: if `P`, `V`, and `H` exactly match Nash Equilibrium,
-then the visit distribution `N` produced by A-ISMCTS will approach `P` as `n` approaches infinity. When viewing
-MCTS as an operator mapping policies to policies, we can say that Nash-ISMCTS is idempotent at equilibrium, or that
+We start with a theoretically interesting property of the system: if $P$, $V$, and $H$ exactly match Nash Equilibrium,
+then the visit distribution $N$ produced by A-ISMCTS will approach $P$ as $n$ approaches infinity. When viewing
+MCTS as an operator mapping policies to policies, we can say that A-ISMCTS is idempotent at equilibrium, or that
 it exhibits _equilibrium-idempotence_.
 
 To see this, note that the PUCT formula is:
 
-```
-PUCT(a) = Q(a) + c * P(a) * sqrt(sum(N)) / (1 + N(a))
+```math
+\mathrm{PUCT}(a) = Q(a) + c_{\mathrm{PUCT}} * P(a) * \frac{\sqrt{\sum N}}{1 + N(a)}
 ```
 
 By standard properties of Nash equilibria, the assumption of equilibrium translates to the following: 
-`P(a) == 0` for all `a` not in `S`, where `S` is the set of actions `a` for which `V(a)` attains it maximum
-of `v_max`.
+$P(a) = 0$ for all $a \not \in S$, where $S$ is the set of actions $a$ for which $V(a)$ attains it maximum
+of $v_{max}$.
 
-If `V` is accurate, as presumed by the equilibrium hypothesis, then `Q(a)` at actions in `S` should converge
-towards `v_max`, while `Q(a)` at actions not in `S` should converge towards values less than `v_max`. Since
-`Q` dominates the equation as `N(a)` approach infinity, the proportion of `N` on actions not in `S`
-should approach 0. It remains to show that the ratio `N(a_i) / N(a_j)` approaches `P(a_i) / P(a_j)`
-for all `a_i, a_j` in `S`.
+If $V$ is accurate, as presumed by the equilibrium hypothesis, then $Q(a)$ should converge
+towards $v_{max}$ for all $a \in S$, and should converge towards strictly smaller values for
+$a \not \in S$. Since
+$Q$ dominates the equation as $N(a) \rightarrow \infty$, the proportion of $N$ on actions not in $S$
+should approach 0. It remains to show that the ratio $N(a_i) / N(a_j)$ approaches $P(a_i) / P(a_j)$
+for all $a_i, a_j \in S$.
 
-To see this, we can plug `a_i` and `a_j` into the `PUCT` equation, and set PUCT values equal. The `Q(a)`, 
-`c`, and `sqrt(sum(N))` terms all cancel, leaving us with:
+To see this, we can plug $a_i$ and $a_j$ into the PUCT equation, and set PUCT values equal. The $Q(a)$, 
+$c_{\mathrm{PUCT}}$, and $\sqrt{\sum N}$ terms all cancel, leaving us with:
 
-```
-P(a_i) / P(a_j) = (1 + N(a_i)) / (1 + N(a_j))
+```math
+\frac{P(a_i)}{P(a_j)} = \frac{1 + N(a_i)}{1 + N(a_j)}
 ```
 
 This demonstrates the required ratio limit, and thus proves the claimed property of equilibrium-idempotence.
 
-## Practical Convergence to Equilibrium
+## From AlphaZero-MCTS to Nash-MCTS
 
-The theoretical argument above demonstrates that if we are at equilibrium, then MT-ISMCTS will
-converge towards an idempotent operator. However, we must be _exactly_ at equilibrium. If `V` or `H` are off by
+The theoretical argument above demonstrates that if we are at equilibrium, then A-ISMCTS will
+converge towards an idempotent operator. However, we must be _exactly_ at equilibrium. If $V$ or $H$ are off by
 even the tiniest of margins, then the idempotence proof fails, and as the number of MCTS iterations approaches
-infinity, the visit distribution will collapse to a single point, rather than converge to `P` as required.
+infinity, the visit distribution will collapse to a single point, rather than converge to $P$ as required.
 
 Practically, the number of visits is finite, and so if the networks are close enough, then perhaps the visit
-distribution will be close enough to `P` to make everything work in practice. However, this is not satisfactory. One should
+distribution will be close enough to $P$ to make everything work in practice. However, this is not satisfactory. One should
 have confidence that the quality of the posterior policy will increase as a function of the number of visits. Without
-such a guarantee, it is difficult to trust that AlphaZero will result in long-term improvement.
+such a guarantee, it is difficult to trust that AlphaZero will result in long-term improvement. Even if near-equilibrium
+networks are produced, it is difficult to trust that policy collapse won't happen at test time, due to using an
+excessive number of visits.
 
-We have brainstormed many potential remedies for this issue. Currently, our most promising remedy is this:
+To remedy this problem, we add uncertainty about $H$. At a given SAMPLE node, $H$ produces a
+sampling distribution $h$, over $k$ possible hidden states. This can be represented as a point in the 
+$k$-simplex, $\Delta_k$. Rather than assuming that $h$ is the exact true sampling distribution, we will
+relax our belief and assume instead that the true sampling distribution falls
+somewhere in the neighborhood $N_{\epsilon}(h)$, consisting of the points of $\Delta_k$ whose
+L1-distance to $h$ is bounded by $\epsilon$.
 
-- For hidden-state nodes, compute `Q` as a weighted-sum of the children `Q`, and use `H` for the weights of that
-average. In the above diagram, this means that `Q` at node `b` is the weighted sum of the `Q` values of nodes `c`
-and `d`, with `H` dictating the weights of that sum.
+Using an exact $h$ in the $Q$ calculation at a SAMPLE node yields a calculation producing an exact value $q \in \mathbb{R}$:
 
-- Consider the _eps-neighborhood_, `N_eps(H)`, of `H`, comprising all other hidden-state-distributions whose distance from `H`
-is bounded by some small constant `eps`. Formally, if `H` is a probability distribution over `k` items, it can be
-represented as a point in the `k`-simplex. Then, `N_eps(H)` can be the set of points of the `k`-simplex whose L1-distance
-to `H` is at most `eps`.
+```math
+Q(n) = \mathbb{E}_{c \sim h}[Q(c)]
+```
 
-- When performing PUCT at action nodes, compute the selection criterion for hidden-state children nodes by using
-every single `H'` in `N_eps(H)`, rather than using just a single `H`. This yields a set of possible actions, rather than
-just a single one.
+Relaxing to $N_{\epsilon}(h)$ yields instead an _interval_ $[q_1, q_2] \subset \mathbb{R}$:
 
-- If this set is of size one, then just select that one action. Otherwise, among the actions in the set, select one
-at random, selecting `i` with probability proportional to `P(i)`.
+```math
+Q(n) = \bigcup_{h' \in N_{\epsilon}(h)} \mathbb{E}_{c \sim h'}[Q(c)]
+```
 
-It is not difficult to show that this criterion guarantees equilibrium-idempotence, even after applying small perturbations
-to `H` or `V`, thus resolving the problematic instability.
+At ACT nodes, the PUCT formula now operates on child $Q$ _intervals_ rather than values, in turn
+producing PUCT intervals. Here is how we adjust the selection mechanics:
+
+- If one PUCT interval is strictly greater than the others, then select the corresponding action.
+
+- Otherwise, the PUCT interval containing the maximum value of the interval-union intersects
+$m\geq1$ other intervals. Choose randomly among the actions corresponding to those $(m+1)$ intervals, with each such action $a$
+chosen with probability proportional to the prior $P(a)$. We call this the _mixing distribution_.
+
+If $\epsilon=0$, this reduces to A-MCTS, and incurs the previously described instability.
+For $\epsilon>0$, however, as long as $N_{\epsilon}(h)$ contains the true equilibrium
+sampling distribution, this relaxation stabilizes the system, leading to convergence towards
+the prior $P$ as $n \rightarrow \infty$, and thus providing $\epsilon$-_equilibrium-idempotence_.
+
+This completes the description of Nash-ISMCTS.
+
+## Technical Notes
+
+### Reducing variance from indifferent actions
+
+When PUCT intervals overlap, the acting player is indifferent between two or more actions, believing them to have
+nearly identical (exploration-incentive-adjusted) utilities. However, the opposing player may be far from
+indifferent with respect to those action choices!
+
+As an example, consider a poker game between Alice and Bob. Bob holds a medium-strength hand and is facing a bet
+from Alice. Based on the bet size and his belief about Alice's cards, he finds himself indifferent between the
+choices of calling and folding, believing them to have equal expected value. Alice, however, happens to have a bluff
+in this specific situation. She is not indifferent to whether Bob calls or folds.
+
+In perfect information games, we do not have this problem, since if Bob is indifferent between two or more choices, Alice
+is equally indifferent.
+
+In Nash-ISMCTS, when we sample a specific action $a$ in the overlapping-intervals case, this increments $N(a)$, which has a
+direct impact on the parent $Q$ evaluation:
+
+```math
+\begin{align*}
+Q(n) &= \mathbb{E}_{c \sim C(n)}[Q(c)] \\
+     &= \frac{1}{\sum N}\bigg(N(a)\cdot Q(a) + N(b)\cdot Q(b) + \cdots \bigg) \\
+\end{align*}
+```
+
+If $Q(a)$ is significantly lower than or higher than the true value of $Q(n)$ (as it would be in this poker example),
+this can lead to a significant misestimate of $Q(n)$. This in turn can impact upstream PUCT calculations. In
+the infinite limit, this will even out, but in practice, the misestimate can have a large distortive effect that
+takes a very long time to self-correct.
+
+To mitigate this problem, we differentiate between _pure_ actions and _mixed_ actions. Pure actions are actions resulting from
+the unique-maximal-interval case, while mixed actions are actions resulting from the overlapping-intervals case.
+A mixed action is similar to a sampling-event, since it similarly results from the random draw of a fixed
+distribution. We can thus treat them similarly for the purposes of calculating $Q(n)$, relying on expectations
+rather than the actual sampled choices. This looks like this:
+
+```math
+Q(n) = \frac{n_{\mathrm{mixed}}\cdot\mathbb{E}_{a \sim \mathrm{MIX}}[Q[a]] + n_{\mathrm{pure}}\cdot\mathbb{E}_{a \sim N}[Q[a]]}{n_{\mathrm{mixed}} + n_{\mathrm{pure}}}
+```
+
+Here:
+
+- $n_{\mathrm{mixed}}$ is the number of mixed actions performed at $n$.
+- $n_{\mathrm{pure}}$ is the number of pure actions performed at $n$.
+- $N$ is the pure action visit distribution.
+- $\mathrm{MIX}$ is a distribution, taken by averaging the $n_{\mathrm{mixed}}$ mixing distributions used so far.
+
+### Child value predictions
+
+(Described in more detail [here](AuxValueTarget.md))
+
+When calculating $Q$ for SAMPLE nodes, we sometimes require $Q$ values from children that may not have been expanded.
+Descending to each child and querying $V$ could be costly. Instead, we add
+an auxiliary network head, the _child-value_ head ($V_c(n)$). This produces a vector of values, whose length
+is equal to the number of children of the current node $n$. It is trained to predict the network's own
+evaluation of $V$ at $n$'s children.
+
+Training targets for the children can be obtained during self-play by evaluating $V$ for all children.
+For expanded children, this $V$ value is available for free. For other children, they can be obtained
+via side-channel batched inference requests that do not block the self-play game.
+
+We can similarly train $V_c$ on ACT nodes. This helps with the modified $Q$ calculation described in the
+prior section, which similarly requires $Q$ values for children that may not have been expanded. More than
+that, $V_c$ can be used in the standard PUCT formula in place of $Q$ for unvisited nodes. This effectively
+serves as an alternate FPU policy, and can be applied in standard MCTS in perfect information games as well.
+
+### Move temperature
+
+If our policy prior $P$ is near-equilibrium, then Nash-ISMCTS will produce a near-equilibrium posterior policy
+$\pi$. In order for the AlphaZero loop to work properly, the self-play agents must act according to $\pi$.
+Otherwise, the $V$ and $H$ targets will not be consistent with $P$.
+
+Fixing the move temperature to 1 ensures this. However, a move temperature of 1 fails to trim
+exploration-induced visits. We will get the right mixing frequencies between the optimal actions, but
+have too much weight on low-quality actions. This dilutes expected action quality, both during self-play
+and at test time.
+
+We therefore need a more sophisticated move selection scheme - one that acts like a temperature=1 scheme
+among the optimal actions, but which acts like a low-temperature scheme for the low-quality actions.
+
+To this end, we apply an LCB-like mechanism. In LCB, the final $Q(a)$ is combined with its associated $N(a)$
+to produce a confidence-interval around $Q(a)$, of the form $[Q(a) - \sigma(N(a)), Q(a) + \sigma(N(a))]$, for some
+decreasing positive-valued function $\sigma$. We identify the interval whose lower bound is greatest, and
+select that action. (LCB stands for "lower confidence bound".)
+
+
 
 ## TODO
 
