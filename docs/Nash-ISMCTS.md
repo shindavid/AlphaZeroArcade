@@ -3,6 +3,35 @@
 This document describes _Nash Information Set Monte Carlo Tree Search_. Nash-ISMCTS is our MCTS-variant,
 which can be applied in imperfect information games to approximate a game's Nash equilibrium.
 
+## Tree Search in Imperfect Information Games
+
+A common objection to applying a tree-search algorithm to games of imperfect information
+is that in imperfect information games, you cannot analyze a subtree of the game in isolation. 
+This is because the value of a node in the game tree is dependent on the policy that got to that point in the tree.
+
+Well...that’s only _partially_ true. It is true that the value of the node against the 
+_worst case_ adversary policy is dependent on the policy that got to that point in the tree. This is because
+given a policy $P$, the behavior of its optimal counter-policy, $\mathrm{counter}(P)$,
+at a node $n$ is dependent on $P$'s behavior across the _entire_ game-tree, 
+rather than just on $P$'s behavior in the subtree $T$ rooted at $n$.
+However, against any given _fixed_ adversary policy, the value is independent of the behavior of $P$
+outside of $T$. So, if we hold the adversary policy fixed, a tree-search subroutine like MCTS could conceivably still act as a
+policy improvement operator.
+
+This begs the question: what good is policy improvement against some given _fixed_ policy? In rock-paper-scissor,
+against a fixed 100%-rock opponent, iterated policy improvement will lead you to the 100%-paper strategy. That is
+not the policy you want to converge to if you want to do well against other policies.
+
+Despite this cautionary example, the fact is, other proven approaches like CFR and R-NaD operate similarly:
+on any given generation, they assume a fixed adversary policy and perform a policy-improvement operator with
+respect to that _fixed_ policy. Doing so yields a _sequence_ of policy-pairs, and as the policies in the pair
+iteratively improve against each other, this _sequence_ (or, the _average_ of the sequence)
+converges towards equilibrium.
+
+So, can MCTS, in the AlphaZero context, similarly serve as a policy-improvement operator that, despite
+only representing an improvement against a fixed-opponent-policy _within_ a generation, represents a
+long-term improvement towards equilibrium _across_ generations?
+
 ## Background: Many Tree ISMCTS (MT-ISMCTS)
 
 In perfect information settings, each node of an MCTS tree represents a full game state. In imperfect
@@ -53,11 +82,11 @@ Bob's recursive application of this procedure can itself spawn a new tree from t
 represented by the third tree in the diagram. And this recursive spawning can continue indefinitely.
 
 This repeated spawning is important. In Alice's simulation of Bob's thinking, she must conceive of him
-as an agent that believes Alice can have non-$x$ hidden-states, optimizing his action accordingly. The
+as an agent that believes Alice can have non- $x$ hidden-states, optimizing his action accordingly. The
 $Q$ values relevant to her decision-making should reflect her own known hidden information of $x$, but
 the $Q$ values relevant to Bob's decision-making should not. Furthermore, her simulation of Bob's thinking
 is an agent that is simulating her own thinking. The simulated-Alice within Alice's simulation of Bob
-must potentially have non-$x$ states, so they cannot use the $Q$ values in the original-tree. And so forth.
+must potentially have non- $x$ states, so they cannot use the $Q$ values in the original-tree. And so forth.
 
 As [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf) predated AlphaGo/AlphaZero,
 some of the details of the MCTS mechanics were different from what they would be in a more modern
