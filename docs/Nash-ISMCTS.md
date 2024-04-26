@@ -283,7 +283,16 @@ distribution. We can thus treat them similarly for the purposes of calculating $
 rather than the actual sampled choices. This looks like this:
 
 ```math
-Q(n) = \frac{n_{\mathrm{mixed}}\cdot\mathbb{E}_{a \sim \mathrm{MIX}}[Q[a]] + n_{\mathrm{pure}}\cdot\mathbb{E}_{a \sim N}[Q[a]]}{n_{\mathrm{mixed}} + n_{\mathrm{pure}}}
+Q(n) = \frac{n_{\mathrm{mixed}}\cdot Q_{\mathrm{mixed}}(n) + n_{\mathrm{pure}}\cdot Q_{\mathrm{pure}}(n)}{n_{\mathrm{mixed}} + n_{\mathrm{pure}}}
+```
+
+where:
+
+```math
+\begin{align*}
+Q_{\mathrm{mixed}}(n) &= \mathbb{E}_{a \sim \mathrm{MIX}}[Q[a]] \\
+Q_{\mathrm{pure}}(n) &= \mathbb{E}_{a \sim N}[Q[a]] \\
+\end{align*}
 ```
 
 Here:
