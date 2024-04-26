@@ -271,7 +271,7 @@ Q(n) &= \mathbb{E}_{c \sim C(n)}[Q(c)] \\
 \end{align*}
 ```
 
-If $Q(a)$ is significantly lower than or higher than the true value of $Q(n)$ (as it would be in this poker example),
+If $Q(a)$ differs significantly from the true value of $Q(n)$ (as it would in this poker example),
 this can lead to a significant misestimate of $Q(n)$. This in turn can impact upstream PUCT calculations. In
 the infinite limit, this will even out, but in practice, the misestimate can have a large distortive effect that
 takes a very long time to self-correct.
