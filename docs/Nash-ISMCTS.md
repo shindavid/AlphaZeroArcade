@@ -232,7 +232,7 @@ producing PUCT intervals. Here is how we adjust the selection mechanics:
 
 - If one PUCT interval is strictly greater than the others, then select the corresponding action.
 
-- Otherwise, the PUCT interval containing the maximum value of the interval-union intersects
+- Otherwise, the PUCT interval whose left endpoint is largest intersects 
 $m\geq1$ other intervals. Choose randomly among the actions corresponding to those $(m+1)$ intervals, with each such action $a$
 chosen with probability proportional to the _raw_ prior $P(a)$. We call this the _mixing distribution_.
 We emphasize _raw_ here to specify that if perturbations like softmax temperature or
@@ -241,7 +241,7 @@ Dirichlet noise are applied, we do _not_ want them to influence the mixing distr
 If $\epsilon=0$, this reduces to A-MCTS, and incurs the previously described instability.
 For $\epsilon>0$, however, as long as $N_{\epsilon}(h)$ contains the true equilibrium
 sampling distribution, this relaxation stabilizes the system, leading to convergence towards
-the prior $P$ as $n \rightarrow \infty$, and thus providing $\epsilon$-_equilibrium-idempotence_.
+the raw prior $P$ as $n \rightarrow \infty$, and thus providing $\epsilon$-_equilibrium-idempotence_.
 
 This completes the description of Nash-ISMCTS.
 
@@ -329,7 +329,7 @@ among the optimal actions, but which acts like a low-temperature scheme for the 
 To this end, we adapt the Lower Confidence Bound (LCB) mechanism. In LCB,
 the final $Q(a)$ is combined with its associated $N(a)$ to produce a confidence-interval
 around $Q(a)$, of the form $I(a) = [Q(a) - \sigma(N(a)), Q(a) + \sigma(N(a))]$, for some
-decreasing positive-valued function $\sigma$. The action $a$ whose lower bound $\mathrm{min}_I I(a)$ is
+decreasing positive-valued function $\sigma$. The action $a$ whose lower bound $\mathrm{min}(I(a))$ is
 greatest is identified, and all actions $b$ such that $I(b)$ is strictly less than $I(a)$ are
 discarded. Only the remaining actions are candidates for move selection.
 
