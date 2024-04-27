@@ -118,8 +118,8 @@ the policy $P$. We can approximately enforce this by being careful with move sel
 move temperature), under the assumption that $P$ has converged; more on this later.
 
 In some games, the size of the hidden state space can be intractably large. Rather than representing
-the hidden state policy as a flat distribution over the entire space, we can split the
-single SAMPLE node into a sequence of multiple SAMPLE nodes, each generating a piece of the hidden state.
+the hidden state as a flat distribution over the entire space, we can split the
+single SAMPLE node into a series of multiple SAMPLE nodes, each generating a piece of the hidden state.
 This is similar to how an LLM samples sentences one word at a time. In Scrabble, we can
 generate a hidden set of tiles one letter at a time, limiting the output of the $H$ network to a size-27 logit layer.
 In Stratego, we can generate the hidden piece identities one piece at a time.
@@ -301,6 +301,12 @@ Here:
 - $n_{\mathrm{pure}}$ is the number of pure actions performed at $n$.
 - $N$ is the pure action visit distribution.
 - $\mathrm{MIX}$ is a distribution, taken by averaging the $n_{\mathrm{mixed}}$ mixing distributions used so far.
+
+Still, if the initial visits to an action node result in pure actions, this mechanism may not be enough.
+For action nodes that are children of sampling nodes, we can consider forcing $m$ additional visits
+after the first pure action, where $m$ can either be a constant or dynamically chosen based on the shape of $P$.
+These additional visits are "free", in a sense, since they will not distort upstream visit distributions,
+due to the expectation-based $Q$-computation at sampling nodes. Experimentation is needed.
 
 ### Child value predictions
 
