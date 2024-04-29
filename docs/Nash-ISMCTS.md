@@ -336,15 +336,15 @@ among the optimal actions, but which acts like a low-temperature scheme for the 
 
 To this end, we adapt the Lower Confidence Bound (LCB) mechanism. In LCB,
 the final $Q(a)$ is combined with its associated $N(a)$ to produce a confidence-interval
-around $Q(a)$, of the form $I(a) = [Q(a) - \sigma(N(a)), Q(a) + \sigma(N(a))]$, for some
-decreasing positive-valued function $\sigma$. The action $a$ whose lower bound $\mathrm{min}(I(a))$ is
+around $Q(a)$, of the form $I(a) = [Q(a) - \phi(N(a)), Q(a) + \phi(N(a))]$, for some
+decreasing positive-valued function $\phi$. The action $a$ whose lower bound $\mathrm{min}(I(a))$ is
 greatest is identified, and all actions $b$ such that $I(b)$ is strictly less than $I(a)$ are
 discarded. Only the remaining actions are candidates for move selection.
 
-In our case, our $Q(a)$ is already an interval, so our confidence interval takes the form,
+In our case, we have $\Sigma_h$ correction terms, so our confidence interval takes the form,
 
 ```math
-I(a) = [\mathrm{min}(Q(a)) - \sigma(N(a)), \mathrm{max}(Q(a)) + \sigma(N(a))]
+I(a) = [Q(a) - \mathrm{min}(\Sigma_h(a)) - \phi(N(a)), Q(a) + \mathrm{max}(\Sigma_h(a)) + \phi(N(a))]
 ```
 
 With this alternate interval definition, we apply the same filtering mechanism. Then, we select
