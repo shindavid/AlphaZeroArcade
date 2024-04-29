@@ -150,10 +150,11 @@ that learns to sample the hidden state of the game. Note that in principle, $H$ 
 Bayes' Rule, but this computation can be expensive. So $H$ can be considered an alternate representation of $P$ that we
 use to avoid an expensive online Bayes' Rule calculation.
 
-$H$ will accept the same inputs as $P$ and $V$, and will be trained on self-play games using the actual values of the hidden state
+$H$ will accept the same inputs as $P$ and $V$: the public game history, together with the acting
+player's private information. It will be trained on self-play games using the actual values of the hidden state
 as training targets. This should result in an unbiased $H$ as long as the self-play games are played according to
-the policy $P$. We can approximately enforce this by being careful with move selection mechanics (such as
-move temperature), under the assumption that $P$ has converged; more on this later.
+the policy $P$. We can approximately enforce this, under the assumption that $P$ has converged,
+by being careful with move selection mechanics; more on this later.
 
 In some games, the size of the hidden state space can be intractably large. Rather than representing
 the hidden state as a flat distribution over the entire space, we can split the
@@ -193,9 +194,9 @@ from indifferent actions.
 Let us call this ISMCTS variant imbued with AlphaZero mechanics _AlphaZero-ISMCTS_, or A-ISMCTS. This is not yet
 our final Nash-ISMCTS.
 
-Suppose we play $G$ self-play games using A-ISMCTS and train $P$, $V$, and $H$ on the resultant set of 
+Suppose we play $g$ self-play games using A-ISMCTS and train $P$, $V$, and $H$ on the resultant set of 
 self-play data. Will the policy produced by running A-ISMCTS with the resultant $P$, $V$, and $H$, for $n$ visits,
-converge towards Nash Equilibrium, as $G$ and $n$ approach infinity?
+converge towards Nash Equilibrium, as $g$ and $n$ approach infinity?
 
 Unfortunately, the answer is no, as the resultant dynamic system will exhibit unstable chaotic behavior. However,
 in analyzing some of the properties of this dynamic system, we can obtain some useful insights that will motivate
@@ -237,7 +238,7 @@ This demonstrates the required ratio limit, and thus proves the claimed property
 The theoretical argument above demonstrates that if we are at equilibrium, then A-ISMCTS will
 converge towards an idempotent operator. However, we must be _exactly_ at equilibrium. If $V$ or $H$ are off by
 even the tiniest of margins, then the idempotence proof fails, and as the number of MCTS iterations approaches
-infinity, the visit distribution will collapse to a single point, rather than converge to $P$ as required.
+infinity, the visit distribution can collapse to a single point, rather than converge to $P$ as required.
 
 Practically, the number of visits is finite, and so if the networks are close enough, then perhaps the visit
 distribution will be close enough to $P$ to make everything work in practice. However, this is not satisfactory. One should
@@ -285,85 +286,38 @@ This completes the description of Nash-ISMCTS.
 
 ## Technical Notes
 
-### Reducing variance from indifferent actions
-
-When PUCT intervals overlap, the acting player is indifferent between two or more actions, believing them to have
-nearly identical (exploration-incentive-adjusted) utilities. However, the opposing player may be far from
-indifferent with respect to those action choices!
-
-As an example, consider a poker game between Alice and Bob. Alice holds a medium-strength hand and is facing a bet
-from Bob. Based on the bet size and her belief about Bob's cards, she finds herself indifferent between the
-choices of calling and folding, believing them to have equal expected value. Bob, however, happens to have a bluff
-in this specific situation. _He_ is not indifferent to whether Alice calls or folds.
-
-In perfect information games, we do not have this asymmetry, since if Alice is indifferent between two or more choices, Bob
-will be equally indifferent.
-
-In Nash-ISMCTS, when we sample a specific action $a$ in the overlapping-intervals case, this increments $N(a)$, which has a
-direct impact on the parent $Q$ evaluation:
-
-```math
-\begin{align*}
-Q(n) &= \mathbb{E}_{c \sim C(n)}[Q(c)] \\
-     &= \frac{1}{\sum N}\bigg(N(a)\cdot Q(a) + N(b)\cdot Q(b) + \cdots \bigg) \\
-\end{align*}
-```
-
-If $Q(a)$ differs significantly from the true value of $Q(n)$ (as it would in this poker example),
-this can lead to a significant misestimate of $Q(n)$. This in turn can impact upstream PUCT calculations. In
-the infinite limit, this will even out, but in practice, the misestimate can have a large distortive effect that
-takes a very long time to self-correct.
-
-To mitigate this problem, we differentiate between _pure_ actions and _mixed_ actions. Pure actions are actions resulting from
-the unique-maximal-interval case, while mixed actions are actions resulting from the overlapping-intervals case.
-A mixed action is similar to a sampling-event, since it similarly results from the random draw of a fixed
-distribution. We can thus treat them similarly for the purposes of calculating $Q(n)$, relying on expectations
-rather than the actual sampled choices. This looks like this:
-
-```math
-Q(n) = \frac{n_{\mathrm{mixed}}\cdot Q_{\mathrm{mixed}}(n) + n_{\mathrm{pure}}\cdot Q_{\mathrm{pure}}(n)}{n_{\mathrm{mixed}} + n_{\mathrm{pure}}}
-```
-
-where:
-
-```math
-\begin{align*}
-Q_{\mathrm{mixed}}(n) &= \mathbb{E}_{a \sim \mathrm{MIX}}[Q[a]] \\
-Q_{\mathrm{pure}}(n) &= \mathbb{E}_{a \sim N}[Q[a]] \\
-\end{align*}
-```
-
-Here:
-
-- $n_{\mathrm{mixed}}$ is the number of mixed actions performed at $n$.
-- $n_{\mathrm{pure}}$ is the number of pure actions performed at $n$.
-- $N$ is the pure action visit distribution.
-- $\mathrm{MIX}$ is a distribution, taken by averaging the $n_{\mathrm{mixed}}$ mixing distributions used so far.
-
-Still, if the initial visits to an action node result in pure actions, this mechanism may not be enough.
-For action nodes that are children of sampling nodes, we can consider forcing $m$ additional visits
-after the first pure action, where $m$ can either be a constant or dynamically chosen based on the shape of $P$.
-These additional visits are "free", in a sense, since they will not distort upstream visit distributions,
-due to the expectation-based $Q$-computation at sampling nodes. Experimentation is needed.
-
 ### Child value predictions
 
 (Described in more detail [here](AuxValueTarget.md))
 
-When calculating $Q$ for SAMPLE nodes, we sometimes require $Q$ values from children that may not have been expanded.
-Descending to each child and querying $V$ could be costly. Instead, we add
-an auxiliary network head, the _child-value_ head, $V_c(n)$. This produces a vector of values, whose length
-is equal to the number of children of the current node $n$. It is trained to predict the network's own
-evaluation of $V$ at $n$'s children.
+We will add a _child-value_ head ($V_c$) to our neural network, alongside the standard value head ($V$).
+This produces a vector of values, whose length is equal to the number of children of
+the current node $n$. It is trained to predict the network's own evaluation of $V$ at $n$'s children.
 
-Training targets for the children can be obtained during self-play by evaluating $V$ for all children.
-For expanded children, this $V$ value is available for free. For other children, they can be obtained
-via side-channel batched inference requests that do not block the self-play game.
+The outputs of this head will be used instead of a First Play Urgency (FPU) policy, for the $Q$ term
+in the PUCT formula for unvisited nodes.
 
-We can similarly train $V_c$ on ACT nodes. This helps with the modified $Q$ calculation described in the
-prior section, which similarly requires $Q$ values for children that may not have been expanded. More than
-that, $V_c$ can be used in the standard PUCT formula in place of $Q$ for unvisited nodes. This effectively
-serves as an alternate FPU policy, and can be applied in standard MCTS in perfect information games as well.
+As we will see in later sections, $V_c$ will be used in other ways for variance reduction during
+backpropagation.
+
+### Reducing variance from sampling
+
+(Described in more detail [here](AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising))
+
+When backpropagating a value $x$ from a node $v$ to its parent SAMPLE node $u$, we apply an additive correction to
+$x$ to control for the luck of sampling $v$ from $u$. The appropriate adjustment is:
+
+```math
+Q(v) - \mathbb{E}_{w \sim C(u)} [Q(w)],
+```
+
+where the $Q$ values are computed _before_ incorporating $x$. For not-yet-expanded children, we can use $V_c$
+in place of $Q$.
+
+We apply this same mechanism at random chance nodes, where the chance event comes from the game rules
+(such as random tile draws from the bag in Scrabble).
+
+At action nodes, in the PUCT-interval-overlap case, we also have a sampling event. We apply the same mechanism in this case.
 
 ### Move selection
 
