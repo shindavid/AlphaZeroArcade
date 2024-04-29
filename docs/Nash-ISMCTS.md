@@ -53,7 +53,7 @@ search routine is itself CFR.
 
 Compared to the full game tree, these synthetic shallow game trees are much smaller. Their size
 only depend on $h$ and $b$, while the full game tree also depends on $p$. Thus, while CFR on the full game tree
-uses $O(phb) memory, CFR on these synthetic shallow game trees only uses $O(hb) memory$. The removal of the $p$ term is
+uses $O(phb)$ memory, CFR on these synthetic shallow game trees only uses $O(hb)$ memory. The removal of the $p$ term is
 what justifies the complexity of ReBeL compared to CFR, and is what allows ReBeL to work on games
 that were intractable for CFR alone.
 
