@@ -372,10 +372,10 @@ The Bayes' Rule calculation described above can similarly be performed online, i
 used in the $\epsilon$-mechanism. Specifically, we can replace the probability terms used in the correction
 term expectation calculation with terms computed by evaluating $H$ and $P$ on prior states. If the calculation
 is tractable, we can take those prior states arbitrarily high in the game tree, even as far as the game's starting
-position.
+position. For games where it is tractable to do this from the starting position, we don't need an $H$ model at all.
 
-(ReBeL does exactly this, continuously updating hidden state distributions via Bayes' Rule throughout the entire
-game.)
+(ReBeL does exactly this, forgoing an $H$ model and instead continuously updating hidden state distributions
+via Bayes' Rule throughout the entire game.)
 
 ## TODO
 
