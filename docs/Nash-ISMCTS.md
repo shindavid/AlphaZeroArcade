@@ -308,10 +308,11 @@ When backpropagating a value $x$ from a node $v$ to its parent SAMPLE node $u$, 
 $x$ to control for the luck of sampling $v$ from $u$. The appropriate adjustment is:
 
 ```math
-Q(v) - \mathbb{E}_{w \sim C(u)} [Q(w)],
+Q(v) - \mathbb{E}_{w \sim H(u)} [Q(w)],
 ```
 
-where the $Q$ values are computed _before_ incorporating $x$. For not-yet-expanded children, we can use $V_c$
+where $H(u)$ represents the sampling distribution gotten by evaluation $H$ at $u$,
+and where the $Q$ values are computed _before_ incorporating $x$. For not-yet-expanded children, we can use $V_c$
 in place of $Q$.
 
 We apply this same mechanism at random chance nodes, where the chance event comes from the game rules
