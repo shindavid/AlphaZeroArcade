@@ -10,7 +10,7 @@ which can be applied in imperfect information games to approximate a game's Nash
 _Counterfactual Regret Minimization_, or CFR ([Zinkevich et al, 2007](https://poker.cs.ualberta.ca/publications/NIPS07-cfr.pdf)),
 is a foundational technique in incomplete information games. At a high-level, this technique works
 by representing a policy $\pi$ as a look-up table mapping every possible information set in the game to
-a probability distribution over actions. This table is approximately of size $p\cdot h \cdot b$, where:
+a probability distribution over actions. This table is of size $O(phb)$, where:
 
 * $p$ is the number of public states of the game
 * $h$ is the number of hidden states of the game
@@ -40,7 +40,7 @@ but rely on this same underlying pseudo-theorem.
 ### Integrating Search: Recursive Belief-based Learning (ReBeL)
 
 CFR has achieved great success in games with a tractable table size, including many popular variants of poker.
-However, the technique is not suitable for games where $p \cdot h \cdot b$ is large, such as Scrabble, Hearts, or Stratego.
+However, the technique is not suitable for games where $O(phb)$ is large, such as Scrabble, Hearts, or Stratego.
 
 Pseudo-Theorem 1 hints at the possibility of integrating a best-local-response-computing search routine
 into a Nash Equilibrium computing framework.
@@ -53,8 +53,7 @@ search routine is itself CFR.
 
 Compared to the full game tree, these synthetic shallow game trees are much smaller. Their size
 only depend on $h$ and $b$, while the full game tree also depends on $p$. Thus, while CFR on the full game tree
-has a memory requirement that scales with $p \cdot h \cdot b$, CFR on these synthetic shallow
-game trees has a memory requirement that only scales with $h \cdot b$. This removal of $p$ is
+uses $O(phb) memory, CFR on these synthetic shallow game trees only uses $O(hb) memory$. The removal of the $p$ term is
 what justifies the complexity of ReBeL compared to CFR, and is what allows ReBeL to work on games
 that were intractable for CFR alone.
 
@@ -156,12 +155,18 @@ as training targets. This should result in an unbiased $H$ as long as the self-p
 the policy $P$. We can approximately enforce this, under the assumption that $P$ has converged,
 by being careful with move selection mechanics; more on this later.
 
-In some games, the size of the hidden state space can be intractably large. Rather than representing
-the hidden state as a flat distribution over the entire space, we can split the
+In some games, the size of the hidden state space, $h$, can be intractably large. Rather than representing
+the hidden state as a flat distribution over the entire space, we can split a
 single SAMPLE node into a series of multiple SAMPLE nodes, each generating a piece of the hidden state.
 This is similar to how an LLM samples sentences one word at a time. In Scrabble, we can
 generate a hidden set of tiles one letter at a time, limiting the output of the $H$ network to a size-27 logit layer.
-In Stratego, we can generate the hidden piece identities one piece at a time.
+In Stratego, we can generate the hidden piece identities one piece at a time. This removes the linear dependence
+on $h$ in the system memory requirements.
+
+Similarly, if the size of the action space, $b$, is too large, we can split a single ACT node into
+a series of multiple ACT nodes, by decomposing an action into multiple sub-actions. In Scrabble, we can
+decompose a move into a board location, followed by tile placements. This removes the linear dependence on
+$b$ in the system memory requirements.
 
 ## Q calculations
 
