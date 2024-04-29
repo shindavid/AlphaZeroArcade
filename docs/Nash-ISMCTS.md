@@ -3,36 +3,70 @@
 This document describes _Nash Information Set Monte Carlo Tree Search_. Nash-ISMCTS is our MCTS-variant,
 which can be applied in imperfect information games to approximate a game's Nash equilibrium.
 
-## Tree Search in Imperfect Information Games
+## Background
 
-A common objection to applying a tree-search algorithm to games of imperfect information
-is that in imperfect information games, you cannot analyze a subtree of the game in isolation. 
-This is because the value of a node in the game tree is dependent on the policy that got to that point in the tree.
+### The Foundation: Counterfactual Regret Minimization (CFR)
 
-Well...that’s only _partially_ true. It is true that the value of the node against the 
-_worst case_ adversary policy is dependent on the policy that got to that point in the tree. This is because
-given a policy $P$, the behavior of its optimal counter-policy, $\mathrm{counter}(P)$,
-at a node $n$ is dependent on $P$'s behavior across the _entire_ game-tree, 
-rather than just on $P$'s behavior in the subtree $T$ rooted at $n$.
-However, against any given _fixed_ adversary policy, the value is independent of the behavior of $P$
-outside of $T$. So, if we hold the adversary policy fixed, a tree-search subroutine like MCTS could conceivably still act as a
-policy improvement operator.
+_Counterfactual Regret Minimization_, or CFR ([Zinkevich et al, 2007](https://poker.cs.ualberta.ca/publications/NIPS07-cfr.pdf)),
+is a foundational technique in incomplete information games. At a high-level, this technique works
+by representing a policy $\pi$ as a look-up table mapping every possible information set in the game to
+a probability distribution over actions. This table is approximately of size $p\cdot h \cdot b$, where:
 
-This begs the question: what good is policy improvement against some given _fixed_ policy? In rock-paper-scissor,
-against a fixed 100%-rock opponent, iterated policy improvement will lead you to the 100%-paper strategy. That is
-not the policy you want to converge to if you want to do well against other policies.
+* $p$ is the number of public states of the game
+* $h$ is the number of hidden states of the game
+* $b$ is the average branching factor of the game
 
-Despite this cautionary example, the fact is, other proven approaches like CFR and R-NaD operate similarly:
-on any given generation, they assume a fixed adversary policy and perform a policy-improvement operator with
-respect to that _fixed_ policy. Doing so yields a _sequence_ of policies, and as the policies
-iteratively improve, this _sequence_ (or, the _average_ of the sequence)
-converges towards equilibrium.
+CFR iteratively produces a sequence of policies $P = \lbrace \pi_1, \pi_2, \ldots \rbrace$. 
+Let $\overline{\pi}_n$ denote the average of the first $n$ elements of $P$.
 
-So, can MCTS, in the AlphaZero context, similarly serve as a policy-improvement operator that, despite
-only representing an improvement against a fixed-opponent-policy _within_ a generation, represents a
-long-term improvement towards equilibrium _across_ generations?
+The iterative step, roughly speaking, computes a new $\pi_{n+1}$ by updating $\overline{\pi}_n$ towards
+its locally-optimal counter-strategy. The exhaustive table facilitates the computation for this update.
+The linked paper describes the iterative step more exactly and provides a rigorous
+proof that $\overline{\pi}_n$ converges to a Nash Equilibrium.
 
-## Background: Many Tree ISMCTS (MT-ISMCTS)
+A key high-level takeaway is this:
+
+---
+
+**Pseudo-Theorem 1**: Suppose we have a set, $S$, of policies. If we repeatedly expand $S$ by adding a
+new policy obtained by updating the average policy of $S$ towards its best local response,
+then the average of the policies in $S$ will converge to a Nash Equilibrium.
+
+---
+
+We are intentionally vague about the details here, as the mechanics of Nash-ISMCTS will differ from CFR,
+but rely on this same underlying pseudo-theorem.
+
+### Integrating Search: Recursive Belief-based Learning (ReBeL)
+
+CFR has achieved great success in games with a tractable table size, including many popular variants of poker.
+However, the technique is not suitable for games where $p \cdot h \cdot b$ is large, such as Scrabble, Hearts, or Stratego.
+
+Pseudo-Theorem 1 hints at the possibility of integrating a best-local-response-computing search routine
+into a Nash Equilibrium computing framework.
+
+This possibility was first realized in _Recursive Belief-based Learning_, or ReBeL ([Brown et al, 2020](https://arxiv.org/pdf/2007.13544)).
+At a high level, ReBeL works by approximating best-response payouts with a value neural network, $V$, and
+then performing the best local response computation needed to power Pseudo-Theorem 1 via a search
+routine performed on a synthetic shallow game tree whose leaf values come from $V$. That
+search routine is itself CFR. 
+
+Compared to the full game tree, these synthetic shallow game trees are much smaller. Their size
+only depend on $h$ and $b$, while the full game tree also depends on $p$. While CFR on the full game tree
+has a memory requirement that scales with $p \cdot h \cdot b$, CFR on these synthetic shallow
+game trees has a memory requirement that only scales with $h \cdot b$. This removal of $p$ is
+what justifies the complexity of ReBeL compared to CFR, and is what allows ReBeL to work on games
+that were intractable for CFR alone.
+
+Still, the $h$ and $b$ factors remain. For the games of Scrabble, Hearts, and Stratego, these factors
+are prohibitively large, making them still out of reach for ReBeL.
+
+In our proposed framework, Nash-ISMCTS, we will similarly exploit Pseudo-Theorem 1, but rely on
+Monte Carlo Tree Search (MCTS) as the best-local-response-computing search routine. As we will see,
+this will allow us to remove the linear dependence on $h$ and $b$ in the system memory requirements,
+which will finally put those large games within reach.
+
+### Many-Tree Information-Set Monte Carlo Tree Search (MT-ISMCTS)
 
 In perfect information settings, each node of an MCTS tree represents a full game state. In imperfect
 information settings, the acting agent lacks visibility into all hidden information, and so cannot
@@ -87,6 +121,10 @@ $Q$ values relevant to her decision-making should reflect her own known hidden i
 the $Q$ values relevant to Bob's decision-making should not. Furthermore, her simulation of Bob's thinking
 is an agent that is simulating her own thinking. The simulated-Alice within Alice's simulation of Bob
 must potentially have non- $x$ states, so they cannot use the $Q$ values in the original-tree. And so forth.
+
+Note that the only piece of information that Alice extracts from her simulation of Bob's thinking is
+Bob's _action_. The utility that simulated-Bob perceives his action to have will not get averaged into
+her own utility beliefs.
 
 As [Cowling et al, 2015](http://orangehelicopter.com/academic/papers/cig15.pdf) predated AlphaGo/AlphaZero,
 some of the details of the MCTS mechanics were different from what they would be in a more modern
