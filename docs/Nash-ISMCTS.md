@@ -168,32 +168,6 @@ a series of multiple ACT nodes, by decomposing an action into multiple sub-actio
 decompose a move into a board location, followed by tile placements. This removes the linear dependence on
 $b$ in the system memory requirements.
 
-## Q calculations
-
-The traditional formulation of MCTS maintains a $Q$ value at each node $n$, which corresponds to the running average of
-the utility values sampled in the subtree rooted at $n$.
-
-It turns out that there is an equivalent formulation:
-
-```math
-Q(n) = \mathbb{E}_{c \sim C(n)}[Q(c)]
-```
-
-Here, $C(n)$ denotes the children of $n$. If $n$ is an action node, the distribution dictating the selection of $c$ from $C(n)$
-is the action policy at $n$, which is simply the child visit distribution ($N$). See 
-[here](https://github.com/lightvector/KataGo/blob/master/docs/GraphSearch.md) for an excellent derivation.
-
-**We will use this alternate formulation.**
-
-In standard MCTS, all nodes are action nodes, and for action nodes, there is no difference in the formulations.
-
-In ISMCTS, however, some nodes are sampling nodes, for which there _is_ a difference. If the sampling distribution is
-30% - 70% between actions $a$ and $b$, the formula will yield $0.3 * Q(a) + 0.7 * Q(b)$, regardless of how many
-times we happened to sample $a$ vs $b$. This helps decrease variance by mitigating random noise from $H$-sampling.
-
-Later, we will modify the expectation-computation at action nodes as well, in an effort to mitigate random noise
-from indifferent actions.
-
 ## Equilibrium-Idempotence
 
 Let us call this ISMCTS variant imbued with AlphaZero mechanics _AlphaZero-ISMCTS_, or A-ISMCTS. This is not yet
@@ -252,26 +226,37 @@ such a guarantee, it is difficult to trust that AlphaZero will result in long-te
 networks are produced, it is difficult to trust that policy collapse won't happen at test time, due to using an
 excessive number of visits.
 
-To remedy this problem, we inject uncertainty into our usage of $H$. At a given SAMPLE node, $H$ produces a
-sampling distribution $h$, over $k$ possible hidden states. This can be represented as a point in the 
-$k$-simplex, $\Delta_k$. Rather than assuming that $h$ is the exact true sampling distribution, we will
+In order to rememdy this problem, we begin by observing that the $Q$ estimate at a SAMPLE node $n$
+is updated by averaging backpropaged values, and at any point will equal:
+
+```math
+Q(n) = \mathbb{E}_{c \sim N(n)}[Q(c)],
+```
+
+where $N(n)$ is the actual visit distribution. This visit distribution was obtained by sampling from $h$,
+a sampling distribution obtained by evaluating the hidden state network $H$. We can compute a
+correction term that can be added to $Q(n)$ to compensate for the luck of that sampling:
+
+```math
+\sigma(h, n) = \mathbb{E}_{c \sim h}[Q(c)] - Q(n),
+```
+
+The key to resolving the policy collapse issue is to inject uncertainty into our usage of $h$. The distribution
+$h$ can be represented as a point in the $k$-simplex, $\Delta_k$.
+Rather than assuming that $h$ is the exact true sampling distribution, we
 relax our belief and assume instead that the true sampling distribution falls
 somewhere in the neighborhood $N_{\epsilon}(h)$, consisting of the points of $\Delta_k$ whose
 L1-distance to $h$ is bounded by $\epsilon$.
 
-Using an exact $h$ in the $Q$ calculation at a SAMPLE node yields a calculation producing an exact value $q \in \mathbb{R}$:
+Now, instead of a singular correction term $\sigma(h, n)$, we can consider a _set_ of potential
+correct terms, and take the union of that set:
 
 ```math
-Q(n) = \mathbb{E}_{c \sim h}[Q(c)]
+\Sigma_h(n) = \bigcup_{h' \in N_{\epsilon}(h)} \sigma(h', n)
 ```
 
-Relaxing to $N_{\epsilon}(h)$ yields instead an _interval_ $[q_1, q_2] \subset \mathbb{R}$:
-
-```math
-Q(n) = \bigcup_{h' \in N_{\epsilon}(h)} \mathbb{E}_{c \sim h'}[Q(c)]
-```
-
-At ACT nodes, the PUCT formula now operates on child $Q$ _intervals_ rather than values, in turn
+This corresponds to a correction _interval_ that can be added to $Q(n)$ to compensate for sampling luck.
+After adding this correction interval, the PUCT formula now operates on child $Q$ _intervals_ rather than values, in turn
 producing PUCT intervals. Here is how we adjust the selection mechanics:
 
 - If one PUCT interval is strictly greater than the others, then select the corresponding action.
@@ -287,6 +272,11 @@ For $\epsilon>0$, however, as long as $N_{\epsilon}(h)$ contains the true equili
 sampling distribution, this relaxation stabilizes the system, leading to convergence towards
 the raw prior $P$ as $n \rightarrow \infty$, and thus providing $\epsilon$-_equilibrium-idempotence_.
 
+If a SAMPLE node was split into $k$ serial SAMPLE nodes, then we want to compute a correction interval
+at the top-level parent corresponding to all possible partitions $\epsilon = \epsilon_1 + \epsilon_2 + \cdots + \epsilon_k$,
+with the $i$'th level yielding an interval using an uncertainty of $\epsilon_i$, and with uncertainties
+propagating upwards. The top-level interval can be computed efficiently via dynamic programming.
+
 This completes the description of Nash-ISMCTS.
 
 ## Technical Notes
@@ -295,12 +285,17 @@ This completes the description of Nash-ISMCTS.
 
 (Described in more detail [here](AuxValueTarget.md))
 
-We will add a _child-value_ head ($V_c$) to our neural network, alongside the standard value head ($V$).
+In the $\epsilon$ mechanism described above, we sometimes require $Q$ estimates for children nodes that
+have not yet been visited.
+
+To address this, we add a _child-value_ head ($V_c$) to our neural network, alongside the standard value head ($V$).
 This produces a vector of values, whose length is equal to the number of children of
 the current node $n$. It is trained to predict the network's own evaluation of $V$ at $n$'s children.
 
-The outputs of this head will be used instead of a First Play Urgency (FPU) policy, for the $Q$ term
-in the PUCT formula for unvisited nodes.
+The outputs of this head can be used as the default $Q$ value for unvisited nodes.
+
+As a bonus, this $V_c$ head provides us with a sound First Play Urgency (FPU) mechanism that represents
+an improvement over typical FPU policies used in other AlphaZero implementations.
 
 As we will see in later sections, $V_c$ will be used in other ways for variance reduction during
 backpropagation.
