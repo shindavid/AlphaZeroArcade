@@ -349,6 +349,34 @@ I(a) = [\mathrm{min}(Q(a)) - \sigma(N(a)), \mathrm{max}(Q(a)) + \sigma(N(a))]
 With this alternate interval definition, we apply the same filtering mechanism. Then, we select
 among the remaining actions proportionally to $N$ (i.e., using a temperature of 1).
 
+### Bayes' Rule Loss Term
+
+We have argued that $H$ should converge towards the distribution that reflects $P$ combined with Bayes' Rule.
+While this is true, it will likely help to add an additional loss term to pressure the $H$ head to conform
+to $P$.
+
+To this end, we construct a loss term that penalizes local deviations from Bayes' Rule. During self-play, at a given SAMPLE
+node, we will have made $n$ queries to $H$, producing a set of $k \leq n$ distinct sampled hidden states: $s_1, s_2, \ldots, s_k$.
+Here, we treat a logical SAMPLE node that was split into a series of sub-nodes as if it were collapsed back into one.
+
+Each $s_i$ has an associated sampling probability, $p_i$.
+
+Let $a$ be the last observed opponent action. For each $s_i$, we can reconstruct the information set $I_i$
+prior to observing $a$, and compute terms $q_i = \mathrm{Pr}[I_i] \cdot \mathrm{Pr}[a | I_i]$. By Baye's Rule,
+we expect the $p_i$ terms to be proportional to the $q_i$ terms. So we can add a loss term based on the
+delta between $p_i$ and $q_i$.
+
+### Online H refinement
+
+The Bayes' Rule calculation described above can similarly be performed online, in order to refine the distributions 
+used in the $\epsilon$-mechanism. Specifically, we can replace the probability terms used in the correction
+term expectation calculation with terms computed by evaluating $H$ and $P$ on prior states. If the calculation
+is tractable, we can take those prior states arbitrarily high in the game tree, even as far as the game's starting
+position.
+
+(ReBeL does exactly this, continuously updating hidden state distributions via Bayes' Rule throughout the entire
+game.)
+
 ## TODO
 
 Describe Kuhn poker experiments.
