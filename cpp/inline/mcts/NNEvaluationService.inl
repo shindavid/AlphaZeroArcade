@@ -72,6 +72,7 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
       timeout_duration_(params.nn_eval_timeout_ns) {
   if (!params.model_filename.empty()) {
     net_.load_weights(params.model_filename.c_str(), params.cuda_device);
+    net_.activate();
   }
   auto input_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
                                                  eigen_util::to_int64_std_array_v<InputShape>);
