@@ -158,13 +158,15 @@ by being careful with move selection mechanics; more on this later.
 In some games, the size of the hidden state space, $h$, can be intractably large. Rather than representing
 the hidden state as a flat distribution over the entire space, we can split a
 single SAMPLE node into a series of multiple SAMPLE nodes, each generating a piece of the hidden state.
+We call this $H$-_splitting_.
 This is similar to how an LLM samples sentences one word at a time. In Scrabble, we can
 generate a hidden set of tiles one letter at a time, limiting the output of the $H$ network to a size-27 logit layer.
 In Stratego, we can generate the hidden piece identities one piece at a time. This removes the linear dependence
 on $h$ in the system memory requirements.
 
 Similarly, if the size of the action space, $b$, is too large, we can split a single ACT node into
-a series of multiple ACT nodes, by decomposing an action into multiple sub-actions. In Scrabble, we can
+a series of multiple ACT nodes, by decomposing an action into multiple sub-actions. 
+We similarly call this $P$-_splitting_. In Scrabble, we can
 decompose a move into a board location, followed by tile placements. This removes the linear dependence on
 $b$ in the system memory requirements.
 
@@ -226,56 +228,54 @@ such a guarantee, it is difficult to trust that AlphaZero will result in long-te
 networks are produced, it is difficult to trust that policy collapse won't happen at test time, due to using an
 excessive number of visits.
 
-In order to rememdy this problem, we begin by observing that the $Q$ estimate at a SAMPLE node $n$
-is updated by averaging backpropaged values, and at any point will equal:
+Our high-level strategy to remedy this problem is to replace the utility _point_-estimate $Q\in \mathbb{R}$ at each SAMPLE node
+with a utility _interval_-estimate $Q = [a, b] \subset \mathbb{R}$, whose width is based on an assumed level uncertainty about the accuracy of $H$.
+The nature of this uncertainty means that the interval's width will _not_
+shrink towards zero as the number of visits approaches infinity.
+The PUCT formula will then yields PUCT intervals, and the selection criterion will require comparing intervals.
+We will treat overlapping PUCT intervals as "tied", and break ties based on $P$.
+If the network believes two actions to be approximately equal
+in value, this approach can lead to PUCT intervals that remain overlapping in the infinite limit, and
+the tiebreaking rule can then lead to the required convergence to $P$.
 
-```math
-Q(n) = \mathbb{E}_{c \sim N(n)}[Q(c)],
-```
+(By contrast, if we associated our uncertainty with $V$ instead of $H$, then the uncertainty of $Q$
+would be expected to shrink towards 0 as more observations are backpropagated,
+if we assume independent noise with each observation.
+And if we _don't_ assume independent noise, then we likely require some sort of covariance modeling,
+which seems quite difficult.)
 
-where $N(n)$ is the actual visit distribution. This visit distribution was obtained by sampling from $h$,
-a sampling distribution obtained by evaluating the hidden state network $H$. We can compute a
-correction term that can be added to $Q(n)$ to compensate for the luck of that sampling:
+With the high-level strategy outlined, let us fill in details.
 
-```math
-\sigma(h, n) = \mathbb{E}_{c \sim h}[Q(c)] - Q(n),
-```
+Consider a SAMPLE node $n$, whose parent is an ACT node. Due to $H$-splitting, $n$ may be followed
+by additional $(k-1)$ SAMPLE nodes. The act of sampling a full hidden state then corresponds to
+sampling a random route down a depth $k$ tree $T$ rooted at $n$.
 
-The key to resolving the policy collapse issue is to inject uncertainty into our usage of $h$. The distribution
-$h$ can be represented as a point in the $k$-simplex, $\Delta_k$.
-Rather than assuming that $h$ is the exact true sampling distribution, we
-relax our belief and assume instead that the true sampling distribution falls
-somewhere in the neighborhood $N_{\epsilon}(h)$, consisting of the points of $\Delta_k$ whose
-L1-distance to $h$ is bounded by $\epsilon$.
+Suppose we have made $m$ visits to node $n$. On visit $i$, suppose we traversed $T$ via route $R_i$,
+backpropagating value $x_i$, so that $Q(n) = \frac{1}{m}\sum_i x_i$.
+We are able to compute, from the $H$ evaluations, the sampling probability $p_i$ associated with route $R_i$.
 
-Now, instead of a singular correction term $\sigma(h, n)$, we can consider a _set_ of potential
-correct terms, and take the union of that set:
+---
 
-```math
-\Sigma_h(n) = \bigcup_{h' \in N_{\epsilon}(h)} \sigma(h', n)
-```
+We have not yet flushed out the full details of how we want to construct our utility interval based
+on $\overrightarrow{x}$ and $\overrightarrow{p}$, although we have several candidate ideas. This
+requires some more thought and experimentation.
 
-This corresponds to a correction _interval_ that can be added to $Q(n)$ to compensate for sampling luck.
-After adding this correction interval, the PUCT formula now operates on child $Q$ _intervals_ rather than values, in turn
-producing PUCT intervals. Here is how we adjust the selection mechanics:
+For now, let us leave this as a black box. We envision that our assumed uncertainty about $H$ will
+be parameterized by a constant $\epsilon > 0$, with an $\epsilon = 0$ corresponding to A-MCTS.
+Hence, we will refer to the method of constructing our $Q$ intervals at SAMPLE nodes
+as the $\epsilon$-_mechanism_.
 
-- If one PUCT interval is strictly greater than the others, then select the corresponding action.
+---
+
+The $\epsilon$-mechanism will produce $Q$ intervals, in turn producing PUCT intervals. Here is how we adjust the selection mechanics:
+
+- If one PUCT interval is strictly greater than the others, then deterministically select the corresponding action.
 
 - Otherwise, the PUCT interval whose left endpoint is largest intersects 
 $m\geq1$ other intervals. Choose randomly among the actions corresponding to those $(m+1)$ intervals, with each such action $a$
 chosen with probability proportional to the _raw_ prior $P(a)$. We call this the _mixing distribution_.
 We emphasize _raw_ here to specify that if perturbations like softmax temperature or
 Dirichlet noise are applied, we do _not_ want them to influence the mixing distribution.
-
-If $\epsilon=0$, this reduces to A-MCTS, and incurs the previously described instability.
-For $\epsilon>0$, however, as long as $N_{\epsilon}(h)$ contains the true equilibrium
-sampling distribution, this relaxation stabilizes the system, leading to convergence towards
-the raw prior $P$ as $n \rightarrow \infty$, and thus providing $\epsilon$-_equilibrium-idempotence_.
-
-If a SAMPLE node was split into $k$ serial SAMPLE nodes, then we want to compute a correction interval
-at the top-level parent corresponding to all possible partitions $\epsilon = \epsilon_1 + \epsilon_2 + \cdots + \epsilon_k$,
-with the $i$'th level yielding an interval using an uncertainty of $\epsilon_i$, and with uncertainties
-propagating upwards. The top-level interval can be computed efficiently via dynamic programming.
 
 This completes the description of Nash-ISMCTS.
 
@@ -285,7 +285,7 @@ This completes the description of Nash-ISMCTS.
 
 (Described in more detail [here](AuxValueTarget.md))
 
-In the $\epsilon$ mechanism described above, we sometimes require $Q$ estimates for children nodes that
+In our not-yet-described $\epsilon$-mechanism, we might require $Q$ estimates for children nodes that
 have not yet been visited.
 
 To address this, we add a _child-value_ head ($V_c$) to our neural network, alongside the standard value head ($V$).
@@ -336,15 +336,15 @@ among the optimal actions, but which acts like a low-temperature scheme for the 
 
 To this end, we adapt the Lower Confidence Bound (LCB) mechanism. In LCB,
 the final $Q(a)$ is combined with its associated $N(a)$ to produce a confidence-interval
-around $Q(a)$, of the form $I(a) = [Q(a) - \phi(N(a)), Q(a) + \phi(N(a))]$, for some
+around $Q(a)$, of the form $I = [Q - \phi(N), Q + \phi(N)]$, for some
 decreasing positive-valued function $\phi$. The action $a$ whose lower bound $\mathrm{min}(I(a))$ is
 greatest is identified, and all actions $b$ such that $I(b)$ is strictly less than $I(a)$ are
 discarded. Only the remaining actions are candidates for move selection.
 
-In our case, we have $\Sigma_h$ correction terms, so our confidence interval takes the form,
+In our case, our $Q$ utilities are intervals, so our confidence interval takes the form,
 
 ```math
-I(a) = [Q(a) - \mathrm{min}(\Sigma_h(a)) - \phi(N(a)), Q(a) + \mathrm{max}(\Sigma_h(a)) + \phi(N(a))]
+I = [\mathrm{min}(Q) - \phi(N), \mathrm{max}(Q) + \phi(N)]
 ```
 
 With this alternate interval definition, we apply the same filtering mechanism. Then, we select
