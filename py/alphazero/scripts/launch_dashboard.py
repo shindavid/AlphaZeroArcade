@@ -95,8 +95,7 @@ for tag in all_tags:
     conn = sqlite3.connect(training_db_filename)
     c = conn.cursor()
 
-    # get unique head_name values from table training_heads:
-    c.execute('SELECT DISTINCT head_name FROM training_heads')
+    c.execute('SELECT head_name FROM training_heads WHERE gen = 1')
     heads = [r[0] for r in c.fetchall()]
 
     for h in heads:
