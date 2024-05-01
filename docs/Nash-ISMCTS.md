@@ -289,6 +289,8 @@ If the network believes two actions to be approximately equal
 in value, this approach can lead to PUCT intervals that remain overlapping in the infinite limit, and
 the tiebreaking rule can then lead to the required convergence to $P$.
 
+**Utility Belief Dispersion is our solution to policy collapse.**
+
 With the high-level strategy outlined, let us fill in details.
 
 ### SAMPLE nodes: Selection and Backpropagation
