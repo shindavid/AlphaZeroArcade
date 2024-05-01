@@ -417,8 +417,8 @@ is already motivated by uncertainty in $V$, making additional dispersion potenti
 
 (Described in more detail [here](AuxValueTarget.md))
 
-In our not-yet-described $\epsilon$-mechanism, we might require $Q$ estimates for children nodes that
-have not yet been visited.
+In our description of backpropagation and selection mechanics, we sometimes use
+$Q$ estimates for children nodes that have not yet been visited.
 
 To address this, we add a _child-value_ head ($V_c$) to our neural network, alongside the standard value head ($V$).
 This produces a vector of values, whose length is equal to the number of children of
@@ -426,69 +426,9 @@ the current node $n$. It is trained to predict the network's own evaluation of $
 
 The outputs of this head can be used as the default $Q$ value for unvisited nodes.
 
-As a bonus, this $V_c$ head provides us with a sound First Play Urgency (FPU) mechanism that represents
-an improvement over typical FPU policies used in other AlphaZero implementations.
-
-As we will see in later sections, $V_c$ will be used in other ways for variance reduction during
-backpropagation.
-
-### Move selection
-
-If our policy prior $P$ is near-equilibrium, then Nash-ISMCTS will produce a near-equilibrium posterior policy
-$\pi$. In order for the AlphaZero loop to work properly, the self-play agents must act according to $\pi$.
-Otherwise, the $V$ and $H$ targets will not be consistent with $P$.
-
-Fixing the move temperature to 1 ensures this. However, a move temperature of 1 fails to trim
-exploration-induced visits. We will get the right mixing frequencies between the optimal actions, but
-have too much weight on low-quality actions. This dilutes expected action quality, both during self-play
-and at test time.
-
-We therefore need a more sophisticated move selection scheme - one that acts like a temperature=1 scheme
-among the optimal actions, but which acts like a low-temperature scheme for the low-quality actions.
-
-To this end, we adapt the Lower Confidence Bound (LCB) mechanism. In LCB,
-the final $Q(a)$ is combined with its associated $N(a)$ to produce a confidence-interval
-around $Q(a)$, of the form $I = [Q - \phi(N), Q + \phi(N)]$, for some
-decreasing positive-valued function $\phi$. The action $a$ whose lower bound $\mathrm{min}(I(a))$ is
-greatest is identified, and all actions $b$ such that $I(b)$ is strictly less than $I(a)$ are
-discarded. Only the remaining actions are candidates for move selection.
-
-In our case, our $Q$ utilities are intervals, so our confidence interval takes the form,
-
-```math
-I = [\mathrm{min}(Q) - \phi(N), \mathrm{max}(Q) + \phi(N)]
-```
-
-With this alternate interval definition, we apply the same filtering mechanism. Then, we select
-among the remaining actions proportionally to $N$ (i.e., using a temperature of 1).
-
-### Bayes' Rule Loss Term
-
-We have argued that $H$ should converge towards the distribution that reflects $P$ combined with Bayes' Rule.
-While this is true, it will likely help to add an additional loss term to pressure the $H$ head to conform
-to $P$.
-
-To this end, we construct a loss term that penalizes local deviations from Bayes' Rule. During self-play, at a given SAMPLE
-node, we will have made $n$ queries to $H$, producing a set of $k \leq n$ distinct sampled hidden states: $s_1, s_2, \ldots, s_k$.
-Here, we treat a logical SAMPLE node that was split into a series of sub-nodes as if it were collapsed back into one.
-
-Each $s_i$ has an associated sampling probability, $p_i$.
-
-Let $a$ be the last observed opponent action. For each $s_i$, we can reconstruct the information set $I_i$
-prior to observing $a$, and compute terms $q_i = \mathrm{Pr}[I_i] \cdot \mathrm{Pr}[a | I_i]$. By Baye's Rule,
-we expect the $p_i$ terms to be proportional to the $q_i$ terms. So we can add a loss term based on the
-delta between $p_i$ and $q_i$.
-
-### Online H refinement
-
-The Bayes' Rule calculation described above can similarly be performed online, in order to refine the distributions 
-used in the $\epsilon$-mechanism. Specifically, we can replace the probability terms used in the correction
-term expectation calculation with terms computed by evaluating $H$ and $P$ on prior states. If the calculation
-is tractable, we can take those prior states arbitrarily high in the game tree, even as far as the game's starting
-position. For games where it is tractable to do this from the starting position, we don't need an $H$ model at all.
-
-(ReBeL does exactly this, forgoing an $H$ model and instead continuously updating hidden state distributions
-via Bayes' Rule throughout the entire game.)
+Note that this helps in standard MCTS as well. In typical AlphaZero implementations, a First Play Urgency (FPU)
+mechanism is used to supply $Q$ values for unvisited nodes. The $V_c$ head can be used instead,
+and represents a more principled choice.
 
 ## TODO
 
