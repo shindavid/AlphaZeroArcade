@@ -344,9 +344,9 @@ chosen with probability proportional to the _raw_ prior $P(a)$. We call this the
 We emphasize _raw_ here to specify that if perturbations like softmax temperature or
 Dirichlet noise are applied, we do _not_ want them to influence the mixing distribution.
 
-When backpropagating upwards from a non-root ACT node to another node within the same ISMCTS tree,
+When backpropagating upwards from a non-root ACT node $n$,
 we wish to control for the randomness of the mixing in the overlapping-intervals case.
-In normal MCTS, at the parent node $n$, we have:
+In normal MCTS, we have:
 
 ```math
 Q(n) = \mathbb{E}_{a \sim N} [Q(a)]
@@ -363,6 +363,11 @@ Here:
 - $n_\mathrm{pure}$ is the number of pure actions performed at $n$.
 - $PN$ is the pure action visit distribution.
 - $\mathrm{MIX}$ is the average of the $n_\mathrm{mixed}$ mixing distributions used so far.
+
+Note that the node that we backpropagate towards might live in a different ISMCTS tree (if the
+current tree was spawned at this point). In this case, the child $Q$ values must come from
+the original tree, while the pure/mixed action counts/distributions must come from the
+spawned tree.
 
 ### Root ACT nodes: Selection
 
