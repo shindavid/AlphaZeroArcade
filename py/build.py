@@ -176,15 +176,15 @@ def main():
         extra_deps = spec.extra_runtime_deps
         for dep in extra_deps:
             dep_loc = os.path.join(repo_root, dep)
-            if not os.path.isfile(dep_loc):
+            if not os.path.exists(dep_loc):
                 print(f'ERROR: extra dependency for {b} not found: {dep}')
                 print('Please rerun setup_wizard.py to fix this.')
                 raise Exception()
             extra_dir = os.path.join(bin_dir, 'extra')
             if not os.path.isdir(extra_dir):
                 os.makedirs(extra_dir)
-            cp_loc = os.path.join(extra_dir, os.path.basename(dep))
-            run(f'rsync {dep_loc} {cp_loc}', print_cmd=False)
+            cp_loc = extra_dir
+            run(f'rsync -r {dep_loc} {cp_loc}', print_cmd=False)
             print(f'Extra dependency:', cp_loc)
 
     for b in bins:

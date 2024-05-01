@@ -85,7 +85,10 @@ def b19_c64(input_shape: Shape):
 @dataclass
 class OthelloSpec(GameSpec):
     name = 'othello'
-    extra_runtime_deps = ['extra_deps/edax-reversi/bin/lEdax-x64-modern']
+    extra_runtime_deps = [
+        'extra_deps/edax-reversi/bin/lEdax-x64-modern',
+        'extra_deps/edax-reversi/data',
+        ]
     model_configs = {
         'default': b19_c64,
         'b19_c64': b19_c64,

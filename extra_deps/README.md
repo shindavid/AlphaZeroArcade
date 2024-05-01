@@ -22,9 +22,15 @@ connect4: https://github.com/PascalPons/connect4.git (master)
 edax-reversi: https://github.com/abulmo/edax-reversi.git (master)
 ```
 
-Additionally, the file 7x6.book was cloned from:
+Additionally, the connect4 7x6.book file was cloned from:
 
 ```
 https://github.com/PascalPons/connect4/releases/download/book/7x6.book
+```
+
+And the edax-reversi data/ dir was cloned from:
+
+```
+https://github.com/abulmo/edax-reversi/releases/download/v4.4/eval.7z
 ```
 
