@@ -28,14 +28,17 @@ A key high-level takeaway is this:
 
 ---
 
-**Pseudo-Theorem 1**: Suppose we have a set, $S$, of policies. If we repeatedly expand $S$ by adding a
-new policy obtained by updating the average policy of $S$ towards its best local response,
-then the average of the policies in $S$ will converge to a Nash Equilibrium.
+**Pseudo-Theorem 1**: If we start with a policy $\pi$, and repeatedly refine $\pi$
+by updating it towards its best local response, then $\pi$ will converge to a Nash Equilibrium,
+if the update is performed appropriately.
 
 ---
 
 We are intentionally vague about the details here, as the mechanics of Nash-ISMCTS will differ from CFR,
 but rely on this same underlying pseudo-theorem.
+
+Pseudo-Theorem 1 applies to CFR if we think of the average policy $\pi_n$ in CFR as the policy $\pi$
+in Pseudo-Theorem 1.
 
 ### Integrating Search: Recursive Belief-based Learning (ReBeL)
 
@@ -57,6 +60,12 @@ uses $O(phb)$ memory, CFR on these synthetic shallow game trees only uses $O(hb)
 what justifies the complexity of ReBeL compared to CFR, and is what allows ReBeL to work on games
 that were intractable for CFR alone.
 
+In particular, the game of No-Limit Texas Hold'em (NLHE) has a
+small $h$ (each player only has $\binom{52}{2}$ possible hands) but a large $p$,
+as the number of possible betting histories grows exponentially with stack size. CFR succeeded in a
+simplified version of the game where the number of possible betting histories was artificially constrained,
+while ReBeL succeeded in the unconstrained version.
+
 Still, the $h$ and $b$ factors remain. For the games of Scrabble, Hearts, and Stratego, these factors
 are prohibitively large, making them still out of reach for ReBeL.
 
@@ -64,6 +73,33 @@ In our proposed framework, Nash-ISMCTS, we will similarly exploit Pseudo-Theorem
 Monte Carlo Tree Search (MCTS) as the best-local-response-computing search routine. As we will see,
 this will allow us to remove the linear dependence on $h$ and $b$ in the system memory requirements,
 which will finally put those large games within reach.
+
+### Policy Collapse
+
+We would like to note a general challenge that occurs when attempting to apply search at test time
+in imperfect information games: _policy collapse_.
+
+For motivation, consider the simple game of Rock-Paper-Scissors. The equilibrium strategy of this 
+game is the uniform random strategy $\pi_u$. We can imagine a framework that models the opponent
+as using policy $\pi_u$, and computes an optimal response at test time via a best-local-response-computing
+routine, such as CFR. The optimal response to $\pi_u$ is itself $\pi_u$.
+
+However, imagine that our model of our opponent is slightly off. Perhaps we model the opponent as using
+$\pi_r$, a policy that is close to $\pi_u$ but slightly favors throwing Rock. Or, as using $\pi_x$, a policy
+that is close to $\pi_u$ but slightly favors throwing Scissors. The optimal response to either of these
+policies is a pure strategy (always throw Paper against $\pi_r$, and always throw Rock against $\pi_s$).
+This is the phenomenon of policy collapse: a slight perturbation in an opponent model can cause a search
+routine to collapse towards an easily exploitable policy.
+
+**Any sound framework for imperfect information games must be robust against policy collapse.**
+
+Each iteration of CFR performs a best-local-response-computation, and that computation is not robust
+against policy collapse. When performing CFR on Rock-Paper-Scissors, each iteration can generally
+produce a deterministic policy, as illustrated above. The robustness of CFR as a whole comes from
+the averaging of these policies.
+
+ReBeL uses a specialized mechanism to prevent policy collapse. A description of the mechanism is 
+out of scope for this document, but can be read about in Section 6 of [Brown et al, 2020](https://arxiv.org/pdf/2007.13544).
 
 ### Many-Tree Information-Set Monte Carlo Tree Search (MT-ISMCTS)
 
@@ -179,9 +215,9 @@ Suppose we play $g$ self-play games using A-ISMCTS and train $P$, $V$, and $H$ o
 self-play data. Will the policy produced by running A-ISMCTS with the resultant $P$, $V$, and $H$, for $n$ visits,
 converge towards Nash Equilibrium, as $g$ and $n$ approach infinity?
 
-Unfortunately, the answer is no, as the resultant dynamic system will exhibit unstable chaotic behavior. However,
-in analyzing some of the properties of this dynamic system, we can obtain some useful insights that will motivate
-our more sound version.
+Unfortunately, the answer is no, as the resultant dynamic system will suffer from the policy collapse phenomenon
+described earlier. However, in analyzing some of the properties of this dynamic system,
+we can obtain some useful insights that will motivate our more sound version.
 
 We start with a theoretically interesting property of the system: if $P$, $V$, and $H$ exactly match Nash Equilibrium,
 then the visit distribution $N$ produced by A-ISMCTS will approach $P$ as $n$ approaches infinity. When viewing
@@ -216,6 +252,8 @@ This demonstrates the required ratio limit, and thus proves the claimed property
 
 ## From AlphaZero-ISMCTS to Nash-ISMCTS
 
+### Utility Belief Dispersion
+
 The theoretical argument above demonstrates that if we are at equilibrium, then A-ISMCTS will
 converge towards an idempotent operator. However, we must be _exactly_ at equilibrium. If $V$ or $H$ are off by
 even the tiniest of margins, then the idempotence proof fails, and as the number of MCTS iterations approaches
@@ -229,46 +267,74 @@ such a guarantee, it is difficult to trust that AlphaZero will result in long-te
 networks are produced, it is difficult to trust that policy collapse won't happen at test time, due to using an
 excessive number of visits.
 
-Our high-level strategy to remedy this problem is to replace the utility _point_-estimate $Q\in \mathbb{R}$ at each SAMPLE node
-with a utility _interval_-estimate $Q = [a, b] \subset \mathbb{R}$, whose width is based on an assumed level uncertainty about the accuracy of $H$.
-The nature of this uncertainty means that the interval's width will _not_
-shrink towards zero as the number of visits approaches infinity.
+Our high-level strategy to remedy this problem is to change the utility belief, $Q$, at each node
+of the MCTS tree from a singular _value_, $q \in \mathbb{R}$, to an _interval_, $[a, b] \subset \mathbb{R}$. We
+name the mechanism that produces these intervals, _utility belief dispersion_, or UBD.
+
+<table align="center">
+  <tr>
+    <td><img src="https://upload.wikimedia.org/wikipedia/commons/0/06/Prism_rainbow_schema.png" alt="Prism Dispersion" style="width:100%; max-width: 600px;"/></td>
+  </tr>
+  <tr>
+    <td style="text-align: center;">In optics, dispersion widens a singular frequency into a range of frequencies.</td>
+  </tr>
+</table>
+
+The dispersion of the singular value to an interval stems from an injection
+of uncertainty about the accuracy of $H$. The nature of the uncertainty injection will
+prevent the interval widths from shrinking towards zero as the number of visits approaches infinity.
 The PUCT formula will then yields PUCT intervals, and the selection criterion will require comparing intervals.
 We will treat overlapping PUCT intervals as "tied", and break ties based on $P$.
 If the network believes two actions to be approximately equal
 in value, this approach can lead to PUCT intervals that remain overlapping in the infinite limit, and
 the tiebreaking rule can then lead to the required convergence to $P$.
 
-(By contrast, if we associated our uncertainty with $V$ instead of $H$, then the uncertainty of $Q$
-would be expected to shrink towards 0 as more observations are backpropagated,
-if we assume independent noise with each observation.
-And if we _don't_ assume independent noise, then we likely require some sort of covariance modeling,
-which seems quite difficult.)
-
 With the high-level strategy outlined, let us fill in details.
 
-Consider a SAMPLE node $n$, whose parent is an ACT node. Due to $H$-splitting, $n$ may be followed
-by an additional $(k-1)$ SAMPLE nodes. The act of sampling a full hidden state then corresponds to
-sampling a random route down a depth $k$ tree $T$ rooted at $n$.
+### SAMPLE nodes: Selection and Backpropagation
 
-Suppose we have made $m$ visits to node $n$. On visit $i$, suppose we traversed $T$ via route $R_i$,
-backpropagating value $x_i$, so that $Q(n) = \frac{1}{m}\sum_i x_i$.
-We are able to compute, from the $H$ evaluations, the sampling probability $p_i$ associated with route $R_i$.
+Suppose that during descent, we reach a SAMPLE node $n$. Due to $H$-splitting, $n$ might belong to
+a chain of SAMPLE nodes, but that does not matter. We evaluate $H$ to obtain a sampling distribution $h$, which we
+sample from to select a child $c$. We descend to $c$, and after potentially more descent from there,
+obtain a utility value $x$ to backpropagate from $c$ to $n$. Suppose for now that $x$ is a singular
+value, and that the $Q$ values at the children of $n$ are singular values.
 
----
+Intuitively, if $x$ was better than expected, we want $Q(n)$ to increase, to encourage further
+exploration of $n$. Conversely, if $x$ was worse than expected, we want $Q(n)$ to decrease.
+Directly backpropagating $x$ should achieve this in expectation. However, this would not control
+for the luck of sampling $c$. Controlling for this luck is easy, as the expected delta in the
+observed value before and after sampling $c$ is:
 
-We have not yet flushed out the full details of how we want to construct our utility interval based
-on $\overrightarrow{x}$ and $\overrightarrow{p}$, although we have several candidate ideas. This
-requires some more thought and experimentation.
+```math
+\phi(h) = Q(c) - \mathbb{E}_{c' \sim h}[Q(c')]
+```
 
-For now, let us leave this as a black box. We envision that our assumed uncertainty about $H$ will
-be parameterized by a constant $\epsilon > 0$, with an $\epsilon = 0$ corresponding to A-MCTS.
-Hence, we will refer to the method of constructing our $Q$ intervals at SAMPLE nodes
-as the $\epsilon$-_mechanism_.
+Now, we _disperse_ this adjustment term by injecting uncertainty about $h$. Suppose $n$ has $k$
+children. Then $h$ is a size $k$ discrete probability distribution, which maps to a point in $\Delta_k$,
+the $k$-simplex. Rather than assuming that the
+hidden state distribution is _exactly_ $h$, we instead assume that the hidden state distribution lies
+somewhere in $N_\epsilon(h)$, the set of points of $\Delta_k$ whose L1-distance from $h$ is bounded by
+some fixed parameter $\epsilon > 0$. This produces a _range_ of adjustment terms:
 
----
+```math
+\Phi(h) = \bigcup_{h' \in N_\epsilon(h)} \phi(h)
+```
 
-The $\epsilon$-mechanism will produce $Q$ intervals, in turn producing PUCT intervals. Here is how we adjust the selection mechanics:
+Adding the adjustment range $\Phi(h)$ to $x$ results in a utility interval, meaning that node $n$
+accumulates, through backpropagation, a collection of utility intervals.
+The $Q$ interval at $n$ is then simply maintained as $[q_{\mathrm{min}}, q_{\mathrm{max}}]$, where
+$q_{\mathrm{min}}$ is the average of the interval minimums, and where $q_{\mathrm{max}}$ is the
+average of the interval maximums.
+
+We can now relax our assumption that $x$ was a singular value, and that $Q$ was a singular
+value at every child of $n$. If $x$ is an interval, and if $Q$ is an interval at the children of
+$n$, we simply revise $\phi$ to be the set of possible values that could arise by choosing
+a specific value from each of those intervals.
+
+### Non-root ACT nodes: Selection and Backpropagation
+
+If a non-root ACT node has SAMPLE nodes as children, the PUCT formula will operate on $Q$ intervals,
+and thus produce PUCT intervals. Here is how we adjust the selection mechanics:
 
 - If one PUCT interval is strictly greater than the others, then deterministically select the corresponding action.
 
@@ -278,7 +344,66 @@ chosen with probability proportional to the _raw_ prior $P(a)$. We call this the
 We emphasize _raw_ here to specify that if perturbations like softmax temperature or
 Dirichlet noise are applied, we do _not_ want them to influence the mixing distribution.
 
+When backpropagating upwards from a non-root ACT node to another node within the same ISMCTS tree,
+we wish to control for the randomness of the mixing in the overlapping-intervals case.
+In normal MCTS, at the parent node $n$, we have:
+
+```math
+Q(n) = \mathbb{E}_{a \sim N} [Q(a)]
+```
+
+In order to control for mixing randomness, we instead use:
+
+```math
+Q(n) = \frac{n_\mathrm{mixed}\cdot\mathbb{E}_{a \sim \mathrm{MIX}}[Q(a)] + n_\mathrm{pure}\cdot\mathbb{E}_{a \sim PN}[Q(a)]}{n_\mathrm{mixed} + n_\mathrm{pure}}
+```
+Here:
+
+- $n_\mathrm{mixed}$ is the number of mixed actions performed at $n$.
+- $n_\mathrm{pure}$ is the number of pure actions performed at $n$.
+- $PN$ is the pure action visit distribution.
+- $\mathrm{MIX}$ is the average of the $n_\mathrm{mixed}$ mixing distributions used so far.
+
+### Root ACT nodes: Selection
+
+If our networks are near-equilibrium, then Nash-ISMCTS will produce a near-equilibrium posterior policy
+$\pi$ at the root. In order for the AlphaZero loop to work properly, we must select according to $\pi$
+at the root. Otherwise, the $V$ and $H$ targets will not be consistent with $P$.
+
+Fixing the move temperature to 1 ensures this. However, a move temperature of 1 fails to trim
+exploration-induced visits. We will get the right mixing frequencies between the optimal actions, but
+have too much weight on low-quality actions. This dilutes expected action quality, both during self-play
+and at test time.
+
+We therefore need a more sophisticated move selection scheme - one that acts like a temperature=1 scheme
+among the optimal actions, but which acts like a low-temperature scheme for the low-quality actions.
+
+To this end, we adapt the Lower Confidence Bound (LCB) mechanism. In LCB,
+the final $Q(a)$ is combined with its associated $N(a)$ to produce a confidence-interval
+around $Q(a)$, of the form $I = [Q - \sigma(N), Q + \sigma(N)]$, for some
+decreasing positive-valued function $\sigma$. The action $a$ whose lower bound $\mathrm{min}(I(a))$ is
+greatest is identified, and all actions $b$ such that $I(b)$ is strictly less than $I(a)$ are
+discarded. Only the remaining actions are candidates for move selection.
+
+In our case, our $Q$ utilities are intervals, so our confidence interval takes the form,
+
+```math
+I = [\mathrm{min}(Q) - \sigma(N), \mathrm{max}(Q) + \sigma(N)]
+```
+
+With this alternate interval definition, we apply the same LCB filtering mechanism. Then, we select
+among the remaining actions proportionally to $N$ (i.e., using a temperature of 1).
+
+### Nash-ISMCTS: Final Remarks
+
 This completes the description of Nash-ISMCTS.
+
+Note that belief update dispersion begins at SAMPLE nodes and propagates upwards.
+In the absence of SAMPLE nodes, there is no dispersion, and Nash-ISMCTS reduces exactly
+to standard MCTS. This is a nice property and is a good reason to
+localize the dispersion mechanics to $H$, rather than also applying dispersion to $V$. An
+additional reason to avoid applying dispersion to $V$ is that the $N$ term in the PUCT formula
+is already motivated by uncertainty in $V$, making additional dispersion potentially redundant.
 
 ## Technical Notes
 
@@ -300,26 +425,6 @@ an improvement over typical FPU policies used in other AlphaZero implementations
 
 As we will see in later sections, $V_c$ will be used in other ways for variance reduction during
 backpropagation.
-
-### Reducing variance from sampling
-
-(Described in more detail [here](AuxValueTarget.md#idea-3-stochastic-alphazero-only-mcts-backpropagation-denoising))
-
-When backpropagating a value $x$ from a node $v$ to its parent SAMPLE node $u$, we apply an additive correction to
-$x$ to control for the luck of sampling $v$ from $u$. The appropriate adjustment is:
-
-```math
-Q(v) - \mathbb{E}_{w \sim H(u)} [Q(w)],
-```
-
-where $H(u)$ represents the sampling distribution gotten by evaluation $H$ at $u$,
-and where the $Q$ values are computed _before_ incorporating $x$. For not-yet-expanded children, we can use $V_c$
-in place of $Q$.
-
-We apply this same mechanism at random chance nodes, where the chance event comes from the game rules
-(such as random tile draws from the bag in Scrabble).
-
-At action nodes, in the PUCT-interval-overlap case, we also have a sampling event. We apply the same mechanism in this case.
 
 ### Move selection
 
