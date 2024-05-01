@@ -222,7 +222,8 @@ even the tiniest of margins, then the idempotence proof fails, and as the number
 infinity, the visit distribution can collapse to a single point, rather than converge to $P$ as required.
 
 Practically, the number of visits is finite, and so if the networks are close enough, then perhaps the visit
-distribution will be close enough to $P$ to make everything work in practice. However, this is not satisfactory. One should
+distribution will be close enough to $P$ to make everything work in practice, at least during self-play, when
+the number of visits is small and controlled. However, this is not satisfactory. One should
 have confidence that the quality of the posterior policy will increase as a function of the number of visits. Without
 such a guarantee, it is difficult to trust that AlphaZero will result in long-term improvement. Even if near-equilibrium
 networks are produced, it is difficult to trust that policy collapse won't happen at test time, due to using an
@@ -247,7 +248,7 @@ which seems quite difficult.)
 With the high-level strategy outlined, let us fill in details.
 
 Consider a SAMPLE node $n$, whose parent is an ACT node. Due to $H$-splitting, $n$ may be followed
-by additional $(k-1)$ SAMPLE nodes. The act of sampling a full hidden state then corresponds to
+by an additional $(k-1)$ SAMPLE nodes. The act of sampling a full hidden state then corresponds to
 sampling a random route down a depth $k$ tree $T$ rooted at $n$.
 
 Suppose we have made $m$ visits to node $n$. On visit $i$, suppose we traversed $T$ via route $R_i$,
