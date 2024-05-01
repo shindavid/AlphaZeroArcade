@@ -319,7 +319,7 @@ somewhere in $N_\epsilon(h)$, the set of points of $\Delta_k$ whose L1-distance 
 some fixed parameter $\epsilon > 0$. This produces a _range_ of adjustment terms:
 
 ```math
-\Phi(h) = \bigcup_{h' \in N_\epsilon(h)} \phi(h)
+\Phi(h) = \bigcup_{h' \in N_\epsilon(h)} \phi(h')
 ```
 
 Adding the adjustment range $\Phi(h)$ to $x$ results in a utility interval, meaning that node $n$
