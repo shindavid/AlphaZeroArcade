@@ -37,7 +37,7 @@ if the update is performed appropriately.
 We are intentionally vague about the details here, as the mechanics of Nash-ISMCTS will differ from CFR,
 but rely on this same underlying pseudo-theorem.
 
-Pseudo-Theorem 1 applies to CFR if we think of the average policy $\pi_n$ in CFR as the policy $\pi$
+Pseudo-Theorem 1 applies to CFR if we think of the average policy $\overline{\pi}_n$ in CFR as the policy $\pi$
 in Pseudo-Theorem 1.
 
 ### Integrating Search: Recursive Belief-based Learning (ReBeL)
