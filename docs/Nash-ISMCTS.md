@@ -304,9 +304,7 @@ value, and that the $Q$ values at the children of $n$ are singular values.
 
 Intuitively, if $x$ was better than expected, we want $Q(n)$ to increase, to encourage further
 exploration of $n$. Conversely, if $x$ was worse than expected, we want $Q(n)$ to decrease.
-Directly backpropagating $x$ should achieve this in expectation. However, this would not control
-for the luck of sampling $c$. Controlling for this luck is easy, as the expected delta in the
-observed value before and after sampling $c$ is:
+We can achieve this by applying an adjustment that controls for the luck of sampling $c$:
 
 ```math
 \phi(h) = Q(c) - \mathbb{E}_{c' \sim h}[Q(c')]
