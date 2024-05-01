@@ -258,6 +258,7 @@ The theoretical argument above demonstrates that if we are at equilibrium, then 
 converge towards an idempotent operator. However, we must be _exactly_ at equilibrium. If $V$ or $H$ are off by
 even the tiniest of margins, then the idempotence proof fails, and as the number of MCTS iterations approaches
 infinity, the visit distribution can collapse to a single point, rather than converge to $P$ as required.
+In short, A-ISMCTS is susceptible to policy collapse.
 
 Practically, the number of visits is finite, and so if the networks are close enough, then perhaps the visit
 distribution will be close enough to $P$ to make everything work in practice, at least during self-play, when
