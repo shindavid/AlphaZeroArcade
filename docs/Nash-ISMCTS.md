@@ -85,7 +85,7 @@ as using policy $\pi_u$, and computes an optimal response at test time via a bes
 routine, such as CFR. The optimal response to $\pi_u$ is itself $\pi_u$.
 
 However, imagine that our model of our opponent is slightly off. Perhaps we model the opponent as using
-$\pi_r$, a policy that is close to $\pi_u$ but slightly favors throwing Rock. Or, as using $\pi_x$, a policy
+$\pi_r$, a policy that is close to $\pi_u$ but slightly favors throwing Rock. Or, as using $\pi_s$, a policy
 that is close to $\pi_u$ but slightly favors throwing Scissors. The optimal response to either of these
 policies is a pure strategy (always throw Paper against $\pi_r$, and always throw Rock against $\pi_s$).
 This is the phenomenon of policy collapse: a slight perturbation in an opponent model can cause a search
