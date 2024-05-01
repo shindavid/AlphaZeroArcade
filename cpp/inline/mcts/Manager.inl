@@ -152,9 +152,10 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
   auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
   results_.counts = root->get_counts(params_);
+  results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.current_player];
   if (params_.forced_playouts && add_noise) {
-    prune_counts(params);
+    prune_policy_target(params);
   }
   results_.policy_prior = evaluation_data.local_policy_prob_distr;
   results_.win_rates = stats.real_avg;
@@ -191,12 +192,11 @@ inline void Manager<GameState, Tensorizor>::stop_search_threads() {
  * target pruning step does.
  */
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_params) {
-  if (params_.model_filename.empty()) return;
+void Manager<GameState, Tensorizor>::prune_policy_target(const SearchParams& search_params) {
+  if (params_.no_model) return;
 
   PUCTStats stats(params_, search_params, shared_data_.root_node.get(), true);
 
-  auto orig_counts = results_.counts;
   const auto& P = stats.P;
   const auto& N = stats.N;
   const auto& V = stats.V;
@@ -221,26 +221,14 @@ void Manager<GameState, Tensorizor>::prune_counts(const SearchParams& search_par
       n = 0;
     }
 
-    results_.counts(it.action()) = n;
+    results_.policy_target(it.action()) = n;
   }
 
-  const auto& counts_array = eigen_util::reinterpret_as_array(results_.counts);
-  if (counts_array.sum() <= 0) {
+  const auto& policy_target_array = eigen_util::reinterpret_as_array(results_.policy_target);
+  if (policy_target_array.sum() <= 0) {
     // can happen in certain edge cases
-    results_.counts = orig_counts;
+    results_.policy_target = results_.counts;
     return;
-  }
-
-  if (!counts_array.isFinite().all()) {
-    std::cout << "P: " << P.transpose() << std::endl;
-    std::cout << "N: " << N.transpose() << std::endl;
-    std::cout << "V: " << V.transpose() << std::endl;
-    std::cout << "PUCT: " << PUCT.transpose() << std::endl;
-    std::cout << "n_forced: " << n_forced.transpose() << std::endl;
-    std::cout << "orig_counts: " << eigen_util::reinterpret_as_array(orig_counts).transpose()
-              << std::endl;
-    std::cout << "results_.counts: " << counts_array.transpose() << std::endl;
-    throw util::Exception("prune_counts: counts problem");
   }
 }
 

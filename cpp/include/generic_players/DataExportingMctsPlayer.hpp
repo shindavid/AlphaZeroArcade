@@ -61,7 +61,7 @@ class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
   void end_game(const GameState&, const GameOutcome&) override;
 
  protected:
-  static PolicyTensor extract_policy(const MctsSearchResults* results);
+  static PolicyTensor extract_policy_target(const MctsSearchResults* results);
   void record_position(const GameState& state, const ActionMask& valid_actions,
                        const PolicyTensor& policy);
 

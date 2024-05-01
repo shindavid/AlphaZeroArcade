@@ -73,7 +73,7 @@ class Manager {
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;
   void announce_shutdown();
-  void prune_counts(const SearchParams&);
+  void prune_policy_target(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
 
   static int next_instance_id_;  // for naming debug/profiling output files

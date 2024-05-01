@@ -16,6 +16,7 @@ struct SearchResults {
 
   ActionMask valid_actions;
   PolicyTensor counts;
+  PolicyTensor policy_target;
   LocalPolicyArray policy_prior;
   ValueArray win_rates;
   ValueArray value_prior;

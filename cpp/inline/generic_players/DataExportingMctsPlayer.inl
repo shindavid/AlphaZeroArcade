@@ -41,13 +41,13 @@ DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action_response(
   const MctsSearchResults* mcts_search_results = this->mcts_search(state, search_mode);
 
   if (record_reply || record) {
-    auto policy = extract_policy(mcts_search_results);
+    auto policy_target = extract_policy_target(mcts_search_results);
     if (record_reply) {
-      game_data_->commit_opp_reply_to_pending_groups(policy);
+      game_data_->commit_opp_reply_to_pending_groups(policy_target);
     }
 
     if (record) {
-      record_position(state, valid_actions, policy);
+      record_position(state, valid_actions, policy_target);
     }
   }
 
@@ -64,18 +64,18 @@ void DataExportingMctsPlayer<GameState_, Tensorizor_>::end_game(const GameState&
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 DataExportingMctsPlayer<GameState_, Tensorizor_>::PolicyTensor
-DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy(
+DataExportingMctsPlayer<GameState_, Tensorizor_>::extract_policy_target(
     const MctsSearchResults* mcts_results) {
-  auto policy = mcts_results->counts;
-  auto& policy_array = eigen_util::reinterpret_as_array(policy);
-  float sum = policy_array.sum();
+  auto policy_target = mcts_results->policy_target;
+  auto& policy_target_array = eigen_util::reinterpret_as_array(policy_target);
+  float sum = policy_target_array.sum();
   if (mcts_results->provably_lost || sum == 0) {
     // python training code will ignore these rows for policy training.
-    policy.setZero();
+    policy_target.setZero();
   } else {
-    policy_array /= sum;
+    policy_target_array /= sum;
   }
-  return policy;
+  return policy_target;
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
