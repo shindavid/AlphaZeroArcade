@@ -99,7 +99,7 @@ produce a deterministic policy, as illustrated above. The robustness of CFR as a
 the averaging of these policies.
 
 ReBeL uses a specialized mechanism to prevent policy collapse. A description of the mechanism is 
-out of scope for this document, but can be read about in Section 6 of [Brown et al, 2020](https://arxiv.org/pdf/2007.13544).
+beyond the scope for this document, but can be read about in Section 6 of [Brown et al, 2020](https://arxiv.org/pdf/2007.13544).
 
 ### Many-Tree Information-Set Monte Carlo Tree Search (MT-ISMCTS)
 
@@ -186,10 +186,28 @@ Bayes' Rule, but this computation can be expensive. So $H$ can be considered an 
 use to avoid an expensive online Bayes' Rule calculation.
 
 $H$ will accept the same inputs as $P$ and $V$: the public game history, together with the acting
-player's private information. It will be trained on self-play games using the actual values of the hidden state
-as training targets. This should result in an unbiased $H$ as long as the self-play games are played according to
-the policy $P$. We can approximately enforce this, under the assumption that $P$ has converged,
-by being careful with move selection mechanics; more on this later.
+player's private information.
+
+Training $H$ takes some care. A natural approach is to train $H$ on the self-play games, using the
+actual values of the hidden state as training targets. This should result in an unbiased $H$
+as long as the self-play games are played according to the policy $P$. As we will see later,
+if $P$ is near Nash Equilibrium, our root node action selection mechanics will approximately
+enforce that self-play games are played according to $P$.
+
+However, this natural approach does not work in practice. The problem is that we want $H$ to converge
+to $B(P)$, but the natural approach instead leads to $H$ converging to $B(\overline{P})$. Here,
+$B$ is the Bayes' Rule function, and $\overline{P}$ is the average of the policies used over the
+entire experience buffer. It is possible for $P$ to fluctuate over the course of the experience buffer,
+but for $\overline{P}$ to remain static, leading to a static $H$.
+
+To remedy this, every time we obtain a new policy $P$, we generate a set $S_P$ of self-play games using $P$,
+and use _only_ $S_P$ to train a $P$-specific hidden state model, $H_P$. In order to make this
+technique practical, we apply the following tricks:
+
+1. Generate the games of $S_P$ by using $P$ _only_, without tree search.
+2. Warm-start the training of $H_P$ by initializing its weights to the current hidden state model.
+
+These tricks greatly reduce the costs of both data generation and training.
 
 In some games, the size of the hidden state space, $h$, can be intractably large. Rather than representing
 the hidden state as a flat distribution over the entire space, we can split a
