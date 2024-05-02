@@ -201,7 +201,7 @@ entire experience buffer. It is possible for $P$ to fluctuate over the course of
 but for $\overline{P}$ to remain static, leading to a static $H$.
 
 To remedy this, when we obtain the $n$'th policy model, $P_n$, after the $n$'th generation of
-training, we generate a set, $S_n$, of self-play games, and train a hidden state model, $H_n$,
+training, we use $P_n$ to generate a set, $S_n$, of self-play games, and train a hidden state model, $H_n$,
 _only_ using $S_n$. In order to make this technique practical, we apply the following tricks
 to speed it up:
 
