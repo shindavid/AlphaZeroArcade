@@ -200,14 +200,16 @@ $B$ is the Bayes' Rule function, and $\overline{P}$ is the average of the polici
 entire experience buffer. It is possible for $P$ to fluctuate over the course of the experience buffer,
 but for $\overline{P}$ to remain static, leading to a static $H$.
 
-To remedy this, every time we obtain a new policy $P$, we generate a set $S_P$ of self-play games using $P$,
-and use _only_ $S_P$ to train a $P$-specific hidden state model, $H_P$. In order to make this
-technique practical, we apply the following tricks:
+To remedy this, when we obtain the $n$'th policy model, $P_n$, after the $n$'th generation of
+training, we generate a set, $S_n$, of self-play games, and train a hidden state model, $H_n$,
+_only_ using $S_n$. In order to make this technique practical, we apply the following tricks
+to speed it up:
 
-1. Generate the games of $S_P$ by using $P$ _only_, without tree search.
-2. Warm-start the training of $H_P$ by initializing its weights to the current hidden state model.
+1. Generate the games of $S_n$ by sampling directly from $P_n$, without using tree search.
+2. Warm-start the training of $H_{n+1}$ by initializing its weights to the weights of $H_n$.
 
-These tricks greatly reduce the costs of both data generation and training.
+If the system has converged, then ISMCTS should act as an identity operator on $P_n$, and the
+sequence ${{H_n}}$ should approach a fixed model, justifying these tricks.
 
 In some games, the size of the hidden state space, $h$, can be intractably large. Rather than representing
 the hidden state as a flat distribution over the entire space, we can split a
