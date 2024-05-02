@@ -330,7 +330,7 @@ With the high-level strategy outlined, let us fill in details.
 ### SAMPLE nodes: Selection and Backpropagation
 
 Suppose that during descent, we reach a SAMPLE node $n$. Due to $H$-splitting, $n$ might belong to
-a chain of SAMPLE nodes, but that does not matter. We evaluate $H$ to obtain a sampling distribution $h$, which we
+a chain of SAMPLE nodes, but that will not affect our description. We evaluate $H$ to obtain a sampling distribution $h$, which we
 sample from to select a child $c$. We descend to $c$, and after potentially more descent from there,
 obtain a utility value $x$ to backpropagate from $c$ to $n$. Suppose for now that $x$ is a singular
 value, and that the $Q$ values at the children of $n$ are singular values.
