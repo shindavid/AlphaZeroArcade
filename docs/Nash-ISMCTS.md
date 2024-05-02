@@ -324,7 +324,7 @@ value, and that the $Q$ values at the children of $n$ are singular values.
 
 Intuitively, if $x$ was better than expected, we want $Q(n)$ to increase, to encourage further
 exploration of $n$. Conversely, if $x$ was worse than expected, we want $Q(n)$ to decrease.
-We can achieve this by applying an adjustment that controls for the luck of sampling $c$:
+We can achieve this by applying an adjustment $x \mapsto x - \phi(h)$, where,
 
 ```math
 \phi(h) = Q(c) - \mathbb{E}_{c' \sim h}[Q(c')]
