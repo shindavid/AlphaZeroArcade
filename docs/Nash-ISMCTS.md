@@ -99,7 +99,7 @@ produce a deterministic policy, as illustrated above. The robustness of CFR as a
 the averaging of these policies.
 
 ReBeL uses a specialized mechanism to prevent policy collapse. A description of the mechanism is 
-beyond the scope for this document, but can be read about in Section 6 of [Brown et al, 2020](https://arxiv.org/pdf/2007.13544).
+beyond the scope of this document, but can be read about in Section 6 of [Brown et al, 2020](https://arxiv.org/pdf/2007.13544).
 
 ### Many-Tree Information-Set Monte Carlo Tree Search (MT-ISMCTS)
 
