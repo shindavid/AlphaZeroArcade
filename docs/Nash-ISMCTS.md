@@ -188,7 +188,8 @@ use to avoid an expensive online Bayes' Rule calculation.
 $H$ will accept the same inputs as $P$ and $V$: the public game history, together with the acting
 player's private information.
 
-Training $H$ takes some care. A natural approach is to train $H$ on the self-play games, using the
+Training $H$ takes some care. A natural approach is to train $H$ over the same
+experience buffer used to train $P$, using the
 actual values of the hidden state as training targets. This should result in an unbiased $H$
 as long as the self-play games are played according to the policy $P$. As we will see later,
 if $P$ is near Nash Equilibrium, our root node action selection mechanics will approximately
