@@ -211,20 +211,33 @@ to speed it up:
 If the system has converged, then ISMCTS should act as an identity operator on $P_n$, and the
 sequence ${{H_n}}$ should approach a fixed model, justifying these tricks.
 
-In some games, the size of the hidden state space, $h$, can be intractably large. Rather than representing
-the hidden state as a flat distribution over the entire space, we can split a
+## Node Splitting
+
+As described, our system still has a memory requirement with linear dependencies on $h$ (the size
+of the hidden state space) and $b$ (the game's branching factor). This is because our $H$ model
+outputs a softmax layer of size $h$ to sample the hidden state, and because our $P$ model outputs
+a softmax layer of size $b$ to produce an action policy.
+
+Here is how we address this. Rather than representing
+the hidden state as a flat distribution over the entire space, we split a
 single SAMPLE node into a series of multiple SAMPLE nodes, each generating a piece of the hidden state.
 We call this $H$-_splitting_.
-This is similar to how an LLM samples sentences one word at a time. In Scrabble, we can
-generate a hidden set of tiles one letter at a time, limiting the output of the $H$ network to a size-27 logit layer.
-In Stratego, we can generate the hidden piece identities one piece at a time. This removes the linear dependence
-on $h$ in the system memory requirements.
+This is similar to how an LLM samples sentences one word at a time. 
+For an appropriately chosen $H$-splitting scheme, this can shrink the dependence from $O(h)$ to $O(\log{h})$.
+In Scrabble, we can generate a hidden set of tiles one letter at a time,
+limiting the output of the $H$ network to a size-27 softmax layer.
+In Stratego, we can generate hidden piece identities one piece at a time. 
 
-Similarly, if the size of the action space, $b$, is too large, we can split a single ACT node into
+Similarly, we can split a single ACT node into
 a series of multiple ACT nodes, by decomposing an action into multiple sub-actions. 
-We similarly call this $P$-_splitting_. In Scrabble, we can
-decompose a move into a board location, followed by tile placements. This removes the linear dependence on
-$b$ in the system memory requirements.
+We similarly call this $P$-_splitting_. For an appropriate chosen $P$-splitting scheme, this can
+shrink the dependence from $O(b)$ to $O(\log{b})$.
+In Scrabble, we can decompose a move into a board location, followed by tile placements.
+
+We should note that $P$-splitting has already been successfully utilized in some large-branching-factor games.
+DeepMind used it in their Starcraft-playing system AlphaStar ([Vinyals et al, 2019](https://www.nature.com/articles/s41586-019-1724-z)).
+User @RightfulChip in the Engine Programming Discord has described success in their (closed-source) engine _Rusty_ for
+playing the high-branching-factor game [Arimaa](https://en.wikipedia.org/wiki/Arimaa).
 
 ## Equilibrium-Idempotence
 
