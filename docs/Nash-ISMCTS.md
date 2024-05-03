@@ -91,7 +91,7 @@ policies is a pure strategy (always throw Paper against $\pi_r$, and always thro
 This is the phenomenon of policy collapse: a slight perturbation in an opponent model can cause a search
 routine to collapse towards an easily exploitable policy.
 
-**Any sound framework for imperfect information games must be robust against policy collapse.**
+**_Any sound framework for imperfect information games must be robust against policy collapse._**
 
 Each iteration of CFR performs a best-local-response-computation, and that computation is not robust
 against policy collapse. When performing CFR on Rock-Paper-Scissors, each iteration can generally
@@ -312,7 +312,7 @@ excessive number of visits.
 
 Our high-level strategy to remedy this problem is to change the utility belief, $Q$, at each node
 of the MCTS tree from a singular _value_, $q \in \mathbb{R}$, to an _interval_, $[a, b] \subset \mathbb{R}$. We
-name the mechanism that produces these intervals, _utility belief dispersion_, or UBD.
+name the mechanism that produces these intervals, _Utility Belief Dispersion_, or UBD.
 
 <table align="center">
   <tr>
@@ -332,7 +332,7 @@ If the network believes two actions to be approximately equal
 in value, this approach can lead to PUCT intervals that remain overlapping in the infinite limit, and
 the tiebreaking rule can then lead to the required convergence to $P$.
 
-**Utility Belief Dispersion is our solution to policy collapse.**
+**_Utility Belief Dispersion is our solution to policy collapse._**
 
 With the high-level strategy outlined, let us fill in details.
 
