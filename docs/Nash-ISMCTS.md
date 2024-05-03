@@ -366,7 +366,7 @@ some fixed parameter $\epsilon > 0$. This produces a _range_ of luck-adjustment 
 \Phi(h) = \bigcup_{h' \in N_\epsilon(h)} \phi(h')
 ```
 
-Subtracting the luck-adjustment range $\Phi(h)$ to $x$ results in a utility interval, meaning that node $n$
+Subtracting the luck-adjustment range $\Phi(h)$ from $x$ results in a utility interval, meaning that node $n$
 accumulates, through backpropagation, a collection of utility intervals.
 The $Q$ interval at $n$ is then simply maintained as $[q_{\mathrm{min}}, q_{\mathrm{max}}]$, where
 $q_{\mathrm{min}}$ is the average of the interval minimums, and where $q_{\mathrm{max}}$ is the
