@@ -346,24 +346,27 @@ value, and that the $Q$ values at the children of $n$ are singular values.
 
 Intuitively, if $x$ was better than expected, we want $Q(n)$ to increase, to encourage further
 exploration of $n$. Conversely, if $x$ was worse than expected, we want $Q(n)$ to decrease.
-We can achieve this by applying an adjustment $x \mapsto x - \phi(h)$, where,
+We can achieve this by computing, before $x$ is obtained, a _luck-adjustment term_ that estimates
+how much the random event of sampling $c$ will affect our expectation of the backpropagated utility
+value. After obtaining $x$, we can subtract this luck-adjustment term from $x$ before backpropagating
+to $n$. The appropriate value for this luck adjustment term is dependent on $h$ and is given by:
 
 ```math
 \phi(h) = Q(c) - \mathbb{E}_{c' \sim h}[Q(c')]
 ```
 
-Now, we _disperse_ this adjustment term by injecting uncertainty about $h$. Suppose $n$ has $k$
+Now, we _disperse_ this luck-adjustment term by injecting uncertainty about $h$. Suppose $n$ has $k$
 children. Then $h$ is a size $k$ discrete probability distribution, which maps to a point in $\Delta_k$,
 the $k$-simplex. Rather than assuming that the
 hidden state distribution is _exactly_ $h$, we instead assume that the hidden state distribution lies
 somewhere in $N_\epsilon(h)$, the set of points of $\Delta_k$ whose L1-distance from $h$ is bounded by
-some fixed parameter $\epsilon > 0$. This produces a _range_ of adjustment terms:
+some fixed parameter $\epsilon > 0$. This produces a _range_ of luck-adjustment terms:
 
 ```math
 \Phi(h) = \bigcup_{h' \in N_\epsilon(h)} \phi(h')
 ```
 
-Adding the adjustment range $\Phi(h)$ to $x$ results in a utility interval, meaning that node $n$
+Subtracting the luck-adjustment range $\Phi(h)$ to $x$ results in a utility interval, meaning that node $n$
 accumulates, through backpropagation, a collection of utility intervals.
 The $Q$ interval at $n$ is then simply maintained as $[q_{\mathrm{min}}, q_{\mathrm{max}}]$, where
 $q_{\mathrm{min}}$ is the average of the interval minimums, and where $q_{\mathrm{max}}$ is the
