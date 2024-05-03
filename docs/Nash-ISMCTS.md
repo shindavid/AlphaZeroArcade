@@ -201,6 +201,14 @@ $B$ is the Bayes' Rule function, and $\overline{P}$ is the average of the polici
 entire experience buffer. It is possible for $P$ to fluctuate over the course of the experience buffer,
 but for $\overline{P}$ to remain static, leading to a static $H$.
 
+---
+
+_NOTE: We are not confident that the above explanation fully captures why the natural approach
+fails in practice. We have other compelling explanations, but will not list them here until we
+have gathered more evidence and reasoned about the theory more carefully._
+
+---
+
 To remedy this, when we obtain the $n$'th policy model, $P_n$, after the $n$'th generation of
 training, we use $P_n$ to generate a set, $S_n$, of self-play games, and train a hidden state model, $H_n$,
 _only_ using $S_n$. In order to make this technique practical, we apply the following tricks
