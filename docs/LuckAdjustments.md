@@ -24,6 +24,8 @@ Q(n) = \bigg(\bigcup_{H' \in B_\epsilon(H)} \mathbb{E}_{c \sim H'} [V^*(c)]\bigg
 ```
 Here, $B_\epsilon(H)$ represents an L1-_ball_[^1] of radius $\epsilon$, lying on the simplex, centered at $H$.
 
+One can think of the first term of the sum as a static base-model evaluation, and the second term as a dynamic modeled residual.
+
 Note that if we set $\epsilon = 0$ and assume that $N \equiv H$, then this simplifies to $Q(n) = \mathbb{E}_{c \sim N}[Q(c)]$,
 matching standard MCTS.
 
