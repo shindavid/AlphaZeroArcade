@@ -50,10 +50,10 @@ emerges to the contrary, we can define:
 Here, $d$ is a distance metric, and $SN(N)$ is a _statistical neighborhood_ function, mapping a given distribution $N$ to a set of
 distributions which are not statistically unlikely to produce $N$ via sampling.
 
-This approach gives us some flexibility in how we exactly define $SN$. Such flexibility may be warranted because the initial
-visits in the spawned tree's root action node might not be an accurate reflection of $\hat{P}$, due to the
-dynamics of MCTS. This may especially be true in the presence of distortive effects like virtual loss
-in multithreaded implementations.
+This approach gives us some flexibility in how we exactly define $SN$. Such flexibility may be useful to
+account for MCTS dynamics in the early visits to the spawned tree's root action node. For example, in
+multi-threaded implementations, virtual loss may introduce a distortive effect that causes $N$ to
+deviate from $\hat{P}$ with statistical significance initially.
 
 ## Previous Proposals
 
