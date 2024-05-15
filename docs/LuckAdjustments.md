@@ -27,7 +27,7 @@ Here, $B_\epsilon(H)$ represents an L1-_ball_[^1] of radius $\epsilon$, lying on
 One can think of the first term of the sum as a static base-model evaluation, and the second term as a dynamic modeled residual.
 
 Note that if we set $\epsilon = 0$ and assume that $N \equiv H$, then this simplifies to $Q(n) = \mathbb{E}_{c \sim N}[Q(c)]$,
-matching standard MCTS.
+matching standard MCTS. Also note that if our $V$ model is perfect, then the residuals should be zero.
 
 At action nodes, we have an _untrusted_ action distribution $P$. It is untrusted because the visit distribution $N$
 is _not_ produced by directly sampling $P$. Instead, the visits come from an implicit refined policy $\hat{P}$ that
