@@ -59,7 +59,7 @@ Q(n) = \bigcup_{H' \in B_\epsilon(H)} \mathbb{E}_{c \sim H'} [Q(c)]
 
 This adjusts for luck well, but if $N$ only represents a sparse sample of $H$, then the visit evidence
 barely modifies $Q(n)$. In general, one can estimate a population well via polling with only $O(1)$ samples,
-and this approachs fails to take advantage of this polling principle.
+and this approach fails to take advantage of this polling principle.
 
 Next, we proposed a backpropagation-based formulation, where $Q(n)$ is maintained as a running
 average of luck-adjusted backpropagated values. Each luck term is computed based on $H'$,
