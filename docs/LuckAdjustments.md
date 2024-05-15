@@ -65,7 +65,7 @@ Next, we proposed a backpropagation-based formulation, where $Q(n)$ is maintaine
 average of luck-adjusted backpropagated values. Each luck term is computed based on $H'$,
 using $Q$-snapshots at the time of backpropagation.
 This takes advantage of the polling principle, but the backpropagation formulation effectively
-computes an expectation with respect to $N$, with isn't really sensible when we have a
+computes an expectation of $Q$ values with respect to $N$, which isn't really sensible when we have a
 trusted distribution $H'$. Furthermore, the usage of $Q$-snapshots for
 luck-correction is suboptimal, as $Q$ estimates get more refined over time.
 
