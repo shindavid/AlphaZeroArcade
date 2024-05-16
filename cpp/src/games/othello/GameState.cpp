@@ -28,22 +28,22 @@ std::string GameState::action_to_str(const Action& action) {
 core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
   int action_index = action[0];
   if (action_index == kPass) {
-    std::swap(cur_player_mask_, opponent_mask_);
-    cur_player_ = 1 - cur_player_;
-    pass_count_++;
-    if (pass_count_ == kNumPlayers) {
+    std::swap(data_.cur_player_mask, data_.opponent_mask);
+    data_.cur_player = 1 - data_.cur_player;
+    data_.pass_count++;
+    if (data_.pass_count == kNumPlayers) {
       return compute_outcome();
     }
   } else {
-    mask_t flipped = flip[action_index](cur_player_mask_, opponent_mask_);
-    mask_t cur_player_mask = opponent_mask_ ^ flipped;
+    mask_t flipped = flip[action_index](data_.cur_player_mask, data_.opponent_mask);
+    mask_t cur_player_mask = data_.opponent_mask ^ flipped;
 
-    opponent_mask_ = cur_player_mask_ ^ (flipped | (1ULL << action_index));
-    cur_player_mask_ = cur_player_mask;
-    cur_player_ = 1 - cur_player_;
-    pass_count_ = 0;
+    data_.opponent_mask = data_.cur_player_mask ^ (flipped | (1ULL << action_index));
+    data_.cur_player_mask = cur_player_mask;
+    data_.cur_player = 1 - data_.cur_player;
+    data_.pass_count = 0;
 
-    if ((opponent_mask_ | cur_player_mask_) == kCompleteBoardMask) {
+    if ((data_.opponent_mask | data_.cur_player_mask) == kCompleteBoardMask) {
       return compute_outcome();
     }
   }
@@ -54,7 +54,7 @@ core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action&
 }
 
 GameState::ActionMask GameState::get_valid_actions() const {
-  uint64_t mask = get_moves(cur_player_mask_, opponent_mask_);
+  uint64_t mask = get_moves(data_.cur_player_mask, data_.opponent_mask);
   ActionMask valid_actions;
   valid_actions.setConstant(0);
   uint64_t u = mask;
@@ -87,11 +87,11 @@ void GameState::dump(const Action* last_action,
     row_dump(valid_actions, row, row == blink_row ? blink_col : -1);
   }
   std::cout << std::endl;
-  int opponent_disc_count = std::popcount(opponent_mask_);
-  int cur_player_disc_count = std::popcount(cur_player_mask_);
+  int opponent_disc_count = std::popcount(data_.opponent_mask);
+  int cur_player_disc_count = std::popcount(data_.cur_player_mask);
 
-  int black_disc_count = cur_player_ == kBlack ? cur_player_disc_count : opponent_disc_count;
-  int white_disc_count = cur_player_ == kWhite ? cur_player_disc_count : opponent_disc_count;
+  int black_disc_count = data_.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
+  int white_disc_count = data_.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
 
   printf("Score: Player\n");
   printf("%5d: %s%s%s", black_disc_count, ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""));
@@ -122,8 +122,8 @@ void GameState::row_dump(const ActionMask& valid_actions, row_t row,
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
     bool valid = valid_actions[index];
-    bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
-    bool occupied_by_opp_player = (1UL << index) & opponent_mask_;
+    bool occupied_by_cur_player = (1UL << index) & data_.cur_player_mask;
+    bool occupied_by_opp_player = (1UL << index) & data_.opponent_mask;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
 
     const char* color =
@@ -141,12 +141,12 @@ typename GameState::GameOutcome GameState::compute_outcome() const {
   GameOutcome outcome;
   outcome.setZero();
 
-  int opponent_count = std::popcount(opponent_mask_);
-  int cur_player_count = std::popcount(cur_player_mask_);
+  int opponent_count = std::popcount(data_.opponent_mask);
+  int cur_player_count = std::popcount(data_.cur_player_mask);
   if (cur_player_count > opponent_count) {
-    outcome(cur_player_) = 1;
+    outcome(data_.cur_player) = 1;
   } else if (opponent_count > cur_player_count) {
-    outcome(1 - cur_player_) = 1;
+    outcome(1 - data_.cur_player) = 1;
   } else {
     outcome.setConstant(0.5);
   }

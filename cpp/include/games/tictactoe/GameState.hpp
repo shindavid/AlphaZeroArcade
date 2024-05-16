@@ -49,6 +49,13 @@ class GameState {
   static constexpr int kTypicalNumMovesPerGame = kNumCells;
   static constexpr int kMaxNumSymmetries = 8;
 
+  struct Data {
+    bool operator==(const Data& other) const = default;
+
+    mask_t full_mask = 0;        // spaces occupied by either player
+    mask_t cur_player_mask = 0;  // spaces occupied by current player
+  };
+
   using ActionShape = Eigen::Sizes<kNumCells>;
   using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -63,33 +70,36 @@ class GameState {
   static std::string action_delimiter() { return ""; }
   static std::string action_to_str(const Action& action) { return std::to_string(action[0]); }
 
+  GameState() = default;
+  GameState(const Data& data) : data_(data) {}
+
   template <eigen_util::FixedTensorConcept Tensor>
   core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
     return core::SquareBoardSymmetries<Tensor, BoardShape>::get_symmetry(index);
   }
 
+  const Data& data() const { return data_; }
   SymmetryIndexSet get_symmetry_indices() const;
 
   core::seat_index_t get_current_player() const;
   GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
-  mask_t get_current_player_mask() const { return cur_player_mask_; }
-  mask_t get_opponent_mask() const { return full_mask_ ^ cur_player_mask_; }
+  mask_t get_current_player_mask() const { return data_.cur_player_mask; }
+  mask_t get_opponent_mask() const { return data_.full_mask ^ data_.cur_player_mask; }
 
   core::seat_index_t get_player_at(int row, int col) const;
   void dump(const Action* last_action = nullptr,
             const player_name_array_t* player_names = nullptr) const;
   bool operator==(const GameState& other) const = default;
-  std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
+  std::size_t hash() const { return boost::hash_range(&data_.full_mask, (&data_.full_mask) + 2); }
 
   static constexpr mask_t kThreeInARowMasks[] = {
       make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
       make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
 
  private:
-  mask_t full_mask_ = 0;        // spaces occupied by either player
-  mask_t cur_player_mask_ = 0;  // spaces occupied by current player
+  Data data_;
 };
 
 static_assert(core::GameStateConcept<tictactoe::GameState>);

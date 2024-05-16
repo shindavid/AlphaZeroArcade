@@ -9,12 +9,12 @@ GameState::GameOutcome GameState::apply_move(const Action& action) {
   core::seat_index_t current_player = get_current_player();
 
   mask_t piece_mask = mask_t(1) << action_index;
-  cur_player_mask_ ^= full_mask_;
-  full_mask_ |= piece_mask;
+  data_.cur_player_mask ^= data_.full_mask;
+  data_.full_mask |= piece_mask;
 
   bool win = false;
 
-  mask_t updated_mask = full_mask_ ^ cur_player_mask_;
+  mask_t updated_mask = data_.full_mask ^ data_.cur_player_mask;
   for (mask_t mask : kThreeInARowMasks) {
     if ((mask & updated_mask) == mask) {
       win = true;
@@ -26,7 +26,7 @@ GameState::GameOutcome GameState::apply_move(const Action& action) {
   outcome.setZero();
   if (win) {
     outcome(current_player) = 1.0;
-  } else if (std::popcount(full_mask_) == kNumCells) {
+  } else if (std::popcount(data_.full_mask) == kNumCells) {
     outcome(0) = 0.5;
     outcome(1) = 0.5;
   }
@@ -37,7 +37,7 @@ GameState::GameOutcome GameState::apply_move(const Action& action) {
 GameState::ActionMask GameState::get_valid_actions() const {
   ActionMask mask;
   mask.setConstant(1);
-  uint64_t u = full_mask_;
+  uint64_t u = data_.full_mask;
   while (u) {
     int index = std::countr_zero(u);
     mask(index) = false;
@@ -50,8 +50,8 @@ void GameState::dump(const Action* last_action,
                             const player_name_array_t* player_names) const {
   auto cp = get_current_player();
   mask_t opp_player_mask = get_opponent_mask();
-  mask_t o_mask = (cp == kO) ? cur_player_mask_ : opp_player_mask;
-  mask_t x_mask = (cp == kX) ? cur_player_mask_ : opp_player_mask;
+  mask_t o_mask = (cp == kO) ? data_.cur_player_mask : opp_player_mask;
+  mask_t x_mask = (cp == kX) ? data_.cur_player_mask : opp_player_mask;
 
   char text[] =
       "0 1 2  | | | |\n"

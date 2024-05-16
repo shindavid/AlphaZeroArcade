@@ -16,14 +16,14 @@ inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
 }
 
 inline core::seat_index_t GameState::get_current_player() const {
-  return std::popcount(full_mask_) % 2;
+  return std::popcount(data_.full_mask) % 2;
 }
 
 inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   int cp = get_current_player();
   int index = row * kBoardDimension + col;
-  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask_;
-  bool occupied_by_any_player = (mask_t(1) << index) & full_mask_;
+  bool occupied_by_cur_player = (mask_t(1) << index) & data_.cur_player_mask;
+  bool occupied_by_any_player = (mask_t(1) << index) & data_.full_mask;
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 

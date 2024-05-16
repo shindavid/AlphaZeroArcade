@@ -47,6 +47,15 @@ class GameState {
   static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
   static constexpr int kMaxNumSymmetries = 8;
 
+  struct Data {
+    bool operator==(const Data& other) const = default;
+
+    mask_t opponent_mask = kStartingWhiteMask;    // spaces occupied by either player
+    mask_t cur_player_mask = kStartingBlackMask;  // spaces occupied by current player
+    core::seat_index_t cur_player = kStartingColor;
+    int8_t pass_count = 0;
+  };
+
   using ActionShape = Eigen::Sizes<othello::kNumGlobalActions>;
   using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
   using GameStateTypes = core::GameStateTypes<GameState>;
@@ -61,15 +70,19 @@ class GameState {
   static std::string action_delimiter() { return "-"; }
   static std::string action_to_str(const Action& action);
 
+  GameState() = default;
+  GameState(const Data& data) : data_(data) {}
+
   template <eigen_util::FixedTensorConcept Tensor>
   core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
     return core::SquareBoardSymmetries<Tensor, BoardShape>::get_symmetry(index);
   }
 
+  const Data& data() const { return data_; }
   SymmetryIndexSet get_symmetry_indices() const;
 
   int get_count(core::seat_index_t seat) const;
-  core::seat_index_t get_current_player() const { return cur_player_; }
+  core::seat_index_t get_current_player() const { return data_.cur_player; }
   GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
 
@@ -81,17 +94,14 @@ class GameState {
 
  private:
   auto to_tuple() const {
-    return std::make_tuple(opponent_mask_, cur_player_mask_, cur_player_, pass_count_);
+    return std::make_tuple(data_.opponent_mask, data_.cur_player_mask, data_.cur_player, data_.pass_count);
   }
   GameOutcome compute_outcome() const;  // assumes game has ended
   void row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const;
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 
-  mask_t opponent_mask_ = kStartingWhiteMask;    // spaces occupied by either player
-  mask_t cur_player_mask_ = kStartingBlackMask;  // spaces occupied by current player
-  core::seat_index_t cur_player_ = kStartingColor;
-  int8_t pass_count_ = 0;
+  Data data_;
 };
 
 static_assert(core::GameStateConcept<othello::GameState>);
