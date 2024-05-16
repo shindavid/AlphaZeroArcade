@@ -21,7 +21,34 @@ namespace core {
  * quite a bit costlier than fixed-sized ones.
  */
 template <class State>
-concept GameStateConcept = requires(State state) {
+concept GameStateConcept = requires(State state, const State& const_state,
+                                    const typename State::Data& data, std::ostream& os) {
+  /*
+   * Each GameState class must have:
+   *
+   * - A trivially-copyable inner class called Data, containing data describing the game state.
+   * - A constructor that accepts a Data object as an argument.
+   * - A data() method that returns a reference to a Data object.
+   *
+   * When serializing a GameState, only the Data returned by data() is serialized. Deserialization
+   * is accomplished by calling the constructor with the deserialized Data object, along with
+   * optionally passing past GameState instances.
+   *
+   * For most games, GameState does not need any additional data members besides a Data instance,
+   * and past GameState instances are not needed.
+   *
+   * An example of a game where you may want this additional machinery is chess. In chess, in order
+   * to determine whether a game is drawn due to the threefold repetition rule, the game state
+   * technically needs to store all previous game states in a dynamic data structure. Serializing
+   * and deserializing this data structure would be cumbersome. It is better to just store the board
+   * state, and to reconstruct the data structure from past board states if needed.
+   */
+  typename State::Data;
+  requires std::is_trivially_copyable_v<typename State::Data>;
+  { const_state.data() } -> std::same_as<const typename State::Data&>;
+  State{data};
+  State{};
+
   /*
    * The number of players in the game.
    */
