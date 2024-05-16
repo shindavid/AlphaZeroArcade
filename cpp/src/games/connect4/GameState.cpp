@@ -14,11 +14,11 @@ namespace c4 {
 core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
   int action_index = action[0];
   column_t col = action_index;
-  mask_t piece_mask = (full_mask_ + _bottom_mask(col)) & _column_mask(col);
+  mask_t piece_mask = (data_.full_mask + _bottom_mask(col)) & _column_mask(col);
   core::seat_index_t current_player = get_current_player();
 
-  cur_player_mask_ ^= full_mask_;
-  full_mask_ |= piece_mask;
+  data_.cur_player_mask ^= data_.full_mask;
+  data_.full_mask |= piece_mask;
 
   bool win = false;
 
@@ -42,7 +42,7 @@ core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action&
       (piece_mask >> 27) * sw_ne_diagonal_block   // sw-ne diagonal 4
   };
 
-  mask_t updated_mask = full_mask_ ^ cur_player_mask_;
+  mask_t updated_mask = data_.full_mask ^ data_.cur_player_mask;
   for (mask_t mask : masks) {
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
@@ -55,7 +55,7 @@ core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action&
   outcome.setZero();
   if (win) {
     outcome(current_player) = 1.0;
-  } else if (std::popcount(full_mask_) == kNumCells) {
+  } else if (std::popcount(data_.full_mask) == kNumCells) {
     outcome(0) = 0.5;
     outcome(1) = 0.5;
   }
@@ -74,7 +74,7 @@ void GameState::dump(const Action* last_action,
   column_t blink_column = action_index;
   row_t blink_row = -1;
   if (blink_column >= 0) {
-    blink_row = std::countr_one(full_mask_ >> (blink_column * 8)) - 1;
+    blink_row = std::countr_one(data_.full_mask >> (blink_column * 8)) - 1;
   }
   for (row_t row = kNumRows - 1; row >= 0; --row) {
     row_dump(row, row == blink_row ? blink_column : -1);
@@ -96,8 +96,8 @@ void GameState::row_dump(row_t row, column_t blink_column) const {
 
   for (int col = 0; col < kNumColumns; ++col) {
     int index = _to_bit_index(row, col);
-    bool occupied = (1UL << index) & full_mask_;
-    bool occupied_by_cur_player = (1UL << index) & cur_player_mask_;
+    bool occupied = (1UL << index) & data_.full_mask;
+    bool occupied_by_cur_player = (1UL << index) & data_.cur_player_mask;
 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle("") : " ";

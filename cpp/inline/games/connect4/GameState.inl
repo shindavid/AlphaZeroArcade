@@ -22,11 +22,15 @@ inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
 }
 
 inline core::seat_index_t GameState::get_current_player() const {
-  return std::popcount(full_mask_) % 2;
+  return std::popcount(data_.full_mask) % 2;
+}
+
+inline std::size_t GameState::hash() const {
+  return boost::hash_range(&data_.full_mask, &data_.full_mask + 2);
 }
 
 inline GameState::ActionMask GameState::get_valid_actions() const {
-  mask_t bottomed_full_mask = full_mask_ + _full_bottom_mask();
+  mask_t bottomed_full_mask = data_.full_mask + _full_bottom_mask();
 
   ActionMask mask;
   for (int col = 0; col < kNumColumns; ++col) {
@@ -36,13 +40,13 @@ inline GameState::ActionMask GameState::get_valid_actions() const {
   return mask;
 }
 
-inline int GameState::get_move_number() const { return 1 + std::popcount(full_mask_); }
+inline int GameState::get_move_number() const { return 1 + std::popcount(data_.full_mask); }
 
 inline core::seat_index_t GameState::get_player_at(int row, int col) const {
   int cp = get_current_player();
   int index = _to_bit_index(row, col);
-  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask_;
-  bool occupied_by_any_player = (mask_t(1) << index) & full_mask_;
+  bool occupied_by_cur_player = (mask_t(1) << index) & data_.cur_player_mask;
+  bool occupied_by_any_player = (mask_t(1) << index) & data_.full_mask;
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 

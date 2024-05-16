@@ -90,6 +90,13 @@ class GameState {
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
 
+  struct Data {
+    bool operator==(const Data& other) const = default;
+
+    mask_t full_mask = 0;        // spaces occupied by either player
+    mask_t cur_player_mask = 0;  // spaces occupied by current player
+  };
+
   using ActionShape = Eigen::Sizes<kNumColumns>;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using Action = GameStateTypes::Action;
@@ -103,11 +110,15 @@ class GameState {
   static std::string action_delimiter() { return ""; }
   static std::string action_to_str(const Action& action) { return std::to_string(action[0]); }
 
+  GameState() = default;
+  GameState(const Data& data) : data_(data) {}
+
   template <eigen_util::FixedTensorConcept Tensor>
   core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
     return Symmetries<Tensor>::get_symmetry(index);
   }
 
+  const Data& data() const { return data_; }
   SymmetryIndexSet get_symmetry_indices() const;
 
   core::seat_index_t get_current_player() const;
@@ -119,7 +130,7 @@ class GameState {
   void dump(const Action* last_action = nullptr,
             const player_name_array_t* player_names = nullptr) const;
   bool operator==(const GameState& other) const = default;
-  std::size_t hash() const { return boost::hash_range(&full_mask_, (&full_mask_) + 2); }
+  std::size_t hash() const;
 
  private:
   void row_dump(row_t row, column_t blink_column) const;
@@ -131,8 +142,7 @@ class GameState {
       column_t col);                            // mask containing single piece at bottom cell
   static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell
 
-  mask_t full_mask_ = 0;        // spaces occupied by either player
-  mask_t cur_player_mask_ = 0;  // spaces occupied by current player
+  Data data_;
 };
 
 static_assert(core::GameStateConcept<c4::GameState>);
