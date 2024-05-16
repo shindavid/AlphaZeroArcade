@@ -82,8 +82,8 @@ int64_t get_unique_id();
  *
  * The above expresses the requirement that the class T has a static member bar of type int.
  *
- * This function does actually have an implementation, and so you will get a linker error if you try
- * to actually invoke it in other contexts.
+ * This function does not actually have an implementation, and so you will get a linker error if
+ * you try to actually invoke it in other contexts.
  *
  * Adapted from: https://stackoverflow.com/a/69687663/543913
  */
