@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace core {
 
 const int kMaxNameLength = 32;  // excluding null terminator
@@ -16,5 +18,8 @@ const int kMaxNameLength = 32;  // excluding null terminator
  * bytes as we need to from them.
  */
 const int kSerializationLimit = 1024;
+
+// See KataGo paper for description of search modes.
+enum SearchMode : int8_t { kFast, kFull, kRawPolicy, kNumSearchModes };
 
 }  // namespace core

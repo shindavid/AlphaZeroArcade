@@ -31,11 +31,11 @@ typename DataExportingMctsPlayer<GameState_, Tensorizor_>::ActionResponse
 DataExportingMctsPlayer<GameState_, Tensorizor_>::get_action_response(
     const GameState& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
-  bool record = search_mode == base_t::kFull;
+  bool record = search_mode == core::kFull;
   bool record_reply = game_data_->contains_pending_groups();
 
   if (kForceFullSearchIfRecordingAsOppReply && record_reply) {
-    search_mode = base_t::kFull;
+    search_mode = core::kFull;
   }
 
   const MctsSearchResults* mcts_search_results = this->mcts_search(state, search_mode);

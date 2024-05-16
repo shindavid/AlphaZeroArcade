@@ -7,6 +7,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/Constants.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
@@ -32,9 +33,6 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
   using base_t = core::AbstractPlayer<GameState_>;
   using GameState = GameState_;
   using Tensorizor = Tensorizor_;
-
-  // See KataGo paper for description of search modes.
-  enum SearchMode { kFast, kFull, kRawPolicy, kNumSearchModes };
 
   struct Params {
     Params(mcts::Mode);
@@ -82,9 +80,9 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
   }
 
  protected:
-  const MctsSearchResults* mcts_search(const GameState& state, SearchMode search_mode) const;
-  SearchMode choose_search_mode() const;
-  ActionResponse get_action_response_helper(SearchMode, const MctsSearchResults*,
+  const MctsSearchResults* mcts_search(const GameState& state, core::SearchMode search_mode) const;
+  core::SearchMode choose_search_mode() const;
+  ActionResponse get_action_response_helper(core::SearchMode, const MctsSearchResults*,
                                             const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
@@ -94,14 +92,14 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
     bool initialized = false;
   };
 
-  SearchMode get_random_search_mode() const;
+  core::SearchMode get_random_search_mode() const;
   void verbose_dump() const;
 
   const Params params_;
   Tensorizor tensorizor_;
 
   MctsManager* mcts_manager_;
-  const MctsSearchParams search_params_[kNumSearchModes];
+  const MctsSearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_manager_;

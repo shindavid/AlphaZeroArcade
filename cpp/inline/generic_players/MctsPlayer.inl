@@ -138,7 +138,7 @@ template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_>
 typename MctsPlayer<GameState_, Tensorizor_>::ActionResponse
 MctsPlayer<GameState_, Tensorizor_>::get_action_response(const GameState& state,
                                                          const ActionMask& valid_actions) {
-  SearchMode search_mode = choose_search_mode();
+  core::SearchMode search_mode = choose_search_mode();
   const MctsSearchResults* mcts_results = mcts_search(state, search_mode);
   return get_action_response_helper(search_mode, mcts_results, valid_actions);
 }
@@ -146,24 +146,24 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response(const GameState& state,
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsSearchResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state,
-                                                 SearchMode search_mode) const {
+                                                 core::SearchMode search_mode) const {
   return mcts_manager_->search(tensorizor_, state, search_params_[search_mode]);
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline typename MctsPlayer<GameState_, Tensorizor_>::SearchMode
+inline core::SearchMode
 MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
   bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
-  return use_raw_policy ? kRawPolicy : get_random_search_mode();
+  return use_raw_policy ? core::kRawPolicy : get_random_search_mode();
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
 typename MctsPlayer<GameState_, Tensorizor_>::ActionResponse
 MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
-    SearchMode search_mode, const MctsSearchResults* mcts_results,
+    core::SearchMode search_mode, const MctsSearchResults* mcts_results,
     const ActionMask& valid_actions) const {
   PolicyTensor policy;
-  if (search_mode == kRawPolicy) {
+  if (search_mode == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
     eigen_util::randomly_zero_out(valid_actions_subset,
                                   eigen_util::count(valid_actions_subset) / 2);
@@ -175,7 +175,7 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
     policy = mcts_results->counts;
   }
 
-  if (search_mode != kRawPolicy) {
+  if (search_mode != core::kRawPolicy) {
     float temp = move_temperature_.value();
     if (temp != 0) {
       eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
@@ -213,10 +213,10 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::SearchMode
+core::SearchMode
 MctsPlayer<GameState_, Tensorizor_>::get_random_search_mode() const {
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
-  return r < params_.full_pct ? kFull : kFast;
+  return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
