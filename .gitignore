@@ -1,4 +1,5 @@
 # IDE
+.editorconfig
 .idea
 .vscode
 cmake-build-debug
