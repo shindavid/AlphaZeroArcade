@@ -6,6 +6,7 @@
 #include <core/GameStateConcept.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
+#include <core/Symmetries.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
@@ -83,6 +84,7 @@ class NNEvaluationService
   using Node = mcts::Node<GameState, Tensorizor>;
   using NNEvaluation = mcts::NNEvaluation<GameState>;
   using ActionMask = typename GameStateTypes::ActionMask;
+  using GameStateHistory = typename TensorizorTypes::GameStateHistory;
 
   using NNEvaluation_asptr = typename NNEvaluation::asptr;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
@@ -102,12 +104,15 @@ class NNEvaluationService
   using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
   using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
 
-  using PolicyTransform = core::AbstractSymmetryTransform<PolicyTensor>;
+  using GameStateData = typename GameState::Data;
+  using HashKey = typename GameState::HashKey;
+  using Transform = typename GameState::Transform;
+  using Transforms = core::Transforms<GameState>;
 
   struct Request {
     Node* node;
     GameState* state;
-    Tensorizor* tensorizor;
+    GameStateHistory* history;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;
@@ -164,7 +169,7 @@ class NNEvaluationService
 
  private:
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = util::HashablePair<GameState, core::symmetry_index_t>;
+  using cache_key_t = util::HashablePair<HashKey, core::symmetry_index_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 
@@ -203,7 +208,7 @@ class NNEvaluationService
 
     cache_key_t cache_key;
     ActionMask valid_actions;
-    PolicyTransform* policy_transform;
+    Transform* transform;
   };
 
   struct tensor_group_t {

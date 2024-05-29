@@ -21,6 +21,26 @@ struct TypeList<Head, Tails...> {
   using tails = TypeList<Tails...>;
 };
 
+template <typename Base, typename T>
+struct AllDerivedFrom;
+
+template <typename Base>
+struct AllDerivedFrom<Base, TypeList<>> {
+  static constexpr bool value = true;
+};
+
+template <typename Base, typename Head, typename... Tails>
+struct AllDerivedFrom<Base, TypeList<Head, Tails...>> {
+  static constexpr bool value =
+      std::is_base_of_v<Base, Head> && AllDerivedFrom<Base, TypeList<Tails...>>::value;
+};
+
+template <typename T>
+concept IsTypeList = requires(T t) { []<typename... Ts>(TypeList<Ts...>&) {}(t); };
+
+template <typename T, typename Base>
+concept IsTypeListOf = IsTypeList<T> && AllDerivedFrom<Base, T>::value;
+
 // TransformTypeList_t<Transform, TypeList<A, B>>
 //
 // is equivalent to:

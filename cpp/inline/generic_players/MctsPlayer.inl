@@ -107,7 +107,6 @@ template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_>
 inline void MctsPlayer<GameState_, Tensorizor_>::start_game() {
   move_count_ = 0;
   move_temperature_.reset();
-  tensorizor_.clear();
   if (owns_manager_) {
     mcts_manager_->start();
   }
@@ -119,7 +118,6 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(core::seat
                                                                       const Action& action) {
   move_count_++;
   move_temperature_.step();
-  tensorizor_.receive_state_change(state, action);
   if (owns_manager_) {
     mcts_manager_->receive_state_change(seat, state, action);
   }
@@ -147,7 +145,7 @@ template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_>
 inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsSearchResults*
 MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state,
                                                  core::SearchMode search_mode) const {
-  return mcts_manager_->search(tensorizor_, state, search_params_[search_mode]);
+  return mcts_manager_->search(state, search_params_[search_mode]);
 }
 
 template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>

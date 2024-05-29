@@ -68,6 +68,8 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
    * This could have been accomplished also by multiplying cPUCT by 0.5, but this way maintains
    * better consistency with the AlphaZero/KataGo approach.
    */
+
+  // TODO: fixme, this should use E rather than N!
   PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
 
   if (params.avoid_proven_losers && !PL.all()) {

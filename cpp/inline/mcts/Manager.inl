@@ -78,9 +78,6 @@ inline void Manager<GameState, Tensorizor>::announce_shutdown() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::start() {
   clear();
-  shared_data_.move_number = 0;
-  shared_data_.root_softmax_temperature.reset();
-  shared_data_.node_cache.clear();
 
   if (!connected_) {
     if (nn_eval_service_) {
@@ -93,7 +90,7 @@ inline void Manager<GameState, Tensorizor>::start() {
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline void Manager<GameState, Tensorizor>::clear() {
   stop_search_threads();
-  shared_data_.root_node = nullptr;
+  shared_data_.clear();
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
@@ -114,8 +111,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   }
 
   shared_data_.root_node = new_root;
-  shared_data_.root_state = state;
-  shared_data_.root_tensorizor.receive_state_change(state, action);
+  shared_data_.update_state(state);
 
   if (params_.enable_pondering) {
     start_search_threads(pondering_search_params_);
@@ -124,8 +120,7 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 inline const typename Manager<GameState, Tensorizor>::SearchResults*
-Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameState& game_state,
-                                       const SearchParams& params) {
+Manager<GameState, Tensorizor>::search(const GameState& game_state, const SearchParams& params) {
   stop_search_threads();
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
@@ -133,8 +128,7 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
     auto outcome = GameStateTypes::make_non_terminal_outcome();
     shared_data_.root_node =
         std::make_shared<Node>(game_state, outcome, &params_);  // TODO: use memory pool
-    shared_data_.root_state = game_state;
-    shared_data_.root_tensorizor = tensorizor;
+    shared_data_.update_state(game_state);
   }
 
   if (mcts::kEnableDebug) {

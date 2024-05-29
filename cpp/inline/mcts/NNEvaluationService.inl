@@ -149,7 +149,7 @@ NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate()";
   }
 
-  cache_key_t cache_key(*request.state, request.sym_index);
+  cache_key_t cache_key(request.state->hash_key(), request.sym_index);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
 
@@ -250,7 +250,7 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
-    edata.policy_transform->undo(group.policy);
+    edata.transform->undo(group.policy);
     edata.eval_ptr.store(
         std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
   }
@@ -378,8 +378,8 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
 void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
     const Request& request, const cache_key_t& cache_key, int reserve_index) {
-  const Tensorizor& tensorizor = *request.tensorizor;
-  const GameState& state = *request.state;
+  GameStateData state_data = request.state->data();
+  GameStateHistory history = *request.history;
   const auto& stable_data = request.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
@@ -389,16 +389,17 @@ void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
-  tensorizor.tensorize(group.input, state);
-  auto input_transform = state.template get_symmetry<InputTensor>(sym_index);
-  auto policy_transform = state.template get_symmetry<PolicyTensor>(sym_index);
-  input_transform->apply(group.input);
+  auto transform = Transforms::get(sym_index);
+  transform->apply(state_data);
+  history.apply(transform);
+
+  Tensorizor::tensorize(group.input, state_data, history);
 
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;
   group.eval_ptr_data.valid_actions = valid_action_mask;
-  group.eval_ptr_data.policy_transform = policy_transform;
+  group.eval_ptr_data.transform = transform;
 }
 
 template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>

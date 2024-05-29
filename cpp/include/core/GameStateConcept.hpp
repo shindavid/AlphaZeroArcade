@@ -21,8 +21,10 @@ namespace core {
  * quite a bit costlier than fixed-sized ones.
  */
 template <class State>
-concept GameStateConcept = requires(State state, const State& const_state,
-                                    const typename State::Data& data, std::ostream& os) {
+concept GameStateConcept = requires(
+    State* _this, const State* const_this, typename State::Data* data,
+    const typename State::Data* const_data, typename State::Transform* transform,
+    typename State::PolicyTensor* policy, std::ostream& os) {
   /*
    * Each GameState class must have:
    *
@@ -44,22 +46,33 @@ concept GameStateConcept = requires(State state, const State& const_state,
    * state, and to reconstruct the data structure from past board states if needed.
    */
   typename State::Data;
+  requires std::is_default_constructible_v<typename State::Data>;
   requires std::is_trivially_copyable_v<typename State::Data>;
-  { const_state.data() } -> std::same_as<const typename State::Data&>;
-  State{data};
+  { const_this->data() } -> std::same_as<const typename State::Data&>;
+  State{*const_data};
   State{};
 
-  /*
-   * The number of players in the game.
-   */
   { util::decay_copy(State::kNumPlayers) } -> std::same_as<int>;
+  { util::decay_copy(State::kMaxNumSymmetries) } -> std::same_as<int>;  // TODO: infer this from TransformList
 
   /*
-   * The maximum number of symmetries.
+   * Each GameState class must have an abstract inner class Transform that is used for symmetry
+   * transformations, as well as an mp::TypeList TransformList that lists the derived Transform
+   * classes.
+   *
+   * Each Transform class must have the following methods:
+   *
+   * - void apply(Data&)
+   * - void apply(PolicyTensor&)
+   * - void undo(Data&)
+   * - void undo(PolicyTensor&)
    */
-  { util::decay_copy(State::kMaxNumSymmetries) } -> std::same_as<int>;
-
-  { state.get_symmetry_indices() } -> std::same_as<std::bitset<State::kMaxNumSymmetries>>;
+  typename State::Transform;
+  requires mp::IsTypeListOf<typename State::TransformList, typename State::Transform>;
+  { transform->apply(*data) } -> std::same_as<void>;
+  { transform->apply(*policy) } -> std::same_as<void>;
+  { transform->undo(*data) } -> std::same_as<void>;
+  { transform->undo(*policy) } -> std::same_as<void>;
 
   /*
    * The string that will be used as a delimiter to separate a sequence of action strings,
@@ -78,7 +91,7 @@ concept GameStateConcept = requires(State state, const State& const_state,
    * starting position of the piece and the 73 corresponds to various move-types (including
    * pawn promotions).
    */
-  { typename State::ActionShape{} } -> eigen_util::ShapeConcept;
+  requires eigen_util::ShapeConcept<typename State::ActionShape>;
 
   /*
    * For a given state s, let A(s) be the set of valid actions.
@@ -101,22 +114,24 @@ concept GameStateConcept = requires(State state, const State& const_state,
    */
   { util::decay_copy(State::kMaxNumLocalActions) } -> std::same_as<int>;
 
+  { _this->get_symmetry_indices() } -> std::same_as<std::bitset<State::kMaxNumSymmetries>>;
+
   /*
    * Return the current player.
    */
-  { state.get_current_player() } -> std::same_as<seat_index_t>;
+  { _this->get_current_player() } -> std::same_as<seat_index_t>;
 
   /*
    * Apply a given action to the state, and return a GameOutcome.
    */
   {
-    state.apply_move(typename GameStateTypes<State>::Action{})
+    _this->apply_move(typename GameStateTypes<State>::Action{})
   } -> std::same_as<typename GameStateTypes<State>::GameOutcome>;
 
   /*
    * Get the valid actions, as a bool tensor
    */
-  { state.get_valid_actions() } -> std::same_as<typename GameStateTypes<State>::ActionMask>;
+  { _this->get_valid_actions() } -> std::same_as<typename GameStateTypes<State>::ActionMask>;
 
   /*
    * A string representation of an action.
@@ -124,9 +139,22 @@ concept GameStateConcept = requires(State state, const State& const_state,
   { State::action_to_str(typename GameStateTypes<State>::Action{}) } -> std::same_as<std::string>;
 
   /*
-   * Must be hashable (for use in MCGS).
+   * Game state evaluations are cached in a hash table. The GameState class must provide a
+   * hash_key() method that returns a hashable type to serve as a key in this hash table.
+   *
+   * For most games, hash_key() can simply return *this. In a game like chess, where the state
+   * stores a history of all past states to support the threefold-repetition rule, this would be a
+   * poor choice, and simply returning data() would be more appropriate. On the other hand, in a
+   * game like go, data() might not include the ko-state, since if the tensorizor includes recent
+   * history, the ko-state can be inferred by the network from the history planes. But the ko-state
+   * deserves to be part of the hash key.
+   *
+   * Due to potential game-specific nuances like this, we leave the details of hash_key() up to
+   * each individual game.
    */
-  { std::hash<State>{}(state) } -> std::convertible_to<std::size_t>;
+  typename State::HashKey;
+  requires util::concepts::Hashable<typename State::HashKey>;
+  { const_this->hash_key() } -> std::same_as<typename State::HashKey>;
 };
 
 }  // namespace core

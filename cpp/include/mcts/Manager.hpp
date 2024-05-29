@@ -59,8 +59,7 @@ class Manager {
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const GameState&, const Action&);
-  const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state,
-                              const SearchParams& params);
+  const SearchResults* search(const GameState& game_state, const SearchParams& params);
 
   void start_search_threads(const SearchParams& search_params);
   void wait_for_search_threads();

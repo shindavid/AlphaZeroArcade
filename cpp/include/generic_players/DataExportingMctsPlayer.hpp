@@ -3,6 +3,7 @@
 #include <generic_players/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
+#include <core/GameLog.hpp>
 #include <core/GameStateConcept.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <core/TrainingDataWriter.hpp>
@@ -30,6 +31,8 @@ class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
   using Tensorizor = Tensorizor_;
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
+  using GameWriteLog = core::GameWriteLog<GameState, Tensorizor>;
+
   using dtype = typename GameStateTypes::dtype;
   using Action = typename GameStateTypes::Action;
   using ActionResponse = typename GameStateTypes::ActionResponse;
@@ -61,12 +64,10 @@ class DataExportingMctsPlayer : public MctsPlayer<GameState_, Tensorizor_> {
   void end_game(const GameState&, const GameOutcome&) override;
 
  protected:
-  static PolicyTensor extract_policy_target(const MctsSearchResults* results);
-  void record_position(const GameState& state, const ActionMask& valid_actions,
-                       const PolicyTensor& policy);
+  static void extract_policy_target(const MctsSearchResults* results, PolicyTensor** target);
 
   TrainingDataWriter* writer_;
-  TrainingDataWriter::GameData_sptr game_data_;
+  TrainingDataWriter::GameWriteLog_sptr game_log_;
 };
 
 }  // namespace generic

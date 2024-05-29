@@ -111,6 +111,7 @@ struct ToTorchTensor {
 
 template <typename Tensorizor>
 struct TensorizorTypes {
+  using GameStateHistory = typename Tensorizor::GameStateHistory;
   using InputTensor = typename Tensorizor::InputTensor;
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
   using InputScalar = typename InputTensor::Scalar;

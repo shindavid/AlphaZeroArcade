@@ -378,6 +378,16 @@ size_t tuple_hash(const std::tuple<T...>& arg);
 template <size_t size>
 uint64_t hash_memory(const void* ptr);
 
+namespace concepts {
+
+template<typename T>
+concept Hashable = requires(const T& a, const T& b) {
+  { std::hash<T>{}(a) } -> std::convertible_to<size_t>;
+  { a == b } -> std::convertible_to<bool>;
+};
+
+}  // namespace concepts
+
 }  // namespace util
 
 #include <inline/util/CppUtil.inl>

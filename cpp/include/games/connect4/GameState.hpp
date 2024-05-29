@@ -8,12 +8,11 @@
 #include <torch/torch.h>
 
 #include <core/AbstractPlayer.hpp>
-#include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/IdentityTransform.hpp>
 #include <core/SerializerTypes.hpp>
+#include <core/Symmetries.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
 #include <mcts/SearchResults.hpp>
 #include <mcts/SearchResultsDumper.hpp>
@@ -31,43 +30,6 @@ struct std::hash<c4::GameState> {
 };
 
 namespace c4 {
-
-template <eigen_util::FixedTensorConcept Tensor>
-struct Symmetries {
-  static constexpr int kNumSymmetries = 2;
-  using Transform = core::AbstractSymmetryTransform<Tensor>;
-  using Identity = core::IdentityTransform<Tensor>;
-  using transform_array_t = std::array<Transform*, kNumSymmetries>;
-
-  struct Refl : public Transform {
-    // last dimension will always be columns, which we want to reverse along
-    void apply(Tensor& t) override {
-      Tensor u = eigen_util::reverse(t, t.rank() - 1);
-      t = u;
-    }
-    void undo(Tensor& t) override { apply(t); }  // refl is its own inverse
-  };
-
-  static Transform* get_symmetry(core::symmetry_index_t index) {
-    return *(transforms().begin() + index);
-  }
-
- protected:
-  static transform_array_t transforms() {
-    transform_array_t arr{&transforms_struct_.identity_, &transforms_struct_.refl_};
-    return arr;
-  }
-
-  struct transforms_struct_t {
-    Identity identity_;
-    Refl refl_;
-  };
-
-  static transforms_struct_t transforms_struct_;
-};
-
-template <eigen_util::FixedTensorConcept Tensor>
-Symmetries<Tensor>::transforms_struct_t Symmetries<Tensor>::transforms_struct_;
 
 /*
  * Bit order encoding for the board:
@@ -90,22 +52,37 @@ class GameState {
   static constexpr int kMaxNumLocalActions = kNumColumns;
   static constexpr int kTypicalNumMovesPerGame = 40;
 
+  using ActionShape = Eigen::Sizes<kNumColumns>;
+  using HashKey = GameState;
+
+  using GameStateTypes = core::GameStateTypes<GameState>;
+  using Action = GameStateTypes::Action;
+  using ActionMask = GameStateTypes::ActionMask;
+  using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
+  using player_name_array_t = GameStateTypes::player_name_array_t;
+  using PolicyTensor = GameStateTypes::PolicyTensor;
+  using ValueArray = GameStateTypes::ValueArray;
+  using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
+  using GameOutcome = GameStateTypes::GameOutcome;
+
   struct Data {
+    core::seat_index_t get_current_player() const;
+    core::seat_index_t get_player_at(int row, int col) const;
     bool operator==(const Data& other) const = default;
 
     mask_t full_mask = 0;        // spaces occupied by either player
     mask_t cur_player_mask = 0;  // spaces occupied by current player
   };
 
-  using ActionShape = Eigen::Sizes<kNumColumns>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using Action = GameStateTypes::Action;
-  using ActionMask = GameStateTypes::ActionMask;
-  using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
-  using player_name_array_t = GameStateTypes::player_name_array_t;
-  using ValueArray = GameStateTypes::ValueArray;
-  using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
-  using GameOutcome = GameStateTypes::GameOutcome;
+  using Transform = core::Transform<Data, PolicyTensor>;
+  using Identity = core::IdentityTransform<Data, PolicyTensor>;
+
+  struct Reflect : public core::ReflexiveTransform<Data, PolicyTensor> {
+    void apply(Data& state) override;
+    void apply(PolicyTensor& policy) override;
+  };
+
+  using TransformList = mp::TypeList<Identity, Reflect>;
 
   static std::string action_delimiter() { return ""; }
   static std::string action_to_str(const Action& action) { return std::to_string(action[0]); }
@@ -113,24 +90,20 @@ class GameState {
   GameState() = default;
   GameState(const Data& data) : data_(data) {}
 
-  template <eigen_util::FixedTensorConcept Tensor>
-  core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
-    return Symmetries<Tensor>::get_symmetry(index);
-  }
-
   const Data& data() const { return data_; }
   SymmetryIndexSet get_symmetry_indices() const;
 
-  core::seat_index_t get_current_player() const;
+  core::seat_index_t get_current_player() const { return data_.get_current_player(); }
   GameOutcome apply_move(const Action& action);
   ActionMask get_valid_actions() const;
   int get_move_number() const;
 
-  core::seat_index_t get_player_at(int row, int col) const;
+  core::seat_index_t get_player_at(int row, int col) const { return data_.get_player_at(row, col); }
   void dump(const Action* last_action = nullptr,
             const player_name_array_t* player_names = nullptr) const;
   bool operator==(const GameState& other) const = default;
   std::size_t hash() const;
+  HashKey hash_key() const { return *this; }
 
  private:
   void row_dump(row_t row, column_t blink_column) const;

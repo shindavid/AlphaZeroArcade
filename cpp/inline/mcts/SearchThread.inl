@@ -57,7 +57,7 @@ inline void SearchThread<GameState, Tensorizor>::perform_visits() {
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     state_ = shared_data_->root_state;
-    tensorizor_ = shared_data_->root_tensorizor;
+    state_history_ = shared_data_->root_state_history;
     visit(root, nullptr, shared_data_->move_number);
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->stable_data().num_valid_actions == 1) break;
@@ -121,8 +121,8 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
     if (!edge) {
       Action action =
           GameStateTypes::get_nth_valid_action(stable_data.valid_action_mask, action_index);
+      state_history_.push_back(state_.data());
       GameOutcome outcome = state_.apply_move(action);
-      tensorizor_.receive_state_change(state_, action);
       applied_action = true;
       auto child = shared_data_->node_cache.fetch_or_create(move_number, state_, outcome,
                                                             this->manager_params_);
@@ -137,8 +137,8 @@ inline void SearchThread<GameState, Tensorizor>::visit(Node* tree, edge_t* edge,
       short_circuit_backprop(edge);
     } else {
       if (!applied_action) {
+        state_history_.push_back(state_.data());
         state_.apply_move(edge->action());
-        tensorizor_.receive_state_change(state_, edge->action());
       }
       visit(edge->child().get(), edge, move_number + 1);
     }
@@ -278,7 +278,7 @@ void SearchThread<GameState, Tensorizor>::evaluate_unset(Node* tree,
                                                       stable_data.valid_action_mask);
   } else {
     core::symmetry_index_t sym_index = stable_data.sym_index;
-    typename NNEvaluationService::Request request{tree,       &state_,    &tensorizor_,
+    typename NNEvaluationService::Request request{tree,       &state_,    &state_history_,
                                                   &profiler_, thread_id_, sym_index};
     auto response = nn_eval_service_->evaluate(request);
     data->evaluation = response.ptr;

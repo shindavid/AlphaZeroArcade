@@ -5,12 +5,40 @@
 #include <cstdint>
 #include <type_traits>
 
-#include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
+#include <core/GameStateHistory.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/MetaProgramming.hpp>
 
 namespace core {
+
+namespace concepts {
+
+template <class T, class GameState>
+concept AuxTarget = requires(const GameState* game_state,
+                             typename T::Tensor* tensor,
+                             core::seat_index_t cp)
+{
+  { util::decay_copy(T::kName) } -> std::same_as<const char*>;
+  requires eigen_util::FixedTensorConcept<typename T::Tensor>;
+  { T::tensorize(*tensor, *game_state, cp) } -> std::same_as<void>;
+};
+
+template <class GameState, typename T>
+struct IsAuxTargetList {
+  static constexpr bool value = false;
+};
+
+template <typename GameState, AuxTarget<GameState>... Ts>
+struct IsAuxTargetList<GameState, mp::TypeList<Ts...>> {
+  static constexpr bool value = true;
+};
+
+template <typename T, class GameState>
+concept AuxTargetList = IsAuxTargetList<GameState, T>::value;
+
+}  // namespace concepts
 
 /*
  * All Tensorizor classes must satisfy the TensorizorConcept concept.
@@ -21,28 +49,19 @@ namespace core {
  * history like this, the Tensorizor class is the appropriate place to maintain that state.
  */
 template <class Tensorizor, class GameState>
-concept TensorizorConcept =
-    requires(Tensorizor tensorizor, typename Tensorizor::InputTensor input) {
-      /*
-       * The Tensor type used to represent the game state.
-       */
-      { typename Tensorizor::InputTensor{} } -> eigen_util::FixedTensorConcept;
+concept TensorizorConcept = requires(Tensorizor tensorizor,
+                                     typename Tensorizor::InputTensor& input,
+                                     const typename GameState::Data& game_state_data,
+                                     const typename Tensorizor::GameStateHistory& history)
+{
+  requires eigen_util::FixedTensorConcept<typename Tensorizor::InputTensor>;
+  requires core::concepts::AuxTargetList<typename Tensorizor::AuxTargetList, GameState>;
+  requires core::concepts::GameStateHistory<typename Tensorizor::GameStateHistory>;
 
-      /*
-       * Used to clear state between games. Needed if the Tensorizor maintains state, as is done
-       * when recent history is included as part of the input tensor.
-       */
-      { tensorizor.clear() };
-
-      /*
-       * Receive broadcast of a game state change.
-       */
-      { tensorizor.receive_state_change(GameState{}, typename GameState::Action{}) };
-
-      /*
-       * Takes an eigen Tensor reference and writes to it.
-       */
-      { tensorizor.tensorize(input, GameState{}) };
-    };
+  /*
+    * Takes an eigen Tensor reference and writes to it.
+    */
+  { Tensorizor::tensorize(input, game_state_data, history) };
+};
 
 }  // namespace core

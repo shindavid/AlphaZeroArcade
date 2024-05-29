@@ -96,7 +96,6 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
   void verbose_dump() const;
 
   const Params params_;
-  Tensorizor tensorizor_;
 
   MctsManager* mcts_manager_;
   const MctsSearchParams search_params_[core::kNumSearchModes];
