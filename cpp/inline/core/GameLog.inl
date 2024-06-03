@@ -206,8 +206,9 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, fl
                                               float** aux, int num_aux) {
   util::release_assert(file_, "Attempt to read from closed GameReadLog");
 
-  if (index < 0) {
-    throw util::Exception("Index %d out of bounds in GameReadLog", index);
+  if (index < 0 || index >= (int)header_.num_game_states) {
+    throw util::Exception("Index %d out of bounds in GameReadLog (%u)", index,
+                          header_.num_game_states);
   }
 
   int state_index;
