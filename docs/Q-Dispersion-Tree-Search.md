@@ -1,6 +1,6 @@
-# Nash Information Set Monte Carlo Tree Search (Nash-ISMCTS)
+# Q-Dispersion Tree Search (QDTS)
 
-This document describes _Nash Information Set Monte Carlo Tree Search_. Nash-ISMCTS is our MCTS-variant,
+This document describes _Q-Dispersion Tree Search_ (QDTS). QDTS is our MCTS-variant,
 which can be applied in imperfect information games to approximate a game's Nash equilibrium.
 
 ## Background
@@ -34,7 +34,7 @@ if the update is performed appropriately.
 
 ---
 
-We are intentionally vague about the details here, as the mechanics of Nash-ISMCTS will differ from CFR,
+We are intentionally vague about the details here, as the mechanics of QDTS will differ from CFR,
 but rely on this same underlying pseudo-theorem.
 
 Pseudo-Theorem 1 applies to CFR if we think of the average policy $\overline{\pi}_n$ in CFR as the policy $\pi$
@@ -69,7 +69,7 @@ while ReBeL succeeded in the unconstrained version.
 Still, the $h$ and $b$ factors remain. For the games of Scrabble, Hearts, and Stratego, these factors
 are prohibitively large, making them still out of reach for ReBeL.
 
-In our proposed framework, Nash-ISMCTS, we will similarly exploit Pseudo-Theorem 1, but rely on
+In our proposed framework, QDTS, we will similarly exploit Pseudo-Theorem 1, but rely on
 Monte Carlo Tree Search (MCTS) as the best-local-response-computing search routine. As we will see,
 this will allow us to remove the linear dependence on $h$ and $b$ in the system memory requirements,
 which will finally put those large games within reach.
@@ -171,7 +171,7 @@ from PUCT.
 
 ## Hidden State Model
 
-In order to build towards Nash-ISMCTS, we will imbue MT-ISMCTS with AlphaZero-mechanics in the natural way:
+In order to build towards QDTS, we will imbue MT-ISMCTS with AlphaZero-mechanics in the natural way:
 
 - Replace random rollouts with value network ($V$) evaluations
 - Incorporate a policy network ($P$) and use PUCT as the action selection criterion.
@@ -251,7 +251,7 @@ playing the high-branching-factor game [Arimaa](https://en.wikipedia.org/wiki/Ar
 ## Equilibrium-Idempotence
 
 Let us call this ISMCTS variant imbued with AlphaZero mechanics _AlphaZero-ISMCTS_, or A-ISMCTS. This is not yet
-our final Nash-ISMCTS.
+our final QDTS.
 
 Suppose we play $g$ self-play games using A-ISMCTS and train $P$, $V$, and $H$ on the resultant set of 
 self-play data. Will the policy produced by running A-ISMCTS with the resultant $P$, $V$, and $H$, for $n$ visits,
@@ -292,7 +292,7 @@ $c_{\mathrm{PUCT}}$, and $\sqrt{\sum N}$ terms all cancel, leaving us with:
 
 This demonstrates the required ratio limit, and thus proves the claimed property of equilibrium-idempotence.
 
-## From AlphaZero-ISMCTS to Nash-ISMCTS
+## From AlphaZero-ISMCTS to QDTS
 
 ### Utility Belief Dispersion
 
@@ -417,7 +417,7 @@ spawned tree.
 
 ### Root ACT nodes: Selection
 
-If our networks are near-equilibrium, then Nash-ISMCTS will produce a near-equilibrium posterior policy
+If our networks are near-equilibrium, then QDTS will produce a near-equilibrium posterior policy
 $\pi$ at the root. In order for the AlphaZero loop to work properly, we must select according to $\pi$
 at the root. Otherwise, the $V$ and $H$ targets will not be consistent with $P$.
 
@@ -445,12 +445,12 @@ I = [\mathrm{min}(Q) - \sigma(N), \mathrm{max}(Q) + \sigma(N)]
 With this alternate interval definition, we apply the same LCB filtering mechanism. Then, we select
 among the remaining actions proportionally to $N$ (i.e., using a temperature of 1).
 
-### Nash-ISMCTS: Final Remarks
+### QDTS: Final Remarks
 
-This completes the description of Nash-ISMCTS.
+This completes the description of QDTS.
 
 Note that belief update dispersion begins at SAMPLE nodes and propagates upwards.
-In the absence of SAMPLE nodes, there is no dispersion, and Nash-ISMCTS reduces exactly
+In the absence of SAMPLE nodes, there is no dispersion, and QDTS reduces exactly
 to standard MCTS. This is a nice property and is a good reason to
 localize the dispersion mechanics to $H$, rather than also applying dispersion to $V$. An
 additional reason to avoid applying dispersion to $V$ is that the $N$ term in the PUCT formula
