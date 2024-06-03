@@ -135,10 +135,20 @@ class GameReadLog {
   GameReadLog(const char* filename);
   ~GameReadLog();
 
-  void load(int index, bool apply_symmetry, float* input,
-            const char** keys, float** values, int num_keys);
+  void load(int index, bool apply_symmetry, const char** keys, float** values, int num_keys);
+
+  /*
+   * Returns the index'th dimension of the tensor with the given key.
+   *
+   * If index is out of bounds, returns -1.
+   *
+   * If key is not recognized, returns -2.
+   */
+  static int get_dim(const char* key, int index);
 
  private:
+  void load_policy(PolicyTensor* policy, AuxMemOffset aux_mem_offset);
+
   template<typename T>
   void seek_and_read(int offset, T* data, int count=1);
 
@@ -155,7 +165,6 @@ class GameReadLog {
   int state_data_offset(int index) const;
   int aux_data_offset(int mem_offset) const;
 
-  void load_policy(PolicyTensor* policy, AuxMemOffset aux_mem_offset);
   uint32_t num_aux_data() const { return header_.num_game_states - 1; }  // no aux for terminal
 
   std::string filename_;

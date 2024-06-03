@@ -7,6 +7,20 @@
 
 namespace core {
 
+namespace detail {
+
+template <eigen_util::ShapeConcept Shape>
+int get_dim_helper(int index) {
+  if (index >= Shape::count) {
+    return -1;
+  }
+
+  Shape shape;
+  return shape[index];
+}
+
+}  // namespace detail
+
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 GameWriteLog<GameState, Tensorizor>::GameWriteLog(game_id_t id, int64_t start_timestamp)
     : id_(id), start_timestamp_(start_timestamp) {}
@@ -201,7 +215,7 @@ GameReadLog<GameState, Tensorizor>::~GameReadLog() {
 }
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, float* input,
+void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry,
                                               const char** keys, float** values, int num_keys) {
   util::release_assert(file_, "Attempt to read from closed GameReadLog");
 
@@ -270,13 +284,16 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, fl
   InputTensor input_tensor;
   Tensorizor::tensorize(input_tensor, cur_state, state_history);
 
-  for (int i = 0; i < input_tensor.size(); ++i) {
-    input[i] = input_tensor.data()[i];
-  }
-
   for (int k = 0; k < num_keys; ++k) {
     const char* key = keys[k];
     float* value = values[k];
+
+    if (std::strcmp(key, "input") == 0) {
+      for (int i = 0; i < input_tensor.size(); ++i) {
+        value[i] = input_tensor.data()[i];
+      }
+      continue;
+    }
     if (std::strcmp(key, "policy") == 0) {
       for (int i = 0; i < policy_tensor.size(); ++i) {
         value[i] = policy_tensor.data()[i];
@@ -298,12 +315,15 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, fl
 
     bool matched = false;
     constexpr size_t N = mp::Length_v<AuxTargetList>;
-    mp::constexpr_for<0, N, 1>([&](auto i) {
-      using AuxTarget = mp::TypeAt_t<AuxTargetList, i>;
+    mp::constexpr_for<0, N, 1>([&](auto a) {
+      using AuxTarget = mp::TypeAt_t<AuxTargetList, a>;
       if (std::strcmp(key, AuxTarget::kName) == 0) {
         using AuxTensor = typename AuxTarget::Tensor;
         AuxTensor aux_tensor;
         AuxTarget::tensorize(aux_tensor, cur_state, final_state);
+        for (int i = 0; i < aux_tensor.size(); ++i) {
+          value[i] = aux_tensor.data()[i];
+        }
         matched = true;
       }
     });
@@ -313,6 +333,36 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, fl
     }
   }
   // TODO: load aux data
+}
+
+template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+int GameReadLog<GameState, Tensorizor>::get_dim(const char* key, int index) {
+  if (index < 0) {
+    throw util::Exception("Index %d out of bounds in GameReadLog", index);
+  }
+
+  if (std::strcmp(key, "input") == 0) {
+    return detail::get_dim_helper<eigen_util::extract_shape_t<InputTensor>>(index);
+  }
+  if (std::strcmp(key, "policy") == 0) {
+    return detail::get_dim_helper<eigen_util::extract_shape_t<PolicyTensor>>(index);
+  }
+  if (std::strcmp(key, "value") == 0) {
+    return detail::get_dim_helper<eigen_util::extract_shape_t<ValueTensor>>(index);
+  }
+  if (std::strcmp(key, "opp_policy") == 0) {
+    return detail::get_dim_helper<eigen_util::extract_shape_t<PolicyTensor>>(index);
+  }
+  int dim = -2;
+  constexpr size_t N = mp::Length_v<AuxTargetList>;
+  mp::constexpr_for<0, N, 1>([&](auto a) {
+    using AuxTarget = mp::TypeAt_t<AuxTargetList, a>;
+    if (std::strcmp(key, AuxTarget::kName) == 0) {
+      using AuxTensor = typename AuxTarget::Tensor;
+      dim = detail::get_dim_helper<eigen_util::extract_shape_t<AuxTensor>>(index);
+    }
+  });
+  return dim;
 }
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
