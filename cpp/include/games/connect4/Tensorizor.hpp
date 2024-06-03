@@ -21,10 +21,12 @@ class OwnershipTarget {
   using Shape = eigen_util::Shape<kNumRows, kNumColumns>;
   using Tensor = Eigen::TensorFixedSize<torch_util::dtype, Shape, Eigen::RowMajor>;
 
-  static void tensorize(Tensor& tensor, const GameState& state, core::seat_index_t cp) {
+  static void tensorize(Tensor& tensor, const GameState::Data& cur_state,
+                        const GameState::Data& final_state) {
+    core::seat_index_t cp = cur_state.get_current_player();
     for (int row = 0; row < kNumRows; ++row) {
       for (int col = 0; col < kNumColumns; ++col) {
-        core::seat_index_t p = state.get_player_at(row, col);
+        core::seat_index_t p = final_state.get_player_at(row, col);
         int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
         tensor(row, col) = val;
       }

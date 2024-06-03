@@ -202,8 +202,7 @@ GameReadLog<GameState, Tensorizor>::~GameReadLog() {
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, float* input,
-                                              float* policy, float* value, const char** aux_keys,
-                                              float** aux, int num_aux) {
+                                              const char** keys, float** values, int num_keys) {
   util::release_assert(file_, "Attempt to read from closed GameReadLog");
 
   if (index < 0 || index >= (int)header_.num_game_states) {
@@ -230,6 +229,11 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, fl
   AuxMemOffset aux_mem_offset;
   seek_and_read(aux_index_offset(index), &aux_mem_offset);
 
+  AuxMemOffset next_aux_mem_offset = -1;
+  if (index + 1 < (int)header_.num_game_states) {
+    seek_and_read(aux_index_offset(index + 1), &next_aux_mem_offset);
+  }
+
   GameStateHistory state_history;
   int history_start_index = std::max(0, state_index - Tensorizor::kHistorySize);
   for (int h = history_start_index; h < state_index; ++h) {
@@ -238,51 +242,102 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry, fl
     state_history.push_back(prev_state_data);
   }
 
-  GameStateData state_data;
-  seek_and_read(state_data_offset(state_index), &state_data);
+  GameStateData cur_state;
+  seek_and_read(state_data_offset(state_index), &cur_state);
 
-  AuxData aux_data;
-  seek_and_read(aux_mem_offset, &aux_data);
+  GameStateData final_state;
+  seek_and_read(state_data_offset(header_.num_game_states - 1), &final_state);
 
   PolicyTensor policy_tensor;
-  if (aux_data.policy_target_format < 0) {  // dense format
-    seek_and_read(aux_data_offset(aux_mem_offset), &policy_tensor);
-  } else if (aux_data.policy_target_format > 0) {
-    sparse_policy_entry_t sparse_entries[aux_data.policy_target_format];
-    seek_and_read(aux_data_offset(aux_mem_offset), sparse_entries, aux_data.policy_target_format);
-    policy_tensor.setZero();
-    for (int i = 0; i < aux_data.policy_target_format; ++i) {
-      policy_tensor.data()[sparse_entries[i].offset] = sparse_entries[i].probability;
-    }
-  } else {
-    policy_tensor.setZero();
-  }
+  load_policy(&policy_tensor, aux_mem_offset);
 
-  if (sym_index > -1) {
+  PolicyTensor next_policy_tensor;
+  load_policy(&next_policy_tensor, next_aux_mem_offset);
+
+  if (sym_index >= 0) {
     Transform* transform = Transforms::get(sym_index);
-    transform->apply(state_data);
     state_history.apply(transform);
+    transform->apply(cur_state);
+    transform->apply(final_state);
     transform->apply(policy_tensor);
+    transform->apply(next_policy_tensor);
   }
 
-  GameState state(state_data);
+  core::seat_index_t cp = cur_state.get_current_player();
+  GameOutcome outcome = outcome_;
+  eigen_util::left_rotate(outcome, cp);
 
   InputTensor input_tensor;
-  Tensorizor::tensorize(input_tensor, state.data(), state_history);
+  Tensorizor::tensorize(input_tensor, cur_state, state_history);
 
   for (int i = 0; i < input_tensor.size(); ++i) {
     input[i] = input_tensor.data()[i];
   }
 
-  for (int i = 0; i < policy_tensor.size(); ++i) {
-    policy[i] = policy_tensor.data()[i];
-  }
+  for (int k = 0; k < num_keys; ++k) {
+    const char* key = keys[k];
+    float* value = values[k];
+    if (std::strcmp(key, "policy") == 0) {
+      for (int i = 0; i < policy_tensor.size(); ++i) {
+        value[i] = policy_tensor.data()[i];
+      }
+      continue;
+    }
+    if (std::strcmp(key, "value") == 0) {
+      for (int i = 0; i < outcome.size(); ++i) {
+        value[i] = outcome[i];
+      }
+      continue;
+    }
+    if (std::strcmp(key, "opp_policy") == 0) {
+      for (int i = 0; i < next_policy_tensor.size(); ++i) {
+        value[i] = next_policy_tensor.data()[i];
+      }
+      continue;
+    }
 
-  for (int i = 0; i < outcome_.size(); ++i) {
-    value[i] = outcome_.data()[i];
-  }
+    bool matched = false;
+    constexpr size_t N = mp::Length_v<AuxTargetList>;
+    mp::constexpr_for<0, N, 1>([&](auto i) {
+      using AuxTarget = mp::TypeAt_t<AuxTargetList, i>;
+      if (std::strcmp(key, AuxTarget::kName) == 0) {
+        using AuxTensor = typename AuxTarget::Tensor;
+        AuxTensor aux_tensor;
+        AuxTarget::tensorize(aux_tensor, cur_state, final_state);
+        matched = true;
+      }
+    });
 
+    if (!matched) {
+      throw util::Exception("Unknown key '%s' in file %s", key, filename_.c_str());
+    }
+  }
   // TODO: load aux data
+}
+
+template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
+void GameReadLog<GameState, Tensorizor>::load_policy(PolicyTensor* policy,
+                                                     AuxMemOffset aux_mem_offset) {
+  if (aux_mem_offset < 0) {
+    policy->setZero();
+    return;
+  }
+  AuxData aux_data;
+  seek_and_read(aux_mem_offset, &aux_data);
+
+  auto f = aux_data.policy_target_format;
+  if (f < 0) {  // dense format
+    seek_and_read(aux_data_offset(aux_mem_offset), policy);
+  } else if (f > 0) {
+    sparse_policy_entry_t sparse_entries[f];
+    seek_and_read(aux_data_offset(aux_mem_offset), sparse_entries, f);
+    policy->setZero();
+    for (int i = 0; i < f; ++i) {
+      policy->data()[sparse_entries[i].offset] = sparse_entries[i].probability;
+    }
+  } else {
+    policy->setZero();
+  }
 }
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -320,8 +375,7 @@ int GameReadLog<GameState, Tensorizor>::aux_index_start() const {
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 int GameReadLog<GameState, Tensorizor>::state_data_start() const {
-  // -1 because the last state is terminal
-  return aux_index_start() + (header_.num_game_states - 1) * sizeof(AuxMemOffset);
+  return aux_index_start() + num_aux_data() * sizeof(AuxMemOffset);
 }
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>

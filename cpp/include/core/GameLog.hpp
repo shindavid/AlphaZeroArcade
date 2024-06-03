@@ -85,6 +85,7 @@ class GameReadLog {
   using GameStateData = typename GameState::Data;
 
   using InputTensor = typename Tensorizor::InputTensor;
+  using AuxTargetList = typename Tensorizor::AuxTargetList;
 
   using GameStateTypes = core::GameStateTypes<GameState>;
   using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
@@ -116,7 +117,7 @@ class GameReadLog {
   };
 
   using NonSymSampleIndex = uint32_t;
-  using AuxMemOffset = uint32_t;
+  using AuxMemOffset = int32_t;
 
 #pragma pack(push, 1)
   // NOTE: when we change Action to be an int32_t, this will fit in 8 bytes
@@ -134,8 +135,8 @@ class GameReadLog {
   GameReadLog(const char* filename);
   ~GameReadLog();
 
-  void load(int index, bool apply_symmetry, float* input, float* policy, float* value,
-            const char** aux_keys, float** aux, int num_aux);
+  void load(int index, bool apply_symmetry, float* input,
+            const char** keys, float** values, int num_keys);
 
  private:
   template<typename T>
@@ -153,6 +154,9 @@ class GameReadLog {
   int aux_index_offset(int index) const;
   int state_data_offset(int index) const;
   int aux_data_offset(int mem_offset) const;
+
+  void load_policy(PolicyTensor* policy, AuxMemOffset aux_mem_offset);
+  uint32_t num_aux_data() const { return header_.num_game_states - 1; }  // no aux for terminal
 
   std::string filename_;
   FILE* file_;

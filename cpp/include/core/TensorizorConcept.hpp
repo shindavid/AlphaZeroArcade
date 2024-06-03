@@ -16,13 +16,13 @@ namespace core {
 namespace concepts {
 
 template <class T, class GameState>
-concept AuxTarget = requires(const GameState* game_state,
-                             typename T::Tensor* tensor,
-                             core::seat_index_t cp)
+concept AuxTarget = requires(const typename GameState::Data& cur_state,
+                             const typename GameState::Data& final_state,
+                             typename T::Tensor& tensor)
 {
   { util::decay_copy(T::kName) } -> std::same_as<const char*>;
   requires eigen_util::FixedTensorConcept<typename T::Tensor>;
-  { T::tensorize(*tensor, *game_state, cp) } -> std::same_as<void>;
+  { T::tensorize(tensor, cur_state, final_state) } -> std::same_as<void>;
 };
 
 template <class GameState, typename T>
