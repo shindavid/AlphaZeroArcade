@@ -2,7 +2,7 @@
 
 #include <generic_players/HumanTuiPlayer.hpp>
 
-#include <games/connect4/GameState.hpp>
+#include <games/connect4/Game.hpp>
 #include <games/connect4/players/PerfectPlayer.hpp>
 
 namespace c4 {

@@ -146,4 +146,5 @@ struct SearchResultsDumper<c4::GameState> {
 
 }  // namespace mcts
 
-#include <inline/games/connect4/GameState.inl>
+#include <inline/games/connect4/Game.inl>
+

@@ -11,7 +11,7 @@
 #include <util/TorchUtil.hpp>
 
 #include <games/connect4/Constants.hpp>
-#include <games/connect4/GameState.hpp>
+#include <games/connect4/Game.hpp>
 
 namespace c4 {
 

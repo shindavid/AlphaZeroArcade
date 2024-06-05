@@ -5,7 +5,7 @@
 #include <generic_players/MctsPlayerGenerator.hpp>
 #include <generic_players/RandomPlayerGenerator.hpp>
 
-#include <games/connect4/GameState.hpp>
+#include <games/connect4/Game.hpp>
 #include <games/connect4/Tensorizor.hpp>
 #include <games/connect4/players/HumanTuiPlayerGenerator.hpp>
 #include <games/connect4/players/PerfectPlayerGenerator.hpp>

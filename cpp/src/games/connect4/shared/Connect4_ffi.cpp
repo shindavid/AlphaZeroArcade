@@ -1,5 +1,5 @@
 #include <core/GameLog.hpp>
-#include <games/connect4/GameState.hpp>
+#include <games/connect4/Game.hpp>
 #include <games/connect4/Tensorizor.hpp>
 
 using GameReadLog = core::GameReadLog<c4::GameState, c4::Tensorizor>;

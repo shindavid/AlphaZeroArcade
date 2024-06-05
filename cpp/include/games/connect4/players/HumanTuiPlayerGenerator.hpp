@@ -10,7 +10,7 @@
 #include <generic_players/HumanTuiPlayerGenerator.hpp>
 #include <util/BoostUtil.hpp>
 
-#include <games/connect4/GameState.hpp>
+#include <games/connect4/Game.hpp>
 #include <games/connect4/players/HumanTuiPlayer.hpp>
 
 namespace c4 {

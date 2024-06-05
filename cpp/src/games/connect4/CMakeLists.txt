@@ -1,6 +1,6 @@
 add_executable(c4_exe
         main/Connect4.cpp
-        GameState.cpp
+        Game.cpp
         PerfectPlayer.cpp
         )
 
