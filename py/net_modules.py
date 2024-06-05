@@ -28,7 +28,7 @@ from torch.nn import functional as F
 
 from learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
 from util.repo_util import Repo
-from util.torch_util import Shape
+from util.torch_util import Shape, ShapeDict
 
 
 class GlobalPoolingLayer(nn.Module):
@@ -383,7 +383,7 @@ class ModuleSpec:
 
 @dataclass
 class ModelConfig:
-    input_shape: Shape
+    shape_info: ShapeDict
     stem: ModuleSpec
     blocks: List[ModuleSpec]
     heads: List[ModuleSpec]
@@ -394,7 +394,7 @@ class ModelConfig:
             assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
 
 
-ModelConfigGenerator = Callable[[Shape], ModelConfig]
+ModelConfigGenerator = Callable[[ShapeDict], ModelConfig]
 
 
 class Model(nn.Module):
@@ -404,13 +404,16 @@ class Model(nn.Module):
         config.validate()
 
         self.config = config
-        self.input_shape = config.input_shape
         self.stem = Model._construct_module(config.stem)
         self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
         self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
         self.loss_weights = config.loss_weights
 
         self.validate()
+
+    @property
+    def shape_info(self) -> ShapeDict:
+        return self.config.shape_info
 
     @property
     def learning_targets(self) -> List[LearningTarget]:
@@ -447,7 +450,7 @@ class Model(nn.Module):
         for name in head_names:
             assert name in self.loss_weights, f'Loss weight missing for head {name}'
 
-    def validate_targets(self, targets: List[str]):
+        targets = [t for t in self.shape_info.keys() if t != 'input']
         for target in targets:
             assert target in self.loss_weights, f'Unknown target {target}'
         for target in self.loss_weights:
@@ -509,7 +512,7 @@ class Model(nn.Module):
 
         clone.to('cpu')
         clone.eval()
-        forward_shape = tuple([1] + list(self.input_shape))
+        forward_shape = tuple([1] + list(self.shape_info['input']))
         example_input = torch.zeros(forward_shape)
 
         # Perform the actual trace/save in a separate process to avoid memory leak

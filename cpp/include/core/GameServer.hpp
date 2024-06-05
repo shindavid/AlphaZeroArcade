@@ -71,7 +71,6 @@ class GameServer {
   struct Params {
     auto make_options_description();
 
-    std::string kill_file;  // if non-empty, kill server when this file is created
     int num_games = 1000;   // if <=0, run indefinitely
     int parallelism = 256;  // number of games to run simultaneously
     int port = 0;
@@ -154,9 +153,6 @@ class GameServer {
 
  public:
   GameServer(const Params& params);
-  ~GameServer();
-
-  static void request_shutdown() { shutdown_requested_ = true; }
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
@@ -184,13 +180,8 @@ class GameServer {
   void shutdown();
 
  private:
-  void kill_file_checker();
-
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
-  std::thread* kill_thread_ = nullptr;
-
-  static bool shutdown_requested_;
 };
 
 }  // namespace core

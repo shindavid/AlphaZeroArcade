@@ -166,6 +166,7 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::send(const GameWriteLog* log) 
   msg["end_timestamp"] = cur_timestamp;
   msg["rows"] = rows;
   msg["flush"] = flush;
+  msg["done"] = done;
 
   if (flush) {
     if (client->report_metrics()) {
@@ -177,13 +178,8 @@ bool TrainingDataWriter<GameState_, Tensorizor_>::send(const GameWriteLog* log) 
 
   rows_written_ = new_rows_written;
   if (done) {
-    std::cout << "TrainingDataWriter: shutting down after writing " << rows_written_ << " rows"
-              << std::endl;
+    LOG_INFO << "TrainingDataWriter: shutting down after writing " << rows_written_ << " rows";
     closed_ = true;
-
-    // This assumes that we are in the same process as the GameServer, which is true for now. I
-    // don't foresee the assumption being violated.
-    GameServer<GameState>::request_shutdown();
     return true;
   }
   return false;

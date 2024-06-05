@@ -6,14 +6,16 @@ using GameReadLog = core::GameReadLog<c4::GameState, c4::Tensorizor>;
 
 extern "C" {
 
-int c4_get_dim(const char* key, int index) { return GameReadLog::get_dim(key, index); }
+core::ShapeInfo* get_shape_info_array() { return GameReadLog::get_shape_info(); }
 
-GameReadLog* c4_GameReadLog_new(const char* filename) { return new GameReadLog(filename); }
+void free_shape_info_array(core::ShapeInfo* info) { delete[] info; }
 
-void c4_GameReadLog_delete(GameReadLog* log) { delete log; }
+GameReadLog* GameReadLog_new(const char* filename) { return new GameReadLog(filename); }
 
-void c4_GameReadLog_load(GameReadLog* log, int index, bool apply_symmetry,
-                         const char** keys, float** values, int num_keys) {
+void GameReadLog_delete(GameReadLog* log) { delete log; }
+
+void GameReadLog_load(GameReadLog* log, int index, bool apply_symmetry, const char** keys,
+                      float** values, int num_keys) {
   log->load(index, apply_symmetry, keys, values, num_keys);
 }
 

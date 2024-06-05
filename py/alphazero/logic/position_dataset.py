@@ -15,7 +15,7 @@ f(n) = n^0.75, where n = |M|.
 This module provides a class, GamesDatasetGenerator, that tracks the master sequence M. This class
 produces GamesDataset objects, which correspond to a window W of M.
 """
-from util.torch_util import Shape
+from alphazero.logic.game_log_reader import GameLogReader
 
 import numpy as np
 import os
@@ -89,10 +89,12 @@ class PositionListSlice:
 
 
 class PositionDataset(Dataset):
-    def __init__(self, base_dir: str, forked_base_dir: Optional[str], positions: PositionListSlice):
+    def __init__(self, base_dir: str, forked_base_dir: Optional[str], positions: PositionListSlice,
+                 game_log_reader: GameLogReader):
         self._base_dir = base_dir
         self._forked_base_dir = forked_base_dir
         self._positions = positions
+        self._game_log_reader = game_log_reader
         self._key_order: List[str] = []
 
     def announce_sampling(self, print_func):
@@ -128,30 +130,13 @@ class PositionDataset(Dataset):
         filename = self._get_filename(client_id, gen, end_timestamp)
 
         try:
+            log = self._game_log_reader.open_log(filename)
+
+            self._game_log_reader.close_log(filename)
             data = torch.jit.load(filename).state_dict()
         except:
             raise Exception(f'Could not load data from file: {filename}')
         return data, pos_index
-
-    def get_input_shape(self) -> Shape:
-        """
-        Peeks into the dataset to determine the shape of the input.
-
-        Without this, we would need to hard-code the input shape into the model configuration,
-        which could be cumbersome if we want to experiment with different ways of representing the
-        input. For example, we may want to vary the number of previous positions of history we
-        include in the input, or we may want to add some additional input feature planes.
-        """
-        data, pos_index = self._get_data_and_pos_index(0)
-        return data['input'][pos_index].shape
-
-    def get_target_names(self) -> List[str]:
-        """
-        Peeks into the dataset to find the names of all the targets.
-        """
-        data, _ = self._get_data_and_pos_index(0)
-        names = list(data.keys())
-        return [n for n in names if n != 'input']
 
     def set_key_order(self, target_names: List[str]):
         """
@@ -171,5 +156,13 @@ class PositionDataset(Dataset):
         return len(self._positions)
 
     def __getitem__(self, idx):
-        data, pos_index = self._get_data_and_pos_index(idx)
-        return [data[key][pos_index] for key in self._key_order]
+        client_id, gen, end_timestamp, pos_index = self._positions[idx]
+        filename = self._get_filename(client_id, gen, end_timestamp)
+
+        try:
+            log = self._game_log_reader.open_log(filename)
+            output = self._game_log_reader.create_tensors(log, self._key_order, pos_index)
+            self._game_log_reader.close_log(log)
+            return output
+        except:
+            raise Exception(f'Could not load data from file: {filename}')

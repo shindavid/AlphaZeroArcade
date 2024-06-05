@@ -302,7 +302,8 @@ class SelfPlayManager:
     def _handle_gen0_complete(self, conn: ClientConnection):
         with self._gen0_lock:
             assert conn.client_id == self._gen0_owner
-            assert self._num_additional_gen0_positions_needed() == 0
+            n = self._num_additional_gen0_positions_needed()
+            assert n == 0, n
             self._gen0_owner = None
             self._set_gen0_completion(True)
             self._gen0_cond.notify_all()
@@ -376,6 +377,7 @@ class SelfPlayManager:
         end_timestamp = msg['end_timestamp']
         rows = msg['rows']
         flush = msg['flush']
+        done = msg['done']
 
         use_data = self._check_row_budget(gen, rows)
 
@@ -403,14 +405,18 @@ class SelfPlayManager:
             metrics = msg.get('metrics', None)
 
             with self._controller.self_play_db_conn_pool.db_lock:
-                conn = self._controller.self_play_db_conn_pool.get_connection()
-                cursor = conn.cursor()
+                db_conn = self._controller.self_play_db_conn_pool.get_connection()
+                cursor = db_conn.cursor()
                 n_augmented_positions = self._flush_pending_games(client_id, cursor)
                 if metrics:
                     self._insert_metrics(client_id, gen, end_timestamp, metrics, cursor)
                 cursor.close()
-                conn.commit()
+                db_conn.commit()
             self._controller.handle_new_self_play_positions(n_augmented_positions)
+
+        if done:
+            logger.info(f'Client {client_id} has finished self-play')
+            conn.socket.send_json({'type': 'quit'})
 
     def _flush_pending_games_helper(self, cursor: sqlite3.Cursor, gen: Generation,
                                     game_data: Dict[Generation, list]):

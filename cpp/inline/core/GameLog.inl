@@ -2,24 +2,27 @@
 
 #include <util/BitSet.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/LoggingUtil.hpp>
 
 #include <limits>
 
 namespace core {
 
-namespace detail {
-
-template <eigen_util::ShapeConcept Shape>
-int get_dim_helper(int index) {
-  if (index >= Shape::count) {
-    return -1;
-  }
+template<eigen_util::FixedTensorConcept Tensor> void ShapeInfo::init(const char* name) {
+  using Shape = eigen_util::extract_shape_t<Tensor>;
+  this->name = name;
+  this->dims = new int[Shape::count];
+  this->num_dims = Shape::count;
 
   Shape shape;
-  return shape[index];
+  for (int i = 0; i < Shape::count; ++i) {
+    this->dims[i] = shape[i];
+  }
 }
 
-}  // namespace detail
+ShapeInfo::~ShapeInfo() {
+  delete[] dims;
+}
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 GameWriteLog<GameState, Tensorizor>::GameWriteLog(game_id_t id, int64_t start_timestamp)
@@ -107,16 +110,15 @@ void GameWriteLog<GameState, Tensorizor>::serialize(std::ostream& stream) const 
       header.num_samples_without_symmetry_expansion++;
     }
 
+    header.num_game_states++;
+    if (entry->terminal) continue;
+
     AuxMemOffset aux_mem_offset = aux_data_stream.tellp();
     aux_mem_offsets.push_back(aux_mem_offset);
 
     char policy_target_buf[sizeof(PolicyTensor)];
     char* policy_target_buf_ptr = policy_target_buf;
     int16_t format = write_policy_target(*entry, &policy_target_buf_ptr);
-
-    header.num_game_states++;
-
-    if (entry->terminal) continue;
 
     AuxData aux_data;
     aux_data.action = entry->action;
@@ -129,7 +131,6 @@ void GameWriteLog<GameState, Tensorizor>::serialize(std::ostream& stream) const 
     } else if (format > 0) {
       aux_data_stream.write(policy_target_buf, sizeof(sparse_policy_entry_t) * format);
     }
-
   }
 
   stream.write(reinterpret_cast<const char*>(&header), sizeof(header));
@@ -196,13 +197,13 @@ GameReadLog<GameState, Tensorizor>::GameReadLog(const char* filename) {
   file_ = fopen(filename, "rb");
   util::release_assert(file_, "Failed to open file '%s' for reading", filename);
 
-  if (fread(&header_, sizeof(Header), 1, file_) != sizeof(Header)) {
+  if (fread(&header_, sizeof(Header), 1, file_) != 1) {
     fclose(file_);
     file_ = nullptr;
     throw util::Exception("Failed to read header from file '%s'", filename);
   }
 
-  if (fread(&outcome_, sizeof(GameOutcome), 1, file_) != sizeof(GameOutcome)) {
+  if (fread(&outcome_, sizeof(GameOutcome), 1, file_) != 1) {
     fclose(file_);
     file_ = nullptr;
     throw util::Exception("Failed to read outcome from file '%s'", filename);
@@ -219,21 +220,26 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry,
                                               const char** keys, float** values, int num_keys) {
   util::release_assert(file_, "Attempt to read from closed GameReadLog");
 
-  if (index < 0 || index >= (int)header_.num_game_states) {
-    throw util::Exception("Index %d out of bounds in GameReadLog (%u)", index,
-                          header_.num_game_states);
-  }
-
   int state_index;
   core::symmetry_index_t sym_index = -1;
 
   if (apply_symmetry) {
+    if (index < 0 || index >= (int)header_.num_samples_with_symmetry_expansion) {
+      throw util::Exception("Index %d(%d) out of bounds in GameReadLog (%u)", index, apply_symmetry,
+                            header_.num_samples_with_symmetry_expansion);
+    }
+
     SymSampleIndex sym_sample_index;
     seek_and_read(symmetric_index_offset(index), &sym_sample_index);
 
     state_index = sym_sample_index.state_index;
     sym_index = sym_sample_index.symmetry_index;
   } else {
+    if (index < 0 || index >= (int)header_.num_samples_without_symmetry_expansion) {
+      throw util::Exception("Index %d(%d) out of bounds in GameReadLog (%u)", index, apply_symmetry,
+                            header_.num_samples_without_symmetry_expansion);
+    }
+
     NonSymSampleIndex non_sym_sample_index;
     seek_and_read(non_symmetric_index_offset(index), &non_sym_sample_index);
 
@@ -241,11 +247,11 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry,
   }
 
   AuxMemOffset aux_mem_offset;
-  seek_and_read(aux_index_offset(index), &aux_mem_offset);
+  seek_and_read(aux_index_offset(state_index), &aux_mem_offset);
 
   AuxMemOffset next_aux_mem_offset = -1;
-  if (index + 1 < (int)header_.num_game_states) {
-    seek_and_read(aux_index_offset(index + 1), &next_aux_mem_offset);
+  if (state_index + 1 < (int)header_.num_game_states) {
+    seek_and_read(aux_index_offset(state_index + 1), &next_aux_mem_offset);
   }
 
   GameStateHistory state_history;
@@ -336,33 +342,24 @@ void GameReadLog<GameState, Tensorizor>::load(int index, bool apply_symmetry,
 }
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
-int GameReadLog<GameState, Tensorizor>::get_dim(const char* key, int index) {
-  if (index < 0) {
-    throw util::Exception("Index %d out of bounds in GameReadLog", index);
-  }
+ShapeInfo* GameReadLog<GameState, Tensorizor>::get_shape_info() {
+  constexpr int n_base = 4;  // input, policy, value, opp_policy
+  constexpr int n_aux = mp::Length_v<AuxTargetList>;
+  constexpr int n = n_base + n_aux;
 
-  if (std::strcmp(key, "input") == 0) {
-    return detail::get_dim_helper<eigen_util::extract_shape_t<InputTensor>>(index);
-  }
-  if (std::strcmp(key, "policy") == 0) {
-    return detail::get_dim_helper<eigen_util::extract_shape_t<PolicyTensor>>(index);
-  }
-  if (std::strcmp(key, "value") == 0) {
-    return detail::get_dim_helper<eigen_util::extract_shape_t<ValueTensor>>(index);
-  }
-  if (std::strcmp(key, "opp_policy") == 0) {
-    return detail::get_dim_helper<eigen_util::extract_shape_t<PolicyTensor>>(index);
-  }
-  int dim = -2;
-  constexpr size_t N = mp::Length_v<AuxTargetList>;
-  mp::constexpr_for<0, N, 1>([&](auto a) {
+  ShapeInfo* info = new ShapeInfo[n+1];
+  info[0].init<InputTensor>("input");
+  info[1].init<PolicyTensor>("policy");
+  info[2].init<ValueTensor>("value");
+  info[3].init<PolicyTensor>("opp_policy");
+
+  mp::constexpr_for<0, n_aux, 1>([&](auto a) {
     using AuxTarget = mp::TypeAt_t<AuxTargetList, a>;
-    if (std::strcmp(key, AuxTarget::kName) == 0) {
-      using AuxTensor = typename AuxTarget::Tensor;
-      dim = detail::get_dim_helper<eigen_util::extract_shape_t<AuxTensor>>(index);
-    }
+    using AuxTensor = typename AuxTarget::Tensor;
+    info[n_base + a].template init<AuxTensor>(AuxTarget::kName);
   });
-  return dim;
+
+  return info;
 }
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
@@ -373,14 +370,16 @@ void GameReadLog<GameState, Tensorizor>::load_policy(PolicyTensor* policy,
     return;
   }
   AuxData aux_data;
-  seek_and_read(aux_mem_offset, &aux_data);
+  int data_offset = aux_data_offset(aux_mem_offset);
+  seek_and_read(data_offset, &aux_data);
 
+  int policy_offset = data_offset + sizeof(AuxData);
   auto f = aux_data.policy_target_format;
   if (f < 0) {  // dense format
-    seek_and_read(aux_data_offset(aux_mem_offset), policy);
+    seek_and_read(policy_offset, policy);
   } else if (f > 0) {
     sparse_policy_entry_t sparse_entries[f];
-    seek_and_read(aux_data_offset(aux_mem_offset), sparse_entries, f);
+    seek_and_read(policy_offset, sparse_entries, f);
     policy->setZero();
     for (int i = 0; i < f; ++i) {
       policy->data()[sparse_entries[i].offset] = sparse_entries[i].probability;
@@ -392,12 +391,12 @@ void GameReadLog<GameState, Tensorizor>::load_policy(PolicyTensor* policy,
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 template<typename T>
-void GameReadLog<GameState, Tensorizor>::seek_and_read(int offset, T* data, int count) {
+void GameReadLog<GameState, Tensorizor>::seek_and_read(int line, int offset, T* data, int count) {
   fseek(file_, offset, SEEK_SET);
-  constexpr int t = sizeof(T);
-  int n = fread(data, t, count, file_);
-  if (n != count * t) {
-    throw util::Exception("Failed to read data from GameReadLog (%d != %d * %d)", n, count, t);
+  int n = fread(data, sizeof(T), count, file_);
+  if (n != count) {
+    throw util::Exception("Failed to read data from %s offset=%d (%d != %d) @%d", filename_.c_str(),
+                          offset, n, count, line);
   }
 }
 

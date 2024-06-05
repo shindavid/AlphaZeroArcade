@@ -13,6 +13,15 @@
 
 namespace core {
 
+struct ShapeInfo {
+  template <eigen_util::FixedTensorConcept Tensor> void init(const char* name);
+  ~ShapeInfo();
+
+  const char* name = nullptr;
+  int* dims = nullptr;
+  int num_dims = 0;
+};
+
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 class GameWriteLog {
  public:
@@ -137,14 +146,7 @@ class GameReadLog {
 
   void load(int index, bool apply_symmetry, const char** keys, float** values, int num_keys);
 
-  /*
-   * Returns the index'th dimension of the tensor with the given key.
-   *
-   * If index is out of bounds, returns -1.
-   *
-   * If key is not recognized, returns -2.
-   */
-  static int get_dim(const char* key, int index);
+  static ShapeInfo* get_shape_info();
 
  private:
   void load_policy(PolicyTensor* policy, AuxMemOffset aux_mem_offset);

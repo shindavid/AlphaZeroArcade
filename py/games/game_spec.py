@@ -28,10 +28,12 @@ class GameSpec(abc.ABC):
     def name(self) -> str:
         """
         The name of the game. This is used both to reference the game when running scripts, and as
-        the name of the game binary.
+        the name of the game binary/shared-library.
 
-        The build process is expected to produce a binary with this name in the
-        target/Release/bin/ directory.
+        The build process is expected to produce the following files:
+
+        target/Release/bin/{name}
+        target/Release/lib/lib{name}.so
         """
         pass
 

@@ -21,9 +21,6 @@
 namespace core {
 
 template <GameStateConcept GameState>
-bool GameServer<GameState>::shutdown_requested_ = false;
-
-template <GameStateConcept GameState>
 auto GameServer<GameState>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
@@ -31,9 +28,6 @@ auto GameServer<GameState>::Params::make_options_description() {
   po2::options_description desc("GameServer options");
 
   return desc
-      .template add_option<"kill-file", 'k'>(
-          po::value<std::string>(&kill_file),
-          "if specified, the server will exit when this file is created")
       .template add_option<"port">(po::value<int>(&port)->default_value(port),
                                    "port for external players to connect to (must be set to a "
                                    "nonzero value if using external players)")
@@ -76,7 +70,7 @@ void GameServer<GameState>::SharedData::init_progress_bar() {
 
 template <GameStateConcept GameState>
 bool GameServer<GameState>::SharedData::request_game(int num_games) {
-  if (shutdown_requested_) return false;
+  if (!LoopControllerClient::get()->active()) return false;
   std::lock_guard<std::mutex> guard(mutex_);
   if (num_games > 0 && num_games_started_ >= num_games) return false;
   num_games_started_++;
@@ -332,14 +326,6 @@ template <GameStateConcept GameState>
 GameServer<GameState>::GameServer(const Params& params) : shared_data_(params) {}
 
 template <GameStateConcept GameState>
-GameServer<GameState>::~GameServer() {
-  if (kill_thread_) {
-    if (kill_thread_->joinable()) kill_thread_->detach();
-    delete kill_thread_;
-  }
-}
-
-template <GameStateConcept GameState>
 void GameServer<GameState>::wait_for_remote_player_registrations() {
   util::clean_assert(num_registered_players() <= kNumPlayers,
                      "Invalid number of players registered: %d", num_registered_players());
@@ -423,9 +409,6 @@ void GameServer<GameState>::run() {
   RemotePlayerProxy<GameState>::PacketDispatcher::start_all(parallelism);
 
   time_point_t start_time = std::chrono::steady_clock::now();
-  if (!params().kill_file.empty()) {
-    kill_thread_ = new std::thread([&] { kill_file_checker(); });
-  }
   for (auto thread : threads_) {
     thread->launch();
   }
@@ -458,21 +441,6 @@ void GameServer<GameState>::run() {
 
   shared_data_.end_session();
   util::KeyValueDumper::flush();
-}
-
-template <GameStateConcept GameState>
-void GameServer<GameState>::kill_file_checker() {
-  boost::filesystem::path kill_path(params().kill_file);
-  while (!boost::filesystem::exists(kill_path)) {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-  }
-
-  std::cout << "Kill file detected [" << kill_path << "]" << std::endl;
-  std::cout << "Shutting down..." << std::endl;
-
-  for (auto thread : threads_) {
-    thread->decommission();
-  }
 }
 
 template <GameStateConcept GameState>
