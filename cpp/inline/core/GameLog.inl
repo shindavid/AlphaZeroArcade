@@ -391,12 +391,12 @@ void GameReadLog<GameState, Tensorizor>::load_policy(PolicyTensor* policy,
 
 template <GameStateConcept GameState, TensorizorConcept<GameState> Tensorizor>
 template<typename T>
-void GameReadLog<GameState, Tensorizor>::seek_and_read(int line, int offset, T* data, int count) {
+void GameReadLog<GameState, Tensorizor>::seek_and_read(int offset, T* data, int count) {
   fseek(file_, offset, SEEK_SET);
   int n = fread(data, sizeof(T), count, file_);
   if (n != count) {
-    throw util::Exception("Failed to read data from %s offset=%d (%d != %d) @%d", filename_.c_str(),
-                          offset, n, count, line);
+    throw util::Exception("Failed to read data from %s offset=%d (%d != %d)", filename_.c_str(),
+                          offset, n, count);
   }
 }
 
