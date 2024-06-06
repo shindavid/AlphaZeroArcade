@@ -56,6 +56,7 @@ class LoopControllerClient {
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
+  static bool deactivated() { return instance_ && instance_->deactivated_; }
   static LoopControllerClient* get() { return instance_;  }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
@@ -63,7 +64,6 @@ class LoopControllerClient {
   const std::string& cuda_device() const { return params_.cuda_device; }
   const std::string& ratings_tag() const { return params_.ratings_tag; }
   bool report_metrics() const { return params_.report_metrics; }
-  bool active() const { return active_; }
 
   template <typename T>
   void add_listener(T* listener);
@@ -119,7 +119,7 @@ class LoopControllerClient {
   size_t pause_receipt_count_ = 0;
   size_t unpause_receipt_count_ = 0;
   bool shutdown_initiated_ = false;
-  bool active_ = true;
+  bool deactivated_ = false;
 };
 
 }  // namespace core

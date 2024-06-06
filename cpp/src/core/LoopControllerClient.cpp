@@ -251,7 +251,7 @@ void LoopControllerClient::loop() {
       cur_generation_ = generation;
       reload_weights(ss, cuda_device);
     } else if (type == "quit") {
-      active_ = false;
+      deactivated_ = true;
       break;
     } else {
       throw util::Exception("Unknown loop-controller message type %s", type.c_str());

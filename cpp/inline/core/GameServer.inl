@@ -70,7 +70,7 @@ void GameServer<GameState>::SharedData::init_progress_bar() {
 
 template <GameStateConcept GameState>
 bool GameServer<GameState>::SharedData::request_game(int num_games) {
-  if (!LoopControllerClient::get()->active()) return false;
+  if (LoopControllerClient::deactivated()) return false;
   std::lock_guard<std::mutex> guard(mutex_);
   if (num_games > 0 && num_games_started_ >= num_games) return false;
   num_games_started_++;
