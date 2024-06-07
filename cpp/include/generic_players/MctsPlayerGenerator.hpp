@@ -15,11 +15,11 @@
 
 namespace generic {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<GameState> {
+template <core::concepts::Game Game>
+class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
  public:
-  using MctsManager = mcts::Manager<GameState, Tensorizor>;
-  using BaseMctsPlayer = generic::MctsPlayer<GameState, Tensorizor>;
+  using MctsManager = mcts::Manager<Game>;
+  using BaseMctsPlayer = generic::MctsPlayer<Game>;
 
   MctsPlayerGeneratorBase(mcts::Mode mode) : manager_params_(mode) {}
 
@@ -46,13 +46,13 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<GameState> 
   mcts::ManagerParams manager_params_;
 };
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Tensorizor> {
+template <core::concepts::Game Game>
+class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
  public:
-  using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
+  using base_t = MctsPlayerGeneratorBase<Game>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
   using MctsManager = typename base_t::MctsManager;
-  using MctsPlayer = generic::MctsPlayer<GameState, Tensorizor>;
+  using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = typename MctsPlayer::Params;
 
   CompetitiveMctsPlayerGenerator();
@@ -74,13 +74,13 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState,
   MctsPlayerParams mcts_player_params_;
 };
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<GameState, Tensorizor> {
+template <core::concepts::Game Game>
+class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
  public:
-  using base_t = MctsPlayerGeneratorBase<GameState, Tensorizor>;
+  using base_t = MctsPlayerGeneratorBase<Game>;
   using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
   using MctsManager = typename base_t::MctsManager;
-  using MctsPlayer = generic::DataExportingMctsPlayer<GameState, Tensorizor>;
+  using MctsPlayer = generic::DataExportingMctsPlayer<Game>;
   using MctsPlayerParams = typename MctsPlayer::Params;
   using TrainingDataWriterParams = typename MctsPlayer::TrainingDataWriterParams;
 

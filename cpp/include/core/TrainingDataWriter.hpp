@@ -24,7 +24,7 @@ namespace core {
  * A single TrainingDataWriter is intended to be shared by multiple MctsPlayer's playing in
  * parallel.
  */
-template <GameStateConcept GameState_, TensorizorConcept<GameState_> Tensorizor_>
+template <concepts::Game Game_>
 class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
@@ -35,15 +35,13 @@ class TrainingDataWriter
     int64_t max_rows = 0;
   };
 
-  using GameState = GameState_;
-  using GameStateTypes = typename core::GameStateTypes<GameState>;
-  using Tensorizor = Tensorizor_;
-  using TensorizorTypes = typename core::TensorizorTypes<Tensorizor>;
+  using Game = Game_;
+  using ValueArray = typename Game::ValueArray;
+  using InputTensorizor = typename Game::InputTensorizor;
+  using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
 
-  using GameWriteLog = core::GameWriteLog<GameState, Tensorizor>;
-  using GameWriteLog_sptr = std::shared_ptr<GameWriteLog>;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-
+  using GameLogWriter = core::GameLogWriter<Game>;
+  using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;
   using game_log_map_t = std::map<game_id_t, GameWriteLog_sptr>;
 
   static TrainingDataWriter* instantiate(const Params& params);

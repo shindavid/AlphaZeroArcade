@@ -11,23 +11,13 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameStateConcept.hpp>
-#include <core/SerializerTypes.hpp>
+#include <core/SimpleFullState.hpp>
 #include <core/Symmetries.hpp>
-#include <core/serializers/DeterministicGameSerializer.hpp>
+#include <core/TrainingTargets.hpp>
 #include <mcts/SearchResults.hpp>
-#include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
 
 #include <games/connect4/Constants.hpp>
-
-namespace c4 {
-class GameState;
-}
-
-template <>
-struct std::hash<c4::GameState> {
-  std::size_t operator()(const c4::GameState& state) const;
-};
 
 namespace c4 {
 
@@ -45,106 +35,95 @@ namespace c4 {
  *
  * Unlike the PascalPons package, we use 0-indexing for column indices.
  */
-class GameState {
- public:
-  static constexpr int kMaxNumSymmetries = 2;
-  static constexpr int kNumPlayers = c4::kNumPlayers;
-  static constexpr int kMaxNumLocalActions = kNumColumns;
-  static constexpr int kTypicalNumMovesPerGame = 40;
+struct Game {
+  static constexpr int kNumPlayers = 2;
+  static constexpr int kNumActions = kNumColumns;
+  static constexpr int kMaxBranchingFactor = kNumColumns;
 
-  using ActionShape = Eigen::Sizes<kNumColumns>;
-  using HashKey = GameState;
+  using ActionMask = std::bitset<kNumActions>;
+  using player_name_array_t = std::array<std::string, kNumPlayers>;
 
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using Action = GameStateTypes::Action;
-  using ActionMask = GameStateTypes::ActionMask;
-  using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
-  using player_name_array_t = GameStateTypes::player_name_array_t;
-  using PolicyTensor = GameStateTypes::PolicyTensor;
-  using ValueArray = GameStateTypes::ValueArray;
-  using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
-  using GameOutcome = GameStateTypes::GameOutcome;
+  using InputShape = Eigen::Sizes<kNumPlayers, kNumRows, kNumColumns>;
+  using InputTensor = eigen_util::FTensor<InputShape>;
+  using PolicyShape = Eigen::Sizes<kNumColumns>;
+  using PolicyTensor = eigen_util::FTensor<PolicyShape>;
+  using ValueArray = Eigen::Array<float, kNumPlayers, 1>;
+  using ActionOutcome = core::ActionOutcome<ValueArray>;
+  using MctsSearchResults = mcts::SearchResults<Game>;
 
-  struct Data {
+  struct StateSnapshot {
     core::seat_index_t get_current_player() const;
     core::seat_index_t get_player_at(int row, int col) const;
-    bool operator==(const Data& other) const = default;
+    bool operator==(const StateSnapshot& other) const = default;
+    size_t hash() const;
 
     mask_t full_mask = 0;        // spaces occupied by either player
     mask_t cur_player_mask = 0;  // spaces occupied by current player
   };
 
-  using Transform = core::Transform<Data, PolicyTensor>;
-  using Identity = core::IdentityTransform<Data, PolicyTensor>;
+  using GameLogReader = core::GameLogReader<Game>;
+  using FullState = core::SimpleFullState<StateSnapshot>;
 
-  struct Reflect : public core::ReflexiveTransform<Data, PolicyTensor> {
-    void apply(Data& state) override;
+  using Transform = core::Transform<FullState, PolicyTensor>;
+  using Identity = core::IdentityTransform<FullState, PolicyTensor>;
+
+  struct Reflect : public core::ReflexiveTransform<FullState, PolicyTensor> {
+    void apply(FullState& state) override;
     void apply(PolicyTensor& policy) override;
   };
 
   using TransformList = mp::TypeList<Identity, Reflect>;
+  using SymmetryIndexSet = std::bitset<mp::Length_v<TransformList>>;
 
-  static std::string action_delimiter() { return ""; }
-  static std::string action_to_str(const Action& action) { return std::to_string(action[0]); }
+  struct Rules {
+    static ActionMask legal_moves(const FullState& state);
+    static core::seat_index_t current_player(const StateSnapshot&);
+    static ActionOutcome apply(FullState& state, core::action_t action);
+    static SymmetryIndexSet get_symmetry_indices(const FullState& state);
+  };
 
-  GameState() = default;
-  GameState(const Data& data) : data_(data) {}
+  struct IO {
+    static std::string action_delimiter() { return ""; }
+    static std::string action_to_str(core::action_t action) { return std::to_string(action); }
+    static void print_snapshot(const StateSnapshot&, core::action_t last_action = -1,
+                               const player_name_array_t* player_names = nullptr);
+    static void print_mcts_results(const PolicyTensor& action_policy, const MctsSearchResults&);
 
-  const Data& data() const { return data_; }
-  SymmetryIndexSet get_symmetry_indices() const;
+   private:
+    static void print_row(const StateSnapshot&, row_t row, column_t blink_column)
+  };
 
-  core::seat_index_t get_current_player() const { return data_.get_current_player(); }
-  GameOutcome apply_move(const Action& action);
-  ActionMask get_valid_actions() const;
-  int get_move_number() const;
+  struct InputTensorizor {
+    static InputShape tensorize(const FullState& state);
+  };
 
-  core::seat_index_t get_player_at(int row, int col) const { return data_.get_player_at(row, col); }
-  void dump(const Action* last_action = nullptr,
-            const player_name_array_t* player_names = nullptr) const;
-  bool operator==(const GameState& other) const = default;
-  std::size_t hash() const;
-  HashKey hash_key() const { return *this; }
+  struct TrainingTargetTensorizor {
+    using BoardShape = Eigen::Sizes<kNumRows, kNumColumns>;
+
+    using PolicyTarget = core::PolicyTarget<PolicyTensor>;
+    using ValueTarget = core::ValueTarget<ValueArray>;
+    using OppPolicyTarget = core::OppPolicyTarget<PolicyTensor>;
+
+    struct OwnershipTarget {
+      static constexpr const char* kName = "ownership";
+      using Tensor = eigen_util::FTensor<BoardShape>;
+      static Tensor tensorize(const GameLogReader& reader);
+    };
+
+    using TargetList = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, OwnershipTarget>;
+  };
 
  private:
-  void row_dump(row_t row, column_t blink_column) const;
-
   static constexpr int _to_bit_index(row_t row, column_t col);
-  static constexpr mask_t _column_mask(
-      column_t col);  // mask containing piece on all cells of given column
-  static constexpr mask_t _bottom_mask(
-      column_t col);                            // mask containing single piece at bottom cell
-  static constexpr mask_t _full_bottom_mask();  // mask containing piece in each bottom cell
-
-  Data data_;
+  static constexpr mask_t _column_mask(column_t col);
+  static constexpr mask_t _bottom_mask(column_t col);
+  static constexpr mask_t _full_bottom_mask();
 };
 
-static_assert(core::GameStateConcept<c4::GameState>);
+static_assert(core::concepts::Game<c4::Game>);
 
-using Player = core::AbstractPlayer<GameState>;
+using Player = core::AbstractPlayer<Game>;
 
 }  // namespace c4
 
-namespace core {
-
-// template specialization
-template <>
-struct serializer<c4::GameState> {
-  using type = DeterministicGameSerializer<c4::GameState>;
-};
-
-}  // namespace core
-
-namespace mcts {
-
-template <>
-struct SearchResultsDumper<c4::GameState> {
-  using LocalPolicyArray = c4::GameState::LocalPolicyArray;
-  using SearchResults = mcts::SearchResults<c4::GameState>;
-
-  static void dump(const LocalPolicyArray& action_policy, const SearchResults& results);
-};
-
-}  // namespace mcts
-
 #include <inline/games/connect4/Game.inl>
-

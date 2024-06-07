@@ -27,7 +27,7 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
   return out;
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 size_t serialize(char* buf, size_t buf_size, const Tensor& tensor) {
   size_t n_bytes = sizeof(typename Tensor::Scalar) * tensor.size();
   if (n_bytes > buf_size) {
@@ -37,7 +37,7 @@ size_t serialize(char* buf, size_t buf_size, const Tensor& tensor) {
   return n_bytes;
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 void deserialize(const char* buf, Tensor* tensor) {
   memcpy(tensor->data(), buf, sizeof(typename Tensor::Scalar) * tensor->size());
 }
@@ -49,7 +49,7 @@ auto softmax(const Array& array) {
   return z / z.sum();
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim) {
   using Sizes = extract_shape_t<Tensor>;
   constexpr int N = Sizes::count;
@@ -61,7 +61,7 @@ auto reverse(const Tensor& tensor, int dim) {
   return tensor.reverse(rev);
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 auto sample(const Tensor& tensor) {
   using Shape = extract_shape_t<Tensor>;
   constexpr size_t N = Shape::total_size;
@@ -71,7 +71,7 @@ auto sample(const Tensor& tensor) {
   return unflatten_index(tensor, flat_index);
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 bool normalize(Tensor& tensor, double eps) {
   auto s = sum(tensor);
   if (s < eps) return false;
@@ -80,7 +80,7 @@ bool normalize(Tensor& tensor, double eps) {
   return true;
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 void randomly_zero_out(Tensor& tensor, int n) {
   using Shape = extract_shape_t<Tensor>;
   constexpr size_t N = Shape::total_size;
@@ -89,7 +89,7 @@ void randomly_zero_out(Tensor& tensor, int n) {
   util::Random::zero_out(data, data + N, n);
 }
 
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 auto unflatten_index(const Tensor& tensor, int flat_index) {
   // Convert the 1D index back to a K-dimensional index
   static_assert(Tensor::Options & Eigen::RowMajorBit, "Tensor must be row-major");
@@ -107,50 +107,20 @@ auto unflatten_index(const Tensor& tensor, int flat_index) {
   return index;
 }
 
-template <typename Scalar, ShapeConcept Shape, int Options>
-const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
+template <concepts::FTensor FTensor>
+const auto& reinterpret_as_array(const FTensor& tensor) {
+  using Shape = extract_shape_t<FTensor>;
   constexpr int N = Shape::total_size;
   using ArrayT = Eigen::Array<Scalar, N, 1>;
   return reinterpret_cast<const ArrayT&>(tensor);
 }
 
-template <typename Scalar, ShapeConcept Shape, int Options>
-auto& reinterpret_as_array(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
+template <concepts::FTensor FTensor>
+auto& reinterpret_as_array(FTensor& tensor) {
+  using Shape = extract_shape_t<FTensor>;
   constexpr int N = Shape::total_size;
   using ArrayT = Eigen::Array<Scalar, N, 1>;
   return reinterpret_cast<ArrayT&>(tensor);
-}
-
-template <FixedTensorConcept TensorT, typename Scalar, int N>
-const TensorT& reinterpret_as_tensor(const Eigen::Array<Scalar, N, 1>& array) {
-  static_assert(std::is_same_v<typename TensorT::Scalar, Scalar>);
-  static_assert(N == extract_shape_t<TensorT>::total_size);
-  static_assert(TensorT::Options | Eigen::RowMajor);
-  return reinterpret_cast<const TensorT&>(array);
-}
-
-template <FixedTensorConcept TensorT, typename Scalar, int N>
-TensorT& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array) {
-  static_assert(std::is_same_v<typename TensorT::Scalar, Scalar>);
-  static_assert(N == extract_shape_t<TensorT>::total_size);
-  static_assert(TensorT::Options | Eigen::RowMajor);
-  return reinterpret_cast<TensorT&>(array);
-}
-
-template <FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
-const MatrixT& reinterpret_as_matrix(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
-  static_assert(std::is_same_v<typename MatrixT::Scalar, Scalar>);
-  static_assert(MatrixT::RowsAtCompileTime * MatrixT::ColsAtCompileTime == Shape::total_size);
-  static_assert((Options | Eigen::RowMajorBit) == (MatrixT::Flags & Eigen::RowMajorBit));
-  return reinterpret_cast<const MatrixT&>(tensor);
-}
-
-template <FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
-MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor) {
-  static_assert(std::is_same_v<typename MatrixT::Scalar, Scalar>);
-  static_assert(MatrixT::RowsAtCompileTime * MatrixT::ColsAtCompileTime == Shape::total_size);
-  static_assert((Options | Eigen::RowMajorBit) == (MatrixT::Flags & Eigen::RowMajorBit));
-  return reinterpret_cast<MatrixT&>(tensor);
 }
 
 template <typename TensorT>
@@ -205,7 +175,7 @@ void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n) {
   std::rotate(data, data + N - n, data + N);
 }
 
-template <FixedTensorConcept TensorT>
+template <concepts::FTensor TensorT>
 uint64_t hash(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;
   constexpr int N = extract_shape_t<TensorT>::total_size;

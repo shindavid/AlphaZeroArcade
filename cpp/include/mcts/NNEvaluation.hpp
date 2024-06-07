@@ -8,16 +8,15 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState>
+template <core::concepts::Game Game>
 class NNEvaluation {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
+  using ActionMask = typename Game::ActionMask;
+  using PolicyTensor = typename Game::PolicyTensor;
+  using ValueArray = typename Game::ValueArray;
+  using LocalPolicyArray = eigen_util::FArray<Game::kMaxBranchingFactor>;
+  using ValueShape = eigen_util::Shape<kNumPlayers>;
+  using ValueTensor = eigen_util::FTensor<ValueShape>;
 
   NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
                const ActionMask& valid_actions);

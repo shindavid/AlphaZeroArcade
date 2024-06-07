@@ -3,45 +3,51 @@
 #include <core/BasicTypes.hpp>
 #include <core/GameStateConcept.hpp>
 #include <util/MetaProgramming.hpp>
+#include <util/EigenUtil.hpp>
 
 namespace core {
 
-template <typename Data, typename PolicyTensor>
+template <typename FullState, eigen_util::concepts::FTensor PolicyTensor>
 struct Transform {
   virtual ~Transform() {}
 
-  virtual void apply(Data&) = 0;
+  virtual void apply(FullState&) = 0;
   virtual void apply(PolicyTensor&) = 0;
-  virtual void undo(Data&) = 0;
+  virtual void undo(FullState&) = 0;
   virtual void undo(PolicyTensor&) = 0;
 };
 
-template <typename Data, typename PolicyTensor>
-struct ReflexiveTransform : public Transform<Data, PolicyTensor> {
+template <typename FullState, eigen_util::concepts::FTensor PolicyTensor>
+struct ReflexiveTransform : public Transform<FullState, PolicyTensor> {
   virtual ~ReflexiveTransform() {}
-  void undo(Data& data) override { this->apply(data); }
+  void undo(FullState& state) override { this->apply(state); }
   void undo(PolicyTensor& tensor) override { this->apply(tensor); }
 };
 
-template <typename Data, typename PolicyTensor>
-struct IdentityTransform : public ReflexiveTransform<Data, PolicyTensor> {
-  void apply(Data&) override {}
+template <typename FullState, eigen_util::concepts::FTensor PolicyTensor>
+struct IdentityTransform : public ReflexiveTransform<FullState, PolicyTensor> {
+  void apply(FullState&) override {}
   void apply(PolicyTensor&) override {}
 };
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class Transforms {
  public:
-  using Data = typename GameState::Data;
-  using PolicyTensor = typename GameState::PolicyTensor;
-  using Transform = core::Transform<Data, PolicyTensor>;
+  using FullState = typename Game::FullState;
+  using PolicyTensor = typename Game::PolicyTensor;
+  using Transform = core::Transform<FullState, PolicyTensor>;
   using TransformList = typename GameState::TransformList;
   using transform_tuple_t = mp::TypeListToTuple_t<TransformList>;
+  static constexpr size_t kNumTransforms = mp::Length_v<TransformList>;
 
   static Transform* get(core::symmetry_index_t sym);
 
  private:
-  static transform_tuple_t transforms_;
+  Transforms();
+  Transforms* instance();
+
+  static Transforms* instance_;
+  Transform* transforms_[kNumTransforms];
 };
 
 }  // namespace core

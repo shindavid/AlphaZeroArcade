@@ -11,14 +11,12 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 struct PUCTStats {
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using dtype = torch_util::dtype;
+  using Node = mcts::Node<Game>;
+  using LocalPolicyArray = typename Game::LocalPolicyArray;
 
-  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
+  static constexpr int kMaxBranchingFactor = Game::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
   PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params,

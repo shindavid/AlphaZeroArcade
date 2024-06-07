@@ -6,15 +6,15 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename NNEvaluationService<GameState, Tensorizor>::instance_map_t
-    NNEvaluationService<GameState, Tensorizor>::instance_map_;
+template <core::concepts::Game Game>
+typename NNEvaluationService<Game>::instance_map_t
+    NNEvaluationService<Game>::instance_map_;
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-int NNEvaluationService<GameState, Tensorizor>::instance_count_ = 0;
+template <core::concepts::Game Game>
+int NNEvaluationService<Game>::instance_count_ = 0;
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tensorizor>::create(
+template <core::concepts::Game Game>
+NNEvaluationService<Game>* NNEvaluationService<Game>::create(
     const NNEvaluationServiceParams& params) {
   auto it = instance_map_.find(params.model_filename);
   if (it == instance_map_.end()) {
@@ -29,8 +29,8 @@ NNEvaluationService<GameState, Tensorizor>* NNEvaluationService<GameState, Tenso
   return instance;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::connect() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::connect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
   num_connections_++;
   if (thread_) return;
@@ -38,8 +38,8 @@ void NNEvaluationService<GameState, Tensorizor>::connect() {
   thread_ = new std::thread([&] { this->loop(); });
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::disconnect() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::disconnect() {
   std::lock_guard<std::mutex> guard(connection_mutex_);
   if (thread_) {
     num_connections_--;
@@ -51,8 +51,8 @@ void NNEvaluationService<GameState, Tensorizor>::disconnect() {
   profiler_.close_file();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void NNEvaluationService<GameState, Tensorizor>::set_profiling_dir(
+template <core::concepts::Game Game>
+inline void NNEvaluationService<Game>::set_profiling_dir(
     const boost::filesystem::path& profiling_dir) {
   std::string name = util::create_string("eval-%d", instance_id_);
   auto profiling_file_path = profiling_dir / util::create_string("%s.txt", name.c_str());
@@ -60,8 +60,8 @@ inline void NNEvaluationService<GameState, Tensorizor>::set_profiling_dir(
   profiler_.set_name(name);
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
+template <core::concepts::Game Game>
+inline NNEvaluationService<Game>::NNEvaluationService(
     const NNEvaluationServiceParams& params)
     : instance_id_(instance_count_++),
       params_(params),
@@ -101,55 +101,54 @@ inline NNEvaluationService<GameState, Tensorizor>::NNEvaluationService(
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void NNEvaluationService<GameState, Tensorizor>::tensor_group_t::load_output_from(
+template <core::concepts::Game Game>
+inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
     int row, torch::Tensor& torch_policy, torch::Tensor& torch_value) {
   constexpr size_t policy_size = PolicyShape::total_size;
   constexpr size_t value_size = ValueShape::total_size;
 
-  memcpy(policy.data(), torch_policy.data_ptr<PolicyScalar>() + row * policy_size,
-         policy_size * sizeof(PolicyScalar));
-  memcpy(value.data(), torch_value.data_ptr<ValueScalar>() + row * value_size,
-         value_size * sizeof(ValueScalar));
+  memcpy(policy.data(), torch_policy.data_ptr<float>() + row * policy_size,
+         policy_size * sizeof(float));
+  memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
+         value_size * sizeof(float));
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline NNEvaluationService<GameState, Tensorizor>::batch_data_t::batch_data_t(int batch_size) {
+template <core::concepts::Game Game>
+inline NNEvaluationService<Game>::batch_data_t::batch_data_t(int batch_size) {
   tensor_groups_ = new tensor_group_t[batch_size];
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline NNEvaluationService<GameState, Tensorizor>::batch_data_t::~batch_data_t() {
+template <core::concepts::Game Game>
+inline NNEvaluationService<Game>::batch_data_t::~batch_data_t() {
   delete[] tensor_groups_;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void NNEvaluationService<GameState, Tensorizor>::batch_data_t::copy_input_to(
+template <core::concepts::Game Game>
+inline void NNEvaluationService<Game>::batch_data_t::copy_input_to(
     int num_rows, DynamicInputFloatTensor& full_input) {
-  dtype* full_input_data = full_input.data();
+  float* full_input_data = full_input.data();
   constexpr size_t input_size = InputShape::total_size;
   int r = 0;
   for (int row = 0; row < num_rows; row++) {
     const tensor_group_t& group = tensor_groups_[row];
-    InputFloatTensor float_input = group.input.template cast<dtype>();
-    memcpy(full_input_data + r, float_input.data(), input_size * sizeof(dtype));
+    memcpy(full_input_data + r, group.input.data(), input_size * sizeof(float));
     r += input_size;
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline NNEvaluationService<GameState, Tensorizor>::~NNEvaluationService() {
+template <core::concepts::Game Game>
+inline NNEvaluationService<Game>::~NNEvaluationService() {
   disconnect();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename NNEvaluationService<GameState, Tensorizor>::Response
-NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
+template <core::concepts::Game Game>
+typename NNEvaluationService<Game>::Response
+NNEvaluationService<Game>::evaluate(const Request& request) {
   if (mcts::kEnableDebug) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate()";
   }
 
-  cache_key_t cache_key(request.state->hash_key(), request.sym_index);
+  cache_key_t cache_key(request.state->eval_key(), request.sym_index);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
 
@@ -175,8 +174,8 @@ NNEvaluationService<GameState, Tensorizor>::evaluate(const Request& request) {
   return Response{eval_ptr, false};
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::end_session() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::end_session() {
   if (session_ended_) return;
 
   int64_t cache_hits = perf_stats_.cache_hits;
@@ -204,8 +203,8 @@ void NNEvaluationService<GameState, Tensorizor>::end_session() {
   session_ended_ = true;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-core::perf_stats_t NNEvaluationService<GameState, Tensorizor>::get_perf_stats() {
+template <core::concepts::Game Game>
+core::perf_stats_t NNEvaluationService<Game>::get_perf_stats() {
   std::unique_lock lock(perf_stats_mutex_);
   core::perf_stats_t perf_stats_copy = perf_stats_;
   new (&perf_stats_) core::perf_stats_t();
@@ -214,13 +213,13 @@ core::perf_stats_t NNEvaluationService<GameState, Tensorizor>::get_perf_stats() 
   return perf_stats_copy;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-std::string NNEvaluationService<GameState, Tensorizor>::dump_key(const char* descr) {
+template <core::concepts::Game Game>
+std::string NNEvaluationService<Game>::dump_key(const char* descr) {
   return util::create_string("NN-%d %s", instance_id_, descr);
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::batch_evaluate() {
   std::unique_lock batch_metadata_lock(batch_metadata_.mutex);
   std::unique_lock batch_data_lock(batch_data_.mutex);
 
@@ -281,8 +280,8 @@ void NNEvaluationService<GameState, Tensorizor>::batch_evaluate() {
   cv_evaluate_.notify_all();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::loop() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::loop() {
   while (active()) {
     load_initial_weights_if_necessary();
     wait_for_unpause();
@@ -295,10 +294,9 @@ void NNEvaluationService<GameState, Tensorizor>::loop() {
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-NNEvaluationService<GameState, Tensorizor>::Response
-NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request,
-                                                        const cache_key_t& cache_key) {
+template <core::concepts::Game Game>
+NNEvaluationService<Game>::Response
+NNEvaluationService<Game>::check_cache(const Request& request, const cache_key_t& cache_key) {
   request.thread_profiler->record(SearchThreadRegion::kCheckingCache);
 
   if (mcts::kEnableDebug) {
@@ -320,8 +318,8 @@ NNEvaluationService<GameState, Tensorizor>::check_cache(const Request& request,
   return Response{nullptr, false};
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_reservable(
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_until_batch_reservable(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock) {
   request.thread_profiler->record(SearchThreadRegion::kWaitingUntilBatchReservable);
 
@@ -343,8 +341,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_reservable(
   });
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
+template <core::concepts::Game Game>
+int NNEvaluationService<Game>::allocate_reserve_index(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock) {
   request.thread_profiler->record(SearchThreadRegion::kMisc);
 
@@ -375,11 +373,10 @@ int NNEvaluationService<GameState, Tensorizor>::allocate_reserve_index(
   return my_index;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::tensorize_and_transform_input(
     const Request& request, const cache_key_t& cache_key, int reserve_index) {
-  GameStateData state_data = request.state->data();
-  GameStateHistory history = *request.history;
+  FullState& state = *request.state;
   const auto& stable_data = request.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
@@ -390,10 +387,9 @@ void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
   auto transform = Transforms::get(sym_index);
-  transform->apply(state_data);
-  history.apply(transform);
-
-  Tensorizor::tensorize(group.input, state_data, history);
+  transform->apply(state);
+  group.input = InputTensorizor::tensorize(state);
+  transform->undo(state);
 
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
@@ -402,8 +398,8 @@ void NNEvaluationService<GameState, Tensorizor>::tensorize_and_transform_input(
   group.eval_ptr_data.transform = transform;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::increment_commit_count(const Request& request) {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::increment_commit_count(const Request& request) {
   request.thread_profiler->record(SearchThreadRegion::kIncrementingCommitCount);
 
   batch_metadata_.commit_count++;
@@ -414,10 +410,10 @@ void NNEvaluationService<GameState, Tensorizor>::increment_commit_count(const Re
   cv_service_loop_.notify_one();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename NNEvaluationService<GameState, Tensorizor>::NNEvaluation_sptr
-NNEvaluationService<GameState, Tensorizor>::get_eval(const Request& request, int reserve_index,
-                                                     std::unique_lock<std::mutex>& metadata_lock) {
+template <core::concepts::Game Game>
+typename NNEvaluationService<Game>::NNEvaluation_sptr
+NNEvaluationService<Game>::get_eval(const Request& request, int reserve_index,
+                                    std::unique_lock<std::mutex>& metadata_lock) {
   const char* func = __func__;
   request.thread_profiler->record(SearchThreadRegion::kWaitingForReservationProcessing);
   if (mcts::kEnableDebug) {
@@ -436,8 +432,8 @@ NNEvaluationService<GameState, Tensorizor>::get_eval(const Request& request, int
   return batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr.load();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_until_all_read(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock) {
   util::debug_assert(batch_metadata_.unread_count > 0);
   batch_metadata_.unread_count--;
@@ -457,8 +453,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_all_read(
   });
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_for_unpause() {
   if (!skip_next_pause_receipt_ && !paused_) return;  // early exit for common case, bypassing lock
 
   std::unique_lock lock(pause_mutex_);
@@ -477,8 +473,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_unpause() {
   core::LoopControllerClient::get()->handle_unpause_receipt();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::load_initial_weights_if_necessary() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   if (initial_weights_loaded_) return;
 
   // LOG_INFO << "NNEvaluationService: load_init_weights_if_necessary() - waiting for pause...";
@@ -494,9 +490,9 @@ void NNEvaluationService<GameState, Tensorizor>::load_initial_weights_if_necessa
   LOG_INFO << "NNEvaluationService: weights loaded!";
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstream& ss,
-                                                                const std::string& cuda_device) {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::reload_weights(std::stringstream& ss,
+                                               const std::string& cuda_device) {
   LOG_INFO << "NNEvaluationService: reloading network weights...";
   util::release_assert(paused_, "%s() called while not paused", __func__);
   std::unique_lock net_weights_lock(net_weights_mutex_);
@@ -510,8 +506,8 @@ void NNEvaluationService<GameState, Tensorizor>::reload_weights(std::stringstrea
   cache_.clear();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::pause() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::pause() {
   LOG_INFO << "NNEvaluationService: pausing";
   std::unique_lock lock(pause_mutex_);
   if (paused_) {
@@ -534,8 +530,8 @@ void NNEvaluationService<GameState, Tensorizor>::pause() {
   cv_paused_.notify_all();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::unpause() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::unpause() {
   LOG_INFO << "NNEvaluationService: unpausing";
   std::unique_lock lock(pause_mutex_);
   net_.activate();
@@ -550,8 +546,8 @@ void NNEvaluationService<GameState, Tensorizor>::unpause() {
   LOG_INFO << "NNEvaluationService: unpause complete!";
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_ready() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_until_batch_ready() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingUntilBatchReady);
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
@@ -570,8 +566,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_until_batch_ready() {
   });
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_for_first_reservation() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_for_first_reservation() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingForFirstReservation);
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
@@ -590,8 +586,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_first_reservation() {
   });
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_for_last_reservation() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_for_last_reservation() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingForLastReservation);
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
@@ -611,8 +607,8 @@ void NNEvaluationService<GameState, Tensorizor>::wait_for_last_reservation() {
   batch_metadata_.accepting_reservations = false;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NNEvaluationService<GameState, Tensorizor>::wait_for_commits() {
+template <core::concepts::Game Game>
+void NNEvaluationService<Game>::wait_for_commits() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingForCommits);
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";

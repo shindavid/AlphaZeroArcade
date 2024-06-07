@@ -12,7 +12,7 @@ namespace core {
  * the action, and reconstruct the GameState on the other end. Note that this assumes that the
  * benefit of sending fewer bytes outweighs the cost of reconstructing the GameState.
  */
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class DeterministicGameSerializer : public GeneralSerializer<GameState> {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;

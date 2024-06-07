@@ -34,7 +34,6 @@ struct GameStateTypes {
   using PolicyTensor = Eigen::TensorFixedSize<dtype, PolicyShape, Eigen::RowMajor>;
   using ValueTensor = Eigen::TensorFixedSize<dtype, ValueShape, Eigen::RowMajor>;
 
-  using PolicyArray = Eigen::Array<dtype, kNumGlobalActionsBound, 1>;
   using ValueArray = Eigen::Array<dtype, kNumPlayers, 1>;
   using GameOutcome = ValueArray;
   using LocalPolicyArray = Eigen::Array<dtype, Eigen::Dynamic, 1, 0, kMaxNumLocalActions>;
@@ -46,23 +45,6 @@ struct GameStateTypes {
   using ActionMask = Eigen::TensorFixedSize<bool, PolicyShape, Eigen::RowMajor>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
 
-  /*
-   * An ActionResponse is an action together with an optional bool indicating whether the player
-   * believes their victory is guaranteed.
-   *
-   * A GameServer can be configured to trust this guarantee, and immediately end the game. This
-   * can speed up simulations.
-   */
-  struct ActionResponse {
-    ActionResponse() : victory_guarantee(false) {}
-    ActionResponse(Action a, bool v = false) : action(a), victory_guarantee(v) {}
-    Action action;
-    bool victory_guarantee;
-  };
-
-  static bool is_terminal_outcome(const GameOutcome& outcome);  // nonzero represents terminal
-  static GameOutcome make_non_terminal_outcome();               // all zeros represents non-terminal
-
   static LocalPolicyArray global_to_local(const PolicyTensor& policy, const ActionMask& mask);
   static void global_to_local(const PolicyTensor& policy, const ActionMask& mask,
                               LocalPolicyArray& out);
@@ -72,21 +54,6 @@ struct GameStateTypes {
                               PolicyTensor& out);
 
   static Action get_nth_valid_action(const ActionMask& valid_actions, int n);
-
-  static void nullify_action(Action& action);
-  static bool is_nullified(const Action& action);
-
-  /*
-   * is_valid_action() validates that 0 <= action[i] <= PolicyShape::dimension(i) for all i.
-   *
-   * If valid_actions is passed in, then validates further that valid_actions[action] is true.
-   *
-   * The validate_action() functions are similar, but throw an exception if the action is invalid.
-   */
-  static bool is_valid_action(const Action& action);
-  static bool is_valid_action(const Action& action, const ActionMask& valid_actions);
-  static void validate_action(const Action& action);
-  static void validate_action(const Action& action, const ActionMask& valid_actions);
 
   /*
    * Provides variable bindings, so that we can specify certain config variables as expressions of

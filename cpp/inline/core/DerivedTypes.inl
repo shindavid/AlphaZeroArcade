@@ -52,7 +52,7 @@ typename GameStateTypes<GameState>::PolicyTensor GameStateTypes<GameState>::loca
 template <typename GameState>
 void GameStateTypes<GameState>::local_to_global(const LocalPolicyArray& policy,
                                                 const ActionMask& mask, PolicyTensor& out) {
-  PolicyArray& out_array = eigen_util::reinterpret_as_array(out);
+  auto& out_array = eigen_util::reinterpret_as_array(out);
   out_array.setConstant(0);
 
   const auto& mask_array = eigen_util::reinterpret_as_array(mask);

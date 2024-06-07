@@ -25,30 +25,27 @@ namespace mcts {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class Manager {
  public:
-  using dtype = torch_util::dtype;
-  using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
-  using SearchResults = mcts::SearchResults<GameState>;
-  using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using NNEvaluationService = mcts::NNEvaluationService<Game>;
+  using Node = mcts::Node<Game>;
+  using PUCTStats = mcts::PUCTStats<Game>;
+  using SearchResults = mcts::SearchResults<Game>;
+  using SearchThread = mcts::SearchThread<Game>;
+  using SharedData = mcts::SharedData<Game>;
 
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
+  static constexpr int kNumPlayers = Game::kNumPlayers;
+  static constexpr int kMaxBranchingFactor = Game::kMaxBranchingFactor;
 
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
-
-  using Action = typename GameStateTypes::Action;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using InputTensor = typename TensorizorTypes::InputTensor;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
+  using IO = typename Game::IO;
+  using FullState = typename Game::FullState;
+  using ActionMask = typename Game::ActionMask;
+  using InputShape = typename Game::InputShape;
+  using InputTensor = eigen_util::FTensor<InputTensor>;
+  using LocalPolicyArray = typename Node::LocalPolicyArray;
+  using PolicyTensor = typename Game::PolicyTensor;
+  using ValueArray = typename Game::ValueArray;
 
   Manager(const ManagerParams& params);
   ~Manager();
@@ -58,8 +55,8 @@ class Manager {
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const GameState&, const Action&);
-  const SearchResults* search(const GameState& game_state, const SearchParams& params);
+  void receive_state_change(core::seat_index_t, const FullState&, core::action_t);
+  const SearchResults* search(const FullState& state, const SearchParams& params);
 
   void start_search_threads(const SearchParams& search_params);
   void wait_for_search_threads();

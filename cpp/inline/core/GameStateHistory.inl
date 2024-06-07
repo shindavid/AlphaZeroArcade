@@ -4,13 +4,13 @@
 
 namespace core {
 
-template <GameStateConcept GameState, int BufferSize>
+template <concepts::Game Game, int BufferSize>
 void GameStateHistory<GameState, BufferSize>::clear() {
   start_ = 0;
   size_ = 0;
 }
 
-template <GameStateConcept GameState, int BufferSize>
+template <concepts::Game Game, int BufferSize>
 void GameStateHistory<GameState, BufferSize>::push_back(const GameStateData& data) {
   circ_buffer_[(start_ + size_) % BufferSize] = data;
   if (size_ < BufferSize) {
@@ -20,7 +20,7 @@ void GameStateHistory<GameState, BufferSize>::push_back(const GameStateData& dat
   }
 }
 
-template <GameStateConcept GameState, int BufferSize>
+template <concepts::Game Game, int BufferSize>
 template<typename Transform>
 void GameStateHistory<GameState, BufferSize>::apply(Transform* transform) {
   for (int i = 0; i < size_; ++i) {
@@ -28,7 +28,7 @@ void GameStateHistory<GameState, BufferSize>::apply(Transform* transform) {
   }
 }
 
-template <GameStateConcept GameState, int BufferSize>
+template <concepts::Game Game, int BufferSize>
 template <typename Transform>
 void GameStateHistory<GameState, BufferSize>::undo(Transform* transform) {
   for (int i = 0; i < size_; ++i) {

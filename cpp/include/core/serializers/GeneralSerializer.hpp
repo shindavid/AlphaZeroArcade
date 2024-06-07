@@ -18,7 +18,7 @@ namespace core {
  * traffic. For example, in deterministic games, we only need to send the action, not the entire
  * GameState, since the GameState can be reconstructed from the action.
  */
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class GeneralSerializer : public AbstractSerializer<GameState> {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;

@@ -4,10 +4,25 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState>
-inline NNEvaluation<GameState>::NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
-                                             const ActionMask& valid_actions) {
-  GameStateTypes::global_to_local(policy, valid_actions, local_policy_logit_distr_);
+template <core::concepts::Game Game>
+inline NNEvaluation<Game>::NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
+                                        const ActionMask& valid_actions) {
+  int n_valid_actions = valid_actions.count();
+  if (n_valid_actions > Game::kMaxBranchingFactor) {
+    throw util::Exception("kMaxBranchingFactor too small (%d < %d)", Game::kMaxBranchingFactor,
+                          n_valid_actions);
+  }
+  int kMaxNumLocalActions = Game::kMaxBranchingFactor;
+  local_policy_logit_distr_.resize(valid_actions.count());
+  const auto& policy_array = eigen_util::reinterpret_as_array(policy);
+
+  int i = 0;
+  for (int a = 0; a < Game::kNumActions; ++a) {
+    if (!valid_actions[a]) continue;
+
+    local_policy_logit_distr_(i++) = policy_array(a);
+  }
+
   value_prob_distr_ = eigen_util::softmax(eigen_util::reinterpret_as_array(value));
 }
 

@@ -4,10 +4,10 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
-                                                   const SearchParams& search_params,
-                                                   const Node* tree, bool is_root)
+template <core::concepts::Game Game>
+inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
+                                  const SearchParams& search_params,
+                                  const Node* tree, bool is_root)
     : cp(tree->stable_data().current_player),
       P(tree->evaluation_data().local_policy_prob_distr),
       V(P.rows()),
@@ -24,7 +24,7 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
   N.setZero();
   VN.setZero();
 
-  std::bitset<kMaxNumLocalActions> fpu_bits;
+  std::bitset<kMaxBranchingFactor> fpu_bits;
   fpu_bits.set();
 
   for (const auto& edge : tree->children_data()) {
@@ -50,11 +50,11 @@ inline PUCTStats<GameState, Tensorizor>::PUCTStats(const ManagerParams& params,
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto& stats = tree->stats();  // no struct copy, not needed here
-    dtype PV = stats.virtualized_avg(cp);
+    float PV = stats.virtualized_avg(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
-    dtype cFPU = disableFPU ? 0.0 : params.cFPU;
-    dtype v = PV - cFPU * sqrt((P * (N > 0).template cast<dtype>()).sum());
+    float cFPU = disableFPU ? 0.0 : params.cFPU;
+    float v = PV - cFPU * sqrt((P * (N > 0).template cast<float>()).sum());
     for (int i : bitset_util::on_indices(fpu_bits)) {
       V(i) = v;
     }

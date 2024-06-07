@@ -10,14 +10,14 @@
 
 namespace generic {
 
-template <core::GameStateConcept GameState>
-class RandomPlayerGenerator : public core::AbstractPlayerGenerator<GameState> {
+template <core::concepts::Game Game>
+class RandomPlayerGenerator : public core::AbstractPlayerGenerator<Game> {
  public:
   std::string get_default_name() const override { return "Random"; }
   std::vector<std::string> get_types() const override { return {"Random"}; }
   std::string get_description() const override { return "Random player"; }
-  core::AbstractPlayer<GameState>* generate(core::game_thread_id_t) override {
-    return new RandomPlayer<GameState>();
+  core::AbstractPlayer<Game>* generate(core::game_thread_id_t) override {
+    return new RandomPlayer<Game>();
   }
 };
 

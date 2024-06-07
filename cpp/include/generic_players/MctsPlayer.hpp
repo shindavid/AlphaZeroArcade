@@ -27,12 +27,11 @@ namespace generic {
  * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they
  * can share the same MCTS tree, as an optimization. This implementation supports this optimization.
  */
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-class MctsPlayer : public core::AbstractPlayer<GameState_> {
+template <core::concepts::Game Game_>
+class MctsPlayer : public core::AbstractPlayer<Game_> {
  public:
-  using base_t = core::AbstractPlayer<GameState_>;
-  using GameState = GameState_;
-  using Tensorizor = Tensorizor_;
+  using Game = Game_;
+  using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
     Params(mcts::Mode);
@@ -48,22 +47,16 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
     bool verbose = false;
   };
 
-  using GameStateTypes = core::GameStateTypes<GameState>;
-
-  using dtype = typename GameStateTypes::dtype;
-  using MctsManager = mcts::Manager<GameState, Tensorizor>;
+  using MctsManager = mcts::Manager<Game>;
   using MctsSearchParams = mcts::SearchParams;
-  using MctsSearchResults = mcts::SearchResults<GameState>;
-  using player_name_array_t = typename GameStateTypes::player_name_array_t;
+  using MctsSearchResults = mcts::SearchResults<Game>;
+  using player_name_array_t = typename Game::player_name_array_t;
 
-  using Action = typename GameStateTypes::Action;
-  using ActionResponse = typename GameStateTypes::ActionResponse;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using PolicyArray = typename GameStateTypes::PolicyArray;
+  using FullState = typename Game::FullState;
+  using IO = typename Game::IO;
+  using ActionMask = typename Game::ActionMask;
+  using ValueArray = typename Game::ValueArray;
+  using PolicyTensor = typename Game::PolicyTensor;
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);
@@ -73,20 +66,20 @@ class MctsPlayer : public core::AbstractPlayer<GameState_> {
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const FullState&, action_t) override;
+  ActionResponse get_action_response(const FullState&, const ActionMask&) override;
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
 
  protected:
-  const MctsSearchResults* mcts_search(const GameState& state, core::SearchMode search_mode) const;
+  const MctsSearchResults* mcts_search(const FullState& state, core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
   ActionResponse get_action_response_helper(core::SearchMode, const MctsSearchResults*,
                                             const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
-    LocalPolicyArray action_policy;
+    PolicyTensor action_policy;
     MctsSearchResults mcts_results;
 
     bool initialized = false;

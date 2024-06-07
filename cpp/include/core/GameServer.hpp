@@ -15,21 +15,20 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class GameServer {
  public:
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr int kNumPlayers = Game::kNumPlayers;
 
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using Action = typename GameStateTypes::Action;
-  using ActionResponse = typename GameStateTypes::ActionResponse;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using Player = AbstractPlayer<GameState>;
-  using PlayerGenerator = AbstractPlayerGenerator<GameState>;
-  using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<GameState>;
+  using ValueArray = typename Game::ValueArray;
+  using ActionMask = typename Game::ActionMask;
+  using FullState = typename Game::FullState;
+  using Rules = typename Game::Rules;
+  using Player = AbstractPlayer<Game>;
+  using PlayerGenerator = AbstractPlayerGenerator<Game>;
+  using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<Game>;
   using player_array_t = std::array<Player*, kNumPlayers>;
-  using player_name_array_t = typename GameStateTypes::player_name_array_t;
+  using player_name_array_t = typename Game::player_name_array_t;
   using results_map_t = std::map<float, int>;
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
@@ -94,7 +93,7 @@ class GameServer {
     const Params& params() const { return params_; }
     void init_progress_bar();
     bool request_game(int num_games);  // returns false iff hit num_games limit
-    void update(const GameOutcome& outcome, int64_t ns);
+    void update(const ValueArray& outcome, int64_t ns);
     auto get_results() const;
     void end_session();
     bool ready_to_start() const;
@@ -142,7 +141,7 @@ class GameServer {
 
    private:
     void run();
-    GameOutcome play_game(player_array_t&);
+    ValueArray play_game(player_array_t&);
 
     SharedData& shared_data_;
     player_instantiation_array_t instantiations_;

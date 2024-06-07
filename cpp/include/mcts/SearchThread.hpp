@@ -20,34 +20,32 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class SearchThread {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using GameOutcome = GameStateTypes::GameOutcome;
-  using NNEvaluation = mcts::NNEvaluation<GameState>;
-  using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
-  using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using ValueArray = Game::ValueArray;
+  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using NNEvaluationService = mcts::NNEvaluationService<Game>;
+  using Node = mcts::Node<Game>;
+  using NodeCache = mcts::NodeCache<Game>;
+  using PUCTStats = mcts::PUCTStats<Game>;
+  using SharedData = mcts::SharedData<Game>;
   using edge_t = typename Node::edge_t;
 
-  using Action = typename GameStateTypes::Action;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
+  using IO = Game::IO;
+  using Rules = typename Game::Rules;
+  using FullState = typename Game::FullState;
+  using ActionMask = typename Game::ActionMask;
+  using LocalPolicyArray = typename Game::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
-  using PolicyShape = typename GameStateTypes::PolicyShape;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
-  using GameStateHistory = typename TensorizorTypes::GameStateHistory;
+  using PolicyShape = typename Game::PolicyShape;
+  using PolicyTensor = typename Game::PolicyTensor;
+  using ValueArray = typename Game::ValueArray;
+  using ValueTensor = typename NNEvaluation::ValueTensor;
 
   static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumGlobalActionsBound = GameStateTypes::kNumGlobalActionsBound;
+  static constexpr int kNumActions = GameState::kNumActions;
 
-  using dtype = torch_util::dtype;
   using profiler_t = search_thread_profiler_t;
 
   SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service,
@@ -133,8 +131,7 @@ class SearchThread {
   auto& rng() { return shared_data_->rng; }
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
-  GameState state_;
-  GameStateHistory state_history_;
+  FullState state_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;
   const ManagerParams* manager_params_;

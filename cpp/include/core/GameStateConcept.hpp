@@ -1,10 +1,12 @@
 #pragma once
 
+#include <bitset>
 #include <concepts>
 #include <string>
 
 #include <Eigen/Core>
 
+#include <core/ActionOutcome.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <util/CppUtil.hpp>
@@ -12,21 +14,41 @@
 
 namespace core {
 
+namespace concepts {
+
 /*
- * All GameState classes must satisfy the GameStateConcept concept.
+ * All Game classes G must satisfy core::concepts::Game<G>.
  *
  * We use concepts rather than abstract classes primarily for efficiency reasons. Abstract classes
  * would require dynamic memory allocations and virtual method overhead. The dynamic memory aspect
  * would be particularly painful in the MCTS context, as variable-sized tensor calculations can be
  * quite a bit costlier than fixed-sized ones.
  */
-template <class State>
-concept GameStateConcept = requires(
-    State* _this, const State* const_this, typename State::Data* data,
-    const typename State::Data* const_data, typename State::Transform* transform,
-    typename State::PolicyTensor* policy, std::ostream& os) {
+template <class G>
+concept Game = requires(
+    const typename G::Position& const_pos) {
+    // ,
+    // State* _this, const State* const_this, typename State::Data* data,
+    // const typename State::Data* const_data, typename State::Transform* transform,
+    // typename State::PolicyTensor* policy, std::ostream& os) {
+
+  { util::decay_copy(G::kNumPlayers) } -> std::same_as<int>;
+  { util::decay_copy(G::kNumActions) } -> std::same_as<int>;
+  { util::decay_copy(G::kMaxBranchingFactor) } -> std::same_as<int>;
+
+  requires std::same_as<typename G::ActionMask, std::bitset<G::kNumActions>>;
+  requires eigen_util::concepts::Shape<typename G::InputShape>;
+  requires eigen_util::concepts::Shape<typename G::PolicyShape>;
+  requires std::same_as<typename G::ValueArray, Eigen::Array<float, G::kNumPlayers, 1>>;
+  requires std::same_as<typename G::ActionOutcome, core::ActionOutcome<typename G::ValueArray>>;
+
+  requires std::is_default_constructible_v<typename G::Position>;
+  requires std::is_trivially_copyable_v<typename G::Position>;
+
+  requires util::concepts::Hashable<typename G::HashKey>;
+
   /*
-   * Each GameState class must have:
+   * Each Game class G must have:
    *
    * - A trivially-copyable inner class called Data, containing data describing the game state.
    * - A constructor that accepts a Data object as an argument.
@@ -91,7 +113,7 @@ concept GameStateConcept = requires(
    * starting position of the piece and the 73 corresponds to various move-types (including
    * pawn promotions).
    */
-  requires eigen_util::ShapeConcept<typename State::ActionShape>;
+  requires eigen_util::concepts::Shape<typename State::ActionShape>;
 
   /*
    * For a given state s, let A(s) be the set of valid actions.
@@ -156,5 +178,7 @@ concept GameStateConcept = requires(
   requires util::concepts::Hashable<typename State::HashKey>;
   { const_this->hash_key() } -> std::same_as<typename State::HashKey>;
 };
+
+}  // namespace concepts
 
 }  // namespace core

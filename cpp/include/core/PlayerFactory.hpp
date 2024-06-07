@@ -14,11 +14,11 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class PlayerSubfactoryBase {
  public:
   virtual ~PlayerSubfactoryBase() = default;
-  virtual AbstractPlayerGenerator<GameState>* create() const = 0;
+  virtual AbstractPlayerGenerator<Game>* create() const = 0;
 };
 
 /*
@@ -29,7 +29,7 @@ class PlayerSubfactoryBase {
  * corresponds to the list of player types that the factory can create.
  */
 template <typename GeneratorT>
-class PlayerSubfactory : public PlayerSubfactoryBase<typename GeneratorT::GameState> {
+class PlayerSubfactory : public PlayerSubfactoryBase<typename GeneratorT::Game> {
  public:
   GeneratorT* create() const override { return new GeneratorT(); }
 };
@@ -40,13 +40,13 @@ class PlayerSubfactory : public PlayerSubfactoryBase<typename GeneratorT::GameSt
  *
  * See cpp/connect4/PlayerFactory.hpp for an example of how to use this class.
  */
-template <GameStateConcept GameState_>
+template <concepts::Game Game_>
 class PlayerFactory {
  public:
-  using GameState = GameState_;
-  using Player = AbstractPlayer<GameState>;
-  using PlayerGenerator = AbstractPlayerGenerator<GameState>;
-  using PlayerSubfactoryBase = core::PlayerSubfactoryBase<GameState>;
+  using Game = Game_;
+  using Player = AbstractPlayer<Game>;
+  using PlayerGenerator = AbstractPlayerGenerator<Game>;
+  using PlayerSubfactoryBase = core::PlayerSubfactoryBase<Game>;
 
   struct player_generator_seat_t {
     PlayerGenerator* generator = nullptr;

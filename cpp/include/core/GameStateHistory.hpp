@@ -5,7 +5,7 @@
 
 namespace core {
 
-template <GameStateConcept GameState, int BufferSize>
+template <concepts::Game Game, int BufferSize>
 class GameStateHistory {
  public:
   using GameStateData = typename GameState::Data;
@@ -24,7 +24,7 @@ class GameStateHistory {
 };
 
 // trivial specialization for BufferSize = 0
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class GameStateHistory<GameState, 0> {
  public:
   using GameStateData = typename GameState::Data;
@@ -43,7 +43,7 @@ struct IsGameStateHistory {
   static constexpr bool value = false;
 };
 
-template<GameStateConcept GameState, int BufferSize>
+template<concepts::Game Game, int BufferSize>
 struct IsGameStateHistory<core::GameStateHistory<GameState, BufferSize>> {
   static constexpr bool value = true;
 };

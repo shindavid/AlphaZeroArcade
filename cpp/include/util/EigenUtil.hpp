@@ -22,7 +22,7 @@ template <int64_t... Is>
 using Shape = Eigen::Sizes<Is...>;
 
 /*
- * ShapeConcept<T> is for concept requirements.
+ * eigen_util::concepts::Shape<T> is for concept requirements.
  */
 template <typename T>
 struct is_eigen_shape {
@@ -34,8 +34,13 @@ struct is_eigen_shape<Eigen::Sizes<Is...>> {
 };
 template <typename T>
 inline constexpr bool is_eigen_shape_v = is_eigen_shape<T>::value;
+
+namespace concepts {
+
 template <typename T>
-concept ShapeConcept = is_eigen_shape_v<T>;
+concept Shape = is_eigen_shape_v<T>;
+
+}  // namespace concepts
 
 /*
  * rank_v<Eigen::Sizes<...>> is the rank of the Eigen::Sizes.
@@ -67,13 +72,13 @@ constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
 /*
  * prepend_dim_t<10, Eigen::Sizes<1, 2, 3>> is Eigen::Sizes<10, 1, 2, 3>
  */
-template <int64_t N, ShapeConcept Shape>
+template <int64_t N, concepts::Shape Shape>
 struct prepend_dim {};
 template <int64_t N, int64_t... Is>
 struct prepend_dim<N, Eigen::Sizes<Is...>> {
   using type = Eigen::Sizes<N, Is...>;
 };
-template <int64_t N, ShapeConcept Shape>
+template <int64_t N, concepts::Shape Shape>
 using prepend_dim_t = typename prepend_dim<N, Shape>::type;
 
 /*
@@ -81,13 +86,13 @@ using prepend_dim_t = typename prepend_dim<N, Shape>::type;
  *
  * This undoes the effect of prepend_dim_t.
  */
-template <ShapeConcept Shape>
+template <concepts::Shape Shape>
 struct subshape {};
 template <int64_t I, int64_t... Is>
 struct subshape<Eigen::Sizes<I, Is...>> {
   using type = Eigen::Sizes<Is...>;
 };
-template <ShapeConcept Shape>
+template <concepts::Shape Shape>
 using subshape_t = typename subshape<Shape>::type;
 
 /*
@@ -151,100 +156,54 @@ auto to_int64_std_array_v = to_int64_std_array<T>::value;
  * and:
  *
  * using S = Eigen::Sizes<1, 2, 3>;
- * using T = eigen_util::fixed_tensor_t<float, S>;
+ * using T = eigen_util::FTensor<S>;
  *
  * The reason we default to RowMajor is for smooth interoperability with pytorch, which is row-major
  * by default.
+ *
+ * The "f" stands for "fixed-size".
  */
-template <typename Scalar, ShapeConcept Shape>
-using fixed_tensor_t = Eigen::TensorFixedSize<Scalar, Shape, Eigen::RowMajor>;
+template <concepts::Shape Shape>
+using FTensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
 
-/*
- * FixedTensorConcept is a concept corresponding to fixed_tensor_t
- */
 template <typename T>
-struct is_fixed_tensor {
+struct is_ftensor {
   static const bool value = false;
 };
-template <typename Scalar, typename Shape>
-struct is_fixed_tensor<fixed_tensor_t<Scalar, Shape>> {
+template <typename Shape>
+struct is_ftensor<FTensor<Shape>> {
   static const bool value = true;
 };
 template <typename T>
-inline constexpr bool is_fixed_tensor_v = is_fixed_tensor<T>::value;
-template <typename T>
-concept FixedTensorConcept = is_fixed_tensor_v<T>;
+inline constexpr bool is_ftensor_v = is_ftensor<T>::value;
+
+namespace concepts {
 
 template <typename T>
-struct is_fixed_matrix {
-  static const bool value = false;
-};
-template <typename Scalar, int Rows, int Cols, int Options>
-struct is_fixed_matrix<Eigen::Matrix<Scalar, Rows, Cols, Options>> {
-  static constexpr bool value = Rows > 0 && Cols > 0;
-};
-template <typename T>
-inline constexpr bool is_fixed_matrix_v = is_fixed_matrix<T>::value;
-template <typename T>
-concept FixedMatrixConcept = is_fixed_matrix_v<T>;
+concept FTensor = is_ftensor_v<T>;
 
-// /*
-//  * ShapeIndexConcept<T, Shape> is a concept that means that T is a 1D-tensor of dtype int and
-//  * of length Shape::count. This means that it can be used to index to a position in a tensor of
-//  * shape Shape.
-//  */
-// template<typename T, typename U> struct is_shape_index { static const bool value = false; };
-// template<ShapeConcept Shape1, ShapeConcept Shape2>
-// struct is_shape_index<fixed_tensor_t<int, Shape1>, Shape2> {
-//   static const bool value = std::is_same_v<Shape1, fixed_tensor_t<int, Shape<Shape2::count>>;
-// };
-// template<typename T, typename U> inline constexpr bool is_shape_index_v = is_shape_index<T,
-// U>::value; template <typename T, typename U> concept ShapeIndexConcept = is_shape_index_v<T, U>;
+}  // namespace concepts
 
-/*
- * ShapeMaskConcept<T, Shape> is a concept that means that T is a tensor of dtype bool and
- * of shape Shape. This means that it can be used to represent a mask of shape Shape.
- */
-template <typename T, typename U>
-struct is_shape_mask {
-  static const bool value = false;
-};
-template <ShapeConcept Shape>
-struct is_shape_mask<fixed_tensor_t<bool, Shape>, Shape> {
-  static const bool value = true;
-};
-template <typename T, typename U>
-inline constexpr bool is_shape_mask_v = is_shape_mask<T, U>::value;
-template <typename T, typename U>
-concept ShapeMaskConcept = is_shape_mask_v<T, U>;
+// DArray is a dynamic float Eigen::Array of max size N
+template <int N>
+using DArray = Eigen::Array<float, Eigen::Dynamic, 1, 0, N>;
 
-template <FixedTensorConcept FixedTensorT>
-struct packed_fixed_tensor_size {
-  static constexpr int value =
-      sizeof(typename FixedTensorT::Scalar) * FixedTensorT::Dimensions::total_size;
-};
-template <FixedTensorConcept FixedTensorT>
-constexpr int packed_fixed_tensor_size_v = packed_fixed_tensor_size<FixedTensorT>::value;
-
-template <FixedTensorConcept FixedTensorT>
-struct alignment_safe {
-  static constexpr bool value = packed_fixed_tensor_size_v<FixedTensorT> % 8 == 0;
-};
-template <FixedTensorConcept FixedTensorT>
-constexpr bool alignment_safe_v = alignment_safe<FixedTensorT>::value;
+// FArray is a fixed-size float Eigen::Array of size N
+template <int N>
+using FArray = Eigen::Array<float, N, 1>;
 
 /*
  * The following are equivalent:
  *
  * using S = Eigen::Sizes<1, 2, 3>;
  *
- * using T = eigen_util::fixed_tensor_t<float, Eigen::Sizes<1, 2, 3>>;
+ * using T = eigen_util::FTensor<Eigen::Sizes<1, 2, 3>>;
  * using S = extract_shape_t<T>;
  */
 template <typename T>
 struct extract_shape {};
-template <typename Scalar, ShapeConcept Shape>
-struct extract_shape<fixed_tensor_t<Scalar, Shape>> {
+template <concepts::Shape Shape>
+struct extract_shape<FTensor<Shape>> {
   using type = Shape;
 };
 template <typename T>
@@ -256,9 +215,9 @@ using extract_shape_t = typename extract_shape<T>::type;
  *
  * deserialize() is the inverse operation.
  */
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 size_t serialize(char* buf, size_t buf_size, const Tensor& tensor);
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 void deserialize(const char* buf, Tensor* tensor);
 
 /*
@@ -274,7 +233,7 @@ auto softmax(const Array& arr);
  *
  * Note that this returns a tensor *operator*, not a tensor.
  */
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim);
 
 /*
@@ -283,7 +242,7 @@ auto reverse(const Tensor& tensor, int dim);
  *
  * Returns the index as a std::array<int64_t, D>
  */
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 auto sample(const Tensor& tensor);
 
 /*
@@ -292,15 +251,15 @@ auto sample(const Tensor& tensor);
  * If the sum is less than eps, then tensor is left unchanged and returns false. Otherwise,
  * returns true.
  */
-template <FixedTensorConcept Tensor>
-bool normalize(Tensor& tensor, double eps=1e-8);
+template <concepts::FTensor Tensor>
+bool normalize(Tensor& tensor, double eps = 1e-8);
 
 /*
  * Uniformly randomly picks n nonzero elements of tensor and sets them to zero.
  *
  * Requires that tensor contains at least n nonzero elements.
  */
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 void randomly_zero_out(Tensor& tensor, int n);
 
 /*
@@ -308,7 +267,7 @@ void randomly_zero_out(Tensor& tensor, int n);
  *
  * tensor.data() is to flat_index as tensor is to _____
  */
-template <FixedTensorConcept Tensor>
+template <concepts::FTensor Tensor>
 auto unflatten_index(const Tensor& tensor, int flat_index);
 
 /*
@@ -316,35 +275,11 @@ auto unflatten_index(const Tensor& tensor, int flat_index);
  *
  * auto& array = reinterpret_as_array(tensor);
  */
-template <typename Scalar, ShapeConcept Shape, int Options>
-const auto& reinterpret_as_array(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
+template <concepts::FTensor FTensor>
+const auto& reinterpret_as_array(const FTensor& tensor);
 
-template <typename Scalar, ShapeConcept Shape, int Options>
-auto& reinterpret_as_array(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
-
-/*
- * Inverse of reinterpret_as_array()
- *
- * auto& tensor = reinterpret_as_tensor<TensorT>(array);
- *
- * or using c++
- */
-template <FixedTensorConcept TensorT, typename Scalar, int N>
-const TensorT& reinterpret_as_tensor(const Eigen::Array<Scalar, N, 1>& array);
-
-template <FixedTensorConcept TensorT, typename Scalar, int N>
-TensorT& reinterpret_as_tensor(Eigen::Array<Scalar, N, 1>& array);
-
-/*
- * Reinterpret a fixed-size tensor as an Eigen::Matrix.
- *
- * auto& tensor = reinterpret_as_matrix<MatrixT>(tensor);
- */
-template <FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
-const MatrixT& reinterpret_as_matrix(const Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
-
-template <FixedMatrixConcept MatrixT, typename Scalar, ShapeConcept Shape, int Options>
-MatrixT& reinterpret_as_matrix(Eigen::TensorFixedSize<Scalar, Shape, Options>& tensor);
+template <concepts::FTensor FTensor>
+auto& reinterpret_as_array(FTensor& tensor);
 
 /*
  * Convenience methods that return scalars.
@@ -376,7 +311,7 @@ void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
 template <typename Scalar, int N>
 void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
 
-template <FixedTensorConcept TensorT>
+template <concepts::FTensor TensorT>
 uint64_t hash(const TensorT& tensor);
 
 }  // namespace eigen_util

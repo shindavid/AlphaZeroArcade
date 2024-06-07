@@ -16,7 +16,7 @@ namespace core {
  * readability. Besides, the serializer usages are such that we should not actually incur the
  * virtual overhead (and even if we do, it should be negligible).
  */
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class AbstractSerializer {
  public:
   using GameStateTypes = core::GameStateTypes<GameState>;

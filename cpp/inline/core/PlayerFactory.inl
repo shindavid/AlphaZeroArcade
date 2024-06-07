@@ -8,8 +8,8 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
-auto PlayerFactory<GameState>::Params::make_options_description() {
+template <concepts::Game Game>
+auto PlayerFactory<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -29,8 +29,8 @@ auto PlayerFactory<GameState>::Params::make_options_description() {
                                    "players with unspecified seats.");
 }
 
-template <GameStateConcept GameState>
-PlayerFactory<GameState>::PlayerFactory(const player_subfactory_vec_t& subfactories)
+template <concepts::Game Game>
+PlayerFactory<Game>::PlayerFactory(const player_subfactory_vec_t& subfactories)
     : subfactories_(subfactories) {
   // validate that the generator types don't overlap
   std::set<std::string> types;
@@ -46,8 +46,8 @@ PlayerFactory<GameState>::PlayerFactory(const player_subfactory_vec_t& subfactor
   }
 }
 
-template <GameStateConcept GameState>
-typename PlayerFactory<GameState>::player_generator_seat_vec_t PlayerFactory<GameState>::parse(
+template <concepts::Game Game>
+typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::parse(
     const std::vector<std::string>& player_strs) {
   player_generator_seat_vec_t vec;
 
@@ -60,7 +60,7 @@ typename PlayerFactory<GameState>::player_generator_seat_vec_t PlayerFactory<Gam
     int seat = -1;
     if (!seat_str.empty()) {
       seat = std::stoi(seat_str);
-      util::clean_assert(seat < GameState::kNumPlayers, "Invalid seat (%d) in --player \"%s\"",
+      util::clean_assert(seat < Game::kNumPlayers, "Invalid seat (%d) in --player \"%s\"",
                          seat, player_str.c_str());
     }
 
@@ -74,8 +74,8 @@ typename PlayerFactory<GameState>::player_generator_seat_vec_t PlayerFactory<Gam
   return vec;
 }
 
-template <GameStateConcept GameState>
-void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player_strs) {
+template <concepts::Game Game>
+void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs) {
   Params params;
   std::cout << params.make_options_description();
   std::cout << "  --... ...             type-specific args, dependent on --type" << std::endl
@@ -139,8 +139,8 @@ void PlayerFactory<GameState>::print_help(const std::vector<std::string>& player
   }
 }
 
-template <GameStateConcept GameState>
-std::string PlayerFactory<GameState>::type_str(const PlayerGenerator* generator) {
+template <concepts::Game Game>
+std::string PlayerFactory<Game>::type_str(const PlayerGenerator* generator) {
   std::vector<std::string> types = generator->get_types();
   std::ostringstream ss;
   for (int k = 0; k < (int)types.size(); ++k) {
@@ -152,8 +152,8 @@ std::string PlayerFactory<GameState>::type_str(const PlayerGenerator* generator)
   return ss.str();
 }
 
-template <GameStateConcept GameState>
-bool PlayerFactory<GameState>::matches(const PlayerGenerator* generator, const std::string& type) {
+template <concepts::Game Game>
+bool PlayerFactory<Game>::matches(const PlayerGenerator* generator, const std::string& type) {
   for (const auto& t : generator->get_types()) {
     if (t == type) {
       return true;
@@ -162,8 +162,8 @@ bool PlayerFactory<GameState>::matches(const PlayerGenerator* generator, const s
   return false;
 }
 
-template <GameStateConcept GameState>
-typename PlayerFactory<GameState>::PlayerGenerator* PlayerFactory<GameState>::parse_helper(
+template <concepts::Game Game>
+typename PlayerFactory<Game>::PlayerGenerator* PlayerFactory<Game>::parse_helper(
     const std::string& player_str, const std::string& name,
     const std::vector<std::string>& orig_tokens) {
   std::vector<std::string> tokens = orig_tokens;

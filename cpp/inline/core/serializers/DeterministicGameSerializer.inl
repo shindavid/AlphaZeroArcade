@@ -6,7 +6,7 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 size_t DeterministicGameSerializer<GameState>::serialize_state_change(char* buf, size_t buf_size,
                                                                       const GameState& state,
                                                                       seat_index_t seat,
@@ -15,7 +15,7 @@ size_t DeterministicGameSerializer<GameState>::serialize_state_change(char* buf,
   return this->serialize_action_response(buf, buf_size, response);
 }
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 void DeterministicGameSerializer<GameState>::deserialize_state_change(const char* buf,
                                                                       GameState* state,
                                                                       seat_index_t* seat,

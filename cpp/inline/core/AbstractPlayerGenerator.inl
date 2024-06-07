@@ -7,8 +7,8 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
-void AbstractPlayerGenerator<GameState>::set_name(const std::string& name) {
+template <concepts::Game Game>
+void AbstractPlayerGenerator<Game>::set_name(const std::string& name) {
   // check that only alphanumeric, dash or underscore are used in name:
   for (char c : name) {
     if (!std::isalnum(c) && c != '-' && c != '_') {
@@ -25,8 +25,8 @@ void AbstractPlayerGenerator<GameState>::set_name(const std::string& name) {
   name_ = name;
 }
 
-template <GameStateConcept GameState>
-AbstractPlayer<GameState>* AbstractPlayerGenerator<GameState>::generate_with_name(
+template <concepts::Game Game>
+AbstractPlayer<Game>* AbstractPlayerGenerator<Game>::generate_with_name(
     game_thread_id_t game_thread_id) {
   auto player = generate(game_thread_id);
   player->set_name(name_);

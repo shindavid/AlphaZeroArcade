@@ -25,27 +25,25 @@ namespace mcts {
  * During MCTS, multiple search threads will try to read and write these values. Thread-safety is
  * achieved in a high-performance manner through mutexes and condition variables.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class Node {
  public:
   using sptr = std::shared_ptr<Node>;
 
-  using NNEvaluation = mcts::NNEvaluation<GameState>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
+  using NNEvaluation = mcts::NNEvaluation<Game>;
 
-  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
-  static constexpr int kNumGlobalActions = GameStateTypes::kNumGlobalActions;
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kEdgeDataChunkSize = std::min(8, kMaxNumLocalActions);
+  static constexpr int kMaxBranchingFactor = Game::kMaxBranchingFactor;
+  static constexpr int kNumActions = Game::kNumActions;
+  static constexpr int kNumPlayers = Game::kNumPlayers;
+  static constexpr int kEdgeDataChunkSize = std::min(8, kMaxBranchingFactor);
 
-  using Action = typename GameStateTypes::Action;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using dtype = typename GameStateTypes::dtype;
-
+  using Rules = typename Game::Rules;
+  using FullState = typename Game::FullState;
+  using ActionMask = typename Game::ActionMask;
+  using ValueArray = typename Game::ValueArray;
+  using LocalPolicyArray = eigen_util::FArray<kMaxBranchingFactor>;
+  using PolicyTensor = typename Game::PolicyTensor;
+  using ActionOutcome = typename Game::ActionOutcome;
   using player_bitset_t = std::bitset<kNumPlayers>;
 
   enum evaluation_state_t : int8_t {
@@ -54,9 +52,9 @@ class Node {
   };
 
   struct stable_data_t {
-    stable_data_t(const GameState&, const GameOutcome&, const ManagerParams*);
+    stable_data_t(const FullState&, const ActionOutcome&, const ManagerParams*);
 
-    GameOutcome outcome;
+    ActionOutcome outcome;
     ActionMask valid_action_mask;
     int num_valid_actions;
     core::seat_index_t current_player;
@@ -120,10 +118,10 @@ class Node {
    * volatile keyword.
    */
   struct edge_t {
-    edge_t();
-    edge_t* instantiate(const Action& a, core::action_index_t i, sptr c);
+    edge_t* instantiate(core::action_t a, core::action_index_t i, sptr c);
     bool instantiated() const { return action_index_ >= 0; }
-    Action action() const { return const_cast<Action&>(action_); }
+    // core::action_t action() const { return const_cast<core::action_t&>(action_); }
+    core::action_t action() const { return action_; }
     core::action_index_t action_index() const { return action_index_; }
     sptr child() const { return const_cast<sptr&>(child_); }
     void increment_count() { count_++; }
@@ -131,7 +129,7 @@ class Node {
 
    private:
     volatile sptr child_;
-    volatile Action action_;
+    volatile core::action_t action_ = -1;
     volatile core::action_index_t action_index_ = -1;
     std::atomic<int> count_ = 0;  // real only
   };
@@ -144,7 +142,7 @@ class Node {
   struct edge_chunk_t {
     ~edge_chunk_t() { delete next; }
     edge_t* find(core::action_index_t i);
-    edge_t* insert(const Action& a, core::action_index_t i, sptr child);
+    edge_t* insert(core::action_index_t a, core::action_index_t i, sptr child);
 
     edge_t data[kEdgeDataChunkSize];
     edge_chunk_t* next = nullptr;
@@ -254,7 +252,7 @@ class Node {
      * It is possible that an edge_t already exists for this action due to a race condition.
      * In this case, returns a pointer to the existing entry.
      */
-    edge_t* insert(const Action& a, core::action_index_t i, sptr child) {
+    edge_t* insert(core::action_t a, core::action_index_t i, sptr child) {
       return first_chunk_.insert(a, i, child);
     }
 
@@ -273,7 +271,7 @@ class Node {
     evaluation_state_t state = kUnset;
   };
 
-  Node(const GameState&, const GameOutcome&, const ManagerParams*);
+  Node(const FullState&, const ActionOutcome&, const ManagerParams*);
 
   void debug_dump() const;
 

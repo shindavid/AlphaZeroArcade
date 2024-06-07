@@ -11,10 +11,10 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
-class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
+template <concepts::Game Game>
+class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<Game> {
  public:
-  using base_t = AbstractPlayerGenerator<GameState>;
+  using base_t = AbstractPlayerGenerator<Game>;
 
   void initialize(io::Socket* socket, int max_simultaneous_games, player_id_t player_id);
   bool initialized() const { return socket_; }
@@ -23,7 +23,7 @@ class RemotePlayerProxyGenerator : public AbstractPlayerGenerator<GameState> {
   std::string get_default_name() const override { return "Remote"; }
   std::vector<std::string> get_types() const override { return {"Remote"}; }
   std::string get_description() const override { return "Remote player from another process"; }
-  AbstractPlayer<GameState>* generate(game_thread_id_t) override;
+  AbstractPlayer<Game>* generate(game_thread_id_t) override;
   void end_session() override;
   int max_simultaneous_games() const override;
 

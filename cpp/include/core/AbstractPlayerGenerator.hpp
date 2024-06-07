@@ -32,11 +32,9 @@ namespace core {
  * string. It will also specify how to parse the other sub-arguments in order to construct a player
  * object.
  */
-template <GameStateConcept GameState_>
+template <concepts::Game Game>
 class AbstractPlayerGenerator {
  public:
-  using GameState = GameState_;
-
   virtual ~AbstractPlayerGenerator() = default;
 
   virtual std::string get_default_name() const = 0;
@@ -62,7 +60,7 @@ class AbstractPlayerGenerator {
    * an optimization, may wish to share data structures with other players sharing the same
    * game_thread_id. This parameter facilitates such sharing.
    */
-  virtual AbstractPlayer<GameState>* generate(game_thread_id_t game_thread_id) = 0;
+  virtual AbstractPlayer<Game>* generate(game_thread_id_t game_thread_id) = 0;
 
   /*
    * Print help for this player generator, describing what parse_args() expects. This should
@@ -116,7 +114,7 @@ class AbstractPlayerGenerator {
   /*
    * Convenience method that composes generate() with set_name().
    */
-  AbstractPlayer<GameState>* generate_with_name(game_thread_id_t game_thread_id);
+  AbstractPlayer<Game>* generate_with_name(game_thread_id_t game_thread_id);
 
  protected:
   /*

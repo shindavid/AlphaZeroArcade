@@ -71,48 +71,39 @@ namespace mcts {
  * Compiling with -DMCTS_DEBUG will enable a bunch of prints that allow you to watch the sequence of
  * operations in the interleaving threads.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class NNEvaluationService
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using dtype = torch_util::dtype;
-
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using NNEvaluation = mcts::NNEvaluation<GameState>;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameStateHistory = typename TensorizorTypes::GameStateHistory;
+  using Node = mcts::Node<Game>;
+  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using ActionMask = typename Game::ActionMask;
 
   using NNEvaluation_asptr = typename NNEvaluation::asptr;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
 
-  using InputTensor = typename TensorizorTypes::InputTensor;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
+  using InputTensor = typename Game::InputTensor;
+  using PolicyTensor = typename Game::PolicyTensor;
+  using ValueTensor = typename NNEvaluation::ValueTensor;
 
-  using InputShape = typename TensorizorTypes::InputShape;
-  using PolicyShape = typename GameStateTypes::PolicyShape;
-  using ValueShape = typename GameStateTypes::ValueShape;
+  using InputShape = typename Game::InputShape;
+  using PolicyShape = typename Game::PolicyShape;
+  using ValueShape = typename NNEvaluation::ValueShape;
 
-  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
-  using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
-  using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
+  using DynamicInputTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
 
-  using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
-  using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
-
-  using GameStateData = typename GameState::Data;
-  using HashKey = typename GameState::HashKey;
-  using Transform = typename GameState::Transform;
-  using Transforms = core::Transforms<GameState>;
+  using StateSnapshot = typename Game::StateSnapshot;
+  using FullState = typename Game::FullState;
+  using EvalKey = typename FullState::EvalKey;
+  using Transform = typename Game::Transform;
+  using Transforms = core::Transforms<Game>;
+  using InputTensorizor = typename Game::InputTensorizor;
 
   struct Request {
     Node* node;
-    GameState* state;
-    GameStateHistory* history;
+    FullState* state;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;
@@ -169,7 +160,7 @@ class NNEvaluationService
 
  private:
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = util::HashablePair<HashKey, core::symmetry_index_t>;
+  using cache_key_t = util::HashablePair<EvalKey, core::symmetry_index_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 

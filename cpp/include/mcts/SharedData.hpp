@@ -1,8 +1,6 @@
 #pragma once
 
 #include <core/GameStateConcept.hpp>
-#include <core/GameStateHistory.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/NodeCache.hpp>
 #include <mcts/SearchParams.hpp>
 #include <util/EigenUtil.hpp>
@@ -21,13 +19,11 @@ namespace mcts {
  *
  * It is separated from Manager to avoid circular dependencies.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 struct SharedData {
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using NodeCache = mcts::NodeCache<GameState, Tensorizor>;
-
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using GameStateHistory = typename TensorizorTypes::GameStateHistory;
+  using Node = mcts::Node<Game>;
+  using NodeCache = mcts::NodeCache<Game>;
+  using FullState = typename Game::FullState;
 
   void clear() {
     move_number = 0;
@@ -35,13 +31,9 @@ struct SharedData {
     node_cache.clear();
     root_node = nullptr;
     root_state_valid = false;
-    root_state_history.clear();
   }
 
-  void update_state(const GameState& state) {
-    if (root_state_valid) {
-      root_state_history.push_back(root_state.data());
-    }
+  void update_state(const FullState& state) {
     root_state = state;
     root_state_valid = true;
   }
@@ -54,8 +46,7 @@ struct SharedData {
   std::condition_variable cv_search_on, cv_search_off;
   boost::dynamic_bitset<> active_search_threads;
   NodeCache node_cache;
-  GameState root_state;
-  GameStateHistory root_state_history;
+  FullState root_state;
 
   Node::sptr root_node;
   SearchParams search_params;
