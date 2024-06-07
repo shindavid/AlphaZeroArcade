@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <util/AtomicSharedPtr.hpp>
 

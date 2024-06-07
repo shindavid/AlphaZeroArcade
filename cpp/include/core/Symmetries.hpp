@@ -36,7 +36,7 @@ class Transforms {
   using FullState = typename Game::FullState;
   using PolicyTensor = typename Game::PolicyTensor;
   using Transform = core::Transform<FullState, PolicyTensor>;
-  using TransformList = typename GameState::TransformList;
+  using TransformList = typename Game::TransformList;
   using transform_tuple_t = mp::TypeListToTuple_t<TransformList>;
   static constexpr size_t kNumTransforms = mp::Length_v<TransformList>;
 

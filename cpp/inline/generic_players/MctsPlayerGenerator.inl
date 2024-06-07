@@ -11,7 +11,7 @@ typename MctsPlayerGeneratorBase<Game>::manager_map_t
     MctsPlayerGeneratorBase<Game>::manager_cache_;
 
 template <core::concepts::Game Game>
-core::AbstractPlayer<GameState>* MctsPlayerGeneratorBase<Game>::generate(
+core::AbstractPlayer<Game>* MctsPlayerGeneratorBase<Game>::generate(
     core::game_thread_id_t game_thread_id) {
   manager_vec_t& vec = manager_cache_[game_thread_id];
   for (MctsManager* manager : vec) {

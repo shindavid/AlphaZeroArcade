@@ -6,7 +6,6 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <util/BoostUtil.hpp>
 
 #include <games/connect4/Constants.hpp>
@@ -19,8 +18,8 @@ namespace c4 {
 
 class PerfectOracle {
  public:
-  using GameStateTypes = core::GameStateTypes<c4::GameState>;
-  using ActionMask = GameStateTypes::ActionMask;
+  using ActionMask = Game::ActionMask;
+  using FullState = Game::FullState;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
   static constexpr int kNumClientsPerOracle = 16;
@@ -106,8 +105,8 @@ class PerfectPlayer : public Player {
   PerfectPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
+  ActionResponse get_action_response(const FullState&, const ActionMask&) override;
 
  private:
   const Params params_;

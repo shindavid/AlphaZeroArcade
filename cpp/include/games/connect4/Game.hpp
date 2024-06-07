@@ -9,7 +9,6 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/SimpleFullState.hpp>
 #include <core/Symmetries.hpp>
@@ -94,7 +93,7 @@ struct Game {
   };
 
   struct InputTensorizor {
-    static InputShape tensorize(const FullState& state);
+    static InputTensor tensorize(const FullState& state);
   };
 
   struct TrainingTargetTensorizor {

@@ -87,9 +87,9 @@ inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
 
 inline void PerfectPlayer::start_game() { move_history_.reset(); }
 
-inline void PerfectPlayer::receive_state_change(core::seat_index_t, const GameState&,
-                                                const Action& action) {
-  move_history_.append(action[0]);
+inline void PerfectPlayer::receive_state_change(core::seat_index_t, const FullState&,
+                                                core::action_t action) {
+  move_history_.append(action);
 }
 
 }  // namespace c4

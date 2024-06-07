@@ -3,7 +3,6 @@
 #include <cstdlib>
 #include <iostream>
 
-#include <core/DerivedTypes.hpp>
 #include <util/ScreenUtil.hpp>
 
 namespace generic {

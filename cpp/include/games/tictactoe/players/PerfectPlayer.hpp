@@ -2,7 +2,6 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <games/tictactoe/Constants.hpp>
 #include <games/tictactoe/GameState.hpp>
 #include <util/BoostUtil.hpp>

@@ -8,7 +8,6 @@
 
 #include <core/ActionOutcome.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 

@@ -8,7 +8,6 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>

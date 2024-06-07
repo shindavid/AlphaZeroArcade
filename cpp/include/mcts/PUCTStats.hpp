@@ -1,7 +1,6 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/ManagerParams.hpp>

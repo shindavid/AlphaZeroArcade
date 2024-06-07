@@ -5,7 +5,6 @@
 #include <thread>
 #include <vector>
 
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
@@ -43,8 +42,8 @@ class SearchThread {
   using ValueArray = typename Game::ValueArray;
   using ValueTensor = typename NNEvaluation::ValueTensor;
 
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kNumActions = GameState::kNumActions;
+  static constexpr int kNumPlayers = Game::kNumPlayers;
+  static constexpr int kNumActions = Game::kNumActions;
 
   using profiler_t = search_thread_profiler_t;
 

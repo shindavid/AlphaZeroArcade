@@ -5,7 +5,6 @@
 #include <memory>
 #include <mutex>
 
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
@@ -283,7 +282,7 @@ class Node {
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
   void update_stats(const UpdateT& update_instruction);
-  sptr lookup_child_by_action(const Action& action) const;
+  sptr lookup_child_by_action(core::action_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
   const children_data_t& children_data() const { return children_data_; }
@@ -295,7 +294,7 @@ class Node {
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
  private:
-  static core::symmetry_index_t make_sym_index(const GameState& state, const ManagerParams& params);
+  static core::symmetry_index_t make_sym_index(const FullState& state, const ManagerParams& params);
   std::condition_variable cv_evaluate_;
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;

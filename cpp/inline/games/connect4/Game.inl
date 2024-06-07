@@ -56,6 +56,35 @@ inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState&
   return set;
 }
 
+inline Game::InputTensor Game::InputTensorizor::tensorize(const FullState& state) {
+  InputTensor tensor;
+  const StateSnapshot& snapshot = state.current();
+  for (int row = 0; row < kNumRows; ++row) {
+    for (int col = 0; col < kNumColumns; ++col) {
+      core::seat_index_t p = snapshot.get_player_at(row, col);
+      tensor(0, row, col) = (p == cp);
+      tensor(1, row, col) = (p == 1 - cp);
+    }
+  }
+  return tensor;
+}
+
+inline Game::TrainingTargetTensorizor::OwnershipTarget::Tensor
+Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const GameLogReader& reader) {
+  Tensor tensor;
+  const StateSnapshot& current_snapshot = reader.current_snapshot();
+  const StateSnapshot& final_snapshot = reader.final_snapshot();
+  core::seat_index_t cp = current_snapshot.get_current_player();
+  for (int row = 0; row < kNumRows; ++row) {
+    for (int col = 0; col < kNumColumns; ++col) {
+      core::seat_index_t p = final_snapshot.get_player_at(row, col);
+      int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
+      tensor(row, col) = val;
+    }
+  }
+  return tensor;
+}
+
 inline constexpr int Game::_to_bit_index(row_t row, column_t col) { return 8 * col + row; }
 
 inline constexpr mask_t Game::_column_mask(column_t col) { return 63UL << (8 * col); }

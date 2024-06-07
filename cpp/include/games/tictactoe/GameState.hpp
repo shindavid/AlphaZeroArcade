@@ -11,7 +11,6 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>

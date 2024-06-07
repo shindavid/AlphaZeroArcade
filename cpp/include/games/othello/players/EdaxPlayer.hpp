@@ -8,7 +8,6 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <games/othello/Constants.hpp>
 #include <games/othello/GameState.hpp>
 #include <util/BoostUtil.hpp>

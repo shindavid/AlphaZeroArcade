@@ -4,7 +4,6 @@
 #include <string>
 
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <util/Exception.hpp>
 
@@ -32,7 +31,7 @@ namespace core {
  * return the action that you want to take.
  *
  * TODO: for imperfect-information games, these methods should accept an "information set", rather
- * than a complete GameState. Flush out the details of this if/when we get there.
+ * than a FullState. Flush out the details of this if/when we get there.
  */
 template <concepts::Game Game>
 class AbstractPlayer {
@@ -54,7 +53,7 @@ class AbstractPlayer {
                  seat_index_t seat_assignment);
 
   virtual void start_game() {}
-  virtual void receive_state_change(seat_index_t, const FullState&, const Action&) {}
+  virtual void receive_state_change(seat_index_t, const FullState&, action_t) {}
 
   /*
    * The FullState passed in here is guaranteed to be identical to the FullState last received via

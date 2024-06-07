@@ -24,7 +24,7 @@ inline Node<Game>::stats_t::stats_t() {
 
 template <core::concepts::Game Game>
 inline Node<Game>::edge_t* Node<Game>::edge_t::instantiate(
-    const Action& a, core::action_index_t i, sptr c) {
+    core::action_t a, core::action_index_t i, sptr c) {
   const_cast<sptr&>(child_) = c;
   action_ = a;
   action_index_ = i;

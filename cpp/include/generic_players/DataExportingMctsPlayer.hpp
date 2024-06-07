@@ -2,7 +2,6 @@
 
 #include <generic_players/MctsPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/GameLog.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>

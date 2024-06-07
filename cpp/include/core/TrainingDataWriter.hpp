@@ -9,7 +9,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
-#include <core/DerivedTypes.hpp>
 #include <core/GameLog.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/LoopControllerClient.hpp>

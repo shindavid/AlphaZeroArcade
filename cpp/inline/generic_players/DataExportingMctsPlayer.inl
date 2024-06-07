@@ -52,7 +52,7 @@ ActionResponse DataExportingMctsPlayer<Game>::get_action_response(const FullStat
 }
 
 template <core::concepts::Game Game>
-void DataExportingMctsPlayer<Game>::end_game(const GameState& state,
+void DataExportingMctsPlayer<Game>::end_game(const FullState& state,
                                              const ValueArray& outcome) {
   game_log_->add_terminal(state, outcome);
   writer_->close(game_log_);

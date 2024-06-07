@@ -38,10 +38,10 @@ class GameLogReader:
     def open_log(self, filename: str):
         ffi = self._ffi
         filename = ffi.new('char[]', filename.encode('utf-8'))
-        return self._lib.GameReadLog_new(filename)
+        return self._lib.GameLogReader_new(filename)
 
     def close_log(self, log):
-        self._lib.GameReadLog_delete(log)
+        self._lib.GameLogReader_delete(log)
 
     def create_tensors(self, log, names: List[str], index: int, apply_symmetry: bool = True):
         ffi = self._ffi
@@ -55,13 +55,13 @@ class GameLogReader:
         keys_c = ffi.new("const char *[]", keys)
         values_c = ffi.new("float *[]", values)
 
-        lib.GameReadLog_load(log, index, apply_symmetry, keys_c, values_c, len(keys))
+        lib.GameLogReader_load(log, index, apply_symmetry, keys_c, values_c, len(keys))
         return tensors
 
     def _get_ffi(self):
         ffi = FFI()
         ffi.cdef("""
-            struct GameReadLog {};
+            struct GameLogReader {};
 
             struct ShapeInfo {
                 char* name;
@@ -72,9 +72,9 @@ class GameLogReader:
             struct ShapeInfo* get_shape_info_array();
             void free_shape_info_array(struct ShapeInfo* info);
 
-            struct GameReadLog* GameReadLog_new(const char* filename);
-            void GameReadLog_delete(struct GameReadLog* log);
-            void GameReadLog_load(struct GameReadLog* log, int index, bool apply_symmetry,
+            struct GameLogReader* GameLogReader_new(const char* filename);
+            void GameLogReader_delete(struct GameLogReader* log);
+            void GameLogReader_load(struct GameLogReader* log, int index, bool apply_symmetry,
                        const char** keys, float** values, int num_keys);
             """)
         return ffi

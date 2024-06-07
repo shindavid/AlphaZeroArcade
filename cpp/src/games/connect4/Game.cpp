@@ -139,33 +139,3 @@ void Game::IO::print_row(const StateSnapshot& snapshot, row_t row, column_t blin
 }
 
 }  // namespace c4
-
-// namespace mcts {
-
-// void SearchResultsDumper<c4::GameState>::dump(const LocalPolicyArray& action_policy,
-//                                                      const SearchResults& results) {
-//   const auto& valid_actions = results.valid_actions;
-//   const auto& mcts_counts = results.counts;
-//   const auto& net_policy = results.policy_prior;
-//   const auto& win_rates = results.win_rates;
-//   const auto& net_value = results.value_prior;
-
-//   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
-//          100 * net_value(c4::kRed), 100 * win_rates(c4::kRed));
-//   printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
-//          100 * net_value(c4::kYellow), 100 * win_rates(c4::kYellow));
-//   printf("\n");
-//   printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
-
-//   int j = 0;
-//   for (int i = 0; i < c4::kNumColumns; ++i) {
-//     if (valid_actions[i]) {
-//       printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(j), mcts_counts(i), action_policy(j));
-//       ++j;
-//     } else {
-//       printf("%3d\n", i + 1);
-//     }
-//   }
-// }
-
-// }  // namespace mcts

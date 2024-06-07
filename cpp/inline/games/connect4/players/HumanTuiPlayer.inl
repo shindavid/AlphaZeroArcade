@@ -21,20 +21,13 @@ inline void HumanTuiPlayer::start_game() {
   base_t::start_game();
 }
 
-inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const GameState& state,
-                                                 const Action& action) {
-  if (move_history_) move_history_->append(action[0]);
+inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const FullState& state,
+                                                 core::action_t action) {
+  if (move_history_) move_history_->append(action);
   base_t::receive_state_change(seat, state, action);
 }
 
-inline HumanTuiPlayer::Action HumanTuiPlayer::prompt_for_action(const GameState& state,
-                                                                const ActionMask& valid_actions) {
-  Action action;
-  action[0] = prompt_for_action_helper(state, valid_actions);
-  return action;
-}
-
-inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&, const ActionMask&) {
+inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState&, const ActionMask&) {
   std::cout << "Enter move [1-7]: ";
   std::cout.flush();
   std::string input;
@@ -48,7 +41,7 @@ inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&, const Acti
   }
 }
 
-inline void HumanTuiPlayer::print_state(const GameState& state, bool terminal) {
+inline void HumanTuiPlayer::print_state(const FullState& state, bool terminal) {
   if (oracle_) {
     if (terminal) {
       std::cout << std::endl;  // blank link to retain alignment
@@ -57,7 +50,8 @@ inline void HumanTuiPlayer::print_state(const GameState& state, bool terminal) {
       printf("%s\n", result.get_overlay().c_str());
     }
   }
-  state.dump(&last_action_, &this->get_player_names());
+
+  Game::IO::print_snapshot(state.current(), last_action_, &this->get_player_names());
 }
 
 }  // namespace c4

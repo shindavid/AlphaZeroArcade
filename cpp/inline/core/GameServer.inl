@@ -7,7 +7,6 @@
 
 #include <boost/program_options.hpp>
 
-#include <core/DerivedTypes.hpp>
 #include <core/Packet.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/BoostUtil.hpp>

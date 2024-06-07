@@ -28,7 +28,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
    * generate_from_manager(), passing in the mcts::Manager* of that previous player. Otherwise,
    * dispatches to generate_from_scratch().
    */
-  core::AbstractPlayer<GameState>* generate(core::game_thread_id_t game_thread_id) override;
+  core::AbstractPlayer<Game>* generate(core::game_thread_id_t game_thread_id) override;
 
   void end_session() override;
 

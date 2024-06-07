@@ -8,7 +8,6 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
