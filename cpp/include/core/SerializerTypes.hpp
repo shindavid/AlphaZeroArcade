@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/serializers/GeneralSerializer.hpp>
 
 namespace core {

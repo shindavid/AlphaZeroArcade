@@ -7,7 +7,7 @@
 #include <generic_players/DataExportingMctsPlayer.hpp>
 #include <generic_players/MctsPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>

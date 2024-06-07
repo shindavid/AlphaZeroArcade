@@ -3,7 +3,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 
 namespace generic {
 

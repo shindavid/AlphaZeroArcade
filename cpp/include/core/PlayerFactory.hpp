@@ -8,7 +8,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/MetaProgramming.hpp>
 

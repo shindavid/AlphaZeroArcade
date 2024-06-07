@@ -11,7 +11,7 @@
 
 #include <core/DerivedTypes.hpp>
 #include <core/GameLog.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <core/TensorizorConcept.hpp>

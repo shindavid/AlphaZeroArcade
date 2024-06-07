@@ -5,7 +5,7 @@
 
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
 #include <util/SocketUtil.hpp>
 

@@ -6,7 +6,7 @@
 #include <generic_players/RandomPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 
 namespace generic {
 

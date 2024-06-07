@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/SearchResults.hpp>
 #include <util/CppUtil.hpp>
 

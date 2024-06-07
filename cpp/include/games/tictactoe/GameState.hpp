@@ -12,7 +12,7 @@
 #include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
 #include <games/tictactoe/Constants.hpp>

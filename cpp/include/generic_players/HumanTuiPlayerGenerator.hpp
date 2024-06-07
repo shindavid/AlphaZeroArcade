@@ -5,7 +5,7 @@
 
 #include <generic_players/HumanTuiPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 
 namespace generic {
 

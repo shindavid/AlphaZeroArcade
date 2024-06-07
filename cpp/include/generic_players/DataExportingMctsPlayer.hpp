@@ -4,7 +4,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/DerivedTypes.hpp>
 #include <core/GameLog.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/TensorizorConcept.hpp>
 #include <core/TrainingDataWriter.hpp>
 #include <mcts/SearchResults.hpp>

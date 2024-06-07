@@ -3,7 +3,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/Symmetries.hpp>
 #include <core/TensorizorConcept.hpp>
 

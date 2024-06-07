@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/Math.hpp>
 
 namespace core {

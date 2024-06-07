@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/NodeCache.hpp>
 #include <mcts/SearchParams.hpp>
 #include <util/EigenUtil.hpp>

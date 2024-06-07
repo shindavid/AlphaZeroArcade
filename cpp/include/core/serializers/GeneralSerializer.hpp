@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/AbstractSerializer.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 
 namespace core {
 

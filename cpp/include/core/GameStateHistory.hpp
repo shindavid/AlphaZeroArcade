@@ -1,7 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 
 namespace core {
 

@@ -4,7 +4,7 @@
 #include <core/LoopControllerClient.hpp>
 #include <core/GameServer.hpp>
 #include <core/GameServerProxy.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/SocketUtil.hpp>

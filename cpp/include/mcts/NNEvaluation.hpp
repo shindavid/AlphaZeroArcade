@@ -3,7 +3,7 @@
 #include <memory>
 
 #include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/AtomicSharedPtr.hpp>
 
 namespace mcts {

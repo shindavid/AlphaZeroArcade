@@ -7,7 +7,7 @@
 
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/Packet.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
