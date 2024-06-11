@@ -27,13 +27,12 @@ inline size_t Game::StateSnapshot::hash() const {
   return boost::hash_range(&full_mask, &full_mask + 2);
 }
 
-inline void Game::Reflect::apply(FullState& state) {
-  StateSnapshot& snapshot = state.current();
-  snapshot.full_mask = __builtin_bswap64(snapshot.full_mask) >> 8;
-  snapshot.cur_player_mask = __builtin_bswap64(snapshot.cur_player_mask) >> 8;
+inline void Game::Reflect::apply(StateSnapshot& pos) {
+  pos.full_mask = __builtin_bswap64(pos.full_mask) >> 8;
+  pos.cur_player_mask = __builtin_bswap64(pos.cur_player_mask) >> 8;
 }
 
-inline void Game::Reflect::apply(eigen_util::FTensor<PolicyShape>& t) {
+inline void Game::Reflect::apply(PolicyTensor& t) {
   eigen_util::FTensor<PolicyShape> u = eigen_util::reverse(t, t.rank() - 1);
   t = u;
 }
@@ -50,18 +49,23 @@ inline Game::ActionMask Game::Rules::legal_moves(const FullState& state) {
   return mask;
 }
 
+inline core::seat_index_t Game::Rules::current_player(const StateSnapshot& snapshot) {
+  return snapshot.get_current_player();
+}
+
 inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState& state) {
   SymmetryIndexSet set;
   set.set();
   return set;
 }
 
-inline Game::InputTensor Game::InputTensorizor::tensorize(const FullState& state) {
+inline Game::InputTensor Game::InputTensorizor::tensorize(const StateSnapshot* start,
+                                                          const StateSnapshot* cur) {
+  core::seat_index_t cp = cur->get_current_player();
   InputTensor tensor;
-  const StateSnapshot& snapshot = state.current();
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumColumns; ++col) {
-      core::seat_index_t p = snapshot.get_player_at(row, col);
+      core::seat_index_t p = cur->get_player_at(row, col);
       tensor(0, row, col) = (p == cp);
       tensor(1, row, col) = (p == 1 - cp);
     }
@@ -70,10 +74,10 @@ inline Game::InputTensor Game::InputTensorizor::tensorize(const FullState& state
 }
 
 inline Game::TrainingTargetTensorizor::OwnershipTarget::Tensor
-Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const GameLogReader& reader) {
+Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const GameLogView& view) {
   Tensor tensor;
-  const StateSnapshot& current_snapshot = reader.current_snapshot();
-  const StateSnapshot& final_snapshot = reader.final_snapshot();
+  const StateSnapshot& current_snapshot = *view.cur_pos;
+  const StateSnapshot& final_snapshot = *view.final_pos;
   core::seat_index_t cp = current_snapshot.get_current_player();
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumColumns; ++col) {

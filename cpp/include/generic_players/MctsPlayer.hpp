@@ -9,7 +9,6 @@
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/SearchParams.hpp>
@@ -26,10 +25,9 @@ namespace generic {
  * Note that when 2 or more identically-configured MctsPlayer's are playing in the same game, they
  * can share the same MCTS tree, as an optimization. This implementation supports this optimization.
  */
-template <core::concepts::Game Game_>
-class MctsPlayer : public core::AbstractPlayer<Game_> {
+template <core::concepts::Game Game>
+class MctsPlayer : public core::AbstractPlayer<Game> {
  public:
-  using Game = Game_;
   using base_t = core::AbstractPlayer<Game>;
 
   struct Params {
@@ -65,8 +63,8 @@ class MctsPlayer : public core::AbstractPlayer<Game_> {
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const FullState&, action_t) override;
-  ActionResponse get_action_response(const FullState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
+  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
@@ -74,8 +72,8 @@ class MctsPlayer : public core::AbstractPlayer<Game_> {
  protected:
   const MctsSearchResults* mcts_search(const FullState& state, core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
-  ActionResponse get_action_response_helper(core::SearchMode, const MctsSearchResults*,
-                                            const ActionMask& valid_actions) const;
+  core::ActionResponse get_action_response_helper(core::SearchMode, const MctsSearchResults*,
+                                                  const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;

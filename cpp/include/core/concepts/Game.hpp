@@ -6,7 +6,6 @@
 
 #include <Eigen/Core>
 
-#include <core/ActionOutcome.hpp>
 #include <core/BasicTypes.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -23,8 +22,12 @@ namespace concepts {
  * would be particularly painful in the MCTS context, as variable-sized tensor calculations can be
  * quite a bit costlier than fixed-sized ones.
  */
-template <class Game>
-concept Game = requires(const typename Game::StateSnapshot& snapshot) {
+template <class G>
+concept Game = requires(const typename G::StateSnapshot& snapshot) {
+  { util::decay_copy(G::kNumPlayers) } -> std::same_as<int>;
+  { util::decay_copy(G::kNumActions) } -> std::same_as<int>;
+  { util::decay_copy(G::kMaxBranchingFactor) } -> std::same_as<int>;
+  { util::decay_copy(G::kHistorySize) } -> std::same_as<int>;
   // TODO
 };
 
@@ -181,7 +184,7 @@ concept Game = requires(const typename Game::StateSnapshot& snapshot) {
 //   typename State::HashKey;
 //   requires util::concepts::Hashable<typename State::HashKey>;
 //   { const_this->hash_key() } -> std::same_as<typename State::HashKey>;
-};
+// };
 
 }  // namespace concepts
 

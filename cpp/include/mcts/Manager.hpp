@@ -6,7 +6,6 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
@@ -39,9 +38,10 @@ class Manager {
 
   using IO = typename Game::IO;
   using FullState = typename Game::FullState;
+  using ActionOutcome = typename Game::ActionOutcome;
   using ActionMask = typename Game::ActionMask;
   using InputShape = typename Game::InputShape;
-  using InputTensor = eigen_util::FTensor<InputTensor>;
+  using InputTensor = typename Game::InputTensor;
   using LocalPolicyArray = typename Node::LocalPolicyArray;
   using PolicyTensor = typename Game::PolicyTensor;
   using ValueArray = typename Game::ValueArray;

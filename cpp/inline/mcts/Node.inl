@@ -12,7 +12,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& s,
     : outcome(o),
       valid_action_mask(Rules::legal_moves(s)),
       num_valid_actions(valid_action_mask.count()),
-      current_player(Rules::current_player(s)),
+      current_player(Rules::current_player(s.current())),
       sym_index(make_sym_index(s, *mp)) {}
 
 template <core::concepts::Game Game>

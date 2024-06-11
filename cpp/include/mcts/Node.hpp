@@ -6,7 +6,6 @@
 #include <mutex>
 
 #include <core/concepts/Game.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>

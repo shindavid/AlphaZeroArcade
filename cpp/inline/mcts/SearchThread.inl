@@ -11,7 +11,7 @@
 
 namespace mcts {
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline SearchThread<Game>::SearchThread(SharedData* shared_data,
                                         NNEvaluationService* nn_eval_service,
                                         const ManagerParams* manager_params,
@@ -23,7 +23,7 @@ inline SearchThread<Game>::SearchThread(SharedData* shared_data,
   thread_ = new std::thread([=, this] { loop(); });
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline SearchThread<Game>::~SearchThread() {
   if (thread_ && thread_->joinable()) {
     thread_->join();
@@ -32,7 +32,7 @@ inline SearchThread<Game>::~SearchThread() {
   profiler_.close_file();
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::set_profiling_dir(const boost::filesystem::path& profiling_dir) {
   auto dir = profiling_dir;
   int manager_id = shared_data_->manager_id;
@@ -42,7 +42,7 @@ inline void SearchThread<Game>::set_profiling_dir(const boost::filesystem::path&
   profiler_.skip_next_n_dumps(5);
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::wait_for_activation() const {
   std::unique_lock lock(shared_data_->search_mutex);
   shared_data_->cv_search_on.wait(lock, [this] {
@@ -50,26 +50,27 @@ inline void SearchThread<Game>::wait_for_activation() const {
   });
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::perform_visits() {
   Node* root = shared_data_->root_node.get();
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     state_ = shared_data_->root_state;
+    snapshot_history_ = shared_data_->root_snapshot_history;
     visit(root, nullptr, shared_data_->move_number);
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->stable_data().num_valid_actions == 1) break;
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::deactivate() const {
   std::unique_lock lock(shared_data_->search_mutex);
   shared_data_->active_search_threads[thread_id_] = 0;
   shared_data_->cv_search_off.notify_all();
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::loop() {
   while (!shared_data_->shutting_down) {
     wait_for_activation();
@@ -79,7 +80,7 @@ inline void SearchThread<Game>::loop() {
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t move_number) {
   search_path_.emplace_back(node, edge);
 
@@ -87,7 +88,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
     std::ostringstream ss;
     ss << thread_id_whitespace();
     if (edge) {
-      ss << __func__ << util::std_array_to_string(edge->action(), "(", ",", ")");
+      ss << __func__ << edge->action();
     } else {
       ss << __func__ << "()";
     }
@@ -97,7 +98,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
 
   const auto& stable_data = node->stable_data();
   if (stable_data.outcome.terminal) {
-    pure_backprop(stable_data.terminal_value);
+    pure_backprop(stable_data.outcome.terminal_value);
     return;
   }
 
@@ -118,7 +119,8 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
     if (!edge) {
       core::action_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask,
                                                             action_index);
-      ActionOutcome outcome = Rules::apply(state_, action);
+      core::ActionOutcome outcome = Rules::apply(state_, action);
+      util::stuff_back<Game::kHistorySize>(snapshot_history_, state_.current());
       applied_action = true;
       auto child = shared_data_->node_cache.fetch_or_create(move_number, state_, outcome,
                                                             this->manager_params_);
@@ -133,14 +135,15 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
       short_circuit_backprop(edge);
     } else {
       if (!applied_action) {
-        Rules::apply(state_, action);
+        Rules::apply(state_, edge->action());
+        util::stuff_back<Game::kHistorySize>(snapshot_history_, state_.current());
       }
       visit(edge->child().get(), edge, move_number + 1);
     }
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::add_dirichlet_noise(LocalPolicyArray& P) {
   int rows = P.rows();
   double alpha = manager_params_->dirichlet_alpha_factor / sqrt(rows);
@@ -148,7 +151,7 @@ inline void SearchThread<Game>::add_dirichlet_noise(LocalPolicyArray& P) {
   P = (1.0 - manager_params_->dirichlet_mult) * P + manager_params_->dirichlet_mult * noise;
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::virtual_backprop() {
   profiler_.record(SearchThreadRegion::kVirtualBackprop);
 
@@ -162,7 +165,7 @@ inline void SearchThread<Game>::virtual_backprop() {
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
@@ -184,7 +187,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 void SearchThread<Game>::backprop_with_virtual_undo(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
@@ -206,7 +209,7 @@ void SearchThread<Game>::backprop_with_virtual_undo(const ValueArray& value) {
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 void SearchThread<Game>::short_circuit_backprop(edge_t* last_edge) {
   // short-circuit
   if (mcts::kEnableDebug) {
@@ -223,7 +226,7 @@ void SearchThread<Game>::short_circuit_backprop(edge_t* last_edge) {
   }
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 typename SearchThread<Game>::evaluation_result_t
 SearchThread<Game>::evaluate(Node* node) {
   profiler_.record(SearchThreadRegion::kEvaluate);
@@ -245,7 +248,7 @@ SearchThread<Game>::evaluate(Node* node) {
   return data;
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 void SearchThread<Game>::evaluate_unset(Node* node, std::unique_lock<std::mutex>* lock,
                                         evaluation_result_t* data) {
   profiler_.record(SearchThreadRegion::kEvaluateUnset);
@@ -272,7 +275,8 @@ void SearchThread<Game>::evaluate_unset(Node* node, std::unique_lock<std::mutex>
                                                       stable_data.valid_action_mask);
   } else {
     core::symmetry_index_t sym_index = stable_data.sym_index;
-    typename NNEvaluationService::Request request{node, &state_, &profiler_, thread_id_, sym_index};
+    typename NNEvaluationService::Request request{node,       &state_,    &snapshot_history_,
+                                                  &profiler_, thread_id_, sym_index};
     auto response = nn_eval_service_->evaluate(request);
     data->evaluation = response.ptr;
   }
@@ -292,7 +296,7 @@ void SearchThread<Game>::evaluate_unset(Node* node, std::unique_lock<std::mutex>
   evaluation_data.state = Node::kSet;
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 std::string SearchThread<Game>::search_path_str() const {
   std::string delim = IO::action_delimiter();
   std::vector<std::string> vec;
@@ -303,7 +307,7 @@ std::string SearchThread<Game>::search_path_str() const {
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
 
-template <core::concepts::Game>
+template <core::concepts::Game Game>
 core::action_index_t SearchThread<Game>::get_best_action_index(
     Node* node, NNEvaluation* evaluation) {
   profiler_.record(SearchThreadRegion::kPUCT);
@@ -368,11 +372,11 @@ core::action_index_t SearchThread<Game>::get_best_action_index(
     A2.setZero();
 
     const ActionMask& valid_actions = node->stable_data().valid_action_mask;
+    int r = 0;
     int c = 0;
     for (int i : bitset_util::on_indices(valid_actions)) {
-      A2(0, c++) = i;
+      A2(r, c++) = i;
     }
-
     r++;
 
     A2.row(r++) = P;

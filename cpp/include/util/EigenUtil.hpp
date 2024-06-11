@@ -166,6 +166,14 @@ auto to_int64_std_array_v = to_int64_std_array<T>::value;
 template <concepts::Shape Shape>
 using FTensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
 
+// DArray is a dynamic float Eigen::Array of max size N
+template <int N>
+using DArray = Eigen::Array<float, Eigen::Dynamic, 1, 0, N>;
+
+// FArray is a fixed-size float Eigen::Array of size N
+template <int N>
+using FArray = Eigen::Array<float, N, 1>;
+
 template <typename T>
 struct is_ftensor {
   static const bool value = false;
@@ -177,20 +185,27 @@ struct is_ftensor<FTensor<Shape>> {
 template <typename T>
 inline constexpr bool is_ftensor_v = is_ftensor<T>::value;
 
+template <typename T>
+struct is_farray {
+  static const bool value = false;
+};
+template <int N>
+struct is_farray<FArray<N>> {
+  static const bool value = true;
+};
+template <typename T>
+inline constexpr bool is_farray_v = is_farray<T>::value;
+
 namespace concepts {
 
 template <typename T>
 concept FTensor = is_ftensor_v<T>;
 
+template <typename T>
+concept FArray = is_farray_v<T>;
+
 }  // namespace concepts
 
-// DArray is a dynamic float Eigen::Array of max size N
-template <int N>
-using DArray = Eigen::Array<float, Eigen::Dynamic, 1, 0, N>;
-
-// FArray is a fixed-size float Eigen::Array of size N
-template <int N>
-using FArray = Eigen::Array<float, N, 1>;
 
 /*
  * The following are equivalent:

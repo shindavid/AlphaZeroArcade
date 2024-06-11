@@ -18,7 +18,7 @@ public:
   using FullState = typename Game::FullState;
   using ActionMask = typename Game::ActionMask;
 
-  ActionResponse get_action_response(const FullState&, const ActionMask& mask) override {
+  core::ActionResponse get_action_response(const FullState&, const ActionMask& mask) override {
     return bitset_util::choose_random_on_index(mask);
   }
 };

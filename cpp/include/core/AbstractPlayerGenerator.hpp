@@ -32,9 +32,11 @@ namespace core {
  * string. It will also specify how to parse the other sub-arguments in order to construct a player
  * object.
  */
-template <concepts::Game Game>
+template <concepts::Game Game_>
 class AbstractPlayerGenerator {
  public:
+  using Game = Game_;
+
   virtual ~AbstractPlayerGenerator() = default;
 
   virtual std::string get_default_name() const = 0;

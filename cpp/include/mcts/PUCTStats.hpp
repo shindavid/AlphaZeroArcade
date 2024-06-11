@@ -2,7 +2,6 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
@@ -13,7 +12,7 @@ namespace mcts {
 template <core::concepts::Game Game>
 struct PUCTStats {
   using Node = mcts::Node<Game>;
-  using LocalPolicyArray = typename Game::LocalPolicyArray;
+  using LocalPolicyArray = typename Node::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0

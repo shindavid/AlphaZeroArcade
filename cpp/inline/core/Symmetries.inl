@@ -8,7 +8,7 @@ Transforms<Game>* Transforms<Game>::instance_ = nullptr;
 template <concepts::Game Game>
 Transforms<Game>::Transforms() {
   mp::constexpr_for<0, kNumTransforms, 1>([&](auto i) {
-    using T = mp::TypeAt<TransformList, i>;
+    using T = mp::TypeAt_t<TransformList, i>;
     transforms_[i] = new T();
   });
 }

@@ -7,8 +7,8 @@
 
 namespace generic {
 
-template <core::concepts::Game Game_>
-inline void HumanTuiPlayer<Game_>::start_game() {
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::start_game() {
   last_action_ = -1;
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
@@ -17,14 +17,14 @@ inline void HumanTuiPlayer<Game_>::start_game() {
   util::clearscreen();
 }
 
-template <core::concepts::Game Game_>
-inline void HumanTuiPlayer<GameState_>::receive_state_change(core::seat_index_t, const FullState&,
-                                                             core::action_t action) {
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const FullState&,
+                                                       core::action_t action) {
   last_action_ = action;
 }
 
-template <core::concepts::Game Game_>
-ActionResponse HumanTuiPlayer<Game_>::get_action_response(
+template <core::concepts::Game Game>
+core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
     const FullState& state, const ActionMask& valid_actions) {
   util::ScreenClearer::clear_once();
   print_state(state, false);
@@ -45,9 +45,8 @@ ActionResponse HumanTuiPlayer<Game_>::get_action_response(
   return my_action;
 }
 
-template <core::concepts::Game Game_>
-inline void HumanTuiPlayer<Game_>::end_game(const FullState& state,
-                                            const ValueArray& outcome) {
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::end_game(const FullState& state, const ValueArray& outcome) {
   util::ScreenClearer::clear_once();
   print_state(state, true);
 
@@ -61,9 +60,9 @@ inline void HumanTuiPlayer<Game_>::end_game(const FullState& state,
   }
 }
 
-template <core::concepts::Game Game_>
-inline void HumanTuiPlayer<GameState_>::print_state(const FullState& state, bool terminal) {
-  IO::dump(state.current(), last_action_, &this->get_player_names());
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::print_state(const FullState& state, bool terminal) {
+  IO::print_snapshot(state.current(), last_action_, &this->get_player_names());
 }
 
 }  // namespace generic

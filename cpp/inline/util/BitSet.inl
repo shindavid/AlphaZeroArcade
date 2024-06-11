@@ -114,6 +114,30 @@ int choose_random_off_index(const std::bitset<N>& bitset) {
 }
 
 template <size_t N>
+void randomly_zero_out(std::bitset<N>& bitset, int n) {
+  // reservoir sampling
+  std::vector<int> reservoir;
+  reservoir.reserve(n);
+
+  int k = 0;
+  for (int i : on_indices(bitset)) {
+    ++k;
+    if ((int)reservoir.size() < n) {
+      reservoir.push_back(i);
+    } else {
+      int j = util::Random::uniform_sample(int(0), k);
+      if (j < n) {
+        reservoir[j] = i;
+      }
+    }
+  }
+
+  for (int i : reservoir) {
+    bitset[i] = 0;
+  }
+}
+
+template <size_t N>
 std::string to_string(const std::bitset<N>& bitset) {
   std::string s = bitset.to_string();
   std::reverse(s.begin(), s.end());

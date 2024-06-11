@@ -105,7 +105,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacke
   RemotePlayerProxy* player = player_vec_array_[player_id][game_thread_id];
 
   // TODO: detect invalid packet and engage in a retry-protocol with remote player
-  const char* buf = packet.dynamic_size_section.buf;
+  const char* buf = payload.dynamic_size_section.buf;
   player->action_response_ = *reinterpret_cast<const ActionResponse*>(buf);
   player->cv_.notify_one();
 }
@@ -145,9 +145,8 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Full
 }
 
 template <concepts::Game Game>
-typename RemotePlayerProxy<Game>::ActionResponse
-RemotePlayerProxy<Game>::get_action_response(const FullState& state,
-                                             const ActionMask& valid_actions) {
+ActionResponse RemotePlayerProxy<Game>::get_action_response(const FullState& state,
+                                                            const ActionMask& valid_actions) {
   state_ = &state;
 
   action_response_.action = -1;

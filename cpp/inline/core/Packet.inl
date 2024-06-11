@@ -4,6 +4,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 
 namespace core {

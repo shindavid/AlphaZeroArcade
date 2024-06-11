@@ -99,6 +99,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
                                                 const FullState& state,
                                                 core::action_t action) {
   shared_data_.move_number++;
+  shared_data_.update_state(state);
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
@@ -112,7 +113,6 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
   }
 
   shared_data_.root_node = new_root;
-  shared_data_.update_state(state);
 
   if (params_.enable_pondering) {
     start_search_threads(pondering_search_params_);
@@ -126,10 +126,9 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
-    auto outcome = GameStateTypes::make_non_terminal_outcome();
+    ActionOutcome outcome;
     shared_data_.root_node =
         std::make_shared<Node>(game_state, outcome, &params_);  // TODO: use memory pool
-    shared_data_.update_state(game_state);
   }
 
   if (mcts::kEnableDebug) {

@@ -9,10 +9,9 @@ namespace generic {
 /*
  * Abstract class. Derived classes must implement the prompt_for_action() method.
  */
-template <core::concepts::Game Game_>
-class HumanTuiPlayer : public core::AbstractPlayer<Game_> {
+template <core::concepts::Game Game>
+class HumanTuiPlayer : public core::AbstractPlayer<Game> {
  public:
-  using Game = Game_;
   using base_t = core::AbstractPlayer<Game>;
 
   using IO = typename Game::IO;
@@ -25,7 +24,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game_> {
   virtual ~HumanTuiPlayer() {}
   void start_game() override;
   void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
-  ActionResponse get_action_response(const FullState&, const ActionMask&) override;
+  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
   void end_game(const FullState&, const ValueArray&) override;
 
   bool is_human_tui_player() const override { return true; }

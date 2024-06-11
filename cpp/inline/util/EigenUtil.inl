@@ -110,6 +110,7 @@ auto unflatten_index(const Tensor& tensor, int flat_index) {
 template <concepts::FTensor FTensor>
 const auto& reinterpret_as_array(const FTensor& tensor) {
   using Shape = extract_shape_t<FTensor>;
+  using Scalar = typename FTensor::Scalar;
   constexpr int N = Shape::total_size;
   using ArrayT = Eigen::Array<Scalar, N, 1>;
   return reinterpret_cast<const ArrayT&>(tensor);
@@ -118,6 +119,7 @@ const auto& reinterpret_as_array(const FTensor& tensor) {
 template <concepts::FTensor FTensor>
 auto& reinterpret_as_array(FTensor& tensor) {
   using Shape = extract_shape_t<FTensor>;
+  using Scalar = typename FTensor::Scalar;
   constexpr int N = Shape::total_size;
   using ArrayT = Eigen::Array<Scalar, N, 1>;
   return reinterpret_cast<ArrayT&>(tensor);

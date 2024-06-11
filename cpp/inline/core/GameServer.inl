@@ -9,6 +9,7 @@
 
 #include <core/Packet.hpp>
 #include <core/players/RemotePlayerProxy.hpp>
+#include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
@@ -77,7 +78,7 @@ bool GameServer<Game>::SharedData::request_game(int num_games) {
 }
 
 template <concepts::Game Game>
-void GameServer<Game>::SharedData::update(const GameOutcome& outcome, int64_t ns) {
+void GameServer<Game>::SharedData::update(const ValueArray& outcome, int64_t ns) {
   std::lock_guard<std::mutex> guard(mutex_);
   for (seat_index_t s = 0; s < kNumPlayers; ++s) {
     results_array_[s][outcome[s]]++;
@@ -248,11 +249,11 @@ void GameServer<Game>::GameThread::run() {
     }
 
     time_point_t t1 = std::chrono::steady_clock::now();
-    GameOutcome outcome = play_game(players);
+    ValueArray outcome = play_game(players);
     time_point_t t2 = std::chrono::steady_clock::now();
 
     // reindex outcome according to player_id
-    GameOutcome reindexed_outcome;
+    ValueArray reindexed_outcome;
     for (int p = 0; p < kNumPlayers; ++p) {
       reindexed_outcome[player_order[p].player_id] = outcome[p];
     }
@@ -263,7 +264,7 @@ void GameServer<Game>::GameThread::run() {
 }
 
 template <concepts::Game Game>
-typename GameServer<Game>::GameOutcome GameServer<Game>::GameThread::play_game(
+typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     player_array_t& players) {
   game_id_t game_id = util::get_unique_id();
 
@@ -278,7 +279,7 @@ typename GameServer<Game>::GameOutcome GameServer<Game>::GameThread::play_game(
 
   FullState state;
   while (true) {
-    seat_index_t seat = Rules::current_player(state);
+    seat_index_t seat = Rules::current_player(state.current());
     Player* player = players[seat];
     auto valid_actions = Rules::legal_moves(state);
     ActionResponse response = player->get_action_response(state, valid_actions);
@@ -305,16 +306,17 @@ typename GameServer<Game>::GameOutcome GameServer<Game>::GameThread::play_game(
     }
     if (outcome.terminal) {
       for (auto player2 : players) {
-        player2->end_game(state, outcome);
+        player2->end_game(state, outcome.terminal_value);
       }
       if (shared_data_.params().announce_game_results) {
         printf("Game %ld complete.\n", game_id);
         for (player_id_t p = 0; p < kNumPlayers; ++p) {
-          printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(), outcome[p]);
+          printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(),
+                 outcome.terminal_value[p]);
         }
         std::cout << std::endl;
       }
-      return outcome;
+      return outcome.terminal_value;
     }
   }
 

@@ -12,14 +12,11 @@ inline NNEvaluation<Game>::NNEvaluation(const ValueTensor& value, const PolicyTe
     throw util::Exception("kMaxBranchingFactor too small (%d < %d)", Game::kMaxBranchingFactor,
                           n_valid_actions);
   }
-  int kMaxNumLocalActions = Game::kMaxBranchingFactor;
   local_policy_logit_distr_.resize(valid_actions.count());
   const auto& policy_array = eigen_util::reinterpret_as_array(policy);
 
   int i = 0;
-  for (int a = 0; a < Game::kNumActions; ++a) {
-    if (!valid_actions[a]) continue;
-
+  for (int a : bitset_util::on_indices(valid_actions)) {
     local_policy_logit_distr_(i++) = policy_array(a);
   }
 

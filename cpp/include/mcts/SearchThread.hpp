@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <core/concepts/Game.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
@@ -22,20 +21,20 @@ namespace mcts {
 template <core::concepts::Game Game>
 class SearchThread {
  public:
-  using ValueArray = Game::ValueArray;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
   using NodeCache = mcts::NodeCache<Game>;
   using PUCTStats = mcts::PUCTStats<Game>;
   using SharedData = mcts::SharedData<Game>;
+  using LocalPolicyArray = typename Node::LocalPolicyArray;
   using edge_t = typename Node::edge_t;
+  using snapshot_vec_t = typename SharedData::snapshot_vec_t;
 
   using IO = Game::IO;
   using Rules = typename Game::Rules;
   using FullState = typename Game::FullState;
   using ActionMask = typename Game::ActionMask;
-  using LocalPolicyArray = typename Game::LocalPolicyArray;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
   using PolicyShape = typename Game::PolicyShape;
   using PolicyTensor = typename Game::PolicyTensor;
@@ -131,6 +130,7 @@ class SearchThread {
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
   FullState state_;
+  snapshot_vec_t snapshot_history_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;
   const ManagerParams* manager_params_;

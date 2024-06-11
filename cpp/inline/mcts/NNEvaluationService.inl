@@ -81,10 +81,10 @@ inline NNEvaluationService<Game>::NNEvaluationService(
   auto value_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
                                                  eigen_util::to_int64_std_array_v<ValueShape>);
 
-  torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<dtype>)
+  torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<float>)
                          .to(at::Device(params.cuda_device));
-  torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<PolicyScalar>);
-  torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<ValueScalar>);
+  torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
+  torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -125,7 +125,7 @@ inline NNEvaluationService<Game>::batch_data_t::~batch_data_t() {
 
 template <core::concepts::Game Game>
 inline void NNEvaluationService<Game>::batch_data_t::copy_input_to(
-    int num_rows, DynamicInputFloatTensor& full_input) {
+    int num_rows, DynamicInputTensor& full_input) {
   float* full_input_data = full_input.data();
   constexpr size_t input_size = InputShape::total_size;
   int r = 0;
@@ -376,7 +376,7 @@ int NNEvaluationService<Game>::allocate_reserve_index(
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::tensorize_and_transform_input(
     const Request& request, const cache_key_t& cache_key, int reserve_index) {
-  FullState& state = *request.state;
+  snapshot_vec_t& snapshot_history = *request.snapshot_history;
   const auto& stable_data = request.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
@@ -387,9 +387,9 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
   auto transform = Transforms::get(sym_index);
-  transform->apply(state);
-  group.input = InputTensorizor::tensorize(state);
-  transform->undo(state);
+  for (StateSnapshot& pos : snapshot_history) transform->apply(pos);
+  group.input = InputTensorizor::tensorize(&snapshot_history.front(), &snapshot_history.back());
+  for (StateSnapshot& pos : snapshot_history) transform->undo(pos);
 
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);

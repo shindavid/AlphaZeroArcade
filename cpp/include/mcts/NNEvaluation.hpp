@@ -14,7 +14,7 @@ class NNEvaluation {
   using PolicyTensor = typename Game::PolicyTensor;
   using ValueArray = typename Game::ValueArray;
   using LocalPolicyArray = eigen_util::FArray<Game::kMaxBranchingFactor>;
-  using ValueShape = eigen_util::Shape<kNumPlayers>;
+  using ValueShape = eigen_util::Shape<Game::kNumPlayers>;
   using ValueTensor = eigen_util::FTensor<ValueShape>;
 
   NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,

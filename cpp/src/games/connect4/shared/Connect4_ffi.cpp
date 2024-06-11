@@ -1,22 +1,21 @@
 #include <core/GameLog.hpp>
 #include <games/connect4/Game.hpp>
-#include <games/connect4/Tensorizor.hpp>
 
-using GameLogReader = core::GameLogReader<c4::Game>;
+using GameLog = core::GameLog<c4::Game>;
 
 extern "C" {
 
-core::ShapeInfo* get_shape_info_array() { return GameLogReader::get_shape_info(); }
+core::ShapeInfo* get_shape_info_array() { return GameLog::get_shape_info_array(); }
 
 void free_shape_info_array(core::ShapeInfo* info) { delete[] info; }
 
-GameLogReader* GameLogReader_new(const char* filename) { return new GameLogReader(filename); }
+GameLog* GameLog_new(const char* filename) { return new GameLog(filename); }
 
-void GameLogReader_delete(GameLogReader* log) { delete log; }
+void GameLog_delete(GameLog* log) { delete log; }
 
-void GameLogReader_load(GameLogReader* log, int index, bool apply_symmetry, const char** keys,
-                        float** values, int num_keys) {
-  log->load(index, apply_symmetry, keys, values, num_keys);
+void GameLog_load(GameLog* log, int index, bool apply_symmetry, float** input_values,
+                  int* target_indices, float** target_value_arrays) {
+  log->load(index, apply_symmetry, input_values, target_indices, target_value_arrays);
 }
 
 }  // extern "C"

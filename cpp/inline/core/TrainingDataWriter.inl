@@ -13,11 +13,11 @@
 
 namespace core {
 
-template <concepts::Game Game_>
-TrainingDataWriter<Game_>* TrainingDataWriter<Game_>::instance_ = nullptr;
+template <concepts::Game Game>
+TrainingDataWriter<Game>* TrainingDataWriter<Game>::instance_ = nullptr;
 
-template <concepts::Game Game_>
-auto TrainingDataWriter<Game_>::Params::make_options_description() {
+template <concepts::Game Game>
+auto TrainingDataWriter<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -28,8 +28,8 @@ auto TrainingDataWriter<Game_>::Params::make_options_description() {
           "if specified, kill process after writing this many rows");
 }
 
-template <concepts::Game Game_>
-TrainingDataWriter<Game_>* TrainingDataWriter<Game_>::instantiate(const Params& params) {
+template <concepts::Game Game>
+TrainingDataWriter<Game>* TrainingDataWriter<Game>::instantiate(const Params& params) {
   if (!instance_) {
     instance_ = new TrainingDataWriter(params);
   } else {
@@ -40,21 +40,21 @@ TrainingDataWriter<Game_>* TrainingDataWriter<Game_>::instantiate(const Params& 
   return instance_;
 }
 
-template <concepts::Game Game_>
-typename TrainingDataWriter<Game_>::GameWriteLog_sptr
-TrainingDataWriter<Game_>::get_log(game_id_t id) {
+template <concepts::Game Game>
+typename TrainingDataWriter<Game>::GameLogWriter_sptr
+TrainingDataWriter<Game>::get_log(game_id_t id) {
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = game_log_map_.find(id);
   if (it == game_log_map_.end()) {
-    GameWriteLog_sptr ptr(new GameWriteLog(id, util::ns_since_epoch()));
+    GameLogWriter_sptr ptr(new GameLogWriter(id, util::ns_since_epoch()));
     game_log_map_[id] = ptr;
     return ptr;
   }
   return it->second;
 }
 
-template <concepts::Game Game_>
-void TrainingDataWriter<Game_>::close(GameWriteLog_sptr data) {
+template <concepts::Game Game>
+void TrainingDataWriter<Game>::close(GameLogWriter_sptr data) {
   if (data->closed()) return;
   data->close();
 
@@ -65,16 +65,16 @@ void TrainingDataWriter<Game_>::close(GameWriteLog_sptr data) {
   cv_.notify_one();
 }
 
-template <concepts::Game Game_>
-void TrainingDataWriter<Game_>::shut_down() {
+template <concepts::Game Game>
+void TrainingDataWriter<Game>::shut_down() {
   closed_ = true;
   cv_.notify_one();
   if (thread_->joinable()) thread_->join();
   delete thread_;
 }
 
-template <concepts::Game Game_>
-void TrainingDataWriter<Game_>::pause() {
+template <concepts::Game Game>
+void TrainingDataWriter<Game>::pause() {
   LOG_INFO << "TrainingDataWriter: pausing";
   std::unique_lock lock(mutex_);
   if (paused_) {
@@ -88,8 +88,8 @@ void TrainingDataWriter<Game_>::pause() {
   LOG_INFO << "TrainingDataWriter: pause complete!";
 }
 
-template <concepts::Game Game_>
-void TrainingDataWriter<Game_>::unpause() {
+template <concepts::Game Game>
+void TrainingDataWriter<Game>::unpause() {
   LOG_INFO << "TrainingDataWriter: unpausing";
   std::unique_lock lock(mutex_);
   if (!paused_) {
@@ -103,8 +103,8 @@ void TrainingDataWriter<Game_>::unpause() {
   LOG_INFO << "TrainingDataWriter: unpause complete!";
 }
 
-template <concepts::Game Game_>
-TrainingDataWriter<Game_>::TrainingDataWriter(const Params& params)
+template <concepts::Game Game>
+TrainingDataWriter<Game>::TrainingDataWriter(const Params& params)
     : params_(params) {
   if (LoopControllerClient::initialized()) {
     LoopControllerClient::get()->add_listener(this);
@@ -112,13 +112,13 @@ TrainingDataWriter<Game_>::TrainingDataWriter(const Params& params)
   thread_ = new std::thread([&] { loop(); });
 }
 
-template <concepts::Game Game_>
-TrainingDataWriter<Game_>::~TrainingDataWriter() {
+template <concepts::Game Game>
+TrainingDataWriter<Game>::~TrainingDataWriter() {
   shut_down();
 }
 
-template <concepts::Game Game_>
-void TrainingDataWriter<Game_>::loop() {
+template <concepts::Game Game>
+void TrainingDataWriter<Game>::loop() {
   while (!closed_) {
     std::unique_lock lock(mutex_);
     game_queue_t& queue = completed_games_[queue_index_];
@@ -132,15 +132,15 @@ void TrainingDataWriter<Game_>::loop() {
     }
     queue_index_ = 1 - queue_index_;
     lock.unlock();
-    for (GameWriteLog_sptr& data : queue) {
+    for (GameLogWriter_sptr& data : queue) {
       if (send(data.get())) break;
     }
     queue.clear();
   }
 }
 
-template <concepts::Game Game_>
-bool TrainingDataWriter<Game_>::send(const GameWriteLog* log) {
+template <concepts::Game Game>
+bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
   int64_t start_timestamp = log->start_timestamp();
   int64_t cur_timestamp = util::ns_since_epoch();
 

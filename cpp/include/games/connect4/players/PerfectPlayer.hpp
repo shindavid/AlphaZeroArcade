@@ -106,7 +106,7 @@ class PerfectPlayer : public Player {
 
   void start_game() override;
   void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
-  ActionResponse get_action_response(const FullState&, const ActionMask&) override;
+  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
 
  private:
   const Params params_;

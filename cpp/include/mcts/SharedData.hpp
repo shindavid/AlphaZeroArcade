@@ -11,6 +11,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <vector>
 
 namespace mcts {
 
@@ -23,18 +24,23 @@ template <core::concepts::Game Game>
 struct SharedData {
   using Node = mcts::Node<Game>;
   using NodeCache = mcts::NodeCache<Game>;
+  using StateSnapshot = typename Game::StateSnapshot;
   using FullState = typename Game::FullState;
+
+  using snapshot_vec_t = std::vector<StateSnapshot>;
 
   void clear() {
     move_number = 0;
     root_softmax_temperature.reset();
     node_cache.clear();
     root_node = nullptr;
+    root_snapshot_history.clear();
     root_state_valid = false;
   }
 
   void update_state(const FullState& state) {
     root_state = state;
+    util::stuff_back<Game::kHistorySize>(root_snapshot_history, state.current());
     root_state_valid = true;
   }
 
@@ -47,6 +53,7 @@ struct SharedData {
   boost::dynamic_bitset<> active_search_threads;
   NodeCache node_cache;
   FullState root_state;
+  snapshot_vec_t root_snapshot_history;
 
   Node::sptr root_node;
   SearchParams search_params;

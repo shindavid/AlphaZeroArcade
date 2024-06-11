@@ -1,10 +1,10 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/CppUtil.hpp>
 
 #include <map>
 #include <mutex>
@@ -19,7 +19,8 @@ template <core::concepts::Game Game>
 class NodeCache {
  public:
   using FullState = typename Game::FullState;
-  using EvalKey = typename FullState::EvalKey;
+  using MCTSKey = typename FullState::MCTSKey;
+  static_assert(util::concepts::Hashable<MCTSKey>);
   using ActionOutcome = typename Game::ActionOutcome;
   using Node = mcts::Node<Game>;
   using Node_sptr = typename Node::sptr;
@@ -30,7 +31,7 @@ class NodeCache {
                             const ActionOutcome& outcome, const ManagerParams* params);
 
  private:
-  using submap_t = std::unordered_map<EvalKey, Node_sptr>;
+  using submap_t = std::unordered_map<MCTSKey, Node_sptr>;
   using map_t = std::map<move_number_t, submap_t*>;
 
   map_t map_;

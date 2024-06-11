@@ -78,11 +78,11 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory& history) {
   return result;
 }
 
-PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
+core::ActionResponse PerfectPlayer::get_action_response(
     const FullState& state, const ActionMask& valid_actions) {
   auto result = oracle_->query(move_history_);
 
-  ActionResponse response;
+  core::ActionResponse response;
 
   ActionMask candidates;
 
@@ -115,7 +115,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
 
   if (params_.verbose) {
     std::cout << "get_action_response()" << std::endl;
-    state.dump();
+    c4::Game::IO::print_snapshot(state.current());
     std::cout << "scores: " << result.scores.transpose() << std::endl;
     std::cout << "best_score: " << result.best_score << std::endl;
     std::cout << "my_strength: " << params_.strength << std::endl;

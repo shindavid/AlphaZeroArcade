@@ -35,11 +35,13 @@ NodeCache<Game>::fetch_or_create(move_number_t move_number, const FullState& sta
   } else {
     submap = submap_it->second;
   }
-  auto it = submap->find(state.mcts_key());
+  auto mcts_key = state.mcts_key();
+  auto it = submap->find(mcts_key);
   if (it == submap->end()) {
     // TODO: use memory pool
-    (*submap)[state.mcts_key()] = std::make_shared<Node>(state, outcome, params);
-    return (*submap)[state];
+    auto node = std::make_shared<Node>(state, outcome, params);
+    (*submap)[mcts_key] = node;
+    return node;
   }
   return it->second;
 }

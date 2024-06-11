@@ -4,7 +4,6 @@
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/Symmetries.hpp>
-#include <core/TensorizorConcept.hpp>
 
 #include <iostream>
 #include <string>
@@ -13,30 +12,35 @@
 namespace core {
 
 struct ShapeInfo {
-  template <eigen_util::concepts::FTensor Tensor> void init(const char* name);
+  template <eigen_util::concepts::FTensor Tensor> void init(const char* name, int target_index);
   ~ShapeInfo();
 
   const char* name = nullptr;
   int* dims = nullptr;
   int num_dims = 0;
+  int target_index = -1;
 };
 
 struct GameLogBase {
+  static constexpr int kAlignment = 8;
+
   struct Header {
     uint32_t num_samples_with_symmetry_expansion = 0;
     uint32_t num_samples_without_symmetry_expansion = 0;
     uint32_t num_positions = 0;  // includes terminal positions
-    uint32_t extra = 0;          // leave extra space for future use (version numbering, etc.)
+    uint32_t num_dense_policies = 0;
+    uint32_t num_sparse_policy_entries = 0;
+    uint32_t extra = 0;  // leave extra space for future use (version numbering, etc.)
   };
 
   struct sym_sample_index_t {
-    uint32_t pos_index;
+    uint32_t state_index;
     uint32_t sym_index;
   };
 
 #pragma pack(push, 1)
   struct non_sym_sample_index_t {
-    uint32_t pos_index;
+    uint32_t state_index;
   };
 #pragma pack(pop)
 
@@ -53,9 +57,24 @@ struct GameLogBase {
 #pragma pack(pop)
 
   struct sparse_policy_entry_t {
-    int offset;
+    int32_t offset;
     float probability;
   };
+
+  static constexpr int align(int offset);
+};
+
+template <typename Game>
+struct GameLogView {
+  using StateSnapshot = typename Game::StateSnapshot;
+  using ValueArray = typename Game::ValueArray;
+  using PolicyTensor = typename Game::PolicyTensor;
+
+  const StateSnapshot* cur_pos;
+  const StateSnapshot* final_pos;
+  const ValueArray* outcome;
+  const PolicyTensor* policy;
+  const PolicyTensor* next_policy;
 };
 
 /*
@@ -73,28 +92,71 @@ struct GameLogBase {
  *
  * Each section is aligned to 8 bytes.
  */
-template <core::concepts::Game Game>
+template <concepts::Game Game>
 class GameLog : public GameLogBase {
  public:
   using Header = GameLogBase::Header;
+
+  using Rules = typename Game::Rules;
+  using Transform = typename Game::Transform;
+  using InputTensor = typename Game::InputTensor;
+  using InputTensorizor = typename Game::InputTensorizor;
+  using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
+  using StateSnapshot = typename Game::StateSnapshot;
+  using PolicyTensor = typename Game::PolicyTensor;
   using ValueArray = typename Game::ValueArray;
-  using sym_sample_index_t = GameLogBase::sym_sample_index_t;
-  using non_sym_sample_index_t = GameLogBase::non_sym_sample_index_t;
-  using policy_tensor_index_t = GameLogBase::policy_tensor_index_t;
-  using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
+
+  GameLog(const char* filename);
+  ~GameLog();
+
+  static ShapeInfo* get_shape_info_array();
+
+  void load(int index, bool apply_symmetry, float** input_values, int* target_indices,
+            float** target_value_arrays);
 
  private:
-  int header_start() const;
-  int outcome_start() const;
-  int sym_sample_index_start() const;
-  int non_sym_sample_index_start() const;
-  int action_start() const;
-  int policy_tensor_index_start() const;
-  int position_start() const;
-  int dense_policy_start() const;
-  int sparse_policy_start() const;
+  char* get_buffer() const;
+  Header& header();
+  const Header& header() const;
 
-  char* buffer_;
+  int num_samples_with_symmetry_expansion() const;
+  int num_samples_without_symmetry_expansion() const;
+  int num_positions() const;
+  int num_non_terminal_positions() const;
+  int num_dense_policies() const;
+  int num_sparse_policy_entries() const;
+
+  static constexpr int header_start_mem_offset();
+  static constexpr int outcome_start_mem_offset();
+  static constexpr int sym_sample_index_start_mem_offset();
+  int non_sym_sample_index_start_mem_offset() const;
+  int action_start_mem_offset() const;
+  int policy_tensor_index_start_mem_offset() const;
+  int snapshot_start_mem_offset() const;
+  int dense_policy_start_mem_offset() const;
+  int sparse_policy_entry_start_mem_offset() const;
+
+  policy_tensor_index_t* policy_tensor_index_start_ptr();
+  StateSnapshot* snapshot_start_ptr();
+  PolicyTensor* dense_policy_start_ptr();
+  sparse_policy_entry_t* sparse_policy_entry_start_ptr();
+  sym_sample_index_t* sym_sample_index_start_ptr();
+  non_sym_sample_index_t* non_sym_sample_index_start_ptr();
+
+  PolicyTensor get_policy(int state_index);
+  StateSnapshot* get_snapshot(int state_index);
+  ValueArray get_outcome() const;
+  sym_sample_index_t get_sym_sample_index(int index);
+  non_sym_sample_index_t get_non_sym_sample_index(int index);
+
+  const std::string filename_;
+  char* const buffer_;
+  const int non_sym_sample_index_start_mem_offset_;
+  const int action_start_mem_offset_;
+  const int policy_tensor_index_start_mem_offset_;
+  const int snapshot_start_mem_offset_;
+  const int dense_policy_start_mem_offset_;
+  const int sparse_policy_entry_start_mem_offset_;
 };
 
 template <concepts::Game Game>
@@ -106,6 +168,7 @@ class GameLogWriter {
   using ValueArray = typename Game::ValueArray;
   using SymmetryIndexSet = typename Game::SymmetryIndexSet;
   using PolicyTensor = eigen_util::FTensor<typename Game::PolicyShape>;
+  using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {
     StateSnapshot position;
@@ -148,112 +211,6 @@ class GameLogWriter {
   int non_sym_train_count_ = 0;
   bool terminal_added_ = false;
   bool closed_ = false;
-};
-
-template <concepts::Game Game>
-class GameLogReader {
- public:
-  // TODO
-};
-
-// File format:
-//
-// [ HEADER ]
-// [ GAME_OUTCOME ]
-// [ SAMPLING INDEX WITH SYMMETRY EXPANSION ]
-// [ SAMPLING INDEX WITHOUT SYMMETRY EXPANSION ]
-// [ AUX INDEX ]
-// [ STATE DATA ]
-// [ AUX DATA ]
-//
-// The AUX DATA section uses variable-sized entries, as the policy target representation can be
-// either sparse or dense.
-template <concepts::Game Game, TensorizorConcept<GameState> Tensorizor>
-class GameReadLog {
- public:
-  using Action = typename GameState::Action;
-  using GameStateData = typename GameState::Data;
-
-  using InputTensor = typename Tensorizor::InputTensor;
-  using AuxTargetList = typename Tensorizor::AuxTargetList;
-
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
-  using GameStateHistory = typename TensorizorTypes::GameStateHistory;
-
-  using Transforms = core::Transforms<GameState>;
-  using Transform = typename Transforms::Transform;
-
-  struct sparse_policy_entry_t {
-    int offset;
-    float probability;
-  };
-
-  struct Header {
-    uint32_t num_samples_with_symmetry_expansion = 0;
-    uint32_t num_samples_without_symmetry_expansion = 0;
-    uint32_t num_game_states = 0;  // includes terminal state
-    uint32_t extra = 0;  // leave extra space for future use (version numbering, etc.)
-  };
-
-  // TODO: consider packing SymSampleIndex to fit in 4 bytes
-  struct SymSampleIndex {
-    uint32_t state_index;
-    uint32_t symmetry_index;
-  };
-
-  using NonSymSampleIndex = uint32_t;
-  using AuxMemOffset = int32_t;
-
-#pragma pack(push, 1)
-  // NOTE: when we change Action to be an int32_t, this will fit in 8 bytes
-  struct AuxData {
-    Action action;
-
-    // If -1, then representation is dense
-    // If 0, then there is no policy target
-    // If >0, then representation is sparse. The value is the number of entries.
-    int16_t policy_target_format;
-    uint16_t use_for_training;
-  };
-#pragma pack(pop)
-
-  GameReadLog(const char* filename);
-  ~GameReadLog();
-
-  void load(int index, bool apply_symmetry, const char** keys, float** values, int num_keys);
-
-  static ShapeInfo* get_shape_info();
-
- private:
-  void load_policy(PolicyTensor* policy, AuxMemOffset aux_mem_offset);
-
-  template<typename T>
-  void seek_and_read(int offset, T* data, int count=1);
-
-  int outcome_start() const;
-  int symmetric_index_start() const;
-  int non_symmetric_index_start() const;
-  int aux_index_start() const;
-  int state_data_start() const;
-  int aux_data_start() const;
-
-  int symmetric_index_offset(int index) const;
-  int non_symmetric_index_offset(int index) const;
-  int aux_index_offset(int index) const;
-  int state_data_offset(int index) const;
-  int aux_data_offset(int mem_offset) const;
-
-  uint32_t num_aux_data() const { return header_.num_game_states - 1; }  // no aux for terminal
-
-  std::string filename_;
-  FILE* file_;
-  Header header_;
-  ValueArray outcome_;
 };
 
 }  // namespace core

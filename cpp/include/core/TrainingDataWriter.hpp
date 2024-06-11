@@ -13,7 +13,6 @@
 #include <core/concepts/Game.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 
@@ -23,7 +22,7 @@ namespace core {
  * A single TrainingDataWriter is intended to be shared by multiple MctsPlayer's playing in
  * parallel.
  */
-template <concepts::Game Game_>
+template <concepts::Game Game>
 class TrainingDataWriter
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause> {
  public:
@@ -34,14 +33,13 @@ class TrainingDataWriter
     int64_t max_rows = 0;
   };
 
-  using Game = Game_;
   using ValueArray = typename Game::ValueArray;
   using InputTensorizor = typename Game::InputTensorizor;
   using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
 
   using GameLogWriter = core::GameLogWriter<Game>;
   using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;
-  using game_log_map_t = std::map<game_id_t, GameWriteLog_sptr>;
+  using game_log_map_t = std::map<game_id_t, GameLogWriter_sptr>;
 
   static TrainingDataWriter* instantiate(const Params& params);
 
@@ -50,22 +48,22 @@ class TrainingDataWriter
    */
   static TrainingDataWriter* instance() { return instance_; }
 
-  GameWriteLog_sptr get_log(game_id_t id);
+  GameLogWriter_sptr get_log(game_id_t id);
 
-  void close(GameWriteLog_sptr log);
+  void close(GameLogWriter_sptr log);
   void shut_down();
 
   void pause() override;
   void unpause() override;
 
  protected:
-  using game_queue_t = std::vector<GameWriteLog_sptr>;
+  using game_queue_t = std::vector<GameLogWriter_sptr>;
 
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
   void loop();
-  bool send(const GameWriteLog* log);  // return true if this is last game
+  bool send(const GameLogWriter* log);  // return true if this is last game
 
   Params params_;
   std::thread* thread_;

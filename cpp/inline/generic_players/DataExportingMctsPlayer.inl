@@ -27,8 +27,8 @@ void DataExportingMctsPlayer<Game>::receive_state_change(core::seat_index_t seat
 }
 
 template <core::concepts::Game Game>
-ActionResponse DataExportingMctsPlayer<Game>::get_action_response(const FullState& state,
-                                                                  const ActionMask& valid_actions) {
+core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
+    const FullState& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
   bool use_for_training = search_mode == core::kFull;
   bool previous_used_for_training = game_log_->is_previous_entry_used_for_training();
@@ -45,7 +45,7 @@ ActionResponse DataExportingMctsPlayer<Game>::get_action_response(const FullStat
     policy_target_ptr = &policy_target;
     extract_policy_target(mcts_search_results, &policy_target_ptr);
   }
-  ActionResponse response =
+  core::ActionResponse response =
       base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
   game_log_->add(state, response.action, policy_target_ptr, use_for_training);
   return response;

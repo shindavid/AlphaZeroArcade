@@ -18,8 +18,8 @@
 
 namespace generic {
 
-template <concepts::Game Game_>
-MctsPlayer<Game_>::Params::Params(mcts::Mode mode) {
+template <core::concepts::Game Game>
+MctsPlayer<Game>::Params::Params(mcts::Mode mode) {
   if (mode == mcts::kCompetitive) {
     num_fast_iters = 1600;
     num_full_iters = 0;
@@ -35,8 +35,8 @@ MctsPlayer<Game_>::Params::Params(mcts::Mode mode) {
   }
 }
 
-template <concepts::Game Game_>
-void MctsPlayer<Game_>::Params::dump() const {
+template <core::concepts::Game Game>
+void MctsPlayer<Game>::Params::dump() const {
   if (full_pct == 0) {
     util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
@@ -47,8 +47,8 @@ void MctsPlayer<Game_>::Params::dump() const {
   }
 }
 
-template <concepts::Game Game_>
-auto MctsPlayer<Game_>::Params::make_options_description() {
+template <core::concepts::Game Game>
+auto MctsPlayer<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -70,8 +70,8 @@ auto MctsPlayer<Game_>::Params::make_options_description() {
                                            "mcts player verbose mode");
 }
 
-template <concepts::Game Game_>
-inline MctsPlayer<Game_>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
+template <core::concepts::Game Game>
+inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
     : params_(params),
       mcts_manager_(mcts_manager),
       search_params_{
@@ -80,30 +80,30 @@ inline MctsPlayer<Game_>::MctsPlayer(const Params& params, MctsManager* mcts_man
           {1, true}                       // kRawPolicy
       },
       move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str,
-                                                      GameVars<Game>::get_bindings())),
+                                                      core::GameVars<Game>::get_bindings())),
       owns_manager_(mcts_manager == nullptr) {
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
 }
 
-template <concepts::Game Game_>
+template <core::concepts::Game Game>
 template <typename... Ts>
-MctsPlayer<Game_>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
+MctsPlayer<Game>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
     : MctsPlayer(params, new MctsManager(std::forward<Ts>(mcts_params_args)...)) {
   owns_manager_ = true;
 }
 
-template <concepts::Game Game_>
-inline MctsPlayer<Game_>::~MctsPlayer() {
+template <core::concepts::Game Game>
+inline MctsPlayer<Game>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
   if (owns_manager_) delete mcts_manager_;
 }
 
-template <concepts::Game Game_>
-inline void MctsPlayer<Game_>::start_game() {
+template <core::concepts::Game Game>
+inline void MctsPlayer<Game>::start_game() {
   move_count_ = 0;
   move_temperature_.reset();
   if (owns_manager_) {
@@ -111,9 +111,9 @@ inline void MctsPlayer<Game_>::start_game() {
   }
 }
 
-template <concepts::Game Game_>
-inline void MctsPlayer<Game_>::receive_state_change(core::seat_index_t seat, const FullState& state,
-                                                    action_t action) {
+template <core::concepts::Game Game>
+inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const FullState& state,
+                                                    core::action_t action) {
   move_count_++;
   move_temperature_.step();
   if (owns_manager_) {
@@ -130,28 +130,28 @@ inline void MctsPlayer<Game_>::receive_state_change(core::seat_index_t seat, con
   }
 }
 
-template <concepts::Game Game_>
-ActionResponse MctsPlayer<Game_>::get_action_response(const FullState& state,
-                                                      const ActionMask& valid_actions) {
+template <core::concepts::Game Game>
+core::ActionResponse MctsPlayer<Game>::get_action_response(const FullState& state,
+                                                           const ActionMask& valid_actions) {
   core::SearchMode search_mode = choose_search_mode();
   const MctsSearchResults* mcts_results = mcts_search(state, search_mode);
   return get_action_response_helper(search_mode, mcts_results, valid_actions);
 }
 
-template <concepts::Game Game_>
-inline const typename MctsPlayer<Game_>::MctsSearchResults* MctsPlayer<Game_>::mcts_search(
+template <core::concepts::Game Game>
+inline const typename MctsPlayer<Game>::MctsSearchResults* MctsPlayer<Game>::mcts_search(
     const FullState& state, core::SearchMode search_mode) const {
   return mcts_manager_->search(state, search_params_[search_mode]);
 }
 
-template <concepts::Game Game_>
-inline core::SearchMode MctsPlayer<Game_>::choose_search_mode() const {
+template <core::concepts::Game Game>
+inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
   bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
   return use_raw_policy ? core::kRawPolicy : get_random_search_mode();
 }
 
-template <concepts::Game Game_>
-ActionResponse MctsPlayer<Game_>::get_action_response_helper(
+template <core::concepts::Game Game>
+core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const MctsSearchResults* mcts_results,
     const ActionMask& valid_actions) const {
   PolicyTensor policy;
@@ -206,23 +206,23 @@ ActionResponse MctsPlayer<Game_>::get_action_response_helper(
   }
 
   if (verbose_info_) {
-    verbose_info_->action_policy = policy_array;
+    verbose_info_->action_policy = policy;
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  action_t action = eigen_util::sample(policy)[0];
+  core::action_t action = eigen_util::sample(policy)[0];
   util::release_assert(valid_actions[action]);
   return action;
 }
 
-template <concepts::Game Game_>
-core::SearchMode MctsPlayer<Game_>::get_random_search_mode() const {
+template <core::concepts::Game Game>
+core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
   return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
-template <concepts::Game Game_>
-inline void MctsPlayer<Game_>::verbose_dump() const {
+template <core::concepts::Game Game>
+inline void MctsPlayer<Game>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& action_policy = verbose_info_->action_policy;

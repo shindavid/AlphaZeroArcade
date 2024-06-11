@@ -10,6 +10,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/GameLog.hpp>
 #include <core/SimpleFullState.hpp>
 #include <core/Symmetries.hpp>
 #include <core/TrainingTargets.hpp>
@@ -38,6 +39,7 @@ struct Game {
   static constexpr int kNumPlayers = 2;
   static constexpr int kNumActions = kNumColumns;
   static constexpr int kMaxBranchingFactor = kNumColumns;
+  static constexpr int kHistorySize = 0;
 
   using ActionMask = std::bitset<kNumActions>;
   using player_name_array_t = std::array<std::string, kNumPlayers>;
@@ -49,6 +51,7 @@ struct Game {
   using ValueArray = Eigen::Array<float, kNumPlayers, 1>;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
   using MctsSearchResults = mcts::SearchResults<Game>;
+  using GameLogView = core::GameLogView<Game>;
 
   struct StateSnapshot {
     core::seat_index_t get_current_player() const;
@@ -60,14 +63,13 @@ struct Game {
     mask_t cur_player_mask = 0;  // spaces occupied by current player
   };
 
-  using GameLogReader = core::GameLogReader<Game>;
   using FullState = core::SimpleFullState<StateSnapshot>;
 
-  using Transform = core::Transform<FullState, PolicyTensor>;
-  using Identity = core::IdentityTransform<FullState, PolicyTensor>;
+  using Transform = core::Transform<StateSnapshot, PolicyTensor>;
+  using Identity = core::IdentityTransform<StateSnapshot, PolicyTensor>;
 
-  struct Reflect : public core::ReflexiveTransform<FullState, PolicyTensor> {
-    void apply(FullState& state) override;
+  struct Reflect : public core::ReflexiveTransform<StateSnapshot, PolicyTensor> {
+    void apply(StateSnapshot& pos) override;
     void apply(PolicyTensor& policy) override;
   };
 
@@ -89,24 +91,25 @@ struct Game {
     static void print_mcts_results(const PolicyTensor& action_policy, const MctsSearchResults&);
 
    private:
-    static void print_row(const StateSnapshot&, row_t row, column_t blink_column)
+    static void print_row(const StateSnapshot&, row_t row, column_t blink_column);
   };
 
   struct InputTensorizor {
-    static InputTensor tensorize(const FullState& state);
+    static InputTensor tensorize(const StateSnapshot* start, const StateSnapshot* cur);
   };
 
   struct TrainingTargetTensorizor {
     using BoardShape = Eigen::Sizes<kNumRows, kNumColumns>;
 
-    using PolicyTarget = core::PolicyTarget<PolicyTensor>;
-    using ValueTarget = core::ValueTarget<ValueArray>;
-    using OppPolicyTarget = core::OppPolicyTarget<PolicyTensor>;
+    using PolicyTarget = core::PolicyTarget<Game>;
+    using ValueTarget = core::ValueTarget<Game>;
+    using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
     struct OwnershipTarget {
       static constexpr const char* kName = "ownership";
       using Tensor = eigen_util::FTensor<BoardShape>;
-      static Tensor tensorize(const GameLogReader& reader);
+
+      static Tensor tensorize(const GameLogView& view);
     };
 
     using TargetList = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, OwnershipTarget>;
@@ -124,5 +127,14 @@ static_assert(core::concepts::Game<c4::Game>);
 using Player = core::AbstractPlayer<Game>;
 
 }  // namespace c4
+
+namespace std {
+
+template <>
+struct hash<c4::Game::StateSnapshot> {
+  size_t operator()(const c4::Game::StateSnapshot& pos) const { return pos.hash(); }
+};
+
+}  // namespace std
 
 #include <inline/games/connect4/Game.inl>

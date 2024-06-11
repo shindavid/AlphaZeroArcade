@@ -6,7 +6,6 @@
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
 #include <core/Symmetries.hpp>
-#include <core/TensorizorConcept.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
@@ -78,6 +77,9 @@ class NNEvaluationService
  public:
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
+  using SharedData = mcts::SharedData<Game>;
+  using snapshot_vec_t = typename SharedData::snapshot_vec_t;
+
   using ActionMask = typename Game::ActionMask;
 
   using NNEvaluation_asptr = typename NNEvaluation::asptr;
@@ -91,7 +93,7 @@ class NNEvaluationService
   using PolicyShape = typename Game::PolicyShape;
   using ValueShape = typename NNEvaluation::ValueShape;
 
-  using DynamicInputTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
+  using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
   using StateSnapshot = typename Game::StateSnapshot;
   using FullState = typename Game::FullState;
@@ -103,6 +105,7 @@ class NNEvaluationService
   struct Request {
     Node* node;
     FullState* state;
+    snapshot_vec_t* snapshot_history;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;
@@ -214,7 +217,7 @@ class NNEvaluationService
   struct batch_data_t {
     batch_data_t(int batch_size);
     ~batch_data_t();
-    void copy_input_to(int num_rows, DynamicInputFloatTensor& full_input);
+    void copy_input_to(int num_rows, DynamicInputTensor& full_input);
 
     std::mutex mutex;
     tensor_group_t* tensor_groups_;
@@ -244,7 +247,7 @@ class NNEvaluationService
   torch::Tensor torch_input_gpu_;
   torch::Tensor torch_policy_;
   torch::Tensor torch_value_;
-  DynamicInputFloatTensor full_input_;
+  DynamicInputTensor full_input_;
   cache_t cache_;
 
   const std::chrono::nanoseconds timeout_duration_;
