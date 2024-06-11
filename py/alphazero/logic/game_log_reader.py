@@ -53,7 +53,7 @@ class GameLogReader:
 
         target_tensors = [torch.empty(shape_info.shape, dtype=torch.float32)
                           for shape_info in target_shape_infos]
-        target_indices = [shape_info.target_index for shape_info in target_shape_infos] + [-1]
+        target_indices = [s.target_index for s in target_shape_infos] + [-1]  # -1: null-terminator
         target_values = [ffi.cast('float*', tensor.data_ptr()) for tensor in target_tensors]
 
         input_values_c = ffi.new('float*', input_values)

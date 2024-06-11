@@ -112,18 +112,24 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float** input_values, i
   memcpy(*input_values, input.data(), input.size() * sizeof(float));
 
   core::GameLogView<Game> view{cur_pos, final_pos, &outcome, &policy, &next_policy};
-  int t = 0;
 
   using TargetList = typename TrainingTargetTensorizor::TargetList;
   constexpr size_t N = mp::Length_v<TargetList>;
-  mp::constexpr_for<0, N, 1>([&](auto a) {
-    if (target_indices[t] == a) {
-      using Target = mp::TypeAt_t<TargetList, a>;
-      auto tensor = Target::tensorize(view);
-      memcpy(target_value_arrays[t], tensor.data(), tensor.size() * sizeof(float));
-      ++t;
-    }
-  });
+
+  int t = 0;
+  while (true) {
+    int target_index = target_indices[t++];
+    if (target_index < 0) break;
+
+    mp::constexpr_for<0, N, 1>([&](auto a) {
+      if (target_index == a) {
+        using Target = mp::TypeAt_t<TargetList, a>;
+        auto tensor = Target::tensorize(view);
+        memcpy(target_value_arrays[t], tensor.data(), tensor.size() * sizeof(float));
+        ++t;
+      }
+    });
+  }
 }
 
 template <concepts::Game Game>
