@@ -1,7 +1,7 @@
 from games.game_spec import GameSpec
+from net_modules import ShapeInfo, ShapeInfoDict
 from util.logging_util import get_logger
 from util.repo_util import Repo
-from util.torch_util import ShapeDict
 
 import torch
 
@@ -24,16 +24,16 @@ class GameLogReader:
         self._game_spec = game_spec
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
-        self._shape_info: Optional[ShapeDict] = None
+        self._shape_info_dict: Optional[ShapeInfoDict] = None
 
     def close(self):
         self._ffi.dlclose(self._lib)
 
     @property
-    def shape_info(self) -> ShapeDict:
-        if self._shape_info is None:
-            self._shape_info = self._load_shape_info()
-        return self._shape_info
+    def shape_info_dict(self) -> ShapeInfoDict:
+        if self._shape_info_dict is None:
+            self._shape_info_dict = self._load_shape_info_dict()
+        return self._shape_info_dict
 
     def open_log(self, filename: str):
         ffi = self._ffi
@@ -43,38 +43,45 @@ class GameLogReader:
     def close_log(self, log):
         self._lib.GameLogReader_delete(log)
 
-    def create_tensors(self, log, names: List[str], index: int, apply_symmetry: bool = True):
+    def create_tensors(self, log, input_shape_info: ShapeInfo, target_shape_infos: List[ShapeInfo],
+                       index: int, apply_symmetry: bool = True):
         ffi = self._ffi
         lib = self._lib
 
-        tensors = [torch.empty(self.shape_info[key], dtype=torch.float32) for key in names]
+        input_tensor = torch.empty(input_shape_info.shape, dtype=torch.float32)
+        input_values = ffi.cast('float*', input_tensor.data_ptr())
 
-        keys = [ffi.new("char[]", key.encode('utf-8')) for key in names]
-        values = [ffi.cast("float *", arr.data_ptr()) for arr in tensors]
+        target_tensors = [torch.empty(shape_info.shape, dtype=torch.float32)
+                          for shape_info in target_shape_infos]
+        target_indices = [shape_info.target_index for shape_info in target_shape_infos] + [-1]
+        target_values = [ffi.cast('float*', tensor.data_ptr()) for tensor in target_tensors]
 
-        keys_c = ffi.new("const char *[]", keys)
-        values_c = ffi.new("float *[]", values)
+        input_values_c = ffi.new('float*', input_values)
+        target_indices_c = ffi.new('int[]', target_indices)
+        target_values_c = ffi.new('float*[]', target_values)
 
-        lib.GameLogReader_load(log, index, apply_symmetry, keys_c, values_c, len(keys))
-        return tensors
+        lib.GameLogReader_load(log, index, apply_symmetry, input_values_c, target_indices_c,
+                               target_values_c)
+        return [input_tensor] + target_tensors
 
     def _get_ffi(self):
         ffi = FFI()
         ffi.cdef("""
-            struct GameLogReader {};
+            struct GameLog {};
 
             struct ShapeInfo {
                 char* name;
                 int* dims;
                 int num_dims;
+                int target_index;
             };
 
             struct ShapeInfo* get_shape_info_array();
             void free_shape_info_array(struct ShapeInfo* info);
 
-            struct GameLogReader* GameLogReader_new(const char* filename);
-            void GameLogReader_delete(struct GameLogReader* log);
-            void GameLogReader_load(struct GameLogReader* log, int index, bool apply_symmetry,
+            struct GameLog* GameLog_new(const char* filename);
+            void GameLog_delete(struct GameLog* log);
+            void GameLog_load(struct GameLog* log, int index, bool apply_symmetry,
                        const char** keys, float** values, int num_keys);
             """)
         return ffi
@@ -85,23 +92,24 @@ class GameLogReader:
         assert os.path.isfile(shared_lib), f'Could not find shared lib: {shared_lib}'
         return self._ffi.dlopen(shared_lib)
 
-    def _load_shape_info(self) -> ShapeDict:
+    def _load_shape_info(self) -> ShapeInfoDict:
         ffi = self._ffi
         lib = self._lib
 
         shape_info_arr = lib.get_shape_info_array()
 
-        shape_info = {}
+        shape_info_dict = {}
         i = 0
         while True:
             info = shape_info_arr[i]
             if info.name == ffi.NULL:
                 break
             name = ffi.string(info.name).decode('utf-8')
-            dims = tuple([info.dims[j] for j in range(info.num_dims)])
-            shape_info[name] = dims
-            logger.debug(f'Tensor shape: {name} -> {dims}')
+            shape = tuple([info.dims[j] for j in range(info.num_dims)])
+            shape_info = ShapeInfo(name=name, target_index=info.target_index, shape=shape)
+            shape_info_dict[name] = shape_info
+            logger.debug(f'ShapeInfo: {name} -> {shape_info}')
             i += 1
 
         lib.free_shape_info_array(shape_info_arr)
-        return shape_info
+        return shape_info_dict

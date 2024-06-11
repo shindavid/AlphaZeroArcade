@@ -16,11 +16,11 @@ This module provides a class, GamesDatasetGenerator, that tracks the master sequ
 produces GamesDataset objects, which correspond to a window W of M.
 """
 from alphazero.logic.game_log_reader import GameLogReader
+from net_modules import ShapeInfo
 
 import numpy as np
 import os
 import sqlite3
-import torch
 from torch.utils.data import Dataset
 
 from typing import List, Optional
@@ -95,7 +95,8 @@ class PositionDataset(Dataset):
         self._forked_base_dir = forked_base_dir
         self._positions = positions
         self._game_log_reader = game_log_reader
-        self._key_order: List[str] = []
+        self._input_shape_info: ShapeInfo = game_log_reader.shape_info_dict['input']
+        self._target_shape_infos: List[ShapeInfo] = []
 
     def announce_sampling(self, print_func):
         dataset_size = len(self)
@@ -125,26 +126,14 @@ class PositionDataset(Dataset):
         """
         return self._positions.end_index
 
-    def _get_data_and_pos_index(self, idx):
-        client_id, gen, end_timestamp, pos_index = self._positions[idx]
-        filename = self._get_filename(client_id, gen, end_timestamp)
-
-        try:
-            log = self._game_log_reader.open_log(filename)
-
-            self._game_log_reader.close_log(filename)
-            data = torch.jit.load(filename).state_dict()
-        except:
-            raise Exception(f'Could not load data from file: {filename}')
-        return data, pos_index
-
     def set_key_order(self, target_names: List[str]):
         """
         The key order determines the order in which the data is returned by __getitem__.
 
         This must be called prior to iterating over the dataset.
         """
-        self._key_order = ['input'] + target_names
+        shape_info_dict = self._game_log_reader.shape_info_dict
+        self._target_shape_infos = [shape_info_dict[name] for name in target_names]
 
     def _get_filename(self, client_id: int, gen: int, end_ts: int) -> str:
         use_forked_dir = client_id <= self._positions.max_forked_client_id
@@ -161,7 +150,8 @@ class PositionDataset(Dataset):
 
         try:
             log = self._game_log_reader.open_log(filename)
-            output = self._game_log_reader.create_tensors(log, self._key_order, pos_index)
+            output = self._game_log_reader.create_tensors(log, self._input_shape_info,
+                                                          self._target_shape_infos, pos_index)
             self._game_log_reader.close_log(log)
             return output
         except:

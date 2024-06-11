@@ -254,9 +254,9 @@ class TrainingManager:
         organizer = self._controller.organizer
         checkpoint_info = organizer.get_latest_checkpoint_info()
         if checkpoint_info is None:
-            shape_info = self._game_log_reader.shape_info
+            shape_info_dict = self._game_log_reader.shape_info_dict
             model_cfg = self._controller.params.model_cfg
-            self._net = Model(self._controller.game_spec.model_configs[model_cfg](shape_info))
+            self._net = Model(self._controller.game_spec.model_configs[model_cfg](shape_info_dict))
             self._init_net_and_opt()
         else:
             self._load_last_checkpoint()
