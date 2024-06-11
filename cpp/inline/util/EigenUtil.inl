@@ -125,6 +125,18 @@ auto& reinterpret_as_array(FTensor& tensor) {
   return reinterpret_cast<ArrayT&>(tensor);
 }
 
+template <concepts::FTensor FTensor, concepts::FArray FArray>
+const FTensor& reinterpret_as_tensor(const FArray& array) {
+  static_assert(extract_length_v<FArray> == extract_shape_t<FTensor>::total_size);
+  return reinterpret_cast<const FTensor&>(array);
+}
+
+template <concepts::FTensor FTensor, concepts::FArray FArray>
+FTensor& reinterpret_as_tensor(FArray& array) {
+  static_assert(extract_length_v<FArray> == extract_shape_t<FTensor>::total_size);
+  return reinterpret_cast<FTensor&>(array);
+}
+
 template <typename TensorT>
 typename TensorT::Scalar sum(const TensorT& tensor) {
   using Scalar = typename TensorT::Scalar;

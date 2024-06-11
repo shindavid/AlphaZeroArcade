@@ -65,12 +65,13 @@ auto off_indices(const std::bitset<N>& bitset) {
 
 template <size_t N>
 int get_nth_on_index(const std::bitset<N>& bitset, int n) {
+  int orig_n = n;
   for (int k : on_indices(bitset)) {
     if (n == 0) return k;
     n--;
   }
-  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d]",
-                        bitset.to_string().c_str(), n);
+  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d] [%d]",
+                        bitset.to_string().c_str(), orig_n, n);
 }
 
 template <size_t N>

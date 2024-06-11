@@ -17,7 +17,7 @@ template<typename Game>
 struct ValueTarget {
   static constexpr const char* kName = "value";
   using ValueArray = typename Game::ValueArray;
-  using Shape = eigen_util::Shape<ValueArray::RowsAtCompileTime>;
+  using Shape = eigen_util::Shape<eigen_util::extract_length_v<ValueArray>>;
   using Tensor = eigen_util::FTensor<Shape>;
   using GameLogView = typename Game::GameLogView;
 
@@ -34,3 +34,5 @@ struct OppPolicyTarget {
 };
 
 }  // namespace core
+
+#include <inline/core/TrainingTargets.inl>

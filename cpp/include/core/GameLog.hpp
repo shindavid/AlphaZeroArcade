@@ -111,7 +111,7 @@ class GameLog : public GameLogBase {
 
   static ShapeInfo* get_shape_info_array();
 
-  void load(int index, bool apply_symmetry, float** input_values, int* target_indices,
+  void load(int index, bool apply_symmetry, float* input_values, int* target_indices,
             float** target_value_arrays);
 
  private:
@@ -150,7 +150,7 @@ class GameLog : public GameLogBase {
   non_sym_sample_index_t get_non_sym_sample_index(int index);
 
   const std::string filename_;
-  char* const buffer_;
+  char* const buffer_ = nullptr;
   const int non_sym_sample_index_start_mem_offset_;
   const int action_start_mem_offset_;
   const int policy_tensor_index_start_mem_offset_;

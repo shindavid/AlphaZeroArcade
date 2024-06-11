@@ -206,7 +206,6 @@ concept FArray = is_farray_v<T>;
 
 }  // namespace concepts
 
-
 /*
  * The following are equivalent:
  *
@@ -223,6 +222,15 @@ struct extract_shape<FTensor<Shape>> {
 };
 template <typename T>
 using extract_shape_t = typename extract_shape<T>::type;
+
+template <typename T>
+struct extract_length {};
+template <int N>
+struct extract_length<FArray<N>> {
+  static constexpr int value = N;
+};
+template <typename T>
+inline constexpr int extract_length_v = extract_length<T>::value;
 
 /*
  * serialize() copies the bytes from tensor.data() to buf, checking to make sure it won't overflow
@@ -295,6 +303,12 @@ const auto& reinterpret_as_array(const FTensor& tensor);
 
 template <concepts::FTensor FTensor>
 auto& reinterpret_as_array(FTensor& tensor);
+
+template <concepts::FTensor FTensor, concepts::FArray FArray>
+const FTensor& reinterpret_as_tensor(const FArray& array);
+
+template <concepts::FTensor FTensor, concepts::FArray FArray>
+FTensor& reinterpret_as_tensor(FArray& array);
 
 /*
  * Convenience methods that return scalars.

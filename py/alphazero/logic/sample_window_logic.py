@@ -96,7 +96,7 @@ def get_required_dataset_size(params: TrainingParams, prev_window: Window):
         inf_loop_protection -= 1
         hi *= 2
 
-    assert inf_loop_protection, 'Infinite loop detected initializing hi'
+    assert inf_loop_protection, f'Infinite loop detected initializing hi a={a} b={b} r={r} s={s} t={t}'
 
     # Binary search between lo and hi to find n
     inf_loop_protection = 100

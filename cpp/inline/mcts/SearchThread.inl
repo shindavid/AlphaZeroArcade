@@ -88,7 +88,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
     std::ostringstream ss;
     ss << thread_id_whitespace();
     if (edge) {
-      ss << __func__ << edge->action();
+      ss << __func__ << " " << edge->action();
     } else {
       ss << __func__ << "()";
     }

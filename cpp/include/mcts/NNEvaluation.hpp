@@ -13,7 +13,7 @@ class NNEvaluation {
   using ActionMask = typename Game::ActionMask;
   using PolicyTensor = typename Game::PolicyTensor;
   using ValueArray = typename Game::ValueArray;
-  using LocalPolicyArray = eigen_util::FArray<Game::kMaxBranchingFactor>;
+  using LocalPolicyArray = eigen_util::DArray<Game::kMaxBranchingFactor>;
   using ValueShape = eigen_util::Shape<Game::kNumPlayers>;
   using ValueTensor = eigen_util::FTensor<ValueShape>;
 

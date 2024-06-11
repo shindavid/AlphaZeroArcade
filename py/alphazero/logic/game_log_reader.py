@@ -38,10 +38,10 @@ class GameLogReader:
     def open_log(self, filename: str):
         ffi = self._ffi
         filename = ffi.new('char[]', filename.encode('utf-8'))
-        return self._lib.GameLogReader_new(filename)
+        return self._lib.GameLog_new(filename)
 
     def close_log(self, log):
-        self._lib.GameLogReader_delete(log)
+        self._lib.GameLog_delete(log)
 
     def create_tensors(self, log, input_shape_info: ShapeInfo, target_shape_infos: List[ShapeInfo],
                        index: int, apply_symmetry: bool = True):
@@ -49,19 +49,17 @@ class GameLogReader:
         lib = self._lib
 
         input_tensor = torch.empty(input_shape_info.shape, dtype=torch.float32)
-        input_values = ffi.cast('float*', input_tensor.data_ptr())
-
         target_tensors = [torch.empty(shape_info.shape, dtype=torch.float32)
                           for shape_info in target_shape_infos]
         target_indices = [s.target_index for s in target_shape_infos] + [-1]  # -1: null-terminator
         target_values = [ffi.cast('float*', tensor.data_ptr()) for tensor in target_tensors]
 
-        input_values_c = ffi.new('float*', input_values)
+        input_values_c = ffi.cast('float*', input_tensor.data_ptr())
         target_indices_c = ffi.new('int[]', target_indices)
         target_values_c = ffi.new('float*[]', target_values)
 
-        lib.GameLogReader_load(log, index, apply_symmetry, input_values_c, target_indices_c,
-                               target_values_c)
+        lib.GameLog_load(log, index, apply_symmetry, input_values_c, target_indices_c,
+                         target_values_c)
         return [input_tensor] + target_tensors
 
     def _get_ffi(self):
@@ -82,17 +80,18 @@ class GameLogReader:
             struct GameLog* GameLog_new(const char* filename);
             void GameLog_delete(struct GameLog* log);
             void GameLog_load(struct GameLog* log, int index, bool apply_symmetry,
-                       const char** keys, float** values, int num_keys);
+                       float* input_values, int* target_indices, float** target_value_arrays);
             """)
         return ffi
 
     def _get_shared_lib(self) -> str:
         name = self._game_spec.name
         shared_lib = os.path.join(Repo.root(), 'target/Release/lib', f'lib{name}.so')
+        # shared_lib = os.path.join(Repo.root(), 'target/Debug/lib', f'lib{name}d.so')
         assert os.path.isfile(shared_lib), f'Could not find shared lib: {shared_lib}'
         return self._ffi.dlopen(shared_lib)
 
-    def _load_shape_info(self) -> ShapeInfoDict:
+    def _load_shape_info_dict(self) -> ShapeInfoDict:
         ffi = self._ffi
         lib = self._lib
 

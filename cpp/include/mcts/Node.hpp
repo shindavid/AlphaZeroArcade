@@ -35,11 +35,11 @@ class Node {
   static constexpr int kNumPlayers = Game::kNumPlayers;
   static constexpr int kEdgeDataChunkSize = std::min(8, kMaxBranchingFactor);
 
+  using LocalPolicyArray = typename NNEvaluation::LocalPolicyArray;
   using Rules = typename Game::Rules;
   using FullState = typename Game::FullState;
   using ActionMask = typename Game::ActionMask;
   using ValueArray = typename Game::ValueArray;
-  using LocalPolicyArray = eigen_util::FArray<kMaxBranchingFactor>;
   using PolicyTensor = typename Game::PolicyTensor;
   using ActionOutcome = typename Game::ActionOutcome;
   using player_bitset_t = std::bitset<kNumPlayers>;

@@ -6,6 +6,7 @@ add_executable(c4_exe
 
 add_library(c4_ffi
         SHARED shared/Connect4_ffi.cpp
+        Game.cpp
 )
 
 set_target_properties(c4_exe PROPERTIES OUTPUT_NAME "c4")

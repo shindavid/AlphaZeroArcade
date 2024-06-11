@@ -68,7 +68,7 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
 }
 
 template <concepts::Game Game>
-void GameLog<Game>::load(int index, bool apply_symmetry, float** input_values, int* target_indices,
+void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
                          float** target_value_arrays) {
   int state_index;
   symmetry_index_t sym_index = -1;
@@ -109,16 +109,15 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float** input_values, i
   eigen_util::left_rotate(outcome, cp);
 
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
-  memcpy(*input_values, input.data(), input.size() * sizeof(float));
+  memcpy(input_values, input.data(), input.size() * sizeof(float));
 
   core::GameLogView<Game> view{cur_pos, final_pos, &outcome, &policy, &next_policy};
 
   using TargetList = typename TrainingTargetTensorizor::TargetList;
   constexpr size_t N = mp::Length_v<TargetList>;
 
-  int t = 0;
-  while (true) {
-    int target_index = target_indices[t++];
+  for (int t = 0;; ++t) {
+    int target_index = target_indices[t];
     if (target_index < 0) break;
 
     mp::constexpr_for<0, N, 1>([&](auto a) {
@@ -126,7 +125,6 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float** input_values, i
         using Target = mp::TypeAt_t<TargetList, a>;
         auto tensor = Target::tensorize(view);
         memcpy(target_value_arrays[t], tensor.data(), tensor.size() * sizeof(float));
-        ++t;
       }
     });
   }
@@ -235,7 +233,7 @@ int GameLog<Game>::snapshot_start_mem_offset() const {
 
 template <concepts::Game Game>
 int GameLog<Game>::dense_policy_start_mem_offset() const {
-  return snapshot_start_mem_offset_ + align(num_non_terminal_positions() * sizeof(StateSnapshot));
+  return snapshot_start_mem_offset_ + align(num_positions() * sizeof(StateSnapshot));
 }
 
 template <concepts::Game Game>
@@ -310,6 +308,11 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
 template <concepts::Game Game>
 typename GameLog<Game>::StateSnapshot* GameLog<Game>::get_snapshot(int state_index) {
   return snapshot_start_ptr() + state_index;
+}
+
+template <concepts::Game Game>
+typename GameLog<Game>::ValueArray GameLog<Game>::get_outcome() const {
+  return reinterpret_cast<ValueArray*>(buffer_ + outcome_start_mem_offset())[0];
 }
 
 template <concepts::Game Game>
