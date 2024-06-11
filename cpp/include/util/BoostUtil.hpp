@@ -74,7 +74,7 @@ struct Settings {
  *     ;
  */
 template <typename StrSeq_ = util::StringLiteralSequence<>,
-          util::IntSequenceConcept CharSeq_ = std::integer_sequence<int>>
+          util::concepts::IntSequence CharSeq_ = std::integer_sequence<int>>
 class options_description {
  public:
   using StrSeq = StrSeq_;
@@ -108,7 +108,7 @@ class options_description {
   /*
    * Adds all options from desc to this.
    */
-  template <typename StrSeq2, util::IntSequenceConcept CharSeq2>
+  template <typename StrSeq2, util::concepts::IntSequence CharSeq2>
   auto add(const options_description<StrSeq2, CharSeq2>& desc);
 
   void print(std::ostream& s) const;
@@ -127,7 +127,7 @@ class options_description {
   template <util::StringLiteral StrLit, char Char = ' '>
   auto augment() const;
 
-  template <typename, util::IntSequenceConcept>
+  template <typename, util::concepts::IntSequence>
   friend class boost_util::program_options::options_description;
 
   base_t* full_base_;    // includes hidden options

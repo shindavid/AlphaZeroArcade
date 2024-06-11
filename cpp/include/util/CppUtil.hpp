@@ -127,9 +127,6 @@ using int64_sequence = std::integer_sequence<int64_t, Ints...>;
 template <uint64_t... Ints>
 using uint64_sequence = std::integer_sequence<uint64_t, Ints...>;
 
-/*
- * IntSequenceConcept/Int64SequenceConcept/UInt64SequenceConcept is for concept requirements.
- */
 template <typename T>
 struct is_int_sequence {
   static const bool value = false;
@@ -140,8 +137,6 @@ struct is_int_sequence<int_sequence<Ints...>> {
 };
 template <typename T>
 inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
-template <typename T>
-concept IntSequenceConcept = is_int_sequence_v<T>;
 
 template <typename T>
 struct is_int64_sequence {
@@ -153,8 +148,6 @@ struct is_int64_sequence<int64_sequence<Ints...>> {
 };
 template <typename T>
 inline constexpr bool is_int64_sequence_v = is_int64_sequence<T>::value;
-template <typename T>
-concept Int64SequenceConcept = is_int64_sequence_v<T>;
 
 template <typename T>
 struct is_uint64_sequence {
@@ -166,8 +159,6 @@ struct is_uint64_sequence<uint64_sequence<Ints...>> {
 };
 template <typename T>
 inline constexpr bool is_uint64_sequence_v = is_uint64_sequence<T>::value;
-template <typename T>
-concept UInt64SequenceConcept = is_uint64_sequence_v<T>;
 
 template <typename T>
 struct integer_sequence_product {};
@@ -243,9 +234,6 @@ template <typename T, StringLiteral S>
 static constexpr bool string_literal_sequence_contains_v =
     string_literal_sequence_contains<T, S>::value;
 
-/*
- * BitSetConcept<T> is for concept requirements.
- */
 template <typename T>
 struct is_bit_set {
   static const bool value = false;
@@ -256,8 +244,6 @@ struct is_bit_set<std::bitset<N>> {
 };
 template <typename T>
 inline constexpr bool is_bit_set_v = is_bit_set<T>::value;
-template <typename T>
-concept BitSetConcept = is_bit_set_v<T>;
 
 /*
  * The following are equivalent:
@@ -393,6 +379,12 @@ template <int N, typename T>
 void stuff_back(std::vector<T>& vec, const T& t);
 
 namespace concepts {
+
+template <typename T>
+concept IntSequence = is_int_sequence_v<T>;
+
+template <typename T>
+concept StdBitSet = is_bit_set_v<T>;
 
 template<typename T>
 concept Hashable = requires(const T& a, const T& b) {

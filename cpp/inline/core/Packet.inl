@@ -46,7 +46,7 @@ void StartGame::parse_player_names(std::array<std::string, N>& player_names) con
   }
 }
 
-template <PacketPayloadConcept PacketPayload>
+template <concepts::PacketPayload PacketPayload>
 void Packet<PacketPayload>::set_player_name(const std::string& name) {
   constexpr int buf_size = sizeof(payload_.dynamic_size_section.player_name);
   if (name.size() + 1 > buf_size) {  // + 1 for null terminator
@@ -57,7 +57,7 @@ void Packet<PacketPayload>::set_player_name(const std::string& name) {
   set_dynamic_section_size(name.size() + 1);  // + 1 for null terminator
 }
 
-template <PacketPayloadConcept PacketPayload>
+template <concepts::PacketPayload PacketPayload>
 void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
   constexpr int orig_size = sizeof(typename PacketPayload::dynamic_size_section_t);
   if (buf_size < 0 || buf_size > orig_size) {
@@ -68,12 +68,12 @@ void Packet<PacketPayload>::set_dynamic_section_size(int buf_size) {
   header_.payload_size = sizeof(PacketPayload) - orig_size + buf_size;
 }
 
-template <PacketPayloadConcept PacketPayload>
+template <concepts::PacketPayload PacketPayload>
 void Packet<PacketPayload>::send_to(io::Socket* socket) const {
   socket->write((const char*)this, size());
 }
 
-template <PacketPayloadConcept PacketPayload>
+template <concepts::PacketPayload PacketPayload>
 bool Packet<PacketPayload>::read_from(io::Socket* socket) {
   char* buf = reinterpret_cast<char*>(this);
   constexpr int header_size = sizeof(header_);
@@ -98,7 +98,7 @@ bool Packet<PacketPayload>::read_from(io::Socket* socket) {
   return true;
 }
 
-template <PacketPayloadConcept PacketPayload>
+template <concepts::PacketPayload PacketPayload>
 const PacketPayload& GeneralPacket::payload_as() const {
   if (header_.type != PacketPayload::kType) {
     throw util::Exception("GeneralPacket::payload_as() invalid type (expected:%d, got:%d)",
