@@ -387,8 +387,12 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
   auto transform = Transforms::get(sym_index);
+
   for (StateSnapshot& pos : snapshot_history) transform->apply(pos);
+
+  util::release_assert(!snapshot_history.empty());
   group.input = InputTensorizor::tensorize(&snapshot_history.front(), &snapshot_history.back());
+
   for (StateSnapshot& pos : snapshot_history) transform->undo(pos);
 
   group.current_player = current_player;
