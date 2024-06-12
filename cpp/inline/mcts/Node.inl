@@ -10,9 +10,9 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& s,
                                                 const ActionOutcome& o,
                                                 const ManagerParams* mp)
     : outcome(o),
-      valid_action_mask(Rules::legal_moves(s)),
+      valid_action_mask(Rules::get_legal_moves(s)),
       num_valid_actions(valid_action_mask.count()),
-      current_player(Rules::current_player(s)),
+      current_player(Rules::get_current_player(s)),
       sym_index(make_sym_index(s, *mp)) {}
 
 template <core::concepts::Game Game>

@@ -16,7 +16,7 @@ Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) 
 
   column_t col = action;
   mask_t piece_mask = (base.full_mask + _bottom_mask(col)) & _column_mask(col);
-  core::seat_index_t current_player = Rules::current_player(base);
+  core::seat_index_t current_player = Rules::get_current_player(base);
 
   base.cur_player_mask ^= base.full_mask;
   base.full_mask |= piece_mask;
@@ -118,7 +118,7 @@ void Game::IO::print_mcts_results(const PolicyTensor& action_policy,
 }
 
 void Game::IO::print_row(const BaseState& base, row_t row, column_t blink_column) {
-  core::seat_index_t current_player = Rules::current_player(base);
+  core::seat_index_t current_player = Rules::get_current_player(base);
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
 

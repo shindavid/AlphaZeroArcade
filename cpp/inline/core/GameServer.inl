@@ -279,9 +279,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
   FullState state;
   while (true) {
-    seat_index_t seat = Rules::current_player(state);
+    seat_index_t seat = Rules::get_current_player(state);
     Player* player = players[seat];
-    auto valid_actions = Rules::legal_moves(state);
+    auto valid_actions = Rules::get_legal_moves(state);
     ActionResponse response = player->get_action_response(state, valid_actions);
     action_t action = response.action;
 

@@ -74,8 +74,8 @@ struct Game {
   using SymmetryIndexSet = std::bitset<mp::Length_v<TransformList>>;
 
   struct Rules {
-    static ActionMask legal_moves(const FullState& state);
-    static core::seat_index_t current_player(const BaseState&);
+    static ActionMask get_legal_moves(const FullState& state);
+    static core::seat_index_t get_current_player(const BaseState&);
     static ActionOutcome apply(FullState& state, core::action_t action);
     static SymmetryIndexSet get_symmetry_indices(const FullState& state);
   };
