@@ -43,18 +43,6 @@ concept Shape = is_eigen_shape_v<T>;
 }  // namespace concepts
 
 /*
- * rank_v<Eigen::Sizes<...>> is the rank of the Eigen::Sizes.
- */
-template <typename T>
-struct rank {};
-template <int64_t... Is>
-struct rank<Eigen::Sizes<Is...>> {
-  static constexpr int value = sizeof...(Is);
-};
-template <typename T>
-inline constexpr int rank_v = rank<T>::value;
-
-/*
  * 10 == extract_dim_v<0, Eigen::Sizes<10, 20, 30>>
  * 20 == extract_dim_v<1, Eigen::Sizes<10, 20, 30>>
  * 30 == extract_dim_v<2, Eigen::Sizes<10, 20, 30>>
@@ -68,32 +56,6 @@ struct extract_dim<N, Eigen::Sizes<Is...>> {
 };
 template <int N, typename T>
 constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
-
-/*
- * prepend_dim_t<10, Eigen::Sizes<1, 2, 3>> is Eigen::Sizes<10, 1, 2, 3>
- */
-template <int64_t N, concepts::Shape Shape>
-struct prepend_dim {};
-template <int64_t N, int64_t... Is>
-struct prepend_dim<N, Eigen::Sizes<Is...>> {
-  using type = Eigen::Sizes<N, Is...>;
-};
-template <int64_t N, concepts::Shape Shape>
-using prepend_dim_t = typename prepend_dim<N, Shape>::type;
-
-/*
- * subshape_t<Eigen::Sizes<10, 20, 30>> is Eigen::Sizes<20, 30>
- *
- * This undoes the effect of prepend_dim_t.
- */
-template <concepts::Shape Shape>
-struct subshape {};
-template <int64_t I, int64_t... Is>
-struct subshape<Eigen::Sizes<I, Is...>> {
-  using type = Eigen::Sizes<Is...>;
-};
-template <concepts::Shape Shape>
-using subshape_t = typename subshape<Shape>::type;
 
 /*
  * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not
@@ -233,17 +195,6 @@ template <typename T>
 inline constexpr int extract_length_v = extract_length<T>::value;
 
 /*
- * serialize() copies the bytes from tensor.data() to buf, checking to make sure it won't overflow
- * past buf_size. Returns the number of bytes written.
- *
- * deserialize() is the inverse operation.
- */
-template <concepts::FTensor Tensor>
-size_t serialize(char* buf, size_t buf_size, const Tensor& tensor);
-template <concepts::FTensor Tensor>
-void deserialize(const char* buf, Tensor* tensor);
-
-/*
  * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */
 template <typename Array>
@@ -298,31 +249,26 @@ auto unflatten_index(const Tensor& tensor, int flat_index);
  *
  * auto& array = reinterpret_as_array(tensor);
  */
-template <concepts::FTensor FTensor>
-const auto& reinterpret_as_array(const FTensor& tensor);
+template <concepts::FTensor Tensor>
+const auto& reinterpret_as_array(const Tensor& tensor);
 
-template <concepts::FTensor FTensor>
-auto& reinterpret_as_array(FTensor& tensor);
+template <concepts::FTensor Tensor>
+auto& reinterpret_as_array(Tensor& tensor);
 
-template <concepts::FTensor FTensor, concepts::FArray FArray>
-const FTensor& reinterpret_as_tensor(const FArray& array);
+template <concepts::FTensor Tensor, concepts::FArray Array>
+const Tensor& reinterpret_as_tensor(const Array& array);
 
-template <concepts::FTensor FTensor, concepts::FArray FArray>
-FTensor& reinterpret_as_tensor(FArray& array);
+template <concepts::FTensor Tensor, concepts::FArray Array>
+Tensor& reinterpret_as_tensor(Array& array);
 
 /*
  * Convenience methods that return scalars.
  */
-template <typename TensorT>
-typename TensorT::Scalar sum(const TensorT& tensor);
-template <typename TensorT>
-typename TensorT::Scalar max(const TensorT& tensor);
-template <typename TensorT>
-typename TensorT::Scalar min(const TensorT& tensor);
-template <typename TensorT>
-bool any(const TensorT& tensor);
-template <typename TensorT>
-int count(const TensorT& tensor);
+template <concepts::FTensor Tensor> float sum(const Tensor& tensor);
+template <concepts::FTensor Tensor> float max(const Tensor& tensor);
+template <concepts::FTensor Tensor> float min(const Tensor& tensor);
+template <concepts::FTensor Tensor> bool any(const Tensor& tensor);
+template <concepts::FTensor Tensor> int count(const Tensor& tensor);
 
 /*
  * left_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]
@@ -335,13 +281,10 @@ int count(const TensorT& tensor);
  * right_rotate([0, 1, 2, 3], 2) -> [2, 3, 0, 1]
  * right_rotate([0, 1, 2, 3], 3) -> [1, 2, 3, 0]
  */
-template <typename Scalar, int N>
-void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
-template <typename Scalar, int N>
-void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n);
+template <concepts::FArray Array> void left_rotate(Array& array, int n);
+template <concepts::FArray Array> void right_rotate(Array& array, int n);
 
-template <concepts::FTensor TensorT>
-uint64_t hash(const TensorT& tensor);
+template <concepts::FTensor Tensor> uint64_t hash(const Tensor& tensor);
 
 }  // namespace eigen_util
 

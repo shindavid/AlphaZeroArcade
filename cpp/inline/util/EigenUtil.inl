@@ -27,21 +27,6 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
   return out;
 }
 
-template <concepts::FTensor Tensor>
-size_t serialize(char* buf, size_t buf_size, const Tensor& tensor) {
-  size_t n_bytes = sizeof(typename Tensor::Scalar) * tensor.size();
-  if (n_bytes > buf_size) {
-    throw util::Exception("Buffer too small (%ld > %ld)", n_bytes, buf_size);
-  }
-  memcpy(buf, tensor.data(), n_bytes);
-  return n_bytes;
-}
-
-template <concepts::FTensor Tensor>
-void deserialize(const char* buf, Tensor* tensor) {
-  memcpy(tensor->data(), buf, sizeof(typename Tensor::Scalar) * tensor->size());
-}
-
 template <typename Array>
 auto softmax(const Array& array) {
   auto normalized_array = array - array.maxCoeff();
@@ -92,7 +77,6 @@ void randomly_zero_out(Tensor& tensor, int n) {
 template <concepts::FTensor Tensor>
 auto unflatten_index(const Tensor& tensor, int flat_index) {
   // Convert the 1D index back to a K-dimensional index
-  static_assert(Tensor::Options & Eigen::RowMajorBit, "Tensor must be row-major");
   using Shape = extract_shape_t<Tensor>;
   constexpr size_t K = Shape::count;
 
@@ -107,60 +91,54 @@ auto unflatten_index(const Tensor& tensor, int flat_index) {
   return index;
 }
 
-template <concepts::FTensor FTensor>
-const auto& reinterpret_as_array(const FTensor& tensor) {
-  using Shape = extract_shape_t<FTensor>;
-  using Scalar = typename FTensor::Scalar;
+template <concepts::FTensor Tensor>
+const auto& reinterpret_as_array(const Tensor& tensor) {
+  using Shape = extract_shape_t<Tensor>;
   constexpr int N = Shape::total_size;
-  using ArrayT = Eigen::Array<Scalar, N, 1>;
-  return reinterpret_cast<const ArrayT&>(tensor);
+  using Array = FArray<N>;
+  return reinterpret_cast<const Array&>(tensor);
 }
 
-template <concepts::FTensor FTensor>
-auto& reinterpret_as_array(FTensor& tensor) {
-  using Shape = extract_shape_t<FTensor>;
-  using Scalar = typename FTensor::Scalar;
+template <concepts::FTensor Tensor>
+auto& reinterpret_as_array(Tensor& tensor) {
+  using Shape = extract_shape_t<Tensor>;
   constexpr int N = Shape::total_size;
-  using ArrayT = Eigen::Array<Scalar, N, 1>;
-  return reinterpret_cast<ArrayT&>(tensor);
+  using Array = FArray<N>;
+  return reinterpret_cast<Array&>(tensor);
 }
 
-template <concepts::FTensor FTensor, concepts::FArray FArray>
-const FTensor& reinterpret_as_tensor(const FArray& array) {
-  static_assert(extract_length_v<FArray> == extract_shape_t<FTensor>::total_size);
-  return reinterpret_cast<const FTensor&>(array);
+template <concepts::FTensor Tensor, concepts::FArray Array>
+const Tensor& reinterpret_as_tensor(const Array& array) {
+  static_assert(extract_length_v<Array> == extract_shape_t<Tensor>::total_size);
+  return reinterpret_cast<const Tensor&>(array);
 }
 
-template <concepts::FTensor FTensor, concepts::FArray FArray>
-FTensor& reinterpret_as_tensor(FArray& array) {
-  static_assert(extract_length_v<FArray> == extract_shape_t<FTensor>::total_size);
-  return reinterpret_cast<FTensor&>(array);
+template <concepts::FTensor Tensor, concepts::FArray Array>
+Tensor& reinterpret_as_tensor(Array& array) {
+  static_assert(extract_length_v<Array> == extract_shape_t<Tensor>::total_size);
+  return reinterpret_cast<Tensor&>(array);
 }
 
-template <typename TensorT>
-typename TensorT::Scalar sum(const TensorT& tensor) {
-  using Scalar = typename TensorT::Scalar;
-  static_assert(!std::is_same_v<Scalar, bool>, "use eigen_util::count() for bool tensors");
-  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.sum();
+template <concepts::FTensor Tensor>
+float sum(const Tensor& tensor) {
+  eigen_util::FTensor<Eigen::Sizes<>> out = tensor.sum();
   return out(0);
 }
 
-template <typename TensorT>
-typename TensorT::Scalar max(const TensorT& tensor) {
-  using Scalar = typename TensorT::Scalar;
-  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.maximum();
+template <concepts::FTensor Tensor>
+float max(const Tensor& tensor) {
+  eigen_util::FTensor<Eigen::Sizes<>> out = tensor.maximum();
   return out(0);
 }
 
-template <typename TensorT>
-typename TensorT::Scalar min(const TensorT& tensor) {
-  using Scalar = typename TensorT::Scalar;
-  Eigen::TensorFixedSize<Scalar, Eigen::Sizes<>, TensorT::Options> out = tensor.minimum();
+template <concepts::FTensor Tensor>
+float min(const Tensor& tensor) {
+  eigen_util::FTensor<Eigen::Sizes<>> out = tensor.minimum();
   return out(0);
 }
 
-template <typename TensorT>
-bool any(const TensorT& tensor) {
+template <concepts::FTensor Tensor>
+bool any(const Tensor& tensor) {
   const auto* data = tensor.data();
   for (int i = 0; i < tensor.size(); ++i) {
     if (data[i]) return true;
@@ -168,8 +146,8 @@ bool any(const TensorT& tensor) {
   return false;
 }
 
-template <typename TensorT>
-int count(const TensorT& tensor) {
+template <concepts::FTensor Tensor>
+int count(const Tensor& tensor) {
   int c = 0;
   for (int i = 0; i < tensor.size(); ++i) {
     c += bool(tensor.data()[i]);
@@ -177,22 +155,24 @@ int count(const TensorT& tensor) {
   return c;
 }
 
-template <typename Scalar, int N>
-void left_rotate(Eigen::Array<Scalar, N, 1>& array, int n) {
-  Scalar* data = array.data();
+template <concepts::FArray Array>
+void left_rotate(Array& array, int n) {
+  constexpr int N = extract_length_v<Array>;
+  auto* data = array.data();
   std::rotate(data, data + n, data + N);
 }
 
-template <typename Scalar, int N>
-void right_rotate(Eigen::Array<Scalar, N, 1>& array, int n) {
-  Scalar* data = array.data();
+template <concepts::FArray Array>
+void right_rotate(Array& array, int n) {
+  constexpr int N = extract_length_v<Array>;
+  auto* data = array.data();
   std::rotate(data, data + N - n, data + N);
 }
 
-template <concepts::FTensor TensorT>
-uint64_t hash(const TensorT& tensor) {
-  using Scalar = typename TensorT::Scalar;
-  constexpr int N = extract_shape_t<TensorT>::total_size;
+template <concepts::FTensor Tensor>
+uint64_t hash(const Tensor& tensor) {
+  using Scalar = typename Tensor::Scalar;
+  constexpr int N = extract_shape_t<Tensor>::total_size;
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }
 
