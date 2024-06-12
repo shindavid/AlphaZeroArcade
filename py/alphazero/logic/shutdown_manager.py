@@ -27,7 +27,7 @@ class ShutdownManager:
 
     def shutdown_requested(self) -> bool:
         with self._lock:
-            return self._shutdown_code is not None
+            return self._shutdown_code is not None or self._shutdown_in_progress
 
     def active(self):
         with self._lock:

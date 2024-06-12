@@ -284,6 +284,7 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
 
   if (index.start < index.end) {
     // sparse case
+    policy.setZero();
     sparse_policy_entry_t* sparse_start = sparse_policy_entry_start_ptr();
     for (int i = index.start; i < index.end; ++i) {
       sparse_policy_entry_t entry = sparse_start[i];
