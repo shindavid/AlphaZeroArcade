@@ -35,7 +35,7 @@ NodeCache<Game>::fetch_or_create(move_number_t move_number, const FullState& sta
   } else {
     submap = submap_it->second;
   }
-  auto mcts_key = state.mcts_key();
+  auto mcts_key = InputTensorizor::mcts_key(state);
   auto it = submap->find(mcts_key);
   if (it == submap->end()) {
     // TODO: use memory pool

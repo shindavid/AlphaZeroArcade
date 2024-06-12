@@ -132,7 +132,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   }
 
   if (mcts::kEnableDebug) {
-    IO::print_state(shared_data_.root_state.base());
+    IO::print_state(shared_data_.root_state);
   }
 
   start_search_threads(params);

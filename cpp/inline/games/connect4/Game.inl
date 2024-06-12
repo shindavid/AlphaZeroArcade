@@ -38,7 +38,7 @@ inline void Game::Reflect::apply(PolicyTensor& t) {
 }
 
 inline Game::ActionMask Game::Rules::legal_moves(const FullState& state) {
-  const BaseState& base = state.base();
+  const BaseState& base = state;
   mask_t bottomed_full_mask = base.full_mask + _full_bottom_mask();
 
   ActionMask mask;

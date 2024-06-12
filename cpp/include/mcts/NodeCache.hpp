@@ -18,8 +18,9 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NodeCache {
  public:
+  using InputTensorizor = typename Game::InputTensorizor;
   using FullState = typename Game::FullState;
-  using MCTSKey = typename FullState::MCTSKey;
+  using MCTSKey = typename InputTensorizor::MCTSKey;
   static_assert(util::concepts::Hashable<MCTSKey>);
   using ActionOutcome = typename Game::ActionOutcome;
   using Node = mcts::Node<Game>;

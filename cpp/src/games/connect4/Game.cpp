@@ -12,7 +12,7 @@
 namespace c4 {
 
 Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
-  BaseState& base = state.base();
+  BaseState& base = state;
 
   column_t col = action;
   mask_t piece_mask = (base.full_mask + _bottom_mask(col)) & _column_mask(col);

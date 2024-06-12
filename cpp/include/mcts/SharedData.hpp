@@ -37,12 +37,12 @@ struct SharedData {
 
     root_state = FullState();
     root_state_history.clear();
-    util::stuff_back<Game::kHistorySize>(root_state_history, root_state.base());
+    util::stuff_back<Game::kHistorySize>(root_state_history, root_state);
   }
 
   void update_state(const FullState& state) {
     root_state = state;
-    util::stuff_back<Game::kHistorySize>(root_state_history, state.base());
+    util::stuff_back<Game::kHistorySize>(root_state_history, state);
   }
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen;

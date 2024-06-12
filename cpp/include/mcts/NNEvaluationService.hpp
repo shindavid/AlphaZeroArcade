@@ -97,10 +97,10 @@ class NNEvaluationService
 
   using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
-  using EvalKey = typename FullState::EvalKey;
   using Transform = typename Game::Transform;
   using Transforms = core::Transforms<Game>;
   using InputTensorizor = typename Game::InputTensorizor;
+  using EvalKey = typename InputTensorizor::EvalKey;
 
   struct Request {
     Node* node;

@@ -11,7 +11,6 @@
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
-#include <core/SimpleFullState.hpp>
 #include <core/Symmetries.hpp>
 #include <core/TrainingTargets.hpp>
 #include <mcts/SearchResults.hpp>
@@ -63,7 +62,7 @@ struct Game {
     mask_t cur_player_mask = 0;  // spaces occupied by current player
   };
 
-  using FullState = core::SimpleFullState<BaseState>;
+  using FullState = BaseState;
 
   using Transform = core::Transform<BaseState, PolicyTensor>;
   using Identity = core::IdentityTransform<BaseState, PolicyTensor>;
@@ -95,6 +94,11 @@ struct Game {
   };
 
   struct InputTensorizor {
+    using EvalKey = BaseState;
+    using MCTSKey = BaseState;
+
+    static EvalKey eval_key(const FullState& state) { return state; }
+    static MCTSKey mcts_key(const FullState& state) { return state; }
     static InputTensor tensorize(const BaseState* start, const BaseState* cur);
   };
 

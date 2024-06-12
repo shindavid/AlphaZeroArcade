@@ -350,7 +350,7 @@ void GameLogWriter<Game>::add(const FullState& state, action_index_t action,
                               const PolicyTensor* policy_target, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
-  entry->position = state.base();
+  entry->position = state;
   entry->symmetries = Rules::get_symmetry_indices(state);
   if (policy_target) {
     entry->policy_target = *policy_target;
@@ -373,7 +373,7 @@ void GameLogWriter<Game>::add_terminal(const FullState& state, const ValueArray&
   if (terminal_added_) return;
   terminal_added_ = true;
   Entry* entry = new Entry();
-  entry->position = state.base();
+  entry->position = state;
   entry->policy_target.setZero();
   entry->action = -1;
   entry->use_for_training = false;
