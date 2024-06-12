@@ -22,7 +22,7 @@ struct ShapeInfo {
 };
 
 struct GameLogBase {
-  static constexpr int kAlignment = 8;
+  static constexpr int kAlignment = 16;
 
   struct Header {
     uint32_t num_samples_with_symmetry_expansion = 0;
