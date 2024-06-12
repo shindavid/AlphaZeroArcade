@@ -56,7 +56,7 @@ inline void SearchThread<Game>::perform_visits() {
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     state_ = shared_data_->root_state;
-    snapshot_history_ = shared_data_->root_snapshot_history;
+    state_history_ = shared_data_->root_state_history;
     visit(root, nullptr, shared_data_->move_number);
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->stable_data().num_valid_actions == 1) break;
@@ -120,7 +120,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
       core::action_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask,
                                                             action_index);
       core::ActionOutcome outcome = Rules::apply(state_, action);
-      util::stuff_back<Game::kHistorySize>(snapshot_history_, state_.current());
+      util::stuff_back<Game::kHistorySize>(state_history_, state_.base());
       applied_action = true;
       auto child = shared_data_->node_cache.fetch_or_create(move_number, state_, outcome,
                                                             this->manager_params_);
@@ -136,7 +136,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
     } else {
       if (!applied_action) {
         Rules::apply(state_, edge->action());
-        util::stuff_back<Game::kHistorySize>(snapshot_history_, state_.current());
+        util::stuff_back<Game::kHistorySize>(state_history_, state_.base());
       }
       visit(edge->child().get(), edge, move_number + 1);
     }
@@ -275,7 +275,7 @@ void SearchThread<Game>::evaluate_unset(Node* node, std::unique_lock<std::mutex>
                                                       stable_data.valid_action_mask);
   } else {
     core::symmetry_index_t sym_index = stable_data.sym_index;
-    typename NNEvaluationService::Request request{node,       &state_,    &snapshot_history_,
+    typename NNEvaluationService::Request request{node,       &state_,    &state_history_,
                                                   &profiler_, thread_id_, sym_index};
     auto response = nn_eval_service_->evaluate(request);
     data->evaluation = response.ptr;

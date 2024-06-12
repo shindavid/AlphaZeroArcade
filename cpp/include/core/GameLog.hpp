@@ -66,12 +66,12 @@ struct GameLogBase {
 
 template <typename Game>
 struct GameLogView {
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using ValueArray = typename Game::ValueArray;
   using PolicyTensor = typename Game::PolicyTensor;
 
-  const StateSnapshot* cur_pos;
-  const StateSnapshot* final_pos;
+  const BaseState* cur_pos;
+  const BaseState* final_pos;
   const ValueArray* outcome;
   const PolicyTensor* policy;
   const PolicyTensor* next_policy;
@@ -86,7 +86,7 @@ struct GameLogView {
  * [non_sym_sample_index_t...]
  * [action_t...]
  * [policy_tensor_index_t...]
- * [Game::StateSnapshot...]
+ * [Game::BaseState...]
  * [Game::PolicyTensor...]  // data for densely represented tensors
  * [sparse_policy_entry_t...]  // data for sparsely represented tensors
  *
@@ -102,7 +102,7 @@ class GameLog : public GameLogBase {
   using InputTensor = typename Game::InputTensor;
   using InputTensorizor = typename Game::InputTensorizor;
   using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using PolicyTensor = typename Game::PolicyTensor;
   using ValueArray = typename Game::ValueArray;
 
@@ -132,19 +132,19 @@ class GameLog : public GameLogBase {
   int non_sym_sample_index_start_mem_offset() const;
   int action_start_mem_offset() const;
   int policy_tensor_index_start_mem_offset() const;
-  int snapshot_start_mem_offset() const;
+  int state_start_mem_offset() const;
   int dense_policy_start_mem_offset() const;
   int sparse_policy_entry_start_mem_offset() const;
 
   policy_tensor_index_t* policy_tensor_index_start_ptr();
-  StateSnapshot* snapshot_start_ptr();
+  BaseState* state_start_ptr();
   PolicyTensor* dense_policy_start_ptr();
   sparse_policy_entry_t* sparse_policy_entry_start_ptr();
   sym_sample_index_t* sym_sample_index_start_ptr();
   non_sym_sample_index_t* non_sym_sample_index_start_ptr();
 
   PolicyTensor get_policy(int state_index);
-  StateSnapshot* get_snapshot(int state_index);
+  BaseState* get_state(int state_index);
   ValueArray get_outcome() const;
   sym_sample_index_t get_sym_sample_index(int index);
   non_sym_sample_index_t get_non_sym_sample_index(int index);
@@ -154,7 +154,7 @@ class GameLog : public GameLogBase {
   const int non_sym_sample_index_start_mem_offset_;
   const int action_start_mem_offset_;
   const int policy_tensor_index_start_mem_offset_;
-  const int snapshot_start_mem_offset_;
+  const int state_start_mem_offset_;
   const int dense_policy_start_mem_offset_;
   const int sparse_policy_entry_start_mem_offset_;
 };
@@ -163,7 +163,7 @@ template <concepts::Game Game>
 class GameLogWriter {
  public:
   using Rules = typename Game::Rules;
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
   using ValueArray = typename Game::ValueArray;
   using SymmetryIndexSet = typename Game::SymmetryIndexSet;
@@ -171,7 +171,7 @@ class GameLogWriter {
   using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {
-    StateSnapshot position;
+    BaseState position;
     SymmetryIndexSet symmetries;
     PolicyTensor policy_target;  // only valid if policy_target_is_valid
     action_t action;

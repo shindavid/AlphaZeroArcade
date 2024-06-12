@@ -3,10 +3,12 @@
 namespace core {
 
 /*
- * A simple state that only contains a single snapshot.
+ * Each Game must define a BaseState and a FullState inner-class. The BaseState should be a
+ * simple POD (piece-of-data) struct. The FullState potentially contains additional information that
+ * is needed to apply the game rules, but which perhaps cannot fit in a POD struct.
  *
- * This is appropriate for games where the current snapshot is all that is needed for
- * rules-calculations.
+ * This class can be used for games where the FullState does not need anything extra beyond the
+ * BaseState.
  *
  * Games where this may not be enough:
  *
@@ -15,20 +17,20 @@ namespace core {
  *
  * For chess/go, a specialized FullState class with a Zobrist hash table would be more appropriate.
  */
-template<typename StateSnapshot>
+template<typename BaseState>
 class SimpleFullState {
  public:
-  using EvalKey = StateSnapshot;
-  using MCTSKey = StateSnapshot;
+  using EvalKey = BaseState;
+  using MCTSKey = BaseState;
 
-  const EvalKey& eval_key() const { return current_; }
-  const MCTSKey& mcts_key() const { return current_; }
-  const StateSnapshot& current() const { return current_; }
-  StateSnapshot& current() { return current_; }
-  void update(const StateSnapshot& current) { current_ = current; }
+  const EvalKey& eval_key() const { return base_; }
+  const MCTSKey& mcts_key() const { return base_; }
+  const BaseState& base() const { return base_; }
+  BaseState& base() { return base_; }
+  void update(const BaseState& base) { base_ = base; }
 
  private:
-  StateSnapshot current_;
+  BaseState base_;
 };
 
 }  // namespace core

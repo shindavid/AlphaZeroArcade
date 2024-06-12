@@ -23,7 +23,7 @@ namespace concepts {
  * quite a bit costlier than fixed-sized ones.
  */
 template <class G>
-concept Game = requires(const typename G::StateSnapshot& snapshot) {
+concept Game = requires(const typename G::BaseState& base_state) {
   { util::decay_copy(G::kNumPlayers) } -> std::same_as<int>;
   { util::decay_copy(G::kNumActions) } -> std::same_as<int>;
   { util::decay_copy(G::kMaxBranchingFactor) } -> std::same_as<int>;

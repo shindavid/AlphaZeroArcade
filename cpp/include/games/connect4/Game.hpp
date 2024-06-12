@@ -53,23 +53,23 @@ struct Game {
   using MctsSearchResults = mcts::SearchResults<Game>;
   using GameLogView = core::GameLogView<Game>;
 
-  struct StateSnapshot {
+  struct BaseState {
     core::seat_index_t get_current_player() const;
     core::seat_index_t get_player_at(int row, int col) const;
-    bool operator==(const StateSnapshot& other) const = default;
+    bool operator==(const BaseState& other) const = default;
     size_t hash() const;
 
     mask_t full_mask = 0;        // spaces occupied by either player
     mask_t cur_player_mask = 0;  // spaces occupied by current player
   };
 
-  using FullState = core::SimpleFullState<StateSnapshot>;
+  using FullState = core::SimpleFullState<BaseState>;
 
-  using Transform = core::Transform<StateSnapshot, PolicyTensor>;
-  using Identity = core::IdentityTransform<StateSnapshot, PolicyTensor>;
+  using Transform = core::Transform<BaseState, PolicyTensor>;
+  using Identity = core::IdentityTransform<BaseState, PolicyTensor>;
 
-  struct Reflect : public core::ReflexiveTransform<StateSnapshot, PolicyTensor> {
-    void apply(StateSnapshot& pos) override;
+  struct Reflect : public core::ReflexiveTransform<BaseState, PolicyTensor> {
+    void apply(BaseState& pos) override;
     void apply(PolicyTensor& policy) override;
   };
 
@@ -78,7 +78,7 @@ struct Game {
 
   struct Rules {
     static ActionMask legal_moves(const FullState& state);
-    static core::seat_index_t current_player(const StateSnapshot&);
+    static core::seat_index_t current_player(const BaseState&);
     static ActionOutcome apply(FullState& state, core::action_t action);
     static SymmetryIndexSet get_symmetry_indices(const FullState& state);
   };
@@ -86,16 +86,16 @@ struct Game {
   struct IO {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action); }
-    static void print_snapshot(const StateSnapshot&, core::action_t last_action = -1,
-                               const player_name_array_t* player_names = nullptr);
+    static void print_state(const BaseState&, core::action_t last_action = -1,
+                            const player_name_array_t* player_names = nullptr);
     static void print_mcts_results(const PolicyTensor& action_policy, const MctsSearchResults&);
 
    private:
-    static void print_row(const StateSnapshot&, row_t row, column_t blink_column);
+    static void print_row(const BaseState&, row_t row, column_t blink_column);
   };
 
   struct InputTensorizor {
-    static InputTensor tensorize(const StateSnapshot* start, const StateSnapshot* cur);
+    static InputTensor tensorize(const BaseState* start, const BaseState* cur);
   };
 
   struct TrainingTargetTensorizor {
@@ -131,8 +131,8 @@ using Player = core::AbstractPlayer<Game>;
 namespace std {
 
 template <>
-struct hash<c4::Game::StateSnapshot> {
-  size_t operator()(const c4::Game::StateSnapshot& pos) const { return pos.hash(); }
+struct hash<c4::Game::BaseState> {
+  size_t operator()(const c4::Game::BaseState& pos) const { return pos.hash(); }
 };
 
 }  // namespace std

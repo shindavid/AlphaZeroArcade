@@ -7,35 +7,35 @@
 
 namespace core {
 
-template <typename StateSnapshot, eigen_util::concepts::FTensor PolicyTensor>
+template <typename BaseState, eigen_util::concepts::FTensor PolicyTensor>
 struct Transform {
   virtual ~Transform() {}
 
-  virtual void apply(StateSnapshot& pos) = 0;
+  virtual void apply(BaseState& pos) = 0;
   virtual void apply(PolicyTensor&) = 0;
-  virtual void undo(StateSnapshot& pos) = 0;
+  virtual void undo(BaseState& pos) = 0;
   virtual void undo(PolicyTensor&) = 0;
 };
 
-template <typename StateSnapshot, eigen_util::concepts::FTensor PolicyTensor>
-struct ReflexiveTransform : public Transform<StateSnapshot, PolicyTensor> {
+template <typename BaseState, eigen_util::concepts::FTensor PolicyTensor>
+struct ReflexiveTransform : public Transform<BaseState, PolicyTensor> {
   virtual ~ReflexiveTransform() {}
-  void undo(StateSnapshot& pos) override { this->apply(pos); }
+  void undo(BaseState& pos) override { this->apply(pos); }
   void undo(PolicyTensor& tensor) override { this->apply(tensor); }
 };
 
-template <typename StateSnapshot, eigen_util::concepts::FTensor PolicyTensor>
-struct IdentityTransform : public ReflexiveTransform<StateSnapshot, PolicyTensor> {
-  void apply(StateSnapshot&) override {}
+template <typename BaseState, eigen_util::concepts::FTensor PolicyTensor>
+struct IdentityTransform : public ReflexiveTransform<BaseState, PolicyTensor> {
+  void apply(BaseState&) override {}
   void apply(PolicyTensor&) override {}
 };
 
 template <concepts::Game Game>
 class Transforms {
  public:
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using PolicyTensor = typename Game::PolicyTensor;
-  using Transform = core::Transform<StateSnapshot, PolicyTensor>;
+  using Transform = core::Transform<BaseState, PolicyTensor>;
   using TransformList = typename Game::TransformList;
   using transform_tuple_t = mp::TypeListToTuple_t<TransformList>;
   static constexpr size_t kNumTransforms = mp::Length_v<TransformList>;

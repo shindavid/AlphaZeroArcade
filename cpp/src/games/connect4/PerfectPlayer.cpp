@@ -115,7 +115,7 @@ core::ActionResponse PerfectPlayer::get_action_response(
 
   if (params_.verbose) {
     std::cout << "get_action_response()" << std::endl;
-    c4::Game::IO::print_snapshot(state.current());
+    c4::Game::IO::print_state(state.base());
     std::cout << "scores: " << result.scores.transpose() << std::endl;
     std::cout << "best_score: " << result.best_score << std::endl;
     std::cout << "my_strength: " << params_.strength << std::endl;

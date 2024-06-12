@@ -78,7 +78,7 @@ class NNEvaluationService
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using SharedData = mcts::SharedData<Game>;
-  using snapshot_vec_t = typename SharedData::snapshot_vec_t;
+  using base_state_vec_t = typename SharedData::base_state_vec_t;
 
   using ActionMask = typename Game::ActionMask;
 
@@ -95,7 +95,7 @@ class NNEvaluationService
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
   using EvalKey = typename FullState::EvalKey;
   using Transform = typename Game::Transform;
@@ -105,7 +105,7 @@ class NNEvaluationService
   struct Request {
     Node* node;
     FullState* state;
-    snapshot_vec_t* snapshot_history;
+    base_state_vec_t* state_history;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;

@@ -376,7 +376,7 @@ int NNEvaluationService<Game>::allocate_reserve_index(
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::tensorize_and_transform_input(
     const Request& request, const cache_key_t& cache_key, int reserve_index) {
-  snapshot_vec_t& snapshot_history = *request.snapshot_history;
+  base_state_vec_t& state_history = *request.state_history;
   const auto& stable_data = request.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
@@ -388,12 +388,12 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
   auto transform = Transforms::get(sym_index);
 
-  for (StateSnapshot& pos : snapshot_history) transform->apply(pos);
+  for (BaseState& pos : state_history) transform->apply(pos);
 
-  util::release_assert(!snapshot_history.empty());
-  group.input = InputTensorizor::tensorize(&snapshot_history.front(), &snapshot_history.back());
+  util::release_assert(!state_history.empty());
+  group.input = InputTensorizor::tensorize(&state_history.front(), &state_history.back());
 
-  for (StateSnapshot& pos : snapshot_history) transform->undo(pos);
+  for (BaseState& pos : state_history) transform->undo(pos);
 
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);

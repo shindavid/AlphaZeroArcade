@@ -12,14 +12,14 @@
 namespace c4 {
 
 Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
-  StateSnapshot& snapshot = state.current();
+  BaseState& base = state.base();
 
   column_t col = action;
-  mask_t piece_mask = (snapshot.full_mask + _bottom_mask(col)) & _column_mask(col);
-  core::seat_index_t current_player = snapshot.get_current_player();
+  mask_t piece_mask = (base.full_mask + _bottom_mask(col)) & _column_mask(col);
+  core::seat_index_t current_player = base.get_current_player();
 
-  snapshot.cur_player_mask ^= snapshot.full_mask;
-  snapshot.full_mask |= piece_mask;
+  base.cur_player_mask ^= base.full_mask;
+  base.full_mask |= piece_mask;
 
   bool win = false;
 
@@ -43,7 +43,7 @@ Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) 
       (piece_mask >> 27) * sw_ne_diagonal_block   // sw-ne diagonal 4
   };
 
-  mask_t updated_mask = snapshot.full_mask ^ snapshot.cur_player_mask;
+  mask_t updated_mask = base.full_mask ^ base.cur_player_mask;
   for (mask_t mask : masks) {
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
@@ -57,7 +57,7 @@ Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) 
   if (win) {
     outcome(current_player) = 1.0;
     return ActionOutcome(outcome);
-  } else if (std::popcount(snapshot.full_mask) == kNumCells) {
+  } else if (std::popcount(base.full_mask) == kNumCells) {
     outcome(0) = 0.5;
     outcome(1) = 0.5;
     return ActionOutcome(outcome);
@@ -66,8 +66,8 @@ Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) 
   return ActionOutcome();
 }
 
-void Game::IO::print_snapshot(const StateSnapshot& snapshot, core::action_t last_action,
-                              const player_name_array_t* player_names) {
+void Game::IO::print_state(const BaseState& base, core::action_t last_action,
+                           const player_name_array_t* player_names) {
   if (!util::tty_mode() && last_action > -1) {
     std::string s(2 * last_action + 1, ' ');
     printf("%sx\n", s.c_str());
@@ -76,10 +76,10 @@ void Game::IO::print_snapshot(const StateSnapshot& snapshot, core::action_t last
   column_t blink_column = last_action;
   row_t blink_row = -1;
   if (blink_column >= 0) {
-    blink_row = std::countr_one(snapshot.full_mask >> (blink_column * 8)) - 1;
+    blink_row = std::countr_one(base.full_mask >> (blink_column * 8)) - 1;
   }
   for (row_t row = kNumRows - 1; row >= 0; --row) {
-    print_row(snapshot, row, row == blink_row ? blink_column : -1);
+    print_row(base, row, row == blink_row ? blink_column : -1);
   }
   printf("|1|2|3|4|5|6|7|\n\n");
   if (player_names) {
@@ -117,15 +117,15 @@ void Game::IO::print_mcts_results(const PolicyTensor& action_policy,
   }
 }
 
-void Game::IO::print_row(const StateSnapshot& snapshot, row_t row, column_t blink_column) {
-  core::seat_index_t current_player = snapshot.get_current_player();
+void Game::IO::print_row(const BaseState& base, row_t row, column_t blink_column) {
+  core::seat_index_t current_player = base.get_current_player();
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
 
   for (int col = 0; col < kNumColumns; ++col) {
     int index = _to_bit_index(row, col);
-    bool occupied = (1UL << index) & snapshot.full_mask;
-    bool occupied_by_cur_player = (1UL << index) & snapshot.cur_player_mask;
+    bool occupied = (1UL << index) & base.full_mask;
+    bool occupied_by_cur_player = (1UL << index) & base.cur_player_mask;
 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle("") : " ";

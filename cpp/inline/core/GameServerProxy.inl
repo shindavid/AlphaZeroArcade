@@ -152,7 +152,7 @@ void GameServerProxy<Game>::PlayerThread::handle_state_change(const StateChange&
   }
   const char* buf = payload.dynamic_size_section.buf;
 
-  seat_index_t seat = Rules::current_player(state_.current());
+  seat_index_t seat = Rules::current_player(state_.base());
   ActionResponse action_response = *reinterpret_cast<const ActionResponse*>(buf);
   action_t action = action_response.action;
   Rules::apply(state_, action);

@@ -36,7 +36,7 @@ namespace core {
 template <concepts::Game Game>
 class AbstractPlayer {
  public:
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
   using ValueArray = typename Game::ValueArray;
   using ActionMask = typename Game::ActionMask;

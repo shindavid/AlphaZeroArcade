@@ -38,7 +38,7 @@ GameLog<Game>::GameLog(const char* filename)
       non_sym_sample_index_start_mem_offset_(non_sym_sample_index_start_mem_offset()),
       action_start_mem_offset_(action_start_mem_offset()),
       policy_tensor_index_start_mem_offset_(policy_tensor_index_start_mem_offset()),
-      snapshot_start_mem_offset_(snapshot_start_mem_offset()),
+      state_start_mem_offset_(state_start_mem_offset()),
       dense_policy_start_mem_offset_(dense_policy_start_mem_offset()),
       sparse_policy_entry_start_mem_offset_(sparse_policy_entry_start_mem_offset()) {
   util::release_assert(num_positions() > 0, "Empty game log file: %s", filename_.c_str());
@@ -88,13 +88,13 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 
   PolicyTensor policy = get_policy(state_index);
   PolicyTensor next_policy = get_policy(state_index + 1);
-  StateSnapshot* cur_pos = get_snapshot(state_index);
-  StateSnapshot* start_pos = get_snapshot(std::max(0, state_index - Game::kHistorySize));
-  StateSnapshot* final_pos = get_snapshot(num_positions() - 1);
+  BaseState* cur_pos = get_state(state_index);
+  BaseState* start_pos = get_state(std::max(0, state_index - Game::kHistorySize));
+  BaseState* final_pos = get_state(num_positions() - 1);
 
   if (sym_index >= 0) {
     Transform* transform = core::Transforms<Game>::get(sym_index);
-    for (StateSnapshot* pos = start_pos; pos <= cur_pos; ++pos) {
+    for (BaseState* pos = start_pos; pos <= cur_pos; ++pos) {
       transform->apply(*pos);
     }
     if (final_pos > cur_pos) {
@@ -224,14 +224,14 @@ int GameLog<Game>::policy_tensor_index_start_mem_offset() const {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::snapshot_start_mem_offset() const {
+int GameLog<Game>::state_start_mem_offset() const {
   return policy_tensor_index_start_mem_offset_ +
          align(num_non_terminal_positions() * sizeof(policy_tensor_index_t));
 }
 
 template <concepts::Game Game>
 int GameLog<Game>::dense_policy_start_mem_offset() const {
-  return snapshot_start_mem_offset_ + align(num_positions() * sizeof(StateSnapshot));
+  return state_start_mem_offset_ + align(num_positions() * sizeof(BaseState));
 }
 
 template <concepts::Game Game>
@@ -245,8 +245,8 @@ GameLogBase::policy_tensor_index_t* GameLog<Game>::policy_tensor_index_start_ptr
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::StateSnapshot* GameLog<Game>::snapshot_start_ptr() {
-  return reinterpret_cast<StateSnapshot*>(buffer_ + snapshot_start_mem_offset_);
+typename GameLog<Game>::BaseState* GameLog<Game>::state_start_ptr() {
+  return reinterpret_cast<BaseState*>(buffer_ + state_start_mem_offset_);
 }
 
 template <concepts::Game Game>
@@ -305,8 +305,8 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::StateSnapshot* GameLog<Game>::get_snapshot(int state_index) {
-  return snapshot_start_ptr() + state_index;
+typename GameLog<Game>::BaseState* GameLog<Game>::get_state(int state_index) {
+  return state_start_ptr() + state_index;
 }
 
 template <concepts::Game Game>
@@ -350,7 +350,7 @@ void GameLogWriter<Game>::add(const FullState& state, action_index_t action,
                               const PolicyTensor* policy_target, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
-  entry->position = state.current();
+  entry->position = state.base();
   entry->symmetries = Rules::get_symmetry_indices(state);
   if (policy_target) {
     entry->policy_target = *policy_target;
@@ -373,7 +373,7 @@ void GameLogWriter<Game>::add_terminal(const FullState& state, const ValueArray&
   if (terminal_added_) return;
   terminal_added_ = true;
   Entry* entry = new Entry();
-  entry->position = state.current();
+  entry->position = state.base();
   entry->policy_target.setZero();
   entry->action = -1;
   entry->use_for_training = false;
@@ -401,7 +401,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   std::vector<non_sym_sample_index_t> non_sym_sample_indices;
   std::vector<action_t> actions;
   std::vector<policy_tensor_index_t> policy_tensor_indices;
-  std::vector<StateSnapshot> snapshots;
+  std::vector<BaseState> states;
   std::vector<PolicyTensor> dense_policy_tensors;
   std::vector<sparse_policy_entry_t> sparse_policy_entries;
 
@@ -409,14 +409,14 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   non_sym_sample_indices.reserve(non_sym_train_count_);
   actions.reserve(num_non_terminal_entries);
   policy_tensor_indices.reserve(num_non_terminal_entries);
-  snapshots.reserve(num_entries);
+  states.reserve(num_entries);
   dense_policy_tensors.reserve(num_non_terminal_entries);
   sparse_policy_entries.reserve(1 + num_non_terminal_entries * sizeof(PolicyTensor) /
                                         (2 * sizeof(sparse_policy_entry_t)));
 
   for (int move_num = 0; move_num < num_entries; ++move_num) {
     const Entry* entry = entries_[move_num];
-    snapshots.push_back(entry->position);
+    states.push_back(entry->position);
 
     if (entry->terminal) continue;
 
@@ -446,7 +446,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   write_section(stream, non_sym_sample_indices.data(), non_sym_sample_indices.size());
   write_section(stream, actions.data(), actions.size());
   write_section(stream, policy_tensor_indices.data(), policy_tensor_indices.size());
-  write_section(stream, snapshots.data(), snapshots.size());
+  write_section(stream, states.data(), states.size());
   write_section(stream, dense_policy_tensors.data(), dense_policy_tensors.size());
   write_section(stream, sparse_policy_entries.data(), sparse_policy_entries.size());
 }

@@ -24,10 +24,10 @@ template <core::concepts::Game Game>
 struct SharedData {
   using Node = mcts::Node<Game>;
   using NodeCache = mcts::NodeCache<Game>;
-  using StateSnapshot = typename Game::StateSnapshot;
+  using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
 
-  using snapshot_vec_t = std::vector<StateSnapshot>;
+  using base_state_vec_t = std::vector<BaseState>;
 
   void clear() {
     move_number = 0;
@@ -36,13 +36,13 @@ struct SharedData {
     root_node = nullptr;
 
     root_state = FullState();
-    root_snapshot_history.clear();
-    util::stuff_back<Game::kHistorySize>(root_snapshot_history, root_state.current());
+    root_state_history.clear();
+    util::stuff_back<Game::kHistorySize>(root_state_history, root_state.base());
   }
 
   void update_state(const FullState& state) {
     root_state = state;
-    util::stuff_back<Game::kHistorySize>(root_snapshot_history, state.current());
+    util::stuff_back<Game::kHistorySize>(root_state_history, state.base());
   }
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen;
@@ -54,7 +54,7 @@ struct SharedData {
   boost::dynamic_bitset<> active_search_threads;
   NodeCache node_cache;
   FullState root_state;
-  snapshot_vec_t root_snapshot_history;
+  base_state_vec_t root_state_history;
 
   Node::sptr root_node;
   SearchParams search_params;

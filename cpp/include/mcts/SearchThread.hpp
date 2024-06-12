@@ -29,7 +29,7 @@ class SearchThread {
   using SharedData = mcts::SharedData<Game>;
   using LocalPolicyArray = typename Node::LocalPolicyArray;
   using edge_t = typename Node::edge_t;
-  using snapshot_vec_t = typename SharedData::snapshot_vec_t;
+  using base_state_vec_t = typename SharedData::base_state_vec_t;
 
   using IO = Game::IO;
   using Rules = typename Game::Rules;
@@ -130,7 +130,7 @@ class SearchThread {
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
   FullState state_;
-  snapshot_vec_t snapshot_history_;
+  base_state_vec_t state_history_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;
   const ManagerParams* manager_params_;

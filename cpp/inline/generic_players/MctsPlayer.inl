@@ -125,7 +125,7 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
     }
     verbose_dump();
     if (!facing_human_tui_player_) {
-      IO::print_snapshot(state.current(), action, &this->get_player_names());
+      IO::print_state(state.base(), action, &this->get_player_names());
     }
   }
 }

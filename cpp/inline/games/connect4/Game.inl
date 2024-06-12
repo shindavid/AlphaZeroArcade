@@ -11,11 +11,11 @@
 
 namespace c4 {
 
-inline core::seat_index_t Game::StateSnapshot::get_current_player() const {
+inline core::seat_index_t Game::BaseState::get_current_player() const {
   return std::popcount(full_mask) % 2;
 }
 
-inline core::seat_index_t Game::StateSnapshot::get_player_at(int row, int col) const {
+inline core::seat_index_t Game::BaseState::get_player_at(int row, int col) const {
   int cp = get_current_player();
   int index = _to_bit_index(row, col);
   bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
@@ -23,11 +23,11 @@ inline core::seat_index_t Game::StateSnapshot::get_player_at(int row, int col) c
   return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
-inline size_t Game::StateSnapshot::hash() const {
+inline size_t Game::BaseState::hash() const {
   return boost::hash_range(&full_mask, &full_mask + 2);
 }
 
-inline void Game::Reflect::apply(StateSnapshot& pos) {
+inline void Game::Reflect::apply(BaseState& pos) {
   pos.full_mask = __builtin_bswap64(pos.full_mask) >> 8;
   pos.cur_player_mask = __builtin_bswap64(pos.cur_player_mask) >> 8;
 }
@@ -38,8 +38,8 @@ inline void Game::Reflect::apply(PolicyTensor& t) {
 }
 
 inline Game::ActionMask Game::Rules::legal_moves(const FullState& state) {
-  const StateSnapshot& snapshot = state.current();
-  mask_t bottomed_full_mask = snapshot.full_mask + _full_bottom_mask();
+  const BaseState& base = state.base();
+  mask_t bottomed_full_mask = base.full_mask + _full_bottom_mask();
 
   ActionMask mask;
   for (int col = 0; col < kNumColumns; ++col) {
@@ -49,8 +49,8 @@ inline Game::ActionMask Game::Rules::legal_moves(const FullState& state) {
   return mask;
 }
 
-inline core::seat_index_t Game::Rules::current_player(const StateSnapshot& snapshot) {
-  return snapshot.get_current_player();
+inline core::seat_index_t Game::Rules::current_player(const BaseState& base) {
+  return base.get_current_player();
 }
 
 inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState& state) {
@@ -59,8 +59,8 @@ inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState&
   return set;
 }
 
-inline Game::InputTensor Game::InputTensorizor::tensorize(const StateSnapshot* start,
-                                                          const StateSnapshot* cur) {
+inline Game::InputTensor Game::InputTensorizor::tensorize(const BaseState* start,
+                                                          const BaseState* cur) {
   core::seat_index_t cp = cur->get_current_player();
   InputTensor tensor;
   for (int row = 0; row < kNumRows; ++row) {
@@ -76,12 +76,10 @@ inline Game::InputTensor Game::InputTensorizor::tensorize(const StateSnapshot* s
 inline Game::TrainingTargetTensorizor::OwnershipTarget::Tensor
 Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const GameLogView& view) {
   Tensor tensor;
-  const StateSnapshot& current_snapshot = *view.cur_pos;
-  const StateSnapshot& final_snapshot = *view.final_pos;
-  core::seat_index_t cp = current_snapshot.get_current_player();
+  core::seat_index_t cp = view.cur_pos->get_current_player();
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumColumns; ++col) {
-      core::seat_index_t p = final_snapshot.get_player_at(row, col);
+      core::seat_index_t p = view.final_pos->get_player_at(row, col);
       int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
       tensor(row, col) = val;
     }
