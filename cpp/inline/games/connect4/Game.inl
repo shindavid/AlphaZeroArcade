@@ -11,18 +11,6 @@
 
 namespace c4 {
 
-inline core::seat_index_t Game::BaseState::get_current_player() const {
-  return std::popcount(full_mask) % 2;
-}
-
-inline core::seat_index_t Game::BaseState::get_player_at(int row, int col) const {
-  int cp = get_current_player();
-  int index = _to_bit_index(row, col);
-  bool occupied_by_cur_player = (mask_t(1) << index) & cur_player_mask;
-  bool occupied_by_any_player = (mask_t(1) << index) & full_mask;
-  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
-}
-
 inline size_t Game::BaseState::hash() const {
   return boost::hash_range(&full_mask, &full_mask + 2);
 }
@@ -50,7 +38,7 @@ inline Game::ActionMask Game::Rules::legal_moves(const FullState& state) {
 }
 
 inline core::seat_index_t Game::Rules::current_player(const BaseState& base) {
-  return base.get_current_player();
+  return std::popcount(base.full_mask) % 2;
 }
 
 inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState& state) {
@@ -61,11 +49,11 @@ inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState&
 
 inline Game::InputTensor Game::InputTensorizor::tensorize(const BaseState* start,
                                                           const BaseState* cur) {
-  core::seat_index_t cp = cur->get_current_player();
+  core::seat_index_t cp = Rules::current_player(*cur);
   InputTensor tensor;
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumColumns; ++col) {
-      core::seat_index_t p = cur->get_player_at(row, col);
+      core::seat_index_t p = _get_player_at(*cur, row, col);
       tensor(0, row, col) = (p == cp);
       tensor(1, row, col) = (p == 1 - cp);
     }
@@ -76,15 +64,23 @@ inline Game::InputTensor Game::InputTensorizor::tensorize(const BaseState* start
 inline Game::TrainingTargetTensorizor::OwnershipTarget::Tensor
 Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const GameLogView& view) {
   Tensor tensor;
-  core::seat_index_t cp = view.cur_pos->get_current_player();
+  core::seat_index_t cp = Rules::current_player(*view.cur_pos);
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumColumns; ++col) {
-      core::seat_index_t p = view.final_pos->get_player_at(row, col);
+      core::seat_index_t p = _get_player_at(*view.final_pos, row, col);
       int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
       tensor(row, col) = val;
     }
   }
   return tensor;
+}
+
+inline core::seat_index_t Game::_get_player_at(const BaseState& state, row_t row, column_t col) {
+  int cp = Rules::current_player(state);
+  int index = _to_bit_index(row, col);
+  bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;
+  bool occupied_by_any_player = (mask_t(1) << index) & state.full_mask;
+  return occupied_by_any_player ? (occupied_by_cur_player ? cp : (1 - cp)) : -1;
 }
 
 inline constexpr int Game::_to_bit_index(row_t row, column_t col) { return 8 * col + row; }

@@ -53,8 +53,6 @@ struct Game {
   using GameLogView = core::GameLogView<Game>;
 
   struct BaseState {
-    core::seat_index_t get_current_player() const;
-    core::seat_index_t get_player_at(int row, int col) const;
     bool operator==(const BaseState& other) const = default;
     size_t hash() const;
 
@@ -120,6 +118,7 @@ struct Game {
   };
 
  private:
+  static core::seat_index_t _get_player_at(const BaseState& state, row_t row, column_t col);
   static constexpr int _to_bit_index(row_t row, column_t col);
   static constexpr mask_t _column_mask(column_t col);
   static constexpr mask_t _bottom_mask(column_t col);
