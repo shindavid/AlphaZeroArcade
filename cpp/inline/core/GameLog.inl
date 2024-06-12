@@ -104,9 +104,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
     transform->apply(next_policy);
   }
 
-  seat_index_t cp = Rules::current_player(*cur_pos);
   ValueArray outcome = get_outcome();
-  eigen_util::left_rotate(outcome, cp);
 
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   memcpy(input_values, input.data(), input.size() * sizeof(float));

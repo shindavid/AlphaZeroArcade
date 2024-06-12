@@ -38,7 +38,7 @@ core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
     my_action = prompt_for_action(state, valid_actions);
 
     if (my_action < 0 || my_action >= Game::kNumActions || !valid_actions[my_action]) continue;
-    continue;
+    break;
   }
 
   util::ScreenClearer::reset();
