@@ -129,6 +129,26 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 }
 
 template <concepts::Game Game>
+void GameLog<Game>::replay() {
+  int n = num_positions();
+  for (int i = 0; i < n; ++i) {
+    BaseState* pos = get_state(i);
+    action_t last_action = get_prev_action(i);
+    Game::IO::print_state(*pos, last_action);
+    if (i < n - 1) {
+      PolicyTensor policy = get_policy(i);
+      std::cout << "Policy: " << policy << std::endl;
+    }
+  }
+}
+
+template <concepts::Game Game>
+int GameLog<Game>::num_samples(bool apply_symmetry) {
+  return apply_symmetry ? num_samples_with_symmetry_expansion()
+                        : num_samples_without_symmetry_expansion();
+}
+
+template <concepts::Game Game>
 char* GameLog<Game>::get_buffer() const {
   FILE* file = fopen(filename_.c_str(), "rb");
   util::clean_assert(file, "Failed to open file '%s'", filename_.c_str());
@@ -240,6 +260,11 @@ int GameLog<Game>::sparse_policy_entry_start_mem_offset() const {
 }
 
 template <concepts::Game Game>
+action_t* GameLog<Game>::action_start_ptr() {
+  return reinterpret_cast<action_t*>(buffer_ + action_start_mem_offset_);
+}
+
+template <concepts::Game Game>
 GameLogBase::policy_tensor_index_t* GameLog<Game>::policy_tensor_index_start_ptr() {
   return reinterpret_cast<policy_tensor_index_t*>(buffer_ + policy_tensor_index_start_mem_offset_);
 }
@@ -307,6 +332,11 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
 template <concepts::Game Game>
 typename GameLog<Game>::BaseState* GameLog<Game>::get_state(int state_index) {
   return state_start_ptr() + state_index;
+}
+
+template <concepts::Game Game>
+action_t GameLog<Game>::get_prev_action(int state_index) {
+  return state_index==0 ? -1 : action_start_ptr()[state_index-1];
 }
 
 template <concepts::Game Game>

@@ -114,6 +114,9 @@ class GameLog : public GameLogBase {
   void load(int index, bool apply_symmetry, float* input_values, int* target_indices,
             float** target_value_arrays);
 
+  void replay();
+  int num_samples(bool apply_symmetry);
+
  private:
   char* get_buffer() const;
   Header& header();
@@ -136,6 +139,7 @@ class GameLog : public GameLogBase {
   int dense_policy_start_mem_offset() const;
   int sparse_policy_entry_start_mem_offset() const;
 
+  action_t* action_start_ptr();
   policy_tensor_index_t* policy_tensor_index_start_ptr();
   BaseState* state_start_ptr();
   PolicyTensor* dense_policy_start_ptr();
@@ -145,6 +149,7 @@ class GameLog : public GameLogBase {
 
   PolicyTensor get_policy(int state_index);
   BaseState* get_state(int state_index);
+  action_t get_prev_action(int state_index);
   ValueArray get_outcome() const;
   sym_sample_index_t get_sym_sample_index(int index);
   non_sym_sample_index_t get_non_sym_sample_index(int index);
