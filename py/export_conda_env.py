@@ -4,12 +4,12 @@ from subprocess import run
 
 
 export_env_cmd = "conda env export"
-# Ensure the diff is as expected
-# first and last key should be name and prefix respectively
 export_out = run(
     export_env_cmd,
     capture_output=True, text=True, shell=True
 )
+# Ensure the diff is as expected
+# first and last key should be name and prefix respectively
 lines = export_out.stdout.splitlines()
 name_key = 'name:'
 prefix_key = 'prefix:'
