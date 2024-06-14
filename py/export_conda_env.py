@@ -2,6 +2,7 @@
 import os
 from subprocess import run
 
+from util.repo_util import Repo
 
 export_env_cmd = "conda env export"
 export_out = run(
@@ -13,19 +14,20 @@ export_out = run(
 lines = export_out.stdout.splitlines()
 name_key = 'name:'
 prefix_key = 'prefix:'
-assert \
-    len(lines) >= 2 \
-    and lines[0][: len(name_key)] == name_key  \
-    and lines[-1][: len(prefix_key)] == prefix_key \
-    , "Environment file format is not supported."
+
+invalid = not len(lines) >= 2 \
+    and lines[0].startswith(name_key) \
+    and lines[-1].startswith(prefix_key)
+
+if invalid:
+    print(export_out.stdout)
+    raise Exception("Environment file format is not supported.")
 
 
-file_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-    "environment.yml"
-)
+file_path = os.path.join(Repo.root(), "environment.yml")
 
 with open(file_path, "w") as fp:
     # New lines are handled correctly in Python 3
     fp.write('\n'.join(lines[1: -1]))
-print('File environment.yml is saved to root repo.')
+
+print(f'File environment.yml is saved to {file_path}.')
