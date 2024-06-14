@@ -5,8 +5,8 @@ from subprocess import run
 
 export_env_cmd = "conda env export"
 export_out = run(
-    export_env_cmd,
-    capture_output=True, text=True, shell=True
+    export_env_cmd.split(),
+    capture_output=True, text=True, shell=False
 )
 # Ensure the diff is as expected
 # first and last key should be name and prefix respectively
