@@ -4,27 +4,28 @@ from subprocess import run
 
 
 export_env_cmd = "conda env export"
-# Remove the first line which contains the environments name
-# Remove the last line which contains the prefix
-export_stripped_env_cmd = f"{export_env_cmd} | head -n -1 | tail -n +2"
 # Ensure the diff is as expected
+# first and last key should be name and prefix respectively
 export_out = run(
     export_env_cmd,
     capture_output=True, text=True, shell=True
 )
-lines = export_out.stdout.split()
+lines = export_out.stdout.splitlines()
+name_key = 'name:'
+prefix_key = 'prefix:'
 assert \
     len(lines) >= 2 \
-    and lines[0] == 'name:'  \
-    and lines[-2] == 'prefix:', \
-    "environment file format is not supported"
+    and lines[0][: len(name_key)] == name_key  \
+    and lines[-1][: len(prefix_key)] == prefix_key \
+    , "Environment file format is not supported."
 
 
-cmd = f'{export_stripped_env_cmd} > environment.yml'
-print('Running from repo root:\n')
-print(cmd)
-repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-os.chdir(repo_root)
+file_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    "environment.yml"
+)
 
-os.system(cmd)
-
+with open(file_path, "w") as fp:
+    # New lines are handled correctly in Python 3
+    fp.write('\n'.join(lines[1: -1]))
+print('File environment.yml is saved to root repo.')
