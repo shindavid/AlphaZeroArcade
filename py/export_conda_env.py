@@ -25,7 +25,7 @@ if invalid:
 
 file_path = os.path.join(Repo.root(), "environment.yml")
 
-with open(file_path, "w") as fp:
+with open(file_path, 'w') as fp:
     # New lines are handled correctly in Python 3
     fp.write('\n'.join(lines[1: -1]))
 
