@@ -12,8 +12,8 @@ export_out = run(
 # Ensure the diff is as expected
 # first and last key should be name and prefix respectively
 lines = export_out.stdout.splitlines()
-name_key = 'name:'
-prefix_key = 'prefix:'
+name_key = "name:"
+prefix_key = "prefix:'"
 
 invalid = not len(lines) >= 2 \
     and lines[0].startswith(name_key) \
@@ -29,4 +29,4 @@ with open(file_path, "w") as fp:
     # New lines are handled correctly in Python 3
     fp.write('\n'.join(lines[1: -1]))
 
-print(f'File environment.yml is saved to {file_path}.')
+print(f"File environment.yml is saved to {file_path}.")
