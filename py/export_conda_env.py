@@ -23,7 +23,6 @@ if invalid:
     print(export_out.stdout)
     raise Exception("Environment file format is not supported.")
 
-
 file_path = os.path.join(Repo.root(), "environment.yml")
 
 with open(file_path, "w") as fp:
