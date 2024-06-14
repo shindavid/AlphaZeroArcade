@@ -13,7 +13,7 @@ export_out = run(
 # first and last key should be name and prefix respectively
 lines = export_out.stdout.splitlines()
 name_key = "name:"
-prefix_key = "prefix:'"
+prefix_key = "prefix:"
 
 invalid = not len(lines) >= 2 \
     and lines[0].startswith(name_key) \
