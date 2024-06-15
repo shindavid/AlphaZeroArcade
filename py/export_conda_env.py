@@ -23,10 +23,11 @@ if not is_valid_format:
     print(export_out.stdout)
     raise Exception("Environment file format is not supported.")
 
-file_path = os.path.join(Repo.root(), "environment.yml")
+file_name = "environment.yml"
+file_path = os.path.join(Repo.root(), file_name)
 
 with open(file_path, 'w') as fp:
     # New lines are handled correctly in Python 3
     fp.write('\n'.join(lines[1: -1] + [""]))
 
-print(f"File environment.yml is saved to {file_path}.")
+print(f"File {file_name} is saved to {file_path}.")
