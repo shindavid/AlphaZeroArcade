@@ -15,11 +15,11 @@ lines = export_out.stdout.splitlines()
 name_key = "name:"
 prefix_key = "prefix:"
 
-invalid = not len(lines) >= 2 \
+is_valid_format = len(lines) >= 2 \
     and lines[0].startswith(name_key) \
     and lines[-1].startswith(prefix_key)
 
-if invalid:
+if not is_valid_format:
     print(export_out.stdout)
     raise Exception("Environment file format is not supported.")
 
@@ -27,6 +27,6 @@ file_path = os.path.join(Repo.root(), "environment.yml")
 
 with open(file_path, 'w') as fp:
     # New lines are handled correctly in Python 3
-    fp.write('\n'.join(lines[1: -1]))
+    fp.write('\n'.join(lines[1: -1] + [""]))
 
 print(f"File environment.yml is saved to {file_path}.")
