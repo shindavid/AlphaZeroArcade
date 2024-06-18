@@ -69,7 +69,7 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
 
 template <concepts::Game Game>
 void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
-                         float** target_value_arrays) {
+                         float** target_value_arrays) const {
   int state_index;
   symmetry_index_t sym_index = -1;
 
@@ -88,28 +88,34 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 
   PolicyTensor policy = get_policy(state_index);
   PolicyTensor next_policy = get_policy(state_index + 1);
-  BaseState* cur_pos = get_state(state_index);
-  BaseState* start_pos = get_state(std::max(0, state_index - Game::kHistorySize));
-  BaseState* final_pos = get_state(num_positions() - 1);
+
+  constexpr int kNumBaseStates = Game::kHistorySize + 1;
+  util::UninitializedArray<BaseState, kNumBaseStates> base_states;
+
+  int num_states_to_cp = std::min(kNumBaseStates, state_index + 1);
+  int num_bytes_to_cp = num_states_to_cp * sizeof(BaseState);
+  std::memcpy(&base_states[0], get_state(state_index - num_states_to_cp + 1), num_bytes_to_cp);
+
+  BaseState final_state = *get_state(num_positions() - 1);
 
   if (sym_index >= 0) {
     Transform* transform = core::Transforms<Game>::get(sym_index);
-    for (BaseState* pos = start_pos; pos <= cur_pos; ++pos) {
-      transform->apply(*pos);
+    for (int i = 0; i < num_states_to_cp; ++i) {
+      transform->apply(base_states[i]);
     }
-    if (final_pos > cur_pos) {
-      transform->apply(*final_pos);
-    }
+    transform->apply(final_state);
     transform->apply(policy);
     transform->apply(next_policy);
   }
 
   ValueArray outcome = get_outcome();
 
+  BaseState* start_pos = &base_states[0];
+  BaseState* cur_pos = &base_states[num_states_to_cp - 1];
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   memcpy(input_values, input.data(), input.size() * sizeof(float));
 
-  core::GameLogView<Game> view{cur_pos, final_pos, &outcome, &policy, &next_policy};
+  core::GameLogView<Game> view{cur_pos, &final_state, &outcome, &policy, &next_policy};
 
   using TargetList = typename TrainingTargetTensorizor::TargetList;
   constexpr size_t N = mp::Length_v<TargetList>;
@@ -129,10 +135,10 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 }
 
 template <concepts::Game Game>
-void GameLog<Game>::replay() {
+void GameLog<Game>::replay() const {
   int n = num_positions();
   for (int i = 0; i < n; ++i) {
-    BaseState* pos = get_state(i);
+    const BaseState* pos = get_state(i);
     action_t last_action = get_prev_action(i);
     Game::IO::print_state(*pos, last_action);
     if (i < n - 1) {
@@ -143,7 +149,7 @@ void GameLog<Game>::replay() {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_samples(bool apply_symmetry) {
+int GameLog<Game>::num_samples(bool apply_symmetry) const {
   return apply_symmetry ? num_samples_with_symmetry_expansion()
                         : num_samples_without_symmetry_expansion();
 }
@@ -260,43 +266,43 @@ int GameLog<Game>::sparse_policy_entry_start_mem_offset() const {
 }
 
 template <concepts::Game Game>
-action_t* GameLog<Game>::action_start_ptr() {
+const action_t* GameLog<Game>::action_start_ptr() const {
   return reinterpret_cast<action_t*>(buffer_ + action_start_mem_offset_);
 }
 
 template <concepts::Game Game>
-GameLogBase::policy_tensor_index_t* GameLog<Game>::policy_tensor_index_start_ptr() {
+const GameLogBase::policy_tensor_index_t* GameLog<Game>::policy_tensor_index_start_ptr() const {
   return reinterpret_cast<policy_tensor_index_t*>(buffer_ + policy_tensor_index_start_mem_offset_);
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::BaseState* GameLog<Game>::state_start_ptr() {
+const typename GameLog<Game>::BaseState* GameLog<Game>::state_start_ptr() const {
   return reinterpret_cast<BaseState*>(buffer_ + state_start_mem_offset_);
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::PolicyTensor* GameLog<Game>::dense_policy_start_ptr() {
+const typename GameLog<Game>::PolicyTensor* GameLog<Game>::dense_policy_start_ptr() const {
   return reinterpret_cast<PolicyTensor*>(buffer_ + dense_policy_start_mem_offset_);
 }
 
 template <concepts::Game Game>
-GameLogBase::sparse_policy_entry_t* GameLog<Game>::sparse_policy_entry_start_ptr() {
+const GameLogBase::sparse_policy_entry_t* GameLog<Game>::sparse_policy_entry_start_ptr() const {
   return reinterpret_cast<sparse_policy_entry_t*>(buffer_ + sparse_policy_entry_start_mem_offset_);
 }
 
 template <concepts::Game Game>
-GameLogBase::sym_sample_index_t* GameLog<Game>::sym_sample_index_start_ptr() {
+const GameLogBase::sym_sample_index_t* GameLog<Game>::sym_sample_index_start_ptr() const {
   return reinterpret_cast<sym_sample_index_t*>(buffer_ + sym_sample_index_start_mem_offset());
 }
 
 template <concepts::Game Game>
-GameLogBase::non_sym_sample_index_t* GameLog<Game>::non_sym_sample_index_start_ptr() {
+const GameLogBase::non_sym_sample_index_t* GameLog<Game>::non_sym_sample_index_start_ptr() const {
   return reinterpret_cast<non_sym_sample_index_t*>(buffer_ +
                                                    non_sym_sample_index_start_mem_offset_);
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) {
+typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) const {
   PolicyTensor policy;
   if (state_index >= num_non_terminal_positions()) {
     policy.setZero();
@@ -308,7 +314,7 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
   if (index.start < index.end) {
     // sparse case
     policy.setZero();
-    sparse_policy_entry_t* sparse_start = sparse_policy_entry_start_ptr();
+    const sparse_policy_entry_t* sparse_start = sparse_policy_entry_start_ptr();
     for (int i = index.start; i < index.end; ++i) {
       sparse_policy_entry_t entry = sparse_start[i];
       policy(entry.offset) = entry.probability;
@@ -330,12 +336,12 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::BaseState* GameLog<Game>::get_state(int state_index) {
+const typename GameLog<Game>::BaseState* GameLog<Game>::get_state(int state_index) const {
   return state_start_ptr() + state_index;
 }
 
 template <concepts::Game Game>
-action_t GameLog<Game>::get_prev_action(int state_index) {
+action_t GameLog<Game>::get_prev_action(int state_index) const {
   return state_index==0 ? -1 : action_start_ptr()[state_index-1];
 }
 
@@ -345,7 +351,7 @@ typename GameLog<Game>::ValueArray GameLog<Game>::get_outcome() const {
 }
 
 template <concepts::Game Game>
-GameLogBase::sym_sample_index_t GameLog<Game>::get_sym_sample_index(int index) {
+GameLogBase::sym_sample_index_t GameLog<Game>::get_sym_sample_index(int index) const {
   if (index < 0 || index >= num_samples_with_symmetry_expansion()) {
     throw util::Exception("%s(%d) out of bounds in %s (%u)", __func__, index,
                           filename_.c_str(), num_samples_with_symmetry_expansion());
@@ -355,7 +361,7 @@ GameLogBase::sym_sample_index_t GameLog<Game>::get_sym_sample_index(int index) {
 }
 
 template <concepts::Game Game>
-GameLogBase::non_sym_sample_index_t GameLog<Game>::get_non_sym_sample_index(int index) {
+GameLogBase::non_sym_sample_index_t GameLog<Game>::get_non_sym_sample_index(int index) const {
   if (index < 0 || index >= num_samples_without_symmetry_expansion()) {
     throw util::Exception("%s(%d) out of bounds in %s (%u)", __func__, index,
                           filename_.c_str(), num_samples_without_symmetry_expansion());

@@ -33,6 +33,17 @@
 
 namespace util {
 
+template<typename T, size_t N>
+class UninitializedArray {
+ public:
+  T& operator[](size_t index) {
+    return *reinterpret_cast<T*>(&storage_[sizeof(T) * index]);
+  }
+
+ private:
+  alignas(T) unsigned char storage_[sizeof(T) * N];
+};
+
 template <typename T>
 std::string get_typename() {
   return boost::core::demangle(typeid(T).name());

@@ -112,10 +112,10 @@ class GameLog : public GameLogBase {
   static ShapeInfo* get_shape_info_array();
 
   void load(int index, bool apply_symmetry, float* input_values, int* target_indices,
-            float** target_value_arrays);
+            float** target_value_arrays) const;
 
-  void replay();
-  int num_samples(bool apply_symmetry);
+  void replay() const;
+  int num_samples(bool apply_symmetry) const;
 
  private:
   char* get_buffer() const;
@@ -139,20 +139,20 @@ class GameLog : public GameLogBase {
   int dense_policy_start_mem_offset() const;
   int sparse_policy_entry_start_mem_offset() const;
 
-  action_t* action_start_ptr();
-  policy_tensor_index_t* policy_tensor_index_start_ptr();
-  BaseState* state_start_ptr();
-  PolicyTensor* dense_policy_start_ptr();
-  sparse_policy_entry_t* sparse_policy_entry_start_ptr();
-  sym_sample_index_t* sym_sample_index_start_ptr();
-  non_sym_sample_index_t* non_sym_sample_index_start_ptr();
+  const action_t* action_start_ptr() const;
+  const policy_tensor_index_t* policy_tensor_index_start_ptr() const;
+  const BaseState* state_start_ptr() const;
+  const PolicyTensor* dense_policy_start_ptr() const;
+  const sparse_policy_entry_t* sparse_policy_entry_start_ptr() const;
+  const sym_sample_index_t* sym_sample_index_start_ptr() const;
+  const non_sym_sample_index_t* non_sym_sample_index_start_ptr() const;
 
-  PolicyTensor get_policy(int state_index);
-  BaseState* get_state(int state_index);
-  action_t get_prev_action(int state_index);
+  PolicyTensor get_policy(int state_index) const;
+  const BaseState* get_state(int state_index) const;
+  action_t get_prev_action(int state_index) const;
   ValueArray get_outcome() const;
-  sym_sample_index_t get_sym_sample_index(int index);
-  non_sym_sample_index_t get_non_sym_sample_index(int index);
+  sym_sample_index_t get_sym_sample_index(int index) const;
+  non_sym_sample_index_t get_non_sym_sample_index(int index) const;
 
   const std::string filename_;
   char* const buffer_ = nullptr;
