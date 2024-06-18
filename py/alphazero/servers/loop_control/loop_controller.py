@@ -193,11 +193,8 @@ class LoopController(LoopControllerInterface):
     def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
         self._remote_logging_manager.close_log_file(msg, conn.client_id)
 
-    def broadcast_weights(self, conns: List[ClientConnection], gen: Generation):
-        if not conns:
-            return
-
-        logger.debug(f'Broadcasting weights (gen={gen}) to {conns}')
+    def broadcast_weights(self, conn: ClientConnection, gen: Generation):
+        logger.debug(f'Broadcasting weights (gen={gen}) to {conn}')
 
         data = {
             'type': 'reload-weights',
@@ -205,10 +202,9 @@ class LoopController(LoopControllerInterface):
         }
 
         model_filename = self.organizer.get_model_filename(gen)
-        for conn in conns:
-            with conn.socket.send_mutex():
-                send_json(conn.socket.native_socket(), data)
-                send_file(conn.socket.native_socket(), model_filename)
+        with conn.socket.send_mutex():
+            send_json(conn.socket.native_socket(), data)
+            send_file(conn.socket.native_socket(), model_filename)
 
         logger.debug('Weights broadcast complete!')
 

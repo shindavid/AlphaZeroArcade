@@ -118,7 +118,7 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def broadcast_weights(self, conns: List[ClientConnection], gen: Generation):
+    def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         pass
 
     @abc.abstractmethod

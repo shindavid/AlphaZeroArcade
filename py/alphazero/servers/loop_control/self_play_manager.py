@@ -284,7 +284,7 @@ class SelfPlayManager:
     def _refresh_weights_if_needed(self, conn: ClientConnection):
         gen = self._controller.latest_gen()
         if conn.aux.get('gen', None) != gen:
-            self._controller.broadcast_weights([conn], gen)
+            self._controller.broadcast_weights(conn, gen)
             conn.aux['gen'] = gen
 
     def _handle_gen0_complete(self, conn: ClientConnection):

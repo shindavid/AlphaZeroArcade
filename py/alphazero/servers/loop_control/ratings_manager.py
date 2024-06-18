@@ -373,7 +373,7 @@ class RatingsManager:
             cond.notify_all()
 
     def _update_weights(self, gen: Generation, conn: ClientConnection):
-        self._controller.broadcast_weights([conn], gen)
+        self._controller.broadcast_weights(conn, gen)
         conn.aux['gen'] = gen
 
     def _estimate_rating(self, gen: Generation) -> Optional[float]:
