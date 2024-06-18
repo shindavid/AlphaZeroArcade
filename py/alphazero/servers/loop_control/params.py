@@ -1,7 +1,7 @@
 from alphazero.logic import constants
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -10,6 +10,7 @@ class LoopControllerParams:
     port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     model_cfg: str = 'default'
     target_rating_rate: float = 0.1
+    max_positions_per_generation: Optional[int] = None
 
     @staticmethod
     def create(args) -> 'LoopControllerParams':
@@ -18,6 +19,7 @@ class LoopControllerParams:
             port=args.port,
             model_cfg=args.model_cfg,
             target_rating_rate=args.target_rating_rate,
+            max_positions_per_generation=args.max_positions_per_generation,
         )
 
     @staticmethod
@@ -39,6 +41,8 @@ class LoopControllerParams:
                            'least one rating server is using a dedicated GPU. Otherwise this '
                            'parameter is used to prevent rating servers from getting starved by '
                            'self-play/training. (default: %(default).1f)')
+        group.add_argument('--max-positions-per-generation', type=int, default=None,
+                           help='max number of positions per generation (default: None)')
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = LoopControllerParams()
@@ -50,3 +54,5 @@ class LoopControllerParams:
             cmd.extend(['--model-cfg', self.model_cfg])
         if self.target_rating_rate != defaults.target_rating_rate:
             cmd.extend(['--target-rating-rate', str(self.target_rating_rate)])
+        if self.max_positions_per_generation != defaults.max_positions_per_generation:
+            cmd.extend(['--max-positions-per-generation', str(self.max_positions_per_generation)])

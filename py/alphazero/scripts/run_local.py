@@ -50,6 +50,8 @@ class Params:
     port: int = default_loop_controller_params.port
     model_cfg: str = default_loop_controller_params.model_cfg
     target_rating_rate: float = default_loop_controller_params.target_rating_rate
+    max_positions_per_generation: Optional[int] = \
+        default_loop_controller_params.max_positions_per_generation
     rating_tag: str = ''
     n_mcts_iters: Optional[int] = None
     n_search_threads: int = default_ratings_server_params.n_search_threads
@@ -151,6 +153,8 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--model-cfg', params.model_cfg])
     if default_loop_controller_params.target_rating_rate != params.target_rating_rate:
         cmd.extend(['--target-rating-rate', str(params.target_rating_rate)])
+    if default_loop_controller_params.max_positions_per_generation != params.max_positions_per_generation:
+        cmd.extend(['--max-positions-per-generation', str(params.max_positions_per_generation)])
 
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)

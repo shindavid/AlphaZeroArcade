@@ -33,6 +33,8 @@ class SelfPlayManager:
         self._gen1_lock = threading.Lock()
         self._gen1_cond = threading.Condition(self._gen1_lock)
 
+        self._budget_lock = threading.Lock()
+        self._budget_dict = defaultdict(int)
         self._pending_game_data = []
 
     def setup(self):
@@ -80,6 +82,16 @@ class SelfPlayManager:
         with self._gen1_lock:
             self._gen1_model_trained = True
             self._gen1_cond.notify_all()
+
+    def _check_row_budget(self, gen, rows):
+        if gen == 0 or self._controller.params.max_positions_per_generation is None:
+            return True
+
+        with self._budget_lock:
+            cumulative_rows = self._budget_dict[gen]
+            self._budget_dict[gen] += rows
+
+        return cumulative_rows < self._controller.params.max_positions_per_generation
 
     def _wait_until_retrain_not_needed(self):
         with self._retrain_lock:
@@ -365,15 +377,27 @@ class SelfPlayManager:
         rows = msg['rows']
         flush = msg['flush']
 
-        organizer = self._controller.organizer
-        # json msg is immediately followed by the game file
-        game_dir = os.path.join(organizer.self_play_data_dir, f'client-{client_id}',
-                                f'gen-{gen}')
-        os.makedirs(game_dir, exist_ok=True)
-        game_filename = os.path.join(game_dir, f'{end_timestamp}.pt')
-        conn.socket.recv_file(game_filename)
+        use_data = self._check_row_budget(gen, rows)
 
-        self._pending_game_data.append((client_id, gen, start_timestamp, end_timestamp, rows))
+        if use_data:
+            organizer = self._controller.organizer
+            # json msg is immediately followed by the game file
+            game_dir = os.path.join(organizer.self_play_data_dir, f'client-{client_id}',
+                                    f'gen-{gen}')
+            os.makedirs(game_dir, exist_ok=True)
+            game_filename = os.path.join(game_dir, f'{end_timestamp}.pt')
+        else:
+            # TODO: This is not the best way to respect the --max-positions-per-generation flag.
+            # This makes it so that the c++ blindly keeps generating games, but the python side
+            # just drops them on the floor if they exceed the budget. It would be smarter to have
+            # the c++ side respect the budget. Currently we have this flag just to support some
+            # ad-hoc experiments, so we can live with this for now. If we start to use the flag
+            # more regularly, we should improve this.
+            game_filename = None
+
+        conn.socket.recv_file(game_filename)
+        if use_data:
+            self._pending_game_data.append((client_id, gen, start_timestamp, end_timestamp, rows))
 
         if flush:
             metrics = msg.get('metrics', None)

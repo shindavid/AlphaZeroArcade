@@ -137,7 +137,7 @@ def send_json(sock: socket.socket, data: JsonData):
             'socket.sendall() failure during send_json() - socket likely closed by peer')
 
 
-def recv_file(sock: socket.socket, filename: str) -> bytes:
+def recv_file(sock: socket.socket, filename: Optional[str]) -> bytes:
     """
     Receives a file from the socket. This assumes that the file is prepended by a 4-byte big-endian
     integer specifying the length of the file and a 1-byte bool specifying whether the file is
@@ -152,6 +152,9 @@ def recv_file(sock: socket.socket, filename: str) -> bytes:
     executable = bool(int.from_bytes(data, byteorder='big'))
 
     data = recvall(sock, length)
+
+    if filename is None:
+        return
 
     with open(filename, 'wb') as f:
         f.write(data)
@@ -231,7 +234,7 @@ class Socket:
         with self._send_mutex:
             send_json(self._sock, data)
 
-    def recv_file(self, filename: str):
+    def recv_file(self, filename: Optional[str]):
         """
         Mutex-protected call to socket_util.recv_file().
         """
