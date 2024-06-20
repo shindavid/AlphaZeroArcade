@@ -88,7 +88,7 @@ class GameLog : public GameLogBase {
   using Transform = typename Game::Transform;
   using InputTensorizor = typename Game::InputTensorizor;
   using InputTensor = typename Game::InputTensorizor::Tensor;
-  using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
+  using TrainingTargetsList = typename Game::TrainingTargets::List;
   using BaseState = typename Game::BaseState;
   using PolicyTensor = typename Game::Types::PolicyTensor;
   using ValueArray = typename Game::Types::ValueArray;

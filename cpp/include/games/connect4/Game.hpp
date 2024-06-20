@@ -12,8 +12,8 @@
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/Symmetries.hpp>
-#include <core/TrainingTargets.hpp>
 #include <core/SearchResults.hpp>
+#include <core/TrainingTargets.hpp>
 #include <util/EigenUtil.hpp>
 
 #include <games/connect4/Constants.hpp>
@@ -94,7 +94,7 @@ struct Game {
     static Tensor tensorize(const BaseState* start, const BaseState* cur);
   };
 
-  struct TrainingTargetTensorizor {
+  struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kNumRows, kNumColumns>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
@@ -108,7 +108,7 @@ struct Game {
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
-    using TargetList = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, OwnershipTarget>;
+    using List = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, OwnershipTarget>;
   };
 
  private:
@@ -118,8 +118,6 @@ struct Game {
   static constexpr mask_t _bottom_mask(column_t col);
   static constexpr mask_t _full_bottom_mask();
 };
-
-static_assert(core::concepts::Game<c4::Game>);
 
 }  // namespace c4
 
@@ -131,5 +129,7 @@ struct hash<c4::Game::BaseState> {
 };
 
 }  // namespace std
+
+static_assert(core::concepts::Game<c4::Game>);
 
 #include <inline/games/connect4/Game.inl>

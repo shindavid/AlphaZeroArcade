@@ -35,7 +35,7 @@ class TrainingDataWriter
 
   using ValueArray = typename Game::Types::ValueArray;
   using InputTensorizor = typename Game::InputTensorizor;
-  using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
+  using TrainingTargetsList = typename Game::TrainingTargets::List;
 
   using GameLogWriter = core::GameLogWriter<Game>;
   using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;

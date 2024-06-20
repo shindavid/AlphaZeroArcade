@@ -21,7 +21,6 @@ class NodeCache {
   using InputTensorizor = typename Game::InputTensorizor;
   using FullState = typename Game::FullState;
   using MCTSKey = typename InputTensorizor::MCTSKey;
-  static_assert(util::concepts::Hashable<MCTSKey>);
   using ActionOutcome = typename Game::Types::ActionOutcome;
   using Node = mcts::Node<Game>;
   using Node_sptr = typename Node::sptr;

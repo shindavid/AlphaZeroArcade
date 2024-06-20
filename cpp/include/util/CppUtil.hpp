@@ -398,7 +398,7 @@ template <typename T>
 concept StdBitSet = is_bit_set_v<T>;
 
 template<typename T>
-concept Hashable = requires(const T& a, const T& b) {
+concept UsableAsHashMapKey = requires(const T& a, const T& b) {
   { std::hash<T>{}(a) } -> std::convertible_to<size_t>;
   { a == b } -> std::convertible_to<bool>;
 };

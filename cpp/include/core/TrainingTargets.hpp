@@ -1,8 +1,35 @@
 #pragma once
 
 #include <util/EigenUtil.hpp>
+#include <util/MetaProgramming.hpp>
 
 namespace core {
+
+namespace concepts {
+
+template <typename T, typename GameLogView>
+concept TrainingTarget = requires (const GameLogView& view) {
+  { util::decay_copy(T::kName) } -> std::same_as<const char*>;
+  requires eigen_util::concepts::FTensor<typename T::Tensor>;
+  { T::tensorize(view) } -> std::same_as<typename T::Tensor>;
+};
+
+}  // namespace concepts
+
+template<typename GameLogView>
+struct IsTrainingTarget {
+  template<typename T>
+  struct Pred {
+    static constexpr bool value = concepts::TrainingTarget<T, GameLogView>;
+  };
+};
+
+namespace concepts {
+
+template <typename T, typename GameLogView>
+concept TrainingTargetList = mp::IsTypeListSatisfying<T, IsTrainingTarget<GameLogView>::template Pred>;
+
+}  // namespace concepts
 
 template<typename Game>
 struct PolicyTarget {

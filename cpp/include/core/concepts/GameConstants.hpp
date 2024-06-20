@@ -2,6 +2,8 @@
 
 #include <util/CppUtil.hpp>
 
+#include <concepts>
+
 namespace core {
 namespace concepts {
 

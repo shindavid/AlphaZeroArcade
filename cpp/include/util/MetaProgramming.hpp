@@ -41,6 +41,20 @@ concept IsTypeList = requires(T t) { []<typename... Ts>(TypeList<Ts...>&) {}(t);
 template <typename T, typename Base>
 concept IsTypeListOf = IsTypeList<T> && AllDerivedFrom<Base, T>::value;
 
+template <template <typename> typename Pred, typename T>
+struct AllSatisfyConcept;
+
+template <template <typename> typename Pred>
+struct AllSatisfyConcept<Pred, TypeList<>> : std::bool_constant<true> {};
+
+template <template <typename> typename Pred, typename Head, typename... Tails>
+struct AllSatisfyConcept<Pred, TypeList<Head, Tails...>>
+    : std::bool_constant<Pred<Head>::value && AllSatisfyConcept<Pred, TypeList<Tails...>>::value> {
+};
+
+template <typename T, template<typename> typename Pred>
+concept IsTypeListSatisfying = IsTypeList<T> && AllSatisfyConcept<Pred, T>::value;
+
 // TransformTypeList_t<Transform, TypeList<A, B>>
 //
 // is equivalent to:

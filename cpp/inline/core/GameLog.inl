@@ -53,15 +53,14 @@ GameLog<Game>::~GameLog() {
 
 template <concepts::Game Game>
 ShapeInfo* GameLog<Game>::get_shape_info_array() {
-  using TargetList = typename TrainingTargetTensorizor::TargetList;
-  constexpr int n_targets = mp::Length_v<TargetList>;
+  constexpr int n_targets = mp::Length_v<TrainingTargetsList>;
   constexpr int n = n_targets + 2;  // 1 for input, 1 for terminator
 
   ShapeInfo* info_array = new ShapeInfo[n];
   info_array[0].template init<InputTensor>("input", -1);
 
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
-    using Target = mp::TypeAt_t<TargetList, a>;
+    using Target = mp::TypeAt_t<TrainingTargetsList, a>;
     using Tensor = typename Target::Tensor;
     info_array[1 + a].template init<Tensor>(Target::kName, a);
   });
@@ -119,8 +118,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 
   core::GameLogView<Game> view{cur_pos, &final_state, &outcome, &policy, &next_policy};
 
-  using TargetList = typename TrainingTargetTensorizor::TargetList;
-  constexpr size_t N = mp::Length_v<TargetList>;
+  constexpr size_t N = mp::Length_v<TrainingTargetsList>;
 
   for (int t = 0;; ++t) {
     int target_index = target_indices[t];
@@ -128,7 +126,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
 
     mp::constexpr_for<0, N, 1>([&](auto a) {
       if (target_index == a) {
-        using Target = mp::TypeAt_t<TargetList, a>;
+        using Target = mp::TypeAt_t<TrainingTargetsList, a>;
         auto tensor = Target::tensorize(view);
         memcpy(target_value_arrays[t], tensor.data(), tensor.size() * sizeof(float));
       }

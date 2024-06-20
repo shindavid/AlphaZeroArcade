@@ -61,8 +61,8 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const Base
   return tensor;
 }
 
-inline Game::TrainingTargetTensorizor::OwnershipTarget::Tensor
-Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const Types::GameLogView& view) {
+inline Game::TrainingTargets::OwnershipTarget::Tensor
+Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   for (int row = 0; row < kNumRows; ++row) {
