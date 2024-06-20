@@ -5,7 +5,6 @@
 #include <core/GameLog.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TrainingDataWriter.hpp>
-#include <core/SearchResults.hpp>
 
 #include <vector>
 

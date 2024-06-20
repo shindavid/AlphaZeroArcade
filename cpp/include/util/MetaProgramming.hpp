@@ -55,46 +55,6 @@ struct AllSatisfyConcept<Pred, TypeList<Head, Tails...>>
 template <typename T, template<typename> typename Pred>
 concept IsTypeListSatisfying = IsTypeList<T> && AllSatisfyConcept<Pred, T>::value;
 
-// TransformTypeList_t<Transform, TypeList<A, B>>
-//
-// is equivalent to:
-//
-// TypeList<Transform<A>::type, Transform<B>::type>
-
-template <template <typename> class Transformer, typename TypeList>
-struct TransformTypeList;
-
-template <template <typename> class Transformer, typename... Ts>
-struct TransformTypeList<Transformer, TypeList<Ts...>> {
-  using type = TypeList<typename Transformer<Ts>::type...>;
-};
-
-template <template <typename> class Transformer, typename TypeList>
-using TransformTypeList_t = typename TransformTypeList<Transformer, TypeList>::type;
-
-// TypeListToTuple_t<TypeList<A, B>>
-//
-// is equivalent to:
-//
-// std::tuple<A, B>
-
-template <typename TypeList>
-struct TypeListToTuple;
-
-template <>
-struct TypeListToTuple<TypeList<>> {
-  using type = std::tuple<>;
-};
-
-template <typename Head, typename... Tails>
-struct TypeListToTuple<TypeList<Head, Tails...>> {
-  using type = decltype(std::tuple_cat(std::tuple<Head>{},
-                                       typename TypeListToTuple<TypeList<Tails...>>::type{}));
-};
-
-template <typename TypeList>
-using TypeListToTuple_t = typename TypeListToTuple<TypeList>::type;
-
 // length of a typelist
 
 template <typename TList>

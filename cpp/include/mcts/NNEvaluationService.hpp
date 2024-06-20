@@ -98,7 +98,7 @@ class NNEvaluationService
 
   using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
-  using Transform = typename Game::Transform;
+  using Transform = typename Game::Types::Transform;
   using Transforms = core::Transforms<Game>;
   using InputTensorizor = typename Game::InputTensorizor;
   using EvalKey = typename InputTensorizor::EvalKey;

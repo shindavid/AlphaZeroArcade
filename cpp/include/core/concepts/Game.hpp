@@ -10,10 +10,8 @@
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/concepts/GameInputTensorizor.hpp>
-#include <core/GameLogView.hpp>
 #include <core/GameTypes.hpp>
 #include <core/Symmetries.hpp>
-#include <core/SearchResults.hpp>
 #include <core/TrainingTargets.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -64,22 +62,18 @@ concept Game = requires(
     const typename G::Types::SearchResults& const_search_results) {
 
   requires core::concepts::GameConstants<typename G::Constants>;
-  requires std::same_as<typename G::Types, core::GameTypes<G>>;
+  requires std::same_as<typename G::Types, core::GameTypes<typename G::Constants, typename G::BaseState>>;
 
   requires std::is_default_constructible_v<typename G::BaseState>;
   requires std::is_trivially_copyable_v<typename G::BaseState>;
   requires std::is_convertible_v<typename G::BaseState, typename G::FullState>;
 
-  requires std::same_as<typename G::Transform, core::Transform<typename G::BaseState, typename G::Types::PolicyTensor>>;
-  requires mp::IsTypeListOf<typename G::TransformList, typename G::Transform>;
-  requires std::same_as<typename G::SymmetryIndexSet, std::bitset<mp::Length_v<typename G::TransformList>>>;
+  requires mp::IsTypeListOf<typename G::TransformList, typename G::Types::Transform>;
 
   { G::Rules::get_legal_moves(const_full_state) } -> std::same_as<typename G::Types::ActionMask>;
   { G::Rules::get_current_player(const_base_state) } -> std::same_as<core::seat_index_t>;
-  { G::Rules::apply(full_state, core::action_t{})
-  } -> std::same_as<typename G::Types::ActionOutcome>;
-  { G::Rules::get_symmetry_indices(const_full_state)
-  } -> std::same_as<typename G::SymmetryIndexSet>;
+  { G::Rules::apply(full_state, core::action_t{}) } -> std::same_as<typename G::Types::ActionOutcome>;
+  { G::Rules::get_symmetry_indices(const_full_state) } -> std::same_as<typename G::Types::SymmetryIndexSet>;
 
   { G::IO::action_delimiter() } -> std::same_as<std::string>;
   { G::IO::action_to_str(core::action_t{}) } -> std::same_as<std::string>;

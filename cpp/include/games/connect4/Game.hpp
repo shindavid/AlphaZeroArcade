@@ -11,8 +11,6 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
-#include <core/Symmetries.hpp>
-#include <core/SearchResults.hpp>
 #include <core/TrainingTargets.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -40,6 +38,7 @@ struct Game {
     static constexpr int kNumActions = kNumColumns;
     static constexpr int kMaxBranchingFactor = kNumColumns;
     static constexpr int kHistorySize = 0;
+    static constexpr int kNumSymmetries = 2;
   };
 
   struct BaseState {
@@ -52,9 +51,8 @@ struct Game {
 
   using FullState = BaseState;
 
-  using Types = core::GameTypes<Game>;
+  using Types = core::GameTypes<Constants, BaseState>;
 
-  using Transform = core::Transform<BaseState, Types::PolicyTensor>;
   using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
 
   struct Reflect : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
@@ -63,13 +61,12 @@ struct Game {
   };
 
   using TransformList = mp::TypeList<Identity, Reflect>;
-  using SymmetryIndexSet = std::bitset<mp::Length_v<TransformList>>;
 
   struct Rules {
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);
-    static SymmetryIndexSet get_symmetry_indices(const FullState& state);
+    static Types::SymmetryIndexSet get_symmetry_indices(const FullState& state);
   };
 
   struct IO {

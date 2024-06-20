@@ -12,7 +12,6 @@
 #include <mcts/Node.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
-#include <core/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 

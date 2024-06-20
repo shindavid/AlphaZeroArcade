@@ -12,7 +12,6 @@
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/SearchParams.hpp>
-#include <core/SearchResults.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>

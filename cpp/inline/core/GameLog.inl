@@ -116,7 +116,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   memcpy(input_values, input.data(), input.size() * sizeof(float));
 
-  core::GameLogView<Game> view{cur_pos, &final_state, &outcome, &policy, &next_policy};
+  GameLogView view{cur_pos, &final_state, &outcome, &policy, &next_policy};
 
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
 

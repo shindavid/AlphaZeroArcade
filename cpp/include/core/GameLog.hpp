@@ -85,13 +85,14 @@ class GameLog : public GameLogBase {
   using Header = GameLogBase::Header;
 
   using Rules = typename Game::Rules;
-  using Transform = typename Game::Transform;
+  using Transform = typename Game::Types::Transform;
   using InputTensorizor = typename Game::InputTensorizor;
   using InputTensor = typename Game::InputTensorizor::Tensor;
   using TrainingTargetsList = typename Game::TrainingTargets::List;
   using BaseState = typename Game::BaseState;
   using PolicyTensor = typename Game::Types::PolicyTensor;
   using ValueArray = typename Game::Types::ValueArray;
+  using GameLogView = typename Game::Types::GameLogView;
 
   GameLog(const char* filename);
   ~GameLog();
@@ -158,8 +159,8 @@ class GameLogWriter {
   using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
   using ValueArray = typename Game::Types::ValueArray;
-  using SymmetryIndexSet = typename Game::SymmetryIndexSet;
-  using PolicyTensor = eigen_util::FTensor<typename Game::Types::PolicyShape>;
+  using SymmetryIndexSet = typename Game::Types::SymmetryIndexSet;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
   using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {

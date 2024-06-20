@@ -41,8 +41,8 @@ inline core::seat_index_t Game::Rules::get_current_player(const BaseState& base)
   return std::popcount(base.full_mask) % 2;
 }
 
-inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState& state) {
-  SymmetryIndexSet set;
+inline Game::Types::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState& state) {
+  Types::SymmetryIndexSet set;
   set.set();
   return set;
 }
