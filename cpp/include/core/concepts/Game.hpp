@@ -8,11 +8,13 @@
 #include <Eigen/Core>
 
 #include <core/BasicTypes.hpp>
-#include <core/concepts/GameConstants.hpp>
-#include <core/concepts/GameInputTensorizor.hpp>
 #include <core/GameTypes.hpp>
 #include <core/Symmetries.hpp>
 #include <core/TrainingTargets.hpp>
+#include <core/concepts/GameConstants.hpp>
+#include <core/concepts/GameIO.hpp>
+#include <core/concepts/GameInputTensorizor.hpp>
+#include <core/concepts/GameRules.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
@@ -54,13 +56,7 @@ namespace concepts {
  *   auxiliary targets.
  */
 template <class G>
-concept Game = requires(
-    const typename G::BaseState& const_base_state, typename G::BaseState& base_state,
-    const typename G::FullState& const_full_state, typename G::FullState& full_state,
-    const typename G::Types::player_name_array_t* const_player_name_array_ptr,
-    const typename G::Types::PolicyTensor& const_policy_tensor,
-    const typename G::Types::SearchResults& const_search_results) {
-
+concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<typename G::Types, core::GameTypes<typename G::Constants, typename G::BaseState>>;
 
@@ -69,22 +65,13 @@ concept Game = requires(
   requires std::is_convertible_v<typename G::BaseState, typename G::FullState>;
 
   requires mp::IsTypeListOf<typename G::TransformList, typename G::Types::Transform>;
-
-  { G::Rules::get_legal_moves(const_full_state) } -> std::same_as<typename G::Types::ActionMask>;
-  { G::Rules::get_current_player(const_base_state) } -> std::same_as<core::seat_index_t>;
-  { G::Rules::apply(full_state, core::action_t{}) } -> std::same_as<typename G::Types::ActionOutcome>;
-  { G::Rules::get_symmetry_indices(const_full_state) } -> std::same_as<typename G::Types::SymmetryIndexSet>;
-
-  { G::IO::action_delimiter() } -> std::same_as<std::string>;
-  { G::IO::action_to_str(core::action_t{}) } -> std::same_as<std::string>;
-  { G::IO::print_state(const_base_state, core::action_t{}, const_player_name_array_ptr) };
-  { G::IO::print_state(const_base_state, core::action_t{}) };
-  { G::IO::print_state(const_base_state) };
-  { G::IO::print_mcts_results(const_policy_tensor, const_search_results) };
-
+  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::BaseState,
+                                     typename G::FullState>;
+  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::BaseState>;
   requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::BaseState,
                                                typename G::FullState>;
-  requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List, typename G::Types::GameLogView>;
+  requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List,
+                                              typename G::Types::GameLogView>;
 };
 
 }  // namespace concepts

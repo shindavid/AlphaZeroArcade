@@ -234,7 +234,7 @@ template <core::concepts::Game Game>
 core::symmetry_index_t Node<Game>::make_sym_index(const FullState& state,
                                                   const ManagerParams& params) {
   if (params.apply_random_symmetries) {
-    return bitset_util::choose_random_on_index(Rules::get_symmetry_indices(state));
+    return bitset_util::choose_random_on_index(Rules::get_symmetries(state));
   }
   return 0;
 }

@@ -78,7 +78,7 @@ class GameState {
   }
 
   const Data& data() const { return data_; }
-  SymmetryIndexSet get_symmetry_indices() const;
+  SymmetryIndexSet get_symmetries() const;
 
   int get_count(core::seat_index_t seat) const;
   core::seat_index_t get_current_player() const { return data_.cur_player; }

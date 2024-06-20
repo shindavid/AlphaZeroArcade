@@ -387,7 +387,7 @@ void GameLogWriter<Game>::add(const FullState& state, action_index_t action,
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
   entry->position = state;
-  entry->symmetries = Rules::get_symmetry_indices(state);
+  entry->symmetries = Rules::get_symmetries(state);
   if (policy_target) {
     entry->policy_target = *policy_target;
   } else {

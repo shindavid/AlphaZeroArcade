@@ -17,7 +17,7 @@ inline std::size_t std::hash<othello::GameState>::operator()(
 
 namespace othello {
 
-inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
+inline GameState::SymmetryIndexSet GameState::get_symmetries() const {
   SymmetryIndexSet set;
   set.set();
   return set;

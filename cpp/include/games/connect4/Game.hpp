@@ -66,7 +66,7 @@ struct Game {
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);
-    static Types::SymmetryIndexSet get_symmetry_indices(const FullState& state);
+    static Types::SymmetryIndexSet get_symmetries(const FullState& state);
   };
 
   struct IO {

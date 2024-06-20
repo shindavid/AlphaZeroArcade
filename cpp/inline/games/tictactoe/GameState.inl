@@ -9,7 +9,7 @@ inline std::size_t std::hash<tictactoe::GameState>::operator()(
 
 namespace tictactoe {
 
-inline GameState::SymmetryIndexSet GameState::get_symmetry_indices() const {
+inline GameState::SymmetryIndexSet GameState::get_symmetries() const {
   SymmetryIndexSet set;
   set.set();
   return set;
