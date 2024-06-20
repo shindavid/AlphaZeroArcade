@@ -1,9 +1,11 @@
 #include <core/GameLog.hpp>
 
+#include <core/Transforms.hpp>
 #include <util/BitSet.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/LoggingUtil.hpp>
 #include <util/Math.hpp>
+#include <util/MetaProgramming.hpp>
 
 #include <limits>
 
@@ -89,7 +91,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   PolicyTensor policy = get_policy(state_index);
   PolicyTensor next_policy = get_policy(state_index + 1);
 
-  constexpr int kNumBaseStates = Game::kHistorySize + 1;
+  constexpr int kNumBaseStates = Game::Constants::kHistorySize + 1;
   util::UninitializedArray<BaseState, kNumBaseStates> base_states;
 
   int num_states_to_cp = std::min(kNumBaseStates, state_index + 1);

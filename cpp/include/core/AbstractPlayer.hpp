@@ -38,10 +38,10 @@ class AbstractPlayer {
  public:
   using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
-  using ValueArray = typename Game::ValueArray;
-  using ActionMask = typename Game::ActionMask;
-  using player_array_t = std::array<AbstractPlayer*, Game::kNumPlayers>;
-  using player_name_array_t = typename Game::player_name_array_t;
+  using ValueArray = typename Game::Types::ValueArray;
+  using ActionMask = typename Game::Types::ActionMask;
+  using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
+  using player_name_array_t = typename Game::Types::player_name_array_t;
 
   virtual ~AbstractPlayer() = default;
   void set_name(const std::string& name) { name_ = name; }

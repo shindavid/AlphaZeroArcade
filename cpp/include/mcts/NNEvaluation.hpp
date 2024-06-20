@@ -10,11 +10,11 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluation {
  public:
-  using ActionMask = typename Game::ActionMask;
-  using PolicyTensor = typename Game::PolicyTensor;
-  using ValueArray = typename Game::ValueArray;
-  using LocalPolicyArray = eigen_util::DArray<Game::kMaxBranchingFactor>;
-  using ValueShape = eigen_util::Shape<Game::kNumPlayers>;
+  using ActionMask = typename Game::Types::ActionMask;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueArray = typename Game::Types::ValueArray;
+  using LocalPolicyArray = eigen_util::DArray<Game::Constants::kMaxBranchingFactor>;
+  using ValueShape = eigen_util::Shape<Game::Constants::kNumPlayers>;
   using ValueTensor = eigen_util::FTensor<ValueShape>;
 
   NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,

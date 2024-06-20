@@ -1,12 +1,12 @@
 #pragma once
 
-namespace mcts {
+namespace core {
 
-template <typename Game>
+template <typename GameTypes>
 struct SearchResults {
-  using ActionMask = typename Game::ActionMask;
-  using PolicyTensor = typename Game::PolicyTensor;
-  using ValueArray = typename Game::ValueArray;
+  using ActionMask = typename GameTypes::ActionMask;
+  using PolicyTensor = typename GameTypes::PolicyTensor;
+  using ValueArray = typename GameTypes::ValueArray;
 
   ActionMask valid_actions;
   PolicyTensor counts;
@@ -17,4 +17,4 @@ struct SearchResults {
   bool provably_lost = false;
 };
 
-}  // namespace mcts
+}  // namespace core

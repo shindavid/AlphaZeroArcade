@@ -8,8 +8,8 @@ template <core::concepts::Game Game>
 inline NNEvaluation<Game>::NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
                                         const ActionMask& valid_actions) {
   int n_valid_actions = valid_actions.count();
-  if (n_valid_actions > Game::kMaxBranchingFactor) {
-    throw util::Exception("kMaxBranchingFactor too small (%d < %d)", Game::kMaxBranchingFactor,
+  if (n_valid_actions > Game::Constants::kMaxBranchingFactor) {
+    throw util::Exception("kMaxBranchingFactor too small (%d < %d)", Game::Constants::kMaxBranchingFactor,
                           n_valid_actions);
   }
   local_policy_logit_distr_.resize(valid_actions.count());

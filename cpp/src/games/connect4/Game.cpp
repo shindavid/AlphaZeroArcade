@@ -11,7 +11,7 @@
 
 namespace c4 {
 
-Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
   BaseState& base = state;
 
   column_t col = action;
@@ -52,22 +52,22 @@ Game::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) 
     }
   }
 
-  ValueArray outcome;
+  Types::ValueArray outcome;
   outcome.setZero();
   if (win) {
     outcome(current_player) = 1.0;
-    return ActionOutcome(outcome);
+    return Types::ActionOutcome(outcome);
   } else if (std::popcount(base.full_mask) == kNumCells) {
     outcome(0) = 0.5;
     outcome(1) = 0.5;
-    return ActionOutcome(outcome);
+    return Types::ActionOutcome(outcome);
   }
 
-  return ActionOutcome();
+  return Types::ActionOutcome();
 }
 
 void Game::IO::print_state(const BaseState& base, core::action_t last_action,
-                           const player_name_array_t* player_names) {
+                           const Types::player_name_array_t* player_names) {
   if (!util::tty_mode() && last_action > -1) {
     std::string s(2 * last_action + 1, ' ');
     printf("%sx\n", s.c_str());
@@ -91,8 +91,8 @@ void Game::IO::print_state(const BaseState& base, core::action_t last_action,
   std::cout.flush();
 }
 
-void Game::IO::print_mcts_results(const PolicyTensor& action_policy,
-                                  const MctsSearchResults& results) {
+void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
+                                  const Types::SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;

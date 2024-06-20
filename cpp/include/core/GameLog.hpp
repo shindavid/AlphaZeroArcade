@@ -64,19 +64,6 @@ struct GameLogBase {
   static constexpr int align(int offset);
 };
 
-template <typename Game>
-struct GameLogView {
-  using BaseState = typename Game::BaseState;
-  using ValueArray = typename Game::ValueArray;
-  using PolicyTensor = typename Game::PolicyTensor;
-
-  const BaseState* cur_pos;
-  const BaseState* final_pos;
-  const ValueArray* outcome;
-  const PolicyTensor* policy;
-  const PolicyTensor* next_policy;
-};
-
 /*
  * GameLog file format is as follows:
  *
@@ -87,7 +74,7 @@ struct GameLogView {
  * [action_t...]
  * [policy_tensor_index_t...]
  * [Game::BaseState...]
- * [Game::PolicyTensor...]  // data for densely represented tensors
+ * [Game::Types::PolicyTensor...]  // data for densely represented tensors
  * [sparse_policy_entry_t...]  // data for sparsely represented tensors
  *
  * Each section is aligned to 8 bytes.
@@ -99,12 +86,12 @@ class GameLog : public GameLogBase {
 
   using Rules = typename Game::Rules;
   using Transform = typename Game::Transform;
-  using InputTensor = typename Game::InputTensor;
   using InputTensorizor = typename Game::InputTensorizor;
+  using InputTensor = typename Game::InputTensorizor::Tensor;
   using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
   using BaseState = typename Game::BaseState;
-  using PolicyTensor = typename Game::PolicyTensor;
-  using ValueArray = typename Game::ValueArray;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueArray = typename Game::Types::ValueArray;
 
   GameLog(const char* filename);
   ~GameLog();
@@ -170,9 +157,9 @@ class GameLogWriter {
   using Rules = typename Game::Rules;
   using BaseState = typename Game::BaseState;
   using FullState = typename Game::FullState;
-  using ValueArray = typename Game::ValueArray;
+  using ValueArray = typename Game::Types::ValueArray;
   using SymmetryIndexSet = typename Game::SymmetryIndexSet;
-  using PolicyTensor = eigen_util::FTensor<typename Game::PolicyShape>;
+  using PolicyTensor = eigen_util::FTensor<typename Game::Types::PolicyShape>;
   using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {

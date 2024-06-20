@@ -5,7 +5,7 @@
 #include <core/GameLog.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/TrainingDataWriter.hpp>
-#include <mcts/SearchResults.hpp>
+#include <core/SearchResults.hpp>
 
 #include <vector>
 
@@ -28,9 +28,9 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using GameLogWriter = core::GameLogWriter<Game>;
 
   using FullState = typename Game::FullState;
-  using ActionMask = typename Game::ActionMask;
-  using ValueArray = typename Game::ValueArray;
-  using PolicyTensor = typename Game::PolicyTensor;
+  using ActionMask = typename Game::Types::ActionMask;
+  using ValueArray = typename Game::Types::ValueArray;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = typename TrainingDataWriter::Params;
@@ -38,7 +38,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using base_t = MctsPlayer<Game>;
   using Params = base_t::Params;
   using MctsManager = base_t::MctsManager;
-  using MctsSearchResults = base_t::MctsSearchResults;
+  using SearchResults = base_t::SearchResults;
 
   template <typename... BaseArgs>
   DataExportingMctsPlayer(const TrainingDataWriterParams& writer_params, BaseArgs&&...);
@@ -50,7 +50,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   void end_game(const FullState&, const ValueArray&) override;
 
  protected:
-  static void extract_policy_target(const MctsSearchResults* results, PolicyTensor** target);
+  static void extract_policy_target(const SearchResults* results, PolicyTensor** target);
 
   TrainingDataWriter* writer_;
   TrainingDataWriter::GameLogWriter_sptr game_log_;

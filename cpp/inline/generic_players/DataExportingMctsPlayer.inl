@@ -37,7 +37,7 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
     search_mode = core::kFull;
   }
 
-  const MctsSearchResults* mcts_search_results = this->mcts_search(state, search_mode);
+  const SearchResults* mcts_search_results = this->mcts_search(state, search_mode);
 
   PolicyTensor policy_target;
   PolicyTensor* policy_target_ptr = nullptr;
@@ -60,8 +60,8 @@ void DataExportingMctsPlayer<Game>::end_game(const FullState& state,
 }
 
 template <core::concepts::Game Game>
-void DataExportingMctsPlayer<Game>::extract_policy_target(
-    const MctsSearchResults* mcts_results, PolicyTensor** target) {
+void DataExportingMctsPlayer<Game>::extract_policy_target(const SearchResults* mcts_results,
+                                                          PolicyTensor** target) {
   **target = mcts_results->policy_target;
   auto& policy_target_array = eigen_util::reinterpret_as_array(**target);
   float sum = policy_target_array.sum();

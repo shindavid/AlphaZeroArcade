@@ -21,15 +21,15 @@ inline void Game::Reflect::apply(BaseState& pos) {
 }
 
 inline void Game::Reflect::apply(PolicyTensor& t) {
-  eigen_util::FTensor<PolicyShape> u = eigen_util::reverse(t, t.rank() - 1);
+  PolicyTensor u = eigen_util::reverse(t, t.rank() - 1);
   t = u;
 }
 
-inline Game::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
   const BaseState& base = state;
   mask_t bottomed_full_mask = base.full_mask + _full_bottom_mask();
 
-  ActionMask mask;
+  Types::ActionMask mask;
   for (int col = 0; col < kNumColumns; ++col) {
     bool legal = bottomed_full_mask & _column_mask(col);
     mask[col] = legal;
@@ -47,10 +47,10 @@ inline Game::SymmetryIndexSet Game::Rules::get_symmetry_indices(const FullState&
   return set;
 }
 
-inline Game::InputTensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                          const BaseState* cur) {
+inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
+                                                                      const BaseState* cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);
-  InputTensor tensor;
+  Tensor tensor;
   for (int row = 0; row < kNumRows; ++row) {
     for (int col = 0; col < kNumColumns; ++col) {
       core::seat_index_t p = _get_player_at(*cur, row, col);
@@ -62,7 +62,7 @@ inline Game::InputTensor Game::InputTensorizor::tensorize(const BaseState* start
 }
 
 inline Game::TrainingTargetTensorizor::OwnershipTarget::Tensor
-Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const GameLogView& view) {
+Game::TrainingTargetTensorizor::OwnershipTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   for (int row = 0; row < kNumRows; ++row) {

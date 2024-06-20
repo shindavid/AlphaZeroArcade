@@ -37,7 +37,7 @@ core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
     complain = true;
     my_action = prompt_for_action(state, valid_actions);
 
-    if (my_action < 0 || my_action >= Game::kNumActions || !valid_actions[my_action]) continue;
+    if (my_action < 0 || my_action >= Game::Constants::kNumActions || !valid_actions[my_action]) continue;
     break;
   }
 

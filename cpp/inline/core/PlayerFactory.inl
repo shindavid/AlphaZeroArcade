@@ -60,7 +60,7 @@ typename PlayerFactory<Game>::player_generator_seat_vec_t PlayerFactory<Game>::p
     int seat = -1;
     if (!seat_str.empty()) {
       seat = std::stoi(seat_str);
-      util::clean_assert(seat < Game::kNumPlayers, "Invalid seat (%d) in --player \"%s\"",
+      util::clean_assert(seat < Game::Constants::kNumPlayers, "Invalid seat (%d) in --player \"%s\"",
                          seat, player_str.c_str());
     }
 

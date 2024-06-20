@@ -16,8 +16,8 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
 
   using IO = typename Game::IO;
   using FullState = typename Game::FullState;
-  using ActionMask = typename Game::ActionMask;
-  using ValueArray = typename Game::ValueArray;
+  using ActionMask = typename Game::Types::ActionMask;
+  using ValueArray = typename Game::Types::ValueArray;
   using player_array_t = typename base_t::player_array_t;
 
   HumanTuiPlayer() {}

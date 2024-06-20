@@ -7,13 +7,13 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
+#include <core/GameTypes.hpp>
 #include <core/Symmetries.hpp>
 #include <core/TrainingTargets.hpp>
-#include <mcts/SearchResults.hpp>
+#include <core/SearchResults.hpp>
 #include <util/EigenUtil.hpp>
 
 #include <games/connect4/Constants.hpp>
@@ -35,22 +35,12 @@ namespace c4 {
  * Unlike the PascalPons package, we use 0-indexing for column indices.
  */
 struct Game {
-  static constexpr int kNumPlayers = 2;
-  static constexpr int kNumActions = kNumColumns;
-  static constexpr int kMaxBranchingFactor = kNumColumns;
-  static constexpr int kHistorySize = 0;
-
-  using ActionMask = std::bitset<kNumActions>;
-  using player_name_array_t = std::array<std::string, kNumPlayers>;
-
-  using InputShape = Eigen::Sizes<kNumPlayers, kNumRows, kNumColumns>;
-  using InputTensor = eigen_util::FTensor<InputShape>;
-  using PolicyShape = Eigen::Sizes<kNumColumns>;
-  using PolicyTensor = eigen_util::FTensor<PolicyShape>;
-  using ValueArray = Eigen::Array<float, kNumPlayers, 1>;
-  using ActionOutcome = core::ActionOutcome<ValueArray>;
-  using MctsSearchResults = mcts::SearchResults<Game>;
-  using GameLogView = core::GameLogView<Game>;
+  struct Constants {
+    static constexpr int kNumPlayers = 2;
+    static constexpr int kNumActions = kNumColumns;
+    static constexpr int kMaxBranchingFactor = kNumColumns;
+    static constexpr int kHistorySize = 0;
+  };
 
   struct BaseState {
     bool operator==(const BaseState& other) const = default;
@@ -62,21 +52,23 @@ struct Game {
 
   using FullState = BaseState;
 
-  using Transform = core::Transform<BaseState, PolicyTensor>;
-  using Identity = core::IdentityTransform<BaseState, PolicyTensor>;
+  using Types = core::GameTypes<Game>;
 
-  struct Reflect : public core::ReflexiveTransform<BaseState, PolicyTensor> {
+  using Transform = core::Transform<BaseState, Types::PolicyTensor>;
+  using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
+
+  struct Reflect : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
     void apply(BaseState& pos) override;
-    void apply(PolicyTensor& policy) override;
+    void apply(Types::PolicyTensor& policy) override;
   };
 
   using TransformList = mp::TypeList<Identity, Reflect>;
   using SymmetryIndexSet = std::bitset<mp::Length_v<TransformList>>;
 
   struct Rules {
-    static ActionMask get_legal_moves(const FullState& state);
+    static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
-    static ActionOutcome apply(FullState& state, core::action_t action);
+    static Types::ActionOutcome apply(FullState& state, core::action_t action);
     static SymmetryIndexSet get_symmetry_indices(const FullState& state);
   };
 
@@ -84,20 +76,22 @@ struct Game {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action); }
     static void print_state(const BaseState&, core::action_t last_action = -1,
-                            const player_name_array_t* player_names = nullptr);
-    static void print_mcts_results(const PolicyTensor& action_policy, const MctsSearchResults&);
+                            const Types::player_name_array_t* player_names = nullptr);
+    static void print_mcts_results(const Types::PolicyTensor& action_policy,
+                                   const Types::SearchResults&);
 
    private:
     static void print_row(const BaseState&, row_t row, column_t blink_column);
   };
 
   struct InputTensorizor {
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kNumRows, kNumColumns>>;
     using EvalKey = BaseState;
     using MCTSKey = BaseState;
 
     static EvalKey eval_key(const FullState& state) { return state; }
     static MCTSKey mcts_key(const FullState& state) { return state; }
-    static InputTensor tensorize(const BaseState* start, const BaseState* cur);
+    static Tensor tensorize(const BaseState* start, const BaseState* cur);
   };
 
   struct TrainingTargetTensorizor {
@@ -111,7 +105,7 @@ struct Game {
       static constexpr const char* kName = "ownership";
       using Tensor = eigen_util::FTensor<BoardShape>;
 
-      static Tensor tensorize(const GameLogView& view);
+      static Tensor tensorize(const Types::GameLogView& view);
     };
 
     using TargetList = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, OwnershipTarget>;
@@ -126,8 +120,6 @@ struct Game {
 };
 
 static_assert(core::concepts::Game<c4::Game>);
-
-using Player = core::AbstractPlayer<Game>;
 
 }  // namespace c4
 

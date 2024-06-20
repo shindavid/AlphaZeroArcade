@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <bitset>
 #include <concepts>
 #include <string>
@@ -7,8 +8,14 @@
 #include <Eigen/Core>
 
 #include <core/BasicTypes.hpp>
+#include <core/concepts/GameConstants.hpp>
+#include <core/GameLogView.hpp>
+#include <core/GameTypes.hpp>
+#include <core/Symmetries.hpp>
+#include <core/SearchResults.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/MetaProgramming.hpp>
 
 namespace core {
 
@@ -23,12 +30,24 @@ namespace concepts {
  * quite a bit costlier than fixed-sized ones.
  */
 template <class G>
-concept Game = requires(const typename G::BaseState& base_state) {
-  { util::decay_copy(G::kNumPlayers) } -> std::same_as<int>;
-  { util::decay_copy(G::kNumActions) } -> std::same_as<int>;
-  { util::decay_copy(G::kMaxBranchingFactor) } -> std::same_as<int>;
-  { util::decay_copy(G::kHistorySize) } -> std::same_as<int>;
-  // TODO
+concept Game = requires(
+    const typename G::BaseState& const_base_state, typename G::BaseState& base_state,
+    const typename G::FullState& const_full_state, typename G::FullState& full_state) {
+
+  requires core::concepts::GameConstants<typename G::Constants>;
+  requires std::same_as<typename G::Types, core::GameTypes<G>>;
+
+  requires std::is_default_constructible_v<typename G::BaseState>;
+  requires std::is_trivially_copyable_v<typename G::BaseState>;
+  requires std::is_convertible_v<typename G::BaseState, typename G::FullState>;
+  requires std::same_as<typename G::Transform, core::Transform<typename G::BaseState, typename G::Types::PolicyTensor>>;
+  requires mp::IsTypeListOf<typename G::TransformList, typename G::Transform>;
+  requires std::same_as<typename G::SymmetryIndexSet, std::bitset<mp::Length_v<typename G::TransformList>>>;
+
+  { G::Rules::get_legal_moves(const_full_state) } -> std::same_as<typename G::Types::ActionMask>;
+  { G::Rules::get_current_player(const_base_state) } -> std::same_as<core::seat_index_t>;
+  { G::Rules::apply(full_state, core::action_t{}) } -> std::same_as<typename G::Types::ActionOutcome>;
+  { G::Rules::get_symmetry_indices(const_full_state) } -> std::same_as<typename G::SymmetryIndexSet>;
 };
 
 // template <class G>

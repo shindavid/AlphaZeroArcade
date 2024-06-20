@@ -12,7 +12,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
-#include <mcts/SearchResults.hpp>
+#include <core/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 
@@ -29,22 +29,22 @@ class Manager {
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
   using PUCTStats = mcts::PUCTStats<Game>;
-  using SearchResults = mcts::SearchResults<Game>;
   using SearchThread = mcts::SearchThread<Game>;
   using SharedData = mcts::SharedData<Game>;
 
-  static constexpr int kNumPlayers = Game::kNumPlayers;
-  static constexpr int kMaxBranchingFactor = Game::kMaxBranchingFactor;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
   using IO = typename Game::IO;
   using FullState = typename Game::FullState;
-  using ActionOutcome = typename Game::ActionOutcome;
-  using ActionMask = typename Game::ActionMask;
-  using InputShape = typename Game::InputShape;
-  using InputTensor = typename Game::InputTensor;
+  using SearchResults = typename Game::Types::SearchResults;
+  using ActionOutcome = typename Game::Types::ActionOutcome;
+  using ActionMask = typename Game::Types::ActionMask;
+  using InputTensor = typename Game::InputTensorizor::Tensor;
+  using InputShape = eigen_util::extract_shape_t<InputTensor>;
   using LocalPolicyArray = typename Node::LocalPolicyArray;
-  using PolicyTensor = typename Game::PolicyTensor;
-  using ValueArray = typename Game::ValueArray;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueArray = typename Game::Types::ValueArray;
 
   Manager(const ManagerParams& params);
   ~Manager();

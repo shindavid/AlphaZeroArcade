@@ -34,15 +34,15 @@ class SearchThread {
   using IO = Game::IO;
   using Rules = typename Game::Rules;
   using FullState = typename Game::FullState;
-  using ActionMask = typename Game::ActionMask;
+  using ActionMask = typename Game::Types::ActionMask;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
-  using PolicyShape = typename Game::PolicyShape;
-  using PolicyTensor = typename Game::PolicyTensor;
-  using ValueArray = typename Game::ValueArray;
+  using PolicyShape = typename Game::Types::PolicyShape;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueArray = typename Game::Types::ValueArray;
   using ValueTensor = typename NNEvaluation::ValueTensor;
 
-  static constexpr int kNumPlayers = Game::kNumPlayers;
-  static constexpr int kNumActions = Game::kNumActions;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  static constexpr int kNumActions = Game::Constants::kNumActions;
 
   using profiler_t = search_thread_profiler_t;
 

@@ -120,7 +120,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
       core::action_t action = bitset_util::get_nth_on_index(stable_data.valid_action_mask,
                                                             action_index);
       core::ActionOutcome outcome = Rules::apply(state_, action);
-      util::stuff_back<Game::kHistorySize>(state_history_, state_);
+      util::stuff_back<Game::Constants::kHistorySize>(state_history_, state_);
       applied_action = true;
       auto child = shared_data_->node_cache.fetch_or_create(move_number, state_, outcome,
                                                             this->manager_params_);
@@ -136,7 +136,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* edge, move_number_t mo
     } else {
       if (!applied_action) {
         Rules::apply(state_, edge->action());
-        util::stuff_back<Game::kHistorySize>(state_history_, state_);
+        util::stuff_back<Game::Constants::kHistorySize>(state_history_, state_);
       }
       visit(edge->child().get(), edge, move_number + 1);
     }

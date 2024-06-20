@@ -33,7 +33,7 @@ class TrainingDataWriter
     int64_t max_rows = 0;
   };
 
-  using ValueArray = typename Game::ValueArray;
+  using ValueArray = typename Game::Types::ValueArray;
   using InputTensorizor = typename Game::InputTensorizor;
   using TrainingTargetTensorizor = typename Game::TrainingTargetTensorizor;
 

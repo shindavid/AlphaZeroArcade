@@ -6,6 +6,7 @@
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
 #include <core/Symmetries.hpp>
+#include <core/Transforms.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
@@ -80,17 +81,17 @@ class NNEvaluationService
   using SharedData = mcts::SharedData<Game>;
   using base_state_vec_t = typename SharedData::base_state_vec_t;
 
-  using ActionMask = typename Game::ActionMask;
+  using ActionMask = typename Game::Types::ActionMask;
 
   using NNEvaluation_asptr = typename NNEvaluation::asptr;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
 
-  using InputTensor = typename Game::InputTensor;
-  using PolicyTensor = typename Game::PolicyTensor;
+  using InputTensor = typename Game::InputTensorizor::Tensor;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
   using ValueTensor = typename NNEvaluation::ValueTensor;
 
-  using InputShape = typename Game::InputShape;
-  using PolicyShape = typename Game::PolicyShape;
+  using InputShape = eigen_util::extract_shape_t<InputTensor>;
+  using PolicyShape = typename Game::Types::PolicyShape;
   using ValueShape = typename NNEvaluation::ValueShape;
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;

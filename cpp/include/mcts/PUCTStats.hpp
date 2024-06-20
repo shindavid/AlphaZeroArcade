@@ -14,7 +14,7 @@ struct PUCTStats {
   using Node = mcts::Node<Game>;
   using LocalPolicyArray = typename Node::LocalPolicyArray;
 
-  static constexpr int kMaxBranchingFactor = Game::kMaxBranchingFactor;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
   PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params,

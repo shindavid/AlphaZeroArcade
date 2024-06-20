@@ -12,7 +12,7 @@
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/SearchParams.hpp>
-#include <mcts/SearchResults.hpp>
+#include <core/SearchResults.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
@@ -46,14 +46,14 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   using MctsManager = mcts::Manager<Game>;
   using MctsSearchParams = mcts::SearchParams;
-  using MctsSearchResults = mcts::SearchResults<Game>;
-  using player_name_array_t = typename Game::player_name_array_t;
+  using SearchResults = typename Game::Types::SearchResults;
+  using player_name_array_t = typename Game::Types::player_name_array_t;
 
   using FullState = typename Game::FullState;
   using IO = typename Game::IO;
-  using ActionMask = typename Game::ActionMask;
-  using ValueArray = typename Game::ValueArray;
-  using PolicyTensor = typename Game::PolicyTensor;
+  using ActionMask = typename Game::Types::ActionMask;
+  using ValueArray = typename Game::Types::ValueArray;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);
@@ -70,14 +70,14 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   }
 
  protected:
-  const MctsSearchResults* mcts_search(const FullState& state, core::SearchMode search_mode) const;
+  const SearchResults* mcts_search(const FullState& state, core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
-  core::ActionResponse get_action_response_helper(core::SearchMode, const MctsSearchResults*,
+  core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
                                                   const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;
-    MctsSearchResults mcts_results;
+    SearchResults mcts_results;
 
     bool initialized = false;
   };

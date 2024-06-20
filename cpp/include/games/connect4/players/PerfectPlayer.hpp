@@ -18,7 +18,7 @@ namespace c4 {
 
 class PerfectOracle {
  public:
-  using ActionMask = Game::ActionMask;
+  using ActionMask = Game::Types::ActionMask;
   using FullState = Game::FullState;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
@@ -85,9 +85,9 @@ class PerfectOracle {
   int client_count_ = 0;
 };
 
-class PerfectPlayer : public Player {
+class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
  public:
-  using base_t = Player;
+  using base_t = core::AbstractPlayer<c4::Game>;
 
   struct Params {
     /*

@@ -134,12 +134,12 @@ template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response(const FullState& state,
                                                            const ActionMask& valid_actions) {
   core::SearchMode search_mode = choose_search_mode();
-  const MctsSearchResults* mcts_results = mcts_search(state, search_mode);
+  const SearchResults* mcts_results = mcts_search(state, search_mode);
   return get_action_response_helper(search_mode, mcts_results, valid_actions);
 }
 
 template <core::concepts::Game Game>
-inline const typename MctsPlayer<Game>::MctsSearchResults* MctsPlayer<Game>::mcts_search(
+inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search(
     const FullState& state, core::SearchMode search_mode) const {
   return mcts_manager_->search(state, search_params_[search_mode]);
 }
@@ -152,7 +152,7 @@ inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
 
 template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
-    core::SearchMode search_mode, const MctsSearchResults* mcts_results,
+    core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
   PolicyTensor policy;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);

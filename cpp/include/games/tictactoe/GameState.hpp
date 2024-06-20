@@ -15,7 +15,7 @@
 #include <core/SerializerTypes.hpp>
 #include <core/serializers/DeterministicGameSerializer.hpp>
 #include <games/tictactoe/Constants.hpp>
-#include <mcts/SearchResults.hpp>
+#include <core/SearchResults.hpp>
 #include <mcts/SearchResultsDumper.hpp>
 #include <util/EigenUtil.hpp>
 

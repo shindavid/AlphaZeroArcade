@@ -1,14 +1,15 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/concepts/Game.hpp>
-#include <util/MetaProgramming.hpp>
 #include <util/EigenUtil.hpp>
 
 namespace core {
 
-template <typename BaseState, eigen_util::concepts::FTensor PolicyTensor>
+template <typename _BaseState, eigen_util::concepts::FTensor _PolicyTensor>
 struct Transform {
+  using BaseState = _BaseState;
+  using PolicyTensor = _PolicyTensor;
+
   virtual ~Transform() {}
 
   virtual void apply(BaseState& pos) = 0;
@@ -30,26 +31,4 @@ struct IdentityTransform : public ReflexiveTransform<BaseState, PolicyTensor> {
   void apply(PolicyTensor&) override {}
 };
 
-template <concepts::Game Game>
-class Transforms {
- public:
-  using BaseState = typename Game::BaseState;
-  using PolicyTensor = typename Game::PolicyTensor;
-  using Transform = core::Transform<BaseState, PolicyTensor>;
-  using TransformList = typename Game::TransformList;
-  using transform_tuple_t = mp::TypeListToTuple_t<TransformList>;
-  static constexpr size_t kNumTransforms = mp::Length_v<TransformList>;
-
-  static Transform* get(core::symmetry_index_t sym);
-
- private:
-  Transforms();
-  static Transforms* instance();
-
-  static Transforms* instance_;
-  Transform* transforms_[kNumTransforms];
-};
-
 }  // namespace core
-
-#include <inline/core/Symmetries.inl>
