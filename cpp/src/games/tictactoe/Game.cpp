@@ -89,15 +89,18 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
   printf("\n");
 
   printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
+  int j = 0;
   for (int i = 0; i < tictactoe::kNumCells; ++i) {
     if (valid_actions[i]) {
       float count = mcts_counts(i);
       auto action_p = action_policy(i);
       auto net_p = net_policy(i);
       printf("   %d %8.3f %8.3f %8.3f\n", i, net_p, count, action_p);
-    } else {
-      printf("\n");
+      ++j;
     }
+  }
+  for (; j < tictactoe::kNumCells; ++j) {
+    printf("\n");
   }
 }
 
