@@ -24,7 +24,8 @@ class GameSpec(abc.ABC):
     Abstract class for defining a game that can be played by the AlphaZero.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def name(self) -> str:
         """
         The name of the game. This is used both to reference the game when running scripts, and as
@@ -47,7 +48,8 @@ class GameSpec(abc.ABC):
         """
         return []
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def model_configs(self) -> Dict[str, ModelConfigGenerator]:
         """
         Dictionary of model configurations for this game.
@@ -63,7 +65,8 @@ class GameSpec(abc.ABC):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def n_mcts_iters_for_ratings_matches(self) -> int:
         """
         The number of MCTS iterations to use for rating matches.

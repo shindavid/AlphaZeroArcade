@@ -27,43 +27,53 @@ class LoopControllerInterface(abc.ABC):
     autocompletion and type hinting.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def socket(self) -> socket.socket:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def default_training_gpu_id(self) -> GpuId:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def game_spec(self) -> GameSpec:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def organizer(self) -> DirectoryOrganizer:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def params(self) -> LoopControllerParams:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def training_params(self) -> TrainingParams:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def clients_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def self_play_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def training_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def ratings_db_conn_pool(self) -> DatabaseConnectionPool:
         pass
 
