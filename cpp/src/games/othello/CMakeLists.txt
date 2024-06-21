@@ -1,5 +1,5 @@
 add_library(othello-lib
-        GameState.cpp
+        Game.cpp
         flip_sse.cpp
         )
 

@@ -8,7 +8,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <generic_players/HumanTuiPlayerGenerator.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <games/othello/players/HumanTuiPlayer.hpp>
 #include <util/BoostUtil.hpp>
 

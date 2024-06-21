@@ -3,16 +3,16 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <games/tictactoe/Constants.hpp>
-#include <games/tictactoe/GameState.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <util/BoostUtil.hpp>
 
 #include <map>
 
 namespace tictactoe {
 
-class PerfectPlayer : public Player {
+class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
  public:
-  using base_t = Player;
+  using base_t = core::AbstractPlayer<tictactoe::Game>;
 
   struct Params {
     /*
@@ -26,7 +26,7 @@ class PerfectPlayer : public Player {
 
   PerfectPlayer(const Params&);
 
-  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
+  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
 
  private:
   struct policy_t {

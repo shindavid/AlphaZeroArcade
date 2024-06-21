@@ -106,11 +106,9 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
   printf("\n");
   printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
 
-  int j = 0;
   for (int i = 0; i < c4::kNumColumns; ++i) {
     if (valid_actions[i]) {
       printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), action_policy(i));
-      ++j;
     } else {
       printf("%3d\n", i + 1);
     }

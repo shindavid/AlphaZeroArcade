@@ -4,7 +4,7 @@
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <generic_players/MctsPlayerGenerator.hpp>
 #include <generic_players/RandomPlayerGenerator.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <games/othello/Tensorizor.hpp>
 #include <games/othello/players/EdaxPlayerGenerator.hpp>
 #include <games/othello/players/HumanTuiPlayerGenerator.hpp>

@@ -5,7 +5,7 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <games/othello/players/EdaxPlayer.hpp>
 #include <util/BoostUtil.hpp>
 

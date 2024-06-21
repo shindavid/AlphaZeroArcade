@@ -1,7 +1,7 @@
 #include <sstream>
 
 #include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <games/othello/Tensorizor.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>

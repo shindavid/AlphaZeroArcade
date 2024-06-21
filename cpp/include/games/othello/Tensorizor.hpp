@@ -2,7 +2,7 @@
 
 #include <core/TensorizorConcept.hpp>
 #include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
 

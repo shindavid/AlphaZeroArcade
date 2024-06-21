@@ -5,14 +5,8 @@
 
 namespace tictactoe {
 
-inline HumanTuiPlayer::Action HumanTuiPlayer::prompt_for_action(const GameState& state,
-                                                                const ActionMask& valid_actions) {
-  Action action;
-  action[0] = prompt_for_action_helper(state, valid_actions);
-  return action;
-}
-
-inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&, const ActionMask&) {
+inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState& state,
+                                                        const ActionMask& valid_actions) {
   std::cout << "Enter move [0-8]: ";
   std::cout.flush();
   std::string input;
@@ -26,8 +20,8 @@ inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&, const Acti
   }
 }
 
-inline void HumanTuiPlayer::print_state(const GameState& state, bool terminal) {
-  state.dump(&last_action_, &this->get_player_names());
+inline void HumanTuiPlayer::print_state(const FullState& state, bool terminal) {
+  Game::IO::print_state(state, last_action_, &this->get_player_names());
 }
 
 }  // namespace tictactoe

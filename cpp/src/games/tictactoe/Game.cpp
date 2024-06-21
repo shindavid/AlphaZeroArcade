@@ -1,20 +1,17 @@
-#include <games/tictactoe/GameState.hpp>
-
-#include <core/SquareBoardSymmetries.hpp>
+#include <games/tictactoe/Game.hpp>
 
 namespace tictactoe {
 
-GameState::GameOutcome GameState::apply_move(const Action& action) {
-  int action_index = action[0];
-  core::seat_index_t current_player = get_current_player();
+Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+  core::seat_index_t current_player = get_current_player(state);
 
-  mask_t piece_mask = mask_t(1) << action_index;
-  data_.cur_player_mask ^= data_.full_mask;
-  data_.full_mask |= piece_mask;
+  mask_t piece_mask = mask_t(1) << action;
+  state.cur_player_mask ^= state.full_mask;
+  state.full_mask |= piece_mask;
 
   bool win = false;
 
-  mask_t updated_mask = data_.full_mask ^ data_.cur_player_mask;
+  mask_t updated_mask = state.full_mask ^ state.cur_player_mask;
   for (mask_t mask : kThreeInARowMasks) {
     if ((mask & updated_mask) == mask) {
       win = true;
@@ -22,36 +19,38 @@ GameState::GameOutcome GameState::apply_move(const Action& action) {
     }
   }
 
-  GameOutcome outcome;
+  Types::ValueArray outcome;
   outcome.setZero();
   if (win) {
     outcome(current_player) = 1.0;
-  } else if (std::popcount(data_.full_mask) == kNumCells) {
+    return Types::ActionOutcome(outcome);
+  } else if (std::popcount(state.full_mask) == kNumCells) {
     outcome(0) = 0.5;
     outcome(1) = 0.5;
+    return Types::ActionOutcome(outcome);
   }
 
-  return outcome;
+  return Types::ActionOutcome();
 }
 
-GameState::ActionMask GameState::get_valid_actions() const {
-  ActionMask mask;
-  mask.setConstant(1);
-  uint64_t u = data_.full_mask;
+Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
+  Types::ActionMask mask;
+  mask.set();
+  uint64_t u = state.full_mask;
   while (u) {
     int index = std::countr_zero(u);
-    mask(index) = false;
+    mask[index] = false;
     u &= u - 1;
   }
   return mask;
 }
 
-void GameState::dump(const Action* last_action,
-                            const player_name_array_t* player_names) const {
-  auto cp = get_current_player();
-  mask_t opp_player_mask = get_opponent_mask();
-  mask_t o_mask = (cp == kO) ? data_.cur_player_mask : opp_player_mask;
-  mask_t x_mask = (cp == kX) ? data_.cur_player_mask : opp_player_mask;
+void Game::IO::print_state(const BaseState& state, core::action_t last_action,
+                           const Types::player_name_array_t* player_names) {
+  auto cp = Rules::get_current_player(state);
+  mask_t opp_player_mask = state.opponent_mask();
+  mask_t o_mask = (cp == kO) ? state.cur_player_mask : opp_player_mask;
+  mask_t x_mask = (cp == kX) ? state.cur_player_mask : opp_player_mask;
 
   char text[] =
       "0 1 2  | | | |\n"
@@ -77,12 +76,8 @@ void GameState::dump(const Action* last_action,
   std::cout.flush();
 }
 
-}  // namespace tictactoe
-
-namespace mcts {
-
-void SearchResultsDumper<tictactoe::GameState>::dump(const LocalPolicyArray& action_policy,
-                                                            const SearchResults& results) {
+void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
+                                  const Types::SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
@@ -94,19 +89,16 @@ void SearchResultsDumper<tictactoe::GameState>::dump(const LocalPolicyArray& act
   printf("\n");
 
   printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
-  int j = 0;
   for (int i = 0; i < tictactoe::kNumCells; ++i) {
-    if (valid_actions(j)) {
+    if (valid_actions[i]) {
       float count = mcts_counts(i);
-      auto action_p = action_policy(j);
-      auto net_p = net_policy(j);
+      auto action_p = action_policy(i);
+      auto net_p = net_policy(i);
       printf("   %d %8.3f %8.3f %8.3f\n", i, net_p, count, action_p);
-      ++j;
+    } else {
+      printf("\n");
     }
-  }
-  for (; j < tictactoe::kNumCells; ++j) {
-    printf("\n");
   }
 }
 
-}  // namespace mcts
+}  // namespace tictactoe

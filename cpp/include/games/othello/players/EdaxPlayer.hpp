@@ -9,7 +9,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace othello {
