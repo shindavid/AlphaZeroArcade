@@ -39,6 +39,8 @@ void LoopControllerClient::handle_pause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
+  LOG_INFO << "LoopControllerClient: handle_pause_receipt() - done (pause_receipt_count_ = "
+           << pause_receipt_count_ << ")";
 }
 
 void LoopControllerClient::handle_unpause_receipt() {

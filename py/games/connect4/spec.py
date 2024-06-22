@@ -75,7 +75,15 @@ class Connect4Spec(GameSpec):
         'b7_c64': b7_c64,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
-    n_mcts_iters_for_ratings_matches = 100
+
+    training_player_options = {
+        '-r': 2,
+    }
+
+    rating_player_options = {
+        '-i': 100,
+        '-n': 4,
+    }
 
 
 Connect4 = Connect4Spec()

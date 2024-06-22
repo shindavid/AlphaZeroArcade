@@ -461,6 +461,7 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::wait_for_unpause() {
   if (!skip_next_pause_receipt_ && !paused_) return;  // early exit for common case, bypassing lock
 
+  LOG_INFO << "NNEvaluationService: wait_for_unpause - acquiring pause_mutex_";
   std::unique_lock lock(pause_mutex_);
   if (skip_next_pause_receipt_) {
     LOG_INFO << "NNEvaluationService: skipping handle_pause_receipt";
@@ -480,11 +481,6 @@ void NNEvaluationService<Game>::wait_for_unpause() {
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::load_initial_weights_if_necessary() {
   if (initial_weights_loaded_) return;
-
-  // LOG_INFO << "NNEvaluationService: load_init_weights_if_necessary() - waiting for pause...";
-  // std::unique_lock pause_lock(pause_mutex_);
-  // cv_paused_.wait(pause_lock, [&] { return paused_; });
-  // pause_lock.unlock();
 
   LOG_INFO << "NNEvaluationService: requesting weights...";
 

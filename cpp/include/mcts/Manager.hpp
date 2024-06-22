@@ -64,6 +64,9 @@ class Manager {
     if (nn_eval_service_) nn_eval_service_->end_session();
   }
 
+  void set_player_data(void* player_data) { player_data_ = player_data; }
+  void* get_player_data() const { return player_data_; }
+
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;
   void announce_shutdown();
@@ -80,6 +83,7 @@ class Manager {
 
   SearchResults results_;
 
+  void* player_data_ = nullptr;
   bool connected_ = false;
 };
 

@@ -138,11 +138,16 @@ class SelfPlayServer:
             '--name=MCTS',
             '--max-rows', max_rows,
             '--no-model',
-
-            # for gen-0, sample more positions and use fewer iters per game, so we finish faster
-            '--num-full-iters', 100,
-            '--full-pct', 1.0,
         ]
+
+        options = dict(self._session_data.game_spec.training_player_options)
+
+        # for gen-0, sample more positions and use fewer iters per game, so we finish faster
+        options.update({
+            '-I': 100,
+            '-f': 1.0,
+        })
+        player_args.extend([f'{k} {v}' for k, v in options.items()])
 
         player2_args = [
             '--name=MCTS2',
@@ -190,6 +195,9 @@ class SelfPlayServer:
             '--name=MCTS',
             '--cuda-device', self._params.cuda_device,
         ]
+
+        options = dict(self._session_data.game_spec.training_player_options)
+        player_args.extend([f'{k} {v}' for k, v in options.items()])
 
         player2_args = [
             '--name=MCTS2',

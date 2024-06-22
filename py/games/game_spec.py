@@ -66,8 +66,15 @@ class GameSpec(abc.ABC):
         return None
 
     @property
-    @abc.abstractmethod
-    def n_mcts_iters_for_ratings_matches(self) -> int:
+    def training_player_options(self) -> Dict[str, str]:
         """
-        The number of MCTS iterations to use for rating matches.
+        Options to pass to the --player argument of the game binary when running training games.
         """
+        return {}
+
+    @property
+    def rating_player_options(self) -> Dict[str, str]:
+        """
+        Options to pass to the --player argument of the game binary when running ratings games.
+        """
+        return {}

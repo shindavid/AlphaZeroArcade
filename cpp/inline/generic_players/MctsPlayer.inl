@@ -63,6 +63,9 @@ auto MctsPlayer<Game>::Params::make_options_description() {
           "num mcts iterations to do per full move")
       .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
                                             "pct of moves that should be full")
+      .template add_option<"mean-raw-moves", 'r'>(
+          po2::float_value("%.2f", &mean_raw_moves, mean_raw_moves),
+          "mean number of raw policy moves to make at the start of each game")
       .template add_option<"move-temp", 't'>(
           po::value<std::string>(&move_temperature_str)->default_value(move_temperature_str),
           "temperature for move selection")
@@ -72,26 +75,22 @@ auto MctsPlayer<Game>::Params::make_options_description() {
 
 template <core::concepts::Game Game>
 inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
-    : params_(params),
-      mcts_manager_(mcts_manager),
-      search_params_{
-          {params.num_fast_iters, true},  // kFast
-          {params.num_full_iters},        // kFull
-          {1, true}                       // kRawPolicy
-      },
-      move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str,
-                                                      core::GameVars<Game>::get_bindings())),
-      owns_manager_(mcts_manager == nullptr) {
-  if (params.verbose) {
-    verbose_info_ = new VerboseInfo();
-  }
+    : MctsPlayer(params) {
+  mcts_manager_ = mcts_manager;
+  shared_data_ = (SharedData*)mcts_manager->get_player_data();
+  owns_manager_ = false;
+
+  util::release_assert(mcts_manager_ != nullptr);
+  util::release_assert(shared_data_ != nullptr);
 }
 
 template <core::concepts::Game Game>
-template <typename... Ts>
-MctsPlayer<Game>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
-    : MctsPlayer(params, new MctsManager(std::forward<Ts>(mcts_params_args)...)) {
+MctsPlayer<Game>::MctsPlayer(const Params& params, const mcts::ManagerParams& manager_params)
+    : MctsPlayer(params) {
+  mcts_manager_ = new MctsManager(manager_params);
+  shared_data_ = new SharedData();
   owns_manager_ = true;
+  mcts_manager_->set_player_data(shared_data_);
 }
 
 template <core::concepts::Game Game>
@@ -99,7 +98,25 @@ inline MctsPlayer<Game>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
-  if (owns_manager_) delete mcts_manager_;
+  if (owns_manager_) {
+    delete mcts_manager_;
+    delete shared_data_;
+  }
+}
+
+template <core::concepts::Game Game>
+MctsPlayer<Game>::MctsPlayer(const Params& params)
+    : params_(params),
+      search_params_{
+          {params.num_fast_iters, true},  // kFast
+          {params.num_full_iters},        // kFull
+          {1, true}                       // kRawPolicy
+      },
+      move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str,
+                                                      core::GameVars<Game>::get_bindings())) {
+  if (params.verbose) {
+    verbose_info_ = new VerboseInfo();
+  }
 }
 
 template <core::concepts::Game Game>
@@ -108,6 +125,10 @@ inline void MctsPlayer<Game>::start_game() {
   move_temperature_.reset();
   if (owns_manager_) {
     mcts_manager_->start();
+    if (params_.mean_raw_moves) {
+      shared_data_->num_raw_policy_starting_moves =
+          util::Random::exponential(1.0 / params_.mean_raw_moves);
+    }
   }
 }
 
@@ -146,7 +167,7 @@ inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_se
 
 template <core::concepts::Game Game>
 inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
-  bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
+  bool use_raw_policy = move_count_ < shared_data_->num_raw_policy_starting_moves;
   return use_raw_policy ? core::kRawPolicy : get_random_search_mode();
 }
 
@@ -164,12 +185,6 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
 
     for (int a : bitset_util::on_indices(valid_actions_subset)) {
       policy_array(a) = mcts_results->policy_prior(a);
-    }
-    if (!eigen_util::normalize(policy)) {
-      policy_array.setConstant(0);
-      for (int a : bitset_util::on_indices(valid_actions_subset)) {
-        policy_array(a) = 1;
-      }
     }
   } else {
     policy = mcts_results->counts;

@@ -58,5 +58,13 @@ class TicTacToeSpec(GameSpec):
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
     n_mcts_iters_for_ratings_matches = 1
 
+    training_player_options = {
+        '-r': 1,
+    }
+
+    rating_player_options = {
+        '-i': 1,
+    }
+
 
 TicTacToe = TicTacToeSpec()

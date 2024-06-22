@@ -11,6 +11,7 @@
 #include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
+#include <mcts/ManagerParams.hpp>
 #include <mcts/SearchParams.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
@@ -38,8 +39,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int num_fast_iters;
     int num_full_iters;
     float full_pct;
+    float mean_raw_moves = 0.0;
     std::string move_temperature_str;
-    int num_raw_policy_starting_moves = 0;
     bool verbose = false;
   };
 
@@ -56,8 +57,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);
-  template <typename... Ts>
-  MctsPlayer(const Params&, Ts&&... mcts_params_args);
+  MctsPlayer(const Params&, const mcts::ManagerParams& manager_params);
   ~MctsPlayer();
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
@@ -69,6 +69,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   }
 
  protected:
+  MctsPlayer(const Params&);
+
   const SearchResults* mcts_search(const FullState& state, core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
   core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
@@ -81,14 +83,19 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     bool initialized = false;
   };
 
+  struct SharedData {
+    int num_raw_policy_starting_moves = 0;
+  };
+
   core::SearchMode get_random_search_mode() const;
   void verbose_dump() const;
 
   const Params params_;
 
-  MctsManager* mcts_manager_;
   const MctsSearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
+  MctsManager* mcts_manager_;
+  SharedData* shared_data_ = nullptr;
   VerboseInfo* verbose_info_ = nullptr;
   bool owns_manager_;
   bool facing_human_tui_player_ = false;

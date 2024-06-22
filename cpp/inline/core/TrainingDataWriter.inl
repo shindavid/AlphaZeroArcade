@@ -126,6 +126,7 @@ void TrainingDataWriter<Game>::loop() {
     if (paused_) {
       LOG_INFO << "TrainingDataWriter: handle_pause_receipt";
       core::LoopControllerClient::get()->handle_pause_receipt();
+      LOG_INFO << "TrainingDataWriter: waiting for unpause";
       cv_.wait(lock, [&] { return !paused_; });
       LOG_INFO << "TrainingDataWriter: handle_unpause_receipt";
       core::LoopControllerClient::get()->handle_unpause_receipt();
