@@ -56,7 +56,6 @@ class TicTacToeSpec(GameSpec):
         'b3_c8': b3_c8,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
-    n_mcts_iters_for_ratings_matches = 1
 
     training_player_options = {
         '-r': 1,

@@ -2,8 +2,7 @@ from dataclasses import dataclass
 import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from net_modules import ModelConfig, ModuleSpec
-from util.torch_util import Shape
+from net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 
 
 BOARD_LENGTH = 8
@@ -12,7 +11,8 @@ NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-def b19_c64(input_shape: Shape):
+def b19_c64(shape_info_dict: ShapeInfoDict):
+    input_shape = shape_info_dict['input'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_shape = (NUM_SQUARES + 1,)  # + 1 for pass
@@ -27,7 +27,7 @@ def b19_c64(input_shape: Shape):
     c_ownership_hidden = 64
 
     return ModelConfig(
-        input_shape=input_shape,
+        shape_info_dict=shape_info_dict,
 
         stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
@@ -94,7 +94,14 @@ class OthelloSpec(GameSpec):
         'b19_c64': b19_c64,
     }
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
-    n_mcts_iters_for_ratings_matches = 400
+
+    training_player_options = {
+        '-r': 4,
+    }
+
+    rating_player_options = {
+        '-i': 400,
+    }
 
 
 Othello = OthelloSpec()
