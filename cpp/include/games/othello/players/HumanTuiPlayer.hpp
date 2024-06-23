@@ -1,14 +1,15 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <generic_players/HumanTuiPlayer.hpp>
 #include <games/othello/Game.hpp>
 
 namespace othello {
 
-class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
+class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  private:
-  Action prompt_for_action(const GameState&, const ActionMask&) override;
-  int prompt_for_action_helper(const GameState&, const ActionMask&);
+  using FullState = Game::FullState;
+  core::action_t prompt_for_action(const FullState&, const ActionMask&) override;
 };
 
 }  // namespace othello

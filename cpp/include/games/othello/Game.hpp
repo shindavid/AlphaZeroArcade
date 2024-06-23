@@ -8,27 +8,14 @@
 #include <boost/functional/hash.hpp>
 #include <torch/torch.h>
 
-#include <core/SquareBoardSymmetries.hpp>
-#include <core/AbstractPlayer.hpp>
-#include <core/AbstractSymmetryTransform.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/SerializerTypes.hpp>
-#include <core/serializers/DeterministicGameSerializer.hpp>
+#include <core/GameLog.hpp>
+#include <core/GameTypes.hpp>
+#include <core/TrainingTargets.hpp>
 #include <games/othello/Constants.hpp>
-#include <core/SearchResults.hpp>
-#include <mcts/SearchResultsDumper.hpp>
-#include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
-
-namespace othello {
-class GameState;
-}
-
-template <>
-struct std::hash<othello::GameState> {
-  std::size_t operator()(const othello::GameState& state) const;
-};
+#include <util/MetaProgramming.hpp>
 
 namespace othello {
 
@@ -39,15 +26,19 @@ namespace othello {
  *
  * https://github.com/abulmo/edax-reversi
  */
-class GameState {
+class Game {
  public:
-  static constexpr int kNumPlayers = othello::kNumPlayers;
-  static constexpr int kMaxNumLocalActions = othello::kMaxNumLocalActions;
-  static constexpr int kTypicalNumMovesPerGame = othello::kTypicalNumMovesPerGame;
-  static constexpr int kMaxNumSymmetries = 8;
+  struct Constants {
+    static constexpr int kNumPlayers = 2;
+    static constexpr int kNumActions = othello::kNumGlobalActions;
+    static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
+    static constexpr int kHistorySize = 0;
+    static constexpr int kNumSymmetries = 1;  // TODO: add other symmetries
+  };
 
-  struct Data {
-    bool operator==(const Data& other) const = default;
+  struct BaseState {
+    bool operator==(const BaseState& other) const = default;
+    size_t hash() const;
 
     mask_t opponent_mask = kStartingWhiteMask;    // spaces occupied by either player
     mask_t cur_player_mask = kStartingBlackMask;  // spaces occupied by current player
@@ -55,82 +46,92 @@ class GameState {
     int8_t pass_count = 0;
   };
 
-  using ActionShape = Eigen::Sizes<othello::kNumGlobalActions>;
-  using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using SymmetryIndexSet = GameStateTypes::SymmetryIndexSet;
-  using Action = GameStateTypes::Action;
-  using ActionMask = GameStateTypes::ActionMask;
-  using player_name_array_t = GameStateTypes::player_name_array_t;
-  using ValueArray = GameStateTypes::ValueArray;
-  using LocalPolicyArray = GameStateTypes::LocalPolicyArray;
-  using GameOutcome = GameStateTypes::GameOutcome;
+  using FullState = BaseState;
 
-  static std::string action_delimiter() { return "-"; }
-  static std::string action_to_str(const Action& action);
+  using Types = core::GameTypes<Constants, BaseState>;
 
-  GameState() = default;
-  GameState(const Data& data) : data_(data) {}
+  using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
 
-  template <eigen_util::FixedTensorConcept Tensor>
-  core::AbstractSymmetryTransform<Tensor>* get_symmetry(core::symmetry_index_t index) const {
-    return core::SquareBoardSymmetries<Tensor, BoardShape>::get_symmetry(index);
-  }
+  using TransformList = mp::TypeList<Identity>;  // TODO: add other symmetries
 
-  const Data& data() const { return data_; }
-  SymmetryIndexSet get_symmetries() const;
+  struct Rules {
+    static Types::ActionMask get_legal_moves(const FullState& state);
+    static core::seat_index_t get_current_player(const BaseState& state);
+    static Types::ActionOutcome apply(FullState& state, core::action_t action);
+    static Types::SymmetryIndexSet get_symmetries(const FullState& state);
 
-  int get_count(core::seat_index_t seat) const;
-  core::seat_index_t get_current_player() const { return data_.cur_player; }
-  GameOutcome apply_move(const Action& action);
-  ActionMask get_valid_actions() const;
+   private:
+    static Types::ValueArray compute_outcome(const FullState& state);
+  };
 
-  core::seat_index_t get_player_at(int row, int col) const;  // -1 for unoccupied
-  void dump(const Action* last_action = nullptr,
-            const player_name_array_t* player_names = nullptr) const;
-  bool operator==(const GameState& other) const = default;
-  std::size_t hash() const;
+  struct IO {
+    static std::string action_delimiter() { return "-"; }
+    static std::string action_to_str(core::action_t action);
+    static void print_state(const BaseState&, core::action_t last_action = -1,
+                            const Types::player_name_array_t* player_names = nullptr);
+    static void print_mcts_results(const Types::PolicyTensor& action_policy,
+                                   const Types::SearchResults&);
+
+   private:
+    static void print_row(const BaseState&, const Types::ActionMask&, row_t row,
+                          column_t blink_column);
+  };
+
+  struct InputTensorizor {
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kBoardDimension, kBoardDimension>>;
+    using EvalKey = BaseState;
+    using MCTSKey = BaseState;
+
+    static EvalKey eval_key(const FullState& state) { return state; }
+    static MCTSKey mcts_key(const FullState& state) { return state; }
+    static Tensor tensorize(const BaseState* start, const BaseState* cur);
+  };
+
+  struct TrainingTargets {
+    using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
+
+    using PolicyTarget = core::PolicyTarget<Game>;
+    using ValueTarget = core::ValueTarget<Game>;
+    using OppPolicyTarget = core::OppPolicyTarget<Game>;
+
+    struct ScoreMarginTarget {
+      static constexpr const char* kName = "score_margin";
+      using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+
+      static Tensor tensorize(const Types::GameLogView& view);
+    };
+
+    struct OwnershipTarget {
+      static constexpr const char* kName = "ownership";
+      using Tensor = eigen_util::FTensor<BoardShape>;
+
+      static Tensor tensorize(const Types::GameLogView& view);
+    };
+
+    using List = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, ScoreMarginTarget,
+                              OwnershipTarget>;
+  };
 
  private:
-  auto to_tuple() const {
-    return std::make_tuple(data_.opponent_mask, data_.cur_player_mask, data_.cur_player, data_.pass_count);
-  }
-  GameOutcome compute_outcome() const;  // assumes game has ended
-  void row_dump(const ActionMask& valid_actions, row_t row, column_t blink_column) const;
+  static int get_count(const BaseState&, core::seat_index_t seat);
+  static core::seat_index_t get_player_at(const BaseState&, int row, int col);  // -1 for unoccupied
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
-
-  Data data_;
 };
-
-static_assert(core::GameStateConcept<othello::GameState>);
 
 extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 
-using Player = core::AbstractPlayer<GameState>;
-
 }  // namespace othello
 
-namespace core {
-
-// template specialization
-template <>
-struct serializer<othello::GameState> {
-  using type = DeterministicGameSerializer<othello::GameState>;
-};
-
-}  // namespace core
-
-namespace mcts {
+namespace std {
 
 template <>
-struct SearchResultsDumper<othello::GameState> {
-  using LocalPolicyArray = othello::GameState::LocalPolicyArray;
-  using SearchResults = mcts::SearchResults<othello::GameState>;
-
-  static void dump(const LocalPolicyArray& action_policy, const SearchResults& results);
+struct hash<othello::Game::BaseState> {
+  size_t operator()(const othello::Game::BaseState& pos) const { return pos.hash(); }
 };
 
-}  // namespace mcts
+}  // namespace std
 
-#include <inline/games/othello/GameState.inl>
+static_assert(core::concepts::Game<othello::Game>);
+
+#include <inline/games/othello/Game.inl>

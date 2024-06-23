@@ -10,39 +10,81 @@
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
 
-inline std::size_t std::hash<othello::GameState>::operator()(
-    const othello::GameState& state) const {
-  return state.hash();
-}
 
 namespace othello {
 
-inline GameState::SymmetryIndexSet GameState::get_symmetries() const {
-  SymmetryIndexSet set;
+inline size_t Game::BaseState::hash() const {
+  return util::tuple_hash(std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count));
+}
+
+inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
+  return state.cur_player;
+}
+
+inline Game::Types::SymmetryIndexSet Game::Rules::get_symmetries(const FullState& state) {
+  Types::SymmetryIndexSet set;
   set.set();
   return set;
 }
 
-inline int GameState::get_count(core::seat_index_t seat) const {
-  if (seat == data_.cur_player) {
-    return std::popcount(data_.cur_player_mask);
+inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
+                                                                      const BaseState* cur) {
+  const BaseState& state = *cur;
+  core::seat_index_t cp = Rules::get_current_player(state);
+  Tensor tensor;
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      core::seat_index_t p = get_player_at(state, row, col);
+      tensor(0, row, col) = (p == cp);
+      tensor(1, row, col) = (p == 1 - cp);
+    }
+  }
+  return tensor;
+}
+
+inline Game::TrainingTargets::ScoreMarginTarget::Tensor
+Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view) {
+  Tensor tensor;
+  const BaseState& state = *view.cur_pos;
+  core::seat_index_t cp = Rules::get_current_player(state);
+  tensor(0) = get_count(state, cp) - get_count(state, 1 - cp);
+  return tensor;
+}
+
+inline Game::TrainingTargets::OwnershipTarget::Tensor
+Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
+  Tensor tensor;
+  const BaseState& cur_state = *view.cur_pos;
+  const BaseState& final_state = *view.final_pos;
+  core::seat_index_t cp = Rules::get_current_player(cur_state);
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      core::seat_index_t p = get_player_at(final_state, row, col);
+      int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
+      tensor(row, col) = val;
+    }
+  }
+  return tensor;
+}
+
+inline int Game::get_count(const BaseState& state, core::seat_index_t seat) {
+  if (seat == state.cur_player) {
+    return std::popcount(state.cur_player_mask);
   } else {
-    return std::popcount(data_.opponent_mask);
+    return std::popcount(state.opponent_mask);
   }
 }
 
-inline core::seat_index_t GameState::get_player_at(int row, int col) const {
-  int cp = get_current_player();
+inline core::seat_index_t Game::get_player_at(const BaseState& state, int row, int col) {
+  int cp = Rules::get_current_player(state);
   int index = row * kBoardDimension + col;
-  bool occupied_by_cur_player = (mask_t(1) << index) & data_.cur_player_mask;
-  bool occupied_by_opponent = (mask_t(1) << index) & data_.opponent_mask;
+  bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;
+  bool occupied_by_opponent = (mask_t(1) << index) & state.opponent_mask;
   return occupied_by_opponent ? (1 - cp) : (occupied_by_cur_player ? cp : -1);
 }
 
-inline std::size_t GameState::hash() const { return util::tuple_hash(to_tuple()); }
-
 // copied from edax-reversi repo
-inline mask_t GameState::get_moves(mask_t P, mask_t O) {
+inline mask_t Game::get_moves(mask_t P, mask_t O) {
   mask_t mask = O & 0x7E7E7E7E7E7E7E7Eull;
 
   return (get_some_moves(P, mask, 1)    // horizontal
@@ -53,7 +95,7 @@ inline mask_t GameState::get_moves(mask_t P, mask_t O) {
 }
 
 // copied from edax-reversi repo
-inline mask_t GameState::get_some_moves(mask_t P, mask_t mask, int dir) {
+inline mask_t Game::get_some_moves(mask_t P, mask_t mask, int dir) {
 #if PARALLEL_PREFIX & 1
   // 1-stage Parallel Prefix (intermediate between kogge stone & sequential)
   // 6 << + 6 >> + 7 | + 10 &

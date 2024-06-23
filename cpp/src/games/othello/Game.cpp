@@ -12,8 +12,8 @@
 
 namespace othello {
 
-std::string GameState::action_to_str(const Action& action) {
-  int a = action[0];
+std::string Game::IO::action_to_str(core::action_t action) {
+  int a = action;
   if (a == kPass) {
     return "PA";
   }
@@ -25,58 +25,53 @@ std::string GameState::action_to_str(const Action& action) {
 }
 
 // copied from edax-reversi repo - board_next()
-core::GameStateTypes<GameState>::GameOutcome GameState::apply_move(const Action& action) {
-  int action_index = action[0];
-  if (action_index == kPass) {
-    std::swap(data_.cur_player_mask, data_.opponent_mask);
-    data_.cur_player = 1 - data_.cur_player;
-    data_.pass_count++;
-    if (data_.pass_count == kNumPlayers) {
-      return compute_outcome();
+Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+  if (action == kPass) {
+    std::swap(state.cur_player_mask, state.opponent_mask);
+    state.cur_player = 1 - state.cur_player;
+    state.pass_count++;
+    if (state.pass_count == kNumPlayers) {
+      return compute_outcome(state);
     }
   } else {
-    mask_t flipped = flip[action_index](data_.cur_player_mask, data_.opponent_mask);
-    mask_t cur_player_mask = data_.opponent_mask ^ flipped;
+    mask_t flipped = flip[action](state.cur_player_mask, state.opponent_mask);
+    mask_t cur_player_mask = state.opponent_mask ^ flipped;
 
-    data_.opponent_mask = data_.cur_player_mask ^ (flipped | (1ULL << action_index));
-    data_.cur_player_mask = cur_player_mask;
-    data_.cur_player = 1 - data_.cur_player;
-    data_.pass_count = 0;
+    state.opponent_mask = state.cur_player_mask ^ (flipped | (1ULL << action));
+    state.cur_player_mask = cur_player_mask;
+    state.cur_player = 1 - state.cur_player;
+    state.pass_count = 0;
 
-    if ((data_.opponent_mask | data_.cur_player_mask) == kCompleteBoardMask) {
-      return compute_outcome();
+    if ((state.opponent_mask | state.cur_player_mask) == kCompleteBoardMask) {
+      return compute_outcome(state);
     }
   }
 
-  GameOutcome outcome;
-  outcome.setZero();
-  return outcome;
+  return Types::ActionOutcome();
 }
 
-GameState::ActionMask GameState::get_valid_actions() const {
-  uint64_t mask = get_moves(data_.cur_player_mask, data_.opponent_mask);
-  ActionMask valid_actions;
-  valid_actions.setConstant(0);
+Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
+  uint64_t mask = get_moves(state.cur_player_mask, state.opponent_mask);
+  Types::ActionMask valid_actions;
   uint64_t u = mask;
   while (u) {
     int index = std::countr_zero(u);
-    valid_actions(index) = true;
+    valid_actions[index] = true;
     u &= u - 1;
   }
-  valid_actions(kPass) = mask == 0;
+  valid_actions[kPass] = mask == 0;
   return valid_actions;
 }
 
-void GameState::dump(const Action* last_action,
-                            const player_name_array_t* player_names) const {
-  ActionMask valid_actions = get_valid_actions();
-  int last_action_index = last_action ? (*last_action)[0] : -1;
-  bool display_last_action = last_action_index >= 0;
+void Game::IO::print_state(const BaseState& state, core::action_t last_action,
+                           const Types::player_name_array_t* player_names) {
+  Types::ActionMask valid_actions = Rules::get_legal_moves(state);
+  bool display_last_action = last_action >= 0;
   int blink_row = -1;
   int blink_col = -1;
-  if (display_last_action && last_action_index != kPass) {
-    blink_row = last_action_index / kBoardDimension;
-    blink_col = last_action_index % kBoardDimension;
+  if (display_last_action && last_action != kPass) {
+    blink_row = last_action / kBoardDimension;
+    blink_col = last_action % kBoardDimension;
   }
   if (!util::tty_mode() && display_last_action) {
     std::string s(2 * blink_col + 3, ' ');
@@ -84,14 +79,14 @@ void GameState::dump(const Action* last_action,
   }
   printf("   A B C D E F G H\n");
   for (int row = 0; row < kBoardDimension; ++row) {
-    row_dump(valid_actions, row, row == blink_row ? blink_col : -1);
+    print_row(state, valid_actions, row, row == blink_row ? blink_col : -1);
   }
   std::cout << std::endl;
-  int opponent_disc_count = std::popcount(data_.opponent_mask);
-  int cur_player_disc_count = std::popcount(data_.cur_player_mask);
+  int opponent_disc_count = std::popcount(state.opponent_mask);
+  int cur_player_disc_count = std::popcount(state.cur_player_mask);
 
-  int black_disc_count = data_.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
-  int white_disc_count = data_.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
+  int black_disc_count = state.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
+  int white_disc_count = state.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
 
   printf("Score: Player\n");
   printf("%5d: %s%s%s", black_disc_count, ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""));
@@ -108,9 +103,9 @@ void GameState::dump(const Action* last_action,
   std::cout << std::endl;
 }
 
-void GameState::row_dump(const ActionMask& valid_actions, row_t row,
-                                column_t blink_column) const {
-  core::seat_index_t current_player = get_current_player();
+void Game::IO::print_row(const BaseState& state, const Types::ActionMask& valid_actions, row_t row,
+                         column_t blink_column) {
+  core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
 
@@ -122,8 +117,8 @@ void GameState::row_dump(const ActionMask& valid_actions, row_t row,
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
     bool valid = valid_actions[index];
-    bool occupied_by_cur_player = (1UL << index) & data_.cur_player_mask;
-    bool occupied_by_opp_player = (1UL << index) & data_.opponent_mask;
+    bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
+    bool occupied_by_opp_player = (1UL << index) & state.opponent_mask;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
 
     const char* color =
@@ -137,16 +132,16 @@ void GameState::row_dump(const ActionMask& valid_actions, row_t row,
   printf("|\n");
 }
 
-typename GameState::GameOutcome GameState::compute_outcome() const {
-  GameOutcome outcome;
+Game::Types::ValueArray Game::Rules::compute_outcome(const FullState& state) {
+  Types::ValueArray outcome;
   outcome.setZero();
 
-  int opponent_count = std::popcount(data_.opponent_mask);
-  int cur_player_count = std::popcount(data_.cur_player_mask);
+  int opponent_count = std::popcount(state.opponent_mask);
+  int cur_player_count = std::popcount(state.cur_player_mask);
   if (cur_player_count > opponent_count) {
-    outcome(data_.cur_player) = 1;
+    outcome(state.cur_player) = 1;
   } else if (opponent_count > cur_player_count) {
-    outcome(1 - data_.cur_player) = 1;
+    outcome(1 - state.cur_player) = 1;
   } else {
     outcome.setConstant(0.5);
   }
@@ -154,12 +149,8 @@ typename GameState::GameOutcome GameState::compute_outcome() const {
   return outcome;
 }
 
-}  // namespace othello
-
-namespace mcts {
-
-void SearchResultsDumper<othello::GameState>::dump(const LocalPolicyArray& action_policy,
-                                                          const SearchResults& results) {
+void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
+                                  const Types::SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
@@ -178,8 +169,8 @@ void SearchResultsDumper<othello::GameState>::dump(const LocalPolicyArray& actio
   tuple_array_t tuples;
   int i = 0;
   for (int a = 0; a < othello::kNumGlobalActions; ++a) {
-    if (valid_actions(a)) {
-      tuples[i] = std::make_tuple(mcts_counts(a), action_policy(i), net_policy(i), a);
+    if (valid_actions[a]) {
+      tuples[i] = std::make_tuple(mcts_counts(a), action_policy(a), net_policy(a), a);
       i++;
     }
   }
@@ -211,4 +202,4 @@ void SearchResultsDumper<othello::GameState>::dump(const LocalPolicyArray& actio
   }
 }
 
-}  // namespace mcts
+}  // namespace othello
