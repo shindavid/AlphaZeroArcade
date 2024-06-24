@@ -62,7 +62,7 @@ $p\cdot s \cdot k$, where:
 
 Struct definition: `core::GameLogBase::non_sym_sample_index_t` in `cpp/include/core/GameLog.hpp`.
 
-Like sym sample indices, but without symmetry expansion. Each `non_sym_sample_index_t` consists of one 32-bit ints: a single state-index. 
+Like sym sample indices, but without symmetry expansion. Each `non_sym_sample_index_t` consists of one 32-bit int: a single state-index. 
 
 ## Actions
 
