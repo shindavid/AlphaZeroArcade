@@ -32,15 +32,6 @@ inline Node<Game>::edge_t* Node<Game>::edge_t::instantiate(
 }
 
 template <core::concepts::Game Game>
-inline Node<Game>::edge_chunk_t::~edge_chunk_t() {
-  while (next) {
-    edge_chunk_t* tmp = next->next;
-    delete next;
-    next = tmp;
-  }
-}
-
-template <core::concepts::Game Game>
 inline Node<Game>::edge_t* Node<Game>::edge_chunk_t::find(core::action_index_t i) {
   for (edge_t& edge : data) {
     if (!edge.instantiated()) return nullptr;
@@ -91,6 +82,16 @@ void Node<Game>::children_data_t::template iterator_base_t<is_const>::nullify_if
   if (chunk && !chunk->data[index].instantiated()) {
     chunk = nullptr;
     index = 0;
+  }
+}
+
+template <core::concepts::Game Game>
+Node<Game>::children_data_t::~children_data_t() {
+  edge_chunk_t* next = first_chunk_.next;
+  while (next) {
+    edge_chunk_t* tmp = next->next;
+    delete next;
+    next = tmp;
   }
 }
 

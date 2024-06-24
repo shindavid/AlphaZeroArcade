@@ -138,7 +138,6 @@ class Node {
    * kEdgeDataChunkSize children, then we avoid dynamic memory allocation.
    */
   struct edge_chunk_t {
-    ~edge_chunk_t();
     edge_t* find(core::action_index_t i);
     edge_t* insert(core::action_index_t a, core::action_index_t i, sptr child);
 
@@ -230,6 +229,8 @@ class Node {
       const edge_t* operator->() const { return &this->chunk->data[this->index]; }
     };
     static_assert(std::forward_iterator<const_iterator>);
+
+    ~children_data_t();
 
     /*
      * Traverses the chunked linked list and attempts to find an edge_t corresponding to the
