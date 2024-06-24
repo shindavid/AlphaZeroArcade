@@ -387,7 +387,7 @@ class SelfPlayManager:
             game_dir = os.path.join(organizer.self_play_data_dir, f'client-{client_id}',
                                     f'gen-{gen}')
             os.makedirs(game_dir, exist_ok=True)
-            game_filename = os.path.join(game_dir, f'{end_timestamp}.pt')
+            game_filename = os.path.join(game_dir, f'{end_timestamp}.log')
         else:
             # TODO: This is not the best way to respect the --max-positions-per-generation flag.
             # This makes it so that the c++ blindly keeps generating games, but the python side

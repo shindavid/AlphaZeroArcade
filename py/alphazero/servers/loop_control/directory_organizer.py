@@ -12,7 +12,7 @@ BASE_DIR/  # $A0A_OUTPUT_DIR/game/tag/
     self-play-data/
         client-0/
             gen-0/  # uses implicit dummy uniform model
-                {timestamp}.pt
+                {timestamp}.log
                 ...
             gen-1/  # uses models/gen-1.pt
                 ...
