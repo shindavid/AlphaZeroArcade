@@ -286,7 +286,7 @@ void NNEvaluationService<Game>::loop() {
     load_initial_weights_if_necessary();
     wait_for_unpause();
     wait_until_batch_ready();
-    wait_for_first_reservation();
+    if (wait_for_first_reservation()) continue;
     wait_for_last_reservation();
     wait_for_commits();
     batch_evaluate();
@@ -441,6 +441,7 @@ void NNEvaluationService<Game>::wait_until_all_read(
     const Request& request, std::unique_lock<std::mutex>& metadata_lock) {
   util::debug_assert(batch_metadata_.unread_count > 0);
   batch_metadata_.unread_count--;
+  cv_service_loop_.notify_all();
 
   const char* func = __func__;
   if (mcts::kEnableDebug) {
@@ -567,8 +568,9 @@ void NNEvaluationService<Game>::wait_until_batch_ready() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::wait_for_first_reservation() {
+bool NNEvaluationService<Game>::wait_for_first_reservation() {
   profiler_.record(NNEvaluationServiceRegion::kWaitingForFirstReservation);
+  auto now = std::chrono::steady_clock::now();
   std::unique_lock<std::mutex> lock(batch_metadata_.mutex);
   const char* cls = "NNEvaluationService";
   const char* func = __func__;
@@ -576,7 +578,8 @@ void NNEvaluationService<Game>::wait_for_first_reservation() {
     LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
              << ") ---------------------->";
   }
-  cv_service_loop_.wait(lock, [&] {
+  auto deadline = now + std::chrono::milliseconds(100);
+  cv_service_loop_.wait_until(lock, deadline, [&] {
     if (batch_metadata_.reserve_index > 0) return true;
     if (mcts::kEnableDebug) {
       LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
@@ -584,6 +587,8 @@ void NNEvaluationService<Game>::wait_for_first_reservation() {
     }
     return false;
   });
+
+  return batch_metadata_.reserve_index == 0;
 }
 
 template <core::concepts::Game Game>

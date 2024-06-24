@@ -191,7 +191,7 @@ class NNEvaluationService
   void pause() override;
   void unpause() override;
   void wait_until_batch_ready();
-  void wait_for_first_reservation();
+  bool wait_for_first_reservation();  // return true if timeout
   void wait_for_last_reservation();
   void wait_for_commits();
 
