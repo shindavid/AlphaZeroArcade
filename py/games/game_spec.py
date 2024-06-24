@@ -66,9 +66,23 @@ class GameSpec(abc.ABC):
         return None
 
     @property
+    def training_options(self) -> Dict[str, str]:
+        """
+        Options to pass to the game binary when running training games.
+        """
+        return {}
+
+    @property
     def training_player_options(self) -> Dict[str, str]:
         """
         Options to pass to the --player argument of the game binary when running training games.
+        """
+        return {}
+
+    @property
+    def rating_options(self) -> Dict[str, str]:
+        """
+        Options to pass to the game binary when running ratings games.
         """
         return {}
 

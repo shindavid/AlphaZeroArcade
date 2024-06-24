@@ -53,7 +53,6 @@ class Params:
     max_positions_per_generation: Optional[int] = \
         default_loop_controller_params.max_positions_per_generation
     rating_tag: str = ''
-    parallelism_factor: int = default_ratings_server_params.parallelism_factor
     binary_path: str = None
 
     @staticmethod
@@ -121,8 +120,6 @@ def launch_ratings_server(params_dict, cuda_device: int):
         cmd.extend(['--binary-path', params.binary_path])
     if default_ratings_server_params.rating_tag != params.rating_tag:
         cmd.extend(['--rating-tag', params.rating_tag])
-    if default_ratings_server_params.parallelism_factor != params.parallelism_factor:
-        cmd.extend(['--parallelism_factor', str(params.parallelism_factor)])
 
     logging_params.add_to_cmd(cmd)
 

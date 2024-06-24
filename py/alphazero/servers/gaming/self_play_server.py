@@ -5,6 +5,7 @@ from alphazero.servers.gaming.log_forwarder import LogForwarder
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
+from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
@@ -133,38 +134,43 @@ class SelfPlayServer:
 
         max_rows = msg['max_rows']
 
-        player_args = [
-            '--type=MCTS-T',
-            '--name=MCTS',
-            '--max-rows', max_rows,
-            '--no-model',
-        ]
-
-        options = dict(self._session_data.game_spec.training_player_options)
+        player_args = {
+            '--type': 'MCTS-T',
+            '--name': 'MCTS',
+            '--max-rows': max_rows,
+            '--no-model': None,
+        }
+        player_args.update(self._session_data.game_spec.training_player_options)
 
         # for gen-0, sample more positions and use fewer iters per game, so we finish faster
-        options.update({
+        player_args.update({
             '-I': 100,
             '-f': 1.0,
         })
-        player_args.extend([f'{k} {v}' for k, v in options.items()])
 
-        player2_args = [
-            '--name=MCTS2',
-            '--copy-from=MCTS',
-        ]
+        player2_args = {
+            '--name': 'MCTS2',
+            '--copy-from': 'MCTS',
+        }
+
+        player_args_str = make_args_str(player_args)
+        player2_args_str = make_args_str(player2_args)
+
+        args = {
+            '-G': 0,
+            '--loop-controller-hostname': self._params.loop_controller_host,
+            '--loop-controller-port': self._params.loop_controller_port,
+            '--client-role': ClientRole.SELF_PLAY_WORKER.value,
+            '--do-not-report-metrics': None,
+        }
+        args.update(self._session_data.game_spec.training_options)
 
         self_play_cmd = [
             self._session_data.binary_path,
-            '-G', 0,
-            '--loop-controller-hostname', self._params.loop_controller_host,
-            '--loop-controller-port', self._params.loop_controller_port,
-            '--client-role', ClientRole.SELF_PLAY_WORKER.value,
-            '--do-not-report-metrics',
-            '--player', '"%s"' % (' '.join(map(str, player_args))),
-            '--player', '"%s"' % (' '.join(map(str, player2_args))),
+            '--player', '"%s"' % player_args_str,
+            '--player', '"%s"' % player2_args_str,
         ]
-
+        self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         proc = subprocess_util.Popen(self_play_cmd)
@@ -190,31 +196,36 @@ class SelfPlayServer:
         assert not self._running
         self._running = True
 
-        player_args = [
-            '--type=MCTS-T',
-            '--name=MCTS',
-            '--cuda-device', self._params.cuda_device,
-        ]
+        player_args = {
+            '--type': 'MCTS-T',
+            '--name': 'MCTS',
+            '--cuda-device': self._params.cuda_device,
+        }
+        player_args.update(self._session_data.game_spec.training_player_options)
 
-        options = dict(self._session_data.game_spec.training_player_options)
-        player_args.extend([f'{k} {v}' for k, v in options.items()])
+        player2_args = {
+            '--name': 'MCTS2',
+            '--copy-from': 'MCTS',
+        }
 
-        player2_args = [
-            '--name=MCTS2',
-            '--copy-from=MCTS',
-        ]
+        player_args_str = make_args_str(player_args)
+        player2_args_str = make_args_str(player2_args)
+
+        args = {
+            '-G': 0,
+            '--loop-controller-hostname': self._params.loop_controller_host,
+            '--loop-controller-port': self._params.loop_controller_port,
+            '--client-role': ClientRole.SELF_PLAY_WORKER.value,
+            '--cuda-device': self._params.cuda_device,
+        }
+        args.update(self._session_data.game_spec.training_options)
 
         self_play_cmd = [
             self._session_data.binary_path,
-            '-G', 0,
-            '--loop-controller-hostname', self._params.loop_controller_host,
-            '--loop-controller-port', self._params.loop_controller_port,
-            '--client-role', ClientRole.SELF_PLAY_WORKER.value,
-            '--cuda-device', self._params.cuda_device,
-            '--player', '"%s"' % (' '.join(map(str, player_args))),
-            '--player', '"%s"' % (' '.join(map(str, player2_args))),
+            '--player', '"%s"' % player_args_str,
+            '--player', '"%s"' % player2_args_str,
         ]
-
+        self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         proc = subprocess_util.Popen(self_play_cmd)

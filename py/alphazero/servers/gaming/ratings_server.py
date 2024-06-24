@@ -6,12 +6,12 @@ from alphazero.servers.gaming.log_forwarder import LogForwarder
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
+from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
 import threading
-from typing import Optional
 
 
 logger = get_logger()
@@ -20,7 +20,6 @@ logger = get_logger()
 @dataclass
 class RatingsServerParams(BaseParams):
     rating_tag: str = ''
-    parallelism_factor: int = 100
 
     @staticmethod
     def create(args) -> 'RatingsServerParams':
@@ -40,9 +39,6 @@ class RatingsServerParams(BaseParams):
                            'the responsibility of the user to make sure that the same '
                            'binary/params are used across different RatingsServer processes '
                            'sharing the same rating-tag. (default: "%(default)s")')
-        group.add_argument('-p', '--parallelism-factor', type=int,
-                           default=defaults.parallelism_factor,
-                           help='parallelism factor (default: %(default)s)')
 
 
 class RatingsServer:
@@ -147,26 +143,28 @@ class RatingsServer:
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
 
-        parallelism_factor = self._params.parallelism_factor
-
         ps1 = self._get_mcts_player_str(mcts_gen)
         ps2 = self._get_reference_player_str(ref_strength)
         binary = self._session_data.binary_path
+
+        args = {
+            '-G': n_games,
+            '--loop-controller-hostname': self._params.loop_controller_host,
+            '--loop-controller-port': self._params.loop_controller_port,
+            '--client-role': ClientRole.RATINGS_WORKER.value,
+            '--manager-id': self._session_data.client_id,
+            '--ratings-tag': f'"{self._params.rating_tag}"',
+            '--cuda-device': self._params.cuda_device,
+            '--weights-request-generation': mcts_gen,
+            '--do-not-report-metrics': None,
+        }
+        args.update(self._session_data.game_spec.rating_options)
         cmd = [
             binary,
-            '-G', n_games,
-            '--loop-controller-hostname', self._params.loop_controller_host,
-            '--loop-controller-port', self._params.loop_controller_port,
-            '--client-role', ClientRole.RATINGS_WORKER.value,
-            '--manager-id', self._session_data.client_id,
-            '--ratings-tag', f'"{self._params.rating_tag}"',
-            '--cuda-device', self._params.cuda_device,
-            '--weights-request-generation', mcts_gen,
-            '--do-not-report-metrics',
-            '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',
             ]
+        cmd.append(make_args_str(args))
         cmd = ' '.join(map(str, cmd))
 
         mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
@@ -203,16 +201,13 @@ class RatingsServer:
     def _get_mcts_player_str(self, gen: int):
         name = RatingsServer._get_mcts_player_name(gen)
 
-        player_args = [
-            '--type=MCTS-C',
-            '--name', name,
-            '--cuda-device', self._params.cuda_device,
-        ]
-
-        options = self._session_data.game_spec.rating_player_options
-        player_args.extend([f'{k} {v}' for k, v in options.items()])
-
-        return ' '.join(map(str, player_args))
+        player_args = {
+            '--type': 'MCTS-C',
+            '--name': name,
+            '--cuda-device': self._params.cuda_device,
+        }
+        player_args.update(self._session_data.game_spec.rating_player_options)
+        return make_args_str(player_args)
 
     @staticmethod
     def _get_reference_player_name(strength: int):
@@ -224,10 +219,9 @@ class RatingsServer:
         type_str = family.type_str
         strength_param = family.strength_param
 
-        player_args = [
-            '--type', type_str,
-            '--name', name,
-            strength_param, strength,
-        ]
-
-        return ' '.join(map(str, player_args))
+        player_args = {
+            '--type': type_str,
+            '--name': name,
+            strength_param: strength,
+        }
+        return make_args_str(player_args)

@@ -48,3 +48,19 @@ def inject_args(cmdline: str, kwargs: dict):
     for arg_name, arg_value in kwargs.items():
         cmdline = inject_arg(cmdline, arg_name, arg_value)
     return cmdline
+
+
+def make_args_str(args: dict) -> str:
+    """
+    Converts a dictionary of args into a string of the form '--arg1 val1 --arg2 val2 ...'.
+
+    A value of None will be treated as a flag, and will be converted to '--arg' instead of
+    '--arg None'.
+    """
+    args_str = ''
+    for arg_name, arg_value in args.items():
+        if arg_value is None:
+            args_str += f' {arg_name}'
+        else:
+            args_str += f' {arg_name} {arg_value}'
+    return args_str.strip()

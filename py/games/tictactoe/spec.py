@@ -61,8 +61,19 @@ class TicTacToeSpec(GameSpec):
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
 
+    # Tic-tac-toe is so simple that most nn evals end up hitting the cache. As a result, the
+    # binary tends to be CPU-bound, rather than GPU-bound. Using the default parallelism of 256
+    # leads to CPU-starving, so we drop to 16.
+    training_options = {
+        '-p': 16,
+    }
+
     training_player_options = {
         '-r': 1,
+    }
+
+    rating_options = {
+        '-p': 16,  # see above comment
     }
 
     rating_player_options = {
