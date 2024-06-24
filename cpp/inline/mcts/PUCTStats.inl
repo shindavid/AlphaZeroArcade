@@ -69,8 +69,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
    * better consistency with the AlphaZero/KataGo approach.
    */
 
-  // TODO: fixme, this should use E rather than N!
-  PUCT = 2 * V + params.cPUCT * P * sqrt(N.sum() + eps) / (N + 1);
+  PUCT = 2 * V + params.cPUCT * P * sqrt(E.sum() + eps) / (E + 1);
 
   if (params.avoid_proven_losers && !PL.all()) {
     PUCT *= (1 - PL);  // zero out provably-losing actions
