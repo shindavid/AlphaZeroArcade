@@ -45,7 +45,7 @@ struct GameLogBase {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-  struct policy_tensor_index_t {
+  struct policy_target_index_t {
     // If start < end, then the representation is sparse, and entries [start, end) of
     // the sparse_policy_entry_t region represent the sparse tensor.
     // Else, if start == end >= 0, then start is the index into the dense tensor region.
@@ -72,10 +72,10 @@ struct GameLogBase {
  * [sym_sample_index_t...]
  * [non_sym_sample_index_t...]
  * [action_t...]
- * [policy_tensor_index_t...]
+ * [policy_target_index_t...]
  * [Game::BaseState...]
- * [Game::Types::PolicyTensor...]  // data for densely represented tensors
- * [sparse_policy_entry_t...]  // data for sparsely represented tensors
+ * [Game::Types::PolicyTensor...]  // data for densely represented policy targets
+ * [sparse_policy_entry_t...]  // data for sparsely represented policy targets
  *
  * Each section is aligned to 8 bytes.
  */
@@ -122,13 +122,13 @@ class GameLog : public GameLogBase {
   static constexpr int sym_sample_index_start_mem_offset();
   int non_sym_sample_index_start_mem_offset() const;
   int action_start_mem_offset() const;
-  int policy_tensor_index_start_mem_offset() const;
+  int policy_target_index_start_mem_offset() const;
   int state_start_mem_offset() const;
   int dense_policy_start_mem_offset() const;
   int sparse_policy_entry_start_mem_offset() const;
 
   const action_t* action_start_ptr() const;
-  const policy_tensor_index_t* policy_tensor_index_start_ptr() const;
+  const policy_target_index_t* policy_target_index_start_ptr() const;
   const BaseState* state_start_ptr() const;
   const PolicyTensor* dense_policy_start_ptr() const;
   const sparse_policy_entry_t* sparse_policy_entry_start_ptr() const;
@@ -146,7 +146,7 @@ class GameLog : public GameLogBase {
   char* const buffer_ = nullptr;
   const int non_sym_sample_index_start_mem_offset_;
   const int action_start_mem_offset_;
-  const int policy_tensor_index_start_mem_offset_;
+  const int policy_target_index_start_mem_offset_;
   const int state_start_mem_offset_;
   const int dense_policy_start_mem_offset_;
   const int sparse_policy_entry_start_mem_offset_;
@@ -192,7 +192,7 @@ class GameLogWriter {
   template<typename T>
   static void write_section(std::ostream& os, const T* t, int count=1);
 
-  static GameLogBase::policy_tensor_index_t write_policy_target(
+  static GameLogBase::policy_target_index_t write_policy_target(
       const Entry& entry, std::vector<PolicyTensor>& dense_tensors,
       std::vector<GameLogBase::sparse_policy_entry_t>& sparse_tensor_entries);
 

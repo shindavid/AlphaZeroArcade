@@ -39,7 +39,7 @@ GameLog<Game>::GameLog(const char* filename)
       buffer_(get_buffer()),
       non_sym_sample_index_start_mem_offset_(non_sym_sample_index_start_mem_offset()),
       action_start_mem_offset_(action_start_mem_offset()),
-      policy_tensor_index_start_mem_offset_(policy_tensor_index_start_mem_offset()),
+      policy_target_index_start_mem_offset_(policy_target_index_start_mem_offset()),
       state_start_mem_offset_(state_start_mem_offset()),
       dense_policy_start_mem_offset_(dense_policy_start_mem_offset()),
       sparse_policy_entry_start_mem_offset_(sparse_policy_entry_start_mem_offset()) {
@@ -245,14 +245,14 @@ int GameLog<Game>::action_start_mem_offset() const {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::policy_tensor_index_start_mem_offset() const {
+int GameLog<Game>::policy_target_index_start_mem_offset() const {
   return action_start_mem_offset_ + align(num_non_terminal_positions() * sizeof(action_t));
 }
 
 template <concepts::Game Game>
 int GameLog<Game>::state_start_mem_offset() const {
-  return policy_tensor_index_start_mem_offset_ +
-         align(num_non_terminal_positions() * sizeof(policy_tensor_index_t));
+  return policy_target_index_start_mem_offset_ +
+         align(num_non_terminal_positions() * sizeof(policy_target_index_t));
 }
 
 template <concepts::Game Game>
@@ -271,8 +271,8 @@ const action_t* GameLog<Game>::action_start_ptr() const {
 }
 
 template <concepts::Game Game>
-const GameLogBase::policy_tensor_index_t* GameLog<Game>::policy_tensor_index_start_ptr() const {
-  return reinterpret_cast<policy_tensor_index_t*>(buffer_ + policy_tensor_index_start_mem_offset_);
+const GameLogBase::policy_target_index_t* GameLog<Game>::policy_target_index_start_ptr() const {
+  return reinterpret_cast<policy_target_index_t*>(buffer_ + policy_target_index_start_mem_offset_);
 }
 
 template <concepts::Game Game>
@@ -309,7 +309,7 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
     return policy;
   }
 
-  policy_tensor_index_t index = policy_tensor_index_start_ptr()[state_index];
+  policy_target_index_t index = policy_target_index_start_ptr()[state_index];
 
   if (index.start < index.end) {
     // sparse case
@@ -426,7 +426,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   using Header = typename GameLog::Header;
   using sym_sample_index_t = typename GameLog::sym_sample_index_t;
   using non_sym_sample_index_t = typename GameLog::non_sym_sample_index_t;
-  using policy_tensor_index_t = typename GameLog::policy_tensor_index_t;
+  using policy_target_index_t = typename GameLog::policy_target_index_t;
   using sparse_policy_entry_t = typename GameLog::sparse_policy_entry_t;
 
   util::release_assert(!entries_.empty(), "Illegal serialization of empty GameLogWriter");
@@ -436,7 +436,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   std::vector<sym_sample_index_t> sym_sample_indices;
   std::vector<non_sym_sample_index_t> non_sym_sample_indices;
   std::vector<action_t> actions;
-  std::vector<policy_tensor_index_t> policy_tensor_indices;
+  std::vector<policy_target_index_t> policy_target_indices;
   std::vector<BaseState> states;
   std::vector<PolicyTensor> dense_policy_tensors;
   std::vector<sparse_policy_entry_t> sparse_policy_entries;
@@ -444,7 +444,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   sym_sample_indices.reserve(sym_train_count_);
   non_sym_sample_indices.reserve(non_sym_train_count_);
   actions.reserve(num_non_terminal_entries);
-  policy_tensor_indices.reserve(num_non_terminal_entries);
+  policy_target_indices.reserve(num_non_terminal_entries);
   states.reserve(num_entries);
   dense_policy_tensors.reserve(num_non_terminal_entries);
   sparse_policy_entries.reserve(1 + num_non_terminal_entries * sizeof(PolicyTensor) /
@@ -464,7 +464,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
     }
 
     actions.push_back(entry->action);
-    policy_tensor_indices.push_back(
+    policy_target_indices.push_back(
         write_policy_target(*entry, dense_policy_tensors, sparse_policy_entries));
   }
 
@@ -481,7 +481,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   write_section(stream, sym_sample_indices.data(), sym_sample_indices.size());
   write_section(stream, non_sym_sample_indices.data(), non_sym_sample_indices.size());
   write_section(stream, actions.data(), actions.size());
-  write_section(stream, policy_tensor_indices.data(), policy_tensor_indices.size());
+  write_section(stream, policy_target_indices.data(), policy_target_indices.size());
   write_section(stream, states.data(), states.size());
   write_section(stream, dense_policy_tensors.data(), dense_policy_tensors.size());
   write_section(stream, sparse_policy_entries.data(), sparse_policy_entries.size());
@@ -511,7 +511,7 @@ void GameLogWriter<Game>::write_section(std::ostream& os, const T* t, int count)
 }
 
 template <concepts::Game Game>
-GameLogBase::policy_tensor_index_t GameLogWriter<Game>::write_policy_target(
+GameLogBase::policy_target_index_t GameLogWriter<Game>::write_policy_target(
     const Entry& entry, std::vector<PolicyTensor>& dense_tensors,
     std::vector<sparse_policy_entry_t>& sparse_tensor_entries) {
   if (!entry.policy_target_is_valid) {
