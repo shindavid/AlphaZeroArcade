@@ -138,7 +138,7 @@ class Node {
    * kEdgeDataChunkSize children, then we avoid dynamic memory allocation.
    */
   struct edge_chunk_t {
-    ~edge_chunk_t() { delete next; }
+    ~edge_chunk_t();
     edge_t* find(core::action_index_t i);
     edge_t* insert(core::action_index_t a, core::action_index_t i, sptr child);
 
