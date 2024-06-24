@@ -3,7 +3,7 @@
 namespace tictactoe {
 
 inline size_t Game::BaseState::hash() const {
-  return boost::hash_range(&full_mask, &full_mask + 2);
+  return (size_t(full_mask) << 16) + cur_player_mask;
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
