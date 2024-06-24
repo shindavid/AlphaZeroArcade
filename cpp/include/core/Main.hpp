@@ -4,7 +4,7 @@
 #include <core/LoopControllerClient.hpp>
 #include <core/GameServer.hpp>
 #include <core/GameServerProxy.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/SocketUtil.hpp>
@@ -17,11 +17,11 @@
 
 template <typename PlayerFactory>
 struct Main {
-  using GameState = PlayerFactory::GameState;
-  using GameServer = core::GameServer<GameState>;
+  using Game = typename PlayerFactory::Game;
+  using GameServer = core::GameServer<Game>;
   using GameServerParams = typename GameServer::Params;
-  using GameServerProxy = core::GameServerProxy<GameState>;
-  using Player = core::AbstractPlayer<GameState>;
+  using GameServerProxy = core::GameServerProxy<Game>;
+  using Player = core::AbstractPlayer<Game>;
 
   struct Args {
     std::vector<std::string> player_strs;

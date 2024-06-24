@@ -1,9 +1,7 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
-#include <core/TensorizorConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
@@ -11,14 +9,12 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 struct PUCTStats {
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using dtype = torch_util::dtype;
+  using Node = mcts::Node<Game>;
+  using LocalPolicyArray = typename Node::LocalPolicyArray;
 
-  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
   PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params,

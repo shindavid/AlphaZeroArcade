@@ -7,32 +7,29 @@
 
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/Packet.hpp>
-#include <core/SerializerTypes.hpp>
 #include <util/CppUtil.hpp>
 #include <util/SocketUtil.hpp>
 
 namespace core {
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class GameServerProxy {
  public:
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using Action = typename GameStateTypes::Action;
-  using ActionResponse = typename GameStateTypes::ActionResponse;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using PlayerGenerator = AbstractPlayerGenerator<GameState>;
+  using FullState = typename Game::FullState;
+  using Rules = typename Game::Rules;
+  using ActionMask = typename Game::Types::ActionMask;
+  using ValueArray = typename Game::Types::ValueArray;
+  using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
-  using Player = AbstractPlayer<GameState>;
+  using Player = AbstractPlayer<Game>;
   using player_name_array_t = typename Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
-  using serializer_t = core::serializer_t<GameState>;
 
   struct seat_generator_t {
     seat_index_t seat;
@@ -55,11 +52,9 @@ class GameServerProxy {
     void init_socket();
     io::Socket* socket() const { return socket_; }
     PlayerGenerator* get_gen(player_id_t p) const { return players_[p]; }
-    const serializer_t& serializer() const { return serializer_; }
     void end_session();
 
    private:
-    serializer_t serializer_;
     seat_generator_vec_t seat_generators_;   // temp storage
     player_generator_array_t players_ = {};  // indexed by player_id_t
     Params params_;
@@ -95,7 +90,7 @@ class GameServerProxy {
     const player_id_t player_id_;
     std::thread* thread_ = nullptr;
 
-    GameState state_;
+    FullState state_;
 
     // below fields are used for inter-thread communication
     ActionMask valid_actions_;

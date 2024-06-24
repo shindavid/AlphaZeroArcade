@@ -114,4 +114,12 @@ uint64_t hash_memory(const void* ptr) {
   return hash;
 }
 
+template <int N, typename T>
+void stuff_back(std::vector<T>& vec, const T& t) {
+  if (N >= 0 && (int)vec.size() > N) {
+    vec.erase(vec.begin());
+  }
+  vec.push_back(t);
+}
+
 }  // namespace util

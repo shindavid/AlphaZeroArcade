@@ -56,6 +56,7 @@ class LoopControllerClient {
 
   static void init(const Params&);
   static bool initialized() { return instance_;  }
+  static bool deactivated() { return instance_ && instance_->deactivated_; }
   static LoopControllerClient* get() { return instance_;  }
   int client_id() const { return client_id_; }
   int cur_generation() const { return cur_generation_; }
@@ -118,6 +119,7 @@ class LoopControllerClient {
   size_t pause_receipt_count_ = 0;
   size_t unpause_receipt_count_ = 0;
   bool shutdown_initiated_ = false;
+  bool deactivated_ = false;
 };
 
 }  // namespace core

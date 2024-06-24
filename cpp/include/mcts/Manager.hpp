@@ -5,16 +5,13 @@
 #include <vector>
 
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
-#include <core/TensorizorConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
-#include <mcts/SearchResults.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 
@@ -25,30 +22,28 @@ namespace mcts {
  *
  * It maintains the search-tree and manages the threads and services that perform the search.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class Manager {
  public:
-  using dtype = torch_util::dtype;
-  using NNEvaluationService = mcts::NNEvaluationService<GameState, Tensorizor>;
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using PUCTStats = mcts::PUCTStats<GameState, Tensorizor>;
-  using SearchResults = mcts::SearchResults<GameState>;
-  using SearchThread = mcts::SearchThread<GameState, Tensorizor>;
-  using SharedData = mcts::SharedData<GameState, Tensorizor>;
+  using NNEvaluationService = mcts::NNEvaluationService<Game>;
+  using Node = mcts::Node<Game>;
+  using PUCTStats = mcts::PUCTStats<Game>;
+  using SearchThread = mcts::SearchThread<Game>;
+  using SharedData = mcts::SharedData<Game>;
 
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using GameStateTypes = core::GameStateTypes<GameState>;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
+  static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
-  static constexpr int kMaxNumLocalActions = GameState::kMaxNumLocalActions;
-
-  using Action = typename GameStateTypes::Action;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using InputTensor = typename TensorizorTypes::InputTensor;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
+  using IO = typename Game::IO;
+  using FullState = typename Game::FullState;
+  using SearchResults = typename Game::Types::SearchResults;
+  using ActionOutcome = typename Game::Types::ActionOutcome;
+  using ActionMask = typename Game::Types::ActionMask;
+  using InputTensor = typename Game::InputTensorizor::Tensor;
+  using InputShape = eigen_util::extract_shape_t<InputTensor>;
+  using LocalPolicyArray = typename Node::LocalPolicyArray;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueArray = typename Game::Types::ValueArray;
 
   Manager(const ManagerParams& params);
   ~Manager();
@@ -58,9 +53,8 @@ class Manager {
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const GameState&, const Action&);
-  const SearchResults* search(const Tensorizor& tensorizor, const GameState& game_state,
-                              const SearchParams& params);
+  void receive_state_change(core::seat_index_t, const FullState&, core::action_t);
+  const SearchResults* search(const FullState& state, const SearchParams& params);
 
   void start_search_threads(const SearchParams& search_params);
   void wait_for_search_threads();
@@ -69,6 +63,9 @@ class Manager {
   void end_session() {
     if (nn_eval_service_) nn_eval_service_->end_session();
   }
+
+  void set_player_data(void* player_data) { player_data_ = player_data; }
+  void* get_player_data() const { return player_data_; }
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;
@@ -86,6 +83,7 @@ class Manager {
 
   SearchResults results_;
 
+  void* player_data_ = nullptr;
   bool connected_ = false;
 };
 

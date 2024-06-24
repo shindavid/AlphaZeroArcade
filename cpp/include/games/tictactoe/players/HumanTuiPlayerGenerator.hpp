@@ -7,16 +7,16 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <generic_players/HumanTuiPlayerGenerator.hpp>
-#include <games/tictactoe/GameState.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <games/tictactoe/players/HumanTuiPlayer.hpp>
+#include <generic_players/HumanTuiPlayerGenerator.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace tictactoe {
 
-class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<tictactoe::GameState> {
+class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<tictactoe::Game> {
  public:
-  core::AbstractPlayer<tictactoe::GameState>* generate(core::game_thread_id_t) override {
+  core::AbstractPlayer<tictactoe::Game>* generate(core::game_thread_id_t) override {
     return new tictactoe::HumanTuiPlayer();
   }
 };

@@ -9,6 +9,7 @@
 #include <typeinfo>
 #include <type_traits>
 #include <unistd.h>
+#include <vector>
 
 #include <boost/core/demangle.hpp>
 
@@ -31,6 +32,17 @@
 #define IS_MACRO_ENABLED(macro) (XSTR(macro)[0] == '1')
 
 namespace util {
+
+template<typename T, size_t N>
+class UninitializedArray {
+ public:
+  T& operator[](size_t index) {
+    return *reinterpret_cast<T*>(&storage_[sizeof(T) * index]);
+  }
+
+ private:
+  alignas(T) unsigned char storage_[sizeof(T) * N];
+};
 
 template <typename T>
 std::string get_typename() {
@@ -82,8 +94,8 @@ int64_t get_unique_id();
  *
  * The above expresses the requirement that the class T has a static member bar of type int.
  *
- * This function does actually have an implementation, and so you will get a linker error if you try
- * to actually invoke it in other contexts.
+ * This function does not actually have an implementation, and so you will get a linker error if
+ * you try to actually invoke it in other contexts.
  *
  * Adapted from: https://stackoverflow.com/a/69687663/543913
  */
@@ -126,9 +138,6 @@ using int64_sequence = std::integer_sequence<int64_t, Ints...>;
 template <uint64_t... Ints>
 using uint64_sequence = std::integer_sequence<uint64_t, Ints...>;
 
-/*
- * IntSequenceConcept/Int64SequenceConcept/UInt64SequenceConcept is for concept requirements.
- */
 template <typename T>
 struct is_int_sequence {
   static const bool value = false;
@@ -139,8 +148,6 @@ struct is_int_sequence<int_sequence<Ints...>> {
 };
 template <typename T>
 inline constexpr bool is_int_sequence_v = is_int_sequence<T>::value;
-template <typename T>
-concept IntSequenceConcept = is_int_sequence_v<T>;
 
 template <typename T>
 struct is_int64_sequence {
@@ -152,8 +159,6 @@ struct is_int64_sequence<int64_sequence<Ints...>> {
 };
 template <typename T>
 inline constexpr bool is_int64_sequence_v = is_int64_sequence<T>::value;
-template <typename T>
-concept Int64SequenceConcept = is_int64_sequence_v<T>;
 
 template <typename T>
 struct is_uint64_sequence {
@@ -165,8 +170,6 @@ struct is_uint64_sequence<uint64_sequence<Ints...>> {
 };
 template <typename T>
 inline constexpr bool is_uint64_sequence_v = is_uint64_sequence<T>::value;
-template <typename T>
-concept UInt64SequenceConcept = is_uint64_sequence_v<T>;
 
 template <typename T>
 struct integer_sequence_product {};
@@ -242,9 +245,6 @@ template <typename T, StringLiteral S>
 static constexpr bool string_literal_sequence_contains_v =
     string_literal_sequence_contains<T, S>::value;
 
-/*
- * BitSetConcept<T> is for concept requirements.
- */
 template <typename T>
 struct is_bit_set {
   static const bool value = false;
@@ -255,8 +255,6 @@ struct is_bit_set<std::bitset<N>> {
 };
 template <typename T>
 inline constexpr bool is_bit_set_v = is_bit_set<T>::value;
-template <typename T>
-concept BitSetConcept = is_bit_set_v<T>;
 
 /*
  * The following are equivalent:
@@ -377,6 +375,35 @@ size_t tuple_hash(const std::tuple<T...>& arg);
 
 template <size_t size>
 uint64_t hash_memory(const void* ptr);
+
+/*
+ * If N<0, just does vec.push_back(t).
+ *
+ * If N>=0, then does vec.push_back(t), but pops off the front element first if the current size
+ * exceeds N.
+ *
+ * For non-negative N, this simulates push_back() for a circular buffer of size N+1. This is useful
+ * in settings where we want circular buffer mechanics, but where we require the container's
+ * logical ordering to match the physical ordering.
+ */
+template <int N, typename T>
+void stuff_back(std::vector<T>& vec, const T& t);
+
+namespace concepts {
+
+template <typename T>
+concept IntSequence = is_int_sequence_v<T>;
+
+template <typename T>
+concept StdBitSet = is_bit_set_v<T>;
+
+template<typename T>
+concept UsableAsHashMapKey = requires(const T& a, const T& b) {
+  { std::hash<T>{}(a) } -> std::convertible_to<size_t>;
+  { a == b } -> std::convertible_to<bool>;
+};
+
+}  // namespace concepts
 
 }  // namespace util
 

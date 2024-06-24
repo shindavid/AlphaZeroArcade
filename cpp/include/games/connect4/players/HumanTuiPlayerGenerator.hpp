@@ -10,12 +10,12 @@
 #include <generic_players/HumanTuiPlayerGenerator.hpp>
 #include <util/BoostUtil.hpp>
 
-#include <games/connect4/GameState.hpp>
+#include <games/connect4/Game.hpp>
 #include <games/connect4/players/HumanTuiPlayer.hpp>
 
 namespace c4 {
 
-class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::GameState> {
+class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game> {
  public:
   struct Params {
     bool cheat_mode;
@@ -30,7 +30,7 @@ class HumanTuiPlayerGenerator : public generic::HumanTuiPlayerGenerator<c4::Game
     }
   };
 
-  core::AbstractPlayer<c4::GameState>* generate(core::game_thread_id_t) override;
+  core::AbstractPlayer<c4::Game>* generate(core::game_thread_id_t) override;
   void print_help(std::ostream& s) override { params_.make_options_description().print(s); }
   void parse_args(const std::vector<std::string>& args) override;
 

@@ -19,8 +19,8 @@
 
 namespace core {
 
-template <GameStateConcept GameState>
-auto GameServerProxy<GameState>::Params::make_options_description() {
+template <concepts::Game Game>
+auto GameServerProxy<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -35,22 +35,22 @@ auto GameServerProxy<GameState>::Params::make_options_description() {
           "Remote port to connect players to. If not specified, run server in-process");
 }
 
-template <GameStateConcept GameState>
-GameServerProxy<GameState>::SharedData::SharedData(const Params& params) : params_(params) {
+template <concepts::Game Game>
+GameServerProxy<Game>::SharedData::SharedData(const Params& params) : params_(params) {
   util::clean_assert(params_.remote_port > 0, "Remote port must be specified");
   socket_ = io::Socket::create_client_socket(params_.remote_server, params_.remote_port);
   std::cout << "Connected to the server!" << std::endl;
 }
 
-template <GameStateConcept GameState>
-GameServerProxy<GameState>::SharedData::~SharedData() {
+template <concepts::Game Game>
+GameServerProxy<Game>::SharedData::~SharedData() {
   for (auto gen : players_) {
     delete gen;
   }
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat,
+template <concepts::Game Game>
+void GameServerProxy<Game>::SharedData::register_player(seat_index_t seat,
                                                              PlayerGenerator* gen) {
   // TODO: assert that we are not constructing MCTS-T players, since the MCTS-T implementation
   // implicitly assumes that all MCTS-T agents are running in the same process.
@@ -60,8 +60,8 @@ void GameServerProxy<GameState>::SharedData::register_player(seat_index_t seat,
   seat_generators_.emplace_back(seat, gen);
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::SharedData::init_socket() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::SharedData::init_socket() {
   int n = seat_generators_.size();
   for (int i = 0; i < n; ++i) {
     seat_generator_t& seat_generator = seat_generators_[i];
@@ -106,15 +106,15 @@ void GameServerProxy<GameState>::SharedData::init_socket() {
   }
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::SharedData::end_session() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::SharedData::end_session() {
   for (auto& sg : seat_generators_) {
     sg.gen->end_session();
   }
 }
 
-template <GameStateConcept GameState>
-GameServerProxy<GameState>::PlayerThread::PlayerThread(SharedData& shared_data, Player* player,
+template <concepts::Game Game>
+GameServerProxy<Game>::PlayerThread::PlayerThread(SharedData& shared_data, Player* player,
                                                        game_thread_id_t game_thread_id,
                                                        player_id_t player_id)
     : shared_data_(shared_data),
@@ -124,14 +124,14 @@ GameServerProxy<GameState>::PlayerThread::PlayerThread(SharedData& shared_data, 
   thread_ = new std::thread([&] { run(); });
 }
 
-template <GameStateConcept GameState>
-GameServerProxy<GameState>::PlayerThread::~PlayerThread() {
+template <concepts::Game Game>
+GameServerProxy<Game>::PlayerThread::~PlayerThread() {
   delete thread_;
   delete player_;
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame& payload) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& payload) {
   if (kEnableDebug) {
     LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
@@ -140,75 +140,74 @@ void GameServerProxy<GameState>::PlayerThread::handle_start_game(const StartGame
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  new (&state_) GameState();  // placement-new
+  new (&state_) FullState();  // placement-new
   player_->init_game(game_id, player_names, seat_assignment);
   player_->start_game();
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::handle_state_change(const StateChange& payload) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::handle_state_change(const StateChange& payload) {
   if (kEnableDebug) {
     LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   const char* buf = payload.dynamic_size_section.buf;
 
-  seat_index_t seat;
-  Action action;
+  seat_index_t seat = Rules::get_current_player(state_);
+  ActionResponse action_response = *reinterpret_cast<const ActionResponse*>(buf);
+  action_t action = action_response.action;
+  Rules::apply(state_, action);
 
-  shared_data_.serializer().deserialize_state_change(buf, &state_, &seat, &action);
   player_->receive_state_change(seat, state_, action);
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::handle_action_prompt(const ActionPrompt& payload) {
   if (kEnableDebug) {
     LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   const char* buf = payload.dynamic_size_section.buf;
 
   std::unique_lock lock(mutex_);
-  shared_data_.serializer().deserialize_action_prompt(buf, &valid_actions_);
+  valid_actions_ = *reinterpret_cast<const ActionMask*>(buf);
   ready_to_get_action_ = true;
   lock.unlock();
   cv_.notify_one();
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::handle_end_game(const EndGame& payload) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::handle_end_game(const EndGame& payload) {
   if (kEnableDebug) {
     LOG_INFO << __func__ << "() game_thread:" << game_thread_id_ << " player:" << player_id_;
   }
   const char* buf = payload.dynamic_size_section.buf;
 
-  GameOutcome outcome;
-
-  shared_data_.serializer().deserialize_game_end(buf, &outcome);
+  ValueArray outcome = *reinterpret_cast<const ValueArray*>(buf);
   player_->end_game(state_, outcome);
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::stop() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::stop() {
   std::unique_lock lock(mutex_);
   active_ = false;
   lock.unlock();
   cv_.notify_one();
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::send_action_packet(const ActionResponse& response) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::send_action_packet(const ActionResponse& response) {
   Packet<ActionDecision> packet;
   ActionDecision& decision = packet.payload();
   auto& section = decision.dynamic_size_section;
 
   decision.game_thread_id = game_thread_id_;
   decision.player_id = player_id_;
-  packet.set_dynamic_section_size(shared_data_.serializer().serialize_action_response(
-      section.buf, sizeof(section.buf), response));
+  packet.set_dynamic_section_size(sizeof(response));
+  memcpy(section.buf, &response, sizeof(response));
   packet.send_to(shared_data_.socket());
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::PlayerThread::run() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::PlayerThread::run() {
   while (true) {
     std::unique_lock lock(mutex_);
     if (kEnableDebug) {
@@ -222,8 +221,8 @@ void GameServerProxy<GameState>::PlayerThread::run() {
   }
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::run() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::run() {
   shared_data_.init_socket();
   init_player_threads();
 
@@ -257,8 +256,8 @@ void GameServerProxy<GameState>::run() {
   util::KeyValueDumper::flush();
 }
 
-template <GameStateConcept GameState>
-GameServerProxy<GameState>::~GameServerProxy() {
+template <concepts::Game Game>
+GameServerProxy<Game>::~GameServerProxy() {
   for (auto& array : thread_vec_) {
     for (auto& thread : array) {
       delete thread;
@@ -266,8 +265,8 @@ GameServerProxy<GameState>::~GameServerProxy() {
   }
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::init_player_threads() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::init_player_threads() {
   Packet<GameThreadInitialization> recv_packet;
   if (!recv_packet.read_from(shared_data_.socket())) {
     throw util::Exception("Unexpected socket close");
@@ -290,8 +289,8 @@ void GameServerProxy<GameState>::init_player_threads() {
   send_packet.send_to(shared_data_.socket());
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::destroy_player_threads() {
+template <concepts::Game Game>
+void GameServerProxy<Game>::destroy_player_threads() {
   for (auto& array : thread_vec_) {
     for (auto& thread : array) {
       if (thread) {
@@ -302,26 +301,26 @@ void GameServerProxy<GameState>::destroy_player_threads() {
   }
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::handle_start_game(const GeneralPacket& packet) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::handle_start_game(const GeneralPacket& packet) {
   const StartGame& payload = packet.payload_as<StartGame>();
   thread_vec_[payload.game_thread_id][payload.player_id]->handle_start_game(payload);
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::handle_state_change(const GeneralPacket& packet) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::handle_state_change(const GeneralPacket& packet) {
   const StateChange& payload = packet.payload_as<StateChange>();
   thread_vec_[payload.game_thread_id][payload.player_id]->handle_state_change(payload);
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::handle_action_prompt(const GeneralPacket& packet) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::handle_action_prompt(const GeneralPacket& packet) {
   const ActionPrompt& payload = packet.payload_as<ActionPrompt>();
   thread_vec_[payload.game_thread_id][payload.player_id]->handle_action_prompt(payload);
 }
 
-template <GameStateConcept GameState>
-void GameServerProxy<GameState>::handle_end_game(const GeneralPacket& packet) {
+template <concepts::Game Game>
+void GameServerProxy<Game>::handle_end_game(const GeneralPacket& packet) {
   const EndGame& payload = packet.payload_as<EndGame>();
   thread_vec_[payload.game_thread_id][payload.player_id]->handle_end_game(payload);
 }

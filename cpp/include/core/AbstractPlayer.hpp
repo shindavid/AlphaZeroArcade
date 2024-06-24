@@ -4,8 +4,7 @@
 #include <string>
 
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/Exception.hpp>
 
 namespace core {
@@ -32,18 +31,17 @@ namespace core {
  * return the action that you want to take.
  *
  * TODO: for imperfect-information games, these methods should accept an "information set", rather
- * than a complete GameState. Flush out the details of this if/when we get there.
+ * than a FullState. Flush out the details of this if/when we get there.
  */
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class AbstractPlayer {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using Action = typename GameStateTypes::Action;
-  using ActionResponse = typename GameStateTypes::ActionResponse;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using player_array_t = std::array<AbstractPlayer*, GameState::kNumPlayers>;
-  using player_name_array_t = typename GameStateTypes::player_name_array_t;
+  using BaseState = typename Game::BaseState;
+  using FullState = typename Game::FullState;
+  using ValueArray = typename Game::Types::ValueArray;
+  using ActionMask = typename Game::Types::ActionMask;
+  using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
+  using player_name_array_t = typename Game::Types::player_name_array_t;
 
   virtual ~AbstractPlayer() = default;
   void set_name(const std::string& name) { name_ = name; }
@@ -55,19 +53,19 @@ class AbstractPlayer {
                  seat_index_t seat_assignment);
 
   virtual void start_game() {}
-  virtual void receive_state_change(seat_index_t, const GameState&, const Action&) {}
+  virtual void receive_state_change(seat_index_t, const FullState&, action_t) {}
 
   /*
-   * The GameState passed in here is guaranteed to be identical to the GameState last received via
+   * The FullState passed in here is guaranteed to be identical to the FullState last received via
    * receive_state_change().
    */
-  virtual ActionResponse get_action_response(const GameState&, const ActionMask&) = 0;
+  virtual ActionResponse get_action_response(const FullState&, const ActionMask&) = 0;
 
   /*
-   * The GameState passed in here is guaranteed to be identical to the GameState last received via
+   * The FullState passed in here is guaranteed to be identical to the FullState last received via
    * receive_state_change().
    */
-  virtual void end_game(const GameState&, const GameOutcome&) {}
+  virtual void end_game(const FullState&, const ValueArray&) {}
 
   /*
    * Some extra virtual functions that most subclasses can ignore.

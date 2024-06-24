@@ -24,14 +24,17 @@ class GameSpec(abc.ABC):
     Abstract class for defining a game that can be played by the AlphaZero.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def name(self) -> str:
         """
         The name of the game. This is used both to reference the game when running scripts, and as
-        the name of the game binary.
+        the name of the game binary/shared-library.
 
-        The build process is expected to produce a binary with this name in the
-        target/Release/bin/ directory.
+        The build process is expected to produce the following files:
+
+        target/Release/bin/{name}
+        target/Release/lib/lib{name}.so
         """
         pass
 
@@ -45,7 +48,8 @@ class GameSpec(abc.ABC):
         """
         return []
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def model_configs(self) -> Dict[str, ModelConfigGenerator]:
         """
         Dictionary of model configurations for this game.
@@ -61,8 +65,30 @@ class GameSpec(abc.ABC):
         """
         return None
 
-    @abc.abstractproperty
-    def n_mcts_iters_for_ratings_matches(self) -> int:
+    @property
+    def training_options(self) -> Dict[str, str]:
         """
-        The number of MCTS iterations to use for rating matches.
+        Options to pass to the game binary when running training games.
         """
+        return {}
+
+    @property
+    def training_player_options(self) -> Dict[str, str]:
+        """
+        Options to pass to the --player argument of the game binary when running training games.
+        """
+        return {}
+
+    @property
+    def rating_options(self) -> Dict[str, str]:
+        """
+        Options to pass to the game binary when running ratings games.
+        """
+        return {}
+
+    @property
+    def rating_player_options(self) -> Dict[str, str]:
+        """
+        Options to pass to the --player argument of the game binary when running ratings games.
+        """
+        return {}

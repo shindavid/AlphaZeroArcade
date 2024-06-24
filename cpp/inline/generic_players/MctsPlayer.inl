@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 
-#include <mcts/SearchResultsDumper.hpp>
+#include <core/GameVars.hpp>
 #include <util/Asserts.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
@@ -18,8 +18,8 @@
 
 namespace generic {
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::Params::Params(mcts::Mode mode) {
+template <core::concepts::Game Game>
+MctsPlayer<Game>::Params::Params(mcts::Mode mode) {
   if (mode == mcts::kCompetitive) {
     num_fast_iters = 1600;
     num_full_iters = 0;
@@ -35,8 +35,8 @@ MctsPlayer<GameState_, Tensorizor_>::Params::Params(mcts::Mode mode) {
   }
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
+template <core::concepts::Game Game>
+void MctsPlayer<Game>::Params::dump() const {
   if (full_pct == 0) {
     util::KeyValueDumper::add("MctsPlayer num iters", "%d", num_fast_iters);
   } else {
@@ -47,8 +47,8 @@ void MctsPlayer<GameState_, Tensorizor_>::Params::dump() const {
   }
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description() {
+template <core::concepts::Game Game>
+auto MctsPlayer<Game>::Params::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -63,6 +63,9 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description() {
           "num mcts iterations to do per full move")
       .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
                                             "pct of moves that should be full")
+      .template add_option<"mean-raw-moves", 'r'>(
+          po2::float_value("%.2f", &mean_raw_moves, mean_raw_moves),
+          "mean number of raw policy moves to make at the start of each game")
       .template add_option<"move-temp", 't'>(
           po::value<std::string>(&move_temperature_str)->default_value(move_temperature_str),
           "temperature for move selection")
@@ -70,56 +73,70 @@ auto MctsPlayer<GameState_, Tensorizor_>::Params::make_options_description() {
                                            "mcts player verbose mode");
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params,
-                                                       MctsManager* mcts_manager)
+template <core::concepts::Game Game>
+inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
+    : MctsPlayer(params) {
+  mcts_manager_ = mcts_manager;
+  shared_data_ = (SharedData*)mcts_manager->get_player_data();
+  owns_manager_ = false;
+
+  util::release_assert(mcts_manager_ != nullptr);
+  util::release_assert(shared_data_ != nullptr);
+}
+
+template <core::concepts::Game Game>
+MctsPlayer<Game>::MctsPlayer(const Params& params, const mcts::ManagerParams& manager_params)
+    : MctsPlayer(params) {
+  mcts_manager_ = new MctsManager(manager_params);
+  shared_data_ = new SharedData();
+  owns_manager_ = true;
+  mcts_manager_->set_player_data(shared_data_);
+}
+
+template <core::concepts::Game Game>
+inline MctsPlayer<Game>::~MctsPlayer() {
+  if (verbose_info_) {
+    delete verbose_info_;
+  }
+  if (owns_manager_) {
+    delete mcts_manager_;
+    delete shared_data_;
+  }
+}
+
+template <core::concepts::Game Game>
+MctsPlayer<Game>::MctsPlayer(const Params& params)
     : params_(params),
-      mcts_manager_(mcts_manager),
       search_params_{
           {params.num_fast_iters, true},  // kFast
           {params.num_full_iters},        // kFull
           {1, true}                       // kRawPolicy
       },
       move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str,
-                                                      GameStateTypes::get_var_bindings())),
-      owns_manager_(mcts_manager == nullptr) {
+                                                      core::GameVars<Game>::get_bindings())) {
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-template <typename... Ts>
-MctsPlayer<GameState_, Tensorizor_>::MctsPlayer(const Params& params, Ts&&... mcts_params_args)
-    : MctsPlayer(params, new MctsManager(std::forward<Ts>(mcts_params_args)...)) {
-  owns_manager_ = true;
-}
-
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline MctsPlayer<GameState_, Tensorizor_>::~MctsPlayer() {
-  if (verbose_info_) {
-    delete verbose_info_;
-  }
-  if (owns_manager_) delete mcts_manager_;
-}
-
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline void MctsPlayer<GameState_, Tensorizor_>::start_game() {
+template <core::concepts::Game Game>
+inline void MctsPlayer<Game>::start_game() {
   move_count_ = 0;
   move_temperature_.reset();
-  tensorizor_.clear();
   if (owns_manager_) {
     mcts_manager_->start();
+    if (params_.mean_raw_moves) {
+      shared_data_->num_raw_policy_starting_moves =
+          util::Random::exponential(1.0 / params_.mean_raw_moves);
+    }
   }
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(core::seat_index_t seat,
-                                                                      const GameState& state,
-                                                                      const Action& action) {
+template <core::concepts::Game Game>
+inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const FullState& state,
+                                                    core::action_t action) {
   move_count_++;
   move_temperature_.step();
-  tensorizor_.receive_state_change(state, action);
   if (owns_manager_) {
     mcts_manager_->receive_state_change(seat, state, action);
   }
@@ -129,53 +146,51 @@ inline void MctsPlayer<GameState_, Tensorizor_>::receive_state_change(core::seat
     }
     verbose_dump();
     if (!facing_human_tui_player_) {
-      state.dump(&action, &this->get_player_names());
+      IO::print_state(state, action, &this->get_player_names());
     }
   }
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-typename MctsPlayer<GameState_, Tensorizor_>::ActionResponse
-MctsPlayer<GameState_, Tensorizor_>::get_action_response(const GameState& state,
-                                                         const ActionMask& valid_actions) {
-  SearchMode search_mode = choose_search_mode();
-  const MctsSearchResults* mcts_results = mcts_search(state, search_mode);
+template <core::concepts::Game Game>
+core::ActionResponse MctsPlayer<Game>::get_action_response(const FullState& state,
+                                                           const ActionMask& valid_actions) {
+  core::SearchMode search_mode = choose_search_mode();
+  const SearchResults* mcts_results = mcts_search(state, search_mode);
   return get_action_response_helper(search_mode, mcts_results, valid_actions);
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline const typename MctsPlayer<GameState_, Tensorizor_>::MctsSearchResults*
-MctsPlayer<GameState_, Tensorizor_>::mcts_search(const GameState& state,
-                                                 SearchMode search_mode) const {
-  return mcts_manager_->search(tensorizor_, state, search_params_[search_mode]);
+template <core::concepts::Game Game>
+inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search(
+    const FullState& state, core::SearchMode search_mode) const {
+  return mcts_manager_->search(state, search_params_[search_mode]);
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline typename MctsPlayer<GameState_, Tensorizor_>::SearchMode
-MctsPlayer<GameState_, Tensorizor_>::choose_search_mode() const {
-  bool use_raw_policy = move_count_ < params_.num_raw_policy_starting_moves;
-  return use_raw_policy ? kRawPolicy : get_random_search_mode();
+template <core::concepts::Game Game>
+inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
+  bool use_raw_policy = move_count_ < shared_data_->num_raw_policy_starting_moves;
+  return use_raw_policy ? core::kRawPolicy : get_random_search_mode();
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-typename MctsPlayer<GameState_, Tensorizor_>::ActionResponse
-MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
-    SearchMode search_mode, const MctsSearchResults* mcts_results,
+template <core::concepts::Game Game>
+core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
+    core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
   PolicyTensor policy;
-  if (search_mode == kRawPolicy) {
+  auto& policy_array = eigen_util::reinterpret_as_array(policy);
+  if (search_mode == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
-    eigen_util::randomly_zero_out(valid_actions_subset,
-                                  eigen_util::count(valid_actions_subset) / 2);
-    GameStateTypes::local_to_global(mcts_results->policy_prior, valid_actions_subset, policy);
-    if (!eigen_util::normalize(policy)) {
-      policy = valid_actions_subset.template cast<torch_util::dtype>();
+    bitset_util::randomly_zero_out(valid_actions_subset, valid_actions_subset.count() / 2);
+
+    policy_array.setConstant(0);
+
+    for (int a : bitset_util::on_indices(valid_actions_subset)) {
+      policy_array(a) = mcts_results->policy_prior(a);
     }
   } else {
     policy = mcts_results->counts;
   }
 
-  if (search_mode != kRawPolicy) {
+  if (search_mode != core::kRawPolicy) {
     float temp = move_temperature_.value();
     if (temp != 0) {
       eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
@@ -198,36 +213,38 @@ MctsPlayer<GameState_, Tensorizor_>::get_action_response_helper(
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
-    policy = valid_actions.template cast<torch_util::dtype>();
+    policy_array.setConstant(0);
+    for (int a : bitset_util::on_indices(valid_actions)) {
+      policy_array(a) = 1;
+    }
     eigen_util::normalize(policy);
   }
 
   if (verbose_info_) {
-    GameStateTypes::global_to_local(policy, valid_actions, verbose_info_->action_policy);
+    verbose_info_->action_policy = policy;
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  Action action = eigen_util::sample(policy);
-  util::debug_assert(valid_actions(action));
+  core::action_t action = eigen_util::sample(policy)[0];
+  util::release_assert(valid_actions[action]);
   return action;
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-MctsPlayer<GameState_, Tensorizor_>::SearchMode
-MctsPlayer<GameState_, Tensorizor_>::get_random_search_mode() const {
+template <core::concepts::Game Game>
+core::SearchMode MctsPlayer<Game>::get_random_search_mode() const {
   float r = util::Random::uniform_real<float>(0.0f, 1.0f);
-  return r < params_.full_pct ? kFull : kFast;
+  return r < params_.full_pct ? core::kFull : core::kFast;
 }
 
-template <core::GameStateConcept GameState_, core::TensorizorConcept<GameState_> Tensorizor_>
-inline void MctsPlayer<GameState_, Tensorizor_>::verbose_dump() const {
+template <core::concepts::Game Game>
+inline void MctsPlayer<Game>::verbose_dump() const {
   if (!verbose_info_->initialized) return;
 
   const auto& action_policy = verbose_info_->action_policy;
   const auto& mcts_results = verbose_info_->mcts_results;
 
   printf("CPU pos eval:\n");
-  mcts::SearchResultsDumper<GameState>::dump(action_policy, mcts_results);
+  IO::print_mcts_results(action_policy, mcts_results);
   std::cout << std::endl;
 }
 

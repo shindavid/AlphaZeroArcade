@@ -2,8 +2,8 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NodeCache<GameState, Tensorizor>::clear() {
+template <core::concepts::Game Game>
+void NodeCache<Game>::clear() {
   std::lock_guard<std::mutex> lock(mutex_);
   for (auto& [_, submap] : map_) {
     delete submap;
@@ -11,8 +11,8 @@ void NodeCache<GameState, Tensorizor>::clear() {
   map_.clear();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void NodeCache<GameState, Tensorizor>::clear_before(move_number_t move_number) {
+template <core::concepts::Game Game>
+void NodeCache<Game>::clear_before(move_number_t move_number) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto begin = map_.begin();
   auto end = map_.lower_bound(move_number);
@@ -22,11 +22,10 @@ void NodeCache<GameState, Tensorizor>::clear_before(move_number_t move_number) {
   map_.erase(begin, end);
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename NodeCache<GameState, Tensorizor>::Node_sptr
-NodeCache<GameState, Tensorizor>::fetch_or_create(move_number_t move_number, const GameState& state,
-                                                  const GameOutcome& outcome,
-                                                  const ManagerParams* params) {
+template <core::concepts::Game Game>
+typename NodeCache<Game>::Node_sptr
+NodeCache<Game>::fetch_or_create(move_number_t move_number, const FullState& state,
+                                 const ActionOutcome& outcome, const ManagerParams* params) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto submap_it = map_.find(move_number);
   submap_t* submap;
@@ -36,10 +35,13 @@ NodeCache<GameState, Tensorizor>::fetch_or_create(move_number_t move_number, con
   } else {
     submap = submap_it->second;
   }
-  auto it = submap->find(state);
+  auto mcts_key = InputTensorizor::mcts_key(state);
+  auto it = submap->find(mcts_key);
   if (it == submap->end()) {
-    (*submap)[state] = std::make_shared<Node>(state, outcome, params);  // TODO: use memory pool
-    return (*submap)[state];
+    // TODO: use memory pool
+    auto node = std::make_shared<Node>(state, outcome, params);
+    (*submap)[mcts_key] = node;
+    return node;
   }
   return it->second;
 }

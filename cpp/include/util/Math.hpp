@@ -67,4 +67,9 @@ inline float half_life_to_decay(float half_life) {
  */
 double parse_expression(const char* expr, const var_bindings_map_t& bindings);
 
+template<typename T>
+constexpr T round_up_to_nearest_multiple(T value, T multiple) {
+  return ((value + multiple - 1) / multiple) * multiple;
+}
+
 }  // namespace math

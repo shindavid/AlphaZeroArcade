@@ -25,6 +25,10 @@ class ShutdownManager:
                 self._shutdown_code = max(self._shutdown_code, return_code)
             self._cond.notify_all()
 
+    def shutdown_requested(self) -> bool:
+        with self._lock:
+            return self._shutdown_code is not None or self._shutdown_in_progress
+
     def active(self):
         with self._lock:
             return not self._shutdown_in_progress

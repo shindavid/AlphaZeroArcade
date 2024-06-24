@@ -1,19 +1,20 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <generic_players/HumanTuiPlayer.hpp>
-#include <games/tictactoe/GameState.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <games/tictactoe/players/PerfectPlayer.hpp>
 
 namespace tictactoe {
 
-class HumanTuiPlayer : public generic::HumanTuiPlayer<GameState> {
+class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  public:
-  using base_t = generic::HumanTuiPlayer<GameState>;
+  using base_t = generic::HumanTuiPlayer<Game>;
+  using FullState = Game::FullState;
 
  private:
-  Action prompt_for_action(const GameState&, const ActionMask&) override;
-  int prompt_for_action_helper(const GameState&, const ActionMask&);
-  void print_state(const GameState&, bool terminal) override;
+  core::action_t prompt_for_action(const FullState&, const ActionMask&) override;
+  void print_state(const FullState&, bool terminal) override;
 };
 
 }  // namespace tictactoe

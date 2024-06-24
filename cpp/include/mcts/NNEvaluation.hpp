@@ -2,22 +2,20 @@
 
 #include <memory>
 
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <util/AtomicSharedPtr.hpp>
 
 namespace mcts {
 
-template <core::GameStateConcept GameState>
+template <core::concepts::Game Game>
 class NNEvaluation {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using LocalPolicyArray = typename GameStateTypes::LocalPolicyArray;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueArray = typename GameStateTypes::ValueArray;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
+  using ActionMask = typename Game::Types::ActionMask;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueArray = typename Game::Types::ValueArray;
+  using LocalPolicyArray = eigen_util::DArray<Game::Constants::kMaxBranchingFactor>;
+  using ValueShape = eigen_util::Shape<Game::Constants::kNumPlayers>;
+  using ValueTensor = eigen_util::FTensor<ValueShape>;
 
   NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
                const ActionMask& valid_actions);

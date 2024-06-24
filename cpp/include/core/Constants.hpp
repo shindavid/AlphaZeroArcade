@@ -1,14 +1,16 @@
 #pragma once
 
+#include <cstdint>
+
 namespace core {
 
 const int kMaxNameLength = 32;  // excluding null terminator
 
 /*
- * All serialize_*() methods of GameState classes must limit their serializations to this size.
+ * All Game objects must serialize to representations of this size or smaller.
  *
  * If we introduce a game that cannot respect this limit, we can either increase this limit, or we
- * can templatize the classes in Packet.hpp by GameState, and have them use a different
+ * can templatize the classes in Packet.hpp by Game, and have them use a different
  * serialization limit for each game.
  *
  * Note that there is no real performance overhead associated with setting this value too high. In
@@ -16,5 +18,8 @@ const int kMaxNameLength = 32;  // excluding null terminator
  * bytes as we need to from them.
  */
 const int kSerializationLimit = 1024;
+
+// See KataGo paper for description of search modes.
+enum SearchMode : int8_t { kFast, kFull, kRawPolicy, kNumSearchModes };
 
 }  // namespace core

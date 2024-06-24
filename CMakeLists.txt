@@ -24,9 +24,10 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 SET(EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
-set(COMMON_LIBS "")  # each executable of ALL_EXECUTABLES will be linked with these
-set(ALL_LIBS "")  # these are linked with each lib of EXTERNAL_LIBS
+set(COMMON_LIBS "")  # each item of ALL_EXECUTABLES and ALL_FFI_LIBS will be linked with these
+set(ALL_LIBS "")  # these are linked with each lib of EXTERNAL_LIBS, separate from ALL_FFI_LIBS
 set(ALL_EXECUTABLES "")
+set(ALL_FFI_LIBS "")  # these are linked with each lib of EXTERNAL_LIBS, separate from ALL_LIBS
 
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
@@ -39,13 +40,13 @@ add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
 
-foreach(tgt ${ALL_LIBS})
+foreach(tgt ${ALL_LIBS} ${ALL_FFI_LIBS})
     foreach(lib ${EXTERNAL_LIBS})
         target_link_libraries(${tgt} ${lib})
     endforeach()
 endforeach()
 
-foreach(tgt ${ALL_EXECUTABLES})
+foreach(tgt ${ALL_EXECUTABLES} ${ALL_FFI_LIBS})
     foreach(lib ${COMMON_LIBS})
         target_link_libraries(${tgt} ${lib})
     endforeach()

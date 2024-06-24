@@ -6,12 +6,12 @@ from alphazero.servers.gaming.log_forwarder import LogForwarder
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
+from util.str_util import make_args_str
 from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
 import threading
-from typing import Optional
 
 
 logger = get_logger()
@@ -20,9 +20,6 @@ logger = get_logger()
 @dataclass
 class RatingsServerParams(BaseParams):
     rating_tag: str = ''
-    n_mcts_iters: Optional[int] = None
-    n_search_threads: int = 4
-    parallelism_factor: int = 100
 
     @staticmethod
     def create(args) -> 'RatingsServerParams':
@@ -42,20 +39,11 @@ class RatingsServerParams(BaseParams):
                            'the responsibility of the user to make sure that the same '
                            'binary/params are used across different RatingsServer processes '
                            'sharing the same rating-tag. (default: "%(default)s")')
-        group.add_argument('-i', '--n-mcts-iters', type=int, default=defaults.n_mcts_iters,
-                            help='num MCTS iters per move. Uses game-specific default if not '
-                            'specified')
-        group.add_argument('-n', '--n-search-threads', type=int, default=defaults.n_search_threads,
-                           help='num search threads per game (default: %(default)s)')
-        group.add_argument('-p', '--parallelism-factor', type=int,
-                           default=defaults.parallelism_factor,
-                           help='parallelism factor (default: %(default)s)')
 
 
 class RatingsServer:
     def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
         self._params = params
-        self._n_mcts_iters = params.n_mcts_iters
         self._session_data = SessionData(params)
         self._shutdown_manager = ShutdownManager()
         self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
@@ -92,9 +80,6 @@ class RatingsServer:
 
     def _recv_handshake(self):
         self._session_data.recv_handshake(ClientRole.RATINGS_SERVER, self._log_forwarder)
-
-        if self._n_mcts_iters is None:
-            self._n_mcts_iters = self._session_data.game_spec.n_mcts_iters_for_ratings_matches
 
     def _recv_loop(self):
         try:
@@ -157,29 +142,29 @@ class RatingsServer:
         mcts_gen = msg['mcts_gen']
         ref_strength = msg['ref_strength']
         n_games = msg['n_games']
-        n_mcts_iters = self._n_mcts_iters
 
-        n_search_threads = self._params.n_search_threads
-        parallelism_factor = self._params.parallelism_factor
-
-        ps1 = self._get_mcts_player_str(mcts_gen, n_mcts_iters, n_search_threads)
+        ps1 = self._get_mcts_player_str(mcts_gen)
         ps2 = self._get_reference_player_str(ref_strength)
         binary = self._session_data.binary_path
+
+        args = {
+            '-G': n_games,
+            '--loop-controller-hostname': self._params.loop_controller_host,
+            '--loop-controller-port': self._params.loop_controller_port,
+            '--client-role': ClientRole.RATINGS_WORKER.value,
+            '--manager-id': self._session_data.client_id,
+            '--ratings-tag': f'"{self._params.rating_tag}"',
+            '--cuda-device': self._params.cuda_device,
+            '--weights-request-generation': mcts_gen,
+            '--do-not-report-metrics': None,
+        }
+        args.update(self._session_data.game_spec.rating_options)
         cmd = [
             binary,
-            '-G', n_games,
-            '--loop-controller-hostname', self._params.loop_controller_host,
-            '--loop-controller-port', self._params.loop_controller_port,
-            '--client-role', ClientRole.RATINGS_WORKER.value,
-            '--manager-id', self._session_data.client_id,
-            '--ratings-tag', f'"{self._params.rating_tag}"',
-            '--cuda-device', self._params.cuda_device,
-            '--weights-request-generation', mcts_gen,
-            '--do-not-report-metrics',
-            '-p', parallelism_factor,
             '--player', f'"{ps1}"',
             '--player', f'"{ps2}"',
             ]
+        cmd.append(make_args_str(args))
         cmd = ' '.join(map(str, cmd))
 
         mcts_name = RatingsServer._get_mcts_player_name(mcts_gen)
@@ -213,18 +198,16 @@ class RatingsServer:
     def _get_mcts_player_name(gen: int):
         return f'MCTS-{gen}'
 
-    def _get_mcts_player_str(self, gen: int, n_mcts_iters: int, n_search_threads: int):
+    def _get_mcts_player_str(self, gen: int):
         name = RatingsServer._get_mcts_player_name(gen)
 
-        player_args = [
-            '--type=MCTS-C',
-            '--name', name,
-            '-i', n_mcts_iters,
-            '-n', n_search_threads,
-            '--cuda-device', self._params.cuda_device,
-        ]
-
-        return ' '.join(map(str, player_args))
+        player_args = {
+            '--type': 'MCTS-C',
+            '--name': name,
+            '--cuda-device': self._params.cuda_device,
+        }
+        player_args.update(self._session_data.game_spec.rating_player_options)
+        return make_args_str(player_args)
 
     @staticmethod
     def _get_reference_player_name(strength: int):
@@ -236,10 +219,9 @@ class RatingsServer:
         type_str = family.type_str
         strength_param = family.strength_param
 
-        player_args = [
-            '--type', type_str,
-            '--name', name,
-            strength_param, strength,
-        ]
-
-        return ' '.join(map(str, player_args))
+        player_args = {
+            '--type': type_str,
+            '--name': name,
+            strength_param: strength,
+        }
+        return make_args_str(player_args)

@@ -5,15 +5,15 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/tictactoe/GameState.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <games/tictactoe/players/PerfectPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace tictactoe {
 
-class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::GameState> {
+class PerfectPlayerGenerator : public core::AbstractPlayerGenerator<tictactoe::Game> {
  public:
-  using Player = core::AbstractPlayer<tictactoe::GameState>;
+  using Player = core::AbstractPlayer<tictactoe::Game>;
   std::string get_default_name() const override { return "Perfect"; }
   std::vector<std::string> get_types() const override { return {"Perfect"}; }
   std::string get_description() const override { return "Perfect player"; }

@@ -65,12 +65,13 @@ auto off_indices(const std::bitset<N>& bitset) {
 
 template <size_t N>
 int get_nth_on_index(const std::bitset<N>& bitset, int n) {
+  int orig_n = n;
   for (int k : on_indices(bitset)) {
     if (n == 0) return k;
     n--;
   }
-  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d]",
-                        bitset.to_string().c_str(), n);
+  throw util::Exception("bitset_util::get_nth_on_index: n is out of bounds [%s] [%d] [%d]",
+                        bitset.to_string().c_str(), orig_n, n);
 }
 
 template <size_t N>
@@ -111,6 +112,30 @@ int choose_random_off_index(const std::bitset<N>& bitset) {
   int p = 0;
   for (; c; ++p) c -= not bitset[p];
   return p - 1;
+}
+
+template <size_t N>
+void randomly_zero_out(std::bitset<N>& bitset, int n) {
+  // reservoir sampling
+  std::vector<int> reservoir;
+  reservoir.reserve(n);
+
+  int k = 0;
+  for (int i : on_indices(bitset)) {
+    ++k;
+    if ((int)reservoir.size() < n) {
+      reservoir.push_back(i);
+    } else {
+      int j = util::Random::uniform_sample(int(0), k);
+      if (j < n) {
+        reservoir[j] = i;
+      }
+    }
+  }
+
+  for (int i : reservoir) {
+    bitset[i] = 0;
+  }
 }
 
 template <size_t N>

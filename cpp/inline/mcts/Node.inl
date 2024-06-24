@@ -5,40 +5,34 @@
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::stable_data_t::stable_data_t(const GameState& s,
-                                                                 const GameOutcome& o,
-                                                                 const ManagerParams* mp)
+template <core::concepts::Game Game>
+inline Node<Game>::stable_data_t::stable_data_t(const FullState& s,
+                                                const ActionOutcome& o,
+                                                const ManagerParams* mp)
     : outcome(o),
-      valid_action_mask(s.get_valid_actions()),
-      num_valid_actions(eigen_util::count(valid_action_mask)),
-      current_player(s.get_current_player()),
+      valid_action_mask(Rules::get_legal_moves(s)),
+      num_valid_actions(valid_action_mask.count()),
+      current_player(Rules::get_current_player(s)),
       sym_index(make_sym_index(s, *mp)) {}
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::stats_t::stats_t() {
+template <core::concepts::Game Game>
+inline Node<Game>::stats_t::stats_t() {
   eval.setZero();
   real_avg.setZero();
   virtualized_avg.setZero();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_t::edge_t() {
-  GameStateTypes::nullify_action(const_cast<Action&>(action_));
-}
-
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_t* Node<GameState, Tensorizor>::edge_t::instantiate(
-    const Action& a, core::action_index_t i, sptr c) {
+template <core::concepts::Game Game>
+inline Node<Game>::edge_t* Node<Game>::edge_t::instantiate(
+    core::action_t a, core::action_index_t i, sptr c) {
   const_cast<sptr&>(child_) = c;
-  const_cast<Action&>(action_) = a;
+  action_ = a;
   action_index_ = i;
   return this;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_t* Node<GameState, Tensorizor>::edge_chunk_t::find(
-    core::action_index_t i) {
+template <core::concepts::Game Game>
+inline Node<Game>::edge_t* Node<Game>::edge_chunk_t::find(core::action_index_t i) {
   for (edge_t& edge : data) {
     if (!edge.instantiated()) return nullptr;
     if (edge.action_index() == i) return &edge;
@@ -46,9 +40,9 @@ inline Node<GameState, Tensorizor>::edge_t* Node<GameState, Tensorizor>::edge_ch
   return next ? next->find(i) : nullptr;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::edge_t* Node<GameState, Tensorizor>::edge_chunk_t::insert(
-    const Action& a, core::action_index_t i, sptr child) {
+template <core::concepts::Game Game>
+inline Node<Game>::edge_t* Node<Game>::edge_chunk_t::insert(
+    core::action_t a, core::action_index_t i, sptr child) {
   for (edge_t& edge : data) {
     if (edge.action() == a) return &edge;
     if (edge.action_index() == -1) return edge.instantiate(a, i, child);
@@ -63,17 +57,17 @@ inline Node<GameState, Tensorizor>::edge_t* Node<GameState, Tensorizor>::edge_ch
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 template <bool is_const>
-Node<GameState, Tensorizor>::children_data_t::template iterator_base_t<is_const>::iterator_base_t(
+Node<Game>::children_data_t::template iterator_base_t<is_const>::iterator_base_t(
     chunk_t* chunk, int index)
     : chunk(chunk), index(index) {
   nullify_if_at_end();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 template <bool is_const>
-void Node<GameState, Tensorizor>::children_data_t::template iterator_base_t<is_const>::increment() {
+void Node<Game>::children_data_t::template iterator_base_t<is_const>::increment() {
   index++;
   if (index >= kEdgeDataChunkSize) {
     chunk = chunk->next;
@@ -82,29 +76,36 @@ void Node<GameState, Tensorizor>::children_data_t::template iterator_base_t<is_c
   nullify_if_at_end();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 template <bool is_const>
-void Node<GameState,
-          Tensorizor>::children_data_t::template iterator_base_t<is_const>::nullify_if_at_end() {
+void Node<Game>::children_data_t::template iterator_base_t<is_const>::nullify_if_at_end() {
   if (chunk && !chunk->data[index].instantiated()) {
     chunk = nullptr;
     index = 0;
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Node<GameState, Tensorizor>::Node(const GameState& state,
-                                         const GameOutcome& outcome, const ManagerParams* mp)
+template <core::concepts::Game Game>
+Node<Game>::children_data_t::~children_data_t() {
+  edge_chunk_t* next = first_chunk_.next;
+  while (next) {
+    edge_chunk_t* tmp = next->next;
+    delete next;
+    next = tmp;
+  }
+}
+
+template <core::concepts::Game Game>
+Node<Game>::Node(const FullState& state, const ActionOutcome& outcome, const ManagerParams* mp)
     : stable_data_(state, outcome, mp) {}
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Node<GameState, Tensorizor>::debug_dump() const {
+template <core::concepts::Game Game>
+void Node<Game>::debug_dump() const {
   std::cout << "value[" << stats_.count << "]: " << stats_.value_avg.transpose() << std::endl;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline typename Node<GameState, Tensorizor>::PolicyTensor Node<GameState, Tensorizor>::get_counts(
-    const ManagerParams& params) const {
+template <core::concepts::Game Game>
+typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& params) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -122,7 +123,7 @@ inline typename Node<GameState, Tensorizor>::PolicyTensor Node<GameState, Tensor
   bool provably_losing = stats_.provably_losing[cp];
 
   for (auto& it : children_data_) {
-    Action action = it.action();
+    core::action_t action = it.action();
     const auto& stats = it.child()->stats();
     int count = stats.real_count;
 
@@ -139,7 +140,7 @@ inline typename Node<GameState, Tensorizor>::PolicyTensor Node<GameState, Tensor
     }
 
     if (kEnableDebug) {
-      std::cout << "  " << util::std_array_to_string(action, "(", ",", ")") << ": " << count;
+      std::cout << "  " << action << ": " << count;
       if (modified_count != count) {
         std::cout << " -> " << modified_count;
       }
@@ -154,9 +155,8 @@ inline typename Node<GameState, Tensorizor>::PolicyTensor Node<GameState, Tensor
   return counts;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename Node<GameState, Tensorizor>::ValueArray Node<GameState, Tensorizor>::make_virtual_loss()
-    const {
+template <core::concepts::Game Game>
+typename Node<Game>::ValueArray Node<Game>::make_virtual_loss() const {
   constexpr float x = 1.0 / (kNumPlayers - 1);
   ValueArray virtual_loss;
   virtual_loss.setZero();
@@ -164,9 +164,9 @@ typename Node<GameState, Tensorizor>::ValueArray Node<GameState, Tensorizor>::ma
   return virtual_loss;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 template <typename UpdateT>
-void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction) {
+void Node<Game>::update_stats(const UpdateT& update_instruction) {
   core::seat_index_t cp = stable_data().current_player;
 
   ValueArray real_sum;
@@ -229,9 +229,8 @@ void Node<GameState, Tensorizor>::update_stats(const UpdateT& update_instruction
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-typename Node<GameState, Tensorizor>::sptr Node<GameState, Tensorizor>::lookup_child_by_action(
-    const Action& action) const {
+template <core::concepts::Game Game>
+typename Node<Game>::sptr Node<Game>::lookup_child_by_action(core::action_t action) const {
   for (const edge_t& edge : children_data_) {
     if (edge.action() == action) {
       return edge.child();
@@ -240,11 +239,11 @@ typename Node<GameState, Tensorizor>::sptr Node<GameState, Tensorizor>::lookup_c
   return nullptr;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-core::symmetry_index_t Node<GameState, Tensorizor>::make_sym_index(const GameState& state,
-                                                                   const ManagerParams& params) {
+template <core::concepts::Game Game>
+core::symmetry_index_t Node<Game>::make_sym_index(const FullState& state,
+                                                  const ManagerParams& params) {
   if (params.apply_random_symmetries) {
-    return bitset_util::choose_random_on_index(state.get_symmetry_indices());
+    return bitset_util::choose_random_on_index(Rules::get_symmetries(state));
   }
   return 0;
 }

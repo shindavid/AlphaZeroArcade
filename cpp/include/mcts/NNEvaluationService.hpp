@@ -2,11 +2,11 @@
 
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
-#include <core/TensorizorConcept.hpp>
+#include <core/Symmetries.hpp>
+#include <core/Transforms.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
@@ -70,44 +70,43 @@ namespace mcts {
  * Compiling with -DMCTS_DEBUG will enable a bunch of prints that allow you to watch the sequence of
  * operations in the interleaving threads.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class NNEvaluationService
     : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using TensorizorTypes = core::TensorizorTypes<Tensorizor>;
-  using dtype = torch_util::dtype;
+  using Node = mcts::Node<Game>;
+  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using SharedData = mcts::SharedData<Game>;
+  using base_state_vec_t = typename SharedData::base_state_vec_t;
 
-  using Node = mcts::Node<GameState, Tensorizor>;
-  using NNEvaluation = mcts::NNEvaluation<GameState>;
-  using ActionMask = typename GameStateTypes::ActionMask;
+  using ActionMask = typename Game::Types::ActionMask;
 
   using NNEvaluation_asptr = typename NNEvaluation::asptr;
   using NNEvaluation_sptr = typename NNEvaluation::sptr;
 
-  using InputTensor = typename TensorizorTypes::InputTensor;
-  using PolicyTensor = typename GameStateTypes::PolicyTensor;
-  using ValueTensor = typename GameStateTypes::ValueTensor;
+  using InputTensor = typename Game::InputTensorizor::Tensor;
+  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using ValueTensor = typename NNEvaluation::ValueTensor;
 
-  using InputShape = typename TensorizorTypes::InputShape;
-  using PolicyShape = typename GameStateTypes::PolicyShape;
-  using ValueShape = typename GameStateTypes::ValueShape;
+  using InputShape = eigen_util::extract_shape_t<InputTensor>;
+  using PolicyShape = typename Game::Types::PolicyShape;
+  using ValueShape = typename NNEvaluation::ValueShape;
 
-  using InputScalar = torch_util::convert_type_t<typename InputTensor::Scalar>;
-  using PolicyScalar = torch_util::convert_type_t<typename PolicyTensor::Scalar>;
-  using ValueScalar = torch_util::convert_type_t<typename ValueTensor::Scalar>;
+  using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
-  using InputFloatTensor = Eigen::TensorFixedSize<dtype, InputShape, Eigen::RowMajor>;
-  using DynamicInputFloatTensor = Eigen::Tensor<dtype, InputShape::count + 1, Eigen::RowMajor>;
-
-  using PolicyTransform = core::AbstractSymmetryTransform<PolicyTensor>;
+  using BaseState = typename Game::BaseState;
+  using FullState = typename Game::FullState;
+  using Transform = typename Game::Types::Transform;
+  using Transforms = core::Transforms<Game>;
+  using InputTensorizor = typename Game::InputTensorizor;
+  using EvalKey = typename InputTensorizor::EvalKey;
 
   struct Request {
     Node* node;
-    GameState* state;
-    Tensorizor* tensorizor;
+    FullState* state;
+    base_state_vec_t* state_history;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
     core::symmetry_index_t sym_index;
@@ -164,7 +163,7 @@ class NNEvaluationService
 
  private:
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = util::HashablePair<GameState, core::symmetry_index_t>;
+  using cache_key_t = util::HashablePair<EvalKey, core::symmetry_index_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 
@@ -192,7 +191,7 @@ class NNEvaluationService
   void pause() override;
   void unpause() override;
   void wait_until_batch_ready();
-  void wait_for_first_reservation();
+  bool wait_for_first_reservation();  // return true if timeout
   void wait_for_last_reservation();
   void wait_for_commits();
 
@@ -203,7 +202,7 @@ class NNEvaluationService
 
     cache_key_t cache_key;
     ActionMask valid_actions;
-    PolicyTransform* policy_transform;
+    Transform* transform;
   };
 
   struct tensor_group_t {
@@ -219,7 +218,7 @@ class NNEvaluationService
   struct batch_data_t {
     batch_data_t(int batch_size);
     ~batch_data_t();
-    void copy_input_to(int num_rows, DynamicInputFloatTensor& full_input);
+    void copy_input_to(int num_rows, DynamicInputTensor& full_input);
 
     std::mutex mutex;
     tensor_group_t* tensor_groups_;
@@ -249,7 +248,7 @@ class NNEvaluationService
   torch::Tensor torch_input_gpu_;
   torch::Tensor torch_policy_;
   torch::Tensor torch_value_;
-  DynamicInputFloatTensor full_input_;
+  DynamicInputTensor full_input_;
   cache_t cache_;
 
   const std::chrono::nanoseconds timeout_duration_;

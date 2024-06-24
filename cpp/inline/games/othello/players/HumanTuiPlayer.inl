@@ -7,15 +7,8 @@
 
 namespace othello {
 
-inline HumanTuiPlayer::Action HumanTuiPlayer::prompt_for_action(const GameState& state,
-                                                                const ActionMask& valid_actions) {
-  Action action;
-  action[0] = prompt_for_action_helper(state, valid_actions);
-  return action;
-}
-
-inline int HumanTuiPlayer::prompt_for_action_helper(const GameState&,
-                                                    const ActionMask& valid_actions) {
+inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState& state,
+                                                        const ActionMask& valid_actions) {
   if (valid_actions[kPass]) {
     std::cout << "Press Enter to pass: ";
     std::cout.flush();

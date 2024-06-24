@@ -5,15 +5,15 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <games/othello/players/EdaxPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace othello {
 
-class EdaxPlayerGenerator : public core::AbstractPlayerGenerator<othello::GameState> {
+class EdaxPlayerGenerator : public core::AbstractPlayerGenerator<othello::Game> {
  public:
-  using Player = core::AbstractPlayer<othello::GameState>;
+  using Player = core::AbstractPlayer<othello::Game>;
   std::string get_default_name() const override {
     return util::create_string("Edax-%d", params_.depth);
   }

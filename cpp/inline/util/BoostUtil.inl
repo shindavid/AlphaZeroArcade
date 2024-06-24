@@ -4,14 +4,14 @@ namespace boost_util {
 
 namespace program_options {
 
-template <typename StrSeq, util::IntSequenceConcept CharSeq>
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
 options_description<StrSeq, CharSeq>::~options_description() {
   // This is bad but we deliberately leak the base_t objects here. Deleting them leads to a
   // segfault due to how boost uses these objects. There is probably a workaround but I could not
   // figure it out.
 }
 
-template <typename StrSeq, util::IntSequenceConcept CharSeq>
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral StrLit, char Char, typename... Ts>
 auto options_description<StrSeq, CharSeq>::add_option(Ts&&... ts) {
   auto out = augment<StrLit, Char>();
@@ -22,7 +22,7 @@ auto options_description<StrSeq, CharSeq>::add_option(Ts&&... ts) {
   return out;
 }
 
-template <typename StrSeq, util::IntSequenceConcept CharSeq>
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
 auto options_description<StrSeq, CharSeq>::add_flag(bool* flag, const char* true_help,
                                                     const char* false_help) {
@@ -57,8 +57,8 @@ auto options_description<StrSeq, CharSeq>::add_flag(bool* flag, const char* true
   return out;
 }
 
-template <typename StrSeq, util::IntSequenceConcept CharSeq>
-template <typename StrSeq2, util::IntSequenceConcept CharSeq2>
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
+template <typename StrSeq2, util::concepts::IntSequence CharSeq2>
 auto options_description<StrSeq, CharSeq>::add(const options_description<StrSeq2, CharSeq2>& desc) {
   static_assert(util::no_overlap_v<StrSeq, StrSeq2>, "Options name clash!");
   static_assert(util::no_overlap_v<CharSeq, CharSeq2>, "Options abbreviation clash!");
@@ -74,7 +74,7 @@ auto options_description<StrSeq, CharSeq>::add(const options_description<StrSeq2
   return out;
 }
 
-template <typename StrSeq, util::IntSequenceConcept CharSeq>
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
 void options_description<StrSeq, CharSeq>::print(std::ostream& s) const {
   if (Settings::help_full) {
     full_base_->print(s);
@@ -83,7 +83,7 @@ void options_description<StrSeq, CharSeq>::print(std::ostream& s) const {
   }
 }
 
-template <typename StrSeq, util::IntSequenceConcept CharSeq>
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral StrLit, char Char>
 auto options_description<StrSeq, CharSeq>::augment() const {
   static_assert(!util::string_literal_sequence_contains_v<StrSeq, StrLit>, "Options name clash!");
@@ -115,7 +115,7 @@ struct Wrap {
   const T& operator()(const T& t) const { return t; }
 };
 
-template <typename S, util::IntSequenceConcept C>
+template <typename S, util::concepts::IntSequence C>
 struct Wrap<options_description<S, C>> {
   const auto& operator()(const options_description<S, C>& t) const { return t.get(); }
 };

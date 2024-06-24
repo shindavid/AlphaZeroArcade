@@ -2,23 +2,24 @@
 
 #include <boost/filesystem.hpp>
 
+#include <core/GameVars.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
 
 namespace mcts {
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-int Manager<GameState, Tensorizor>::next_instance_id_ = 0;
+template <core::concepts::Game Game>
+int Manager<Game>::next_instance_id_ = 0;
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
+template <core::concepts::Game Game>
+inline Manager<Game>::Manager(const ManagerParams& params)
     : params_(params),
       pondering_search_params_(
           SearchParams::make_pondering_params(params.pondering_tree_size_limit)) {
   shared_data_.manager_id = next_instance_id_++;
   new (&shared_data_.root_softmax_temperature) math::ExponentialDecay(math::ExponentialDecay::parse(
-      params.root_softmax_temperature_str, GameStateTypes::get_var_bindings()));
+      params.root_softmax_temperature_str, core::GameVars<Game>::get_bindings()));
   namespace bf = boost::filesystem;
 
   if (mcts::kEnableProfiling) {
@@ -56,8 +57,8 @@ inline Manager<GameState, Tensorizor>::Manager(const ManagerParams& params)
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline Manager<GameState, Tensorizor>::~Manager() {
+template <core::concepts::Game Game>
+inline Manager<Game>::~Manager() {
   announce_shutdown();
   clear();
   if (nn_eval_service_) {
@@ -68,19 +69,16 @@ inline Manager<GameState, Tensorizor>::~Manager() {
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::announce_shutdown() {
+template <core::concepts::Game Game>
+inline void Manager<Game>::announce_shutdown() {
   std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
   shared_data_.shutting_down = true;
   shared_data_.cv_search_on.notify_all();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::start() {
+template <core::concepts::Game Game>
+inline void Manager<Game>::start() {
   clear();
-  shared_data_.move_number = 0;
-  shared_data_.root_softmax_temperature.reset();
-  shared_data_.node_cache.clear();
 
   if (!connected_) {
     if (nn_eval_service_) {
@@ -90,17 +88,18 @@ inline void Manager<GameState, Tensorizor>::start() {
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::clear() {
+template <core::concepts::Game Game>
+inline void Manager<Game>::clear() {
   stop_search_threads();
-  shared_data_.root_node = nullptr;
+  shared_data_.clear();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_index_t seat,
-                                                                 const GameState& state,
-                                                                 const Action& action) {
+template <core::concepts::Game Game>
+inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
+                                                const FullState& state,
+                                                core::action_t action) {
   shared_data_.move_number++;
+  shared_data_.update_state(state);
   shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
@@ -114,31 +113,26 @@ inline void Manager<GameState, Tensorizor>::receive_state_change(core::seat_inde
   }
 
   shared_data_.root_node = new_root;
-  shared_data_.root_state = state;
-  shared_data_.root_tensorizor.receive_state_change(state, action);
 
   if (params_.enable_pondering) {
     start_search_threads(pondering_search_params_);
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline const typename Manager<GameState, Tensorizor>::SearchResults*
-Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameState& game_state,
-                                       const SearchParams& params) {
+template <core::concepts::Game Game>
+inline const typename Manager<Game>::SearchResults*
+Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   stop_search_threads();
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
   if (!shared_data_.root_node || add_noise) {
-    auto outcome = GameStateTypes::make_non_terminal_outcome();
+    ActionOutcome outcome;
     shared_data_.root_node =
         std::make_shared<Node>(game_state, outcome, &params_);  // TODO: use memory pool
-    shared_data_.root_state = game_state;
-    shared_data_.root_tensorizor = tensorizor;
   }
 
   if (mcts::kEnableDebug) {
-    shared_data_.root_state.dump();
+    IO::print_state(shared_data_.root_state);
   }
 
   start_search_threads(params);
@@ -157,15 +151,18 @@ Manager<GameState, Tensorizor>::search(const Tensorizor& tensorizor, const GameS
   if (params_.forced_playouts && add_noise) {
     prune_policy_target(params);
   }
-  results_.policy_prior = evaluation_data.local_policy_prob_distr;
+  results_.policy_prior.setZero();
+  int i = 0;
+  for (int a : bitset_util::on_indices(results_.valid_actions)) {
+    results_.policy_prior(a) = evaluation_data.local_policy_prob_distr(i++);
+  }
   results_.win_rates = stats.real_avg;
   results_.value_prior = evaluation->value_prob_distr();
   return &results_;
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::start_search_threads(
-    const SearchParams& search_params) {
+template <core::concepts::Game Game>
+inline void Manager<Game>::start_search_threads(const SearchParams& search_params) {
   std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
 
   shared_data_.search_params = search_params;
@@ -173,14 +170,14 @@ inline void Manager<GameState, Tensorizor>::start_search_threads(
   shared_data_.cv_search_on.notify_all();
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::wait_for_search_threads() {
+template <core::concepts::Game Game>
+inline void Manager<Game>::wait_for_search_threads() {
   std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
   shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-inline void Manager<GameState, Tensorizor>::stop_search_threads() {
+template <core::concepts::Game Game>
+inline void Manager<Game>::stop_search_threads() {
   std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
   shared_data_.search_params.tree_size_limit = 0;
   shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
@@ -191,8 +188,8 @@ inline void Manager<GameState, Tensorizor>::stop_search_threads() {
  * the KataGo source code was not very enlightening. The following is my best guess at what the
  * target pruning step does.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::prune_policy_target(const SearchParams& search_params) {
+template <core::concepts::Game Game>
+void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
   if (params_.no_model) return;
 
   PUCTStats stats(params_, search_params, shared_data_.root_node.get(), true);
@@ -232,8 +229,8 @@ void Manager<GameState, Tensorizor>::prune_policy_target(const SearchParams& sea
   }
 }
 
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
-void Manager<GameState, Tensorizor>::init_profiling_dir(const std::string& profiling_dir) {
+template <core::concepts::Game Game>
+void Manager<Game>::init_profiling_dir(const std::string& profiling_dir) {
   static std::string pdir;
   if (!pdir.empty()) {
     if (pdir == profiling_dir) return;

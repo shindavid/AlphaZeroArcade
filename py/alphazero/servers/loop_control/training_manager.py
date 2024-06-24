@@ -2,6 +2,7 @@ from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 
 from alphazero.logic.custom_types import Domain, Generation
+from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
@@ -34,6 +35,8 @@ class TrainingManager:
         self._controller = controller
         self._ready_event = threading.Event()
         self._lock = threading.Lock()
+
+        self._game_log_reader = GameLogReader(controller.game_spec)
 
         self._trainer = None
         self._net = None
@@ -109,7 +112,8 @@ class TrainingManager:
         else:
             self._extend_master_list()
 
-        dataset = PositionDataset(organizer.base_dir, forked_base_dir, self._master_list_slice)
+        dataset = PositionDataset(organizer.base_dir, forked_base_dir, self._master_list_slice,
+                                  self._game_log_reader)
 
         logger.info('******************************')
         logger.info(f'Train gen:{gen}')
@@ -243,21 +247,17 @@ class TrainingManager:
 
         # TODO: SWA, cyclic learning rate
 
-    def _get_net_and_optimizer(self, loader: DataLoader) -> Tuple[Model, optim.Optimizer]:
+    def _get_net_and_optimizer(self) -> Tuple[Model, optim.Optimizer]:
         if self._net is not None:
             return self._net, self._opt
 
         organizer = self._controller.organizer
         checkpoint_info = organizer.get_latest_checkpoint_info()
         if checkpoint_info is None:
-            dataset: PositionDataset = loader.dataset
-            input_shape = dataset.get_input_shape()
-            target_names = dataset.get_target_names()
+            shape_info_dict = self._game_log_reader.shape_info_dict
             model_cfg = self._controller.params.model_cfg
-            self._net = Model(self._controller.game_spec.model_configs[model_cfg](input_shape))
-            self._net.validate_targets(target_names)
+            self._net = Model(self._controller.game_spec.model_configs[model_cfg](shape_info_dict))
             self._init_net_and_opt()
-            logger.info(f'Creating new net with input shape {input_shape}')
         else:
             self._load_last_checkpoint()
 
@@ -275,7 +275,7 @@ class TrainingManager:
                 pin_memory=True,
                 shuffle=True)
 
-            net, optimizer = self._get_net_and_optimizer(loader)
+            net, optimizer = self._get_net_and_optimizer()
 
             table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
             logger.debug(f'Training table: {table}')

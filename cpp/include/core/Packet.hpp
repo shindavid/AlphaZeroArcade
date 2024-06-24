@@ -50,10 +50,14 @@ struct PacketHeader {
 
 static_assert(sizeof(PacketHeader) == 8);
 
+namespace concepts {
+
 template <class PayloadType>
-concept PacketPayloadConcept = requires(PayloadType p) {
+concept PacketPayload = requires(PayloadType p) {
   { util::decay_copy(PayloadType::kType) } -> std::same_as<PacketHeader::Type>;
 };
+
+}  // namespace concepts
 
 struct Registration {
   static constexpr PacketHeader::Type kType = PacketHeader::kRegistration;
@@ -164,7 +168,7 @@ using PayloadTypeList = mp::TypeList<Registration, RegistrationResponse, GameThr
                                      ActionPrompt, ActionDecision, EndGame>;
 static_assert(mp::Length_v<PayloadTypeList> == PacketHeader::kNumTypes);
 
-template <PacketPayloadConcept PacketPayload>
+template <concepts::PacketPayload PacketPayload>
 class Packet {
  public:
   /*
@@ -213,7 +217,7 @@ class GeneralPacket {
    * Checks that this packet is of the given type, and returns the payload reinterpreted to the
    * given type. If the check fails, throws an exception.
    */
-  template <PacketPayloadConcept PacketPayload>
+  template <concepts::PacketPayload PacketPayload>
   const PacketPayload& payload_as() const;
 
   /*

@@ -3,14 +3,13 @@
 #include <cstdlib>
 #include <iostream>
 
-#include <core/DerivedTypes.hpp>
 #include <util/ScreenUtil.hpp>
 
 namespace generic {
 
-template <core::GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::start_game() {
-  GameStateTypes::nullify_action(last_action_);
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::start_game() {
+  last_action_ = -1;
   std::cout << "Press any key to start game" << std::endl;
   std::string input;
   std::getline(std::cin, input);
@@ -18,20 +17,19 @@ inline void HumanTuiPlayer<GameState_>::start_game() {
   util::clearscreen();
 }
 
-template <core::GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::receive_state_change(core::seat_index_t, const GameState&,
-                                                             const Action& action) {
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const FullState&,
+                                                       core::action_t action) {
   last_action_ = action;
 }
 
-template <core::GameStateConcept GameState_>
-typename HumanTuiPlayer<GameState_>::ActionResponse HumanTuiPlayer<GameState_>::get_action_response(
-    const GameState& state, const ActionMask& valid_actions) {
+template <core::concepts::Game Game>
+core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
+    const FullState& state, const ActionMask& valid_actions) {
   util::ScreenClearer::clear_once();
   print_state(state, false);
   bool complain = false;
-  Action my_action;
-  GameStateTypes::nullify_action(my_action);
+  core::action_t my_action = -1;
   while (true) {
     if (complain) {
       printf("Invalid input!\n");
@@ -39,7 +37,7 @@ typename HumanTuiPlayer<GameState_>::ActionResponse HumanTuiPlayer<GameState_>::
     complain = true;
     my_action = prompt_for_action(state, valid_actions);
 
-    if (!GameStateTypes::is_valid_action(my_action, valid_actions)) continue;
+    if (my_action < 0 || my_action >= Game::Constants::kNumActions || !valid_actions[my_action]) continue;
     break;
   }
 
@@ -47,9 +45,8 @@ typename HumanTuiPlayer<GameState_>::ActionResponse HumanTuiPlayer<GameState_>::
   return my_action;
 }
 
-template <core::GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::end_game(const GameState& state,
-                                                 const GameOutcome& outcome) {
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::end_game(const FullState& state, const ValueArray& outcome) {
   util::ScreenClearer::clear_once();
   print_state(state, true);
 
@@ -63,9 +60,9 @@ inline void HumanTuiPlayer<GameState_>::end_game(const GameState& state,
   }
 }
 
-template <core::GameStateConcept GameState_>
-inline void HumanTuiPlayer<GameState_>::print_state(const GameState& state, bool terminal) {
-  state.dump(&last_action_, &this->get_player_names());
+template <core::concepts::Game Game>
+inline void HumanTuiPlayer<Game>::print_state(const FullState& state, bool terminal) {
+  IO::print_state(state, last_action_, &this->get_player_names());
 }
 
 }  // namespace generic

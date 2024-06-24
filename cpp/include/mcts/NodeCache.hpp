@@ -1,11 +1,10 @@
 #pragma once
 
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
-#include <core/TensorizorConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/CppUtil.hpp>
 
 #include <map>
 #include <mutex>
@@ -16,22 +15,23 @@ namespace mcts {
 /*
  * Node lookup used to support MCGS.
  */
-template <core::GameStateConcept GameState, core::TensorizorConcept<GameState> Tensorizor>
+template <core::concepts::Game Game>
 class NodeCache {
  public:
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using Action = typename GameStateTypes::Action;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using Node = mcts::Node<GameState, Tensorizor>;
+  using InputTensorizor = typename Game::InputTensorizor;
+  using FullState = typename Game::FullState;
+  using MCTSKey = typename InputTensorizor::MCTSKey;
+  using ActionOutcome = typename Game::Types::ActionOutcome;
+  using Node = mcts::Node<Game>;
   using Node_sptr = typename Node::sptr;
 
   void clear();
   void clear_before(move_number_t move_number);
-  Node_sptr fetch_or_create(move_number_t move_number, const GameState& state,
-                            const GameOutcome& outcome, const ManagerParams* params);
+  Node_sptr fetch_or_create(move_number_t move_number, const FullState& state,
+                            const ActionOutcome& outcome, const ManagerParams* params);
 
  private:
-  using submap_t = std::unordered_map<GameState, Node_sptr>;
+  using submap_t = std::unordered_map<MCTSKey, Node_sptr>;
   using map_t = std::map<move_number_t, submap_t*>;
 
   map_t map_;

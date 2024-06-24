@@ -45,21 +45,21 @@ inline void EdaxPlayer::start_game() {
   in_.flush();
 }
 
-inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const GameState&,
-                                             const Action& action) {
+inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const FullState&,
+                                             core::action_t action) {
   if (seat == this->get_my_seat()) return;
   submit_action(action);
 }
 
-inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const GameState&,
-                                                                  const ActionMask& valid_actions) {
-  int num_valid_actions = eigen_util::count(valid_actions);
+inline core::ActionResponse EdaxPlayer::get_action_response(const FullState&,
+                                                            const ActionMask& valid_actions) {
+  int num_valid_actions = valid_actions.count();
   if (params_.verbose) {
     std::cout << "EdaxPlayer::get_action_response() - num_valid_actions=" << num_valid_actions
               << std::endl;
   }
   if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    Action action = eigen_util::sample(valid_actions);
+    core::action_t action = bitset_util::get_nth_on_index(valid_actions, 0);
     submit_action(action);
     return action;
   }
@@ -88,20 +88,18 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const GameStat
     }
   }
 
-  if (a < 0 || a >= kNumGlobalActions || !valid_actions(a)) {
+  if (a < 0 || a >= kNumGlobalActions || !valid_actions[a]) {
     for (size_t i = 0; i < n; ++i) {
       std::cerr << line_buffer_[i] << std::endl;
     }
     throw util::Exception("EdaxPlayer::get_action_response: invalid action: %d", a);
   }
 
-  Action action;
-  action[0] = a;
-  return action;
+  return a;
 }
 
-inline void EdaxPlayer::submit_action(const Action& action) {
-  int a = action[0];
+inline void EdaxPlayer::submit_action(const core::action_t action) {
+  int a = action;
   if (a == kPass) {
     if (params_.verbose) {
       std::cout << "EdaxPlayer::submit_action() - PS" << std::endl;

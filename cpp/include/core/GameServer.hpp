@@ -8,28 +8,27 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/AbstractPlayerGenerator.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
 #include <third_party/ProgressBar.hpp>
 
 namespace core {
 
-template <GameStateConcept GameState>
+template <concepts::Game Game>
 class GameServer {
  public:
-  static constexpr int kNumPlayers = GameState::kNumPlayers;
+  static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  using GameStateTypes = core::GameStateTypes<GameState>;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
-  using Action = typename GameStateTypes::Action;
-  using ActionResponse = typename GameStateTypes::ActionResponse;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using Player = AbstractPlayer<GameState>;
-  using PlayerGenerator = AbstractPlayerGenerator<GameState>;
-  using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<GameState>;
+  using ValueArray = typename Game::Types::ValueArray;
+  using ActionMask = typename Game::Types::ActionMask;
+  using ActionOutcome = typename Game::Types::ActionOutcome;
+  using FullState = typename Game::FullState;
+  using Rules = typename Game::Rules;
+  using Player = AbstractPlayer<Game>;
+  using PlayerGenerator = AbstractPlayerGenerator<Game>;
+  using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<Game>;
   using player_array_t = std::array<Player*, kNumPlayers>;
-  using player_name_array_t = typename GameStateTypes::player_name_array_t;
+  using player_name_array_t = typename Game::Types::player_name_array_t;
   using results_map_t = std::map<float, int>;
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;
@@ -71,7 +70,6 @@ class GameServer {
   struct Params {
     auto make_options_description();
 
-    std::string kill_file;  // if non-empty, kill server when this file is created
     int num_games = 1000;   // if <=0, run indefinitely
     int parallelism = 256;  // number of games to run simultaneously
     int port = 0;
@@ -95,7 +93,7 @@ class GameServer {
     const Params& params() const { return params_; }
     void init_progress_bar();
     bool request_game(int num_games);  // returns false iff hit num_games limit
-    void update(const GameOutcome& outcome, int64_t ns);
+    void update(const ValueArray& outcome, int64_t ns);
     auto get_results() const;
     void end_session();
     bool ready_to_start() const;
@@ -143,7 +141,7 @@ class GameServer {
 
    private:
     void run();
-    GameOutcome play_game(player_array_t&);
+    ValueArray play_game(player_array_t&);
 
     SharedData& shared_data_;
     player_instantiation_array_t instantiations_;
@@ -154,9 +152,6 @@ class GameServer {
 
  public:
   GameServer(const Params& params);
-  ~GameServer();
-
-  static void request_shutdown() { shutdown_requested_ = true; }
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the
@@ -184,13 +179,8 @@ class GameServer {
   void shutdown();
 
  private:
-  void kill_file_checker();
-
   SharedData shared_data_;
   std::vector<GameThread*> threads_;
-  std::thread* kill_thread_ = nullptr;
-
-  static bool shutdown_requested_;
 };
 
 }  // namespace core

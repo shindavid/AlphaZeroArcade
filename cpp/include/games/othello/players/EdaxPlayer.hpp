@@ -8,9 +8,8 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
 #include <games/othello/Constants.hpp>
-#include <games/othello/GameState.hpp>
+#include <games/othello/Game.hpp>
 #include <util/BoostUtil.hpp>
 
 namespace othello {
@@ -25,9 +24,9 @@ namespace othello {
  * we can try to avoid the I/O and the text parsing by building and linking against an edax library
  * directly.
  */
-class EdaxPlayer : public Player {
+class EdaxPlayer : public core::AbstractPlayer<Game> {
  public:
-  using base_t = Player;
+  // using base_t = Player;
 
   struct Params {
     int depth = 21;  // matches edax default
@@ -39,11 +38,11 @@ class EdaxPlayer : public Player {
   EdaxPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
+  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
 
  private:
-  void submit_action(const Action& action);
+  void submit_action(const core::action_t);
 
   const Params params_;
   std::vector<std::string> line_buffer_;

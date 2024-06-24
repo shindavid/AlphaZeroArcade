@@ -2,33 +2,30 @@
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
-#include <core/DerivedTypes.hpp>
-#include <core/GameStateConcept.hpp>
+#include <core/concepts/Game.hpp>
 
 namespace generic {
 
 /*
  * Abstract class. Derived classes must implement the prompt_for_action() method.
  */
-template <core::GameStateConcept GameState_>
-class HumanTuiPlayer : public core::AbstractPlayer<GameState_> {
+template <core::concepts::Game Game>
+class HumanTuiPlayer : public core::AbstractPlayer<Game> {
  public:
-  using base_t = core::AbstractPlayer<GameState_>;
-  using GameState = GameState_;
-  using GameStateTypes = core::GameStateTypes<GameState>;
+  using base_t = core::AbstractPlayer<Game>;
 
-  using Action = typename GameStateTypes::Action;
-  using ActionResponse = typename GameStateTypes::ActionResponse;
-  using ActionMask = typename GameStateTypes::ActionMask;
-  using GameOutcome = typename GameStateTypes::GameOutcome;
+  using IO = typename Game::IO;
+  using FullState = typename Game::FullState;
+  using ActionMask = typename Game::Types::ActionMask;
+  using ValueArray = typename Game::Types::ValueArray;
   using player_array_t = typename base_t::player_array_t;
 
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const GameState&, const Action&) override;
-  ActionResponse get_action_response(const GameState&, const ActionMask&) override;
-  void end_game(const GameState&, const GameOutcome&) override;
+  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
+  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
+  void end_game(const FullState&, const ValueArray&) override;
 
   bool is_human_tui_player() const override { return true; }
 
@@ -39,14 +36,14 @@ class HumanTuiPlayer : public core::AbstractPlayer<GameState_> {
    *
    * Derived classes must override this method.
    */
-  virtual Action prompt_for_action(const GameState&, const ActionMask&) = 0;
+  virtual core::action_t prompt_for_action(const FullState&, const ActionMask&) = 0;
 
   /*
-   * By default, dispatches to GameState::dump(). Can be overridden by derived classes.
+   * By default, dispatches to Game::IO::dump(). Can be overridden by derived classes.
    */
-  virtual void print_state(const GameState&, bool terminal);
+  virtual void print_state(const FullState&, bool terminal);
 
-  Action last_action_;
+  core::action_t last_action_;
 };
 
 }  // namespace generic

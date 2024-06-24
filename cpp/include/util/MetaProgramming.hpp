@@ -21,45 +21,39 @@ struct TypeList<Head, Tails...> {
   using tails = TypeList<Tails...>;
 };
 
-// TransformTypeList_t<Transform, TypeList<A, B>>
-//
-// is equivalent to:
-//
-// TypeList<Transform<A>::type, Transform<B>::type>
+template <typename Base, typename T>
+struct AllDerivedFrom;
 
-template <template <typename> class Transformer, typename TypeList>
-struct TransformTypeList;
-
-template <template <typename> class Transformer, typename... Ts>
-struct TransformTypeList<Transformer, TypeList<Ts...>> {
-  using type = TypeList<typename Transformer<Ts>::type...>;
+template <typename Base>
+struct AllDerivedFrom<Base, TypeList<>> {
+  static constexpr bool value = true;
 };
 
-template <template <typename> class Transformer, typename TypeList>
-using TransformTypeList_t = typename TransformTypeList<Transformer, TypeList>::type;
-
-// TypeListToTuple_t<TypeList<A, B>>
-//
-// is equivalent to:
-//
-// std::tuple<A, B>
-
-template <typename TypeList>
-struct TypeListToTuple;
-
-template <>
-struct TypeListToTuple<TypeList<>> {
-  using type = std::tuple<>;
+template <typename Base, typename Head, typename... Tails>
+struct AllDerivedFrom<Base, TypeList<Head, Tails...>> {
+  static constexpr bool value =
+      std::is_base_of_v<Base, Head> && AllDerivedFrom<Base, TypeList<Tails...>>::value;
 };
 
-template <typename Head, typename... Tails>
-struct TypeListToTuple<TypeList<Head, Tails...>> {
-  using type = decltype(std::tuple_cat(std::tuple<Head>{},
-                                       typename TypeListToTuple<TypeList<Tails...>>::type{}));
+template <typename T>
+concept IsTypeList = requires(T t) { []<typename... Ts>(TypeList<Ts...>&) {}(t); };
+
+template <typename T, typename Base>
+concept IsTypeListOf = IsTypeList<T> && AllDerivedFrom<Base, T>::value;
+
+template <template <typename> typename Pred, typename T>
+struct AllSatisfyConcept;
+
+template <template <typename> typename Pred>
+struct AllSatisfyConcept<Pred, TypeList<>> : std::bool_constant<true> {};
+
+template <template <typename> typename Pred, typename Head, typename... Tails>
+struct AllSatisfyConcept<Pred, TypeList<Head, Tails...>>
+    : std::bool_constant<Pred<Head>::value && AllSatisfyConcept<Pred, TypeList<Tails...>>::value> {
 };
 
-template <typename TypeList>
-using TypeListToTuple_t = typename TypeListToTuple<TypeList>::type;
+template <typename T, template<typename> typename Pred>
+concept IsTypeListSatisfying = IsTypeList<T> && AllSatisfyConcept<Pred, T>::value;
 
 // length of a typelist
 

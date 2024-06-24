@@ -39,6 +39,8 @@ void LoopControllerClient::handle_pause_receipt() {
     lock.unlock();
     receipt_cv_.notify_all();
   }
+  LOG_INFO << "LoopControllerClient: handle_pause_receipt() - done (pause_receipt_count_ = "
+           << pause_receipt_count_ << ")";
 }
 
 void LoopControllerClient::handle_unpause_receipt() {
@@ -251,7 +253,7 @@ void LoopControllerClient::loop() {
       cur_generation_ = generation;
       reload_weights(ss, cuda_device);
     } else if (type == "quit") {
-      // TODO: add actual quit logic
+      deactivated_ = true;
       break;
     } else {
       throw util::Exception("Unknown loop-controller message type %s", type.c_str());

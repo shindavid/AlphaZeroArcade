@@ -63,6 +63,14 @@ template <size_t N>
 int choose_random_off_index(const std::bitset<N>&);
 
 /*
+ * Uniformly flips n bits of bitset from true to false.
+ *
+ * Requires that bitset contains at least n true bits.
+ */
+template <size_t N>
+void randomly_zero_out(std::bitset<N>& bitset, int n);
+
+/*
  * std::bitset::to_string() represents the bits in "reverse" order. This function simply flips that
  * order to the more intuitive one.
  */

@@ -1,7 +1,6 @@
 #include <games/tictactoe/players/PerfectPlayer.hpp>
 
 #include <games/tictactoe/PerfectStrategyLookupTable.hpp>
-#include <games/tictactoe/Tensorizor.hpp>
 #include <util/BitSet.hpp>
 #include <util/Random.hpp>
 
@@ -27,22 +26,20 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
   util::clean_assert(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
-    const GameState& state, const ActionMask& valid_actions) {
+inline core::ActionResponse PerfectPlayer::get_action_response(
+    const FullState& state, const ActionMask& valid_actions) {
   if (params_.strength == 0) {
-    return eigen_util::sample(valid_actions);
+    return bitset_util::choose_random_on_index(valid_actions);
   }
 
   // if only one legal move, make it
-  if (eigen_util::count(valid_actions) == 1) {
-    return eigen_util::sample(valid_actions);
+  if (valid_actions.count() == 1) {
+    return bitset_util::choose_random_on_index(valid_actions);
   }
 
-  Action action;
-
-  core::seat_index_t cp = state.get_current_player();
-  mask_t my_mask = state.get_current_player_mask();
-  mask_t opp_mask = state.get_opponent_mask();
+  core::seat_index_t cp = Game::Rules::get_current_player(state);
+  mask_t my_mask = state.cur_player_mask;
+  mask_t opp_mask = state.opponent_mask();
   mask_t full_mask = my_mask | opp_mask;
   mask_t x_mask = cp == kX ? my_mask : opp_mask;
   mask_t o_mask = cp == kO ? my_mask : opp_mask;
@@ -59,28 +56,26 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   }
 
   // check for winning move
-  for (mask_t mask : GameState::kThreeInARowMasks) {
+  for (mask_t mask : Game::kThreeInARowMasks) {
     if ((std::popcount(uint32_t(mask & my_mask))) == 2 && ((mask & opp_mask) == 0)) {
       int a = std::countr_zero(uint32_t(mask & ~full_mask));
       if (params_.verbose) {
         std::cout << "    winning along:  " << std::bitset<16>(mask) << std::endl;
         std::cout << "    winning move:   " << a << std::endl;
       }
-      action[0] = a;
-      return action;
+      return a;
     }
   }
 
   // block opponent's winning move
-  for (mask_t mask : GameState::kThreeInARowMasks) {
+  for (mask_t mask : Game::kThreeInARowMasks) {
     if ((std::popcount(uint32_t(mask & opp_mask))) == 2 && ((mask & my_mask) == 0)) {
       int a = std::countr_zero(uint32_t(mask & ~full_mask));
       if (params_.verbose) {
         std::cout << "    blocking along: " << std::bitset<16>(mask) << std::endl;
         std::cout << "    blocking move:  " << a << std::endl;
       }
-      action[0] = a;
-      return action;
+      return a;
     }
   }
 
@@ -91,8 +86,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   }
 
   try {
-    action[0] = lookup_map_.at(key).select();
-    return action;
+    return lookup_map_.at(key).select();
   } catch (const std::out_of_range&) {
     throw util::Exception("lookup failed (%08ux|%08ux)", uint32_t(x_mask), uint32_t(o_mask));
   }

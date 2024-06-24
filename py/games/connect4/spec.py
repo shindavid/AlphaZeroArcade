@@ -2,8 +2,9 @@ from dataclasses import dataclass
 import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from net_modules import ModelConfig, ModuleSpec
-from util.torch_util import Shape
+from net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
+
+from typing import Dict
 
 
 NUM_COLUMNS = 7
@@ -13,7 +14,8 @@ NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-def b7_c64(input_shape: Shape):
+def b7_c64(shape_info_dict: ShapeInfoDict):
+    input_shape = shape_info_dict['input'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_shape = (NUM_COLUMNS, )
@@ -26,7 +28,7 @@ def b7_c64(input_shape: Shape):
     c_ownership_hidden = 64
 
     return ModelConfig(
-        input_shape=input_shape,
+        shape_info_dict=shape_info_dict,
 
         stem=ModuleSpec(type='ConvBlock', args=[input_shape[0], c_trunk]),
 
@@ -73,7 +75,15 @@ class Connect4Spec(GameSpec):
         'b7_c64': b7_c64,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
-    n_mcts_iters_for_ratings_matches = 100
+
+    training_player_options = {
+        '-r': 2,
+    }
+
+    rating_player_options = {
+        '-i': 100,
+        '-n': 4,
+    }
 
 
 Connect4 = Connect4Spec()
