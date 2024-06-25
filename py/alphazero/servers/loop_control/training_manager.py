@@ -186,7 +186,7 @@ class TrainingManager:
             n = row[0]
             c = int(n - f(n))
 
-            start = c
+            start = max(0, c)
             end = n
 
             self._master_list_slice.set_bounds(cursor, start, end)
