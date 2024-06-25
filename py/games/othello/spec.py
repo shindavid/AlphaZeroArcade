@@ -15,7 +15,7 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_shape = (NUM_SQUARES + 1,)  # + 1 for pass
+    policy_size = NUM_SQUARES + 1  # + 1 for pass
     c_trunk = 64
     c_mid = 64
     c_policy_hidden = 2
@@ -58,12 +58,12 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
 
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='PolicyHead',
-                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
+                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
             ModuleSpec(type='ScoreMarginHead',
                        args=['score_margin', board_size, c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, NUM_SQUARES]),

@@ -230,13 +230,12 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int,
-                 policy_shape: Union[Shape, int]):
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, policy_size: int):
         super(PolicyHead, self).__init__(name, PolicyTarget())
 
-        policy_shape = tuple([policy_shape]) if isinstance(policy_shape, int) else policy_shape
+        policy_shape = (policy_size, )
         self.policy_shape = policy_shape
-        self.policy_size = math.prod(policy_shape)
+        self.policy_size = policy_size
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
