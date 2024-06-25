@@ -118,7 +118,7 @@ class TrainingParams:
     TODO: weight EMA
     TODO: learning rate annealing
     """
-    _window_size_function_str: str = 'katago(n0=minibatches_per_epoch*minibatch_size)'
+    window_size_function_str: str = 'katago(n0=minibatches_per_epoch*minibatch_size)'
     target_sample_rate: float = 8
     minibatches_per_epoch: int = 2048
     minibatch_size: int = 256
@@ -129,7 +129,7 @@ class TrainingParams:
 
     def __post_init__(self):
         attrs = {f.name: getattr(self, f.name) for f in fields(self)}
-        self.window_size_function = WindowSizeFunction.create(self._window_size_function_str, attrs)
+        self.window_size_function = WindowSizeFunction.create(self.window_size_function_str, attrs)
 
     def samples_per_window(self):
         return self.minibatch_size * self.minibatches_per_epoch
@@ -137,7 +137,7 @@ class TrainingParams:
     @staticmethod
     def create(args) -> 'TrainingParams':
         return TrainingParams(
-            _window_size_function_str=args.window_size_function,
+            window_size_function_str=args.window_size_function,
             target_sample_rate=args.target_sample_rate,
             minibatches_per_epoch=args.minibatches_per_epoch,
             minibatch_size=args.minibatch_size,
@@ -152,7 +152,7 @@ class TrainingParams:
         group = parser.add_argument_group('Learning options')
 
         valid_functions_str = str(list(VALID_WINDOW_SIZE_FUNCTIONS.keys()))
-        group.add_argument('--window-size-function', default=defaults._window_size_function_str,
+        group.add_argument('--window-size-function', default=defaults.window_size_function_str,
                            help=f'window size function (valid functions: {valid_functions_str}, default: "%(default)s")')
         group.add_argument(
             '--target-sample-rate', type=int, default=defaults.target_sample_rate,
@@ -171,8 +171,8 @@ class TrainingParams:
 
     def add_to_cmd(self, cmd: List[str]):
         defaults = TrainingParams()
-        if self._window_size_function_str != defaults._window_size_function_str:
-            cmd.extend(['--window-size-function', self._window_size_function_str])
+        if self.window_size_function_str != defaults.window_size_function_str:
+            cmd.extend(['--window-size-function', self.window_size_function_str])
         if self.target_sample_rate != defaults.target_sample_rate:
             cmd.extend(['--target-sample-rate', str(self.target_sample_rate)])
         if self.minibatches_per_epoch != defaults.minibatches_per_epoch:
