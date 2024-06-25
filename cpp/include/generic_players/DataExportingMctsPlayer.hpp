@@ -26,13 +26,13 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
 
   using GameLogWriter = core::GameLogWriter<Game>;
 
-  using FullState = typename Game::FullState;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ValueArray = typename Game::Types::ValueArray;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using FullState = Game::FullState;
+  using ActionMask = Game::Types::ActionMask;
+  using ValueArray = Game::Types::ValueArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
-  using TrainingDataWriterParams = typename TrainingDataWriter::Params;
+  using TrainingDataWriterParams = TrainingDataWriter::Params;
 
   using base_t = MctsPlayer<Game>;
   using Params = base_t::Params;

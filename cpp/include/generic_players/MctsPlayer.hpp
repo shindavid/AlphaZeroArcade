@@ -46,14 +46,14 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   using MctsManager = mcts::Manager<Game>;
   using MctsSearchParams = mcts::SearchParams;
-  using SearchResults = typename Game::Types::SearchResults;
-  using player_name_array_t = typename Game::Types::player_name_array_t;
+  using SearchResults = Game::Types::SearchResults;
+  using player_name_array_t = Game::Types::player_name_array_t;
 
-  using FullState = typename Game::FullState;
-  using IO = typename Game::IO;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ValueArray = typename Game::Types::ValueArray;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using FullState = Game::FullState;
+  using IO = Game::IO;
+  using ActionMask = Game::Types::ActionMask;
+  using ValueArray = Game::Types::ValueArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);

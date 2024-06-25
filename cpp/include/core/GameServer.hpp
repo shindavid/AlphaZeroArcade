@@ -19,16 +19,16 @@ class GameServer {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
-  using ValueArray = typename Game::Types::ValueArray;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ActionOutcome = typename Game::Types::ActionOutcome;
-  using FullState = typename Game::FullState;
-  using Rules = typename Game::Rules;
+  using ValueArray = Game::Types::ValueArray;
+  using ActionMask = Game::Types::ActionMask;
+  using ActionOutcome = Game::Types::ActionOutcome;
+  using FullState = Game::FullState;
+  using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using RemotePlayerProxyGenerator = core::RemotePlayerProxyGenerator<Game>;
   using player_array_t = std::array<Player*, kNumPlayers>;
-  using player_name_array_t = typename Game::Types::player_name_array_t;
+  using player_name_array_t = Game::Types::player_name_array_t;
   using results_map_t = std::map<float, int>;
   using results_array_t = std::array<results_map_t, kNumPlayers>;
   using time_point_t = std::chrono::time_point<std::chrono::steady_clock>;

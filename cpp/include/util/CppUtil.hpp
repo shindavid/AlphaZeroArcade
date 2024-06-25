@@ -276,7 +276,7 @@ struct concat_int_sequence<std::integer_sequence<IntT1, Ints1...>,
   using type = std::integer_sequence<IntT, (IntT)Ints1..., (IntT)Ints2...>;
 };
 template <typename T, typename U>
-using concat_int_sequence_t = typename concat_int_sequence<T, U>::type;
+using concat_int_sequence_t = concat_int_sequence<T, U>::type;
 
 template <typename T, typename U>
 struct concat_string_literal_sequence {};
@@ -285,7 +285,7 @@ struct concat_string_literal_sequence<StringLiteralSequence<S1...>, StringLitera
   using type = StringLiteralSequence<S1..., S2...>;
 };
 template <typename T, typename U>
-using concat_string_literal_sequence_t = typename concat_string_literal_sequence<T, U>::type;
+using concat_string_literal_sequence_t = concat_string_literal_sequence<T, U>::type;
 
 template <typename T, typename U>
 struct no_overlap {

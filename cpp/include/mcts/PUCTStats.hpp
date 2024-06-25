@@ -12,7 +12,7 @@ namespace mcts {
 template <core::concepts::Game Game>
 struct PUCTStats {
   using Node = mcts::Node<Game>;
-  using LocalPolicyArray = typename Node::LocalPolicyArray;
+  using LocalPolicyArray = Node::LocalPolicyArray;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0

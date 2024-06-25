@@ -20,14 +20,14 @@ class GameServerProxy {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
-  using FullState = typename Game::FullState;
-  using Rules = typename Game::Rules;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ValueArray = typename Game::Types::ValueArray;
+  using FullState = Game::FullState;
+  using Rules = Game::Rules;
+  using ActionMask = Game::Types::ActionMask;
+  using ValueArray = Game::Types::ValueArray;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<Game>;
-  using player_name_array_t = typename Player::player_name_array_t;
+  using player_name_array_t = Player::player_name_array_t;
   using player_array_t = std::array<Player*, kNumPlayers>;
   using player_vec_t = std::vector<Player*>;
 

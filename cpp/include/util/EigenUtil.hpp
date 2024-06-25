@@ -183,7 +183,7 @@ struct extract_shape<FTensor<Shape>> {
   using type = Shape;
 };
 template <typename T>
-using extract_shape_t = typename extract_shape<T>::type;
+using extract_shape_t = extract_shape<T>::type;
 
 template <typename T>
 struct extract_length {};

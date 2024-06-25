@@ -18,12 +18,12 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NodeCache {
  public:
-  using InputTensorizor = typename Game::InputTensorizor;
-  using FullState = typename Game::FullState;
-  using MCTSKey = typename InputTensorizor::MCTSKey;
-  using ActionOutcome = typename Game::Types::ActionOutcome;
+  using InputTensorizor = Game::InputTensorizor;
+  using FullState = Game::FullState;
+  using MCTSKey = InputTensorizor::MCTSKey;
+  using ActionOutcome = Game::Types::ActionOutcome;
   using Node = mcts::Node<Game>;
-  using Node_sptr = typename Node::sptr;
+  using Node_sptr = Node::sptr;
 
   void clear();
   void clear_before(move_number_t move_number);

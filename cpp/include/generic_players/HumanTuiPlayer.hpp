@@ -14,11 +14,11 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
  public:
   using base_t = core::AbstractPlayer<Game>;
 
-  using IO = typename Game::IO;
-  using FullState = typename Game::FullState;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ValueArray = typename Game::Types::ValueArray;
-  using player_array_t = typename base_t::player_array_t;
+  using IO = Game::IO;
+  using FullState = Game::FullState;
+  using ActionMask = Game::Types::ActionMask;
+  using ValueArray = Game::Types::ValueArray;
+  using player_array_t = base_t::player_array_t;
 
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}

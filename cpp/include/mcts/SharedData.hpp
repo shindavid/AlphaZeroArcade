@@ -24,8 +24,8 @@ template <core::concepts::Game Game>
 struct SharedData {
   using Node = mcts::Node<Game>;
   using NodeCache = mcts::NodeCache<Game>;
-  using BaseState = typename Game::BaseState;
-  using FullState = typename Game::FullState;
+  using BaseState = Game::BaseState;
+  using FullState = Game::FullState;
 
   using base_state_vec_t = std::vector<BaseState>;
 

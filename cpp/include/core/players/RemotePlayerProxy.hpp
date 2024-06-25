@@ -23,9 +23,9 @@ template <concepts::Game Game>
 class RemotePlayerProxy : public AbstractPlayer<Game> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  using FullState = typename Game::FullState;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ValueArray = typename Game::Types::ValueArray;
+  using FullState = Game::FullState;
+  using ActionMask = Game::Types::ActionMask;
+  using ValueArray = Game::Types::ValueArray;
   using Player = AbstractPlayer<Game>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_thread_id_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;

@@ -81,11 +81,11 @@ struct TypeAt<TypeList<Head, Tails...>, 0> {
 template <typename Head, typename... Tails, std::size_t index>
 struct TypeAt<TypeList<Head, Tails...>, index> {
   static_assert(index < sizeof...(Tails) + 1, "index out of range");
-  using type = typename TypeAt<TypeList<Tails...>, index - 1>::type;
+  using type = TypeAt<TypeList<Tails...>, index - 1>::type;
 };
 
 template <typename TList, std::size_t index>
-using TypeAt_t = typename TypeAt<TList, index>::type;
+using TypeAt_t = TypeAt<TList, index>::type;
 
 // indexof
 
@@ -129,7 +129,7 @@ struct Apply<TypeList<Head, Tails...>, F> {
 };
 
 template <typename TList, template <typename> typename F>
-using Apply_t = typename Apply<TList, F>::type;
+using Apply_t = Apply<TList, F>::type;
 
 // maxsizeof
 

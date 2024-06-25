@@ -61,7 +61,7 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
 
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
     using Target = mp::TypeAt_t<TrainingTargetsList, a>;
-    using Tensor = typename Target::Tensor;
+    using Tensor = Target::Tensor;
     info_array[1 + a].template init<Tensor>(Target::kName, a);
   });
 
@@ -423,11 +423,11 @@ void GameLogWriter<Game>::add_terminal(const FullState& state, const ValueArray&
 template <concepts::Game Game>
 void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   using GameLog = core::GameLog<Game>;
-  using Header = typename GameLog::Header;
-  using sym_sample_index_t = typename GameLog::sym_sample_index_t;
-  using non_sym_sample_index_t = typename GameLog::non_sym_sample_index_t;
-  using policy_target_index_t = typename GameLog::policy_target_index_t;
-  using sparse_policy_entry_t = typename GameLog::sparse_policy_entry_t;
+  using Header = GameLog::Header;
+  using sym_sample_index_t = GameLog::sym_sample_index_t;
+  using non_sym_sample_index_t = GameLog::non_sym_sample_index_t;
+  using policy_target_index_t = GameLog::policy_target_index_t;
+  using sparse_policy_entry_t = GameLog::sparse_policy_entry_t;
 
   util::release_assert(!entries_.empty(), "Illegal serialization of empty GameLogWriter");
   int num_entries = entries_.size();

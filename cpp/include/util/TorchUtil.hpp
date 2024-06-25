@@ -190,7 +190,7 @@ struct convert_type<bool> {
   using type = uint8_t;
 };
 template <typename T>
-using convert_type_t = typename convert_type<T>::type;
+using convert_type_t = convert_type<T>::type;
 
 }  // namespace torch_util
 

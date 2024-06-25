@@ -17,9 +17,9 @@
 
 template <typename PlayerFactory>
 struct Main {
-  using Game = typename PlayerFactory::Game;
+  using Game = PlayerFactory::Game;
   using GameServer = core::GameServer<Game>;
-  using GameServerParams = typename GameServer::Params;
+  using GameServerParams = GameServer::Params;
   using GameServerProxy = core::GameServerProxy<Game>;
   using Player = core::AbstractPlayer<Game>;
 

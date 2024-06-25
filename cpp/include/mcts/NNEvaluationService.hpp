@@ -79,29 +79,29 @@ class NNEvaluationService
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using SharedData = mcts::SharedData<Game>;
-  using base_state_vec_t = typename SharedData::base_state_vec_t;
+  using base_state_vec_t = SharedData::base_state_vec_t;
 
-  using ActionMask = typename Game::Types::ActionMask;
+  using ActionMask = Game::Types::ActionMask;
 
-  using NNEvaluation_asptr = typename NNEvaluation::asptr;
-  using NNEvaluation_sptr = typename NNEvaluation::sptr;
+  using NNEvaluation_asptr = NNEvaluation::asptr;
+  using NNEvaluation_sptr = NNEvaluation::sptr;
 
-  using InputTensor = typename Game::InputTensorizor::Tensor;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
-  using ValueTensor = typename NNEvaluation::ValueTensor;
+  using InputTensor = Game::InputTensorizor::Tensor;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueTensor = NNEvaluation::ValueTensor;
 
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
-  using PolicyShape = typename Game::Types::PolicyShape;
-  using ValueShape = typename NNEvaluation::ValueShape;
+  using PolicyShape = Game::Types::PolicyShape;
+  using ValueShape = NNEvaluation::ValueShape;
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
-  using BaseState = typename Game::BaseState;
-  using FullState = typename Game::FullState;
-  using Transform = typename Game::Types::Transform;
+  using BaseState = Game::BaseState;
+  using FullState = Game::FullState;
+  using Transform = Game::Types::Transform;
   using Transforms = core::Transforms<Game>;
-  using InputTensorizor = typename Game::InputTensorizor;
-  using EvalKey = typename InputTensorizor::EvalKey;
+  using InputTensorizor = Game::InputTensorizor;
+  using EvalKey = InputTensorizor::EvalKey;
 
   struct Request {
     Node* node;

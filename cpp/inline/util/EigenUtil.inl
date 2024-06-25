@@ -171,7 +171,7 @@ void right_rotate(Array& array, int n) {
 
 template <concepts::FTensor Tensor>
 uint64_t hash(const Tensor& tensor) {
-  using Scalar = typename Tensor::Scalar;
+  using Scalar = Tensor::Scalar;
   constexpr int N = extract_shape_t<Tensor>::total_size;
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }

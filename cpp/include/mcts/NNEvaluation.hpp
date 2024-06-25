@@ -10,9 +10,9 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluation {
  public:
-  using ActionMask = typename Game::Types::ActionMask;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
-  using ValueArray = typename Game::Types::ValueArray;
+  using ActionMask = Game::Types::ActionMask;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueArray = Game::Types::ValueArray;
   using LocalPolicyArray = eigen_util::DArray<Game::Constants::kMaxBranchingFactor>;
   using ValueShape = eigen_util::Shape<Game::Constants::kNumPlayers>;
   using ValueTensor = eigen_util::FTensor<ValueShape>;

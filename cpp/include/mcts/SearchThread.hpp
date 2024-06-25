@@ -27,19 +27,19 @@ class SearchThread {
   using NodeCache = mcts::NodeCache<Game>;
   using PUCTStats = mcts::PUCTStats<Game>;
   using SharedData = mcts::SharedData<Game>;
-  using LocalPolicyArray = typename Node::LocalPolicyArray;
-  using edge_t = typename Node::edge_t;
-  using base_state_vec_t = typename SharedData::base_state_vec_t;
+  using LocalPolicyArray = Node::LocalPolicyArray;
+  using edge_t = Node::edge_t;
+  using base_state_vec_t = SharedData::base_state_vec_t;
 
   using IO = Game::IO;
-  using Rules = typename Game::Rules;
-  using FullState = typename Game::FullState;
-  using ActionMask = typename Game::Types::ActionMask;
-  using NNEvaluation_sptr = typename NNEvaluation::sptr;
-  using PolicyShape = typename Game::Types::PolicyShape;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
-  using ValueArray = typename Game::Types::ValueArray;
-  using ValueTensor = typename NNEvaluation::ValueTensor;
+  using Rules = Game::Rules;
+  using FullState = Game::FullState;
+  using ActionMask = Game::Types::ActionMask;
+  using NNEvaluation_sptr = NNEvaluation::sptr;
+  using PolicyShape = Game::Types::PolicyShape;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = NNEvaluation::ValueTensor;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kNumActions = Game::Constants::kNumActions;

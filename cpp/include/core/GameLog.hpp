@@ -84,15 +84,15 @@ class GameLog : public GameLogBase {
  public:
   using Header = GameLogBase::Header;
 
-  using Rules = typename Game::Rules;
-  using Transform = typename Game::Types::Transform;
-  using InputTensorizor = typename Game::InputTensorizor;
-  using InputTensor = typename Game::InputTensorizor::Tensor;
-  using TrainingTargetsList = typename Game::TrainingTargets::List;
-  using BaseState = typename Game::BaseState;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
-  using ValueArray = typename Game::Types::ValueArray;
-  using GameLogView = typename Game::Types::GameLogView;
+  using Rules = Game::Rules;
+  using Transform = Game::Types::Transform;
+  using InputTensorizor = Game::InputTensorizor;
+  using InputTensor = Game::InputTensorizor::Tensor;
+  using TrainingTargetsList = Game::TrainingTargets::List;
+  using BaseState = Game::BaseState;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueArray = Game::Types::ValueArray;
+  using GameLogView = Game::Types::GameLogView;
 
   GameLog(const char* filename);
   ~GameLog();
@@ -155,12 +155,12 @@ class GameLog : public GameLogBase {
 template <concepts::Game Game>
 class GameLogWriter {
  public:
-  using Rules = typename Game::Rules;
-  using BaseState = typename Game::BaseState;
-  using FullState = typename Game::FullState;
-  using ValueArray = typename Game::Types::ValueArray;
-  using SymmetryIndexSet = typename Game::Types::SymmetryIndexSet;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
+  using Rules = Game::Rules;
+  using BaseState = Game::BaseState;
+  using FullState = Game::FullState;
+  using ValueArray = Game::Types::ValueArray;
+  using SymmetryIndexSet = Game::Types::SymmetryIndexSet;
+  using PolicyTensor = Game::Types::PolicyTensor;
   using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {

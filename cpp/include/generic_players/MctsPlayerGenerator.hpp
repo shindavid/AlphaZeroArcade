@@ -49,10 +49,10 @@ template <core::concepts::Game Game>
 class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
  public:
   using base_t = MctsPlayerGeneratorBase<Game>;
-  using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
-  using MctsManager = typename base_t::MctsManager;
+  using BaseMctsPlayer = base_t::BaseMctsPlayer;
+  using MctsManager = base_t::MctsManager;
   using MctsPlayer = generic::MctsPlayer<Game>;
-  using MctsPlayerParams = typename MctsPlayer::Params;
+  using MctsPlayerParams = MctsPlayer::Params;
 
   CompetitiveMctsPlayerGenerator();
   std::string get_default_name() const override;
@@ -77,11 +77,11 @@ template <core::concepts::Game Game>
 class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
  public:
   using base_t = MctsPlayerGeneratorBase<Game>;
-  using BaseMctsPlayer = typename base_t::BaseMctsPlayer;
-  using MctsManager = typename base_t::MctsManager;
+  using BaseMctsPlayer = base_t::BaseMctsPlayer;
+  using MctsManager = base_t::MctsManager;
   using MctsPlayer = generic::DataExportingMctsPlayer<Game>;
-  using MctsPlayerParams = typename MctsPlayer::Params;
-  using TrainingDataWriterParams = typename MctsPlayer::TrainingDataWriterParams;
+  using MctsPlayerParams = MctsPlayer::Params;
+  using TrainingDataWriterParams = MctsPlayer::TrainingDataWriterParams;
 
   TrainingMctsPlayerGenerator();
   std::string get_default_name() const override;

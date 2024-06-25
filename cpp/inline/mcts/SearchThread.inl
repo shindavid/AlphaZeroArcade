@@ -363,7 +363,7 @@ core::action_index_t SearchThread<Game>::get_best_action_index(
 
     ss << "cp:       " << cp_line << break_plus_thread_id_whitespace();
 
-    using ScalarT = typename PVec::Scalar;
+    using ScalarT = PVec::Scalar;
     constexpr int kNumRows = 10;  // action, P, V, PW, PL, E, N, VN, PUCT, argmax
     constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
     using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;

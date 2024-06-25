@@ -35,13 +35,13 @@ class Node {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kEdgeDataChunkSize = std::min(8, kMaxBranchingFactor);
 
-  using LocalPolicyArray = typename NNEvaluation::LocalPolicyArray;
-  using Rules = typename Game::Rules;
-  using FullState = typename Game::FullState;
-  using ActionMask = typename Game::Types::ActionMask;
-  using ValueArray = typename Game::Types::ValueArray;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
-  using ActionOutcome = typename Game::Types::ActionOutcome;
+  using LocalPolicyArray = NNEvaluation::LocalPolicyArray;
+  using Rules = Game::Rules;
+  using FullState = Game::FullState;
+  using ActionMask = Game::Types::ActionMask;
+  using ValueArray = Game::Types::ValueArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionOutcome = Game::Types::ActionOutcome;
   using player_bitset_t = std::bitset<kNumPlayers>;
 
   enum evaluation_state_t : int8_t {

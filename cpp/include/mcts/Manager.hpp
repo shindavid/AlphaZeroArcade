@@ -34,16 +34,16 @@ class Manager {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  using IO = typename Game::IO;
-  using FullState = typename Game::FullState;
-  using SearchResults = typename Game::Types::SearchResults;
-  using ActionOutcome = typename Game::Types::ActionOutcome;
-  using ActionMask = typename Game::Types::ActionMask;
-  using InputTensor = typename Game::InputTensorizor::Tensor;
+  using IO = Game::IO;
+  using FullState = Game::FullState;
+  using SearchResults = Game::Types::SearchResults;
+  using ActionOutcome = Game::Types::ActionOutcome;
+  using ActionMask = Game::Types::ActionMask;
+  using InputTensor = Game::InputTensorizor::Tensor;
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
-  using LocalPolicyArray = typename Node::LocalPolicyArray;
-  using PolicyTensor = typename Game::Types::PolicyTensor;
-  using ValueArray = typename Game::Types::ValueArray;
+  using LocalPolicyArray = Node::LocalPolicyArray;
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ValueArray = Game::Types::ValueArray;
 
   Manager(const ManagerParams& params);
   ~Manager();
