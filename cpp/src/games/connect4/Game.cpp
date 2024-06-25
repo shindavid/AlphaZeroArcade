@@ -66,11 +66,15 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   return Types::ActionOutcome();
 }
 
-void Game::IO::print_state(const BaseState& base, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const BaseState& base, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
   if (!util::tty_mode() && last_action > -1) {
     std::string s(2 * last_action + 1, ' ');
-    printf("%sx\n", s.c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "%sx\n", s.c_str());
   }
 
   column_t blink_column = last_action;
@@ -79,19 +83,21 @@ void Game::IO::print_state(const BaseState& base, core::action_t last_action,
     blink_row = std::countr_one(base.full_mask >> (blink_column * 8)) - 1;
   }
   for (row_t row = kNumRows - 1; row >= 0; --row) {
-    print_row(base, row, row == blink_row ? blink_column : -1);
+    cx += print_row(buffer + cx, buf_size - cx, base, row, row == blink_row ? blink_column : -1);
   }
-  printf("|1|2|3|4|5|6|7|\n\n");
+  cx += snprintf(buffer + cx, buf_size - cx, "|1|2|3|4|5|6|7|\n\n");
   if (player_names) {
-    printf("%s%s%s: %s\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
-           (*player_names)[kRed].c_str());
-    printf("%s%s%s: %s\n\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
-           (*player_names)[kYellow].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %s\n", ansi::kRed(""), ansi::kCircle("R"),
+                   ansi::kReset(""), (*player_names)[kRed].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %s\n\n", ansi::kYellow(""),
+                   ansi::kCircle("Y"), ansi::kReset(""), (*player_names)[kYellow].c_str());
   }
-  std::cout.flush();
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
+void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -99,26 +105,38 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""),
-         100 * net_value(c4::kRed), 100 * win_rates(c4::kRed));
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset(""),
-         100 * net_value(c4::kYellow), 100 * win_rates(c4::kYellow));
-  printf("\n");
-  printf("%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
+  cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kRed(""),
+                 ansi::kCircle("R"), ansi::kReset(""), 100 * net_value(c4::kRed),
+                 100 * win_rates(c4::kRed));
+  cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kYellow(""),
+                 ansi::kCircle("Y"), ansi::kReset(""), 100 * net_value(c4::kYellow),
+                 100 * win_rates(c4::kYellow));
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
+  cx += snprintf(buffer + cx, buf_size - cx, "%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
 
   for (int i = 0; i < c4::kNumColumns; ++i) {
     if (valid_actions[i]) {
-      printf("%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i), mcts_counts(i), action_policy(i));
+      cx += snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i),
+                     mcts_counts(i), action_policy(i));
     } else {
-      printf("%3d\n", i + 1);
+      cx += snprintf(buffer + cx, buf_size - cx, "%3d\n", i + 1);
     }
   }
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
-void Game::IO::print_row(const BaseState& base, row_t row, column_t blink_column) {
+int Game::IO::print_row(char* buf, int n, const BaseState& base, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(base);
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
+
+  int cx = 0;
 
   for (int col = 0; col < kNumColumns; ++col) {
     int index = _to_bit_index(row, col);
@@ -128,11 +146,12 @@ void Game::IO::print_row(const BaseState& base, row_t row, column_t blink_column
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle("") : " ";
 
-    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c,
-           occupied ? ansi::kReset("") : "");
+    cx += snprintf(buf + cx, n - cx, "|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "",
+                   color, c, occupied ? ansi::kReset("") : "");
   }
 
-  printf("|\n");
+  cx += snprintf(buf + cx, n - cx, "|\n");
+  return cx;
 }
 
 }  // namespace c4

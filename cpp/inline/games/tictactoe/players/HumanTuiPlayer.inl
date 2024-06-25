@@ -21,7 +21,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState& state,
 }
 
 inline void HumanTuiPlayer::print_state(const FullState& state, bool terminal) {
-  Game::IO::print_state(state, last_action_, &this->get_player_names());
+  Game::IO::print_state(std::cout, state, last_action_, &this->get_player_names());
 }
 
 }  // namespace tictactoe

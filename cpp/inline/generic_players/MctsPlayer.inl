@@ -146,7 +146,7 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
     }
     verbose_dump();
     if (!facing_human_tui_player_) {
-      IO::print_state(state, action, &this->get_player_names());
+      IO::print_state(std::cout, state, action, &this->get_player_names());
     }
   }
 }
@@ -244,8 +244,7 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   const auto& mcts_results = verbose_info_->mcts_results;
 
   printf("CPU pos eval:\n");
-  IO::print_mcts_results(action_policy, mcts_results);
-  std::cout << std::endl;
+  IO::print_mcts_results(std::cout, action_policy, mcts_results);
 }
 
 }  // namespace generic

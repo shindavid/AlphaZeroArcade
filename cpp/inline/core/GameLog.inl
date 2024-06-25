@@ -140,7 +140,7 @@ void GameLog<Game>::replay() const {
   for (int i = 0; i < n; ++i) {
     const BaseState* pos = get_state(i);
     action_t last_action = get_prev_action(i);
-    Game::IO::print_state(*pos, last_action);
+    Game::IO::print_state(std::cout, *pos, last_action);
     if (i < n - 1) {
       PolicyTensor policy = get_policy(i);
       std::cout << "Policy: " << policy << std::endl;

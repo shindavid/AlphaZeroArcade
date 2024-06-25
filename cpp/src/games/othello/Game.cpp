@@ -63,7 +63,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
   return valid_actions;
 }
 
-void Game::IO::print_state(const BaseState& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   Types::ActionMask valid_actions = Rules::get_legal_moves(state);
   bool display_last_action = last_action >= 0;
@@ -73,47 +73,59 @@ void Game::IO::print_state(const BaseState& state, core::action_t last_action,
     blink_row = last_action / kBoardDimension;
     blink_col = last_action % kBoardDimension;
   }
+
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
   if (!util::tty_mode() && display_last_action) {
     std::string s(2 * blink_col + 3, ' ');
-    printf("%sx\n", s.c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "%sx\n", s.c_str());
   }
-  printf("   A B C D E F G H\n");
+  cx += snprintf(buffer + cx, buf_size - cx, "   A B C D E F G H\n");
   for (int row = 0; row < kBoardDimension; ++row) {
-    print_row(state, valid_actions, row, row == blink_row ? blink_col : -1);
+    cx += print_row(buffer + cx, buf_size - cx, state, valid_actions, row,
+                    row == blink_row ? blink_col : -1);
   }
-  std::cout << std::endl;
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
   int opponent_disc_count = std::popcount(state.opponent_mask);
   int cur_player_disc_count = std::popcount(state.cur_player_mask);
 
   int black_disc_count = state.cur_player == kBlack ? cur_player_disc_count : opponent_disc_count;
   int white_disc_count = state.cur_player == kWhite ? cur_player_disc_count : opponent_disc_count;
 
-  printf("Score: Player\n");
-  printf("%5d: %s%s%s", black_disc_count, ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""));
+  cx += snprintf(buffer + cx, buf_size - cx, "Score: Player\n");
+  cx += snprintf(buffer + cx, buf_size - cx, "%5d: %s%s%s", black_disc_count, ansi::kBlue(""),
+                 ansi::kCircle("*"), ansi::kReset(""));
   if (player_names) {
-    printf(" [%s]", (*player_names)[kBlack].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, " [%s]", (*player_names)[kBlack].c_str());
   }
-  printf("\n");
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
-  printf("%5d: %s%s%s", white_disc_count, ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""));
+  cx += snprintf(buffer + cx, buf_size - cx, "%5d: %s%s%s", white_disc_count, ansi::kWhite(""),
+                 ansi::kCircle("0"), ansi::kReset(""));
   if (player_names) {
-    printf(" [%s]", (*player_names)[kWhite].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, " [%s]", (*player_names)[kWhite].c_str());
   }
-  printf("\n");
-  std::cout << std::endl;
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
-void Game::IO::print_row(const BaseState& state, const Types::ActionMask& valid_actions, row_t row,
-                         column_t blink_column) {
+int Game::IO::print_row(char* buf, int n, const BaseState& state,
+                        const Types::ActionMask& valid_actions, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
+
+  int cx = 0;
 
   char prefix = ' ';
   if (!util::tty_mode() && blink_column >= 0) {
     prefix = 'x';
   }
-  printf("%c%d", prefix, (int)(row + 1));
+  cx += snprintf(buf + cx, n - cx, "%c%d", prefix, (int)(row + 1));
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
     bool valid = valid_actions[index];
@@ -125,11 +137,12 @@ void Game::IO::print_row(const BaseState& state, const Types::ActionMask& valid_
         occupied_by_cur_player ? cur_color : (occupied_by_opp_player ? opp_color : "");
     const char* c = occupied ? ansi::kCircle("") : (valid ? "." : " ");
 
-    printf("|%s%s%s%s", col == blink_column ? ansi::kBlink("") : "", color, c,
-           occupied ? ansi::kReset("") : "");
+    cx += snprintf(buf + cx, n - cx, "|%s%s%s%s", color, c,
+                   col == blink_column ? ansi::kBlink("") : "", occupied ? ansi::kReset("") : "");
   }
 
-  printf("|\n");
+  cx += snprintf(buf + cx, n - cx, "|%s\n", ansi::kReset(""));
+  return cx;
 }
 
 Game::Types::ValueArray Game::Rules::compute_outcome(const FullState& state) {
@@ -149,7 +162,7 @@ Game::Types::ValueArray Game::Rules::compute_outcome(const FullState& state) {
   return outcome;
 }
 
-void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
+void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -157,11 +170,17 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""), ansi::kCircle("*"), ansi::kReset(""),
-         100 * net_value(othello::kBlack), 100 * win_rates(othello::kBlack));
-  printf("%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""), ansi::kCircle("0"), ansi::kReset(""),
-         100 * net_value(othello::kWhite), 100 * win_rates(othello::kWhite));
-  printf("\n");
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
+  cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""),
+                 ansi::kCircle("*"), ansi::kReset(""), 100 * net_value(othello::kBlack),
+                 100 * win_rates(othello::kBlack));
+  cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""),
+                 ansi::kCircle("0"), ansi::kReset(""), 100 * net_value(othello::kWhite),
+                 100 * win_rates(othello::kWhite));
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
   auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
   using tuple_t = decltype(tuple0);
@@ -180,7 +199,7 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
 
   int num_rows = 10;
   int num_actions = i;
-  printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
+  cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
   for (i = 0; i < std::min(num_rows, num_actions); ++i) {
     const auto& tuple = tuples[i];
 
@@ -190,16 +209,21 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
     int action = std::get<3>(tuple);
 
     if (action == othello::kPass) {
-      printf("%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count, action_p);
+      cx += snprintf(buffer + cx, buf_size - cx, "%4s %8.3f %8.3f %8.3f\n", "Pass", net_p, count,
+                     action_p);
     } else {
       int row = action / othello::kBoardDimension;
       int col = action % othello::kBoardDimension;
-      printf("  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1, net_p, count, action_p);
+      cx += snprintf(buffer + cx, buf_size - cx, "  %c%d %8.3f %8.3f %8.3f\n", 'A' + col, row + 1,
+                     net_p, count, action_p);
     }
   }
   for (i = num_actions; i < num_rows; ++i) {
-    printf("\n");
+    cx += snprintf(buffer + cx, buf_size - cx, "\n");
   }
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
 }  // namespace othello

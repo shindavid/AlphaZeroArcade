@@ -62,7 +62,7 @@ inline void HumanTuiPlayer<Game>::end_game(const FullState& state, const ValueAr
 
 template <core::concepts::Game Game>
 inline void HumanTuiPlayer<Game>::print_state(const FullState& state, bool terminal) {
-  IO::print_state(state, last_action_, &this->get_player_names());
+  IO::print_state(std::cout, state, last_action_, &this->get_player_names());
 }
 
 }  // namespace generic

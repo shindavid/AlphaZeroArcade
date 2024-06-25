@@ -45,7 +45,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
   return mask;
 }
 
-void Game::IO::print_state(const BaseState& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   auto cp = Rules::get_current_player(state);
   mask_t opp_player_mask = state.opponent_mask();
@@ -67,16 +67,22 @@ void Game::IO::print_state(const BaseState& state, core::action_t last_action,
     }
   }
 
-  printf("%s\n", text);
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
+  cx += snprintf(buffer + cx, buf_size - cx, "%s\n", text);
 
   if (player_names) {
-    printf("X: %s\n", (*player_names)[kX].c_str());
-    printf("O: %s\n\n", (*player_names)[kO].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "X: %s\n", (*player_names)[kX].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "O: %s\n\n", (*player_names)[kO].c_str());
   }
-  std::cout.flush();
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
+void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = results.valid_actions;
   const auto& mcts_counts = results.counts;
@@ -84,24 +90,34 @@ void Game::IO::print_mcts_results(const Types::PolicyTensor& action_policy,
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  printf("X: %6.3f%% -> %6.3f%%\n", 100 * net_value(tictactoe::kX), 100 * win_rates(tictactoe::kO));
-  printf("O: %6.3f%% -> %6.3f%%\n", 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kX));
-  printf("\n");
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
 
-  printf("%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
+  cx += snprintf(buffer + cx, buf_size - cx, "X: %6.3f%% -> %6.3f%%\n",
+                 100 * net_value(tictactoe::kX), 100 * win_rates(tictactoe::kO));
+  cx += snprintf(buffer + cx, buf_size - cx, "O: %6.3f%% -> %6.3f%%\n",
+                 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kX));
+  cx += snprintf(buffer + cx, buf_size - cx, "\n");
+
+  cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
   int j = 0;
   for (int i = 0; i < tictactoe::kNumCells; ++i) {
     if (valid_actions[i]) {
       float count = mcts_counts(i);
       auto action_p = action_policy(i);
       auto net_p = net_policy(i);
-      printf("   %d %8.3f %8.3f %8.3f\n", i, net_p, count, action_p);
+      cx += snprintf(buffer + cx, buf_size - cx, "   %d %8.3f %8.3f %8.3f\n", i, net_p, count,
+                     action_p);
       ++j;
     }
   }
   for (; j < tictactoe::kNumCells; ++j) {
-    printf("\n");
+    cx += snprintf(buffer + cx, buf_size - cx, "\n");
   }
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  ss << buffer << std::endl;
 }
 
 }  // namespace tictactoe
