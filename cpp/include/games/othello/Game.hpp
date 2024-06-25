@@ -54,7 +54,7 @@ class Game {
 
   using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
 
-  struct Rot90 : public core::Transform<BaseState, Types::PolicyTensor> {
+  struct Rot90Clockwise : public core::Transform<BaseState, Types::PolicyTensor> {
     void apply(BaseState& pos) override;
     void undo(BaseState& pos) override;
     void apply(Types::PolicyTensor& policy) override;
@@ -66,7 +66,7 @@ class Game {
     void apply(Types::PolicyTensor& policy) override;
   };
 
-  struct Rot270 : public core::Transform<BaseState, Types::PolicyTensor> {
+  struct Rot270Clockwise : public core::Transform<BaseState, Types::PolicyTensor> {
     void apply(BaseState& pos) override;
     void undo(BaseState& pos) override;
     void apply(Types::PolicyTensor& policy) override;
@@ -93,8 +93,8 @@ class Game {
     void apply(Types::PolicyTensor& policy) override;
   };
 
-  using TransformList = mp::TypeList<Identity, Rot90, Rot180, Rot270, FlipVertical,
-                                     MirrorHorizontal, FlipMainDiag, FlipAntiDiag>;
+  using TransformList = mp::TypeList<Identity, Rot90Clockwise, Rot180, Rot270Clockwise,
+                                     FlipVertical, MirrorHorizontal, FlipMainDiag, FlipAntiDiag>;
 
   struct Rules {
     static Types::ActionMask get_legal_moves(const FullState& state);

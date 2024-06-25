@@ -19,24 +19,7 @@ inline void mirror_horizontal(uint64_t& mask) {
   x = ((x >> 4) & k4) | ((x & k4) << 4);
 }
 
-// in chessprogramming.org link, this is called flipDiagA8H1
 inline void flip_main_diag(uint64_t& mask) {
-  uint64_t t;
-  constexpr uint64_t k1 = 0xaa00aa00aa00aa00UL;
-  constexpr uint64_t k2 = 0xcccc0000cccc0000UL;
-  constexpr uint64_t k4 = 0xf0f0f0f00f0f0f0fUL;
-
-  uint64_t& x = mask;
-  t = x ^ (x << 36);
-  x ^= k4 & (t ^ (x >> 36));
-  t = k2 & (x ^ (x << 18));
-  x ^= t ^ (t >> 18);
-  t = k1 & (x ^ (x << 9));
-  x ^= t ^ (t >> 9);
-}
-
-// in chessprogramming.org link, this is called flipDiagA1H8
-inline void flip_anti_diag(uint64_t& mask) {
   uint64_t t;
   constexpr uint64_t k1 = 0x5500550055005500UL;
   constexpr uint64_t k2 = 0x3333000033330000UL;
@@ -51,9 +34,24 @@ inline void flip_anti_diag(uint64_t& mask) {
   x ^= t ^ (t >> 7);
 }
 
+inline void flip_anti_diag(uint64_t& mask) {
+  uint64_t t;
+  constexpr uint64_t k1 = 0xaa00aa00aa00aa00UL;
+  constexpr uint64_t k2 = 0xcccc0000cccc0000UL;
+  constexpr uint64_t k4 = 0xf0f0f0f00f0f0f0fUL;
+
+  uint64_t& x = mask;
+  t = x ^ (x << 36);
+  x ^= k4 & (t ^ (x >> 36));
+  t = k2 & (x ^ (x << 18));
+  x ^= t ^ (t >> 18);
+  t = k1 & (x ^ (x << 9));
+  x ^= t ^ (t >> 9);
+}
+
 inline void rot90_clockwise(uint64_t& mask) {
-  flip_anti_diag(mask);
   flip_vertical(mask);
+  flip_main_diag(mask);
 }
 
 inline void rot180(uint64_t& mask) {

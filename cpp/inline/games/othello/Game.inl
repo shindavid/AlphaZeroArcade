@@ -17,21 +17,21 @@ inline size_t Game::BaseState::hash() const {
   return util::tuple_hash(std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count));
 }
 
-inline void Game::Rot90::apply(BaseState& state) {
+inline void Game::Rot90Clockwise::apply(BaseState& state) {
   bitmap_util::rot90_clockwise(state.cur_player_mask);
   bitmap_util::rot90_clockwise(state.opponent_mask);
 }
 
-inline void Game::Rot90::undo(BaseState& state) {
+inline void Game::Rot90Clockwise::undo(BaseState& state) {
   bitmap_util::rot270_clockwise(state.cur_player_mask);
   bitmap_util::rot270_clockwise(state.opponent_mask);
 }
 
-inline void Game::Rot90::apply(Types::PolicyTensor& tensor) {
+inline void Game::Rot90Clockwise::apply(Types::PolicyTensor& tensor) {
   eigen_util::rot90_clockwise<kBoardDimension>(tensor);
 }
 
-inline void Game::Rot90::undo(Types::PolicyTensor& tensor) {
+inline void Game::Rot90Clockwise::undo(Types::PolicyTensor& tensor) {
   eigen_util::rot270_clockwise<kBoardDimension>(tensor);
 }
 
@@ -44,21 +44,21 @@ inline void Game::Rot180::apply(Types::PolicyTensor& tensor) {
   eigen_util::rot180<kBoardDimension>(tensor);
 }
 
-inline void Game::Rot270::apply(BaseState& state) {
+inline void Game::Rot270Clockwise::apply(BaseState& state) {
   bitmap_util::rot270_clockwise(state.cur_player_mask);
   bitmap_util::rot270_clockwise(state.opponent_mask);
 }
 
-inline void Game::Rot270::undo(BaseState& state) {
+inline void Game::Rot270Clockwise::undo(BaseState& state) {
   bitmap_util::rot90_clockwise(state.cur_player_mask);
   bitmap_util::rot90_clockwise(state.opponent_mask);
 }
 
-inline void Game::Rot270::apply(Types::PolicyTensor& tensor) {
+inline void Game::Rot270Clockwise::apply(Types::PolicyTensor& tensor) {
   eigen_util::rot270_clockwise<kBoardDimension>(tensor);
 }
 
-inline void Game::Rot270::undo(Types::PolicyTensor& tensor) {
+inline void Game::Rot270Clockwise::undo(Types::PolicyTensor& tensor) {
   eigen_util::rot90_clockwise<kBoardDimension>(tensor);
 }
 
