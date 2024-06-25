@@ -4,7 +4,7 @@ from .params import LoopControllerParams
 
 from alphazero.logic.custom_types import ClientConnection, DisconnectHandler, Generation, GpuId, \
     MsgHandler, ShutdownAction
-from alphazero.logic.training_params import TrainingParams
+from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
 from util.sqlite3_util import DatabaseConnectionPool

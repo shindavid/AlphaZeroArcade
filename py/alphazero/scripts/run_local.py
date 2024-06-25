@@ -18,7 +18,7 @@ If the local machine does not have enough GPU's to dedicate one to each server, 
 share the GPU's, managing contention via GpuContentionManager.
 """
 from alphazero.logic.run_params import RunParams
-from alphazero.logic.training_params import TrainingParams
+from shared.training_params import TrainingParams
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams

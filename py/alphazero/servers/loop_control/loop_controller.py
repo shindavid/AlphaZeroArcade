@@ -15,7 +15,7 @@ from alphazero.logic.custom_types import ClientConnection, ClientRole, Disconnec
     Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.run_params import RunParams
 from alphazero.logic.shutdown_manager import ShutdownManager
-from alphazero.logic.training_params import TrainingParams
+from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
