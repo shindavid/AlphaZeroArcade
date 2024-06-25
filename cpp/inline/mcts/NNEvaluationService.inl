@@ -578,6 +578,9 @@ bool NNEvaluationService<Game>::wait_for_first_reservation() {
     LOG_INFO << "<---------------------- " << cls << " " << func << "(" << batch_metadata_.repr()
              << ") ---------------------->";
   }
+
+  // Without the deadline, we can end up deadlocking here if the loop-controller issues a pause
+  // command while we're waiting for the first reservation.
   auto deadline = now + std::chrono::milliseconds(100);
   cv_service_loop_.wait_until(lock, deadline, [&] {
     if (batch_metadata_.reserve_index > 0) return true;
