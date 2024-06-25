@@ -11,6 +11,7 @@ from bokeh.models import BasicTickFormatter, ColumnDataSource, CustomJSTickForma
 from bokeh.plotting import figure
 import pandas as pd
 
+from collections import defaultdict
 from dataclasses import dataclass
 import sqlite3
 from typing import List
@@ -18,42 +19,55 @@ from typing import List
 
 @dataclass
 class XVar:
+    db_filename_attr: str
+    table: str
     label: str
     df_col: str
     sql_select_str: str
 
 
 X_VARS = [
-    XVar('Generation', 'mcts_gen', 'timestamps.gen'),
-    XVar('Games', 'n_games', 'games'),
-    XVar('Self-Play Runtime (sec)', 'runtime', 'end_timestamp - start_timestamp'),
-    XVar('Num Evaluated Positions', 'n_evaluated_positions', 'positions_evaluated'),
-    XVar('Num Evaluated Batches', 'n_batches_evaluated', 'batches_evaluated'),
+    XVar('training_db_filename', 'training', 'Train Time (sec)',
+         'train_time', 'training_end_ts - training_start_ts'),
+    XVar('self_play_db_filename', 'timestamps', 'Generation', 'mcts_gen', 'gen'),
+    XVar('self_play_db_filename', 'self_play_metadata', 'Games', 'n_games', 'games'),
+    XVar('self_play_db_filename', 'timestamps', 'Self-Play Runtime (sec)',
+         'runtime', 'end_timestamp - start_timestamp'),
+    XVar('self_play_db_filename', 'self_play_metadata', 'Num Evaluated Positions',
+         'n_evaluated_positions', 'positions_evaluated'),
+    XVar('self_play_db_filename', 'self_play_metadata', 'Num Evaluated Batches',
+         'n_batches_evaluated', 'batches_evaluated'),
     ]
 
 
 def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
-    select_str = ', '.join([x_var.sql_select_str for x_var in X_VARS])
-    query = f'SELECT {select_str} FROM self_play_metadata JOIN timestamps USING (gen)'
-    conn = sqlite3.connect(organizer.self_play_db_filename)
-    cursor = conn.cursor()
-    values = cursor.execute(query).fetchall()
-    conn.close()
+    x_var_dict = defaultdict(lambda: defaultdict(list))  # filename -> table -> XVar
+    for x_var in X_VARS:
+        x_var_dict[x_var.db_filename_attr][x_var.table].append(x_var)
 
-    columns = [x_var.df_col for x_var in X_VARS]
-    x_df = pd.DataFrame(values, columns=columns).set_index('mcts_gen')
+    full_x_df = pd.DataFrame()
+    for db_filename_attr, subdict in x_var_dict.items():
+        db_filename = getattr(organizer, db_filename_attr)
+        conn = sqlite3.connect(db_filename)
+        cursor = conn.cursor()
+        for table, x_vars in subdict.items():
+            select_str = ', '.join([x_var.sql_select_str for x_var in x_vars])
+            query = f'SELECT {select_str} FROM {table}'
+            values = cursor.execute(query).fetchall()
+            columns = [x_var.df_col for x_var in x_vars]
+            x_df = pd.DataFrame(values, columns=columns)
+            full_x_df = pd.concat([full_x_df, x_df], axis=1)
+        conn.close()
 
-    if len(x_df['runtime']) > 0:
-        # Earlier versions stored runtimes in sec, not ns. This heuristic corrects the
-        # earlier versions to ns.
-        ts = max(x_df['runtime'])
-        if ts > 1e9:
-            x_df['runtime'] *= 1e-9  # ns -> sec
+    full_x_df = full_x_df.set_index('mcts_gen')
 
-    for col in x_df:
-        x_df[col] = x_df[col].cumsum()
+    full_x_df['train_time'] *= 1e-9  # convert nanoseconds to seconds
+    full_x_df['runtime'] *= 1e-9  # convert nanoseconds to seconds
 
-    return x_df
+    for col in full_x_df:
+        full_x_df[col] = full_x_df[col].cumsum()
+
+    return full_x_df
 
 
 class XVarSelector:
@@ -152,7 +166,7 @@ class XVarSelector:
                 plot.x_range.start = x_min + start_pct * x_width
                 plot.x_range.end = x_min + end_pct * x_width
 
-            if x_col == 'runtime':
+            if x_col in ('runtime', 'train_time'):
                 plot.xaxis.formatter = CustomJSTickFormatter(code="""
                     var total_seconds = tick;
                     var days = Math.floor(total_seconds / 86400);
