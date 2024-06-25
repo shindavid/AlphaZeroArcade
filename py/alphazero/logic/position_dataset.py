@@ -16,7 +16,7 @@ This module provides a class, GamesDatasetGenerator, that tracks the master sequ
 produces GamesDataset objects, which correspond to a window W of M.
 """
 from alphazero.logic.game_log_reader import GameLogReader
-from net_modules import ShapeInfo
+from shared.net_modules import ShapeInfo
 
 import numpy as np
 import os

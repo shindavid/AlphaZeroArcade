@@ -2,7 +2,7 @@ import abc
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from net_modules import ModelConfigGenerator
+from shared.net_modules import ModelConfigGenerator
 
 
 @dataclass

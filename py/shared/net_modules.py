@@ -26,7 +26,7 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
+from shared.learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 

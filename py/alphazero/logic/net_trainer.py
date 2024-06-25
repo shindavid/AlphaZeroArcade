@@ -4,7 +4,7 @@ from torch import optim
 
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.position_dataset import PositionDataset
-from net_modules import Head, Model
+from shared.net_modules import Head, Model
 from util.torch_util import apply_mask
 
 

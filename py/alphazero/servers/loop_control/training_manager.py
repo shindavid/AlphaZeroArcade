@@ -6,7 +6,7 @@ from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
 from alphazero.logic.position_dataset import PositionDataset, PositionListSlice
 from alphazero.logic.sample_window_logic import Window, construct_window, get_required_dataset_size
-from net_modules import Model
+from shared.net_modules import Model
 from util.logging_util import get_logger
 from util.py_util import make_hidden_filename
 

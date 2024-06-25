@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
+from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 
 from typing import Dict
 

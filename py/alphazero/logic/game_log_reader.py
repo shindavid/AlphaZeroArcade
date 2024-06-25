@@ -1,5 +1,5 @@
 from games.game_spec import GameSpec
-from net_modules import ShapeInfo, ShapeInfoDict
+from shared.net_modules import ShapeInfo, ShapeInfoDict
 from util.logging_util import get_logger
 from util.repo_util import Repo
 
