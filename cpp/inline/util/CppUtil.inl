@@ -28,6 +28,21 @@ struct TupleHasher {
 
 }  // namespace detail
 
+// https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#By_90_degrees_Clockwise
+inline void bitmask_rot90(uint64_t& s) {
+  uint64_t t = (((s >> 3) | (s << 3)) & 63) ^ 56;
+  s = ((t * 0x20800000) >> 26) ^ 56; // unsigned 32-bit shift
+}
+
+// https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#By_180_degrees_-_Bit-Reversal
+inline void bitmask_rot180(uint64_t& s) { s = s ^ 63; }
+
+// https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating#By_90_degrees_Anti-Clockwise
+inline void bitmask_rot270(uint64_t& s) {
+  uint64_t t = (((s >> 3) | (s << 3)) & 63) ^ 7;
+  s = ((t * 0x20800000) >> 26) ^ 7;  // unsigned 32-bit shift
+}
+
 template <typename TimePoint>
 int64_t ns_since_epoch(const TimePoint& t) {
   return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();

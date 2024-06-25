@@ -7,14 +7,95 @@
 #include <boost/lexical_cast.hpp>
 
 #include <util/AnsiCodes.hpp>
+#include <util/BitMapUtil.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
-
 
 namespace othello {
 
 inline size_t Game::BaseState::hash() const {
   return util::tuple_hash(std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count));
+}
+
+inline void Game::Rot90::apply(BaseState& state) {
+  bitmap_util::rot90_clockwise(state.cur_player_mask);
+  bitmap_util::rot90_clockwise(state.opponent_mask);
+}
+
+inline void Game::Rot90::undo(BaseState& state) {
+  bitmap_util::rot270_clockwise(state.cur_player_mask);
+  bitmap_util::rot270_clockwise(state.opponent_mask);
+}
+
+inline void Game::Rot90::apply(Types::PolicyTensor& tensor) {
+  eigen_util::rot90_clockwise<kBoardDimension>(tensor);
+}
+
+inline void Game::Rot90::undo(Types::PolicyTensor& tensor) {
+  eigen_util::rot270_clockwise<kBoardDimension>(tensor);
+}
+
+inline void Game::Rot180::apply(BaseState& state) {
+  bitmap_util::rot180(state.cur_player_mask);
+  bitmap_util::rot180(state.opponent_mask);
+}
+
+inline void Game::Rot180::apply(Types::PolicyTensor& tensor) {
+  eigen_util::rot180<kBoardDimension>(tensor);
+}
+
+inline void Game::Rot270::apply(BaseState& state) {
+  bitmap_util::rot270_clockwise(state.cur_player_mask);
+  bitmap_util::rot270_clockwise(state.opponent_mask);
+}
+
+inline void Game::Rot270::undo(BaseState& state) {
+  bitmap_util::rot90_clockwise(state.cur_player_mask);
+  bitmap_util::rot90_clockwise(state.opponent_mask);
+}
+
+inline void Game::Rot270::apply(Types::PolicyTensor& tensor) {
+  eigen_util::rot270_clockwise<kBoardDimension>(tensor);
+}
+
+inline void Game::Rot270::undo(Types::PolicyTensor& tensor) {
+  eigen_util::rot90_clockwise<kBoardDimension>(tensor);
+}
+
+inline void Game::FlipVertical::apply(BaseState& state) {
+  bitmap_util::flip_vertical(state.cur_player_mask);
+  bitmap_util::flip_vertical(state.opponent_mask);
+}
+
+inline void Game::FlipVertical::apply(Types::PolicyTensor& tensor) {
+  eigen_util::flip_vertical<kBoardDimension>(tensor);
+}
+
+inline void Game::MirrorHorizontal::apply(BaseState& state) {
+  bitmap_util::mirror_horizontal(state.cur_player_mask);
+  bitmap_util::mirror_horizontal(state.opponent_mask);
+}
+
+inline void Game::MirrorHorizontal::apply(Types::PolicyTensor& tensor) {
+  eigen_util::mirror_horizontal<kBoardDimension>(tensor);
+}
+
+inline void Game::FlipMainDiag::apply(BaseState& state) {
+  bitmap_util::flip_main_diag(state.cur_player_mask);
+  bitmap_util::flip_main_diag(state.opponent_mask);
+}
+
+inline void Game::FlipMainDiag::apply(Types::PolicyTensor& tensor) {
+  eigen_util::flip_main_diag<kBoardDimension>(tensor);
+}
+
+inline void Game::FlipAntiDiag::apply(BaseState& state) {
+  bitmap_util::flip_anti_diag(state.cur_player_mask);
+  bitmap_util::flip_anti_diag(state.opponent_mask);
+}
+
+inline void Game::FlipAntiDiag::apply(Types::PolicyTensor& tensor) {
+  eigen_util::flip_anti_diag<kBoardDimension>(tensor);
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {

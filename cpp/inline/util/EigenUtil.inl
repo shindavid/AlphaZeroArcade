@@ -169,6 +169,70 @@ void right_rotate(Array& array, int n) {
   std::rotate(data, data + N - n, data + N);
 }
 
+namespace detail {
+
+template <int Dim, concepts::FTensor Tensor>
+struct MatrixSlice {
+  static_assert(Dim * Dim <= extract_shape_t<Tensor>::total_size, "Tensor is too small");
+  using type = Eigen::Map<
+      Eigen::Matrix<typename Tensor::Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
+};
+
+template <int Dim, concepts::FTensor Tensor>
+using MatrixSlice_t = typename MatrixSlice<Dim, Tensor>::type;
+
+}  // namespace detail
+
+template <int Dim, concepts::FTensor Tensor>
+void rot90_clockwise(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.transposeInPlace();
+  slice.rowwise().reverseInPlace();
+}
+
+template <int Dim, concepts::FTensor Tensor>
+void rot180(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.rowwise().reverseInPlace();
+  slice.colwise().reverseInPlace();
+}
+
+template <int Dim, concepts::FTensor Tensor>
+void rot270_clockwise(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.transposeInPlace();
+  slice.colwise().reverseInPlace();
+}
+
+template<int Dim, concepts::FTensor Tensor> void flip_vertical(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.colwise().reverseInPlace();
+}
+
+template<int Dim, concepts::FTensor Tensor> void mirror_horizontal(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.rowwise().reverseInPlace();
+}
+
+template<int Dim, concepts::FTensor Tensor> void flip_main_diag(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.transposeInPlace();
+}
+
+template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor) {
+  using MatrixSlice = detail::MatrixSlice_t<Dim, Tensor>;
+  MatrixSlice slice(tensor.data());
+  slice.transposeInPlace();
+  slice.rowwise().reverseInPlace();
+  slice.colwise().reverseInPlace();
+}
+
 template <concepts::FTensor Tensor>
 uint64_t hash(const Tensor& tensor) {
   using Scalar = Tensor::Scalar;

@@ -33,7 +33,7 @@ class Game {
     static constexpr int kNumActions = othello::kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
     static constexpr int kHistorySize = 0;
-    static constexpr int kNumSymmetries = 1;  // TODO: add other symmetries
+    static constexpr int kNumSymmetries = 8;
   };
 
   struct BaseState {
@@ -52,7 +52,47 @@ class Game {
 
   using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
 
-  using TransformList = mp::TypeList<Identity>;  // TODO: add other symmetries
+  struct Rot90 : public core::Transform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void undo(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+    void undo(Types::PolicyTensor& policy) override;
+  };
+
+  struct Rot180 : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+  };
+
+  struct Rot270 : public core::Transform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void undo(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+    void undo(Types::PolicyTensor& policy) override;
+  };
+
+  struct FlipVertical : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+  };
+
+  struct MirrorHorizontal : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+  };
+
+  struct FlipMainDiag : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+  };
+
+  struct FlipAntiDiag : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
+    void apply(BaseState& pos) override;
+    void apply(Types::PolicyTensor& policy) override;
+  };
+
+  using TransformList = mp::TypeList<Identity, Rot90, Rot180, Rot270, FlipVertical,
+                                     MirrorHorizontal, FlipMainDiag, FlipAntiDiag>;
 
   struct Rules {
     static Types::ActionMask get_legal_moves(const FullState& state);

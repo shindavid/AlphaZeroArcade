@@ -284,7 +284,39 @@ template <concepts::FTensor Tensor> int count(const Tensor& tensor);
 template <concepts::FArray Array> void left_rotate(Array& array, int n);
 template <concepts::FArray Array> void right_rotate(Array& array, int n);
 
-template <concepts::FTensor Tensor> uint64_t hash(const Tensor& tensor);
+/*
+ * The below functions all accept a flat 1D tensor as input, and interpret the first Dim**2
+ * elements as entries of a square Dim x Dim board using row-major order. For Dim=8, this looks like
+ * this:
+ *
+ *  0  1  2  3  4  5  6  7
+ *  8  9 10 11 12 13 14 15
+ * 16 17 18 19 20 21 22 23
+ * 24 25 26 27 28 29 30 31
+ * 32 33 34 35 36 37 38 39
+ * 40 41 42 43 44 45 46 47
+ * 48 49 50 51 52 53 54 55
+ * 56 57 58 59 60 61 62 63
+ *
+ * Each function does an in-place transformation of the input tensor.
+ *
+ * In the function names, "main diagonal" refers to the diagonal from the top-left to the
+ * bottom-right, and "anti-diagonal" refers to the diagonal from the top-right to the bottom-left.
+ *
+ * Implementations are based on:
+ *
+ * https://stackoverflow.com/a/8664879/543913
+ */
+template<int Dim, concepts::FTensor Tensor> void rot90_clockwise(Tensor& tensor);
+template<int Dim, concepts::FTensor Tensor> void rot180(Tensor& tensor);
+template<int Dim, concepts::FTensor Tensor> void rot270_clockwise(Tensor& tensor);
+template<int Dim, concepts::FTensor Tensor> void flip_vertical(Tensor& tensor);
+template<int Dim, concepts::FTensor Tensor> void mirror_horizontal(Tensor& tensor);
+template<int Dim, concepts::FTensor Tensor> void flip_main_diag(Tensor& tensor);
+template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor);
+
+template <concepts::FTensor Tensor>
+uint64_t hash(const Tensor& tensor);
 
 }  // namespace eigen_util
 
