@@ -3,6 +3,7 @@ import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
+from shared.training_params import TrainingParams
 
 
 BOARD_LENGTH = 3
@@ -60,6 +61,12 @@ class TicTacToeSpec(GameSpec):
         'b7_c32': b7_c32,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
+
+    training_params = TrainingParams(
+        window_size_function_str='fixed(20000)',
+        minibatches_per_epoch=100,
+        minibatch_size=100,
+    )
 
     # Tic-tac-toe is so simple that most nn evals end up hitting the cache. As a result, the
     # binary tends to be CPU-bound, rather than GPU-bound. Using the default parallelism of 256

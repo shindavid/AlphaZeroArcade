@@ -22,6 +22,8 @@ from shared.training_params import TrainingParams
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
+from games.game_spec import GameSpec
+import games.index as game_index
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.repo_util import Repo
 from util import subprocess_util
@@ -74,8 +76,9 @@ class Params:
 def load_args():
     parser = argparse.ArgumentParser()
 
-    RunParams.add_args(parser)
-    TrainingParams.add_args(parser)
+    game_spec: Optional[GameSpec] = RunParams.add_args(parser)
+    default_training_params = None if game_spec is None else game_spec.training_params
+    TrainingParams.add_args(parser, defaults=default_training_params)
     Params.add_args(parser)
     LoggingParams.add_args(parser)
 
@@ -131,6 +134,8 @@ def launch_ratings_server(params_dict, cuda_device: int):
 def launch_loop_controller(params_dict, cuda_device: int):
     params = params_dict['Params']
     run_params = params_dict['RunParams']
+    game_spec = game_index.get_game_spec(run_params.game)
+    default_training_params = game_spec.training_params
     training_params = params_dict['TrainingParams']
     logging_params = params_dict['LoggingParams']
 
@@ -149,7 +154,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
 
     logging_params.add_to_cmd(cmd)
     run_params.add_to_cmd(cmd)
-    training_params.add_to_cmd(cmd)
+    training_params.add_to_cmd(cmd, default_training_params)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching loop controller: {cmd}')

@@ -1,11 +1,11 @@
+from games.game_spec import GameSpec
 import games.index as game_index
 from util.py_util import is_valid_path_component
 
 import argparse
 from dataclasses import dataclass
-import os
 import sys
-from typing import List
+from typing import Optional, List
 
 
 @dataclass
@@ -41,7 +41,11 @@ class RunParams:
             assert is_valid_path_component(self.tag), f'Illegal tag name: {self.tag}'
 
     @staticmethod
-    def add_args(parser: argparse.ArgumentParser, multiple_tags=False):
+    def add_args(parser: argparse.ArgumentParser, multiple_tags=False) -> Optional[GameSpec]:
+        """
+        Returns the game specified in the command line arguments, so that other command-line
+        options can use game-specific defaults.
+        """
         group = parser.add_argument_group('Common options')
 
         game_index.add_parser_argument(group, '-g', '--game')
@@ -49,6 +53,13 @@ class RunParams:
             group.add_argument('-t', '--tag', default='', help='comma-separated tags for this run (e.g. "v1,v2")')
         else:
             group.add_argument('-t', '--tag', default='', help='tag for this run (e.g. "v1")')
+
+        # attempt an early parse to see if -g/--game is specified:
+        sys_args = [a for a in sys.argv[1:] if a not in ('-h', '--help')]
+        args, _ = parser.parse_known_args(sys_args)
+        if args.game:
+            return game_index.get_game_spec(args.game)
+        return None
 
     def add_to_cmd(self, cmd: List[str]):
         cmd.extend([

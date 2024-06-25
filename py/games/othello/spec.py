@@ -3,7 +3,7 @@ import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
-
+from shared.training_params import TrainingParams
 
 BOARD_LENGTH = 8
 NUM_SQUARES = BOARD_LENGTH * BOARD_LENGTH
@@ -94,6 +94,12 @@ class OthelloSpec(GameSpec):
         'b19_c64': b19_c64,
     }
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
+
+    training_params = TrainingParams(
+        window_size_function_str='fixed(300000)',
+        minibatches_per_epoch=500,
+        minibatch_size=100,
+    )
 
     training_player_options = {
         '-r': 4,

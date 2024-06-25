@@ -1,7 +1,7 @@
 import abc
 import argparse
 from dataclasses import dataclass, fields
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 class WindowSizeFunction(abc.ABC):
@@ -147,9 +147,10 @@ class TrainingParams:
         )
 
     @staticmethod
-    def add_args(parser: argparse.ArgumentParser):
-        defaults = TrainingParams()
-        group = parser.add_argument_group('Learning options')
+    def add_args(parser: argparse.ArgumentParser, defaults: Optional['TrainingParams']=None):
+        if defaults is None:
+            defaults = TrainingParams()
+        group = parser.add_argument_group('Learning options (defaults are game-specific)')
 
         valid_functions_str = str(list(VALID_WINDOW_SIZE_FUNCTIONS.keys()))
         group.add_argument('--window-size-function', default=defaults.window_size_function_str,
@@ -169,8 +170,9 @@ class TrainingParams:
         group.add_argument('--learning-rate', type=float, default=defaults.learning_rate,
                            help='learning rate (default: %(default)s)')
 
-    def add_to_cmd(self, cmd: List[str]):
-        defaults = TrainingParams()
+    def add_to_cmd(self, cmd: List[str], defaults: Optional['TrainingParams']=None):
+        if defaults is None:
+            defaults = TrainingParams()
         if self.window_size_function_str != defaults.window_size_function_str:
             cmd.extend(['--window-size-function', self.window_size_function_str])
         if self.target_sample_rate != defaults.target_sample_rate:

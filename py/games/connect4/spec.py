@@ -3,6 +3,7 @@ import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
+from shared.training_params import TrainingParams
 
 from typing import Dict
 
@@ -75,6 +76,12 @@ class Connect4Spec(GameSpec):
         'b7_c64': b7_c64,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
+
+    training_params = TrainingParams(
+        window_size_function_str='fixed(50000)',
+        minibatches_per_epoch=500,
+        minibatch_size=100,
+    )
 
     training_player_options = {
         '-r': 2,

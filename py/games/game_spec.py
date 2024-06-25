@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from shared.net_modules import ModelConfigGenerator
+from shared.training_params import TrainingParams
 
 
 @dataclass
@@ -62,6 +63,14 @@ class GameSpec(abc.ABC):
     def reference_player_family(self) -> Optional[ReferencePlayerFamily]:
         """
         The reference player family for this game, if any.
+        """
+        return None
+
+    @property
+    def training_params(self) -> Optional[TrainingParams]:
+        """
+        Default TrainingParams to use for this game. If not specified, the default uses the
+        default TrainingParams constructor.
         """
         return None
 

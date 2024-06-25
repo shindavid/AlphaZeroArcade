@@ -5,10 +5,12 @@ import argparse
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from alphazero.servers.loop_control.loop_controller import LoopController, LoopControllerParams
+from games.game_spec import GameSpec
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 
 import os
+from typing import Optional
 
 
 logger = get_logger()
@@ -17,9 +19,10 @@ logger = get_logger()
 def load_args():
     parser = argparse.ArgumentParser()
 
-    RunParams.add_args(parser)
+    game_spec: Optional[GameSpec] = RunParams.add_args(parser)
+    default_training_params = None if game_spec is None else game_spec.training_params
     LoopControllerParams.add_args(parser)
-    TrainingParams.add_args(parser)
+    TrainingParams.add_args(parser, defaults=default_training_params)
     LoggingParams.add_args(parser)
 
     return parser.parse_args()
