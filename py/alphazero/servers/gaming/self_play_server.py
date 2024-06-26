@@ -10,7 +10,9 @@ from util import subprocess_util
 
 from dataclasses import dataclass, fields
 import logging
+import subprocess
 import threading
+from typing import Optional
 
 
 logger = get_logger()
@@ -36,6 +38,7 @@ class SelfPlayServer:
         self._shutdown_manager = ShutdownManager()
         self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
         self._running = False
+        self._proc: Optional[subprocess.Popen] = None
 
     def run(self):
         try:
@@ -97,6 +100,8 @@ class SelfPlayServer:
             self._handle_start_gen0(msg)
         elif msg_type == 'start':
             self._handle_start()
+        elif msg_type == 'restart':
+            self._handle_restart()
         elif msg_type == 'quit':
             self._quit()
             return True
@@ -116,6 +121,14 @@ class SelfPlayServer:
     def _handle_start(self):
         thread = threading.Thread(target=self._start, daemon=True, name=f'start')
         thread.start()
+
+    def _handle_restart(self):
+        try:
+            thread = threading.Thread(target=self._restart_helper, daemon=True, name=f'restart')
+            thread.start()
+        except:
+            logger.error(f'Error in restart:', exc_info=True)
+            self._shutdown_manager.request_shutdown(1)
 
     def _quit(self):
         logger.info(f'Received quit command')
@@ -229,6 +242,19 @@ class SelfPlayServer:
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
         proc = subprocess_util.Popen(self_play_cmd)
+        self._proc = proc
         logger.info(f'Running self-play [{proc.pid}]: {self_play_cmd}')
         self._log_forwarder.forward_output('self-play-worker', proc)
-        assert False, 'Should not get here'
+
+    def _restart_helper(self):
+        proc = self._proc
+        assert proc is not None
+
+        logger.info(f'Restarting self-play process')
+        logger.info(f'Killing [{proc.pid}]...')
+        self._log_forwarder.disable_next_returncode_check()
+        self._proc.kill()
+        self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
+        self._running = False
+
+        self._start_helper()

@@ -39,6 +39,10 @@ class LogForwarder:
         self._logging_params = logging_params
         self._socket: Optional[Socket] = None
         self._logging_queue = QueueStream()
+        self._skip_next_returncode_check = False
+
+    def disable_next_returncode_check(self):
+        self._skip_next_returncode_check = True
 
     def set_socket(self, socket: Socket):
         self._socket = socket
@@ -98,6 +102,9 @@ class LogForwarder:
         except SocketSendException:
             pass
 
+        if self._skip_next_returncode_check:
+            self._skip_next_returncode_check = False
+            return
         if proc.returncode:
             logger.error(f'Process failed with return code {proc.returncode}')
             for line in stderr_buffer:

@@ -10,6 +10,7 @@ import logging
 import os
 import sqlite3
 import threading
+import time
 from typing import Dict, Optional
 
 
@@ -222,6 +223,33 @@ class SelfPlayManager:
         }
 
         logger.info(f'Requesting {conn} to launch self-play...')
+        conn.socket.send_json(data)
+
+        thread = threading.Thread(target=self._launch_self_play_restart_loop, args=(conn,),
+                                  daemon=True, name=f'self-play-restart-loop')
+        thread.start()
+
+    def _launch_self_play_restart_loop(self, conn: ClientConnection):
+        """
+        There is currently a memory-leak in the c++ process. I suspect it comes from torchlib,
+        although it's possible that the culprit lies in our code. The leak appears to contribute
+        about 1GB of memory per hour. To mitigate this, we restart the process every hour.
+        """
+        try:
+            while conn.active:
+                time.sleep(3600)  # 1 hour
+                self._restart(conn)
+        except SocketSendException:
+            logger.warn(f'Error sending to {conn} - worker likely disconnected')
+        except:
+            logger.error(f'Unexpected error managing restart loop for {conn}', exc_info=True)
+            self._controller.request_shutdown(1)
+
+    def _restart(self, conn: ClientConnection):
+        logger.info(f'Restarting self-play for {conn}...')
+        data = {
+            'type': 'restart',
+        }
         conn.socket.send_json(data)
 
     def _handle_ready(self, conn: ClientConnection):
