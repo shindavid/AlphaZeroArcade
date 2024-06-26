@@ -312,12 +312,20 @@ class SelfPlayManager:
     def _handle_pause_ack(self, conn: ClientConnection):
         cond = conn.aux['ack_cond']
         with cond:
+            start_ts = conn.aux.get('start_ts', None)
+            if start_ts is not None:
+                elapsed = time.time_ns() - start_ts
+                total_runtime = conn.aux.get('total_runtime', 0)
+                conn.aux['total_runtime'] = total_runtime + elapsed
+                del conn.aux['start_ts']
             conn.aux.pop('pending_pause_ack', None)
             cond.notify_all()
 
     def _handle_unpause_ack(self, conn: ClientConnection):
         cond = conn.aux['ack_cond']
         with cond:
+            if 'start_ts' not in conn.aux:
+                conn.aux['start_ts'] = time.time_ns()
             conn.aux.pop('pending_unpause_ack', None)
             cond.notify_all()
 
@@ -390,12 +398,12 @@ class SelfPlayManager:
         metrics = msg['metrics']
 
         with self._controller.self_play_db_conn_pool.db_lock:
-            conn = self._controller.self_play_db_conn_pool.get_connection()
-            cursor = conn.cursor()
-            n_augmented_positions = self._flush_pending_games(client_id, cursor)
+            db_conn = self._controller.self_play_db_conn_pool.get_connection()
+            cursor = db_conn.cursor()
+            n_augmented_positions = self._flush_pending_games(conn, cursor)
             self._insert_metrics(client_id, gen, timestamp, metrics, cursor)
             cursor.close()
-            conn.commit()
+            db_conn.commit()
         self._controller.handle_new_self_play_positions(n_augmented_positions)
 
     def _handle_game(self, msg, conn: ClientConnection):
@@ -435,7 +443,7 @@ class SelfPlayManager:
             with self._controller.self_play_db_conn_pool.db_lock:
                 db_conn = self._controller.self_play_db_conn_pool.get_connection()
                 cursor = db_conn.cursor()
-                n_augmented_positions = self._flush_pending_games(client_id, cursor)
+                n_augmented_positions = self._flush_pending_games(conn, cursor)
                 if metrics:
                     self._insert_metrics(client_id, gen, end_timestamp, metrics, cursor)
                 cursor.close()
@@ -447,36 +455,17 @@ class SelfPlayManager:
             conn.socket.send_json({'type': 'quit'})
 
     def _flush_pending_games_helper(self, cursor: sqlite3.Cursor, gen: Generation,
-                                    game_data: Dict[Generation, list]):
+                                    n_games: int, n_augmented_positions: int, runtime: int):
         cursor.execute(
             'INSERT OR IGNORE INTO self_play_metadata (gen) VALUES (?)', (gen,))
 
-        game_subdict = defaultdict(list)  # keyed by client_id
-        n_games = 0
-        n_augmented_positions = 0
-        for client_id, start_timestamp, end_timestamp, n_rows in game_data:
-            game_subdict[client_id].append((start_timestamp, end_timestamp))
-            n_games += 1
-            n_augmented_positions += n_rows
-
         cursor.execute("""UPDATE self_play_metadata
                 SET games = games + ?,
-                    augmented_positions = augmented_positions + ?
-                WHERE gen = ?""", (n_games, n_augmented_positions, gen))
+                    augmented_positions = augmented_positions + ?,
+                    runtime = runtime + ?
+                WHERE gen = ?""", (n_games, n_augmented_positions, runtime, gen))
 
-        for client_id, game_subdata in game_subdict.items():
-            start_timestamp = min([x[0] for x in game_subdata])
-            end_timestamp = max([x[1] for x in game_subdata])
-
-            cursor.execute('INSERT OR IGNORE INTO timestamps (gen, client_id, start_timestamp, end_timestamp) VALUES (?, ?, ?, ?)',
-                      (gen, client_id, start_timestamp, end_timestamp))
-            cursor.execute("""UPDATE timestamps
-                    SET start_timestamp = MIN(start_timestamp, ?),
-                        end_timestamp = MAX(end_timestamp, ?)
-                    WHERE gen = ? AND client_id = ?""",
-                      (start_timestamp, end_timestamp, gen, client_id))
-
-    def _flush_pending_games(self, client_id: ClientId, cursor: sqlite3.Cursor):
+    def _flush_pending_games(self, conn: ClientConnection, cursor: sqlite3.Cursor):
         """
         Flushes pending games to the database, and returns the number of augmented positions.
 
@@ -486,20 +475,40 @@ class SelfPlayManager:
         if not self._pending_game_data:
             return 0
 
-        n_augmented_positions = 0
-        game_dict = defaultdict(list)  # keyed by gen
-        for client_id, gen, start_timestamp, end_timestamp, n_rows in self._pending_game_data:
-            n_augmented_positions += n_rows
-            game_dict[gen].append(
-                (client_id, start_timestamp, end_timestamp, n_rows))
+        n_total_augmented_positions = 0
+        n_games_per_gen: Dict[Generation, int] = defaultdict(int)
+        n_augmented_positions_per_gen: Dict[Generation, int] = defaultdict(int)
+        for game_data in self._pending_game_data:
+            gen = game_data[1]
+            n_rows = game_data[4]
+            n_games_per_gen[gen] += 1
+            n_augmented_positions_per_gen[gen] += n_rows
+            n_total_augmented_positions += n_rows
 
-        for gen, game_data in game_dict.items():
-            self._flush_pending_games_helper(cursor, gen, game_data)
+        cond = conn.aux['ack_cond']
+        with cond:
+            conn_gen = conn.aux.get('gen', None)
+            start_ts = conn.aux.get('start_ts', None)
+            total_runtime = conn.aux.get('total_runtime', 0)
+            if start_ts is not None:
+                now = time.time_ns()
+                elapsed = now - start_ts
+                total_runtime += elapsed
+                conn.aux['start_ts'] = now
+
+            if 'total_runtime' in conn.aux:
+                del conn.aux['total_runtime']
+
+        for gen, n_games in n_games_per_gen.items():
+            gen_runtime = total_runtime if gen == conn_gen else 0
+            n_augmented_positions = n_augmented_positions_per_gen[gen]
+            self._flush_pending_games_helper(cursor, gen, n_games, n_augmented_positions,
+                                             gen_runtime)
 
         cursor.executemany('INSERT INTO games (client_id, gen, start_timestamp, end_timestamp, augmented_positions) VALUES (?, ?, ?, ?, ?)',
                            self._pending_game_data)
         self._pending_game_data = []
-        return n_augmented_positions
+        return n_total_augmented_positions
 
     def _handle_weights_request(self, conn: ClientConnection):
         thread = threading.Thread(target=self._manage_worker, args=(conn,),

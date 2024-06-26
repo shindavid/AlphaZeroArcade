@@ -42,15 +42,8 @@ SELF_PLAY_TABLE_CREATE_CMDS = [
             positions_evaluated INTEGER DEFAULT 0,
             batches_evaluated INTEGER DEFAULT 0,
             games INTEGER DEFAULT 0,
+            runtime INTEGER DEFAULT 0,
             augmented_positions INTEGER DEFAULT 0
-            )""",
-
-    """CREATE TABLE timestamps (
-            gen INTEGER,
-            client_id INTEGER,
-            start_timestamp INTEGER DEFAULT 0,
-            end_timestamp INTEGER DEFAULT 0,
-            PRIMARY KEY (gen, client_id)
             )""",
 
     """CREATE TRIGGER update_games AFTER INSERT ON games
