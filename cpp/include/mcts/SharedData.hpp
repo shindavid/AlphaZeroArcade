@@ -35,7 +35,7 @@ struct SharedData {
     node_cache.clear();
     root_node = nullptr;
 
-    root_state = FullState();
+    Game::Rules::init_state(root_state);
     root_state_history.clear();
     util::stuff_back<Game::Constants::kHistorySize>(root_state_history, root_state);
   }

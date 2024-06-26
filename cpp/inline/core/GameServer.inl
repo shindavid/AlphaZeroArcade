@@ -278,6 +278,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   }
 
   FullState state;
+  Rules::init_state(state);
   while (true) {
     seat_index_t seat = Rules::get_current_player(state);
     Player* player = players[seat];

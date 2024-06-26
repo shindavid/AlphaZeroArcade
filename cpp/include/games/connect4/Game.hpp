@@ -47,8 +47,8 @@ struct Game {
     bool operator==(const BaseState& other) const = default;
     size_t hash() const;
 
-    mask_t full_mask = 0;        // spaces occupied by either player
-    mask_t cur_player_mask = 0;  // spaces occupied by current player
+    mask_t full_mask;        // spaces occupied by either player
+    mask_t cur_player_mask;  // spaces occupied by current player
   };
 
   using FullState = BaseState;
@@ -65,6 +65,7 @@ struct Game {
   using TransformList = mp::TypeList<Identity, Reflect>;
 
   struct Rules {
+    static void init_state(FullState& state);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);

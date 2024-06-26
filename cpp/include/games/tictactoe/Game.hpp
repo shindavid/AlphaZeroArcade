@@ -46,8 +46,8 @@ class Game {
     size_t hash() const;
     mask_t opponent_mask() const { return full_mask ^ cur_player_mask; }
 
-    mask_t full_mask = 0;        // spaces occupied by either player
-    mask_t cur_player_mask = 0;  // spaces occupied by current player
+    mask_t full_mask;        // spaces occupied by either player
+    mask_t cur_player_mask;  // spaces occupied by current player
   };
 
   using FullState = BaseState;
@@ -59,6 +59,7 @@ class Game {
   using TransformList = mp::TypeList<Identity>;
 
   struct Rules {
+    static void init_state(FullState& state);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);

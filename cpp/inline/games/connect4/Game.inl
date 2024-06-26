@@ -25,6 +25,11 @@ inline void Game::Reflect::apply(PolicyTensor& t) {
   t = u;
 }
 
+inline void Game::Rules::init_state(FullState& state) {
+  state.full_mask = 0;
+  state.cur_player_mask = 0;
+}
+
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
   const BaseState& base = state;
   mask_t bottomed_full_mask = base.full_mask + _full_bottom_mask();

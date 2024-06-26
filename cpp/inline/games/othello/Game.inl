@@ -98,6 +98,13 @@ inline void Game::FlipAntiDiag::apply(Types::PolicyTensor& tensor) {
   eigen_util::flip_anti_diag<kBoardDimension>(tensor);
 }
 
+inline void Game::Rules::init_state(FullState& state) {
+  state.opponent_mask = kStartingWhiteMask;
+  state.cur_player_mask = kStartingBlackMask;
+  state.cur_player = kStartingColor;
+  state.pass_count = 0;
+}
+
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
   return state.cur_player;
 }

@@ -140,7 +140,7 @@ void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& pay
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  new (&state_) FullState();  // placement-new
+  Rules::init_state(state_);
   player_->init_game(game_id, player_names, seat_assignment);
   player_->start_game();
 }

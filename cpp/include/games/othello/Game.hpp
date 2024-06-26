@@ -42,10 +42,10 @@ class Game {
     bool operator==(const BaseState& other) const = default;
     size_t hash() const;
 
-    mask_t opponent_mask = kStartingWhiteMask;    // spaces occupied by either player
-    mask_t cur_player_mask = kStartingBlackMask;  // spaces occupied by current player
-    core::seat_index_t cur_player = kStartingColor;
-    int8_t pass_count = 0;
+    mask_t opponent_mask;    // spaces occupied by either player
+    mask_t cur_player_mask;  // spaces occupied by current player
+    core::seat_index_t cur_player;
+    int8_t pass_count;
   };
 
   using FullState = BaseState;
@@ -97,6 +97,7 @@ class Game {
                                      FlipVertical, MirrorHorizontal, FlipMainDiag, FlipAntiDiag>;
 
   struct Rules {
+    static void init_state(FullState& state);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState& state);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);

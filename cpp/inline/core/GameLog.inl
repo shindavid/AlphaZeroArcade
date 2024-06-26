@@ -91,7 +91,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   PolicyTensor next_policy = get_policy(state_index + 1);
 
   constexpr int kNumBaseStates = Game::Constants::kHistorySize + 1;
-  util::UninitializedArray<BaseState, kNumBaseStates> base_states;
+  BaseState base_states[kNumBaseStates];
 
   int num_states_to_cp = std::min(kNumBaseStates, state_index + 1);
   int num_bytes_to_cp = num_states_to_cp * sizeof(BaseState);
