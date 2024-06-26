@@ -126,10 +126,12 @@ class XVarSelector:
             x_index = radio_group.active
             self.set_x_index(x_index, plots, sources)
 
+        self.set_x_index(self._x_index, plots, sources, force_refresh=True)
         radio_group.on_change('active', update_data)
         return radio_group
 
-    def set_x_index(self, x_index: int, plots: List[figure], sources: List[ColumnDataSource]):
+    def set_x_index(self, x_index: int, plots: List[figure], sources: List[ColumnDataSource],
+                    force_refresh=False):
         """
         Performs the following:
 
@@ -146,7 +148,7 @@ class XVarSelector:
         for source in sources:
             source.data['x'] = source.data[x_col]
 
-        if prev_x_index == x_index:
+        if not force_refresh and prev_x_index == x_index:
             return
 
         prev_x_min = self._min_x_dict[prev_x_col]
