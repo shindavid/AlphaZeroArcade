@@ -105,4 +105,4 @@ to a `float[kNumGlobalActions]`.
 
 Struct definition: `core::GameLogBase::sparse_policy_entry_t` in `cpp/include/core/GameLog.hpp`.
 
-This section contains (int, float) pairs. A contiguous block of them encodes a given sparse policy target.
+This section contains (float, offset) pairs. A contiguous block of them encodes a given sparse policy target.
