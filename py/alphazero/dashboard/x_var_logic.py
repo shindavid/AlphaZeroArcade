@@ -27,11 +27,11 @@ class XVar:
 
 
 X_VARS = [
-    XVar('training_db_filename', 'training', 'Train Time (sec)',
+    XVar('training_db_filename', 'training', 'Train Time',
          'train_time', 'training_end_ts - training_start_ts'),
     XVar('self_play_db_filename', 'self_play_metadata', 'Generation', 'mcts_gen', 'gen'),
     XVar('self_play_db_filename', 'self_play_metadata', 'Games', 'n_games', 'games'),
-    XVar('self_play_db_filename', 'self_play_metadata', 'Self-Play Runtime (sec)',
+    XVar('self_play_db_filename', 'self_play_metadata', 'Self-Play Runtime',
          'runtime', 'runtime'),
     XVar('self_play_db_filename', 'self_play_metadata', 'Num Evaluated Positions',
          'n_evaluated_positions', 'positions_evaluated'),
