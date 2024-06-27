@@ -78,11 +78,11 @@ class Game {
 
   struct InputTensorizor {
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kBoardDimension, kBoardDimension>>;
-    using EvalKey = BaseState;
     using MCTSKey = BaseState;
+    using EvalKey = BaseState;
 
-    static EvalKey eval_key(const FullState& state) { return state; }
     static MCTSKey mcts_key(const FullState& state) { return state; }
+    static EvalKey eval_key(const BaseState* start, const BaseState* cur) { return *cur; }
     static Tensor tensorize(const BaseState* start, const BaseState* cur);
   };
 

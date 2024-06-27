@@ -148,7 +148,10 @@ NNEvaluationService<Game>::evaluate(const Request& request) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate()";
   }
 
-  cache_key_t cache_key(InputTensorizor::eval_key(*request.state), request.sym);
+  base_state_vec_t& state_history = *request.state_history;
+  util::release_assert(!state_history.empty());
+  auto eval_key = InputTensorizor::eval_key(&state_history.front(), &state_history.back());
+  cache_key_t cache_key(eval_key, request.sym);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
 
