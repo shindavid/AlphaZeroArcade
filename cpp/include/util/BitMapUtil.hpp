@@ -5,7 +5,7 @@
 /*
  * Various utility functions for manipulating bitmaps.
  *
- * Each function assumes that the 64-bit integer represents an 8x8 bitmap:
+ * Each function accepts one or more uint64_t references, each of which correspond to an 8x8 bitmap:
  *
  *  0  1  2  3  4  5  6  7
  *  8  9 10 11 12 13 14 15
@@ -28,14 +28,13 @@
  */
 namespace bitmap_util {
 
-void flip_vertical(uint64_t& mask);
-void mirror_horizontal(uint64_t& mask);
-void flip_main_diag(uint64_t& mask);
-void flip_anti_diag(uint64_t& mask);
-
-void rot90_clockwise(uint64_t& mask);
-void rot180(uint64_t& mask);
-void rot270_clockwise(uint64_t& mask);
+template <typename... UInt64T> void flip_vertical(UInt64T&... mask);
+template <typename... UInt64T> void mirror_horizontal(UInt64T&... mask);
+template <typename... UInt64T> void flip_main_diag(UInt64T&... mask);
+template <typename... UInt64T> void flip_anti_diag(UInt64T&... mask);
+template <typename... UInt64T> void rot90_clockwise(UInt64T&... mask);
+template <typename... UInt64T> void rot180(UInt64T&... mask);
+template <typename... UInt64T> void rot270_clockwise(UInt64T&... mask);
 
 }  // namespace bitmap_util
 

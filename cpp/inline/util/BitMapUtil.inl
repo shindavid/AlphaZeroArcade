@@ -4,6 +4,8 @@
 
 namespace bitmap_util {
 
+namespace detail {
+
 inline void flip_vertical(uint64_t& mask) {
   mask = __builtin_bswap64(mask);
 }
@@ -62,6 +64,43 @@ inline void rot180(uint64_t& mask) {
 inline void rot270_clockwise(uint64_t& mask) {
   flip_vertical(mask);
   flip_anti_diag(mask);
+}
+
+}  // namespace detail
+
+template <typename... UInt64T>
+void flip_vertical(UInt64T&... mask) {
+  (detail::flip_vertical(mask), ...);
+}
+
+template <typename... UInt64T>
+void mirror_horizontal(UInt64T&... mask) {
+  (detail::mirror_horizontal(mask), ...);
+}
+
+template <typename... UInt64T>
+void flip_main_diag(UInt64T&... mask) {
+  (detail::flip_main_diag(mask), ...);
+}
+
+template <typename... UInt64T>
+void flip_anti_diag(UInt64T&... mask) {
+  (detail::flip_anti_diag(mask), ...);
+}
+
+template <typename... UInt64T>
+void rot90_clockwise(UInt64T&... mask) {
+  (detail::rot90_clockwise(mask), ...);
+}
+
+template <typename... UInt64T>
+void rot180(UInt64T&... mask) {
+  (detail::rot180(mask), ...);
+}
+
+template <typename... UInt64T>
+void rot270_clockwise(UInt64T&... mask) {
+  (detail::rot270_clockwise(mask), ...);
 }
 
 }  // namespace bitmap_util

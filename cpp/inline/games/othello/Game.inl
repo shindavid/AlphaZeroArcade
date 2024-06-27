@@ -21,44 +21,18 @@ inline size_t Game::BaseState::hash() const {
 
 inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {
   util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+  using namespace bitmap_util;
+  using D4 = groups::D4;
+  auto& s = state;
   switch (sym.element) {
-    case groups::D4::kIdentity:
-      return;
-    case groups::D4::kRot90: {
-      bitmap_util::rot90_clockwise(state.cur_player_mask);
-      bitmap_util::rot90_clockwise(state.opponent_mask);
-      return;
-    }
-    case groups::D4::kRot180: {
-      bitmap_util::rot180(state.cur_player_mask);
-      bitmap_util::rot180(state.opponent_mask);
-      return;
-    }
-    case groups::D4::kRot270: {
-      bitmap_util::rot270_clockwise(state.cur_player_mask);
-      bitmap_util::rot270_clockwise(state.opponent_mask);
-      return;
-    }
-    case groups::D4::kFlipVertical: {
-      bitmap_util::flip_vertical(state.cur_player_mask);
-      bitmap_util::flip_vertical(state.opponent_mask);
-      return;
-    }
-    case groups::D4::kFlipMainDiag: {
-      bitmap_util::flip_main_diag(state.cur_player_mask);
-      bitmap_util::flip_main_diag(state.opponent_mask);
-      return;
-    }
-    case groups::D4::kMirrorHorizontal: {
-      bitmap_util::mirror_horizontal(state.cur_player_mask);
-      bitmap_util::mirror_horizontal(state.opponent_mask);
-      return;
-    }
-    case groups::D4::kFlipAntiDiag: {
-      bitmap_util::flip_anti_diag(state.cur_player_mask);
-      bitmap_util::flip_anti_diag(state.opponent_mask);
-      return;
-    }
+    case D4::kIdentity: return;
+    case D4::kRot90: return rot90_clockwise(s.cur_player_mask, s.opponent_mask);
+    case D4::kRot180: return rot180(s.cur_player_mask, s.opponent_mask);
+    case D4::kRot270: return rot270_clockwise(s.cur_player_mask, s.opponent_mask);
+    case D4::kFlipVertical: return flip_vertical(s.cur_player_mask, s.opponent_mask);
+    case D4::kFlipMainDiag: return flip_main_diag(s.cur_player_mask, s.opponent_mask);
+    case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
+    case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
     default: {
       throw util::Exception("Unknown group element: %d", sym.element);
     }
@@ -67,37 +41,18 @@ inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sy
 
 inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, const core::symmetry_t& sym) {
   util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+  using namespace eigen_util;
+  using D4 = groups::D4;
+  constexpr int N = kBoardDimension;
   switch (sym.element) {
-    case groups::D4::kIdentity:
-      return;
-    case groups::D4::kRot90: {
-      eigen_util::rot90_clockwise<kBoardDimension>(tensor);
-      return;
-    }
-    case groups::D4::kRot180: {
-      eigen_util::rot180<kBoardDimension>(tensor);
-      return;
-    }
-    case groups::D4::kRot270: {
-      eigen_util::rot270_clockwise<kBoardDimension>(tensor);
-      return;
-    }
-    case groups::D4::kFlipVertical: {
-      eigen_util::flip_vertical<kBoardDimension>(tensor);
-      return;
-    }
-    case groups::D4::kFlipMainDiag: {
-      eigen_util::flip_main_diag<kBoardDimension>(tensor);
-      return;
-    }
-    case groups::D4::kMirrorHorizontal: {
-      eigen_util::mirror_horizontal<kBoardDimension>(tensor);
-      return;
-    }
-    case groups::D4::kFlipAntiDiag: {
-      eigen_util::flip_anti_diag<kBoardDimension>(tensor);
-      return;
-    }
+    case D4::kIdentity: return;
+    case D4::kRot90: return rot90_clockwise<N>(tensor);
+    case D4::kRot180: return rot180<N>(tensor);
+    case D4::kRot270: return rot270_clockwise<N>(tensor);
+    case D4::kFlipVertical: return flip_vertical<N>(tensor);
+    case D4::kFlipMainDiag: return flip_main_diag<N>(tensor);
+    case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
+    case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
     default: {
       throw util::Exception("Unknown group element: %d", sym.element);
     }
