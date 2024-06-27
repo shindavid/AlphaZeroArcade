@@ -2,7 +2,6 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
-#include <core/Symmetries.hpp>
 #include <util/EigenUtil.hpp>
 
 #include <array>
@@ -20,8 +19,6 @@ struct GameTypes {
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
-  using SymmetryIndexSet = std::bitset<GameConstants::kNumSymmetries>;
-  using Transform = core::Transform<BaseState, PolicyTensor>;
 
   /*
    * Return type for an MCTS search.

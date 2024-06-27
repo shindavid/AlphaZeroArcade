@@ -1,6 +1,5 @@
 #include <core/GameLog.hpp>
 
-#include <core/Transforms.hpp>
 #include <util/BitSet.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/LoggingUtil.hpp>
@@ -37,7 +36,6 @@ template <concepts::Game Game>
 GameLog<Game>::GameLog(const char* filename)
     : filename_(filename),
       buffer_(get_buffer()),
-      non_sym_sample_index_start_mem_offset_(non_sym_sample_index_start_mem_offset()),
       action_start_mem_offset_(action_start_mem_offset()),
       policy_target_index_start_mem_offset_(policy_target_index_start_mem_offset()),
       state_start_mem_offset_(state_start_mem_offset()),
@@ -71,48 +69,40 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
 template <concepts::Game Game>
 void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
                          float** target_value_arrays) const {
-  int state_index;
-  symmetry_index_t sym_index = -1;
-
-  if (apply_symmetry) {
-    sym_sample_index_t sym_sample_index = get_sym_sample_index(index);
-    state_index = sym_sample_index.state_index;
-    sym_index = sym_sample_index.sym_index;
-  } else {
-    non_sym_sample_index_t non_sym_sample_index = get_non_sym_sample_index(index);
-    state_index = non_sym_sample_index.state_index;
-  }
-
-  util::release_assert(state_index >= 0 && state_index < num_positions(),
-                       "Invalid state index %d for index=%d in %s", state_index, index,
+  util::release_assert(index >= 0 && index < num_sampled_positions(),
+                       "Index %d out of bounds [0, %d) in %s", index, num_sampled_positions(),
                        filename_.c_str());
 
+  pos_index_t state_index = get_pos_index(index);
   PolicyTensor policy = get_policy(state_index);
   PolicyTensor next_policy = get_policy(state_index + 1);
 
-  constexpr int kNumBaseStates = Game::Constants::kHistorySize + 1;
-  BaseState base_states[kNumBaseStates];
-
-  int num_states_to_cp = std::min(kNumBaseStates, state_index + 1);
+  int num_states_to_cp = 1 + std::min(Game::Constants::kHistorySize, state_index);
   int num_bytes_to_cp = num_states_to_cp * sizeof(BaseState);
+
+  BaseState base_states[num_states_to_cp];
   std::memcpy(&base_states[0], get_state(state_index - num_states_to_cp + 1), num_bytes_to_cp);
-
-  BaseState final_state = *get_state(num_positions() - 1);
-
-  if (sym_index >= 0) {
-    Transform* transform = core::Transforms<Game>::get(sym_index);
-    for (int i = 0; i < num_states_to_cp; ++i) {
-      transform->apply(base_states[i]);
-    }
-    transform->apply(final_state);
-    transform->apply(policy);
-    transform->apply(next_policy);
-  }
-
-  ValueArray outcome = get_outcome();
 
   BaseState* start_pos = &base_states[0];
   BaseState* cur_pos = &base_states[num_states_to_cp - 1];
+  BaseState final_state = *get_state(num_positions() - 1);
+
+  core::symmetry_t sym;
+  if (apply_symmetry) {
+    sym.group_id = Game::Symmetries::get_group(*cur_pos);
+    sym.element = groups::get_random_element<SymmetryGroups>(sym.group_id);
+    sym.inverse_element = groups::get_inverse_element<SymmetryGroups>(sym.group_id, sym.element);
+  }
+
+  for (int i = 0; i < num_states_to_cp; ++i) {
+    Game::Symmetries::apply(base_states[i], sym);
+  }
+  Game::Symmetries::apply(final_state, sym);
+  Game::Symmetries::apply(policy, sym);
+  Game::Symmetries::apply(next_policy, sym);
+
+  ValueArray outcome = get_outcome();
+
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   memcpy(input_values, input.data(), input.size() * sizeof(float));
 
@@ -149,9 +139,8 @@ void GameLog<Game>::replay() const {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_samples(bool apply_symmetry) const {
-  return apply_symmetry ? num_samples_with_symmetry_expansion()
-                        : num_samples_without_symmetry_expansion();
+int GameLog<Game>::num_sampled_positions() const {
+  return header().num_samples;
 }
 
 template <concepts::Game Game>
@@ -188,16 +177,6 @@ const GameLogBase::Header& GameLog<Game>::header() const {
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::num_samples_with_symmetry_expansion() const {
-  return header().num_samples_with_symmetry_expansion;
-}
-
-template <concepts::Game Game>
-int GameLog<Game>::num_samples_without_symmetry_expansion() const {
-  return header().num_samples_without_symmetry_expansion;
-}
-
-template <concepts::Game Game>
 int GameLog<Game>::num_positions() const {
   return header().num_positions;
 }
@@ -228,20 +207,13 @@ constexpr int GameLog<Game>::outcome_start_mem_offset() {
 }
 
 template <concepts::Game Game>
-constexpr int GameLog<Game>::sym_sample_index_start_mem_offset() {
+constexpr int GameLog<Game>::sampled_indices_start_mem_offset() {
   return outcome_start_mem_offset() + align(sizeof(ValueArray));
 }
 
 template <concepts::Game Game>
-int GameLog<Game>::non_sym_sample_index_start_mem_offset() const {
-  return sym_sample_index_start_mem_offset() +
-         align(num_samples_with_symmetry_expansion() * sizeof(sym_sample_index_t));
-}
-
-template <concepts::Game Game>
 int GameLog<Game>::action_start_mem_offset() const {
-  return non_sym_sample_index_start_mem_offset_ +
-         align(num_samples_without_symmetry_expansion() * sizeof(non_sym_sample_index_t));
+  return sampled_indices_start_mem_offset() + align(num_sampled_positions() * sizeof(pos_index_t));
 }
 
 template <concepts::Game Game>
@@ -291,14 +263,8 @@ const GameLogBase::sparse_policy_entry_t* GameLog<Game>::sparse_policy_entry_sta
 }
 
 template <concepts::Game Game>
-const GameLogBase::sym_sample_index_t* GameLog<Game>::sym_sample_index_start_ptr() const {
-  return reinterpret_cast<sym_sample_index_t*>(buffer_ + sym_sample_index_start_mem_offset());
-}
-
-template <concepts::Game Game>
-const GameLogBase::non_sym_sample_index_t* GameLog<Game>::non_sym_sample_index_start_ptr() const {
-  return reinterpret_cast<non_sym_sample_index_t*>(buffer_ +
-                                                   non_sym_sample_index_start_mem_offset_);
+const GameLogBase::pos_index_t* GameLog<Game>::sampled_indices_start_ptr() const {
+  return reinterpret_cast<pos_index_t*>(buffer_ + sampled_indices_start_mem_offset());
 }
 
 template <concepts::Game Game>
@@ -351,23 +317,13 @@ typename GameLog<Game>::ValueArray GameLog<Game>::get_outcome() const {
 }
 
 template <concepts::Game Game>
-GameLogBase::sym_sample_index_t GameLog<Game>::get_sym_sample_index(int index) const {
-  if (index < 0 || index >= num_samples_with_symmetry_expansion()) {
-    throw util::Exception("%s(%d) out of bounds in %s (%u)", __func__, index,
-                          filename_.c_str(), num_samples_with_symmetry_expansion());
+GameLogBase::pos_index_t GameLog<Game>::get_pos_index(int index) const {
+  if (index < 0 || index >= num_sampled_positions()) {
+    throw util::Exception("%s(%d) out of bounds in %s (%u)", __func__, index, filename_.c_str(),
+                          num_sampled_positions());
   }
 
-  return sym_sample_index_start_ptr()[index];
-}
-
-template <concepts::Game Game>
-GameLogBase::non_sym_sample_index_t GameLog<Game>::get_non_sym_sample_index(int index) const {
-  if (index < 0 || index >= num_samples_without_symmetry_expansion()) {
-    throw util::Exception("%s(%d) out of bounds in %s (%u)", __func__, index,
-                          filename_.c_str(), num_samples_without_symmetry_expansion());
-  }
-
-  return non_sym_sample_index_start_ptr()[index];
+  return sampled_indices_start_ptr()[index];
 }
 
 template <concepts::Game Game>
@@ -387,7 +343,6 @@ void GameLogWriter<Game>::add(const FullState& state, action_index_t action,
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
   entry->position = state;
-  entry->symmetries = Rules::get_symmetries(state);
   if (policy_target) {
     entry->policy_target = *policy_target;
   } else {
@@ -398,10 +353,7 @@ void GameLogWriter<Game>::add(const FullState& state, action_index_t action,
   entry->policy_target_is_valid = policy_target != nullptr;
   entry->terminal = false;
   entries_.push_back(entry);
-  if (use_for_training) {
-    sym_train_count_ += entry->symmetries.count();
-    non_sym_train_count_++;
-  }
+  sample_count_ += use_for_training;
 }
 
 template <concepts::Game Game>
@@ -424,8 +376,7 @@ template <concepts::Game Game>
 void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   using GameLog = core::GameLog<Game>;
   using Header = GameLog::Header;
-  using sym_sample_index_t = GameLog::sym_sample_index_t;
-  using non_sym_sample_index_t = GameLog::non_sym_sample_index_t;
+  using pos_index_t = GameLog::pos_index_t;
   using policy_target_index_t = GameLog::policy_target_index_t;
   using sparse_policy_entry_t = GameLog::sparse_policy_entry_t;
 
@@ -433,16 +384,14 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   int num_entries = entries_.size();
   int num_non_terminal_entries = num_entries - 1;
 
-  std::vector<sym_sample_index_t> sym_sample_indices;
-  std::vector<non_sym_sample_index_t> non_sym_sample_indices;
+  std::vector<pos_index_t> sampled_indices;
   std::vector<action_t> actions;
   std::vector<policy_target_index_t> policy_target_indices;
   std::vector<BaseState> states;
   std::vector<PolicyTensor> dense_policy_tensors;
   std::vector<sparse_policy_entry_t> sparse_policy_entries;
 
-  sym_sample_indices.reserve(sym_train_count_);
-  non_sym_sample_indices.reserve(non_sym_train_count_);
+  sampled_indices.reserve(sample_count_);
   actions.reserve(num_non_terminal_entries);
   policy_target_indices.reserve(num_non_terminal_entries);
   states.reserve(num_entries);
@@ -457,10 +406,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
     if (entry->terminal) continue;
 
     if (entry->use_for_training) {
-      for (symmetry_index_t sym_index : bitset_util::on_indices(entry->symmetries)) {
-        sym_sample_indices.emplace_back(move_num, sym_index);
-      }
-      non_sym_sample_indices.emplace_back(move_num);
+      sampled_indices.push_back(move_num);
     }
 
     actions.push_back(entry->action);
@@ -469,8 +415,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   }
 
   Header header;
-  header.num_samples_with_symmetry_expansion = sym_train_count_;
-  header.num_samples_without_symmetry_expansion = non_sym_train_count_;
+  header.num_samples = sample_count_;
   header.num_positions = num_entries;
   header.num_dense_policies = dense_policy_tensors.size();
   header.num_sparse_policy_entries = sparse_policy_entries.size();
@@ -478,8 +423,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
 
   write_section(stream, &header);
   write_section(stream, &outcome_);
-  write_section(stream, sym_sample_indices.data(), sym_sample_indices.size());
-  write_section(stream, non_sym_sample_indices.data(), non_sym_sample_indices.size());
+  write_section(stream, sampled_indices.data(), sampled_indices.size());
   write_section(stream, actions.data(), actions.size());
   write_section(stream, policy_target_indices.data(), policy_target_indices.size());
   write_section(stream, states.data(), states.size());

@@ -17,85 +17,89 @@ inline size_t Game::BaseState::hash() const {
   return util::tuple_hash(std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count));
 }
 
-inline void Game::Rot90Clockwise::apply(BaseState& state) {
-  bitmap_util::rot90_clockwise(state.cur_player_mask);
-  bitmap_util::rot90_clockwise(state.opponent_mask);
+inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {
+  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+  switch (sym.element) {
+    case groups::D4::kIdentity:
+      return;
+    case groups::D4::kRot90: {
+      bitmap_util::rot90_clockwise(state.cur_player_mask);
+      bitmap_util::rot90_clockwise(state.opponent_mask);
+      return;
+    }
+    case groups::D4::kRot180: {
+      bitmap_util::rot180(state.cur_player_mask);
+      bitmap_util::rot180(state.opponent_mask);
+      return;
+    }
+    case groups::D4::kRot270: {
+      bitmap_util::rot270_clockwise(state.cur_player_mask);
+      bitmap_util::rot270_clockwise(state.opponent_mask);
+      return;
+    }
+    case groups::D4::kFlipVertical: {
+      bitmap_util::flip_vertical(state.cur_player_mask);
+      bitmap_util::flip_vertical(state.opponent_mask);
+      return;
+    }
+    case groups::D4::kFlipMainDiag: {
+      bitmap_util::flip_main_diag(state.cur_player_mask);
+      bitmap_util::flip_main_diag(state.opponent_mask);
+      return;
+    }
+    case groups::D4::kMirrorHorizontal: {
+      bitmap_util::mirror_horizontal(state.cur_player_mask);
+      bitmap_util::mirror_horizontal(state.opponent_mask);
+      return;
+    }
+    case groups::D4::kFlipAntiDiag: {
+      bitmap_util::flip_anti_diag(state.cur_player_mask);
+      bitmap_util::flip_anti_diag(state.opponent_mask);
+      return;
+    }
+    default: {
+      throw util::Exception("Unknown group element: %d", sym.element);
+    }
+  }
 }
 
-inline void Game::Rot90Clockwise::undo(BaseState& state) {
-  bitmap_util::rot270_clockwise(state.cur_player_mask);
-  bitmap_util::rot270_clockwise(state.opponent_mask);
-}
-
-inline void Game::Rot90Clockwise::apply(Types::PolicyTensor& tensor) {
-  eigen_util::rot90_clockwise<kBoardDimension>(tensor);
-}
-
-inline void Game::Rot90Clockwise::undo(Types::PolicyTensor& tensor) {
-  eigen_util::rot270_clockwise<kBoardDimension>(tensor);
-}
-
-inline void Game::Rot180::apply(BaseState& state) {
-  bitmap_util::rot180(state.cur_player_mask);
-  bitmap_util::rot180(state.opponent_mask);
-}
-
-inline void Game::Rot180::apply(Types::PolicyTensor& tensor) {
-  eigen_util::rot180<kBoardDimension>(tensor);
-}
-
-inline void Game::Rot270Clockwise::apply(BaseState& state) {
-  bitmap_util::rot270_clockwise(state.cur_player_mask);
-  bitmap_util::rot270_clockwise(state.opponent_mask);
-}
-
-inline void Game::Rot270Clockwise::undo(BaseState& state) {
-  bitmap_util::rot90_clockwise(state.cur_player_mask);
-  bitmap_util::rot90_clockwise(state.opponent_mask);
-}
-
-inline void Game::Rot270Clockwise::apply(Types::PolicyTensor& tensor) {
-  eigen_util::rot270_clockwise<kBoardDimension>(tensor);
-}
-
-inline void Game::Rot270Clockwise::undo(Types::PolicyTensor& tensor) {
-  eigen_util::rot90_clockwise<kBoardDimension>(tensor);
-}
-
-inline void Game::FlipVertical::apply(BaseState& state) {
-  bitmap_util::flip_vertical(state.cur_player_mask);
-  bitmap_util::flip_vertical(state.opponent_mask);
-}
-
-inline void Game::FlipVertical::apply(Types::PolicyTensor& tensor) {
-  eigen_util::flip_vertical<kBoardDimension>(tensor);
-}
-
-inline void Game::MirrorHorizontal::apply(BaseState& state) {
-  bitmap_util::mirror_horizontal(state.cur_player_mask);
-  bitmap_util::mirror_horizontal(state.opponent_mask);
-}
-
-inline void Game::MirrorHorizontal::apply(Types::PolicyTensor& tensor) {
-  eigen_util::mirror_horizontal<kBoardDimension>(tensor);
-}
-
-inline void Game::FlipMainDiag::apply(BaseState& state) {
-  bitmap_util::flip_main_diag(state.cur_player_mask);
-  bitmap_util::flip_main_diag(state.opponent_mask);
-}
-
-inline void Game::FlipMainDiag::apply(Types::PolicyTensor& tensor) {
-  eigen_util::flip_main_diag<kBoardDimension>(tensor);
-}
-
-inline void Game::FlipAntiDiag::apply(BaseState& state) {
-  bitmap_util::flip_anti_diag(state.cur_player_mask);
-  bitmap_util::flip_anti_diag(state.opponent_mask);
-}
-
-inline void Game::FlipAntiDiag::apply(Types::PolicyTensor& tensor) {
-  eigen_util::flip_anti_diag<kBoardDimension>(tensor);
+inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, const core::symmetry_t& sym) {
+  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+  switch (sym.element) {
+    case groups::D4::kIdentity:
+      return;
+    case groups::D4::kRot90: {
+      eigen_util::rot90_clockwise<kBoardDimension>(tensor);
+      return;
+    }
+    case groups::D4::kRot180: {
+      eigen_util::rot180<kBoardDimension>(tensor);
+      return;
+    }
+    case groups::D4::kRot270: {
+      eigen_util::rot270_clockwise<kBoardDimension>(tensor);
+      return;
+    }
+    case groups::D4::kFlipVertical: {
+      eigen_util::flip_vertical<kBoardDimension>(tensor);
+      return;
+    }
+    case groups::D4::kFlipMainDiag: {
+      eigen_util::flip_main_diag<kBoardDimension>(tensor);
+      return;
+    }
+    case groups::D4::kMirrorHorizontal: {
+      eigen_util::mirror_horizontal<kBoardDimension>(tensor);
+      return;
+    }
+    case groups::D4::kFlipAntiDiag: {
+      eigen_util::flip_anti_diag<kBoardDimension>(tensor);
+      return;
+    }
+    default: {
+      throw util::Exception("Unknown group element: %d", sym.element);
+    }
+  }
 }
 
 inline void Game::Rules::init_state(FullState& state) {
@@ -107,12 +111,6 @@ inline void Game::Rules::init_state(FullState& state) {
 
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
   return state.cur_player;
-}
-
-inline Game::Types::SymmetryIndexSet Game::Rules::get_symmetries(const FullState& state) {
-  Types::SymmetryIndexSet set;
-  set.set();
-  return set;
 }
 
 inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,

@@ -5,15 +5,13 @@
 #include <core/concepts/Game.hpp>
 #include <core/NeuralNet.hpp>
 #include <core/PerfStats.hpp>
-#include <core/Symmetries.hpp>
-#include <core/Transforms.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
-#include <util/HashablePair.hpp>
+#include <util/FiniteGroups.hpp>
 #include <util/LRUCache.hpp>
 #include <util/TorchUtil.hpp>
 
@@ -98,8 +96,6 @@ class NNEvaluationService
 
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
-  using Transform = Game::Types::Transform;
-  using Transforms = core::Transforms<Game>;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
 
@@ -109,7 +105,7 @@ class NNEvaluationService
     base_state_vec_t* state_history;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
-    core::symmetry_index_t sym_index;
+    core::symmetry_t sym;
 
     std::string thread_id_whitespace() const {
       return util::make_whitespace(kThreadWhitespaceLength * thread_id);
@@ -163,7 +159,7 @@ class NNEvaluationService
 
  private:
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = util::HashablePair<EvalKey, core::symmetry_index_t>;
+  using cache_key_t = std::tuple<EvalKey, core::symmetry_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 
@@ -202,7 +198,7 @@ class NNEvaluationService
 
     cache_key_t cache_key;
     ActionMask valid_actions;
-    Transform* transform;
+    core::symmetry_t sym;
   };
 
   struct tensor_group_t {

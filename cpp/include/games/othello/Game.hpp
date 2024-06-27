@@ -17,6 +17,7 @@
 #include <core/TrainingTargets.hpp>
 #include <games/othello/Constants.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
 
 namespace othello {
@@ -35,7 +36,6 @@ class Game {
     static constexpr int kNumActions = othello::kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
     static constexpr int kHistorySize = 0;
-    static constexpr int kNumSymmetries = 8;
   };
 
   struct BaseState {
@@ -49,59 +49,20 @@ class Game {
   };
 
   using FullState = BaseState;
-
   using Types = core::GameTypes<Constants, BaseState>;
+  using SymmetryGroups = mp::TypeList<groups::D4>;
 
-  using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
-
-  struct Rot90Clockwise : public core::Transform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void undo(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-    void undo(Types::PolicyTensor& policy) override;
+  struct Symmetries {
+    static core::group_id_t get_group(const BaseState& state) { return 0; }
+    static void apply(BaseState& state, const core::symmetry_t& sym);
+    static void apply(Types::PolicyTensor& policy, const core::symmetry_t& sym);
   };
-
-  struct Rot180 : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-  };
-
-  struct Rot270Clockwise : public core::Transform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void undo(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-    void undo(Types::PolicyTensor& policy) override;
-  };
-
-  struct FlipVertical : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-  };
-
-  struct MirrorHorizontal : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-  };
-
-  struct FlipMainDiag : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-  };
-
-  struct FlipAntiDiag : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
-  };
-
-  using TransformList = mp::TypeList<Identity, Rot90Clockwise, Rot180, Rot270Clockwise,
-                                     FlipVertical, MirrorHorizontal, FlipMainDiag, FlipAntiDiag>;
 
   struct Rules {
     static void init_state(FullState& state);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState& state);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);
-    static Types::SymmetryIndexSet get_symmetries(const FullState& state);
 
    private:
     static Types::ValueArray compute_outcome(const FullState& state);

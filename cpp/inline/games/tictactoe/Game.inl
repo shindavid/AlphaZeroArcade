@@ -15,12 +15,6 @@ inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state
   return std::popcount(state.full_mask) % 2;
 }
 
-inline Game::Types::SymmetryIndexSet Game::Rules::get_symmetries(const FullState& state) {
-  Types::SymmetryIndexSet set;
-  set.set();
-  return set;
-}
-
 inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
                                                                       const BaseState* cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);

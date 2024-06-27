@@ -16,6 +16,7 @@
 #include <core/TrainingTargets.hpp>
 #include <games/tictactoe/Constants.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
 
 namespace tictactoe {
@@ -38,7 +39,6 @@ class Game {
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
     static constexpr int kHistorySize = 0;
-    static constexpr int kNumSymmetries = 1;  // TODO: add more symmetries
   };
 
   struct BaseState {
@@ -51,19 +51,20 @@ class Game {
   };
 
   using FullState = BaseState;
-
   using Types = core::GameTypes<Constants, BaseState>;
+  using SymmetryGroups = mp::TypeList<groups::TrivialGroup>;
 
-  using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
-
-  using TransformList = mp::TypeList<Identity>;
+  struct Symmetries {
+    static core::group_id_t get_group(const BaseState& state) { return 0; }
+    static void apply(BaseState& state, const core::symmetry_t& sym) {}
+    static void apply(Types::PolicyTensor& policy, const core::symmetry_t& sym) {}
+  };
 
   struct Rules {
     static void init_state(FullState& state);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);
-    static Types::SymmetryIndexSet get_symmetries(const FullState& state);
   };
 
   struct IO {

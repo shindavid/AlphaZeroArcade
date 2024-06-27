@@ -153,7 +153,7 @@ bool TrainingDataWriter<Game>::send(const GameLogWriter* log) {
   std::stringstream ss;
   log->serialize(ss);
 
-  int rows = log->sym_train_count();
+  int rows = log->sample_count();
   auto new_rows_written = rows_written_ + rows;
   bool done = params_.max_rows > 0 && new_rows_written >= params_.max_rows;
   bool flush = done || client->ready_for_games_flush(cur_timestamp);

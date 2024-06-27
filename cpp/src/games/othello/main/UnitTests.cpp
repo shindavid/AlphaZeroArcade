@@ -19,6 +19,7 @@ using Rules = Game::Rules;
 
 BaseState make_init_state() {
   BaseState state;
+  Rules::init_state(state);
   Rules::apply(state, othello::kD3);
   return state;
 }
@@ -106,22 +107,23 @@ bool validate_policy(const char* func, int line, const PolicyTensor& actual_poli
 void test_identity() {
   BaseState state = make_init_state();
 
-  Game::Identity transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kIdentity;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr = init_state_repr;
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kA3);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -131,8 +133,9 @@ void test_identity() {
 void test_rot90_clockwise() {
   BaseState state = make_init_state();
 
-  Game::Rot90Clockwise transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kRot90;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -147,15 +150,15 @@ void test_rot90_clockwise() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kF1);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -165,8 +168,9 @@ void test_rot90_clockwise() {
 void test_rot180() {
   BaseState state = make_init_state();
 
-  Game::Rot180 transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kRot180;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -181,15 +185,15 @@ void test_rot180() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kH6);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -199,8 +203,9 @@ void test_rot180() {
 void test_rot270_clockwise() {
   BaseState state = make_init_state();
 
-  Game::Rot270Clockwise transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kRot270;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -215,15 +220,15 @@ void test_rot270_clockwise() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kC8);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -233,8 +238,9 @@ void test_rot270_clockwise() {
 void test_flip_vertical() {
   BaseState state = make_init_state();
 
-  Game::FlipVertical transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kFlipVertical;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -249,15 +255,15 @@ void test_flip_vertical() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kA6);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -267,8 +273,9 @@ void test_flip_vertical() {
 void test_mirror_horizontal() {
   BaseState state = make_init_state();
 
-  Game::MirrorHorizontal transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kMirrorHorizontal;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -283,15 +290,15 @@ void test_mirror_horizontal() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kH3);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -301,8 +308,9 @@ void test_mirror_horizontal() {
 void test_flip_main_diag() {
   BaseState state = make_init_state();
 
-  Game::FlipMainDiag transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kFlipMainDiag;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -317,15 +325,15 @@ void test_flip_main_diag() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kC1);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
@@ -335,8 +343,9 @@ void test_flip_main_diag() {
 void test_flip_anti_diag() {
   BaseState state = make_init_state();
 
-  Game::FlipAntiDiag transform;
-  transform.apply(state);
+  group::element_t elem = groups::D4::kFlipAntiDiag;
+  core::symmetry_t sym{0, elem, groups::D4::inverse(elem)};
+  Game::Symmetries::apply(state, sym);
 
   std::string repr = get_repr(state);
   std::string expected_repr =
@@ -351,15 +360,15 @@ void test_flip_anti_diag() {
       " 8| | | | | | | | |\n";
 
   if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
-  transform.undo(state);
+  Game::Symmetries::apply(state, sym.inverse());
   if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
-  transform.apply(policy);
+  Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kF8);
   if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
-  transform.undo(policy);
+  Game::Symmetries::apply(policy, sym.inverse());
   if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
 
   printf("Success: %s()\n", __func__);
