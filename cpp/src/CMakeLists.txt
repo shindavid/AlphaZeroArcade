@@ -1,4 +1,4 @@
-add_library(alphazero-lib
+add_library(util-lib
         core/LoopControllerClient.cpp
         util/BoostUtil.cpp
         util/CudaUtil.cpp
@@ -11,13 +11,13 @@ add_library(alphazero-lib
         ${MY_TINYEXPR_DIR}/tinyexpr.c
         )
 
-set(LOCAL_LIBS alphazero-lib)
+set(LOCAL_LIBS util-lib)
 set(COMMON_LIBS ${COMMON_LIBS} ${LOCAL_LIBS} PARENT_SCOPE)
 set(ALL_LIBS ${ALL_LIBS} ${LOCAL_LIBS} PARENT_SCOPE)
 
-add_executable(alphazero-lib-tests
+add_executable(util-tests
         util/main/UnitTests.cpp
         )
 
-set(LOCAL_EXECUTABLES alphazero-lib-tests)
+set(LOCAL_EXECUTABLES util-tests)
 set(ALL_EXECUTABLES ${ALL_EXECUTABLES} ${LOCAL_EXECUTABLES} PARENT_SCOPE)
