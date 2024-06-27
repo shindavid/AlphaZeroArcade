@@ -148,7 +148,10 @@ NNEvaluationService<Game>::evaluate(const Request& request) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate()";
   }
 
-  cache_key_t cache_key(InputTensorizor::eval_key(*request.state), request.sym_index);
+  base_state_vec_t& state_history = *request.state_history;
+  util::release_assert(!state_history.empty());
+  auto eval_key = InputTensorizor::eval_key(&state_history.front(), &state_history.back());
+  cache_key_t cache_key(eval_key, request.sym);
   Response response = check_cache(request, cache_key);
   if (response.used_cache) return response;
 
@@ -249,7 +252,8 @@ void NNEvaluationService<Game>::batch_evaluate() {
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
-    edata.transform->undo(group.policy);
+
+    Game::Symmetries::apply(group.policy, edata.sym.inverse());
     edata.eval_ptr.store(
         std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
   }
@@ -380,26 +384,30 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
   const auto& stable_data = request.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
-  core::symmetry_index_t sym_index = cache_key.second;
+  core::symmetry_t sym = std::get<1>(cache_key);
 
   request.thread_profiler->record(SearchThreadRegion::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
-  auto transform = Transforms::get(sym_index);
 
-  for (BaseState& pos : state_history) transform->apply(pos);
+  for (BaseState& pos : state_history) {
+    Game::Symmetries::apply(pos, sym);
+  }
 
   util::release_assert(!state_history.empty());
   group.input = InputTensorizor::tensorize(&state_history.front(), &state_history.back());
 
-  for (BaseState& pos : state_history) transform->undo(pos);
+  core::symmetry_t inverse_sym = sym.inverse();
+  for (BaseState& pos : state_history) {
+    Game::Symmetries::apply(pos, inverse_sym);
+  }
 
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;
   group.eval_ptr_data.valid_actions = valid_action_mask;
-  group.eval_ptr_data.transform = transform;
+  group.eval_ptr_data.sym = sym;
 }
 
 template <core::concepts::Game Game>

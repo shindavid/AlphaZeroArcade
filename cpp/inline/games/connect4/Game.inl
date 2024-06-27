@@ -12,17 +12,40 @@
 namespace c4 {
 
 inline size_t Game::BaseState::hash() const {
-  return boost::hash_range(&full_mask, &full_mask + 2);
+  auto tuple = std::make_tuple(full_mask, cur_player_mask);
+  std::hash<decltype(tuple)> hasher;
+  return hasher(tuple);
 }
 
-inline void Game::Reflect::apply(BaseState& pos) {
-  pos.full_mask = __builtin_bswap64(pos.full_mask) >> 8;
-  pos.cur_player_mask = __builtin_bswap64(pos.cur_player_mask) >> 8;
+inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {
+  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+  switch (sym.element) {
+    case groups::D1::kIdentity: return;
+    case groups::D1::kFlip: {
+      state.full_mask = __builtin_bswap64(state.full_mask);
+      state.cur_player_mask = __builtin_bswap64(state.cur_player_mask);
+      return;
+    }
+    default: {
+      throw util::Exception("Unknown group element: %d", sym.element);
+    }
+  }
 }
 
-inline void Game::Reflect::apply(PolicyTensor& t) {
-  PolicyTensor u = eigen_util::reverse(t, t.rank() - 1);
-  t = u;
+inline void Game::Symmetries::apply(Types::PolicyTensor& t, const core::symmetry_t& sym) {
+  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+  switch (sym.element) {
+    case groups::D1::kIdentity:
+      return;
+    case groups::D1::kFlip: {
+      Types::PolicyTensor u = eigen_util::reverse(t, t.rank() - 1);
+      t = u;
+      return;
+    }
+    default: {
+      throw util::Exception("Unknown group element: %d", sym.element);
+    }
+  }
 }
 
 inline void Game::Rules::init_state(FullState& state) {
@@ -44,12 +67,6 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& sta
 
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& base) {
   return std::popcount(base.full_mask) % 2;
-}
-
-inline Game::Types::SymmetryIndexSet Game::Rules::get_symmetries(const FullState& state) {
-  Types::SymmetryIndexSet set;
-  set.set();
-  return set;
 }
 
 inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,

@@ -3,7 +3,6 @@
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
-#include <core/Symmetries.hpp>
 
 #include <iostream>
 #include <string>
@@ -25,24 +24,14 @@ struct GameLogBase {
   static constexpr int kAlignment = 16;
 
   struct Header {
-    uint32_t num_samples_with_symmetry_expansion = 0;
-    uint32_t num_samples_without_symmetry_expansion = 0;
+    uint32_t num_samples = 0;
     uint32_t num_positions = 0;  // includes terminal positions
     uint32_t num_dense_policies = 0;
     uint32_t num_sparse_policy_entries = 0;
     uint32_t extra = 0;  // leave extra space for future use (version numbering, etc.)
   };
 
-  struct sym_sample_index_t {
-    uint32_t state_index;
-    uint32_t sym_index;
-  };
-
-#pragma pack(push, 1)
-  struct non_sym_sample_index_t {
-    uint32_t state_index;
-  };
-#pragma pack(pop)
+  using pos_index_t = int32_t;
 
 #pragma pack(push, 1)
   struct policy_target_index_t {
@@ -69,13 +58,12 @@ struct GameLogBase {
  *
  * [Header]
  * [ValueArray]
- * [sym_sample_index_t...]
- * [non_sym_sample_index_t...]
+ * [pos_index_t...]                // indices of sampled positions
  * [action_t...]
  * [policy_target_index_t...]
- * [Game::BaseState...]
+ * [Game::BaseState...]            // all positions, whether sampled or not
  * [Game::Types::PolicyTensor...]  // data for densely represented policy targets
- * [sparse_policy_entry_t...]  // data for sparsely represented policy targets
+ * [sparse_policy_entry_t...]      // data for sparsely represented policy targets
  *
  * Each section is aligned to 8 bytes.
  */
@@ -85,7 +73,7 @@ class GameLog : public GameLogBase {
   using Header = GameLogBase::Header;
 
   using Rules = Game::Rules;
-  using Transform = Game::Types::Transform;
+  using SymmetryGroups = Game::SymmetryGroups;
   using InputTensorizor = Game::InputTensorizor;
   using InputTensor = Game::InputTensorizor::Tensor;
   using TrainingTargetsList = Game::TrainingTargets::List;
@@ -103,15 +91,13 @@ class GameLog : public GameLogBase {
             float** target_value_arrays) const;
 
   void replay() const;
-  int num_samples(bool apply_symmetry) const;
+  int num_sampled_positions() const;
 
  private:
   char* get_buffer() const;
   Header& header();
   const Header& header() const;
 
-  int num_samples_with_symmetry_expansion() const;
-  int num_samples_without_symmetry_expansion() const;
   int num_positions() const;
   int num_non_terminal_positions() const;
   int num_dense_policies() const;
@@ -119,8 +105,7 @@ class GameLog : public GameLogBase {
 
   static constexpr int header_start_mem_offset();
   static constexpr int outcome_start_mem_offset();
-  static constexpr int sym_sample_index_start_mem_offset();
-  int non_sym_sample_index_start_mem_offset() const;
+  static constexpr int sampled_indices_start_mem_offset();
   int action_start_mem_offset() const;
   int policy_target_index_start_mem_offset() const;
   int state_start_mem_offset() const;
@@ -132,19 +117,16 @@ class GameLog : public GameLogBase {
   const BaseState* state_start_ptr() const;
   const PolicyTensor* dense_policy_start_ptr() const;
   const sparse_policy_entry_t* sparse_policy_entry_start_ptr() const;
-  const sym_sample_index_t* sym_sample_index_start_ptr() const;
-  const non_sym_sample_index_t* non_sym_sample_index_start_ptr() const;
+  const pos_index_t* sampled_indices_start_ptr() const;
 
   PolicyTensor get_policy(int state_index) const;
   const BaseState* get_state(int state_index) const;
   action_t get_prev_action(int state_index) const;
   ValueArray get_outcome() const;
-  sym_sample_index_t get_sym_sample_index(int index) const;
-  non_sym_sample_index_t get_non_sym_sample_index(int index) const;
+  pos_index_t get_pos_index(int sample_index) const;
 
   const std::string filename_;
   char* const buffer_ = nullptr;
-  const int non_sym_sample_index_start_mem_offset_;
   const int action_start_mem_offset_;
   const int policy_target_index_start_mem_offset_;
   const int state_start_mem_offset_;
@@ -159,13 +141,12 @@ class GameLogWriter {
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
   using ValueArray = Game::Types::ValueArray;
-  using SymmetryIndexSet = Game::Types::SymmetryIndexSet;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using SymmetryGroups = Game::SymmetryGroups;
   using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {
     BaseState position;
-    SymmetryIndexSet symmetries;
     PolicyTensor policy_target;  // only valid if policy_target_is_valid
     action_t action;
     bool use_for_training;
@@ -182,7 +163,7 @@ class GameLogWriter {
   void add_terminal(const FullState& state, const ValueArray& outcome);
   void serialize(std::ostream&) const;
   bool is_previous_entry_used_for_training() const;
-  int sym_train_count() const { return sym_train_count_; }
+  int sample_count() const { return sample_count_; }
   game_id_t id() const { return id_; }
   int64_t start_timestamp() const { return start_timestamp_; }
   void close() { closed_ = true; }
@@ -200,8 +181,7 @@ class GameLogWriter {
   ValueArray outcome_;
   const game_id_t id_;
   const int64_t start_timestamp_;
-  int sym_train_count_ = 0;
-  int non_sym_train_count_ = 0;
+  int sample_count_ = 0;
   bool terminal_added_ = false;
   bool closed_ = false;
 };

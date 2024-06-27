@@ -9,14 +9,15 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/GameTypes.hpp>
-#include <core/Symmetries.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/concepts/GameIO.hpp>
 #include <core/concepts/GameInputTensorizor.hpp>
 #include <core/concepts/GameRules.hpp>
+#include <core/concepts/GameSymmetries.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
 
 namespace core {
@@ -64,7 +65,9 @@ concept Game = requires {
   requires std::is_trivially_copyable_v<typename G::BaseState>;
   requires std::is_convertible_v<typename G::BaseState, typename G::FullState>;
 
-  requires mp::IsTypeListOf<typename G::TransformList, typename G::Types::Transform>;
+  requires ::concepts::FiniteGroupList<typename G::SymmetryGroups>;
+  requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types::PolicyTensor,
+                                          typename G::BaseState>;
   requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::BaseState,
                                      typename G::FullState>;
   requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::BaseState>;

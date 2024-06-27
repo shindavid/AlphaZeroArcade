@@ -24,10 +24,6 @@ concept GameConstants = requires {
   // evaluate the current BaseState. If the neural network does not need any previous BaseState's,
   // kHistorySize should be 0.
   { util::decay_copy(GC::kHistorySize) } -> std::same_as<int>;
-
-  // kNumSymmetries is the number of symmetries that the game has. This must be consistent with
-  // the length of the TransformList in the Game class.
-  { util::decay_copy(GC::kNumSymmetries) } -> std::same_as<int>;
 };
 
 }  // namespace concepts

@@ -410,4 +410,16 @@ concept UsableAsHashMapKey = requires(const T& a, const T& b) {
 
 }  // namespace util
 
+namespace std {
+
+// hash for std::tuple
+template<typename... Ts>
+struct hash<std::tuple<Ts...>> {
+  size_t operator()(const std::tuple<Ts...>& tup) const {
+    return util::tuple_hash(tup);
+  }
+};
+
+}  // namespace std
+
 #include <inline/util/CppUtil.inl>

@@ -16,6 +16,7 @@
 #include <core/TrainingTargets.hpp>
 #include <games/connect4/Constants.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
 
 namespace c4 {
@@ -40,7 +41,6 @@ struct Game {
     static constexpr int kNumActions = kNumColumns;
     static constexpr int kMaxBranchingFactor = kNumColumns;
     static constexpr int kHistorySize = 0;
-    static constexpr int kNumSymmetries = 2;
   };
 
   struct BaseState {
@@ -52,24 +52,20 @@ struct Game {
   };
 
   using FullState = BaseState;
-
   using Types = core::GameTypes<Constants, BaseState>;
+  using SymmetryGroups = mp::TypeList<groups::D1>;
 
-  using Identity = core::IdentityTransform<BaseState, Types::PolicyTensor>;
-
-  struct Reflect : public core::ReflexiveTransform<BaseState, Types::PolicyTensor> {
-    void apply(BaseState& pos) override;
-    void apply(Types::PolicyTensor& policy) override;
+  struct Symmetries {
+    static core::group_id_t get_group(const BaseState& state) { return 0; }
+    static void apply(BaseState& state, const core::symmetry_t& sym);
+    static void apply(Types::PolicyTensor& policy, const core::symmetry_t& sym);
   };
-
-  using TransformList = mp::TypeList<Identity, Reflect>;
 
   struct Rules {
     static void init_state(FullState& state);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);
-    static Types::SymmetryIndexSet get_symmetries(const FullState& state);
   };
 
   struct IO {
@@ -86,11 +82,11 @@ struct Game {
 
   struct InputTensorizor {
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kNumRows, kNumColumns>>;
-    using EvalKey = BaseState;
     using MCTSKey = BaseState;
+    using EvalKey = BaseState;
 
-    static EvalKey eval_key(const FullState& state) { return state; }
     static MCTSKey mcts_key(const FullState& state) { return state; }
+    static EvalKey eval_key(const BaseState* start, const BaseState* cur) { return *cur; }
     static Tensor tensorize(const BaseState* start, const BaseState* cur);
   };
 

@@ -13,7 +13,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& s,
       valid_action_mask(Rules::get_legal_moves(s)),
       num_valid_actions(valid_action_mask.count()),
       current_player(Rules::get_current_player(s)),
-      sym_index(make_sym_index(s, *mp)) {}
+      sym(make_symmetry(s, *mp)) {}
 
 template <core::concepts::Game Game>
 inline Node<Game>::stats_t::stats_t() {
@@ -240,12 +240,14 @@ typename Node<Game>::sptr Node<Game>::lookup_child_by_action(core::action_t acti
 }
 
 template <core::concepts::Game Game>
-core::symmetry_index_t Node<Game>::make_sym_index(const FullState& state,
-                                                  const ManagerParams& params) {
+core::symmetry_t Node<Game>::make_symmetry(const FullState& state, const ManagerParams& params) {
+  core::symmetry_t sym;
   if (params.apply_random_symmetries) {
-    return bitset_util::choose_random_on_index(Rules::get_symmetries(state));
+    sym.group_id = Game::Symmetries::get_group(state);
+    sym.element = groups::get_random_element<SymmetryGroups>(sym.group_id);
+    sym.inverse_element = groups::get_inverse_element<SymmetryGroups>(sym.group_id, sym.element);
   }
-  return 0;
+  return sym;
 }
 
 }  // namespace mcts
