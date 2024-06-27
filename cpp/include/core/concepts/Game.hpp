@@ -65,8 +65,6 @@ concept Game = requires {
   requires std::is_trivially_copyable_v<typename G::BaseState>;
   requires std::is_convertible_v<typename G::BaseState, typename G::FullState>;
 
-  // TODO: requirements for Symmmetry class
-
   requires ::concepts::FiniteGroupList<typename G::SymmetryGroups>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types::PolicyTensor,
                                           typename G::BaseState>;
