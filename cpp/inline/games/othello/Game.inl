@@ -14,7 +14,9 @@
 namespace othello {
 
 inline size_t Game::BaseState::hash() const {
-  return util::tuple_hash(std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count));
+  auto tuple = std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count);
+  std::hash<decltype(tuple)> hasher;
+  return hasher(tuple);
 }
 
 inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {

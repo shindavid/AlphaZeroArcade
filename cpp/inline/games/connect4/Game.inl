@@ -12,7 +12,9 @@
 namespace c4 {
 
 inline size_t Game::BaseState::hash() const {
-  return boost::hash_range(&full_mask, &full_mask + 2);
+  auto tuple = std::make_tuple(full_mask, cur_player_mask);
+  std::hash<decltype(tuple)> hasher;
+  return hasher(tuple);
 }
 
 inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {
