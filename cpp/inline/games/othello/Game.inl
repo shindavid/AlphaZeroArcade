@@ -19,12 +19,17 @@ inline size_t Game::BaseState::hash() const {
   return hasher(tuple);
 }
 
-inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {
-  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+  Types::SymmetryMask mask;
+  mask.set();
+  return mask;
+}
+
+inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
   using namespace bitmap_util;
   using D4 = groups::D4;
   auto& s = state;
-  switch (sym.element) {
+  switch (sym) {
     case D4::kIdentity: return;
     case D4::kRot90: return rot90_clockwise(s.cur_player_mask, s.opponent_mask);
     case D4::kRot180: return rot180(s.cur_player_mask, s.opponent_mask);
@@ -34,17 +39,16 @@ inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sy
     case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
     case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
     default: {
-      throw util::Exception("Unknown group element: %d", sym.element);
+      throw util::Exception("Unknown group element: %d", sym);
     }
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, const core::symmetry_t& sym) {
-  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
+inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
-  switch (sym.element) {
+  switch (sym) {
     case D4::kIdentity: return;
     case D4::kRot90: return rot90_clockwise<N>(tensor);
     case D4::kRot180: return rot180<N>(tensor);
@@ -54,7 +58,7 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, const core::sym
     case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
     case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
     default: {
-      throw util::Exception("Unknown group element: %d", sym.element);
+      throw util::Exception("Unknown group element: %d", sym);
     }
   }
 }

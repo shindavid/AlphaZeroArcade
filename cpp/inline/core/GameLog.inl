@@ -87,11 +87,9 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   BaseState* cur_pos = &base_states[num_states_to_cp - 1];
   BaseState final_state = *get_state(num_positions() - 1);
 
-  core::symmetry_t sym;
+  group::element_t sym = 0;
   if (apply_symmetry) {
-    sym.group_id = Game::Symmetries::get_group(*cur_pos);
-    sym.element = groups::get_random_element<SymmetryGroups>(sym.group_id);
-    sym.inverse_element = groups::get_inverse_element<SymmetryGroups>(sym.group_id, sym.element);
+    sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(*cur_pos));
   }
 
   for (int i = 0; i < num_states_to_cp; ++i) {

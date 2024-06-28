@@ -3,6 +3,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <util/EigenUtil.hpp>
+#include <util/FiniteGroups.hpp>
 
 #include <array>
 #include <bitset>
@@ -10,7 +11,8 @@
 
 namespace core {
 
-template<concepts::GameConstants GameConstants, typename BaseState>
+template <concepts::GameConstants GameConstants, typename BaseState,
+          group::concepts::FiniteGroup Group>
 struct GameTypes {
   using ActionMask = std::bitset<GameConstants::kNumActions>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
@@ -19,6 +21,7 @@ struct GameTypes {
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
+  using SymmetryMask = std::bitset<Group::kOrder>;
 
   /*
    * Return type for an MCTS search.

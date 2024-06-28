@@ -11,8 +11,6 @@ namespace group {
 using element_t = int32_t;
 constexpr element_t kIdentity = 0;  // in every group, 0 is the identity element
 
-}  // namespace group
-
 namespace concepts {
 
 template <typename G>
@@ -23,6 +21,8 @@ concept FiniteGroup = requires(group::element_t x, group::element_t y) {
 };
 
 }  // namespace concepts
+
+}  // namespace group
 
 namespace groups {
 
@@ -65,33 +65,6 @@ struct D4 : public DihedralGroup<4> {
   static constexpr group::element_t kMirrorHorizontal = 6;
   static constexpr group::element_t kFlipAntiDiag = 7;  // top-right to bot-left
 };
-
-template <typename G>
-struct FiniteGroupPredicate {
-  static constexpr bool value = concepts::FiniteGroup<G>;
-};
-
-}  // namespace groups
-
-namespace concepts {
-
-template <typename T>
-concept FiniteGroupList = mp::IsTypeListSatisfying<T, groups::FiniteGroupPredicate>;
-
-}  // namespace concepts
-
-namespace groups {
-
-/*
- * groups::get_random_element<L>(k) returns a random element of the k'th Group of L.
- */
-template <concepts::FiniteGroupList L> group::element_t get_random_element(int index);
-
-/*
- * groups::get_inverse_element<L>(k, x) returns the inverse of x in the k'th Group of L.
- */
-template <concepts::FiniteGroupList L>
-group::element_t get_inverse_element(int index, group::element_t x);
 
 }  // namespace groups
 

@@ -240,12 +240,10 @@ typename Node<Game>::sptr Node<Game>::lookup_child_by_action(core::action_t acti
 }
 
 template <core::concepts::Game Game>
-core::symmetry_t Node<Game>::make_symmetry(const FullState& state, const ManagerParams& params) {
-  core::symmetry_t sym;
+group::element_t Node<Game>::make_symmetry(const FullState& state, const ManagerParams& params) {
+  group::element_t sym = 0;
   if (params.apply_random_symmetries) {
-    sym.group_id = Game::Symmetries::get_group(state);
-    sym.element = groups::get_random_element<SymmetryGroups>(sym.group_id);
-    sym.inverse_element = groups::get_inverse_element<SymmetryGroups>(sym.group_id, sym.element);
+    sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(state));
   }
   return sym;
 }

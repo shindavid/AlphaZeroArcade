@@ -59,14 +59,16 @@ namespace concepts {
 template <class G>
 concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
-  requires std::same_as<typename G::Types, core::GameTypes<typename G::Constants, typename G::BaseState>>;
+  requires std::same_as<
+      typename G::Types,
+      core::GameTypes<typename G::Constants, typename G::BaseState, typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::BaseState>;
   requires std::is_trivially_copyable_v<typename G::BaseState>;
   requires std::is_convertible_v<typename G::BaseState, typename G::FullState>;
 
-  requires ::concepts::FiniteGroupList<typename G::SymmetryGroups>;
-  requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types::PolicyTensor,
+  requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
+  requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
                                           typename G::BaseState>;
   requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::BaseState,
                                      typename G::FullState>;

@@ -73,7 +73,6 @@ class GameLog : public GameLogBase {
   using Header = GameLogBase::Header;
 
   using Rules = Game::Rules;
-  using SymmetryGroups = Game::SymmetryGroups;
   using InputTensorizor = Game::InputTensorizor;
   using InputTensor = Game::InputTensorizor::Tensor;
   using TrainingTargetsList = Game::TrainingTargets::List;
@@ -142,7 +141,6 @@ class GameLogWriter {
   using FullState = Game::FullState;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
-  using SymmetryGroups = Game::SymmetryGroups;
   using sparse_policy_entry_t = GameLogBase::sparse_policy_entry_t;
 
   struct Entry {

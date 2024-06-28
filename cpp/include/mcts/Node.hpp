@@ -42,7 +42,6 @@ class Node {
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionOutcome = Game::Types::ActionOutcome;
-  using SymmetryGroups = Game::SymmetryGroups;
   using player_bitset_t = std::bitset<kNumPlayers>;
 
   enum evaluation_state_t : int8_t {
@@ -57,7 +56,7 @@ class Node {
     ActionMask valid_action_mask;
     int num_valid_actions;
     core::seat_index_t current_player;
-    core::symmetry_t sym;
+    group::element_t sym;
   };
 
   /*
@@ -295,7 +294,7 @@ class Node {
   evaluation_data_t& evaluation_data() { return evaluation_data_; }
 
  private:
-  static core::symmetry_t make_symmetry(const FullState& state, const ManagerParams& params);
+  static group::element_t make_symmetry(const FullState& state, const ManagerParams& params);
   std::condition_variable cv_evaluate_;
   mutable std::mutex evaluation_data_mutex_;
   mutable std::mutex children_mutex_;

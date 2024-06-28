@@ -6,6 +6,12 @@ inline size_t Game::BaseState::hash() const {
   return (size_t(full_mask) << 16) + cur_player_mask;
 }
 
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+  Types::SymmetryMask mask;
+  mask.set();
+  return mask;
+}
+
 inline void Game::Rules::init_state(FullState& state) {
   state.full_mask = 0;
   state.cur_player_mask = 0;

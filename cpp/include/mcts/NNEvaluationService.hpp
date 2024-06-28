@@ -105,7 +105,7 @@ class NNEvaluationService
     base_state_vec_t* state_history;
     search_thread_profiler_t* thread_profiler;
     int thread_id;
-    core::symmetry_t sym;
+    group::element_t sym;
 
     std::string thread_id_whitespace() const {
       return util::make_whitespace(kThreadWhitespaceLength * thread_id);
@@ -159,7 +159,7 @@ class NNEvaluationService
 
  private:
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = std::tuple<EvalKey, core::symmetry_t>;
+  using cache_key_t = std::tuple<EvalKey, group::element_t>;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
 
@@ -198,7 +198,7 @@ class NNEvaluationService
 
     cache_key_t cache_key;
     ActionMask valid_actions;
-    core::symmetry_t sym;
+    group::element_t sym;
   };
 
   struct tensor_group_t {

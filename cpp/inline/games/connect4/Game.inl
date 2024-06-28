@@ -17,9 +17,14 @@ inline size_t Game::BaseState::hash() const {
   return hasher(tuple);
 }
 
-inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sym) {
-  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
-  switch (sym.element) {
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+  Types::SymmetryMask mask;
+  mask.set();
+  return mask;
+}
+
+inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
+  switch (sym) {
     case groups::D1::kIdentity: return;
     case groups::D1::kFlip: {
       state.full_mask = __builtin_bswap64(state.full_mask);
@@ -27,14 +32,13 @@ inline void Game::Symmetries::apply(BaseState& state, const core::symmetry_t& sy
       return;
     }
     default: {
-      throw util::Exception("Unknown group element: %d", sym.element);
+      throw util::Exception("Unknown group element: %d", sym);
     }
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& t, const core::symmetry_t& sym) {
-  util::release_assert(sym.group_id == 0, "Unknown group: %d", sym.group_id);
-  switch (sym.element) {
+inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym) {
+  switch (sym) {
     case groups::D1::kIdentity:
       return;
     case groups::D1::kFlip: {
@@ -43,7 +47,7 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& t, const core::symmetry
       return;
     }
     default: {
-      throw util::Exception("Unknown group element: %d", sym.element);
+      throw util::Exception("Unknown group element: %d", sym);
     }
   }
 }

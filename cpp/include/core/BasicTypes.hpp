@@ -15,16 +15,6 @@ using action_t = int32_t;
 using action_index_t = int32_t;
 using game_id_t = int64_t;
 using game_thread_id_t = int16_t;
-using group_id_t = int32_t;
-
-struct symmetry_t {
-  bool operator==(const symmetry_t& other) const = default;
-  symmetry_t inverse() const { return {group_id, inverse_element, element}; }
-
-  group_id_t group_id = 0;
-  group::element_t element = 0;
-  group::element_t inverse_element = 0;
-};
 
 /*
  * An ActionResponse is an action together with an optional bool indicating whether the player
@@ -51,14 +41,3 @@ struct ActionOutcome {
 };
 
 }  // namespace core
-
-namespace std {
-
-template<>
-struct hash<core::symmetry_t> {
-  size_t operator()(const core::symmetry_t& sym) const {
-    return util::tuple_hash(std::make_tuple(sym.group_id, sym.element));
-  }
-};
-
-}  // std

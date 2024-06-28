@@ -253,7 +253,7 @@ void NNEvaluationService<Game>::batch_evaluate() {
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
 
-    Game::Symmetries::apply(group.policy, edata.sym.inverse());
+    Game::Symmetries::apply(group.policy, Game::SymmetryGroup::inverse(edata.sym));
     edata.eval_ptr.store(
         std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
   }
@@ -384,7 +384,7 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
   const auto& stable_data = request.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
-  core::symmetry_t sym = std::get<1>(cache_key);
+  group::element_t sym = std::get<1>(cache_key);
 
   request.thread_profiler->record(SearchThreadRegion::kTensorizing);
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
@@ -398,7 +398,7 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
   util::release_assert(!state_history.empty());
   group.input = InputTensorizor::tensorize(&state_history.front(), &state_history.back());
 
-  core::symmetry_t inverse_sym = sym.inverse();
+  group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
   for (BaseState& pos : state_history) {
     Game::Symmetries::apply(pos, inverse_sym);
   }

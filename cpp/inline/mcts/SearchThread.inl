@@ -274,7 +274,7 @@ void SearchThread<Game>::evaluate_unset(Node* node, std::unique_lock<std::mutex>
     data->evaluation = std::make_shared<NNEvaluation>(uniform_value, uniform_policy,
                                                       stable_data.valid_action_mask);
   } else {
-    const core::symmetry_t& sym = stable_data.sym;
+    group::element_t sym = stable_data.sym;
     typename NNEvaluationService::Request request{node,       &state_,    &state_history_,
                                                   &profiler_, thread_id_, sym};
     auto response = nn_eval_service_->evaluate(request);
