@@ -1,3 +1,4 @@
+#include <util/AllocPool.hpp>
 #include <util/Random.hpp>
 
 #include <array>
@@ -47,8 +48,54 @@ void test_random() {
   test_zero_out<int>();
 }
 
+template<typename Pool>
+bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
+  int x = 0;
+  for (int i = 0; i < num_sizes; ++i) {
+    int size = sizes[i];
+    util::pool_index_t idx = pool.alloc(size);
+    for (int i = 0; i < size; ++i) {
+      pool[idx + i] = x++;
+    }
+  }
+
+  std::vector<int> vec = pool.to_vector();
+  if (int(vec.size()) != x) {
+    printf("Expected %d elements, got %lu\n", x, vec.size());
+    global_fail_count++;
+    return false;
+  }
+  for (int i = 0; i < x; ++i) {
+    if (vec[i] != i) {
+      printf("pool[%d]: expected %d, got %d\n", i, i, vec[i]);
+      global_fail_count++;
+      return false;
+    }
+  }
+  return true;
+}
+
+void test_alloc_pool() {
+  using pool_t = util::AllocPool<int, 2>;
+  pool_t pool;
+
+  int sizes1[] = {10, 1, 1, 1, 1};
+  if (!test_alloc_pool_helper(pool, sizes1, sizeof(sizes1) / sizeof(sizes1[0]))) return;
+  pool.clear();
+
+  int sizes2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  if (!test_alloc_pool_helper(pool, sizes2, sizeof(sizes2) / sizeof(sizes2[0]))) return;
+  pool.clear();
+
+  int sizes3[] = {100};
+  if (!test_alloc_pool_helper(pool, sizes3, sizeof(sizes3) / sizeof(sizes3[0]))) return;
+
+  global_pass_count++;
+}
+
 int main() {
   test_random();
+  test_alloc_pool();
 
   if (global_fail_count > 0) {
     int total_count = global_pass_count + global_fail_count;
