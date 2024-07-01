@@ -9,17 +9,14 @@
 
 namespace util {
 
-using pool_index_t = uint64_t;
+using pool_index_t = int64_t;
 
 /*
  * An AllocPool is a thread-safe pool of memory that supports single or block alloc() calls. Each
  * alloc() call returns a pool_index_t that can be used to access the allocated memory via
  * operator[].
  *
- * It is assumed that all reads via operator[] occur after the corresponding alloc() call has
- * returned. This assumption can be easily relaxed, but we should not need to do so in our
- * expected use cases. The assumption allows for lockfree-reads; relaxing it would require
- * additional synchronization on reads.
+ * The alloc() call is mutex-protected, while operator[] is usually lockfree.
  *
  * AllocPool does NOT support free() calls. Memory is freed when the pool is destroyed.
  *
@@ -30,6 +27,7 @@ template<typename T, int N=10>
 class AllocPool {
  public:
   static_assert(std::is_trivially_destructible_v<T>);
+  static_assert(std::is_trivially_copyable_v<T>);
 
   AllocPool();
   AllocPool(const AllocPool&) = delete;
@@ -47,13 +45,13 @@ class AllocPool {
  private:
   void add_block();
 
-  static constexpr int kNumBlocks = 65 - N;
+  static constexpr int kNumBlocks = 64 - N;
   using block_t = char*;
 
-  block_t blocks_[kNumBlocks] = {};
   uint64_t size_ = 0;
   int num_blocks_ = 2;
-  std::mutex mutex_;
+  mutable std::mutex mutex_;
+  block_t blocks_[kNumBlocks] = {};
 };
 
 }  // namespace util
