@@ -50,6 +50,7 @@ void test_random() {
 
 template<typename Pool>
 bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
+  // add 0, 1, 2, ... to the pool, in chunks given by sizes
   int x = 0;
   for (int i = 0; i < num_sizes; ++i) {
     int size = sizes[i];
@@ -59,12 +60,15 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
     }
   }
 
+  // validate size
   std::vector<int> vec = pool.to_vector();
   if (int(vec.size()) != x) {
     printf("Expected %d elements, got %lu\n", x, vec.size());
     global_fail_count++;
     return false;
   }
+
+  // validate contents
   for (int i = 0; i < x; ++i) {
     if (vec[i] != i) {
       printf("pool[%d]: expected %d, got %d\n", i, i, vec[i]);
@@ -72,6 +76,31 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
       return false;
     }
   }
+
+  // now remove the odd elements
+  boost::dynamic_bitset<> used_indices(x);
+  for (int i = 1; i < x; i += 2) {
+    used_indices[i] = true;
+  }
+  pool.defragment(used_indices);
+
+  // validate size
+  vec = pool.to_vector();
+  if (int(vec.size()) != x / 2) {
+    printf("Expected %d elements, got %lu\n", x / 2, vec.size());
+    global_fail_count++;
+    return false;
+  }
+
+  // validate contents
+  for (int i = 0; i < x / 2; ++i) {
+    if (vec[i] != 2 * i + 1) {
+      printf("pool[%d]: expected %d, got %d\n", i, 2 * i + 1, vec[i]);
+      global_fail_count++;
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -79,7 +108,7 @@ void test_alloc_pool() {
   using pool_t = util::AllocPool<int, 2>;
   pool_t pool;
 
-  int sizes1[] = {10, 1, 1, 1, 1};
+  int sizes1[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
   if (!test_alloc_pool_helper(pool, sizes1, sizeof(sizes1) / sizeof(sizes1[0]))) return;
   pool.clear();
 

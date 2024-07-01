@@ -5,6 +5,8 @@
 #include <mutex>
 #include <vector>
 
+#include <boost/dynamic_bitset.hpp>
+
 namespace util {
 
 using pool_index_t = uint64_t;
@@ -16,14 +18,13 @@ using pool_index_t = uint64_t;
  *
  * It is assumed that all reads via operator[] occur after the corresponding alloc() call has
  * returned. This assumption can be easily relaxed, but we should not need to do so in our
- * expected use cases.
+ * expected use cases. The assumption allows for lockfree-reads; relaxing it would require
+ * additional synchronization on reads.
  *
  * AllocPool does NOT support free() calls. Memory is freed when the pool is destroyed.
  *
  * The underlying implementation relies on an array of blocks of type T[]. The first two blocks are
  * of size 2^N, and each subsequent block is twice the size of the previous block.
- *
- * TODO: add defragmentation functionality.
  */
 template<typename T, int N=10>
 class AllocPool {
@@ -39,7 +40,9 @@ class AllocPool {
   pool_index_t alloc(int n);
   T& operator[](pool_index_t i);
   const T& operator[](pool_index_t i) const;
+  uint64_t size() const { return size_; }
   std::vector<T> to_vector() const;  // for debugging
+  void defragment(const boost::dynamic_bitset<>& used_indices);
 
  private:
   void add_block();

@@ -1,5 +1,7 @@
 #include <util/AllocPool.hpp>
 
+#include <util/Asserts.hpp>
+
 namespace util {
 
 namespace detail {
@@ -70,6 +72,24 @@ std::vector<T> AllocPool<T, N>::to_vector() const {
     vec[i] = (*this)[i];
   }
   return vec;
+}
+
+template <typename T, int N>
+void AllocPool<T, N>::defragment(const boost::dynamic_bitset<>& used_indices) {
+  util::release_assert(used_indices.size() == size_);
+
+  uint64_t r = 0;
+  uint64_t w = 0;
+  while (r < size_) {
+    if (used_indices[r]) {
+      if (r != w) {
+        (*this)[w] = (*this)[r];
+      }
+      ++w;
+    }
+    ++r;
+  }
+  size_ = w;
 }
 
 template <typename T, int N>
