@@ -98,21 +98,22 @@ template <core::concepts::Game Game>
 inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
                                                 const FullState& state,
                                                 core::action_t action) {
-  shared_data_.move_number++;
+  using node_pool_index_t = Node::node_pool_index_t;
+
   shared_data_.update_state(state);
-  shared_data_.node_cache.clear_before(shared_data_.move_number);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
-  auto root_node = shared_data_.root_node;
-  if (!root_node.get()) return;
+  node_pool_index_t root_index = shared_data_.root_node_index;
+  if (root_index < 0) return;
 
-  auto new_root = root_node->lookup_child_by_action(action);
-  if (!new_root.get()) {
-    shared_data_.root_node = nullptr;
+  Node* root = shared_data_.lookup_table.get_node(root_index);
+  root_index = root->lookup_child_by_action(action);
+  if (root_index < 0) {
+    shared_data_.root_node_index = -1;
     return;
   }
 
-  shared_data_.root_node = new_root;
+  shared_data_.root_node_index = root_index;
 
   if (params_.enable_pondering) {
     start_search_threads(pondering_search_params_);
@@ -125,10 +126,11 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   stop_search_threads();
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
-  if (!shared_data_.root_node || add_noise) {
+  if (shared_data_.root_node_index < 0 || add_noise) {
     ActionOutcome outcome;
-    shared_data_.root_node =
-        std::make_shared<Node>(game_state, outcome, &params_);  // TODO: use memory pool
+    shared_data_.root_node_index = shared_data_.lookup_table.alloc_node();
+    Node* root = shared_data_.lookup_table.get_node(shared_data_.root_node_index);
+    new (root) Node(&shared_data_.lookup_table, game_state, outcome);
   }
 
   if (mcts::kEnableDebug) {
@@ -138,12 +140,10 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   start_search_threads(params);
   wait_for_search_threads();
 
-  const auto& root = shared_data_.root_node;
-  const auto& evaluation_data = root->evaluation_data();
+  Node* root = shared_data_.lookup_table.get_node(shared_data_.root_node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();
 
-  auto evaluation = evaluation_data.ptr.load();
   results_.valid_actions = stable_data.valid_action_mask;
   results_.counts = root->get_counts(params_);
   results_.policy_target = results_.counts;
@@ -154,10 +154,14 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   results_.policy_prior.setZero();
   int i = 0;
   for (int a : bitset_util::on_indices(results_.valid_actions)) {
-    results_.policy_prior(a) = evaluation_data.local_policy_prob_distr(i++);
+    auto* edge = root->get_edge(i++);
+    results_.policy_prior(a) = edge->raw_policy_prior;
   }
-  results_.win_rates = stats.real_avg;
-  results_.value_prior = evaluation->value_prob_distr();
+  results_.win_rates = stats.RQ;
+  results_.value_prior = stable_data.V;
+
+  defragment_pools();
+
   return &results_;
 }
 
@@ -183,16 +187,19 @@ inline void Manager<Game>::stop_search_threads() {
   shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
 }
 
-/*
- * The KataGo paper is a little vague in its description of the target pruning step, and examining
- * the KataGo source code was not very enlightening. The following is my best guess at what the
- * target pruning step does.
- */
+template <core::concepts::Game Game>
+void Manager<Game>::defragment_pools() {
+  // throw std::runtime_error("Not implemented");
+}
+
 template <core::concepts::Game Game>
 void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
+  using edge_t = Node::edge_t;
+
   if (params_.no_model) return;
 
-  PUCTStats stats(params_, search_params, shared_data_.root_node.get(), true);
+  Node* root = shared_data_.get_root_node();
+  PUCTStats stats(params_, search_params, root, true);
 
   const auto& P = stats.P;
   const auto& N = stats.N;
@@ -209,8 +216,8 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
 
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
 
-  for (auto& it : shared_data_.root_node->children_data()) {
-    core::action_index_t i = it.action_index();
+  for (int i = 0; i < root->stable_data().num_valid_actions; ++i) {
+    edge_t* edge = root->get_edge(i);
     if (N(i) == N_max) continue;
     if (!isfinite(N_floor(i))) continue;
     auto n = std::max(N_floor(i), N(i) - n_forced(i));
@@ -218,7 +225,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
       n = 0;
     }
 
-    results_.policy_target(it.action()) = n;
+    results_.policy_target(edge->action) = n;
   }
 
   const auto& policy_target_array = eigen_util::reinterpret_as_array(results_.policy_target);

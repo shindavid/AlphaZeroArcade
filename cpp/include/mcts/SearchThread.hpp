@@ -11,7 +11,6 @@
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/NodeCache.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -24,16 +23,17 @@ class SearchThread {
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
-  using NodeCache = mcts::NodeCache<Game>;
   using PUCTStats = mcts::PUCTStats<Game>;
   using SharedData = mcts::SharedData<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using edge_t = Node::edge_t;
+  using node_pool_index_t = Node::node_pool_index_t;
   using base_state_vec_t = SharedData::base_state_vec_t;
 
   using IO = Game::IO;
   using Rules = Game::Rules;
   using FullState = Game::FullState;
+  using ActionOutcome = Game::Types::ActionOutcome;
   using ActionMask = Game::Types::ActionMask;
   using NNEvaluation_sptr = NNEvaluation::sptr;
   using PolicyShape = Game::Types::PolicyShape;
@@ -76,9 +76,9 @@ class SearchThread {
     void operator()(Node* node) const { node->stats().increment_transfer(); }
   };
 
-  struct SetEvalExact {
-    SetEvalExact(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().set_eval_exact(value); }
+  struct SetProvableBitsAndRealIncrement {
+    SetProvableBitsAndRealIncrement(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().set_provable_bits_and_real_increment(value); }
     const ValueArray& value;
   };
 
@@ -101,17 +101,20 @@ class SearchThread {
   using search_path_t = std::vector<visitation_t>;
 
   void wait_for_activation() const;
+  Node* init_root_node();
+  void init_node(node_pool_index_t, Node* node);
+  void transform_policy(node_pool_index_t, LocalPolicyArray&) const;
   void perform_visits();
   void deactivate() const;
   void loop();
-  void visit(Node* tree, edge_t* edge, move_number_t move_number);
-  void add_dirichlet_noise(LocalPolicyArray& P);
+  void print_visit_info(Node* node, edge_t* parent_edge);
+  void visit(Node* tree, edge_t* edge);
+  void add_dirichlet_noise(LocalPolicyArray& P) const;
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);
-  void backprop_with_virtual_undo(const ValueArray& value);
+  void backprop_with_virtual_undo();
   void short_circuit_backprop(edge_t* last_edge);
-  evaluation_result_t evaluate(Node* tree);
-  void evaluate_unset(Node* tree, std::unique_lock<std::mutex>* lock, evaluation_result_t* data);
+  bool expand(Node* node, edge_t* edge);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
 
   /*
@@ -123,13 +126,14 @@ class SearchThread {
    * etc., this method will evolve. It probably makes sense to have the behavior as part of the
    * Tensorizor, since there is coupling with NN architecture (in the form of output heads).
    */
-  core::action_index_t get_best_action_index(Node* tree, NNEvaluation* evaluation);
+  int get_best_child_index(Node* tree);
 
-  auto& dirichlet_gen() { return shared_data_->dirichlet_gen; }
-  auto& rng() { return shared_data_->rng; }
+  auto& dirichlet_gen() const { return shared_data_->dirichlet_gen; }
+  auto& rng() const { return shared_data_->rng; }
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
   FullState state_;
+  ActionOutcome outcome_;
   base_state_vec_t state_history_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;

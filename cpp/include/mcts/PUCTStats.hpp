@@ -21,7 +21,7 @@ struct PUCTStats {
             const Node* tree, bool is_root);
 
   core::seat_index_t cp;
-  const LocalPolicyArray& P;
+  LocalPolicyArray P;
   LocalPolicyArray V;   // (virtualized) value
   LocalPolicyArray PW;  // provably-winning
   LocalPolicyArray PL;  // provably-losing

@@ -6,103 +6,58 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline Node<Game>::stable_data_t::stable_data_t(const FullState& s,
-                                                const ActionOutcome& o,
-                                                const ManagerParams* mp)
-    : outcome(o),
-      valid_action_mask(Rules::get_legal_moves(s)),
-      num_valid_actions(valid_action_mask.count()),
-      current_player(Rules::get_current_player(s)),
-      sym(make_symmetry(s, *mp)) {}
-
-template <core::concepts::Game Game>
-inline Node<Game>::stats_t::stats_t() {
-  eval.setZero();
-  real_avg.setZero();
-  virtualized_avg.setZero();
-}
-
-template <core::concepts::Game Game>
-inline Node<Game>::edge_t* Node<Game>::edge_t::instantiate(
-    core::action_t a, core::action_index_t i, sptr c) {
-  const_cast<sptr&>(child_) = c;
-  action_ = a;
-  action_index_ = i;
-  return this;
-}
-
-template <core::concepts::Game Game>
-inline Node<Game>::edge_t* Node<Game>::edge_chunk_t::find(core::action_index_t i) {
-  for (edge_t& edge : data) {
-    if (!edge.instantiated()) return nullptr;
-    if (edge.action_index() == i) return &edge;
-  }
-  return next ? next->find(i) : nullptr;
-}
-
-template <core::concepts::Game Game>
-inline Node<Game>::edge_t* Node<Game>::edge_chunk_t::insert(
-    core::action_t a, core::action_index_t i, sptr child) {
-  for (edge_t& edge : data) {
-    if (edge.action() == a) return &edge;
-    if (edge.action_index() == -1) return edge.instantiate(a, i, child);
-  }
-  if (!next) {
-    edge_chunk_t* chunk = new edge_chunk_t();
-    edge_t* edge = chunk->insert(a, i, child);
-    next = chunk;
-    return edge;
+inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
+                                                const ActionOutcome& outcome) {
+  if (outcome.terminal) {
+    V = outcome.terminal_value;
+    num_valid_actions = 0;
+    current_player = -1;
+    terminal = true;
   } else {
-    return next->insert(a, i, child);
+    V.setZero();  // to be set lazily
+    valid_action_mask = Game::Rules::get_legal_moves(state);
+    num_valid_actions = valid_action_mask.count();
+    current_player = Game::Rules::get_current_player(state);
+    terminal = false;
   }
 }
 
 template <core::concepts::Game Game>
-template <bool is_const>
-Node<Game>::children_data_t::template iterator_base_t<is_const>::iterator_base_t(
-    chunk_t* chunk, int index)
-    : chunk(chunk), index(index) {
-  nullify_if_at_end();
-}
-
-template <core::concepts::Game Game>
-template <bool is_const>
-void Node<Game>::children_data_t::template iterator_base_t<is_const>::increment() {
-  index++;
-  if (index >= kEdgeDataChunkSize) {
-    chunk = chunk->next;
-    index = 0;
+void Node<Game>::stats_t::set_provable_bits_and_real_increment(const ValueArray& value) {
+  for (int p = 0; p < kNumPlayers; ++p) {
+    provably_winning[p] = value(p) == 1;
+    provably_losing[p] = value(p) == 0;
   }
-  nullify_if_at_end();
+  real_increment();
 }
 
 template <core::concepts::Game Game>
-template <bool is_const>
-void Node<Game>::children_data_t::template iterator_base_t<is_const>::nullify_if_at_end() {
-  if (chunk && !chunk->data[index].instantiated()) {
-    chunk = nullptr;
-    index = 0;
+void Node<Game>::LookupTable::clear() {
+  map_.clear();
+  edge_pool_.clear();
+  node_pool_.clear();
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::insert_node(const MCTSKey& key, node_pool_index_t value) {
+  std::lock_guard lock(map_mutex_);
+  map_[key] = value;
+}
+
+template <core::concepts::Game Game>
+typename Node<Game>::node_pool_index_t Node<Game>::LookupTable::lookup_node(
+    const MCTSKey& key) const {
+  std::lock_guard lock(map_mutex_);
+  auto it = map_.find(key);
+  if (it == map_.end()) {
+    return -1;
   }
+  return it->second;
 }
 
 template <core::concepts::Game Game>
-Node<Game>::children_data_t::~children_data_t() {
-  edge_chunk_t* next = first_chunk_.next;
-  while (next) {
-    edge_chunk_t* tmp = next->next;
-    delete next;
-    next = tmp;
-  }
-}
-
-template <core::concepts::Game Game>
-Node<Game>::Node(const FullState& state, const ActionOutcome& outcome, const ManagerParams* mp)
-    : stable_data_(state, outcome, mp) {}
-
-template <core::concepts::Game Game>
-void Node<Game>::debug_dump() const {
-  std::cout << "value[" << stats_.count << "]: " << stats_.value_avg.transpose() << std::endl;
-}
+Node<Game>::Node(LookupTable* table, const FullState& state, const ActionOutcome& outcome)
+    : stable_data_(state, outcome), lookup_table_(table), mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
 typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& params) const {
@@ -122,10 +77,12 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
   bool provably_winning = stats_.provably_winning[cp];
   bool provably_losing = stats_.provably_losing[cp];
 
-  for (auto& it : children_data_) {
-    core::action_t action = it.action();
-    const auto& stats = it.child()->stats();
-    int count = stats.real_count;
+  for (int i = 0; i < stable_data().num_valid_actions; i++) {
+    const edge_t* edge = get_edge(i);
+    core::action_t action = edge->action;
+    const Node* child = get_child(edge);
+    const auto& stats = child->stats();
+    int count = stats.RN;
 
     int modified_count = count;
     const char* detail = "";
@@ -169,9 +126,9 @@ template <typename UpdateT>
 void Node<Game>::update_stats(const UpdateT& update_instruction) {
   core::seat_index_t cp = stable_data().current_player;
 
-  ValueArray real_sum;
-  real_sum.setZero();
-  int real_count = 0;
+  ValueArray RQ_sum;
+  RQ_sum.setZero();
+  int RN = 0;
 
   /*
    * provably winning/losing calculation
@@ -186,11 +143,12 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   player_bitset_t all_provably_losing;
   all_provably_winning.set();
   all_provably_losing.set();
-  for (const edge_t& edge : children_data_) {
-    const auto& child_stats = edge.child()->stats();
-    int count = edge.count();
-    real_sum += child_stats.real_avg * count;
-    real_count += count;
+  for (int i = 0; i < stable_data().num_valid_actions; i++) {
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    const auto& child_stats = child->stats();
+    RN += edge->RN;
+    RQ_sum += child_stats.RQ * edge->RN;
 
     cp_has_winning_move |= child_stats.provably_winning[cp];
     all_provably_winning &= child_stats.provably_winning;
@@ -198,12 +156,12 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     num_children++;
   }
 
-  std::unique_lock lock(stats_mutex_);
+  std::unique_lock lock(mutex());
   update_instruction(this);
 
-  if (stats_.real_count) {
-    real_sum += stats_.eval;
-    real_count++;
+  if (stats_.RN) {
+    RQ_sum += stable_data_.V;
+    RN++;
   }
 
   // incorporate bounds from children
@@ -219,24 +177,63 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     stats_.provably_losing = all_provably_losing;
   }
 
-  stats_.real_avg = real_count ? (real_sum / real_count) : real_sum;
-  if (stats_.virtual_count) {
-    ValueArray virtualized_num = real_sum + make_virtual_loss() * stats_.virtual_count;
-    int virtualized_den = real_count + stats_.virtual_count;
-    stats_.virtualized_avg = virtualized_num / virtualized_den;
+  stats_.RQ = RN ? (RQ_sum / RN) : RQ_sum;
+  if (stats_.VN) {
+    ValueArray VQ_sum = RQ_sum + make_virtual_loss() * stats_.VN;
+    stats_.VQ = VQ_sum / (RN + stats_.VN);
   } else {
-    stats_.virtualized_avg = stats_.real_avg;
+    stats_.VQ = stats_.RQ;
   }
 }
 
+// NOTE: this can be switched to use binary search if we'd like
 template <core::concepts::Game Game>
-typename Node<Game>::sptr Node<Game>::lookup_child_by_action(core::action_t action) const {
-  for (const edge_t& edge : children_data_) {
-    if (edge.action() == action) {
-      return edge.child();
+typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
+    core::action_t action) const {
+  int i = 0;
+  for (core::action_t a : bitset_util::on_indices(stable_data_.valid_action_mask)) {
+    if (a == action) {
+      return get_edge(i)->child_index;
     }
+    ++i;
   }
-  return nullptr;
+  return -1;
+}
+
+template <core::concepts::Game Game>
+template<typename PolicyTransformFunc>
+void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
+  first_edge_index_ = lookup_table_->alloc_edges(stable_data_.num_valid_actions);
+  if (eval == nullptr) {
+    // treat this as uniform P and V
+    stable_data_.V.setConstant(1.0 / kNumPlayers);
+
+    float prob = 1.0 / stable_data_.num_valid_actions;
+    int i = 0;
+    for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
+      edge_t* edge = get_edge(i);
+      edge->action = action;
+      edge->raw_policy_prior = prob;
+      edge->adjusted_policy_prior = prob;
+      i++;
+    }
+    return;
+  }
+
+  stable_data_.V = eval->value_prob_distr();
+  LocalPolicyArray P_raw = eigen_util::softmax(eval->local_policy_logit_distr());
+  LocalPolicyArray P_adjusted = P_raw;
+  f(P_adjusted);
+
+  // initialize child's edges
+  int i = 0;
+  for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
+    edge_t* edge = get_edge(i);
+    edge->action = action;
+    edge->raw_policy_prior = P_raw[i];
+    edge->adjusted_policy_prior = P_adjusted[i];
+    i++;
+  }
 }
 
 template <core::concepts::Game Game>

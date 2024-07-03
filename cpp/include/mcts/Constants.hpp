@@ -25,9 +25,7 @@ struct SearchThreadRegion {
     kAcquiringStatsMutex,
     kBackpropEvaluation,
     kMarkFullyAnalyzed,
-    kEvaluate,
-    kEvaluateUnset,
-    kEvaluatePending,
+    kExpand,
     kNumRegions
   };
 };

@@ -7,6 +7,7 @@
 #include <core/PerfStats.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
+#include <mcts/NNEvaluationRequest.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
@@ -76,6 +77,7 @@ class NNEvaluationService
  public:
   using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
+  using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using SharedData = mcts::SharedData<Game>;
   using base_state_vec_t = SharedData::base_state_vec_t;
 
@@ -98,24 +100,6 @@ class NNEvaluationService
   using FullState = Game::FullState;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
-
-  struct Request {
-    Node* node;
-    FullState* state;
-    base_state_vec_t* state_history;
-    search_thread_profiler_t* thread_profiler;
-    int thread_id;
-    group::element_t sym;
-
-    std::string thread_id_whitespace() const {
-      return util::make_whitespace(kThreadWhitespaceLength * thread_id);
-    }
-  };
-
-  struct Response {
-    NNEvaluation_sptr ptr;
-    bool used_cache;
-  };
 
   /*
    * Constructs an evaluation service and returns it.
@@ -151,7 +135,7 @@ class NNEvaluationService
    *
    * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
    */
-  Response evaluate(const Request&);
+  NNEvaluation_sptr evaluate(const NNEvaluationRequest&);
 
   void end_session();
 
@@ -171,15 +155,15 @@ class NNEvaluationService
   void batch_evaluate();
   void loop();
 
-  Response check_cache(const Request&, const cache_key_t& cache_key);
-  void wait_until_batch_reservable(const Request&, std::unique_lock<std::mutex>& metadata_lock);
-  int allocate_reserve_index(const Request&, std::unique_lock<std::mutex>& metadata_lock);
-  void tensorize_and_transform_input(const Request& request, const cache_key_t& cache_key,
-                                     int reserve_index);
-  void increment_commit_count(const Request&);
-  NNEvaluation_sptr get_eval(const Request&, int reserve_index,
-                             std::unique_lock<std::mutex>& metadata_lock);
-  void wait_until_all_read(const Request&, std::unique_lock<std::mutex>& metadata_lock);
+  NNEvaluation_sptr check_cache(const NNEvaluationRequest&, const cache_key_t& cache_key);
+  void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
+  int allocate_reserve_index(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
+  void tensorize_and_transform_input(const NNEvaluationRequest& request,
+                                     const cache_key_t& cache_key, int reserve_index);
+  void increment_commit_count(const NNEvaluationRequest&);
+  NNEvaluation_sptr get_eval(const NNEvaluationRequest&, int reserve_index,
+                             std::unique_lock<std::mutex>&);
+  void wait_until_all_read(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
 
   void wait_for_unpause();
   void load_initial_weights_if_necessary();

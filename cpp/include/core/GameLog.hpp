@@ -156,7 +156,7 @@ class GameLogWriter {
   GameLogWriter(game_id_t id, int64_t start_timestamp);
   ~GameLogWriter();
 
-  void add(const FullState& state, action_index_t action, const PolicyTensor* policy_target,
+  void add(const FullState& state, action_t action, const PolicyTensor* policy_target,
            bool use_for_training);
   void add_terminal(const FullState& state, const ValueArray& outcome);
   void serialize(std::ostream&) const;
