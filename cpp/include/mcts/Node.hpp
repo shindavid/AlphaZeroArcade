@@ -79,7 +79,9 @@ class Node {
     void virtual_increment() { VN++; }
     void real_increment() { RN++; }
     void increment_transfer() { RN++; VN--; }
-    void set_provable_bits_and_real_increment(const ValueArray& value);
+    void init_q(const ValueArray&);
+    void init_q_and_real_increment(const ValueArray& value);
+    void init_q_and_increment_transfer(const ValueArray& value);
 
     ValueArray RQ;  // excludes virtual loss
     ValueArray VQ;  // includes virtual loss
@@ -147,12 +149,14 @@ class Node {
   std::mutex& mutex() { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
+  void init_edges();
+
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
   bool eval_loaded() const { return first_edge_index_ != -1; }
-  edge_t* get_edge(int i) const { return lookup_table_->get_edge(first_edge_index_ + i); }
-  Node* get_child(const edge_t* edge) const { return lookup_table_->get_node(edge->child_index); }
+  edge_t* get_edge(int i) const;
+  Node* get_child(const edge_t* edge) const;
 
  private:
   static group::element_t make_symmetry(const FullState& state, const ManagerParams& params);

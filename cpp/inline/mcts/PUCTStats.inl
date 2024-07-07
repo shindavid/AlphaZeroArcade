@@ -35,15 +35,19 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
      */
     using edge_t = Node::edge_t;
     edge_t* edge = tree->get_edge(i);
-    const auto& child_stats = tree->get_child(edge)->stats();
 
     P(i) = edge->adjusted_policy_prior;
-    V(i) = child_stats.VQ(cp);
-    PW(i) = child_stats.provably_winning[cp];
-    PL(i) = child_stats.provably_losing[cp];
     E(i) = edge->RN;
-    N(i) = child_stats.RN;
-    VN(i) = child_stats.VN;
+
+    Node* child = tree->get_child(edge);
+    if (child) {
+      const auto& child_stats = child->stats();
+      V(i) = child_stats.VQ(cp);
+      PW(i) = child_stats.provably_winning[cp];
+      PL(i) = child_stats.provably_losing[cp];
+      N(i) = child_stats.RN;
+      VN(i) = child_stats.VN;
+    }
 
     fpu_bits[i] = (N(i) == 0);
   }

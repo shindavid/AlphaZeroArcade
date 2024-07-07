@@ -23,12 +23,25 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::stats_t::set_provable_bits_and_real_increment(const ValueArray& value) {
+void Node<Game>::stats_t::init_q(const ValueArray& value) {
+  RQ = value;
+  VQ = value;
   for (int p = 0; p < kNumPlayers; ++p) {
     provably_winning[p] = value(p) == 1;
     provably_losing[p] = value(p) == 0;
   }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::stats_t::init_q_and_real_increment(const ValueArray& value) {
+  init_q(value);
   real_increment();
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::stats_t::init_q_and_increment_transfer(const ValueArray& value) {
+  init_q(value);
+  increment_transfer();
 }
 
 template <core::concepts::Game Game>
@@ -81,6 +94,8 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     const edge_t* edge = get_edge(i);
     core::action_t action = edge->action;
     const Node* child = get_child(edge);
+    if (!child) continue;
+
     const auto& stats = child->stats();
     int count = stats.RN;
 
@@ -91,7 +106,7 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
       detail = " (losing)";
     } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
       modified_count = 0;
-      detail = " (!winning)";
+      detail = " (?)";
     } else if (provably_winning) {
       detail = " (winning)";
     }
@@ -143,9 +158,14 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   player_bitset_t all_provably_losing;
   all_provably_winning.set();
   all_provably_losing.set();
+  bool skipped = false;
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
     const Node* child = get_child(edge);
+    if (!child) {
+      skipped = true;
+      continue;
+    }
     const auto& child_stats = child->stats();
     RN += edge->RN;
     RQ_sum += child_stats.RQ * edge->RN;
@@ -154,6 +174,11 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     all_provably_winning &= child_stats.provably_winning;
     all_provably_losing &= child_stats.provably_losing;
     num_children++;
+  }
+
+  if (skipped) {
+    all_provably_winning.set(false);
+    all_provably_losing.set(false);
   }
 
   std::unique_lock lock(mutex());
@@ -201,39 +226,58 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-template<typename PolicyTransformFunc>
-void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
+void Node<Game>::init_edges() {
   first_edge_index_ = lookup_table_->alloc_edges(stable_data_.num_valid_actions);
-  if (eval == nullptr) {
-    // treat this as uniform P and V
-    stable_data_.V.setConstant(1.0 / kNumPlayers);
 
-    float prob = 1.0 / stable_data_.num_valid_actions;
-    int i = 0;
-    for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
-      edge_t* edge = get_edge(i);
-      edge->action = action;
-      edge->raw_policy_prior = prob;
-      edge->adjusted_policy_prior = prob;
-      i++;
-    }
-    return;
-  }
-
-  stable_data_.V = eval->value_prob_distr();
-  LocalPolicyArray P_raw = eigen_util::softmax(eval->local_policy_logit_distr());
-  LocalPolicyArray P_adjusted = P_raw;
-  f(P_adjusted);
-
-  // initialize child's edges
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
     edge_t* edge = get_edge(i);
+    new (edge) edge_t();
     edge->action = action;
-    edge->raw_policy_prior = P_raw[i];
-    edge->adjusted_policy_prior = P_adjusted[i];
     i++;
   }
+}
+
+template <core::concepts::Game Game>
+template<typename PolicyTransformFunc>
+void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
+  ValueArray V;
+  LocalPolicyArray P_raw;
+  LocalPolicyArray P_adjusted;
+
+  if (eval == nullptr) {
+    // treat this as uniform P and V
+    V.setConstant(1.0 / kNumPlayers);
+    P_raw.setConstant(1.0 / stable_data_.num_valid_actions);
+    P_adjusted = P_raw;
+  } else {
+    V = eval->value_prob_distr();
+    P_raw = eigen_util::softmax(eval->local_policy_logit_distr());
+    P_adjusted = P_raw;
+    f(P_adjusted);
+  }
+
+  stable_data_.V = V;
+  stats_.RQ = V;
+  stats_.VQ = V;
+
+  for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
+    edge_t* edge = get_edge(i);
+    edge->raw_policy_prior = P_raw[i];
+    edge->adjusted_policy_prior = P_adjusted[i];
+  }
+}
+
+template <core::concepts::Game Game>
+typename Node<Game>::edge_t* Node<Game>::get_edge(int i) const {
+  util::debug_assert(first_edge_index_ != -1);
+  return lookup_table_->get_edge(first_edge_index_ + i);
+}
+
+template <core::concepts::Game Game>
+Node<Game>* Node<Game>::get_child(const edge_t* edge) const {
+  if (edge->child_index < 0) return nullptr;
+  return lookup_table_->get_node(edge->child_index);
 }
 
 template <core::concepts::Game Game>

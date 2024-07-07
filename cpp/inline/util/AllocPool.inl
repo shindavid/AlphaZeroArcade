@@ -49,6 +49,7 @@ pool_index_t AllocPool<T, N>::alloc(int n) {
 
 template <typename T, int N>
 T& AllocPool<T, N>::operator[](pool_index_t i) {
+  debug_assert(i >= 0, "Index out of bounds: %ld", i);
   int block_index = detail::get_block_index<N>(i);
   int offset = block_index == 0 ? i : (i - std::bit_floor(uint64_t(i)));
 
@@ -63,6 +64,7 @@ T& AllocPool<T, N>::operator[](pool_index_t i) {
 
 template <typename T, int N>
 const T& AllocPool<T, N>::operator[](pool_index_t i) const {
+  debug_assert(i >= 0 && i < size_, "Index out of bounds: %ld", i);
   int block_index = detail::get_block_index<N>(i);
   int offset = block_index == 0 ? i : (i - std::bit_floor(uint64_t(i)));
 

@@ -76,15 +76,15 @@ class SearchThread {
     void operator()(Node* node) const { node->stats().increment_transfer(); }
   };
 
-  struct SetProvableBitsAndRealIncrement {
-    SetProvableBitsAndRealIncrement(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().set_provable_bits_and_real_increment(value); }
+  struct InitQAndRealIncrement {
+    InitQAndRealIncrement(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().init_q_and_real_increment(value); }
     const ValueArray& value;
   };
 
-  struct SetEvalWithVirtualUndo {
-    SetEvalWithVirtualUndo(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().set_eval_with_virtual_undo(value); }
+  struct InitQAndIncrementTransfer {
+    InitQAndIncrementTransfer(const ValueArray& value) : value(value) {}
+    void operator()(Node* node) const { node->stats().init_q_and_increment_transfer(value); }
     const ValueArray& value;
   };
 
@@ -94,10 +94,10 @@ class SearchThread {
   };
 
   struct visitation_t {
-    visitation_t(Node* n, edge_t* e) : node(n), edge(e) {}
-    Node* node;
     edge_t* edge;
+    Node* child;
   };
+
   using search_path_t = std::vector<visitation_t>;
 
   void wait_for_activation() const;
@@ -113,7 +113,7 @@ class SearchThread {
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);
   void backprop_with_virtual_undo();
-  void short_circuit_backprop(edge_t* last_edge);
+  void short_circuit_backprop();
   bool expand(Node* node, edge_t* edge);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
 

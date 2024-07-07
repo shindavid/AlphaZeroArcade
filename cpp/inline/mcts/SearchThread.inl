@@ -59,7 +59,9 @@ Node<Game>* SearchThread<Game>::init_root_node() {
   Node* root = shared_data_->lookup_table.get_node(root_index);
   if (root->is_terminal() || root->eval_loaded()) return root;
 
+  root->init_edges();
   init_node(root_index, root);
+  root->stats().RN++;
   return root;
 }
 
@@ -144,7 +146,6 @@ void SearchThread<Game>::print_visit_info(Node* node, edge_t* parent_edge) {
 
 template <core::concepts::Game Game>
 inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
-  search_path_.emplace_back(node, parent_edge);
   print_visit_info(node, parent_edge);
 
   const auto& stable_data = node->stable_data();
@@ -155,6 +156,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
 
   int child_index = get_best_child_index(node);
   edge_t* edge = node->get_edge(child_index);
+  search_path_.emplace_back(edge, nullptr);
   bool applied_action = false;
   if (edge->state != Node::kExpanded) {
     // reread state under mutex in case of race-condition
@@ -174,12 +176,15 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
   }
 
   util::release_assert(edge->state == Node::kExpanded);
-  int edge_count = edge->RN;
   Node* child = node->get_child(edge);
-  int child_count = child->stats().RN;
-  if (edge_count < child_count) {
-    short_circuit_backprop(edge);
-    return;
+  search_path_.back().child = child;
+  if (child) {
+    int edge_count = edge->RN;
+    int child_count = child->stats().RN;
+    if (edge_count < child_count) {
+      short_circuit_backprop();
+      return;
+    }
   }
   if (!applied_action) {
     outcome_ = Game::Rules::apply(state_, edge->action);
@@ -205,9 +210,9 @@ inline void SearchThread<Game>::virtual_backprop() {
   }
 
   for (int i = search_path_.size() - 1; i >= 0; --i) {
-    Node* node = search_path_[i].node;
-    node->update_stats(VirtualIncrement{});
+    search_path_[i].child->update_stats(VirtualIncrement{});
   }
+  shared_data_->get_root_node()->update_stats(VirtualIncrement{});
 }
 
 template <core::concepts::Game Game>
@@ -219,17 +224,19 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
              << value.transpose();
   }
 
-  Node* last_node = search_path_.back().node;
+  util::release_assert(!search_path_.empty());
   edge_t* last_edge = search_path_.back().edge;
-  last_node->update_stats(SetProvableBitsAndRealIncrement(value));
+  Node* last_node = search_path_.back().child;
+  last_node->update_stats(InitQAndRealIncrement(value));
   last_edge->RN++;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    Node* child = search_path_[i].node;
     edge_t* edge = search_path_[i].edge;
+    Node* child = search_path_[i].child;
     child->update_stats(RealIncrement{});
-    if (i) edge->RN++;
+    edge->RN++;
   }
+  shared_data_->get_root_node()->update_stats(RealIncrement{});
 }
 
 template <core::concepts::Game Game>
@@ -240,29 +247,37 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
-  for (int i = search_path_.size() - 1; i >= 0; --i) {
-    Node* child = search_path_[i].node;
+  edge_t* last_edge = search_path_.back().edge;
+  Node* last_node = search_path_.back().child;
+  auto value = last_node->stable_data().V;
+  last_node->update_stats(InitQAndIncrementTransfer(value));
+  last_edge->RN++;
+
+  for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
+    Node* child = search_path_[i].child;
     child->update_stats(IncrementTransfer{});
-    if (i) edge->RN++;
+    edge->RN++;
   }
+  shared_data_->get_root_node()->update_stats(IncrementTransfer{});
 }
 
 template <core::concepts::Game Game>
-void SearchThread<Game>::short_circuit_backprop(edge_t* last_edge) {
-  // short-circuit
+void SearchThread<Game>::short_circuit_backprop() {
   if (mcts::kEnableDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
+  edge_t* last_edge = search_path_.back().edge;
   last_edge->RN++;
 
-  for (int i = search_path_.size() - 1; i >= 0; --i) {
-    Node* child = search_path_[i].node;
+  for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
+    Node* child = search_path_[i].child;
     child->update_stats(RealIncrement{});
-    if (i) edge->RN++;
+    edge->RN++;
   }
+  shared_data_->get_root_node()->update_stats(RealIncrement{});
 }
 
 template <core::concepts::Game Game>
@@ -278,10 +293,12 @@ bool SearchThread<Game>::expand(Node* parent, edge_t* edge) {
 
   bool is_new_node = child_index < 0;
   if (is_new_node) {
-    virtual_backprop();
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, state_, outcome_);
+    search_path_.back().child = child;
+    child->init_edges();
+    virtual_backprop();
     init_node(edge->child_index, child);
     backprop_with_virtual_undo();
   } else {
@@ -300,9 +317,8 @@ template <core::concepts::Game Game>
 std::string SearchThread<Game>::search_path_str() const {
   std::string delim = IO::action_delimiter();
   std::vector<std::string> vec;
-  for (int n = 1; n < (int)search_path_.size(); ++n) {  // skip the first node
-    core::action_t action = search_path_[n].edge->action;
-    vec.push_back(IO::action_to_str(action));
+  for (const visitation_t& visitation : search_path_) {
+    vec.push_back(IO::action_to_str(visitation.edge->action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
