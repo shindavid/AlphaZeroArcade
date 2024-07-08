@@ -77,30 +77,38 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
     }
   }
 
-  // TODO: test defrag with contiguous blocks
-
-  // now remove the odd elements
+  // now remove the square elements
   boost::dynamic_bitset<> used_indices(x);
-  for (int i = 1; i < x; i += 2) {
-    used_indices[i] = true;
+  used_indices.set();
+  int y = x;
+  for (int i = 0; i * i < x; ++i) {
+    used_indices[i*i] = false;
+    --y;
   }
   pool.defragment(used_indices);
 
   // validate size
   vec = pool.to_vector();
-  if (int(vec.size()) != x / 2) {
-    printf("Expected %d elements, got %lu\n", x / 2, vec.size());
+  if (int(vec.size()) != y) {
+    printf("Expected %d elements, got %lu\n", y, vec.size());
     global_fail_count++;
     return false;
   }
 
   // validate contents
-  for (int i = 0; i < x / 2; ++i) {
-    if (vec[i] != 2 * i + 1) {
-      printf("pool[%d]: expected %d, got %d\n", i, 2 * i + 1, vec[i]);
+  int sqrt = 0;
+  int k = 0;
+  for (int i = 0; i < x; ++i) {
+    if (sqrt * sqrt == i) {
+      ++sqrt;
+      continue;
+    }
+    if (vec[k] != i) {
+      printf("pool[%d]: expected %d, got %d\n", k, i, vec[i]);
       global_fail_count++;
       return false;
     }
+    ++k;
   }
 
   return true;
