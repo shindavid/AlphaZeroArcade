@@ -92,6 +92,8 @@ void AllocPool<T, N>::defragment(const boost::dynamic_bitset<>& used_indices) {
 
   uint64_t r = 0;
   uint64_t w = 0;
+
+  // TODO: find contiguous blocks, and copy block-wise
   while (r < size_) {
     if (used_indices[r]) {
       if (r != w) {

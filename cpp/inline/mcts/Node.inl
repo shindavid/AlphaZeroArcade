@@ -45,10 +45,109 @@ void Node<Game>::stats_t::init_q_and_increment_transfer(const ValueArray& value)
 }
 
 template <core::concepts::Game Game>
+Node<Game>::LookupTable::Defragmenter::Defragmenter(LookupTable* table)
+    : table_(table),
+      node_bitset_(table->node_pool_.size()),
+      edge_bitset_(table->edge_pool_.size()) {}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::Defragmenter::scan(node_pool_index_t n) {
+  if (n < 0 || node_bitset_[n]) return;
+
+  node_bitset_[n] = true;
+  Node* node = &table_->node_pool_[n];
+  if (!node->edges_initialized()) return;
+
+  edge_pool_index_t first_edge_index = node->get_first_edge_index();
+  int n_edges = node->stable_data().num_valid_actions;
+
+  edge_bitset_.set(first_edge_index, n_edges, true);
+  for (int e = 0; e < n_edges; ++e) {
+    scan(node->get_edge(e)->child_index);
+  }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::Defragmenter::prepare() {
+  init_remapping(node_index_remappings_, node_bitset_);
+  init_remapping(edge_index_remappings_, edge_bitset_);
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::Defragmenter::remap(node_pool_index_t& n) {
+  bitset_t processed_nodes(table_->node_pool_.size());
+  remap_helper(n, processed_nodes);
+  n = node_index_remappings_[n];
+  util::debug_assert(processed_nodes == node_bitset_);
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::Defragmenter::defrag() {
+  table_->node_pool_.defragment(node_bitset_);
+  table_->edge_pool_.defragment(edge_bitset_);
+
+  for (auto it = table_->map_.begin(); it != table_->map_.end();) {
+    if (!node_bitset_[it->second]) {
+      it = table_->map_.erase(it);
+    } else {
+      it->second = node_index_remappings_[it->second];
+      ++it;
+    }
+  }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::Defragmenter::remap_helper(node_pool_index_t n,
+                                                         bitset_t& processed_nodes) {
+  if (processed_nodes[n]) return;
+
+  processed_nodes[n] = true;
+  Node* node = &table_->node_pool_[n];
+  if (!node->edges_initialized()) return;
+
+  edge_pool_index_t first_edge_index = node->get_first_edge_index();
+  int n_edges = node->stable_data().num_valid_actions;
+
+  for (int e = 0; e < n_edges; ++e) {
+    edge_t* edge = node->get_edge(e);
+    if (edge->child_index < 0) continue;
+    remap_helper(edge->child_index, processed_nodes);
+    edge->child_index = node_index_remappings_[edge->child_index];
+  }
+
+  node->set_first_edge_index(edge_index_remappings_[first_edge_index]);
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::Defragmenter::init_remapping(index_vec_t& remappings,
+                                                           bitset_t& bitset) {
+  remappings.resize(bitset.size());
+  for (int i = 0; i < (int)bitset.size(); ++i) {
+    remappings[i] = -1;
+  }
+
+  auto i = bitset.find_first();
+  int k = 0;
+  while (i != bitset_t::npos) {
+    remappings[i] = k++;
+    i = bitset.find_next(i);
+  }
+}
+
+template <core::concepts::Game Game>
 void Node<Game>::LookupTable::clear() {
   map_.clear();
   edge_pool_.clear();
   node_pool_.clear();
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::LookupTable::defragment(node_pool_index_t& root_index) {
+  Defragmenter defragmenter(this);
+  defragmenter.scan(root_index);
+  defragmenter.prepare();
+  defragmenter.remap(root_index);
+  defragmenter.defrag();
 }
 
 template <core::concepts::Game Game>
@@ -226,7 +325,7 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::init_edges() {
+void Node<Game>::initialize_edges() {
   first_edge_index_ = lookup_table_->alloc_edges(stable_data_.num_valid_actions);
 
   int i = 0;

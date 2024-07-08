@@ -57,9 +57,9 @@ Node<Game>* SearchThread<Game>::init_root_node() {
 
   node_pool_index_t root_index = shared_data_->root_node_index;
   Node* root = shared_data_->lookup_table.get_node(root_index);
-  if (root->is_terminal() || root->eval_loaded()) return root;
+  if (root->is_terminal() || root->edges_initialized()) return root;
 
-  root->init_edges();
+  root->initialize_edges();
   init_node(root_index, root);
   root->stats().RN++;
   return root;
@@ -297,7 +297,7 @@ bool SearchThread<Game>::expand(Node* parent, edge_t* edge) {
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, state_, outcome_);
     search_path_.back().child = child;
-    child->init_edges();
+    child->initialize_edges();
     virtual_backprop();
     init_node(edge->child_index, child);
     backprop_with_virtual_undo();

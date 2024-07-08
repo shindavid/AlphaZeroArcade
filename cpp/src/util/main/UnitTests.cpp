@@ -77,6 +77,8 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
     }
   }
 
+  // TODO: test defrag with contiguous blocks
+
   // now remove the odd elements
   boost::dynamic_bitset<> used_indices(x);
   for (int i = 1; i < x; i += 2) {

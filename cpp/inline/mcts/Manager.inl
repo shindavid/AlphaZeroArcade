@@ -140,6 +140,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   start_search_threads(params);
   wait_for_search_threads();
 
+  shared_data_.lookup_table.defragment(shared_data_.root_node_index);
   Node* root = shared_data_.lookup_table.get_node(shared_data_.root_node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();
@@ -159,8 +160,6 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   }
   results_.win_rates = stats.RQ;
   results_.value_prior = stable_data.V;
-
-  defragment_pools();
 
   return &results_;
 }
@@ -185,11 +184,6 @@ inline void Manager<Game>::stop_search_threads() {
   std::unique_lock<std::mutex> lock(shared_data_.search_mutex);
   shared_data_.search_params.tree_size_limit = 0;
   shared_data_.cv_search_off.wait(lock, [&] { return shared_data_.active_search_threads.none(); });
-}
-
-template <core::concepts::Game Game>
-void Manager<Game>::defragment_pools() {
-  // throw std::runtime_error("Not implemented");
 }
 
 template <core::concepts::Game Game>

@@ -109,7 +109,32 @@ class Node {
    public:
     static constexpr int kMutexPoolSize = 256;
 
+    class Defragmenter {
+     public:
+      Defragmenter(LookupTable* table);
+      void scan(node_pool_index_t);
+      void prepare();
+      void remap(node_pool_index_t&);
+      void defrag();
+
+     private:
+      using bitset_t = boost::dynamic_bitset<>;
+      using index_vec_t = std::vector<util::pool_index_t>;
+
+      void remap_helper(node_pool_index_t, bitset_t&);
+      static void init_remapping(index_vec_t&, bitset_t&);
+
+      LookupTable* table_;
+      bitset_t node_bitset_;
+      bitset_t edge_bitset_;
+
+      index_vec_t node_index_remappings_;
+      index_vec_t edge_index_remappings_;
+    };
+
     void clear();
+
+    void defragment(node_pool_index_t& root_index);
     void insert_node(const MCTSKey&, node_pool_index_t);
     node_pool_index_t lookup_node(const MCTSKey&) const;
 
@@ -123,6 +148,7 @@ class Node {
     std::condition_variable& get_cv(int mutex_id) { return cv_pool_[mutex_id]; }
 
    private:
+    friend class Defragmenter;
     using map_t = std::unordered_map<MCTSKey, node_pool_index_t>;
 
     map_t map_;
@@ -149,13 +175,15 @@ class Node {
   std::mutex& mutex() { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
-  void init_edges();
+  void initialize_edges();
 
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
-  bool eval_loaded() const { return first_edge_index_ != -1; }
+  bool edges_initialized() const { return first_edge_index_ != -1; }
   edge_t* get_edge(int i) const;
+  edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
+  void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
   Node* get_child(const edge_t* edge) const;
 
  private:
