@@ -336,7 +336,7 @@ GameLogWriter<Game>::~GameLogWriter() {
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add(const FullState& state, action_index_t action,
+void GameLogWriter<Game>::add(const FullState& state, action_t action,
                               const PolicyTensor* policy_target, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();

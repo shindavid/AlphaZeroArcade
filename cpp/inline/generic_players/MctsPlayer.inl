@@ -203,10 +203,13 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
        *
        * But the above doesn't work.
        */
-      PolicyTensor policy_max = policy.maximum();
-      PolicyTensor policy_max_broadcasted;
-      policy_max_broadcasted.setConstant(policy_max(0));
-      policy = (policy == policy_max_broadcasted).template cast<torch_util::dtype>();
+      PolicyTensor policy_max_tensor = policy.maximum();
+      float policy_max = policy_max_tensor(0);
+      if (policy_max > 0) {
+        PolicyTensor policy_max_broadcasted;
+        policy_max_broadcasted.setConstant(policy_max);
+        policy = (policy == policy_max_broadcasted).template cast<torch_util::dtype>();
+      }
     }
   }
 

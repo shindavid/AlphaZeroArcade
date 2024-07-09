@@ -9,7 +9,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
                                   const SearchParams& search_params,
                                   const Node* tree, bool is_root)
     : cp(tree->stable_data().current_player),
-      P(tree->evaluation_data().local_policy_prob_distr),
+      P(tree->stable_data().num_valid_actions),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -17,6 +17,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
       N(P.rows()),
       VN(P.rows()),
       PUCT(P.rows()) {
+  P.setZero();
   V.setZero();
   PW.setZero();
   PL.setZero();
@@ -27,20 +28,26 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
   std::bitset<kMaxBranchingFactor> fpu_bits;
   fpu_bits.set();
 
-  for (const auto& edge : tree->children_data()) {
+  for (int i = 0; i < tree->stable_data().num_valid_actions; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
-    core::action_index_t i = edge.action_index();
-    const auto& child_stats = edge.child()->stats();
+    using edge_t = Node::edge_t;
+    edge_t* edge = tree->get_edge(i);
 
-    V(i) = child_stats.virtualized_avg(cp);
-    PW(i) = child_stats.provably_winning[cp];
-    PL(i) = child_stats.provably_losing[cp];
-    E(i) = edge.count();
-    N(i) = child_stats.real_count;
-    VN(i) = child_stats.virtual_count;
+    P(i) = edge->adjusted_policy_prior;
+    E(i) = edge->RN;
+
+    Node* child = tree->get_child(edge);
+    if (child) {
+      const auto& child_stats = child->stats();
+      V(i) = child_stats.VQ(cp);
+      PW(i) = child_stats.provably_winning[cp];
+      PL(i) = child_stats.provably_losing[cp];
+      N(i) = child_stats.RN;
+      VN(i) = child_stats.VN;
+    }
 
     fpu_bits[i] = (N(i) == 0);
   }
@@ -50,7 +57,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto& stats = tree->stats();  // no struct copy, not needed here
-    float PV = stats.virtualized_avg(cp);
+    float PV = stats.VQ(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     float cFPU = disableFPU ? 0.0 : params.cFPU;
