@@ -190,7 +190,7 @@ class Node {
   static group::element_t make_symmetry(const FullState& state, const ManagerParams& params);
 
   stable_data_t stable_data_;
-  LookupTable* lookup_table_;  // here as member for convenience. TODO: remove
+  LookupTable* lookup_table_;
   stats_t stats_;
   int mutex_id_;
   edge_pool_index_t first_edge_index_ = -1;
