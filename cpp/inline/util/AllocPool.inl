@@ -31,7 +31,6 @@ void AllocPool<T, N>::clear() {
   std::lock_guard<std::mutex> lock(mutex_);
 
   size_ = 0;
-  num_blocks_ = 2;
 }
 
 template <typename T, int N>
