@@ -51,13 +51,13 @@ class Game {
   };
 
   using FullState = BaseState;
-  using SymmetryGroup = groups::TrivialGroup;
+  using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const BaseState& state);
-    static void apply(BaseState& state, group::element_t sym) {}
-    static void apply(Types::PolicyTensor& policy, group::element_t sym) {}
+    static void apply(BaseState& state, group::element_t sym);
+    static void apply(Types::PolicyTensor& policy, group::element_t sym);
   };
 
   struct Rules {
