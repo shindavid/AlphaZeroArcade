@@ -52,6 +52,19 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym
   }
 }
 
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym) {
+  switch (sym) {
+    case groups::D1::kIdentity: return;
+    case groups::D1::kFlip: {
+      action = 6 - action;
+      return;
+    }
+    default: {
+      throw util::Exception("Unknown group element: %d", sym);
+    }
+  }
+}
+
 inline void Game::Rules::init_state(FullState& state) {
   state.full_mask = 0;
   state.cur_player_mask = 0;

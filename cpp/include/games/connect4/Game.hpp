@@ -59,6 +59,7 @@ struct Game {
     static Types::SymmetryMask get_mask(const BaseState& state);
     static void apply(BaseState& state, group::element_t sym);
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
+    static void apply(core::action_t& action, group::element_t sym);
   };
 
   struct Rules {

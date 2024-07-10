@@ -38,9 +38,7 @@ inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
     case D4::kFlipMainDiag: return flip_main_diag(s.cur_player_mask, s.opponent_mask);
     case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
     case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
-    default: {
-      throw util::Exception("Unknown group element: %d", sym);
-    }
+    default: throw util::Exception("Unknown group element: %d", sym);
   }
 }
 
@@ -57,10 +55,30 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
     case D4::kFlipMainDiag: return flip_main_diag<N>(tensor);
     case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
     case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
-    default: {
-      throw util::Exception("Unknown group element: %d", sym);
-    }
+    default: throw util::Exception("Unknown group element: %d", sym);
   }
+}
+
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym) {
+  using namespace bitmap_util;
+  using D4 = groups::D4;
+
+  if (action == kPass || sym == D4::kIdentity) return;
+
+  mask_t mask = 1ULL << action;
+
+  switch (sym) {
+    case D4::kRot90: rot90_clockwise(mask); break;
+    case D4::kRot180: rot180(mask); break;
+    case D4::kRot270: rot270_clockwise(mask); break;
+    case D4::kFlipVertical: flip_vertical(mask); break;
+    case D4::kFlipMainDiag: flip_main_diag(mask); break;
+    case D4::kMirrorHorizontal: mirror_horizontal(mask); break;
+    case D4::kFlipAntiDiag: flip_anti_diag(mask); break;
+    default: throw util::Exception("Unknown group element: %d", sym);
+  }
+
+  action = std::countr_zero(mask);
 }
 
 inline void Game::Rules::init_state(FullState& state) {

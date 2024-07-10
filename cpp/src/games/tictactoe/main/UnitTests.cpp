@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 
+#include <core/tests/Common.hpp>
 #include <games/tictactoe/Constants.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <util/CppUtil.hpp>
@@ -326,6 +327,16 @@ void test_flip_anti_diag() {
   global_pass_count++;
 }
 
+void test_action_transforms() {
+  if (core::tests::Common<Game>::test_action_transforms(__func__) == false) {
+    global_fail_count++;
+    return;
+  } else {
+    printf("Success: %s()\n", __func__);
+    global_pass_count++;
+  }
+}
+
 void test_symmetries() {
   test_identity();
   test_rot90_clockwise();
@@ -335,6 +346,7 @@ void test_symmetries() {
   test_mirror_horizontal();
   test_flip_main_diag();
   test_flip_anti_diag();
+  test_action_transforms();
 }
 
 int main() {

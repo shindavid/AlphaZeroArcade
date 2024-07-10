@@ -122,6 +122,21 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
   }
 }
 
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym) {
+  constexpr int8_t lookup[] = {
+      0, 1, 2, 3, 4, 5, 6, 7, 8,  // kIdentity
+      2, 5, 8, 1, 4, 7, 0, 3, 6,  // kRot90
+      8, 7, 6, 5, 4, 3, 2, 1, 0,  // kRot180
+      6, 3, 0, 7, 4, 1, 8, 5, 2,  // kRot270
+      6, 7, 8, 3, 4, 5, 0, 1, 2,  // kFlipVertical
+      0, 3, 6, 1, 4, 7, 2, 5, 8,  // kFlipMainDiag
+      2, 1, 0, 5, 4, 3, 8, 7, 6,  // kMirrorHorizontal
+      8, 5, 2, 7, 4, 1, 6, 3, 0,  // kFlipAntiDiag
+  };
+
+  action = lookup[sym * 9 + action];
+}
+
 inline void Game::Rules::init_state(FullState& state) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
