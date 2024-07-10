@@ -17,7 +17,6 @@ class NNEvaluationRequest {
  public:
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
-  using ActionOutcome = Game::Types::ActionOutcome;
   using Node = mcts::Node<Game>;
 
   NNEvaluationRequest(Node*, FullState*, std::vector<BaseState>*, search_thread_profiler_t*,

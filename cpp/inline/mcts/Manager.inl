@@ -3,6 +3,7 @@
 #include <boost/filesystem.hpp>
 
 #include <core/GameVars.hpp>
+#include <mcts/PUCTStats.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
@@ -123,6 +124,8 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
 template <core::concepts::Game Game>
 inline const typename Manager<Game>::SearchResults*
 Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
+  using ActionOutcome = Game::Types::ActionOutcome;
+
   stop_search_threads();
 
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
@@ -134,7 +137,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   }
 
   if (mcts::kEnableDebug) {
-    IO::print_state(std::cout, shared_data_.root_state);
+    Game::IO::print_state(std::cout, shared_data_.root_state);
   }
 
   start_search_threads(params);
@@ -188,6 +191,7 @@ inline void Manager<Game>::stop_search_threads() {
 
 template <core::concepts::Game Game>
 void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
+  using PUCTStats = mcts::PUCTStats<Game>;
   using edge_t = Node::edge_t;
 
   if (params_.no_model) return;

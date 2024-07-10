@@ -10,7 +10,6 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/PUCTStats.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
@@ -27,23 +26,14 @@ class Manager {
  public:
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
-  using PUCTStats = mcts::PUCTStats<Game>;
   using SearchThread = mcts::SearchThread<Game>;
   using SharedData = mcts::SharedData<Game>;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  using IO = Game::IO;
   using FullState = Game::FullState;
   using SearchResults = Game::Types::SearchResults;
-  using ActionOutcome = Game::Types::ActionOutcome;
-  using ActionMask = Game::Types::ActionMask;
-  using InputTensor = Game::InputTensorizor::Tensor;
-  using InputShape = eigen_util::extract_shape_t<InputTensor>;
-  using LocalPolicyArray = Node::LocalPolicyArray;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ValueArray = Game::Types::ValueArray;
 
   Manager(const ManagerParams& params);
   ~Manager();
