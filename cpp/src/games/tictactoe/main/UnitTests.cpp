@@ -8,7 +8,7 @@
 #include <util/EigenUtil.hpp>
 
 /*
- * Tests othello symmetry classes.
+ * Tests tictactoe symmetry classes.
  */
 
 using Game = tictactoe::Game;
