@@ -27,8 +27,8 @@ inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
   switch (sym) {
     case groups::D1::kIdentity: return;
     case groups::D1::kFlip: {
-      state.full_mask = __builtin_bswap64(state.full_mask);
-      state.cur_player_mask = __builtin_bswap64(state.cur_player_mask);
+      state.full_mask = __builtin_bswap64(state.full_mask << 8);
+      state.cur_player_mask = __builtin_bswap64(state.cur_player_mask << 8);
       return;
     }
     default: {
