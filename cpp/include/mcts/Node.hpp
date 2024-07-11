@@ -102,6 +102,7 @@ class Node {
     int RN = 0;  // real count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
+    group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };
 

@@ -1,15 +1,16 @@
 #include <games/othello/Game.hpp>
 
+#include <core/DefaultCanonicalizer.hpp>
+#include <util/AnsiCodes.hpp>
+#include <util/BitMapUtil.hpp>
+#include <util/BitSet.hpp>
+#include <util/CppUtil.hpp>
+
 #include <algorithm>
 #include <bit>
 #include <iostream>
 
 #include <boost/lexical_cast.hpp>
-
-#include <util/AnsiCodes.hpp>
-#include <util/BitMapUtil.hpp>
-#include <util/BitSet.hpp>
-#include <util/CppUtil.hpp>
 
 namespace othello {
 
@@ -81,11 +82,18 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   action = std::countr_zero(mask);
 }
 
-inline void Game::Rules::init_state(FullState& state) {
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState& state) {
+  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
+  return DefaultCanonicalizer::get(state);
+}
+
+inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
   state.opponent_mask = kStartingWhiteMask;
   state.cur_player_mask = kStartingBlackMask;
   state.cur_player = kStartingColor;
   state.pass_count = 0;
+
+  Symmetries::apply(state, sym);
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {

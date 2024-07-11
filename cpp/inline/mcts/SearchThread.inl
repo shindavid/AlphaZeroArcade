@@ -4,6 +4,7 @@
 #include <util/Asserts.hpp>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <cmath>
 #include <sstream>
@@ -44,6 +45,34 @@ inline void SearchThread<Game>::set_profiling_dir(const boost::filesystem::path&
 }
 
 template <core::concepts::Game Game>
+inline void SearchThread<Game>::state_data_t::load(const FullState& s, const base_state_vec_t& h) {
+  state = s;
+  state_history = h;
+}
+
+template <core::concepts::Game Game>
+inline void SearchThread<Game>::state_data_t::add_state_to_history() {
+  util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
+}
+
+template <core::concepts::Game Game>
+inline void SearchThread<Game>::state_data_t::canonical_validate() {
+#ifndef NDEBUG
+  constexpr bool check = true;
+#else  // NDEBUG
+  constexpr bool check = false;
+#endif  // NDEBUG
+
+  if (!check) return;
+  group::element_t e = Game::Symmetries::get_canonical_symmetry(state);
+  if (e == group::kIdentity) return;
+
+  std::cout << "canonical_validate() failure (e=" << e << ")" << std::endl;
+  Game::IO::print_state(std::cout, state);
+  throw std::runtime_error("canonical_validate() failure");
+}
+
+template <core::concepts::Game Game>
 inline void SearchThread<Game>::wait_for_activation() const {
   std::unique_lock lock(shared_data_->search_mutex);
   shared_data_->cv_search_on.wait(lock, [this] {
@@ -55,38 +84,49 @@ template <core::concepts::Game Game>
 Node<Game>* SearchThread<Game>::init_root_node() {
   std::unique_lock lock(shared_data_->init_root_mutex);
 
-  node_pool_index_t root_index = shared_data_->root_node_index;
+  node_pool_index_t root_index = shared_data_->root_info.node_index;
   Node* root = shared_data_->lookup_table.get_node(root_index);
   if (root->is_terminal() || root->edges_initialized()) return root;
 
   root->initialize_edges();
-  init_node(root_index, root);
+
+  canonical_state_data_.load(shared_data_->root_info.state[canonical_sym_],
+                             shared_data_->root_info.state_history[canonical_sym_]);
+
+  init_node(&canonical_state_data_, root_index, root);
+
   root->stats().RN++;
   return root;
 }
 
 template <core::concepts::Game Game>
-inline void SearchThread<Game>::init_node(node_pool_index_t index, Node* node) {
+inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_index_t index,
+                                          Node* node) {
+  FullState* state = &state_data->state;
+  base_state_vec_t* state_history = &state_data->state_history;
+  state_data->canonical_validate();
+
   if (!node->is_terminal()) {
     NNEvaluation* eval = nullptr;
     if (nn_eval_service_) {
       group::element_t sym = 0;
       if (manager_params_->apply_random_symmetries) {
-        sym = util::Random::uniform_sample(0, Game::SymmetryGroup::kOrder);
+        auto mask = Game::Symmetries::get_mask(*state);
+        sym = bitset_util::choose_random_on_index(mask);
       }
-      NNEvaluationRequest request(node, &state_, &state_history_, &profiler_, thread_id_, sym);
+      NNEvaluationRequest request(node, state, state_history, &profiler_, thread_id_, sym);
       eval = nn_eval_service_->evaluate(request).get();
     }
     node->load_eval(eval, [&](LocalPolicyArray& P) { transform_policy(index, P); });
   }
 
-  auto mcts_key = Game::InputTensorizor::mcts_key(state_);
+  auto mcts_key = Game::InputTensorizor::mcts_key(*state);
   shared_data_->lookup_table.insert_node(mcts_key, index);
 }
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::transform_policy(node_pool_index_t index, LocalPolicyArray& P) const {
-  if (index == shared_data_->root_node_index) {
+  if (index == shared_data_->root_info.node_index) {
     if (!shared_data_->search_params.disable_exploration) {
       if (manager_params_->dirichlet_mult) {
         add_dirichlet_noise(P);
@@ -99,14 +139,17 @@ void SearchThread<Game>::transform_policy(node_pool_index_t index, LocalPolicyAr
 
 template <core::concepts::Game Game>
 inline void SearchThread<Game>::perform_visits() {
-  state_ = shared_data_->root_state;
-  state_history_ = shared_data_->root_state_history;
+  const auto& root_info = shared_data_->root_info;
+  canonical_sym_ = root_info.canonical_sym;
+  constexpr group::element_t e = group::kIdentity;
+  raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
+
   Node* root = init_root_node();
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     visit(root, nullptr);
-    state_ = shared_data_->root_state;
-    state_history_ = shared_data_->root_state_history;
+    canonical_sym_ = root_info.canonical_sym;
+    raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->stable_data().num_valid_actions == 1) break;
   }
@@ -135,7 +178,9 @@ void SearchThread<Game>::print_visit_info(Node* node, edge_t* parent_edge) {
     std::ostringstream ss;
     ss << thread_id_whitespace();
     if (parent_edge) {
-      ss << "visit " << parent_edge->action;
+      core::action_t action = parent_edge->action;
+      Game::Symmetries::apply(action, Game::SymmetryGroup::inverse(canonical_sym_));
+      ss << "visit " << action;
     } else {
       ss << "visit()";
     }
@@ -146,6 +191,7 @@ void SearchThread<Game>::print_visit_info(Node* node, edge_t* parent_edge) {
 
 template <core::concepts::Game Game>
 inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
+  using Group = Game::SymmetryGroup;
   print_visit_info(node, parent_edge);
 
   const auto& stable_data = node->stable_data();
@@ -158,6 +204,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
   edge_t* edge = node->get_edge(child_index);
   search_path_.emplace_back(edge, nullptr);
   bool applied_action = false;
+  group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
   if (edge->state != Node::kExpanded) {
     // reread state under mutex in case of race-condition
     std::unique_lock lock(node->mutex());
@@ -166,10 +213,28 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
       edge->state = Node::kMidExpansion;
       lock.unlock();
 
-      outcome_ = Game::Rules::apply(state_, edge->action);
-      util::stuff_back<Game::Constants::kHistorySize>(state_history_, state_);
+      // reorient edge->action into raw-orientation
+      core::action_t edge_action = edge->action;
+      Game::Symmetries::apply(edge_action, inv_canonical_sym);
+
+      // apply raw-orientation action to raw-orientation leaf-state
+      outcome_ = Game::Rules::apply(raw_state_data_.state, edge_action);
+      raw_state_data_.add_state_to_history();
+
+      // determine canonical orientation of new leaf-state
+      group::element_t new_sym = Game::Symmetries::get_canonical_symmetry(raw_state_data_.state);
+      edge->sym = Group::compose(new_sym, inv_canonical_sym);
+
+      canonical_sym_ = new_sym;
       applied_action = true;
-      if (expand(node, edge)) return;
+
+      state_data_t* state_data = &raw_state_data_;
+      if (canonical_sym_ != group::kIdentity) {
+        calc_canonical_state_data();
+        state_data = &canonical_state_data_;
+      }
+
+      if (expand(state_data, node, edge)) return;
     } else if (edge->state == Node::kMidExpansion) {
       node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
     }
@@ -187,8 +252,13 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
     }
   }
   if (!applied_action) {
-    outcome_ = Game::Rules::apply(state_, edge->action);
-    util::stuff_back<Game::Constants::kHistorySize>(state_history_, state_);
+    // reorient edge->action into raw-orientation
+    core::action_t edge_action = edge->action;
+    Game::Symmetries::apply(edge_action, inv_canonical_sym);
+
+    outcome_ = Game::Rules::apply(raw_state_data_.state, edge_action);
+    raw_state_data_.add_state_to_history();
+    canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
   }
   visit(child, edge);
 }
@@ -281,25 +351,28 @@ void SearchThread<Game>::short_circuit_backprop() {
 }
 
 template <core::concepts::Game Game>
-bool SearchThread<Game>::expand(Node* parent, edge_t* edge) {
+bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* edge) {
   using LookupTable = Node::LookupTable;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
 
   profiler_.record(SearchThreadRegion::kExpand);
 
+  state_data->canonical_validate();
+  const FullState& state = state_data->state;
+
   LookupTable& lookup_table = shared_data_->lookup_table;
-  MCTSKey mcts_key = Game::InputTensorizor::mcts_key(state_);
+  MCTSKey mcts_key = Game::InputTensorizor::mcts_key(state);
   node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
 
   bool is_new_node = child_index < 0;
   if (is_new_node) {
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
-    new (child) Node(&lookup_table, state_, outcome_);
+    new (child) Node(&lookup_table, state, outcome_);
     search_path_.back().child = child;
     child->initialize_edges();
     virtual_backprop();
-    init_node(edge->child_index, child);
+    init_node(state_data, edge->child_index, child);
     backprop_with_virtual_undo();
   } else {
     edge->child_index = child_index;
@@ -315,12 +388,30 @@ bool SearchThread<Game>::expand(Node* parent, edge_t* edge) {
 
 template <core::concepts::Game Game>
 std::string SearchThread<Game>::search_path_str() const {
-  std::string delim = IO::action_delimiter();
+  group::element_t cur_sym = shared_data_->root_info.canonical_sym;
+  std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;
   for (const visitation_t& visitation : search_path_) {
-    vec.push_back(IO::action_to_str(visitation.edge->action));
+    core::action_t action = visitation.edge->action;
+    Game::Symmetries::apply(action, cur_sym);
+    cur_sym = Game::SymmetryGroup::compose(visitation.edge->sym, cur_sym);
+    vec.push_back(Game::IO::action_to_str(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
+}
+
+template <core::concepts::Game Game>
+void SearchThread<Game>::calc_canonical_state_data() {
+  // if FullState and BaseState are different, we need to do a second-pass from the root, in order
+  // to reconstruct a leaf-canonical FullState. I've punted on this because c++ is finicky with
+  // partial template specialization.
+  static_assert(std::is_same_v<FullState, BaseState>, "non-trivial FullState's not yet supported");
+
+  canonical_state_data_ = raw_state_data_;
+  Game::Symmetries::apply(canonical_state_data_.state, canonical_sym_);
+  for (BaseState& base : canonical_state_data_.state_history) {
+    Game::Symmetries::apply(base, canonical_sym_);
+  }
 }
 
 template <core::concepts::Game Game>
@@ -378,7 +469,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
     ss << "cp:    " << cp_line << break_plus_thread_id_whitespace();
 
     using ScalarT = PVec::Scalar;
-    constexpr int kNumRows = 10;  // action, P, V, PW, PL, E, N, VN, PUCT, argmax
+    constexpr int kNumRows = 11;  // action, P, V, PW, PL, E, N, VN, &ch, PUCT, argmax
     constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
     using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
 
@@ -388,10 +479,19 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
     const ActionMask& valid_actions = node->stable_data().valid_action_mask;
     int r = 0;
     int c = 0;
-    for (int i : bitset_util::on_indices(valid_actions)) {
-      A2(r, c++) = i;
+
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(shared_data_->root_info.canonical_sym);
+    for (core::action_t action : bitset_util::on_indices(valid_actions)) {
+      Game::Symmetries::apply(action, inv_sym);
+      A2(r, c++) = action;
     }
     r++;
+
+    PVec child_addr(P.rows());
+    child_addr.setConstant(-1);
+    for (int e = 0; e < node->stable_data().num_valid_actions; ++e) {
+      child_addr(e) = node->get_edge(e)->child_index;
+    }
 
     A2.row(r++) = P;
     A2.row(r++) = stats.V;
@@ -400,8 +500,11 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
     A2.row(r++) = stats.E;
     A2.row(r++) = N;
     A2.row(r++) = stats.VN;
+    A2.row(r++) = child_addr;
     A2.row(r++) = PUCT;
     A2(r, argmax_index) = 1;
+
+    A2 = eigen_util::sort_columns(A2);
 
     std::ostringstream ss2;
     ss2 << A2;
@@ -419,6 +522,11 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
     ss << "E:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "N:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "VN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
+
+    std::string ch_line = s2_lines[r++];
+    boost::replace_all(ch_line, "-1", "  ");
+
+    ss << "&ch:   " << ch_line << break_plus_thread_id_whitespace();
     ss << "PUCT:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
 
     std::string argmax_line = s2_lines[r];

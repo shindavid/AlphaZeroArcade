@@ -27,6 +27,24 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
   return out;
 }
 
+template <typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+auto sort_columns(const Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& array) {
+  using Column = Eigen::Array<Scalar, Rows, 1, Options>;
+  std::vector<Column> columns;
+  for (int i = 0; i < array.cols(); ++i) {
+    columns.push_back(array.col(i));
+  }
+  std::sort(columns.begin(), columns.end(), [](const Column& a, const Column& b) {
+    return a(0) < b(0);
+  });
+
+  auto out = array;
+  for (int i = 0; i < out.cols(); ++i) {
+    out.col(i) = columns[i];
+  }
+  return out;
+}
+
 template <typename Array>
 auto softmax(const Array& array) {
   auto normalized_array = array - array.maxCoeff();

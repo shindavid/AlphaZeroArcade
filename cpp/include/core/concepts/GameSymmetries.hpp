@@ -16,6 +16,7 @@ concept GameSymmetries = requires(const BaseState& const_base_state, BaseState& 
   { GS::apply(base_state, sym) };
   { GS::apply(policy, sym) };
   { GS::apply(action, sym) };
+  { GS::get_canonical_symmetry(const_base_state) } -> std::same_as<group::element_t>;
 };
 
 }  // namespace concepts

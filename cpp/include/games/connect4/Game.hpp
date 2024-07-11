@@ -44,7 +44,7 @@ struct Game {
   };
 
   struct BaseState {
-    bool operator==(const BaseState& other) const = default;
+    auto operator<=>(const BaseState& other) const = default;
     size_t hash() const;
 
     mask_t full_mask;        // spaces occupied by either player
@@ -60,10 +60,11 @@ struct Game {
     static void apply(BaseState& state, group::element_t sym);
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
+    static group::element_t get_canonical_symmetry(const BaseState& state);
   };
 
   struct Rules {
-    static void init_state(FullState& state);
+    static void init_state(FullState& state, group::element_t sym = group::kIdentity);
     static Types::ActionMask get_legal_moves(const FullState& state);
     static core::seat_index_t get_current_player(const BaseState&);
     static Types::ActionOutcome apply(FullState& state, core::action_t action);

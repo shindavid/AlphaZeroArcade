@@ -195,6 +195,12 @@ template <typename T>
 inline constexpr int extract_length_v = extract_length<T>::value;
 
 /*
+ * Accepts an Eigen::Array, and sorts the columns based on the values in the first row.
+ */
+template <typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
+auto sort_columns(const Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& array);
+
+/*
  * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
  */
 template <typename Array>

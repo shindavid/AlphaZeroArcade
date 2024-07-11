@@ -26,26 +26,53 @@ struct SharedData {
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
   using LookupTable = Node::LookupTable;
+  using SymmetryGroup = Game::SymmetryGroup;
 
   using base_state_vec_t = std::vector<BaseState>;
   using node_pool_index_t = Node::node_pool_index_t;
 
+  struct root_info_t {
+    FullState state[SymmetryGroup::kOrder];
+    base_state_vec_t state_history[SymmetryGroup::kOrder];
+
+    group::element_t canonical_sym = -1;
+    node_pool_index_t node_index = -1;
+  };
+
   void clear() {
     root_softmax_temperature.reset();
     lookup_table.clear();
-    root_node_index = -1;
+    root_info.node_index = -1;
 
-    Game::Rules::init_state(root_state);
-    root_state_history.clear();
-    util::stuff_back<Game::Constants::kHistorySize>(root_state_history, root_state);
+    for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
+      FullState& state = root_info.state[sym];
+      base_state_vec_t& state_history = root_info.state_history[sym];
+
+      Game::Rules::init_state(state, sym);
+      state_history.clear();
+      util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
+    }
+
+    group::element_t e = group::kIdentity;
+    root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(root_info.state[e]);
   }
 
-  void update_state(const FullState& state) {
-    root_state = state;
-    util::stuff_back<Game::Constants::kHistorySize>(root_state_history, state);
+  void update_state(core::action_t action) {
+    for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
+      FullState& state = root_info.state[sym];
+      base_state_vec_t& state_history = root_info.state_history[sym];
+
+      core::action_t transformed_action = action;
+      Game::Symmetries::apply(transformed_action, sym);
+      Game::Rules::apply(state, transformed_action);
+      util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
+    }
+
+    group::element_t e = group::kIdentity;
+    root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(root_info.state[e]);
   }
 
-  Node* get_root_node() { return lookup_table.get_node(root_node_index); }
+  Node* get_root_node() { return lookup_table.get_node(root_info.node_index); }
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen;
   math::ExponentialDecay root_softmax_temperature;
@@ -56,10 +83,8 @@ struct SharedData {
   std::condition_variable cv_search_on, cv_search_off;
   boost::dynamic_bitset<> active_search_threads;
   LookupTable lookup_table;
-  FullState root_state;
-  base_state_vec_t root_state_history;
+  root_info_t root_info;
 
-  node_pool_index_t root_node_index = -1;
   SearchParams search_params;
   int manager_id = -1;
   bool shutting_down = false;

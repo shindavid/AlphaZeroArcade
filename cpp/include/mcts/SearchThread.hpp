@@ -31,9 +31,8 @@ class SearchThread {
   using node_pool_index_t = Node::node_pool_index_t;
   using base_state_vec_t = SharedData::base_state_vec_t;
 
-  using IO = Game::IO;
-  using Rules = Game::Rules;
   using FullState = Game::FullState;
+  using BaseState = Game::BaseState;
   using ActionOutcome = Game::Types::ActionOutcome;
   using ActionMask = Game::Types::ActionMask;
   using NNEvaluation_sptr = NNEvaluation::sptr;
@@ -99,24 +98,34 @@ class SearchThread {
     Node* child;
   };
 
+  struct state_data_t {
+    void load(const FullState& s, const base_state_vec_t& h);
+    void add_state_to_history();
+    void canonical_validate();
+
+    FullState state;
+    base_state_vec_t state_history;
+  };
+
   using search_path_t = std::vector<visitation_t>;
 
   void wait_for_activation() const;
   Node* init_root_node();
-  void init_node(node_pool_index_t, Node* node);
+  void init_node(state_data_t*, node_pool_index_t, Node* node);
   void transform_policy(node_pool_index_t, LocalPolicyArray&) const;
   void perform_visits();
   void deactivate() const;
   void loop();
   void print_visit_info(Node* node, edge_t* parent_edge);
-  void visit(Node* tree, edge_t* edge);
+  void visit(Node* node, edge_t* edge);
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);
   void backprop_with_virtual_undo();
   void short_circuit_backprop();
-  bool expand(Node* node, edge_t* edge);  // returns true if a new node was expanded
+  bool expand(state_data_t*, Node*, edge_t*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
+  void calc_canonical_state_data();
 
   /*
    * Used in visit().
@@ -127,19 +136,22 @@ class SearchThread {
    * etc., this method will evolve. It probably makes sense to have the behavior as part of the
    * Tensorizor, since there is coupling with NN architecture (in the form of output heads).
    */
-  int get_best_child_index(Node* tree);
+  int get_best_child_index(Node* node);
 
   auto& dirichlet_gen() const { return shared_data_->dirichlet_gen; }
   auto& rng() const { return shared_data_->rng; }
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
-  FullState state_;
   ActionOutcome outcome_;
-  base_state_vec_t state_history_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;
   const ManagerParams* manager_params_;
   std::thread* thread_ = nullptr;
+
+  group::element_t canonical_sym_;
+  state_data_t raw_state_data_;
+  state_data_t canonical_state_data_;  // pseudo-local-var, here to avoid repeated vector allocation
+
   search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;

@@ -16,8 +16,12 @@ namespace concepts {
 template <typename G>
 concept FiniteGroup = requires(group::element_t x, group::element_t y) {
   { util::decay_copy(G::kOrder) } -> std::same_as<int>;
-  { G::inverse(x) } -> std::convertible_to<int>;
-  { G::compose(x, y) } -> std::convertible_to<int>;
+  { G::inverse(x) } -> std::convertible_to<group::element_t>;
+
+  // If the group acts on a set S, and s is a member of S, then:
+  //
+  // compose(x, y)(s) = x(y(s))
+  { G::compose(x, y) } -> std::convertible_to<group::element_t>;
 };
 
 }  // namespace concepts
