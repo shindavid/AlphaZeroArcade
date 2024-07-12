@@ -58,14 +58,14 @@
  * called repeatedly, but in those contexts, we want the convenience of lazily assigning data to the
  * Tensor rather than having to initialize its shape/dtype up-front.
  */
-#ifdef NDEBUG
+#ifdef DEBUG_BUILD
 #define CATCH_TENSOR_MALLOCS(...)
-#else  // NDEBUG
+#else  // DEBUG_BUILD
 #define CATCH_TENSOR_MALLOCS(t, ...)                               \
   static int CONCAT(__unique_var1_, __LINE__) = 0;                 \
   torch_util::CatchTensorMallocs CONCAT(__unique_var2_, __LINE__)( \
       CONCAT(__unique_var1_, __LINE__), t, #t, __FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__);
-#endif  // NDEBUG
+#endif  // DEBUG_BUILD
 
 namespace torch_util {
 

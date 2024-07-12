@@ -124,6 +124,9 @@ def main():
 
     macro_defines = args.macro_defines if args.macro_defines else []
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
+    if debug:
+        macro_defines.append('DEBUG_BUILD=1')
+
     extra_definitions = ' '.join(f'-D{d}' for d in macro_defines)
 
     build_name = 'Debug' if debug else 'Release'

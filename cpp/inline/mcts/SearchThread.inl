@@ -2,6 +2,7 @@
 
 #include <mcts/NNEvaluationRequest.hpp>
 #include <util/Asserts.hpp>
+#include <util/CppUtil.hpp>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -57,11 +58,7 @@ inline void SearchThread<Game>::state_data_t::add_state_to_history() {
 
 template <core::concepts::Game Game>
 inline void SearchThread<Game>::state_data_t::canonical_validate() {
-#ifndef NDEBUG
-  constexpr bool check = true;
-#else  // NDEBUG
-  constexpr bool check = false;
-#endif  // NDEBUG
+  constexpr bool check = IS_MACRO_ENABLED(DEBUG_BUILD);
 
   if (!check) return;
   group::element_t e = Game::Symmetries::get_canonical_symmetry(state);
