@@ -101,14 +101,19 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
                                                 core::action_t action) {
   using node_pool_index_t = Node::node_pool_index_t;
 
+  group::element_t sym = shared_data_.root_info.canonical_sym;
+
   shared_data_.update_state(action);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
   node_pool_index_t root_index = shared_data_.root_info.node_index;
   if (root_index < 0) return;
 
+  core::action_t transformed_action = action;
+  Game::Symmetries::apply(transformed_action, sym);
+
   Node* root = shared_data_.lookup_table.get_node(root_index);
-  root_index = root->lookup_child_by_action(action);
+  root_index = root->lookup_child_by_action(transformed_action);
   if (root_index < 0) {
     shared_data_.root_info.node_index = -1;
     return;

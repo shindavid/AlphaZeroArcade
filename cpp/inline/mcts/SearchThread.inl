@@ -480,7 +480,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
     int r = 0;
     int c = 0;
 
-    group::element_t inv_sym = Game::SymmetryGroup::inverse(shared_data_->root_info.canonical_sym);
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(canonical_sym_);
     for (core::action_t action : bitset_util::on_indices(valid_actions)) {
       Game::Symmetries::apply(action, inv_sym);
       A2(r, c++) = action;

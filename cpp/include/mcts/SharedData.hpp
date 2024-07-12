@@ -68,8 +68,8 @@ struct SharedData {
       util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
     }
 
-    group::element_t e = group::kIdentity;
-    root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(root_info.state[e]);
+    const FullState& raw_state = root_info.state[group::kIdentity];
+    root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(raw_state);
   }
 
   Node* get_root_node() { return lookup_table.get_node(root_info.node_index); }
