@@ -133,27 +133,29 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
 
   stop_search_threads();
 
+  auto& root_info = shared_data_.root_info;
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
-  if (shared_data_.root_info.node_index < 0 || add_noise) {
+  if (root_info.node_index < 0 || add_noise) {
+    const FullState& canonical_state = root_info.state[root_info.canonical_sym];
     ActionOutcome outcome;
-    shared_data_.root_info.node_index = shared_data_.lookup_table.alloc_node();
-    Node* root = shared_data_.lookup_table.get_node(shared_data_.root_info.node_index);
-    new (root) Node(&shared_data_.lookup_table, game_state, outcome);
+    root_info.node_index = shared_data_.lookup_table.alloc_node();
+    Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
+    new (root) Node(&shared_data_.lookup_table, canonical_state, outcome);
   }
 
   if (mcts::kEnableDebug) {
-    Game::IO::print_state(std::cout, shared_data_.root_info.state[group::kIdentity]);
+    Game::IO::print_state(std::cout, root_info.state[group::kIdentity]);
   }
 
   start_search_threads(params);
   wait_for_search_threads();
 
-  shared_data_.lookup_table.defragment(shared_data_.root_info.node_index);
-  Node* root = shared_data_.lookup_table.get_node(shared_data_.root_info.node_index);
+  shared_data_.lookup_table.defragment(root_info.node_index);
+  Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();
 
-  group::element_t sym = shared_data_.root_info.canonical_sym;
+  group::element_t sym = root_info.canonical_sym;
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
   results_.valid_actions.set(false);
