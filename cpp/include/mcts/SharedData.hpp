@@ -39,6 +39,10 @@ struct SharedData {
     node_pool_index_t node_index = -1;
   };
 
+  SharedData(bool multithreaded_mode) : lookup_table(multithreaded_mode) {}
+  SharedData(const SharedData&) = delete;
+  SharedData& operator=(const SharedData&) = delete;
+
   void clear() {
     root_softmax_temperature.reset();
     lookup_table.clear();

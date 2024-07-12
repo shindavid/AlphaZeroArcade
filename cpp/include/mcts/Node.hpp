@@ -108,7 +108,7 @@ class Node {
 
   class LookupTable {
    public:
-    static constexpr int kMutexPoolSize = 256;
+    static constexpr int kDefaultMutexPoolSize = 256;
 
     class Defragmenter {
      public:
@@ -133,6 +133,10 @@ class Node {
       index_vec_t edge_index_remappings_;
     };
 
+    LookupTable(bool multithreaded_mode);
+    LookupTable(const LookupTable&) = delete;
+    LookupTable& operator=(const LookupTable&) = delete;
+
     void clear();
 
     void defragment(node_pool_index_t& root_index);
@@ -144,7 +148,7 @@ class Node {
     Node* get_node(node_pool_index_t index) { return &node_pool_[index]; }
     edge_t* get_edge(edge_pool_index_t index) { return &edge_pool_[index]; }
 
-    int get_random_mutex_id() const { return util::Random::uniform_sample(0, kMutexPoolSize); }
+    int get_random_mutex_id() const;
     std::mutex& get_mutex(int mutex_id) { return mutex_pool_[mutex_id]; }
     std::condition_variable& get_cv(int mutex_id) { return cv_pool_[mutex_id]; }
 
@@ -155,8 +159,8 @@ class Node {
     map_t map_;
     util::AllocPool<edge_t> edge_pool_;
     util::AllocPool<Node> node_pool_;
-    std::mutex mutex_pool_[kMutexPoolSize];
-    std::condition_variable cv_pool_[kMutexPoolSize];
+    std::vector<std::mutex> mutex_pool_;
+    std::vector<std::condition_variable> cv_pool_;
     mutable std::mutex map_mutex_;
   };
 

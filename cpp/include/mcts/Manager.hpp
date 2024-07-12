@@ -66,8 +66,8 @@ class Manager {
   static int next_instance_id_;  // for naming debug/profiling output files
 
   const ManagerParams params_;
-  SharedData shared_data_;
   const SearchParams pondering_search_params_;
+  SharedData shared_data_;
   search_thread_vec_t search_threads_;
   NNEvaluationService* nn_eval_service_ = nullptr;
 

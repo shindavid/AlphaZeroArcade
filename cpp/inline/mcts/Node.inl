@@ -135,6 +135,11 @@ void Node<Game>::LookupTable::Defragmenter::init_remapping(index_vec_t& remappin
 }
 
 template <core::concepts::Game Game>
+Node<Game>::LookupTable::LookupTable(bool multithreaded_mode)
+    : mutex_pool_(multithreaded_mode ? kDefaultMutexPoolSize : 1),
+      cv_pool_(multithreaded_mode ? kDefaultMutexPoolSize : 1) {}
+
+template <core::concepts::Game Game>
 void Node<Game>::LookupTable::clear() {
   map_.clear();
   edge_pool_.clear();
@@ -165,6 +170,11 @@ typename Node<Game>::node_pool_index_t Node<Game>::LookupTable::lookup_node(
     return -1;
   }
   return it->second;
+}
+
+template <core::concepts::Game Game>
+int Node<Game>::LookupTable::get_random_mutex_id() const {
+  return util::Random::uniform_sample(0, (int)mutex_pool_.size());
 }
 
 template <core::concepts::Game Game>
