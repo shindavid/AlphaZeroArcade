@@ -343,8 +343,8 @@ template <core::concepts::Game Game>
 template<typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   ValueArray V;
-  LocalPolicyArray P_raw;
-  LocalPolicyArray P_adjusted;
+  LocalPolicyArray P_raw(stable_data_.num_valid_actions);
+  LocalPolicyArray P_adjusted(stable_data_.num_valid_actions);
 
   if (eval == nullptr) {
     // treat this as uniform P and V
