@@ -7,9 +7,9 @@ namespace mcts {
 template <core::concepts::Game Game>
 inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
                                   const SearchParams& search_params,
-                                  const Node* tree, bool is_root)
-    : cp(tree->stable_data().current_player),
-      P(tree->stable_data().num_valid_actions),
+                                  const Node* node, bool is_root)
+    : cp(node->stable_data().current_player),
+      P(node->stable_data().num_valid_actions),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -28,18 +28,18 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
   std::bitset<kMaxBranchingFactor> fpu_bits;
   fpu_bits.set();
 
-  for (int i = 0; i < tree->stable_data().num_valid_actions; ++i) {
+  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
     using edge_t = Node::edge_t;
-    edge_t* edge = tree->get_edge(i);
+    edge_t* edge = node->get_edge(i);
 
     P(i) = edge->adjusted_policy_prior;
     E(i) = edge->RN;
 
-    Node* child = tree->get_child(edge);
+    Node* child = node->get_child(edge);
     if (child) {
       const auto& child_stats = child->stats();
       V(i) = child_stats.VQ(cp);
@@ -56,7 +56,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
     /*
      * Again, we do NOT grab the stats_mutex here!
      */
-    const auto& stats = tree->stats();  // no struct copy, not needed here
+    const auto& stats = node->stats();  // no struct copy, not needed here
     float PV = stats.VQ(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
