@@ -5,6 +5,7 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <core/DefaultCanonicalizer.hpp>
 #include <util/AnsiCodes.hpp>
 #include <util/BitSet.hpp>
 #include <util/CppUtil.hpp>
@@ -65,7 +66,12 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   }
 }
 
-inline void Game::Rules::init_state(FullState& state) {
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState& state) {
+  using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
+  return DefaultCanonicalizer::get(state);
+}
+
+inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
 }

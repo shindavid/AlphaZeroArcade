@@ -337,6 +337,56 @@ void test_action_transforms() {
   }
 }
 
+void test_canonicalization() {
+  BaseState state;
+  Rules::init_state(state);
+  Rules::apply(state, 2);
+  Rules::apply(state, 1);
+
+  std::string expected_repr =
+      "0 1 2  | |O|X|\n"
+      "3 4 5  | | | |\n"
+      "6 7 8  | | | |\n";
+
+  std::string repr = get_repr(state);
+
+  if (repr != expected_repr) {
+    printf("Failure in %s() at %s:%d\n", __func__, __FILE__, __LINE__);
+    printf("Expected:\n%s\n", expected_repr.c_str());
+    printf("But got:\n%s\n", repr.c_str());
+    global_fail_count++;
+    return;
+  }
+
+  group::element_t e = Game::Symmetries::get_canonical_symmetry(state);
+  if (e != groups::D4::kMirrorHorizontal) {
+    printf("Failure in %s() at %s:%d\n", __func__, __FILE__, __LINE__);
+    printf("Expected canonical symmetry: %d, but got %d\n", groups::D4::kMirrorHorizontal, e);
+    global_fail_count++;
+    return;
+  }
+
+  Game::Symmetries::apply(state, e);
+
+  expected_repr =
+      "0 1 2  |X|O| |\n"
+      "3 4 5  | | | |\n"
+      "6 7 8  | | | |\n";
+
+  repr = get_repr(state);
+
+  if (repr != expected_repr) {
+    printf("Failure in %s() at %s:%d\n", __func__, __FILE__, __LINE__);
+    printf("Expected:\n%s\n", expected_repr.c_str());
+    printf("But got:\n%s\n", repr.c_str());
+    global_fail_count++;
+    return;
+  }
+
+  printf("Success: %s()\n", __func__);
+  global_pass_count++;
+}
+
 void test_symmetries() {
   test_identity();
   test_rot90_clockwise();
@@ -347,6 +397,7 @@ void test_symmetries() {
   test_flip_main_diag();
   test_flip_anti_diag();
   test_action_transforms();
+  test_canonicalization();
 }
 
 int main() {

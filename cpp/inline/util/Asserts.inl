@@ -1,5 +1,6 @@
 #include <util/Asserts.hpp>
 
+#include <util/CppUtil.hpp>
 #include <util/Exception.hpp>
 
 #include <cstdarg>
@@ -8,7 +9,7 @@
 namespace util {
 
 inline void debug_assert(bool condition, char const* fmt, ...) {
-#ifndef NDEBUG
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
   if (condition) return;
   if (!fmt) throw Exception();
   va_list ap;
@@ -17,7 +18,6 @@ inline void debug_assert(bool condition, char const* fmt, ...) {
   vsnprintf(text, sizeof(text), fmt, ap);
   va_end(ap);
   throw Exception("%s", text);
-#endif  // NDEBUG
 }
 
 inline void release_assert(bool condition, char const* fmt, ...) {

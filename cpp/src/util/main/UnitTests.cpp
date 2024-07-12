@@ -1,5 +1,8 @@
 #include <util/AllocPool.hpp>
+#include <util/EigenUtil.hpp>
 #include <util/Random.hpp>
+
+#include <Eigen/Core>
 
 #include <array>
 #include <iostream>
@@ -132,9 +135,41 @@ void test_alloc_pool() {
   global_pass_count++;
 }
 
+void test_eigen_util() {
+  constexpr int kNumRows = 3;
+  constexpr int kNumCols = 5;
+  constexpr int kMaxNumCols = 10;
+  using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
+
+  Array array{
+      {3, 1, 5, 4, 2},
+      {30, 10, 50, 40, 20},
+      {300, 100, 500, 400, 200},
+  };
+
+  array = eigen_util::sort_columns(array);
+
+  int pow10[] = {1, 10, 100};
+  for (int r = 0; r < kNumRows; ++r) {
+    for (int c = 0; c < kNumCols; ++c) {
+      float expected = (c + 1) * pow10[r];
+      if (array(r, c) != expected) {
+        printf("%s() failure at %s:%d\n", __func__, __FILE__, __LINE__);
+        printf("Expected %.f at array(%d, %d) but got %.f\n", expected, r, c, array(r, c));
+        std::cout << array << std::endl;
+        global_fail_count++;
+        return;
+      }
+    }
+  }
+
+  global_pass_count++;
+}
+
 int main() {
   test_random();
   test_alloc_pool();
+  test_eigen_util();
 
   if (global_fail_count > 0) {
     int total_count = global_pass_count + global_fail_count;

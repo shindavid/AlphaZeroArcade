@@ -17,7 +17,8 @@ template <core::concepts::Game Game>
 inline Manager<Game>::Manager(const ManagerParams& params)
     : params_(params),
       pondering_search_params_(
-          SearchParams::make_pondering_params(params.pondering_tree_size_limit)) {
+          SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
+      shared_data_(num_search_threads() > 1) {
   shared_data_.manager_id = next_instance_id_++;
   new (&shared_data_.root_softmax_temperature) math::ExponentialDecay(math::ExponentialDecay::parse(
       params.root_softmax_temperature_str, core::GameVars<Game>::get_bindings()));
@@ -101,20 +102,25 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
                                                 core::action_t action) {
   using node_pool_index_t = Node::node_pool_index_t;
 
-  shared_data_.update_state(state);
+  group::element_t sym = shared_data_.root_info.canonical_sym;
+
+  shared_data_.update_state(action);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
-  node_pool_index_t root_index = shared_data_.root_node_index;
+  node_pool_index_t root_index = shared_data_.root_info.node_index;
   if (root_index < 0) return;
 
+  core::action_t transformed_action = action;
+  Game::Symmetries::apply(transformed_action, sym);
+
   Node* root = shared_data_.lookup_table.get_node(root_index);
-  root_index = root->lookup_child_by_action(action);
+  root_index = root->lookup_child_by_action(transformed_action);
   if (root_index < 0) {
-    shared_data_.root_node_index = -1;
+    shared_data_.root_info.node_index = -1;
     return;
   }
 
-  shared_data_.root_node_index = root_index;
+  shared_data_.root_info.node_index = root_index;
 
   if (params_.enable_pondering) {
     start_search_threads(pondering_search_params_);
@@ -128,39 +134,53 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
 
   stop_search_threads();
 
+  auto& root_info = shared_data_.root_info;
   bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
-  if (shared_data_.root_node_index < 0 || add_noise) {
+  if (root_info.node_index < 0 || add_noise) {
+    const FullState& canonical_state = root_info.state[root_info.canonical_sym];
     ActionOutcome outcome;
-    shared_data_.root_node_index = shared_data_.lookup_table.alloc_node();
-    Node* root = shared_data_.lookup_table.get_node(shared_data_.root_node_index);
-    new (root) Node(&shared_data_.lookup_table, game_state, outcome);
+    root_info.node_index = shared_data_.lookup_table.alloc_node();
+    Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
+    new (root) Node(&shared_data_.lookup_table, canonical_state, outcome);
   }
 
   if (mcts::kEnableDebug) {
-    Game::IO::print_state(std::cout, shared_data_.root_state);
+    Game::IO::print_state(std::cout, root_info.state[group::kIdentity]);
   }
 
   start_search_threads(params);
   wait_for_search_threads();
 
-  shared_data_.lookup_table.defragment(shared_data_.root_node_index);
-  Node* root = shared_data_.lookup_table.get_node(shared_data_.root_node_index);
+  shared_data_.lookup_table.defragment(root_info.node_index);
+  Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();
 
-  results_.valid_actions = stable_data.valid_action_mask;
+  group::element_t sym = root_info.canonical_sym;
+  group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
+
+  results_.valid_actions.set(false);
+  results_.policy_prior.setZero();
+
+  int i = 0;
+  for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
+    auto* edge = root->get_edge(i++);
+
+    Game::Symmetries::apply(action, inv_sym);
+    results_.valid_actions.set(action);
+    results_.policy_prior(action) = edge->raw_policy_prior;
+  }
+
   results_.counts = root->get_counts(params_);
   results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.current_player];
   if (params_.forced_playouts && add_noise) {
     prune_policy_target(params);
   }
-  results_.policy_prior.setZero();
-  int i = 0;
-  for (int a : bitset_util::on_indices(results_.valid_actions)) {
-    auto* edge = root->get_edge(i++);
-    results_.policy_prior(a) = edge->raw_policy_prior;
-  }
+
+  Game::Symmetries::apply(results_.counts, inv_sym);
+  Game::Symmetries::apply(results_.policy_target, inv_sym);
+
   results_.win_rates = stats.RQ;
   results_.value_prior = stable_data.V;
 
