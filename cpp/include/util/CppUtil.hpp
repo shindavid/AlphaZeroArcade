@@ -379,6 +379,21 @@ size_t tuple_hash(const std::tuple<T...>& arg);
 template <size_t size>
 uint64_t hash_memory(const void* ptr);
 
+// Helper function to generate the array of reciprocal values
+template <int N, std::size_t... I>
+constexpr std::array<float, N> generateReciprocalArray(std::index_sequence<I...>) {
+  return {{1.0f / (I + 1)...}};
+}
+
+/*
+ * ReciprocalTable<N>::values is an array of size N where values[i] = 1.0 / (i + 1).
+ */
+template <int N>
+struct ReciprocalTable {
+  static constexpr std::array<float, N> values =
+      generateReciprocalArray<N>(std::make_index_sequence<N>{});
+};
+
 /*
  * If N<0, just does vec.push_back(t).
  *

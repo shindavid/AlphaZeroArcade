@@ -85,11 +85,11 @@ Node<Game>* SearchThread<Game>::init_root_node() {
   Node* root = shared_data_->lookup_table.get_node(root_index);
   if (root->is_terminal() || root->edges_initialized()) return root;
 
-  root->initialize_edges();
+  const FullState& state = shared_data_->root_info.state[canonical_sym_];
+  const base_state_vec_t& state_history = shared_data_->root_info.state_history[canonical_sym_];
 
-  canonical_state_data_.load(shared_data_->root_info.state[canonical_sym_],
-                             shared_data_->root_info.state_history[canonical_sym_]);
-
+  root->initialize_edges(state);
+  canonical_state_data_.load(state, state_history);
   init_node(&canonical_state_data_, root_index, root);
 
   root->stats().RN++;
@@ -142,6 +142,7 @@ inline void SearchThread<Game>::perform_visits() {
   raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
 
   Node* root = init_root_node();
+  if (root->num_representative_actions() == 1) return;
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     visit(root, nullptr);
@@ -367,7 +368,7 @@ bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* 
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, state, outcome_);
     search_path_.back().child = child;
-    child->initialize_edges();
+    child->initialize_edges(state);
     virtual_backprop();
     init_node(state_data, edge->child_index, child);
     backprop_with_virtual_undo();
@@ -436,6 +437,13 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
 
+  print_puct_details(node, stats, argmax_index);
+  return stats.edge_indices(argmax_index);
+}
+
+template <core::concepts::Game Game>
+void SearchThread<Game>::print_puct_details(Node* node, const PUCTStats& stats,
+                                            int argmax_index) const {
   if (mcts::kEnableDebug) {
     std::ostringstream ss;
     ss << thread_id_whitespace();
@@ -465,40 +473,40 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
     ss << "cp:    " << cp_line << break_plus_thread_id_whitespace();
 
+    using PVec = LocalPolicyArray;
     using ScalarT = PVec::Scalar;
-    constexpr int kNumRows = 11;  // action, P, V, PW, PL, E, N, VN, &ch, PUCT, argmax
+    constexpr int kNumRows = 12;  // action, P, V, FPU, PW, PL, E, N, VN, &ch, PUCT, argmax
     constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
     using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
 
-    ArrayT2 A2(kNumRows, P.rows());
+    ArrayT2 A2(kNumRows, stats.P.rows());
     A2.setZero();
 
-    const ActionMask& valid_actions = node->stable_data().valid_action_mask;
     int r = 0;
-    int c = 0;
+
+    PVec child_addr(stats.P.rows());
+    child_addr.setConstant(-1);
 
     group::element_t inv_sym = Game::SymmetryGroup::inverse(canonical_sym_);
-    for (core::action_t action : bitset_util::on_indices(valid_actions)) {
+    for (int e = 0; e < node->num_representative_actions(); ++e) {
+      auto edge = node->get_edge(stats.edge_indices(e));
+      core::action_t action = edge->action;
       Game::Symmetries::apply(action, inv_sym);
-      A2(r, c++) = action;
+      A2(r, e) = action;
+      child_addr(e) = edge->child_index;
     }
     r++;
 
-    PVec child_addr(P.rows());
-    child_addr.setConstant(-1);
-    for (int e = 0; e < node->stable_data().num_valid_actions; ++e) {
-      child_addr(e) = node->get_edge(e)->child_index;
-    }
-
-    A2.row(r++) = P;
+    A2.row(r++) = stats.P;
     A2.row(r++) = stats.V;
+    A2.row(r++) = stats.FPU;
     A2.row(r++) = stats.PW;
     A2.row(r++) = stats.PL;
     A2.row(r++) = stats.E;
-    A2.row(r++) = N;
+    A2.row(r++) = stats.N;
     A2.row(r++) = stats.VN;
     A2.row(r++) = child_addr;
-    A2.row(r++) = PUCT;
+    A2.row(r++) = stats.PUCT;
     A2(r, argmax_index) = 1;
 
     A2 = eigen_util::sort_columns(A2);
@@ -514,6 +522,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
     ss << "move:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "P:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "V:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "FPU:   " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "PW:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "PL:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "E:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
@@ -535,7 +544,6 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
     LOG_INFO << ss.str();
   }
-  return argmax_index;
 }
 
 }  // namespace mcts

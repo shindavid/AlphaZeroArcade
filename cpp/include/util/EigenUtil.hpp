@@ -128,9 +128,9 @@ auto to_int64_std_array_v = to_int64_std_array<T>::value;
 template <concepts::Shape Shape>
 using FTensor = Eigen::TensorFixedSize<float, Shape, Eigen::RowMajor>;
 
-// DArray is a dynamic float Eigen::Array of max size N
-template <int N>
-using DArray = Eigen::Array<float, Eigen::Dynamic, 1, 0, N>;
+// DArray is a dynamic Eigen::Array of max size N
+template <int N, typename Scalar=float>
+using DArray = Eigen::Array<Scalar, Eigen::Dynamic, 1, 0, N>;
 
 // FArray is a fixed-size float Eigen::Array of size N
 template <int N>

@@ -137,6 +137,7 @@ class SearchThread {
    * Tensorizor, since there is coupling with NN architecture (in the form of output heads).
    */
   int get_best_child_index(Node* node);
+  void print_puct_details(Node* node, const PUCTStats& stats, int argmax_index) const;
 
   auto& dirichlet_gen() const { return shared_data_->dirichlet_gen; }
   auto& rng() const { return shared_data_->rng; }

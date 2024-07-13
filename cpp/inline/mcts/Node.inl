@@ -221,7 +221,7 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     }
 
     if (kEnableDebug) {
-      std::cout << "  " << action << ": " << count;
+      std::cout << "  " << Game::IO::action_to_str(action) << ": " << count;
       if (modified_count != count) {
         std::cout << " -> " << modified_count;
       }
@@ -335,17 +335,75 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::initialize_edges() {
+void Node<Game>::initialize_edges(const FullState& state) {
   int n_edges = stable_data_.num_valid_actions;
   if (n_edges == 0) return;
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);
+
+  struct pair_t {
+    auto operator<=>(const pair_t& other) const = default;
+    BaseState child_state;
+    int edge_index;
+  };
+  pair_t pairs[n_edges];
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
     edge_t* edge = get_edge(i);
     new (edge) edge_t();
     edge->action = action;
+
+    FullState state_copy = state;
+    Game::Rules::apply(state_copy, action);
+
+    pair_t& pair = pairs[i];
+    pair.child_state = state_copy;
+    pair.edge_index = i;
+
+    group::element_t canonical_sym = Game::Symmetries::get_canonical_symmetry(pair.child_state);
+    Game::Symmetries::apply(pair.child_state, canonical_sym);
+
     i++;
+  }
+
+  std::sort(pairs, pairs + n_edges);
+
+  int representative_edge_indices[n_edges];
+  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+    std::fill(representative_edge_indices, representative_edge_indices + n_edges, -1);
+  }
+
+  int r = 0;
+  for (i = 0; i < n_edges; ++i) {
+    if (i == 0 || pairs[i].child_state != pairs[i - 1].child_state) {
+      representative_edge_indices[r++] = pairs[i].edge_index;
+    }
+  }
+  num_representative_actions_ = r;
+
+  std::sort(representative_edge_indices, representative_edge_indices + r);
+
+  int collapsed_index_lookup[n_edges];
+  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+    std::fill(collapsed_index_lookup, collapsed_index_lookup + n_edges, -1);
+  }
+
+  for (i = 0; i < r; ++i) {
+    util::debug_assert(representative_edge_indices[i] >= 0);
+    collapsed_index_lookup[representative_edge_indices[i]] = i;
+  }
+
+  int cur_representative = 0;
+
+  for (i = 0; i < n_edges; ++i) {
+    int j = pairs[i].edge_index;
+    if (i == 0 || pairs[i].child_state != pairs[i - 1].child_state) {
+      cur_representative = j;
+    }
+    edge_t* edge = get_edge(j);
+    edge->representative_edge_index = cur_representative;
+    edge->collapsed_index = collapsed_index_lookup[cur_representative];
+    util::debug_assert(edge->collapsed_index >= 0);
   }
 }
 
@@ -354,19 +412,24 @@ template<typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   ValueArray V;
   LocalPolicyArray P_raw(stable_data_.num_valid_actions);
-  LocalPolicyArray P_adjusted(stable_data_.num_valid_actions);
 
   if (eval == nullptr) {
     // treat this as uniform P and V
     V.setConstant(1.0 / kNumPlayers);
     P_raw.setConstant(1.0 / stable_data_.num_valid_actions);
-    P_adjusted = P_raw;
   } else {
     V = eval->value_prob_distr();
     P_raw = eigen_util::softmax(eval->local_policy_logit_distr());
-    P_adjusted = P_raw;
-    f(P_adjusted);
   }
+
+  LocalPolicyArray P_adjusted(num_representative_actions_);
+  P_adjusted.setZero();
+  for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
+    edge_t* edge = get_edge(i);
+    P_adjusted(edge->collapsed_index) += P_raw(i);
+  }
+
+  if (eval) f(P_adjusted);
 
   stable_data_.V = V;
   stats_.RQ = V;
@@ -375,7 +438,11 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     edge_t* edge = get_edge(i);
     edge->raw_policy_prior = P_raw[i];
-    edge->adjusted_policy_prior = P_adjusted[i];
+    if (edge->representative_edge_index == i) {
+      edge->adjusted_policy_prior = P_adjusted[edge->collapsed_index];
+    } else {
+      edge->adjusted_policy_prior = 0;
+    }
   }
 }
 

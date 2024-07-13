@@ -228,6 +228,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
+  policy = mcts_results->action_collapse_table.uncollapse(policy);
   core::action_t action = eigen_util::sample(policy)[0];
   util::release_assert(valid_actions[action]);
   return action;

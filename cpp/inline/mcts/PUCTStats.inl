@@ -5,17 +5,17 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
-                                  const SearchParams& search_params,
+inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParams& search_params,
                                   const Node* node, bool is_root)
     : cp(node->stable_data().current_player),
-      P(node->stable_data().num_valid_actions),
+      P(node->num_representative_actions()),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
       E(P.rows()),
       N(P.rows()),
       VN(P.rows()),
+      FPU(P.rows()),
       PUCT(P.rows()) {
   P.setZero();
   V.setZero();
@@ -24,18 +24,19 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
   E.setZero();
   N.setZero();
   VN.setZero();
+  FPU.setZero();
 
-  std::bitset<kMaxBranchingFactor> fpu_bits;
-  fpu_bits.set();
-
-  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+  bool fpu_any = false;
+  for (int e = 0; e < node->stable_data().num_valid_actions; ++e) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
     using edge_t = Node::edge_t;
-    edge_t* edge = node->get_edge(i);
+    edge_t* edge = node->get_edge(e);
+    if (edge->representative_edge_index != e) continue;
 
+    int i = edge->collapsed_index;
     P(i) = edge->adjusted_policy_prior;
     E(i) = edge->RN;
 
@@ -49,10 +50,14 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
       VN(i) = child_stats.VN;
     }
 
-    fpu_bits[i] = (N(i) == 0);
+    edge_indices(i) = e;
+
+    bool fpu = N(i) == 0;
+    FPU[i] = fpu;
+    fpu_any |= fpu;
   }
 
-  if (params.enable_first_play_urgency && fpu_bits.any()) {
+  if (params.enable_first_play_urgency && fpu_any) {
     /*
      * Again, we do NOT grab the stats_mutex here!
      */
@@ -62,9 +67,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params,
     bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
     float cFPU = disableFPU ? 0.0 : params.cFPU;
     float v = PV - cFPU * sqrt((P * (N > 0).template cast<float>()).sum());
-    for (int i : bitset_util::on_indices(fpu_bits)) {
-      V(i) = v;
-    }
+    V = (1 - FPU) * V + FPU * v;
   }
 
   /*
