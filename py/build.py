@@ -184,11 +184,10 @@ def main():
                 print('Please rerun setup_wizard.py to fix this.')
                 raise Exception()
             extra_dir = os.path.join(bin_dir, 'extra')
-            if not os.path.isdir(extra_dir):
-                os.makedirs(extra_dir)
+            os.makedirs(extra_dir, exist_ok=True)
             cp_loc = extra_dir
             run(f'rsync -r {dep_loc} {cp_loc}', print_cmd=False)
-            print(f'Extra dependency:', cp_loc)
+            print(f'Extra dependency:', os.path.join(cp_loc, os.path.split(dep)[1]))
 
     for b in bins:
         bin_loc = os.path.join(bin_dir, f'{b}{bin_postfix}')
