@@ -82,7 +82,7 @@ class options_description {
 
   using base_t = boost::program_options::options_description;
 
-  options_description(const char* name) : full_base_(new base_t(name)), base_(new base_t(name)) {}
+  options_description(const char* name);
   ~options_description();
 
   /*

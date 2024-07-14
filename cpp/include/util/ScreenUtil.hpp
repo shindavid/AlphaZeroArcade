@@ -2,6 +2,8 @@
 
 namespace util {
 
+int get_screen_width();
+
 void clearscreen();
 
 /*

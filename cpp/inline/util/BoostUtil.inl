@@ -1,8 +1,15 @@
 #include <util/BoostUtil.hpp>
 
+#include <util/ScreenUtil.hpp>
+
 namespace boost_util {
 
 namespace program_options {
+
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
+options_description<StrSeq, CharSeq>::options_description(const char* name)
+    : full_base_(new base_t(name, util::get_screen_width())),
+      base_(new base_t(name, util::get_screen_width())) {}
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 options_description<StrSeq, CharSeq>::~options_description() {

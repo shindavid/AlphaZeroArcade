@@ -1,10 +1,21 @@
 #include <util/ScreenUtil.hpp>
 
 #include <cstdlib>
+#include <stdio.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
-#include <term.h>
 
 namespace util {
+
+inline int get_screen_width() {
+  static int width = 0;
+  if (width == 0) {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    width = w.ws_col;
+  }
+  return width;
+}
 
 /*
  * See: https://cplusplus.com/articles/4z18T05o/
