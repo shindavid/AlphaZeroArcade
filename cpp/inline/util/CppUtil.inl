@@ -125,12 +125,12 @@ uint64_t hash_memory(const void* ptr) {
   return hash;
 }
 
-template <int N, typename T>
-void stuff_back(std::vector<T>& vec, const T& t) {
+template <int N, typename T, typename U>
+void stuff_back(std::vector<T>& vec, const U& u) {
   if (N >= 0 && (int)vec.size() > N) {
     vec.erase(vec.begin());
   }
-  vec.push_back(t);
+  vec.push_back(u);
 }
 
 }  // namespace util

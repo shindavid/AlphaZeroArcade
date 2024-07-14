@@ -395,17 +395,17 @@ struct ReciprocalTable {
 };
 
 /*
- * If N<0, just does vec.push_back(t).
+ * If N<0, just does vec.push_back(u).
  *
- * If N>=0, then does vec.push_back(t), but pops off the front element first if the current size
+ * If N>=0, then does vec.push_back(u), but pops off the front element first if the current size
  * exceeds N.
  *
  * For non-negative N, this simulates push_back() for a circular buffer of size N+1. This is useful
  * in settings where we want circular buffer mechanics, but where we require the container's
  * logical ordering to match the physical ordering.
  */
-template <int N, typename T>
-void stuff_back(std::vector<T>& vec, const T& t);
+template <int N, typename T, typename U>
+void stuff_back(std::vector<T>& vec, const U& u);
 
 namespace concepts {
 
