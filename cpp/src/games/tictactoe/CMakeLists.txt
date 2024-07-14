@@ -14,6 +14,7 @@ add_library(tictactoe_ffi
         Game.cpp
 )
 
+set_target_properties(tictactoe_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
 set_target_properties(tictactoe_exe PROPERTIES OUTPUT_NAME "tictactoe")
 set_target_properties(tictactoe_ffi PROPERTIES OUTPUT_NAME "tictactoe")
 

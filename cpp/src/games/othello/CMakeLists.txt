@@ -16,6 +16,7 @@ add_library(othello_ffi
         flip_sse.cpp
 )
 
+set_target_properties(othello_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
 set_target_properties(othello_exe PROPERTIES OUTPUT_NAME "othello")
 set_target_properties(othello_ffi PROPERTIES OUTPUT_NAME "othello")
 

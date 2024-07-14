@@ -14,6 +14,7 @@ add_library(c4_ffi
         Game.cpp
 )
 
+set_target_properties(c4_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
 set_target_properties(c4_exe PROPERTIES OUTPUT_NAME "c4")
 set_target_properties(c4_ffi PROPERTIES OUTPUT_NAME "c4")
 
