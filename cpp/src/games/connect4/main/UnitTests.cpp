@@ -186,5 +186,5 @@ int main() {
   } else {
     printf("All tests passed (%d of %d)!\n", global_pass_count, global_pass_count);
   }
-  return 0;
+  return global_fail_count ? 1 : 0;
 }
