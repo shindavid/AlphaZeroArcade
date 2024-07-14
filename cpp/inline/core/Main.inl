@@ -31,6 +31,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
 
     Args args;
     util::logging::Params log_params;
+    util::Random::Params random_params;
     core::LoopControllerClient::Params loop_controller_params;
     typename GameServerProxy::Params game_server_proxy_params;
     typename GameServer::Params game_server_params = get_default_game_server_params();
@@ -40,6 +41,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
                     .template add_option<"help-full">("help with no-op flags included")
                     .add(args.make_options_description())
                     .add(log_params.make_options_description())
+                    .add(random_params.make_options_description())
                     .add(loop_controller_params.make_options_description())
                     .add(game_server_params.make_options_description())
                     .add(game_server_proxy_params.make_options_description());
@@ -57,6 +59,7 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     }
 
     util::logging::init(log_params);
+    util::Random::init(random_params);
 
     LOG_INFO << "Starting process " << getpid();
 

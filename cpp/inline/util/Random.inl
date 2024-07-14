@@ -2,9 +2,32 @@
 
 #include <ctime>
 
+#include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 
 namespace util {
+
+inline auto Random::Params::make_options_description() {
+  namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
+
+  po2::options_description desc("Random options");
+
+  return desc
+      .template add_option<"seed">(
+          po::value<int>(&seed)->default_value(seed),
+          "random seed (default: 0 means seed with current time)");
+}
+
+inline void Random::init(const Params& params) {
+  if (params.seed) {
+    set_seed(params.seed);
+  }
+}
+
+inline void Random::set_seed(int seed) {
+  instance()->prng_.seed(seed);
+}
 
 template <typename T, typename U>
 inline auto Random::uniform_sample(T lower, U upper) {
@@ -73,8 +96,6 @@ void Random::zero_out(InputIt begin, InputIt end, size_t n) {
   }
 }
 
-inline void Random::set_seed(int seed) { instance()->prng_.seed(seed); }
-
 inline Random* Random::instance() {
   if (!instance_) {
     instance_ = new Random();
@@ -82,6 +103,6 @@ inline Random* Random::instance() {
   return instance_;
 }
 
-inline Random::Random() : prng_(IS_MACRO_ENABLED(DETERMINISTIC_MODE) ? 1234 : std::time(nullptr)) {}
+inline Random::Random() : prng_(std::time(nullptr)) {}
 
 }  // namespace util

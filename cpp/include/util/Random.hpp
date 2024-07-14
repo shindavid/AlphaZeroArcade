@@ -5,12 +5,39 @@
 
 /*
  * A wrapper around STL's random machinery.
+ *
+ * To use with a timer-based seed, just directly use any of the functions, such as
+ * util::Random::uniform_sample().
+ *
+ * To initialize with a specific seed, first call:
+ *
+ * util::Random::set_seed(seed);
+ *
+ * To add a cmdline option to set the seed, do:
+ *
+ * util::Random::Params random_params;
+ *
+ * namespace po2 = boost_util::program_options;
+ * po2::options_description raw_desc("General options");
+ * auto desc = raw_desc.add(random_params.make_options_description());
+ * po2::parse_args(desc, ac, av);
+ *
+ * util::Random::init(random_params);
  */
-
 namespace util {
 
 class Random {
  public:
+  struct Params {
+    auto make_options_description();
+
+    int seed = 0;
+  };
+
+  static void init(const Params&);
+
+  static void set_seed(int seed);
+
   /*
    * Uniformly randomly picks a value in the half-open range [lower, upper).
    */
@@ -55,8 +82,6 @@ class Random {
    */
   template <typename InputIt>
   static void zero_out(InputIt begin, InputIt end, size_t n);
-
-  static void set_seed(int seed);
 
  private:
   static Random* instance();
