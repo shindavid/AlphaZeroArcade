@@ -8,8 +8,8 @@ namespace program_options {
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 options_description<StrSeq, CharSeq>::options_description(const char* name)
-    : full_base_(new base_t(name, util::get_screen_width())),
-      base_(new base_t(name, util::get_screen_width())) {}
+    : full_base_(new base_t(name, util::get_screen_width() - 1)),
+      base_(new base_t(name, util::get_screen_width() - 1)) {}
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
 options_description<StrSeq, CharSeq>::~options_description() {
@@ -30,38 +30,27 @@ auto options_description<StrSeq, CharSeq>::add_option(Ts&&... ts) {
 }
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
+template <util::StringLiteral StrLit, typename... Ts>
+auto options_description<StrSeq, CharSeq>::add_hidden_option(Ts&&... ts) {
+  auto out = augment<StrLit>();
+  std::string full_name = out.tmp_str_;
+
+  out.full_base_->add_options()(full_name.c_str(), std::forward<Ts>(ts)...);
+  return out;
+}
+
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
 template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
 auto options_description<StrSeq, CharSeq>::add_flag(bool* flag, const char* true_help,
                                                     const char* false_help) {
-  auto out = augment<TrueStrLit>().template augment<FalseStrLit>();
+  return add_flag_helper<TrueStrLit, FalseStrLit>(flag, true_help, false_help, false);
+}
 
-  std::string full_true_help = true_help;
-  std::string full_false_help = false_help;
-
-  if (*flag) {
-    full_true_help += " (no-op)";
-  } else {
-    full_false_help += " (no-op)";
-  }
-
-  const char* true_name = TrueStrLit.value;
-  const char* false_name = FalseStrLit.value;
-
-  namespace po = boost::program_options;
-
-  out.full_base_->add_options()
-  (true_name, po::value(flag)->implicit_value(true)->zero_tokens(), full_true_help.c_str())
-  (false_name, po::value(flag)->implicit_value(false)->zero_tokens(), full_false_help.c_str());
-
-  if (*flag) {
-    out.base_->add_options()(false_name, po::value(flag)->implicit_value(false)->zero_tokens(),
-                            full_false_help.c_str());
-  } else {
-    out.base_->add_options()(true_name, po::value(flag)->implicit_value(true)->zero_tokens(),
-                            full_true_help.c_str());
-  }
-
-  return out;
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
+template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+auto options_description<StrSeq, CharSeq>::add_hidden_flag(bool* flag, const char* true_help,
+                                                           const char* false_help) {
+  return add_flag_helper<TrueStrLit, FalseStrLit>(flag, true_help, false_help, true);
 }
 
 template <typename StrSeq, util::concepts::IntSequence CharSeq>
@@ -111,6 +100,43 @@ auto options_description<StrSeq, CharSeq>::augment() const {
     full_name = util::create_string("%s,%c", full_name.c_str(), Char);
   }
   out.tmp_str_ = full_name;
+
+  return out;
+}
+
+template <typename StrSeq, util::concepts::IntSequence CharSeq>
+template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+auto options_description<StrSeq, CharSeq>::add_flag_helper(bool* flag, const char* true_help,
+                                                           const char* false_help, bool hidden) {
+  auto out = augment<TrueStrLit>().template augment<FalseStrLit>();
+
+  std::string full_true_help = true_help;
+  std::string full_false_help = false_help;
+
+  if (*flag) {
+    full_true_help += " (no-op)";
+  } else {
+    full_false_help += " (no-op)";
+  }
+
+  const char* true_name = TrueStrLit.value;
+  const char* false_name = FalseStrLit.value;
+
+  namespace po = boost::program_options;
+
+  out.full_base_->add_options()
+      (true_name, po::value(flag)->implicit_value(true)->zero_tokens(), full_true_help.c_str())
+      (false_name, po::value(flag)->implicit_value(false)->zero_tokens(), full_false_help.c_str());
+
+  if (!hidden) {
+    if (*flag) {
+      out.base_->add_options()(false_name, po::value(flag)->implicit_value(false)->zero_tokens(),
+                               full_false_help.c_str());
+    } else {
+      out.base_->add_options()(true_name, po::value(flag)->implicit_value(true)->zero_tokens(),
+                               full_true_help.c_str());
+    }
+  }
 
   return out;
 }

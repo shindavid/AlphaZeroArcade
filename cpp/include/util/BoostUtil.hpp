@@ -94,6 +94,16 @@ class options_description {
   auto add_option(Ts&&... ts);
 
   /*
+   * Similar to add_option(), but keeps the option hidden from the --help output to avoid clutter.
+   *
+   * To actually see the hidden options, use --help-full instead of --help/-h.
+   *
+   * For hidden options, we don't allow single-character abbreviations.
+   */
+  template <util::StringLiteral StrLit, typename... Ts>
+  auto add_hidden_option(Ts&&... ts);
+
+  /*
    * Adds both --foo and --no-foo options. One of the two will be suppressed from the --help output,
    * depending on the value of *flag. This allows you to brainlessly add both options without
    * having to worry about what the default value is.
@@ -104,6 +114,12 @@ class options_description {
    */
   template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
   auto add_flag(bool* flag, const char* true_help, const char* false_help);
+
+  /*
+   * Like add_flag(), but both options are hidden from the --help output.
+   */
+  template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+  auto add_hidden_flag(bool* flag, const char* true_help, const char* false_help);
 
   /*
    * Adds all options from desc to this.
@@ -126,6 +142,9 @@ class options_description {
 
   template <util::StringLiteral StrLit, char Char = ' '>
   auto augment() const;
+
+  template <util::StringLiteral TrueStrLit, util::StringLiteral FalseStrLit>
+  auto add_flag_helper(bool* flag, const char* true_help, const char* false_help, bool hidden);
 
   template <typename, util::concepts::IntSequence>
   friend class boost_util::program_options::options_description;

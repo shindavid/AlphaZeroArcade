@@ -86,7 +86,6 @@ void PlayerFactory<Game>::print_help(const std::vector<std::string>& player_strs
   std::cout << "  --player \"--type=TUI --name=Human --seat=1 <type-specific options...>\""
             << std::endl
             << std::endl;
-  std::cout << std::endl << std::endl;
 
   std::cout << "The set of legal --type values are:" << std::endl;
 

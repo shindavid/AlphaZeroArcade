@@ -43,7 +43,7 @@ auto GameServer<Game>::Params::make_options_description() {
       .template add_flag<"announce-game-results", "do-not-announce-game-results">(
           &announce_game_results, "announce result after each individual game",
           "do not announce result after each individual game")
-      .template add_flag<"respect-victory-hints", "do-not-respect-victory-hints">(
+      .template add_hidden_flag<"respect-victory-hints", "do-not-respect-victory-hints">(
           &respect_victory_hints, "immediately exit game if a player claims imminent victory",
           "ignore imminent victory claims from players");
 }

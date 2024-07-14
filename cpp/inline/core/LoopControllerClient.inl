@@ -36,24 +36,24 @@ inline auto LoopControllerClient::Params::make_options_description() {
       .template add_option<"loop-controller-port">(
           po::value<io::port_t>(&loop_controller_port)->default_value(loop_controller_port),
           "loop controller port. If unset, then this runs without a loop controller")
-      .template add_option<"client-role">(
-          po::value<std::string>(&client_role)->default_value(client_role),
-          "loop controller client role")
-      .template add_option<"ratings-tag">(
-          po::value<std::string>(&ratings_tag)->default_value(ratings_tag),
-          "ratings tag (only relevant if client_role == ratings-worker)")
       .template add_option<"cuda-device">(
           po::value<std::string>(&cuda_device)->default_value(cuda_device),
           "cuda device to register to the loop controller. Usually you need to specify this again "
           "for the MCTS player(s)")
-      .template add_option<"manager-id">(
+      .template add_hidden_option<"client-role">(
+          po::value<std::string>(&client_role)->default_value(client_role),
+          "loop controller client role")
+      .template add_hidden_option<"ratings-tag">(
+          po::value<std::string>(&ratings_tag)->default_value(ratings_tag),
+          "ratings tag (only relevant if client_role == ratings-worker)")
+      .template add_hidden_option<"manager-id">(
           po::value<int>(&manager_id)->default_value(manager_id),
           "if specified, indicates the client-id of the manager of this process")
-      .template add_option<"weights-request-generation">(
+      .template add_hidden_option<"weights-request-generation">(
           po::value<int>(&weights_request_generation)->default_value(weights_request_generation),
           "if specified, requests this specific generation from the loop controller whenever "
           "requesting weights")
-      .template add_flag<"report-metrics", "do-not-report-metrics">(
+      .template add_hidden_flag<"report-metrics", "do-not-report-metrics">(
           &report_metrics, "report metrics to loop-controller periodically",
           "do not report metrics to loop-controller");
 }

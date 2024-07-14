@@ -37,8 +37,8 @@ int Main<PlayerFactory>::main(int ac, char* av[]) {
     typename GameServer::Params game_server_params = get_default_game_server_params();
 
     po2::options_description raw_desc("General options");
-    auto desc = raw_desc.template add_option<"help", 'h'>("help")
-                    .template add_option<"help-full">("help with no-op flags included")
+    auto desc = raw_desc.template add_option<"help", 'h'>("help (most used options)")
+                    .template add_option<"help-full">("help (all options)")
                     .add(args.make_options_description())
                     .add(log_params.make_options_description())
                     .add(random_params.make_options_description())
