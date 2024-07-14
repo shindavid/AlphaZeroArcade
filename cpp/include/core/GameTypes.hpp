@@ -1,7 +1,9 @@
 #pragma once
 
+#include <core/ActionCollapseTable.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
+#include <core/EigenTypes.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 
@@ -17,11 +19,12 @@ struct GameTypes {
   using ActionMask = std::bitset<GameConstants::kNumActions>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
 
-  using PolicyShape = Eigen::Sizes<GameConstants::kNumActions>;
-  using PolicyTensor = eigen_util::FTensor<PolicyShape>;
-  using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
+  using PolicyShape = EigenTypes<GameConstants>::PolicyShape;
+  using PolicyTensor = EigenTypes<GameConstants>::PolicyTensor;
+  using ValueArray = EigenTypes<GameConstants>::ValueArray;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
   using SymmetryMask = std::bitset<Group::kOrder>;
+  using ActionCollapseTable = core::ActionCollapseTable<GameConstants, Group>;
 
   /*
    * Return type for an MCTS search.
@@ -36,6 +39,8 @@ struct GameTypes {
     PolicyTensor policy_prior;
     ValueArray win_rates;
     ValueArray value_prior;
+    ActionCollapseTable action_collapse_table;
+    int num_representative_actions;
     bool provably_lost = false;
   };
 

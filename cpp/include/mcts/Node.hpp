@@ -36,6 +36,7 @@ class Node {
 
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using LocalPolicyArray = NNEvaluation::LocalPolicyArray;
+  using BaseState = Game::BaseState;
   using FullState = Game::FullState;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using ActionMask = Game::Types::ActionMask;
@@ -102,6 +103,8 @@ class Node {
     int RN = 0;  // real count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
+    int representative_edge_index = -1;
+    int collapsed_index = -1;
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };
@@ -180,11 +183,12 @@ class Node {
   std::mutex& mutex() { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
-  void initialize_edges();
+  void initialize_edges(const FullState&);
 
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
+  int num_representative_actions() const { return num_representative_actions_; }
   bool edges_initialized() const { return first_edge_index_ != -1; }
   edge_t* get_edge(int i) const;
   edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
@@ -199,6 +203,7 @@ class Node {
   stats_t stats_;
   int mutex_id_;
   edge_pool_index_t first_edge_index_ = -1;
+  int num_representative_actions_ = -1;
 };
 
 }  // namespace mcts

@@ -162,18 +162,31 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   results_.valid_actions.set(false);
   results_.policy_prior.setZero();
 
+  core::action_t actions[stable_data.num_valid_actions];
+
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
-    auto* edge = root->get_edge(i++);
-
     Game::Symmetries::apply(action, inv_sym);
     results_.valid_actions.set(action);
+    actions[i] = action;
+
+    auto* edge = root->get_edge(i);
     results_.policy_prior(action) = edge->raw_policy_prior;
+
+    i++;
   }
 
+  std::array<core::action_t, Game::Constants::kNumActions> action_collapse_lookup;
+  action_collapse_lookup.fill(-1);
+  for (int e = 0; e < stable_data.num_valid_actions; ++e) {
+    action_collapse_lookup[actions[e]] = actions[root->get_edge(e)->representative_edge_index];
+  }
+
+  results_.action_collapse_table.load(action_collapse_lookup);
   results_.counts = root->get_counts(params_);
   results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.current_player];
+  results_.num_representative_actions = root->num_representative_actions();
   if (params_.forced_playouts && add_noise) {
     prune_policy_target(params);
   }
