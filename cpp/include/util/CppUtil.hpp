@@ -33,6 +33,14 @@
 
 namespace util {
 
+// Used for concept definitions, when we want to specify the type of a method argument exactly.
+template <class T>
+struct strict_type_match_t {
+  template <class U>
+    requires(std::same_as<std::decay_t<T>, std::decay_t<U>>)
+  operator U&();
+};
+
 template <typename T>
 std::string get_typename() {
   return boost::core::demangle(typeid(T).name());

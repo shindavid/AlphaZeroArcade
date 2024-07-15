@@ -50,6 +50,7 @@ class Game {
     mask_t cur_player_mask;  // spaces occupied by current player
   };
 
+  // struct FullState : public BaseState {};  // TODO: use this test BaseState != FullState case
   using FullState = BaseState;
   using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;

@@ -403,7 +403,8 @@ void SearchThread<Game>::calc_canonical_state_data() {
   // if FullState and BaseState are different, we need to do a second-pass from the root, in order
   // to reconstruct a leaf-canonical FullState. I've punted on this because c++ is finicky with
   // partial template specialization.
-  static_assert(std::is_same_v<FullState, BaseState>, "non-trivial FullState's not yet supported");
+  static_assert(!core::concepts::RequiresMctsDoublePass<Game>,
+                "non-trivial FullState's not yet supported");
 
   canonical_state_data_ = raw_state_data_;
   Game::Symmetries::apply(canonical_state_data_.state, canonical_sym_);

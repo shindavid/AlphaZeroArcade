@@ -65,7 +65,7 @@ concept Game = requires {
 
   requires std::is_default_constructible_v<typename G::BaseState>;
   requires std::is_trivially_copyable_v<typename G::BaseState>;
-  requires std::is_convertible_v<typename G::FullState, typename G::BaseState>;
+  requires std::derived_from<typename G::FullState, typename G::BaseState>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
@@ -77,6 +77,13 @@ concept Game = requires {
                                                typename G::FullState>;
   requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List,
                                               typename G::Types::GameLogView>;
+};
+
+template <class G>
+concept RequiresMctsDoublePass = requires {
+  requires core::concepts::Game<G>;
+  requires !std::same_as<typename G::FullState, typename G::BaseState>;
+  requires !OperatesOn<typename G::Symmetries, typename G::FullState>;
 };
 
 }  // namespace concepts

@@ -14,12 +14,13 @@
 
 using Game = tictactoe::Game;
 using BaseState = Game::BaseState;
+using FullState = Game::FullState;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 BaseState make_init_state() {
-  BaseState state;
+  FullState state;
   Rules::init_state(state);
   Rules::apply(state, 7);
   Rules::apply(state, 2);
@@ -338,7 +339,7 @@ void test_action_transforms() {
 }
 
 void test_canonicalization() {
-  BaseState state;
+  FullState state;
   Rules::init_state(state);
   Rules::apply(state, 2);
   Rules::apply(state, 1);
