@@ -63,8 +63,8 @@ concept Game = requires {
       typename G::Types,
       core::GameTypes<typename G::Constants, typename G::BaseState, typename G::SymmetryGroup>>;
 
-  requires std::is_default_constructible_v<typename G::BaseState>;
-  requires std::is_trivially_copyable_v<typename G::BaseState>;
+  requires std::is_trivial_v<typename G::BaseState>;
+  requires std::totally_ordered<typename G::BaseState>;
   requires std::derived_from<typename G::FullState, typename G::BaseState>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;

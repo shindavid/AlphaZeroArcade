@@ -19,7 +19,6 @@ template<concepts::Game Game>
 class DefaultCanonicalizer {
  public:
   using BaseState = Game::BaseState;
-  static_assert(std::totally_ordered<BaseState>, "BaseState must be a comparable type");
 
   static group::element_t get(const BaseState& state);
 };
