@@ -63,14 +63,15 @@ template <core::concepts::Game Game>
 void DataExportingMctsPlayer<Game>::extract_policy_target(const SearchResults* mcts_results,
                                                           PolicyTensor** target) {
   **target = mcts_results->policy_target;
-  auto& policy_target_array = eigen_util::reinterpret_as_array(**target);
-  float sum = policy_target_array.sum();
+  float sum = eigen_util::sum(**target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->num_representative_actions <= 1) {
     // python training code will ignore these rows for policy training.
     *target = nullptr;
   } else {
-    policy_target_array /= sum;
     **target = mcts_results->action_collapse_table.uncollapse(**target);
+    sum = eigen_util::sum(**target);
+    auto& policy_target_array = eigen_util::reinterpret_as_array(**target);
+    policy_target_array /= sum;
   }
 }
 

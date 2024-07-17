@@ -233,7 +233,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
   PUCTStats stats(params_, search_params, root, true);
 
   const auto& P = stats.P;
-  const auto& N = stats.N;
+  const auto& N = stats.E;
   const auto& V = stats.V;
   const auto& PUCT = stats.PUCT;
 
@@ -247,20 +247,21 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
 
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
 
-  for (int i = 0; i < root->stable_data().num_valid_actions; ++i) {
-    edge_t* edge = root->get_edge(i);
+  for (int e = 0; e < root->stable_data().num_valid_actions; ++e) {
+    edge_t* edge = root->get_edge(e);
+    if (edge->representative_edge_index != e) continue;
+
+    int i = edge->collapsed_index;
     if (N(i) == N_max) continue;
     if (!isfinite(N_floor(i))) continue;
     auto n = std::max(N_floor(i), N(i) - n_forced(i));
     if (n <= 1.0) {
       n = 0;
     }
-
     results_.policy_target(edge->action) = n;
   }
 
-  const auto& policy_target_array = eigen_util::reinterpret_as_array(results_.policy_target);
-  if (policy_target_array.sum() <= 0) {
+  if (eigen_util::sum(results_.policy_target) <= 0) {
     // can happen in certain edge cases
     results_.policy_target = results_.counts;
     return;

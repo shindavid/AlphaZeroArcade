@@ -25,14 +25,16 @@ ActionCollapseTable<GameConstants, Group>::uncollapse(const PolicyTensor& policy
     core::action_t action = lookup_table_[i];
     if (action < 0) continue;
     float policy_value = policy(action);
+    util::debug_assert(policy_value >= policy(i), "%f < %f", policy_value, policy(i));
     int count = count_table_[action];
     util::debug_assert(count > 0);
     if (count > Group::kOrder) {
       output(i) = policy_value / count;
     } else {
-      output(i) = policy_value * util::ReciprocalTable<Group::kOrder>::values[count];
+      output(i) = policy_value * util::ReciprocalTable<Group::kOrder>::values[count - 1];
     }
   }
+  util::debug_assert(eigen_util::sum(output) > 0);
   return output;
 }
 
