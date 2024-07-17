@@ -174,15 +174,8 @@ template <core::concepts::Game Game>
 void SearchThread<Game>::print_visit_info(Node* node, edge_t* parent_edge) {
   if (mcts::kEnableDebug) {
     std::ostringstream ss;
-    ss << thread_id_whitespace();
-    if (parent_edge) {
-      core::action_t action = parent_edge->action;
-      Game::Symmetries::apply(action, Game::SymmetryGroup::inverse(canonical_sym_));
-      ss << "visit " << action;
-    } else {
-      ss << "visit()";
-    }
-    ss << " " << search_path_str() << " cp=" << (int)node->stable_data().current_player;
+    ss << thread_id_whitespace() << "visit " << search_path_str()
+       << " cp=" << (int)node->stable_data().current_player;
     LOG_INFO << ss.str();
   }
 }
@@ -400,16 +393,30 @@ std::string SearchThread<Game>::search_path_str() const {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::calc_canonical_state_data() {
-  // if FullState and BaseState are different, we need to do a second-pass from the root, in order
-  // to reconstruct a leaf-canonical FullState. I've punted on this because c++ is finicky with
-  // partial template specialization.
-  static_assert(!core::concepts::RequiresMctsDoublePass<Game>,
-                "non-trivial FullState's not yet supported");
-
   canonical_state_data_ = raw_state_data_;
-  Game::Symmetries::apply(canonical_state_data_.state, canonical_sym_);
   for (BaseState& base : canonical_state_data_.state_history) {
     Game::Symmetries::apply(base, canonical_sym_);
+  }
+
+  if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
+    using Group = Game::SymmetryGroup;
+    canonical_state_data_.state = shared_data_->root_info.state[canonical_sym_];
+    group::element_t cur_canonical_sym = shared_data_->root_info.canonical_sym;
+    group::element_t leaf_canonical_sym = canonical_sym_;
+    for (const visitation_t& visitation : search_path_) {
+      edge_t* edge = visitation.edge;
+      core::action_t action = edge->action;
+      group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
+      Game::Symmetries::apply(action, sym);
+      Game::Rules::apply(canonical_state_data_.state, action);
+      cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
+    }
+
+    util::release_assert(cur_canonical_sym == leaf_canonical_sym,
+                         "cur_canonical_sym=%d leaf_canonical_sym=%d", cur_canonical_sym,
+                         leaf_canonical_sym);
+  } else {
+    Game::Symmetries::apply(canonical_state_data_.state, canonical_sym_);
   }
 }
 
