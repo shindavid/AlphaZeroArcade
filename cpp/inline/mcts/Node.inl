@@ -340,18 +340,11 @@ void Node<Game>::initialize_edges(const FullState& state, bool collapse_actions)
   if (n_edges == 0) return;
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);
 
-  int i = 0;
-  for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
-    edge_t* edge = get_edge(i);
-    new (edge) edge_t();
-    edge->action = action;
-  }
-
   if (collapse_actions) {
     this->collapse_actions(state);
   } else {
     num_representative_actions_ = n_edges;
-    for (i = 0; i < n_edges; ++i) {
+    for (int i = 0; i < n_edges; ++i) {
       edge_t* edge = get_edge(i);
       edge->representative_edge_index = i;
       edge->collapsed_index = i;
@@ -372,6 +365,10 @@ void Node<Game>::collapse_actions(const FullState& state) {
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
+    edge_t* edge = get_edge(i);
+    new (edge) edge_t();
+    edge->action = action;
+
     FullState state_copy = state;
     Game::Rules::apply(state_copy, action);
 
