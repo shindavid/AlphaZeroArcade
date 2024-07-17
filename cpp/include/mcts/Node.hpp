@@ -183,7 +183,7 @@ class Node {
   std::mutex& mutex() { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
-  void initialize_edges(const FullState&, bool collapse_actions);
+  void initialize_edges(const FullState&);
 
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
@@ -196,7 +196,6 @@ class Node {
   Node* get_child(const edge_t* edge) const;
 
  private:
-  void collapse_actions(const FullState&);
   static group::element_t make_symmetry(const FullState& state, const ManagerParams& params);
 
   stable_data_t stable_data_;
