@@ -88,7 +88,7 @@ Node<Game>* SearchThread<Game>::init_root_node() {
   const FullState& state = shared_data_->root_info.state[canonical_sym_];
   const base_state_vec_t& state_history = shared_data_->root_info.state_history[canonical_sym_];
 
-  root->initialize_edges(state);
+  root->initialize_edges(state, enable_action_collapsing());
   canonical_state_data_.load(state, state_history);
   init_node(&canonical_state_data_, root_index, root);
 
@@ -361,7 +361,7 @@ bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* 
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, state, outcome_);
     search_path_.back().child = child;
-    child->initialize_edges(state);
+    child->initialize_edges(state, enable_action_collapsing());
     virtual_backprop();
     init_node(state_data, edge->child_index, child);
     backprop_with_virtual_undo();
@@ -389,6 +389,13 @@ std::string SearchThread<Game>::search_path_str() const {
     vec.push_back(Game::IO::action_to_str(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
+}
+
+template <core::concepts::Game Game>
+bool SearchThread<Game>::enable_action_collapsing() const {
+  // when using no model, edge-collapsing leads to poor game diversity
+  bool no_model = !nn_eval_service_;
+  return Game::Constants::kEnableActionCollapsing && !no_model;
 }
 
 template <core::concepts::Game Game>

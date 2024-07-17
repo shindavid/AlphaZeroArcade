@@ -24,6 +24,17 @@ concept GameConstants = requires {
   // evaluate the current BaseState. If the neural network does not need any previous BaseState's,
   // kHistorySize should be 0.
   { util::decay_copy(GC::kHistorySize) } -> std::same_as<int>;
+
+  // This flag determines whether or not to collapse symmetrically equivalent actions into a single
+  // representative action at each state evaluated by MCTS. This has numerous potential benefits,
+  // such as reducing the size of the search tree and ensuring symmetrical policy targets. The
+  // downside is that MCTS can become computationally more expensive, as at each state, we need to
+  // expand every possible action in order to perform the collapsing.
+  //
+  // TODO: There is a potential happy-medium here, where we only rely on the natural collapsing
+  // offered by MCGS mechanics, but then use the (potentially partial) transposition info discovered
+  // to appropriately symmetrize the policy targets.
+  { util::decay_copy(GC::kEnableActionCollapsing) } -> std::same_as<bool>;
 };
 
 }  // namespace concepts

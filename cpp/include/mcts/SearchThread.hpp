@@ -125,6 +125,7 @@ class SearchThread {
   void short_circuit_backprop();
   bool expand(state_data_t*, Node*, edge_t*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
+  bool enable_action_collapsing() const;
   void calc_canonical_state_data();
 
   /*

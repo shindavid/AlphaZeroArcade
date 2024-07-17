@@ -335,10 +335,26 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::initialize_edges(const FullState& state) {
+void Node<Game>::initialize_edges(const FullState& state, bool collapse_actions) {
   int n_edges = stable_data_.num_valid_actions;
   if (n_edges == 0) return;
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);
+
+  if (collapse_actions) {
+    this->collapse_actions(state);
+  } else {
+    num_representative_actions_ = n_edges;
+    for (int i = 0; i < n_edges; ++i) {
+      edge_t* edge = get_edge(i);
+      edge->representative_edge_index = i;
+      edge->collapsed_index = i;
+    }
+  }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::collapse_actions(const FullState& state) {
+  int n_edges = stable_data_.num_valid_actions;
 
   struct pair_t {
     auto operator<=>(const pair_t& other) const = default;
@@ -369,9 +385,6 @@ void Node<Game>::initialize_edges(const FullState& state) {
   std::sort(pairs, pairs + n_edges);
 
   int representative_edge_indices[n_edges];
-  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
-    std::fill(representative_edge_indices, representative_edge_indices + n_edges, -1);
-  }
 
   int r = 0;
   for (i = 0; i < n_edges; ++i) {
@@ -384,9 +397,6 @@ void Node<Game>::initialize_edges(const FullState& state) {
   std::sort(representative_edge_indices, representative_edge_indices + r);
 
   int collapsed_index_lookup[n_edges];
-  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
-    std::fill(collapsed_index_lookup, collapsed_index_lookup + n_edges, -1);
-  }
 
   for (i = 0; i < r; ++i) {
     util::debug_assert(representative_edge_indices[i] >= 0);
@@ -408,7 +418,7 @@ void Node<Game>::initialize_edges(const FullState& state) {
 }
 
 template <core::concepts::Game Game>
-template<typename PolicyTransformFunc>
+template <typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   ValueArray V;
   LocalPolicyArray P_raw(stable_data_.num_valid_actions);

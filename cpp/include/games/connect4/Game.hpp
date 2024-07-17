@@ -41,6 +41,7 @@ struct Game {
     static constexpr int kNumActions = kNumColumns;
     static constexpr int kMaxBranchingFactor = kNumColumns;
     static constexpr int kHistorySize = 0;
+    static constexpr bool kEnableActionCollapsing = true;
   };
 
   struct BaseState {
