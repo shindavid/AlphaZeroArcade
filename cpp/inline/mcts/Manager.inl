@@ -167,7 +167,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
     Game::Symmetries::apply(action, inv_sym);
-    results_.valid_actions.set(action);
+    results_.valid_actions.set(action, true);
     actions[i] = action;
 
     auto* edge = root->get_edge(i);
