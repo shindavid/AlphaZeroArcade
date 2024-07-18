@@ -103,8 +103,6 @@ class Node {
     int RN = 0;  // real count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
-    int representative_edge_index = -1;
-    int collapsed_index = -1;
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };
@@ -188,12 +186,13 @@ class Node {
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
-  int num_representative_actions() const { return num_representative_actions_; }
   bool edges_initialized() const { return first_edge_index_ != -1; }
   edge_t* get_edge(int i) const;
   edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
   Node* get_child(const edge_t* edge) const;
+  void update_child_expand_count();
+  bool trivial() const { return trivial_; }
 
  private:
   static group::element_t make_symmetry(const FullState& state, const ManagerParams& params);
@@ -203,7 +202,8 @@ class Node {
   stats_t stats_;
   int mutex_id_;
   edge_pool_index_t first_edge_index_ = -1;
-  int num_representative_actions_ = -1;
+  int child_expand_count_ = 0;
+  bool trivial_ = false;  // set to true if all actions discovered to be symmetrically equivalent
 };
 
 }  // namespace mcts

@@ -28,6 +28,9 @@ class Manager {
   using Node = mcts::Node<Game>;
   using SearchThread = mcts::SearchThread<Game>;
   using SharedData = mcts::SharedData<Game>;
+  using node_pool_index_t = Node::node_pool_index_t;
+  using edge_t = Node::edge_t;
+  using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
@@ -59,7 +62,9 @@ class Manager {
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;
+
   void announce_shutdown();
+  void load_action_symmetries(Node* root, core::action_t* actions);
   void prune_policy_target(const SearchParams&);
   static void init_profiling_dir(const std::string& profiling_dir);
 

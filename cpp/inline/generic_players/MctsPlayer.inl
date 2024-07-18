@@ -191,6 +191,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
   }
 
   if (search_mode != core::kRawPolicy) {
+    policy = mcts_results->action_symmetry_table.collapse(policy);
     float temp = move_temperature_.value();
     if (temp != 0) {
       eigen_util::normalize(policy);  // normalize to avoid numerical issues with annealing.
@@ -211,6 +212,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
         policy = (policy == policy_max_broadcasted).template cast<torch_util::dtype>();
       }
     }
+    policy = mcts_results->action_symmetry_table.symmetrize(policy);
   }
 
   if (!eigen_util::normalize(policy)) {
@@ -227,9 +229,6 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     verbose_info_->action_policy = policy;
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
-  }
-  if (search_mode != core::kRawPolicy) {
-    policy = mcts_results->action_collapse_table.uncollapse(policy);
   }
   core::action_t action = eigen_util::sample(policy)[0];
   util::release_assert(valid_actions[action]);

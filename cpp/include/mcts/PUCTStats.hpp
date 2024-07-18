@@ -13,7 +13,6 @@ template <core::concepts::Game Game>
 struct PUCTStats {
   using Node = mcts::Node<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
-  using LocalIndexArray = eigen_util::DArray<Game::Constants::kMaxBranchingFactor, int>;
 
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
@@ -31,7 +30,6 @@ struct PUCTStats {
   LocalPolicyArray VN;   // virtual count
   LocalPolicyArray FPU;  // FPU
   LocalPolicyArray PUCT;
-  LocalIndexArray edge_indices;
 };
 
 }  // namespace mcts
