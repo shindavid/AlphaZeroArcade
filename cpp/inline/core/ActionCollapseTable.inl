@@ -12,23 +12,50 @@ namespace core {
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
 typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
 ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy) const {
-  // int i = 0;
-  // while (i < GameConstants::kNumActions && action_array_[i] >= 0) {
-  //   core::action_t action = action_array_[i];
+  PolicyTensor out;
+  out.setZero();
+  int i = 0;
+  while (i < GameConstants::kNumActions) {
+    core::action_t action = action_array_[i];
+    if (action < 0) break;
 
-  //   action_array_t equivalence_class;
-  //   int j = 0;
-  //   equivalence_class[j++] = action;
+    int start_i = i;
+    float sum = 0;
+    while (i < GameConstants::kNumActions && action_array_[i] >= action) {
+      sum += policy(action_array_[i++]);
+    }
 
-  //   // TODO
-  // }
-  throw util::Exception("Not implemented");
+    int end_i = i;
+    int count = end_i - start_i;
+
+    float inv_count = util::ReciprocalTable<Group::kOrder>::get(count);
+    float avg = sum * inv_count;
+    for (int j = start_i; j < end_i; ++j) {
+      out(action_array_[j]) = avg;
+    }
+  }
+  return out;
 }
 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
 typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
 ActionSymmetryTable<GameConstants, Group>::collapse(const PolicyTensor& policy) const {
-  throw util::Exception("Not implemented");
+  PolicyTensor out;
+  out.setZero();
+  int i = 0;
+  while (i < GameConstants::kNumActions) {
+    core::action_t action = action_array_[i];
+    if (action < 0) break;
+
+    int start_i = i;
+    float sum = 0;
+    while (i < GameConstants::kNumActions && action_array_[i] >= action) {
+      sum += policy(action_array_[i++]);
+    }
+
+    out(action_array_[start_i]) = sum;
+  }
+  return out;
 }
 
 }  // namespace core

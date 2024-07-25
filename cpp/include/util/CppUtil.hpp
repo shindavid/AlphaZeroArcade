@@ -400,6 +400,9 @@ template <int N>
 struct ReciprocalTable {
   static constexpr std::array<float, N> values =
       generateReciprocalArray<N>(std::make_index_sequence<N>{});
+
+  // Accepts i >= 1, returns 1.0 / i, avoiding a division if i <= N.
+  static float get(int i) { return i <= N ? values[i - 1] : 1.0f / i; }
 };
 
 /*
