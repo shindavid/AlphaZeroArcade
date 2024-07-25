@@ -182,7 +182,8 @@ Node<Game>::Node(LookupTable* table, const FullState& state, const ActionOutcome
     : stable_data_(state, outcome), lookup_table_(table), mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
-typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& params) const {
+typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& params,
+                                                         group::element_t inv_sym) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -190,7 +191,6 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
 
   if (kEnableDebug) {
     std::cout << "get_counts()" << std::endl;
-    std::cout << "  cp: " << int(cp) << std::endl;
   }
 
   PolicyTensor counts;
@@ -221,7 +221,9 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     }
 
     if (kEnableDebug) {
-      std::cout << "  " << Game::IO::action_to_str(action) << ": " << count;
+      auto action2 = action;
+      Game::Symmetries::apply(action2, inv_sym);
+      std::cout << "  " << Game::IO::action_to_str(action2) << ": " << count;
       if (modified_count != count) {
         std::cout << " -> " << modified_count;
       }

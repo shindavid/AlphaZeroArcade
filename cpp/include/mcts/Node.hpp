@@ -167,7 +167,7 @@ class Node {
 
   Node(LookupTable*, const FullState&, const ActionOutcome&);
 
-  PolicyTensor get_counts(const ManagerParams& params) const;
+  PolicyTensor get_counts(const ManagerParams& params, group::element_t inv_sym) const;
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
   void update_stats(const UpdateT& update_instruction);
