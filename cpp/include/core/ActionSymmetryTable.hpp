@@ -51,4 +51,4 @@ class ActionSymmetryTable {
 
 }  // namespace core
 
-#include <inline/core/ActionCollapseTable.inl>
+#include <inline/core/ActionSymmetryTable.inl>

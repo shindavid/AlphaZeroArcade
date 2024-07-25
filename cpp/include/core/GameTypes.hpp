@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/ActionCollapseTable.hpp>
+#include <core/ActionSymmetryTable.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/EigenTypes.hpp>
