@@ -202,22 +202,23 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
     core::action_t action = edge->action;
-    const Node* child = get_child(edge);
-    if (!child) continue;
 
-    const auto& stats = child->stats();
-    int count = stats.RN;
-
+    int count = edge->RN;
     int modified_count = count;
     const char* detail = "";
-    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
-      modified_count = 0;
-      detail = " (losing)";
-    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
-      modified_count = 0;
-      detail = " (?)";
-    } else if (provably_winning) {
-      detail = " (winning)";
+
+    const Node* child = get_child(edge);
+    if (child) {
+      const auto& stats = child->stats();
+      if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
+        modified_count = 0;
+        detail = " (losing)";
+      } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
+        modified_count = 0;
+        detail = " (?)";
+      } else if (provably_winning) {
+        detail = " (winning)";
+      }
     }
 
     if (kEnableDebug) {
