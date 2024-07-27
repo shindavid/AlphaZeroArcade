@@ -142,14 +142,13 @@ inline void SearchThread<Game>::perform_visits() {
   raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
 
   Node* root = init_root_node();
-  if (root->num_representative_actions() == 1) return;
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     visit(root, nullptr);
     canonical_sym_ = root_info.canonical_sym;
     raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
     dump_profiling_stats();
-    if (!shared_data_->search_params.ponder && root->stable_data().num_valid_actions == 1) break;
+    if (!shared_data_->search_params.ponder && root->trivial()) break;
   }
 }
 
@@ -370,6 +369,7 @@ bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* 
   }
 
   std::unique_lock lock(parent->mutex());
+  parent->update_child_expand_count();
   edge->state = Node::kExpanded;
   lock.unlock();
 
@@ -446,7 +446,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   PUCT.maxCoeff(&argmax_index);
 
   print_puct_details(node, stats, argmax_index);
-  return stats.edge_indices(argmax_index);
+  return argmax_index;
 }
 
 template <core::concepts::Game Game>
@@ -496,8 +496,8 @@ void SearchThread<Game>::print_puct_details(Node* node, const PUCTStats& stats,
     child_addr.setConstant(-1);
 
     group::element_t inv_sym = Game::SymmetryGroup::inverse(canonical_sym_);
-    for (int e = 0; e < node->num_representative_actions(); ++e) {
-      auto edge = node->get_edge(stats.edge_indices(e));
+    for (int e = 0; e < node->stable_data().num_valid_actions; ++e) {
+      auto edge = node->get_edge(e);
       core::action_t action = edge->action;
       Game::Symmetries::apply(action, inv_sym);
       A2(r, e) = action;

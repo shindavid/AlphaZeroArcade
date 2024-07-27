@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/ActionCollapseTable.hpp>
+#include <core/ActionSymmetryTable.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
 #include <core/EigenTypes.hpp>
@@ -24,7 +24,7 @@ struct GameTypes {
   using ValueArray = EigenTypes<GameConstants>::ValueArray;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
   using SymmetryMask = std::bitset<Group::kOrder>;
-  using ActionCollapseTable = core::ActionCollapseTable<GameConstants, Group>;
+  using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, Group>;
 
   /*
    * Return type for an MCTS search.
@@ -39,8 +39,8 @@ struct GameTypes {
     PolicyTensor policy_prior;
     ValueArray win_rates;
     ValueArray value_prior;
-    ActionCollapseTable action_collapse_table;
-    int num_representative_actions;
+    ActionSymmetryTable action_symmetry_table;
+    bool trivial;  // all actions are symmetrically equivalent
     bool provably_lost = false;
   };
 

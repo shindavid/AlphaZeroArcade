@@ -8,7 +8,7 @@ template <core::concepts::Game Game>
 inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParams& search_params,
                                   const Node* node, bool is_root)
     : cp(node->stable_data().current_player),
-      P(node->num_representative_actions()),
+      P(node->stable_data().num_valid_actions),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
@@ -27,16 +27,13 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParam
   FPU.setZero();
 
   bool fpu_any = false;
-  for (int e = 0; e < node->stable_data().num_valid_actions; ++e) {
+  for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
      * arbitrarily-partially-written data.
      */
     using edge_t = Node::edge_t;
-    edge_t* edge = node->get_edge(e);
-    if (edge->representative_edge_index != e) continue;
-
-    int i = edge->collapsed_index;
+    edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
     E(i) = edge->RN;
 
@@ -49,8 +46,6 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParam
       N(i) = child_stats.RN;
       VN(i) = child_stats.VN;
     }
-
-    edge_indices(i) = e;
 
     bool fpu = N(i) == 0;
     FPU[i] = fpu;
