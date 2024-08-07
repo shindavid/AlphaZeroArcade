@@ -25,6 +25,8 @@ def create_ratings_figure(game: str, tags: List[str]):
         return figure(title='No data available')
     data_list = get_rating_data_list(game, tags)
     plotter = RatingPlotter(game, data_list)
+    if not plotter.valid():
+        return figure(title='No data available')
     return plotter.figure
 
 
@@ -107,6 +109,9 @@ class RatingPlotter:
         self.load(data_list)
         self.figure = self.make_figure()
 
+    def valid(self) -> bool:
+        return self.figure is not None
+
     def load(self, data_list: List[RatingData]):
         self.data_list = data_list
         for rating_data in data_list:
@@ -138,7 +143,8 @@ class RatingPlotter:
         plot = figure(title=title, x_range=[0, 1], y_range=y_range, y_axis_label='Rating',
                       active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
 
-        self.x_var_selector.init_plot(plot)
+        if not self.x_var_selector.init_plot(plot):
+            return None
 
         hline = Span(location=self.y_limit, dimension='width', line_color='gray',
                      line_dash='dashed', line_width=1)

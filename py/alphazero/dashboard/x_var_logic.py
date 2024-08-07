@@ -109,14 +109,19 @@ class XVarSelector:
         """
         source.data['x'] = source.data[self.x_column]
 
-    def init_plot(self, plot: figure):
+    def init_plot(self, plot: figure) -> bool:
         """
         Initializes the x-axis label and range of the given plot.
+
+        Returns True if the initialization succeeds.
         """
         x_col = self.x_column
         plot.xaxis.axis_label = self.x_label
+        if x_col not in self._min_x_dict:
+            return False
         plot.x_range.start = self._min_x_dict[x_col]
         plot.x_range.end = self._max_x_dict[x_col]
+        return True
 
     def create_radio_group(self, plots: List[figure], sources: List[ColumnDataSource]) -> RadioGroup:
         labels = [x_var.label for x_var in X_VARS]
