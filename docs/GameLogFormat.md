@@ -11,13 +11,12 @@ Currently each file contains one game log. The log is recorded in a binary forma
 ```
 1. Header
 2. Game outcome
-3. Sym sample indices
-4. Non-sym sample indices
-5. Actions
-6. Policy target indices
-7. Base states
-8. Dense policy target
-9. Sparse policy target entries
+3. Sampled indices
+4. Actions
+5. Policy target indices
+6. Base states
+7. Dense policy target
+8. Sparse policy target entries
 ```
 
 The first two sections are of fixed-size.
@@ -41,28 +40,16 @@ The header includes counts which dictate the size of the other sections.
 The game outcome, recorded as an `Eigen::Array` of fixed size, which is equivalent in byte-representation
 to a `float[kNumPlayers]`. 
 
-## Sym sample indices
+## Sampled indices
 
-Struct definition: `core::GameLogBase::sym_sample_index_t` in `cpp/include/core/GameLog.hpp`.
+Consists of an array of `int32_t` entries. These indices indicate the game positions that are sampled for
+network training purposes.
 
-Consists of an array of `sym_sample_index_t` entries. Each `sym_sample_index_t` consists of two 32-bit ints: a state-index, and a sym-index. 
-The state-index dictates which position of the game to use, and the sym-index dictates which symmetry to apply.
-To uniformly sample from the set of symmetry-expanded positions in a game, you would uniformly randomly select one of these,
-scanning to a specific position in the Base States section based on the state-index, and then applying a symmetry
-to that position based on sym-index.
-
-The number of these indices is specified in the header. On average, the number of sym sample indices will be
-$p\cdot s \cdot k$, where:
+The number of these indices is specified in the header. On average, the number of sampled indices will be
+$p\cdot k$, where:
 
 * $p$ is the percentage of positions that are evaluated in "full-search" mode (see KataGo paper section 3.1)
-* $s$ is the average number of symmetry-expansions per position
 * $k$ is the length of the game
-
-## Non-sym sample indices
-
-Struct definition: `core::GameLogBase::non_sym_sample_index_t` in `cpp/include/core/GameLog.hpp`.
-
-Like sym sample indices, but without symmetry expansion. Each `non_sym_sample_index_t` consists of one 32-bit int: a single state-index. 
 
 ## Actions
 
@@ -84,6 +71,9 @@ struct detailing where to find the data needed to reconstruct the policy target.
 The `policy_target_index_t` struct either provides an int offset into the dense policy target section, or an int pair (start, end)
 into the sparse policy target entry section.
 
+The decision of whether to record a policy target in dense or sparse format is made dynamically at time of write, based on
+the number of bytes that a sparse encoding would require.
+
 ## Base states
 
 Each game has a game-specific `BaseState` class. This is a POD struct representing a game state snapshot. See: [GameConcept.md](GameConcept.md) for details.
@@ -95,6 +85,9 @@ When constructing the neural network input for a given (state-index, sym-index) 
 reads the header to determine section memory offsets, and does a `reinterpret_cast<BaseState>()` to the appropriate location in this section
 to recover a `BaseState`. In games where previous state history is included in the neural network input, the prior states can be found
 in the preceding block of memory (thus avoiding the need to redundantly record recent-history).
+
+The ffi library API includes a bool `apply_symmetry` parameter. When set to the default value of `true`, this `reinterpret_cast`'ed `BaseState`
+is transformed via a randomly selected symmetry.
 
 ## Dense policy targets
 
