@@ -104,6 +104,7 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
   state_data->canonical_validate();
 
   if (!node->is_terminal()) {
+    NNEvaluation_sptr eval_sptr;
     NNEvaluation* eval = nullptr;
     if (nn_eval_service_) {
       group::element_t sym = 0;
@@ -112,7 +113,8 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
         sym = bitset_util::choose_random_on_index(mask);
       }
       NNEvaluationRequest request(node, state, state_history, &profiler_, thread_id_, sym);
-      eval = nn_eval_service_->evaluate(request).get();
+      eval_sptr = nn_eval_service_->evaluate(request);
+      eval = eval_sptr.get();
     }
     node->load_eval(eval, [&](LocalPolicyArray& P) { transform_policy(index, P); });
   }
