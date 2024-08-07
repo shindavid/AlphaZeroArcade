@@ -11,6 +11,7 @@ the loop controller as a separate c++ binary process.
 """
 import argparse
 
+from alphazero.logic.build_params import BuildParams
 from alphazero.servers.gaming.ratings_server import RatingsServer, RatingsServerParams
 from util.logging_util import LoggingParams
 
@@ -20,6 +21,7 @@ def load_args():
 
     RatingsServerParams.add_args(parser)
     LoggingParams.add_args(parser)
+    BuildParams.add_args(parser, add_ffi_lib_path_option=False)
 
     return parser.parse_args()
 
@@ -28,8 +30,9 @@ def main():
     args = load_args()
     params = RatingsServerParams.create(args)
     logging_params = LoggingParams.create(args)
+    build_params = BuildParams.create(args)
 
-    server = RatingsServer(params, logging_params)
+    server = RatingsServer(params, logging_params, build_params)
     server.run()
 
 

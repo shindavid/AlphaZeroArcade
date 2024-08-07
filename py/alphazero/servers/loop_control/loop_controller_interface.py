@@ -2,6 +2,7 @@ from .directory_organizer import DirectoryOrganizer
 from .gpu_contention_table import GpuContentionTable
 from .params import LoopControllerParams
 
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, DisconnectHandler, Generation, GpuId, \
     MsgHandler, ShutdownAction
 from shared.training_params import TrainingParams
@@ -55,6 +56,11 @@ class LoopControllerInterface(abc.ABC):
     @property
     @abc.abstractmethod
     def training_params(self) -> TrainingParams:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def build_params(self) -> BuildParams:
         pass
 
     @property

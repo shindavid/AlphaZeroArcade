@@ -17,13 +17,14 @@ This script launches 1 server of each type on the local machine, using the above
 If the local machine does not have enough GPU's to dedicate one to each server, then the servers
 share the GPU's, managing contention via GpuContentionManager.
 """
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
-from shared.training_params import TrainingParams
 from alphazero.servers.gaming.ratings_server import RatingsServerParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServerParams
 from alphazero.servers.loop_control.params import LoopControllerParams
 from games.game_spec import GameSpec
 import games.index as game_index
+from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.repo_util import Repo
 from util import subprocess_util
@@ -42,6 +43,7 @@ import torch
 logger = get_logger()
 
 
+default_build_params = BuildParams()
 default_loop_controller_params = LoopControllerParams()
 default_self_play_server_params = SelfPlayServerParams()
 default_ratings_server_params = RatingsServerParams()
@@ -55,7 +57,6 @@ class Params:
     max_positions_per_generation: Optional[int] = \
         default_loop_controller_params.max_positions_per_generation
     rating_tag: str = ''
-    binary_path: str = None
 
     @staticmethod
     def create(args) -> 'Params':
@@ -67,11 +68,6 @@ class Params:
         LoopControllerParams.add_args(parser, include_cuda_device=False)
         RatingsServerParams.add_args(parser, omit_base=True)
 
-        group = parser.add_argument_group('SelfPlayServer/RatingsServer options')
-        group.add_argument('-b', '--binary-path',
-                           help='binary path. Default: last-used binary for this tag. If this is '
-                           'the first run for this tag, then target/Release/bin/{game}')
-
 
 def load_args():
     parser = argparse.ArgumentParser()
@@ -81,6 +77,7 @@ def load_args():
     TrainingParams.add_args(parser, defaults=default_training_params)
     Params.add_args(parser)
     LoggingParams.add_args(parser)
+    BuildParams.add_args(parser)
 
     return parser.parse_args()
 
@@ -88,6 +85,7 @@ def load_args():
 def launch_self_play_server(params_dict, cuda_device: int):
     params = params_dict['Params']
     logging_params = params_dict['LoggingParams']
+    build_params = params_dict['BuildParams']
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -97,10 +95,9 @@ def launch_self_play_server(params_dict, cuda_device: int):
     ]
     if default_self_play_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
-    if default_self_play_server_params.binary_path != params.binary_path:
-        cmd.extend(['--binary-path', params.binary_path])
 
     logging_params.add_to_cmd(cmd)
+    build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching self-play server: {cmd}')
@@ -110,6 +107,7 @@ def launch_self_play_server(params_dict, cuda_device: int):
 def launch_ratings_server(params_dict, cuda_device: int):
     params = params_dict['Params']
     logging_params = params_dict['LoggingParams']
+    build_params = params_dict['BuildParams']
 
     cuda_device = f'cuda:{cuda_device}'
 
@@ -119,12 +117,11 @@ def launch_ratings_server(params_dict, cuda_device: int):
     ]
     if default_ratings_server_params.loop_controller_port != params.port:
         cmd.extend(['--loop_controller_port', str(params.port)])
-    if default_ratings_server_params.binary_path != params.binary_path:
-        cmd.extend(['--binary-path', params.binary_path])
     if default_ratings_server_params.rating_tag != params.rating_tag:
         cmd.extend(['--rating-tag', params.rating_tag])
 
     logging_params.add_to_cmd(cmd)
+    build_params.add_to_cmd(cmd, add_ffi_lib_path_option=False)
 
     cmd = ' '.join(map(quote, cmd))
     logger.info(f'Launching ratings server: {cmd}')
@@ -138,6 +135,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
     default_training_params = game_spec.training_params
     training_params = params_dict['TrainingParams']
     logging_params = params_dict['LoggingParams']
+    build_params = params_dict['BuildParams']
 
     cmd = [
         'py/alphazero/scripts/run_loop_controller.py',
@@ -153,6 +151,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
         cmd.extend(['--max-positions-per-generation', str(params.max_positions_per_generation)])
 
     logging_params.add_to_cmd(cmd)
+    build_params.add_to_cmd(cmd, add_binary_path_option=False)
     run_params.add_to_cmd(cmd)
     training_params.add_to_cmd(cmd, default_training_params)
 
@@ -167,12 +166,14 @@ def main():
     training_params = TrainingParams.create(args)
     params = Params.create(args)
     logging_params = LoggingParams.create(args)
+    build_params = BuildParams.create(args)
 
     params_dict = {
         'RunParams': run_params,
         'TrainingParams': training_params,
         'Params': params,
         'LoggingParams': logging_params,
+        'BuildParams': build_params,
         }
 
     configure_logger(params=logging_params, prefix='[main]')

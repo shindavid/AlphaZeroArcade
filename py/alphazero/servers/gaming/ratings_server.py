@@ -1,3 +1,4 @@
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.ratings import extract_match_record
 from alphazero.logic.shutdown_manager import ShutdownManager
@@ -42,8 +43,10 @@ class RatingsServerParams(BaseParams):
 
 
 class RatingsServer:
-    def __init__(self, params: RatingsServerParams, logging_params: LoggingParams):
+    def __init__(self, params: RatingsServerParams, logging_params: LoggingParams,
+                 build_params: BuildParams):
         self._params = params
+        self._build_params = build_params
         self._session_data = SessionData(params)
         self._shutdown_manager = ShutdownManager()
         self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
@@ -145,7 +148,7 @@ class RatingsServer:
 
         ps1 = self._get_mcts_player_str(mcts_gen)
         ps2 = self._get_reference_player_str(ref_strength)
-        binary = self._session_data.binary_path
+        binary = self._build_params.get_binary_path(self._session_data.game)
 
         args = {
             '-G': n_games,

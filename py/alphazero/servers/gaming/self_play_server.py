@@ -1,3 +1,4 @@
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.servers.gaming.base_params import BaseParams
@@ -32,8 +33,10 @@ class SelfPlayServerParams(BaseParams):
 
 
 class SelfPlayServer:
-    def __init__(self, params: SelfPlayServerParams, logging_params: LoggingParams):
+    def __init__(self, params: SelfPlayServerParams, logging_params: LoggingParams,
+                 build_params: BuildParams):
         self._params = params
+        self._build_params = build_params
         self._session_data = SessionData(params)
         self._shutdown_manager = ShutdownManager()
         self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
@@ -178,8 +181,10 @@ class SelfPlayServer:
         }
         args.update(self._session_data.game_spec.training_options)
 
+        binary = self._build_params.get_binary_path(self._session_data.game)
+
         self_play_cmd = [
-            self._session_data.binary_path,
+            binary,
             '--player', '"%s"' % player_args_str,
             '--player', '"%s"' % player2_args_str,
         ]
@@ -233,8 +238,10 @@ class SelfPlayServer:
         }
         args.update(self._session_data.game_spec.training_options)
 
+        binary = self._build_params.get_binary_path(self._session_data.game)
+
         self_play_cmd = [
-            self._session_data.binary_path,
+            binary,
             '--player', '"%s"' % player_args_str,
             '--player', '"%s"' % player2_args_str,
         ]

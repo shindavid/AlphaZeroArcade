@@ -87,9 +87,3 @@ class SessionData:
         if self._game_spec is None:
             self._game_spec = get_game_spec(self.game)
         return self._game_spec
-
-    @property
-    def binary_path(self):
-        if self._params.binary_path:
-            return self._params.binary_path
-        return os.path.join(Repo.root(), 'target/Release/bin', self.game_spec.name)

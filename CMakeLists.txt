@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
 
-set(CMAKE_DEBUG_POSTFIX d)
 project(alphazero)
 
 
@@ -50,7 +49,6 @@ foreach(tgt ${ALL_EXECUTABLES} ${ALL_FFI_LIBS})
     foreach(lib ${COMMON_LIBS})
         target_link_libraries(${tgt} ${lib})
     endforeach()
-    set_target_properties(${tgt} PROPERTIES DEBUG_POSTFIX ${CMAKE_DEBUG_POSTFIX})
     set_property(TARGET ${tgt} PROPERTY CXX_STANDARD 20)
 endforeach()
 

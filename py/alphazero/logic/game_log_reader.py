@@ -1,3 +1,5 @@
+from .build_params import BuildParams
+
 from games.game_spec import GameSpec
 from shared.net_modules import ShapeInfo, ShapeInfoDict
 from util.logging_util import get_logger
@@ -20,8 +22,9 @@ class GameLogReader:
     The functions of the shared library are exposed through the FFI interface.
     """
 
-    def __init__(self, game_spec: GameSpec):
+    def __init__(self, game_spec: GameSpec, build_params: BuildParams):
         self._game_spec = game_spec
+        self._build_params = build_params
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
         self._shape_info_dict: Optional[ShapeInfoDict] = None
@@ -86,8 +89,8 @@ class GameLogReader:
 
     def _get_shared_lib(self) -> str:
         name = self._game_spec.name
-        shared_lib = os.path.join(Repo.root(), 'target/Release/lib', f'lib{name}.so')
-        # shared_lib = os.path.join(Repo.root(), 'target/Debug/lib', f'lib{name}d.so')
+
+        shared_lib = os.path.join(Repo.root(), self._build_params.get_ffi_lib_path(name))
         assert os.path.isfile(shared_lib), f'Could not find shared lib: {shared_lib}'
         return self._ffi.dlopen(shared_lib)
 

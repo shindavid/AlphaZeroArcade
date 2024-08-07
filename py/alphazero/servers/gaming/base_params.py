@@ -8,7 +8,6 @@ class BaseParams:
     loop_controller_host: str = 'localhost'
     loop_controller_port: int = constants.DEFAULT_LOOP_CONTROLLER_PORT
     cuda_device: str = 'cuda:0'
-    binary_path: str = None
 
     @staticmethod
     def add_base_args(group):
@@ -22,6 +21,4 @@ class BaseParams:
                            help='loop-controller port (default: %(default)s)')
         group.add_argument('--cuda-device', default=defaults.cuda_device,
                            help='cuda device (default: %(default)s)')
-        group.add_argument('-b', '--binary-path',
-                           help='binary path. Default: target/Release/bin/{game}')
         return group

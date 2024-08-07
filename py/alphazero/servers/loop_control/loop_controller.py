@@ -11,6 +11,7 @@ from .training_manager import TrainingManager
 from .gpu_contention_manager import GpuContentionManager
 
 from alphazero.logic import constants
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, ClientRole, DisconnectHandler, \
     Generation, GpuId, MsgHandler, RatingTag, ShutdownAction
 from alphazero.logic.run_params import RunParams
@@ -46,10 +47,11 @@ class LoopController(LoopControllerInterface):
     the system would be a tangled mess of interdependencies between the various managers.
     """
     def __init__(self, params: LoopControllerParams, training_params: TrainingParams,
-                 run_params: RunParams):
+                 run_params: RunParams, build_params: BuildParams):
         self._game_spec = get_game_spec(run_params.game)
         self._params = params
         self._training_params = training_params
+        self._build_params = build_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
         self._organizer = DirectoryOrganizer(run_params)
@@ -107,6 +109,10 @@ class LoopController(LoopControllerInterface):
     @property
     def training_params(self) -> TrainingParams:
         return self._training_params
+
+    @property
+    def build_params(self) -> BuildParams:
+        return self._build_params
 
     @property
     def clients_db_conn_pool(self) -> DatabaseConnectionPool:

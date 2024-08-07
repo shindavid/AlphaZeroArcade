@@ -1,6 +1,7 @@
 from .gpu_contention_table import GpuContentionTable
 from .loop_controller_interface import LoopControllerInterface
 
+from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import Domain, Generation
 from alphazero.logic.game_log_reader import GameLogReader
 from alphazero.logic.net_trainer import NetTrainer, TrainingStats
@@ -36,7 +37,7 @@ class TrainingManager:
         self._ready_event = threading.Event()
         self._lock = threading.Lock()
 
-        self._game_log_reader = GameLogReader(controller.game_spec)
+        self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params)
 
         self._trainer = None
         self._net = None
