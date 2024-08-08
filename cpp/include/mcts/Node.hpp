@@ -35,11 +35,11 @@ class Node {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
   using NNEvaluation = mcts::NNEvaluation<Game>;
-  using LocalPolicyArray = NNEvaluation::LocalPolicyArray;
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using ActionMask = Game::Types::ActionMask;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionOutcome = Game::Types::ActionOutcome;

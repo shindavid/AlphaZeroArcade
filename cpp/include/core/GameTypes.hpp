@@ -11,6 +11,8 @@
 #include <bitset>
 #include <string>
 
+#include <Eigen/Core>
+
 namespace core {
 
 template <concepts::GameConstants GameConstants, typename BaseState,
@@ -25,6 +27,8 @@ struct GameTypes {
   using ActionOutcome = core::ActionOutcome<ValueArray>;
   using SymmetryMask = std::bitset<Group::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, Group>;
+  using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
+  using CompactLocalPolicyArray = Eigen::Array<float, Eigen::Dynamic, 1>;
 
   /*
    * Return type for an MCTS search.

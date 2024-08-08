@@ -355,16 +355,17 @@ void Node<Game>::initialize_edges(const FullState& state) {
 template <core::concepts::Game Game>
 template<typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
+  int n = stable_data_.num_valid_actions;
   ValueArray V;
-  LocalPolicyArray P_raw(stable_data_.num_valid_actions);
+  LocalPolicyArray P_raw(n);
 
   if (eval == nullptr) {
     // treat this as uniform P and V
     V.setConstant(1.0 / kNumPlayers);
-    P_raw.setConstant(1.0 / stable_data_.num_valid_actions);
+    P_raw.setConstant(1.0 / n);
   } else {
-    V = eval->value_prob_distr();
-    P_raw = eigen_util::softmax(eval->local_policy_logit_distr());
+    V = eval->value_distr();
+    P_raw = eval->compact_local_policy_distr();
   }
 
   LocalPolicyArray P_adjusted = P_raw;
@@ -374,7 +375,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   stats_.RQ = V;
   stats_.VQ = V;
 
-  for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
+  for (int i = 0; i < n; ++i) {
     edge_t* edge = get_edge(i);
     edge->raw_policy_prior = P_raw[i];
     edge->adjusted_policy_prior = P_adjusted[i];

@@ -257,9 +257,9 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
 
 template <core::concepts::Game Game>
 inline void SearchThread<Game>::add_dirichlet_noise(LocalPolicyArray& P) const {
-  int rows = P.rows();
-  double alpha = manager_params_->dirichlet_alpha_factor / sqrt(rows);
-  LocalPolicyArray noise = dirichlet_gen().template generate<LocalPolicyArray>(rng(), alpha, rows);
+  int n = P.rows();
+  double alpha = manager_params_->dirichlet_alpha_factor / sqrt(n);
+  LocalPolicyArray noise = dirichlet_gen().template generate<LocalPolicyArray>(rng(), alpha, n);
   P = (1.0 - manager_params_->dirichlet_mult) * P + manager_params_->dirichlet_mult * noise;
 }
 
