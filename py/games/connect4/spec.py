@@ -78,7 +78,6 @@ class Connect4Spec(GameSpec):
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
 
     training_params = TrainingParams(
-        window_size_function_str='fixed(50000)',
         minibatches_per_epoch=500,
         minibatch_size=100,
     )
