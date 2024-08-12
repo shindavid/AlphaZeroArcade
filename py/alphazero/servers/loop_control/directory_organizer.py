@@ -158,6 +158,31 @@ class DirectoryOrganizer:
     def get_latest_model_filename(self) -> Optional[str]:
         return DirectoryOrganizer.get_latest_full_subpath(self.models_dir)
 
+    def get_any_self_play_data_filename(self, gen: Optional[Generation]) -> Optional[str]:
+        """
+        Returns a self-play data filename for the given generation.
+
+        If gen is None, returns a filename for the most recent generation that has self-play data.
+
+        If no self-play data filename exists, returns None
+        """
+        if gen is None:
+            gen = self.get_latest_model_generation()
+
+        for client_subdir in os.listdir(self.self_play_data_dir):
+            if not client_subdir.startswith('client-'):
+                continue
+            client_dir = os.path.join(self.self_play_data_dir, client_subdir)
+            gen_dir = os.path.join(client_dir, f'gen-{gen}')
+            if os.path.isdir(gen_dir):
+                data_files = os.listdir(gen_dir)
+                if data_files:
+                    return os.path.join(gen_dir, data_files[0])
+
+        if gen == 0:
+            return None
+        return self.get_any_self_play_data_filename(gen - 1)
+
     def copy_self_play_data(self, target: 'DirectoryOrganizer', last_gen: Optional[Generation]):
         for client_subdir in os.listdir(self.self_play_data_dir):
             if not client_subdir.startswith('client-'):
