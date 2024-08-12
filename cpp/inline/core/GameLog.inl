@@ -130,8 +130,18 @@ void GameLog<Game>::replay() const {
     action_t last_action = get_prev_action(i);
     Game::IO::print_state(std::cout, *pos, last_action);
     if (i < n - 1) {
+      action_t action = get_prev_action(i + 1);
       PolicyTensor policy = get_policy(i);
-      std::cout << "Policy: " << policy << std::endl;
+      bool add_newline = false;
+      for (action_t a = 0; a < Game::Constants::kNumActions; ++a) {
+        if (policy(a) > 0) {
+          char p = a == action ? '*' : ' ';
+          std::string s = Game::IO::action_to_str(a);
+          std::cout << p << " " << s << ": " << policy(a) << std::endl;
+          add_newline = true;
+        }
+      }
+      if (add_newline) std::cout << std::endl;
     }
   }
 }
