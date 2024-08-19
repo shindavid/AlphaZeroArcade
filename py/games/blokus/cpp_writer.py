@@ -1,6 +1,7 @@
 from games.blokus.pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS
 
 from collections import defaultdict
+from typing import Iterable, List
 
 
 def extract_column_masks(coordinates):
@@ -42,7 +43,7 @@ for p, piece in enumerate(ALL_PIECES):
 
     o_index = canonical_orientation.index
     coords_str = ', '.join(extract_column_masks(canonical_orientation.coordinates))
-    print(f'  Piece("{name}", p{name}, {o_index}, g{sym_subgroup}, {coords_str}){end}')
+    print(f'  Piece("{name}", {o_index}, g{sym_subgroup}, {coords_str}){end}')
 
 print('};  // kPieces')
 print('')
@@ -63,10 +64,347 @@ for o, orientation in enumerate(ALL_PIECE_ORIENTATIONS):
         print(f'  // {line}')
 
     coords_str = ', '.join(extract_column_masks(orientation.coordinates))
-    print(f'  PieceOrientation({o}, p{piece.name}, {sym_index}, {coords_str}){end}')
+    print(f'  PieceOrientation(p{piece.name}, {coords_str}){end}')
 
 print('};  // kPieceOrientations')
 print('')
 
+# print('const PieceOrientationSquare kPieceOrientationSquares[kNumPieceOrientationSquares] = {')
+# line_blocks = []
+# for o, orientation in enumerate(ALL_PIECE_ORIENTATIONS):
+#     sym_index = orientation.sym_index
+#     piece = ALL_PIECES[orientation.piece_index]
+#     name = f'{piece.name}/{sym_index}'
+#     block = []
+#     for xy in orientation.coordinates:
+#         x, y = xy
+#         block.append(f'  PieceOrientationSquare({o}, {x}, {y})')
+
+#     text = (f'  // {name}\n') + (',\n'.join(block))
+#     line_blocks.append(text)
+
+# print(',\n\n'.join(line_blocks))
+
+# print('};  // kPieceOrientationSquares')
+# print('')
+
 print('}  // namespace blokus')
 print('')
+
+
+def make_mask(*indices):
+    mask = 0
+    for i in indices:
+        mask |= 1 << i
+    return mask
+
+
+ADJACENCY_MASKS = [
+    make_mask(4, 5, 11),        # 0
+    make_mask(5, 6, 7),         # 1
+    make_mask(7, 8, 9),         # 2
+    make_mask(9, 10, 11),       # 3
+    make_mask(0, 12, 13, 23),   # 4
+    make_mask(0, 1, 13, 14),    # 5
+    make_mask(1, 14, 15, 16),   # 6
+    make_mask(1, 2, 16, 17),    # 7
+    make_mask(2, 17, 18, 19),   # 8
+    make_mask(2, 3, 19, 20),    # 9
+    make_mask(3, 20, 21, 22),   # 10
+    make_mask(0, 3, 22, 23),    # 11
+    make_mask(4, 24, 25, 39),   # 12
+    make_mask(4, 5, 25, 26),    # 13
+    make_mask(5, 6, 26, 27),    # 14
+    make_mask(6, 27, 28, 29),   # 15
+    make_mask(6, 7, 29, 30),    # 16
+    make_mask(7, 8, 30, 31),    # 17
+    make_mask(8, 31, 32, 33),   # 18
+    make_mask(8, 9, 33, 34),    # 19
+    make_mask(9, 10, 34, 35),   # 20
+    make_mask(10, 35, 36, 37),  # 21
+    make_mask(10, 11, 37, 38),  # 22
+    make_mask(4, 11, 38, 39),   # 23
+    make_mask(12),              # 24
+    make_mask(12, 13),          # 25
+    make_mask(13, 14),          # 26
+    make_mask(14, 15),          # 27
+    make_mask(15),              # 28
+    make_mask(15, 16),          # 29
+    make_mask(16, 17),          # 30
+    make_mask(17, 18),          # 31
+    make_mask(18),              # 32
+    make_mask(18, 19),          # 33
+    make_mask(19, 20),          # 34
+    make_mask(20, 21),          # 35
+    make_mask(21),              # 36
+    make_mask(21, 22),          # 37
+    make_mask(22, 23),          # 38
+    make_mask(12, 23),          # 39
+    ]
+
+
+def get_set_bits(mask: int) -> List[int]:
+    """
+    Returns a list of the indices of the set bits in the mask.
+
+    get_set_bits(0b1010) -> [1, 3]
+    get_set_bits(0b100) -> [2]
+    """
+    bits = []
+    while mask:
+        bit = mask & -mask
+        bits.append(bit.bit_length() - 1)
+        mask ^= bit
+
+    return bits
+
+
+def rotate_bits(bits: int, start: int, end: int, shift: int) -> int:
+    """
+    Circularly shifts bits[start:end] by shift positions to the right.
+
+    Returns those shifted bits in the same position as they were in the original bits.
+    """
+    mask = ((1 << end) - 1) & ~((1 << start) - 1)
+    sub_bits = (bits & mask) >> start
+    sub_bits1 = sub_bits >> shift
+    sub_bits2 = sub_bits & ((1 << shift) - 1)
+    sub_bits = sub_bits1 | (sub_bits2 << (end - start - shift))
+
+    return sub_bits << start
+
+
+def swap_bits(bits: int, start: int, end: int) -> int:
+    """
+    Swaps bits[k] with bits[start + end - k] for k in (start, (start + end) / 2).
+
+    Returns those swapped bits in the same position as they were in the original bits.
+    """
+    s = sum((1 << (start + end - i)) for i in range(start + 1, end) if bits & (1 << i))
+    return s + (bits & (1 << start))
+
+
+def reverse_bits(n: int) -> int:
+    n = (n >> 1) & 0x5555555555555555 | (n << 1) & 0xAAAAAAAAAAAAAAAA
+    n = (n >> 2) & 0x3333333333333333 | (n << 2) & 0xCCCCCCCCCCCCCCCC
+    n = (n >> 4) & 0x0F0F0F0F0F0F0F0F | (n << 4) & 0xF0F0F0F0F0F0F0F0
+    n = (n >> 8) & 0x00FF00FF00FF00FF | (n << 8) & 0xFF00FF00FF00FF00
+    n = (n >> 16) & 0x0000FFFF0000FFFF | (n << 16) & 0xFFFF0000FFFF0000
+    n = (n >> 32) & 0x00000000FFFFFFFF | (n << 32) & 0xFFFFFFFF00000000
+    return n
+
+
+class Region:
+    """
+    A subset of the L1 radius-5 neighborhood of the origin, excluding the origin.
+
+    This is represented as a mask of the 40 cells in the neighborhood, using the following layout:
+
+                24
+             39 12 25
+          38 23  4 13 26
+       37 22 11  0  5 14 27
+    36 21 10  3     1  6 15 28
+       35 20  9  2  7 16 29
+          34 19  8 17 30
+             33 18 31
+                32
+    """
+    def __init__(self, mask=0):
+        self.mask = mask
+
+    @staticmethod
+    def rotate_mask(mask: int, n: int=1) -> int:
+        out = rotate_bits(mask, 0, 4, n)
+        out += rotate_bits(mask, 4, 12, 2 * n)
+        out += rotate_bits(mask, 12, 24, 3 * n)
+        out += rotate_bits(mask, 24, 40, 4 * n)
+        return out
+
+    @staticmethod
+    def flip_mask(mask: int) -> int:
+        out = swap_bits(mask, 0, 4)
+        out += swap_bits(mask, 4, 12)
+        out += swap_bits(mask, 12, 24)
+        out += swap_bits(mask, 24, 40)
+        return out
+
+    def canonicalize(self) -> 'Region':
+        mask0 = self.mask
+        mask1 = Region.rotate_mask(mask0)
+        mask2 = Region.rotate_mask(mask1)
+        mask3 = Region.rotate_mask(mask2)
+        mask4 = Region.flip_mask(mask0)
+        mask5 = Region.rotate_mask(mask4)
+        mask6 = Region.rotate_mask(mask5)
+        mask7 = Region.rotate_mask(mask6)
+
+        # print('Canonicalizing:')
+        # print('mask0:')
+        # print(self)
+        # print('mask1:')
+        # print(Region(mask1))
+        # print('mask2:')
+        # print(Region(mask2))
+        # print('mask3:')
+        # print(Region(mask3))
+        # print('mask4:')
+        # print(Region(mask4))
+        # print('mask5:')
+        # print(Region(mask5))
+        # print('mask6:')
+        # print(Region(mask6))
+        # print('mask7:')
+        # print(Region(mask7))
+
+        # reverse bits for more intuitive canonicalization
+        masks = [mask0, mask1, mask2, mask3, mask4, mask5, mask6, mask7]
+        reversed_masks = [reverse_bits(m) for m in masks]
+        best_mask = max(reversed_masks)
+        return Region(reverse_bits(best_mask))
+
+    def __eq__(self, other):
+        return self.mask == other.mask
+
+    def __hash__(self):
+        return self.mask
+
+    def __str__(self):
+        rows = [
+            [' ', ' ', ' ', ' ', 24],
+            [' ', ' ', ' ', 39, 12, 25],
+            [' ', ' ', 38, 23, 4, 13, 26],
+            [' ', 37, 22, 11, 0, 5, 14, 27],
+            [36, 21, 10, 3, '+', 1, 6, 15, 28],
+            [' ', 35, 20, 9, 2, 7, 16, 29],
+            [' ', ' ', 34, 19, 8, 17, 30],
+            [' ', ' ', ' ', 33, 18, 31],
+            [' ', ' ', ' ', ' ', 32],
+        ]
+        for r, row in enumerate(rows):
+            for c, cell in enumerate(row):
+                if type(cell) == int:
+                    row[c] = '.' if self.mask & (1 << cell) else ' '
+
+        non_blank_rows = [row for row in rows if any(c != ' ' for c in row)]
+        return '\n'.join([''.join(row) for row in non_blank_rows])
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
+class CrawlArea:
+    def __init__(self, legal_mask=0, illegal_mask=0, depth=1):
+        self.legal_mask = legal_mask
+        self.illegal_mask = illegal_mask
+
+        self.depth = depth
+        self.frontier_mask = 0
+        if depth < 5:
+            # The frontier is the set of cells that are adjacent to the legal region, without
+            # being part of the illegal region.
+            if legal_mask:
+              for b in get_set_bits(legal_mask):
+                  self.frontier_mask |= ADJACENCY_MASKS[b]
+            else:
+                self.frontier_mask = 15
+
+            self.frontier_mask &= ~legal_mask
+            self.frontier_mask &= ~illegal_mask
+
+    def legal_region(self) -> Region:
+        return Region(self.legal_mask)
+
+    def expand(self) -> Iterable['CrawlArea']:
+        if self.depth == 1:
+            assert self.legal_mask == 0, self
+            assert self.illegal_mask == 0, self
+
+            # hard-coded frontier
+            yield CrawlArea(make_mask(0), make_mask(1, 2, 3), 2)
+            yield CrawlArea(make_mask(1), make_mask(2, 3, 0), 2)
+            yield CrawlArea(make_mask(2), make_mask(3, 0, 1), 2)
+            yield CrawlArea(make_mask(3), make_mask(0, 1, 2), 2)
+            yield CrawlArea(make_mask(0, 1), make_mask(2, 3), 2)
+            yield CrawlArea(make_mask(1, 2), make_mask(3, 0), 2)
+            yield CrawlArea(make_mask(2, 3), make_mask(0, 1), 2)
+            yield CrawlArea(make_mask(3, 0), make_mask(1, 2), 2)
+        else:
+            frontier_bits = get_set_bits(self.frontier_mask)
+            B = 1 << len(frontier_bits)
+            for b in range(B):
+                legal_count = 0
+                new_legal = self.legal_mask
+                new_illegal = self.illegal_mask
+                for i, fb in enumerate(frontier_bits):
+                    if b & (1 << i):
+                        new_legal |= 1 << fb
+                        legal_count += 1
+                    else:
+                        new_illegal |= 1 << fb
+
+                if self.depth == 1 and legal_count > 2:
+                    continue
+                new_area = CrawlArea(new_legal, new_illegal, self.depth + 1)
+                yield new_area
+
+    def __eq__(self, other):
+        return self.legal_mask == other.legal_mask and self.illegal_mask == other.illegal_mask
+
+    def __hash__(self):
+        return hash((self.legal_mask, self.illegal_mask))
+
+    def __str__(self):
+        rows = [
+            [' ', ' ', ' ', ' ', 24],
+            [' ', ' ', ' ', 39, 12, 25],
+            [' ', ' ', 38, 23, 4, 13, 26],
+            [' ', 37, 22, 11, 0, 5, 14, 27],
+            [36, 21, 10, 3, '+', 1, 6, 15, 28],
+            [' ', 35, 20, 9, 2, 7, 16, 29],
+            [' ', ' ', 34, 19, 8, 17, 30],
+            [' ', ' ', ' ', 33, 18, 31],
+            [' ', ' ', ' ', ' ', 32],
+        ]
+        for r, row in enumerate(rows):
+            for c, cell in enumerate(row):
+                if type(cell) == int:
+                    legal = self.legal_mask & (1 << cell)
+                    illegal = self.illegal_mask & (1 << cell)
+                    row[c] = 'o' if legal else ('x' if illegal else ' ')
+
+        non_blank_rows = [row for row in rows if any(c != ' ' for c in row)]
+        return '\n'.join([''.join(row) for row in non_blank_rows])
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
+def crawl() -> List[Region]:
+    area = CrawlArea()
+    area_list = [area]
+    area_set = set(area_list)
+    region_set = set([area.legal_region()])
+
+    while area_list:
+        new_area_list = []
+        for area in area_list:
+            for new_area in area.expand():
+                if new_area not in area_set:
+                    region = new_area.legal_region()
+                    canonical_region = region.canonicalize()
+                    # print(f'Area {n}:')
+                    # print(new_area)
+                    # print('-----------------------------')
+                    new_area_list.append(new_area)
+                    area_set.add(new_area)
+                    if canonical_region not in region_set:
+                        region_set.add(canonical_region)
+                        print(f'// Region {len(region_set) - 1}')
+                        print(canonical_region)
+                        print('-----------------------------')
+
+        area_list = new_area_list
+
+
+crawl()
