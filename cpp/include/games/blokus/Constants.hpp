@@ -7,8 +7,47 @@ namespace blokus {
 using color_t = int8_t;
 using piece_index_t = int8_t;
 using piece_orientation_index_t = int8_t;
+using piece_orientation_corner_index_t = int16_t;
 using diagonal_direction_t = int8_t;
 using diagonal_direction_mask_t = int8_t;
+using column_mask_t = uint8_t;
+using group_subset_t = uint8_t;
+
+// which directions are unblocked (at most 2 can ever be unblocked)
+enum corner_constraint_t : uint8_t {
+  ccN,
+  ccE,
+  ccS,
+  ccW,
+  ccNE,
+  ccSE,
+  ccSW,
+  ccNW,
+  ccNone
+};
+
+const piece_index_t pO1 = 0;
+const piece_index_t pI2 = 1;
+const piece_index_t pI3 = 2;
+const piece_index_t pL3 = 3;
+const piece_index_t pI4 = 4;
+const piece_index_t pO4 = 5;
+const piece_index_t pT4 = 6;
+const piece_index_t pL4 = 7;
+const piece_index_t pS4 = 8;
+const piece_index_t pF5 = 9;
+const piece_index_t pI5 = 10;
+const piece_index_t pL5 = 11;
+const piece_index_t pN5 = 12;
+const piece_index_t pP5 = 13;
+const piece_index_t pT5 = 14;
+const piece_index_t pU5 = 15;
+const piece_index_t pV5 = 16;
+const piece_index_t pW5 = 17;
+const piece_index_t pX5 = 18;
+const piece_index_t pY5 = 19;
+const piece_index_t pZ5 = 20;
+const piece_index_t kNumPieces = 21;
 
 const color_t kBlue = 0;
 const color_t kYellow = 1;
@@ -30,9 +69,6 @@ const int kMaxPieceHeight = 5;
 const int kMaxScore = 89;
 
 const core::action_t kPass = kNumCells;
-
-using column_mask_t = uint8_t;
-using group_subset_t = uint8_t;
 
 const group_subset_t gC1 = 0b00000001;
 const group_subset_t gC2 = 0b00000101;

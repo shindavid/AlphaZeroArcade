@@ -4,7 +4,7 @@ namespace blokus {
 
 namespace detail {
 
-struct PieceMaskWrapper {
+struct PieceMaskRange {
   struct Iterator {
    public:
     explicit Iterator(uint32_t mask) : mask(mask) {}
@@ -28,15 +28,16 @@ struct PieceMaskWrapper {
     uint32_t mask;
   };
 
-  PieceMaskWrapper(uint32_t mask) : mask(mask) {}
+  PieceMaskRange(uint32_t mask) : mask(mask) {}
 
   Iterator begin() const { return Iterator(mask); }
   Iterator end() const { return Iterator(0); }
 
+ private:
   uint32_t mask;
 };
 
-struct BitBoardWrapper {
+struct BitBoardRange {
   struct Iterator {
    public:
     Iterator(const BitBoard* bitboard, int row, int col)
@@ -77,20 +78,22 @@ struct BitBoardWrapper {
       }
     }
 
+   private:
     const BitBoard* bitboard_;
     int row_;
     int col_;
   };
 
-  BitBoardWrapper(const BitBoard* bitboard) : bitboard_(bitboard) {}
+  BitBoardRange(const BitBoard* bitboard) : bitboard_(bitboard) {}
 
   Iterator begin() const { return Iterator(bitboard_, 0, 0); }
   Iterator end() const { return Iterator(bitboard_, kBoardDimension, 0); }
 
+ private:
   const BitBoard* bitboard_;
 };
 
-struct BitBoardSliceWrapper {
+struct BitBoardSliceRange {
   struct Iterator {
     Iterator(const BitBoardSlice* bitboard, int row, int col)
         : bitboard_(bitboard), row_(row), col_(col) {
@@ -135,25 +138,51 @@ struct BitBoardSliceWrapper {
     int col_;
   };
 
-  BitBoardSliceWrapper(const BitBoardSlice* bitboard) : bitboard_(bitboard) {}
+  BitBoardSliceRange(const BitBoardSlice* bitboard) : bitboard_(bitboard) {}
 
   Iterator begin() const { return Iterator(bitboard_, 0, 0); }
   Iterator end() const { return Iterator(bitboard_, bitboard_->num_rows(), 0); }
 
+ private:
   const BitBoardSlice* bitboard_;
 };
 
+struct PieceOrientationCornerRange {
+  struct Iterator {
+    Iterator(int index) : index_(index) {}
+
+    bool operator==(Iterator other) const { return index_ == other.index_; }
+    bool operator!=(Iterator other) const { return index_ != other.index_; }
+    PieceOrientationCorner operator*() const {
+      return kPieceOrientationCornerArray[index_];
+    }
+
+    Iterator& operator++() {
+      index_++;
+      return *this;
+    }
+
+    Iterator operator++(int) {
+      Iterator tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+   private:
+    int index_;
+  };
+
+  PieceOrientationCornerRange(int start, int end) : start_(start), end_(end) {}
+
+  Iterator begin() const { return Iterator(start_); }
+  Iterator end() const { return Iterator(end_); }
+
+ private:
+  int start_;
+  int end_;
+};
+
 }  // namespace detail
-
-inline void CornerConstraint::set(direction_t dir, bool value) {
-  if (value) {
-    mask_ |= 1 << dir;
-  } else {
-    mask_ &= ~(1 << dir);
-  }
-}
-
-inline int CornerConstraint::get_count() const { return std::popcount(mask_); }
 
 inline void Location::set(int8_t row, int8_t col) {
   this->row = row;
@@ -265,7 +294,7 @@ inline void BitBoard::set(int row, int col) { rows[row] |= (1 << col); }
 
 inline void BitBoard::set(const Location& loc) { set(loc.row, loc.col); }
 
-inline auto BitBoard::get_set_locations() const { return detail::BitBoardWrapper(this); }
+inline auto BitBoard::get_set_locations() const { return detail::BitBoardRange(this); }
 
 inline void BitBoard::write_to(std::bitset<kNumCells>& bitset) const {
   // TODO: optimize this
@@ -274,18 +303,47 @@ inline void BitBoard::write_to(std::bitset<kNumCells>& bitset) const {
   }
 }
 
-inline CornerConstraint BitBoard::get_corner_constraint(Location loc) const {
+inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
   int row = loc.row;
   int col = loc.col;
 
-  CornerConstraint constraint;
+  bool N_unblocked = (row < kBoardDimension - 1) && !get(row + 1, col);
+  bool E_unblocked = (col < kBoardDimension - 1) && !get(row, col + 1);
+  bool S_unblocked = (row > 0) && !get(row - 1, col);
+  bool W_unblocked = (col > 0) && !get(row, col - 1);
 
-  if (row < kBoardDimension - 1) constraint.set(dN, !get(row + 1, col));
-  if (col < kBoardDimension - 1) constraint.set(dE, !get(row, col + 1));
-  if (row > 0) constraint.set(dS, !get(row - 1, col));
-  if (col > 0) constraint.set(dW, !get(row, col - 1));
+  int count = int(N_unblocked) + int(E_unblocked) + int(S_unblocked) + int(W_unblocked);
+  util::debug_assert(count <= 2);
 
-  return constraint;
+  if (N_unblocked) {
+    util::debug_assert(!S_unblocked);
+    if (W_unblocked) {
+      return ccNW;
+    }
+    if (E_unblocked) {
+      return ccNE;
+    }
+    return ccN;
+  }
+  if (S_unblocked) {
+    util::debug_assert(!N_unblocked);
+    if (W_unblocked) {
+      return ccSW;
+    }
+    if (E_unblocked) {
+      return ccSE;
+    }
+    return ccS;
+  }
+  if (W_unblocked) {
+    util::debug_assert(!E_unblocked);
+    return ccW;
+  }
+  if (E_unblocked) {
+    return ccE;
+  }
+
+  return ccNone;
 }
 
 inline bool BitBoard::intersects(const BitBoardSlice& other) const {
@@ -304,21 +362,141 @@ inline BitBoardSlice::BitBoardSlice(const uint32_t* rows, int num_rows, int row_
   }
 }
 
-inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceWrapper(this); }
+inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
 
-inline piece_index_t PieceOrientationCorner::piece_index() const {
-  return kPieceOrientationCornerIndexToPieceIndex[index_];
+inline const char* Piece::name() const { return kPieceData[index_].name.c_str(); }
+
+inline auto Piece::get_corners(corner_constraint_t constraint) const {
+  int c = kPieceData[index_].corner_array_start_index;
+  int n = kPieceData[index_].num_corner_array_indices;
+
+  return detail::PieceOrientationCornerRange(c, c + n);
 }
 
-inline const char* Piece::name() const {}
+inline const uint8_t* PieceOrientation::row_masks() const {
+  const auto& data = kPieceOrientationData[index_];
+  return &kPieceOrientationRowMasks[data.mask_array_start_index];
+}
 
-inline auto Piece::orientations() const {}
+inline const uint8_t* PieceOrientation::adjacent_row_masks() const {
+  const auto& data = kPieceOrientationData[index_];
+  return &kPieceOrientationRowMasks[data.mask_array_start_index + height()];
+}
 
-inline auto Piece::get_corners(CornerConstraint constraint) const {}
+inline const uint8_t* PieceOrientation::diagonal_row_masks() const {
+  const auto& data = kPieceOrientationData[index_];
+  return &kPieceOrientationRowMasks[data.mask_array_start_index + 2 * height() + 2];
+}
+
+inline int PieceOrientation::height() const {
+  return kPieceOrientationData[index_].height;
+}
+
+inline int PieceOrientation::width() const {
+  return kPieceOrientationData[index_].width;
+}
+
+inline Piece PieceOrientationCorner::to_piece() const {
+    return kPieceOrientationCornerData[index_].piece;
+}
+
+inline PieceOrientation PieceOrientationCorner::to_piece_orientation() const {
+  return kPieceOrientationCornerData[index_].piece_orientation;
+}
+
+inline Location PieceOrientationCorner::corner_offset() const {
+  return kPieceOrientationCornerData[index_].corner_offset;
+}
+
+inline BitBoardSlice PieceOrientationCorner::to_bitboard_mask(Location loc) const {
+  PieceOrientation po = to_piece_orientation();
+  const uint8_t* base_rows = po.row_masks();
+  int height = po.height();
+  int width = po.width();
+  Location offset = corner_offset();
+
+  // out-of-bounds checks
+  int top_margin = kBoardDimension - loc.row + offset.row - height;
+  int bot_margin = loc.row - offset.row;
+  int left_margin = loc.col - offset.col;
+  int right_margin = kBoardDimension - loc.col + offset.col - width;
+  if (top_margin < 0 || bot_margin < 0 || left_margin < 0 || right_margin < 0) {
+    return BitBoardSlice(nullptr, 0, 0);
+  }
+
+  uint32_t rows[height];
+  for (int i = 0; i < height; ++i) {
+    rows[i] = uint32_t(base_rows[i]) << (loc.col - offset.col);
+  }
+
+  return BitBoardSlice(rows, height, loc.row - offset.row);
+}
+
+inline BitBoardSlice PieceOrientationCorner::to_adjacent_bitboard_mask(Location loc) const {
+  PieceOrientation po = to_piece_orientation();
+  int height = po.height();
+  int width = po.width();
+  Location offset = corner_offset();
+
+  int top_margin = kBoardDimension - loc.row + offset.row - height;
+  int bot_margin = loc.row - offset.row;
+  int left_margin = loc.col - offset.col;
+  int right_margin = kBoardDimension - loc.col + offset.col - width;
+
+  util::debug_assert(top_margin >= 0);
+  util::debug_assert(bot_margin >= 0);
+  util::debug_assert(left_margin >= 0);
+  util::debug_assert(right_margin >= 0);
+
+  bool top_overflow = top_margin == 0;
+  bool bot_overflow = bot_margin == 0;
+
+  util::debug_assert(!(top_overflow && bot_overflow));
+
+  const uint8_t* base_rows = po.adjacent_row_masks();
+  int n_rows = height + !top_overflow +!bot_overflow;
+
+  uint32_t rows[n_rows];
+  for (int i = 0; i < n_rows; ++i) {
+    rows[i] = (uint32_t(base_rows[i + bot_overflow]) << left_margin) & ((1 << kBoardDimension) - 1);
+  }
+  return BitBoardSlice(rows, height, loc.row - offset.row);
+}
+
+inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location loc) const {
+  PieceOrientation po = to_piece_orientation();
+  int height = po.height();
+  int width = po.width();
+  Location offset = corner_offset();
+
+  int top_margin = kBoardDimension - loc.row + offset.row - height;
+  int bot_margin = loc.row - offset.row;
+  int left_margin = loc.col - offset.col;
+  int right_margin = kBoardDimension - loc.col + offset.col - width;
+
+  util::debug_assert(top_margin >= 0);
+  util::debug_assert(bot_margin >= 0);
+  util::debug_assert(left_margin >= 0);
+  util::debug_assert(right_margin >= 0);
+
+  bool top_overflow = top_margin == 0;
+  bool bot_overflow = bot_margin == 0;
+
+  util::debug_assert(!(top_overflow && bot_overflow));
+
+  const uint8_t* base_rows = po.diagonal_row_masks();
+  int n_rows = height + !top_overflow + !bot_overflow;
+
+  uint32_t rows[n_rows];
+  for (int i = 0; i < n_rows; ++i) {
+    rows[i] = (uint32_t(base_rows[i + bot_overflow]) << left_margin) & ((1 << kBoardDimension) - 1);
+  }
+  return BitBoardSlice(rows, height, loc.row - offset.row);
+}
 
 inline auto PieceMask::get_unset_bits() const {
   uint32_t unset_bits = ~mask_ & ((1 << kNumPieces) - 1);
-  return detail::PieceMaskWrapper(unset_bits);
+  return detail::PieceMaskRange(unset_bits);
 }
 
 }  // namespace blokus

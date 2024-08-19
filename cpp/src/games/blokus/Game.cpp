@@ -35,10 +35,11 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
     BitBoard unplayable_locations = aux.unplayable_locations[color];
     for (Location loc : aux.corner_locations[color].get_set_locations()) {
       bool broke = false;
-      CornerConstraint constraint = aux.unplayable_locations[color].get_corner_constraint(loc);
+      corner_constraint_t constraint = aux.unplayable_locations[color].get_corner_constraint(loc);
       for (Piece piece : aux.played_pieces[color].get_unset_bits()) {
         for (PieceOrientationCorner poc : piece.get_corners(constraint)) {
           BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
+          if (move_mask.empty()) continue;
           if (!unplayable_locations.intersects(move_mask)) {
             valid_actions[loc] = true;
             broke = true;
@@ -66,10 +67,11 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
     earlier_corner_locations.clear_at_and_after(loc);  // redundancy-representation-removal
     BitBoard unplayable_locations = aux.unplayable_locations[color] | earlier_corner_locations;
 
-    CornerConstraint constraint = unplayable_locations[color].get_corner_constraint(loc);
+    corner_constraint_t constraint = unplayable_locations[color].get_corner_constraint(loc);
     for (Piece piece : aux.played_pieces[color].get_unset_bits()) {
       for (PieceOrientationCorner poc : piece.get_corners(constraint)) {
         BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
+        if (move_mask.empty()) continue;
         if (!unplayable_locations.intersects(move_mask)) {
           valid_actions[s] = true;
         }
