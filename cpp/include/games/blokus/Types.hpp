@@ -1,26 +1,36 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <games/blokus/Constants.hpp>
-#include <games/blokus/Pieces.hpp>
+#include <util/FiniteGroups.hpp>
 
+#include <bit>
 #include <bitset>
+#include <cstdint>
 
 namespace blokus {
 
-/*
- * PieceMask is suitable for storing a subset of the 21 pieces of the game.
- */
 #pragma pack(push, 1)
-class PieceMask {
+class CornerConstraint {
  public:
-  auto get_unset_bits() const;
-  void set(Piece piece) { mask_ |= 1 << piece; }
-  void clear() { mask_ = 0; }
+  void set(direction_t dir, bool value);
+  int get_count() const;  // number of directions that are constrained
 
  private:
-  uint32_t mask_;
+  uint8_t mask_ = 0;
 };
 #pragma pack(pop)
+
+#pragma pack(push, 1)
+struct Location {
+  void set(int8_t row, int8_t col);
+  bool valid() const;
+
+  int8_t row;
+  int8_t col;
+};
+#pragma pack(pop)
+static_assert(sizeof(Location) == 2);
 
 class BitBoard;
 class BitBoardSlice;
@@ -83,6 +93,61 @@ class BitBoardSlice {
   int start_row_;
 };
 
+#pragma pack(push, 1)
+class PieceOrientationCorner {
+ public:
+  PieceOrientationCorner(piece_orientation_corner_index_t index) : index_(index) {}
+  piece_orientation_corner_index_t operator() const { return index_; }
+  piece_index_t piece_index() const;
+
+ private:
+  piece_orientation_corner_index_t index_;
+};
+#pragma pack(pop)
+static_assert(sizeof(PieceOrientationCorner) == 2);
+
+#pragma pack(push, 1)
+class PieceOrientation {
+ public:
+  PieceOrientation(piece_orientation_index_t index) : index_(index) {}
+  piece_orientation_index_t operator() const { return index_; }
+
+ private:
+  piece_orientation_index_t index_;
+};
+#pragma pack(pop)
+static_assert(sizeof(PieceOrientation) == 1);
+
+#pragma pack(push, 1)
+class Piece {
+ public:
+  Piece(piece_index_t index) : index_(index) {}
+  piece_index_t operator() const { return index_; }
+  const char* name() const;
+  auto orientations() const;
+  auto get_corners(CornerConstraint constraint) const;
+
+ private:
+  piece_index_t index_;
+};
+#pragma pack(pop)
+static_assert(sizeof(Piece) == 1);
+
+/*
+ * PieceMask is suitable for storing a subset of the 21 pieces of the game.
+ */
+#pragma pack(push, 1)
+class PieceMask {
+ public:
+  auto get_unset_bits() const;
+  void set(Piece piece) { mask_ |= 1 << piece; }
+  void clear() { mask_ = 0; }
+
+ private:
+  uint32_t mask_;
+};
+#pragma pack(pop)
+
 }  // namespace blokus
 
-#include <inline/games/blokus/BitBoard.inl>
+#include <inline/games/blokus/Types.inl>
