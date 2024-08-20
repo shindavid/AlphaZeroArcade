@@ -269,3 +269,6 @@ for o, data in enumerate(piece_orientation_data_list):
 
 print('};  // kPieceOrientationRowMasks ')
 print('')
+
+print('}  // namespace tables')
+print('}  // namespace blokus')
