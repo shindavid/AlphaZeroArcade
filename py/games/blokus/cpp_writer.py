@@ -1,19 +1,141 @@
-from games.blokus.pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS
+from games.blokus.pieces import ALL_PIECES, ALL_PIECE_ORIENTATIONS, Piece, PieceOrientation
 
 from collections import defaultdict
 from typing import Iterable, List
 
+import numpy as np
 
-def extract_column_masks(coordinates):
-    masks = defaultdict(int)
 
-    for x, y in coordinates:
-        masks[x] |= 1 << y
+def extract_row_masks(matrix):
+    masks = []
 
-    columns = []
-    for m in sorted(masks):
-        columns.append(bin(masks[m]))
-    return columns
+    for row in matrix.T:
+        mask = 0
+        for b in reversed(row):
+            mask = (mask << 1) | b
+        masks.append(mask)
+    return masks
+
+
+class PieceData:
+    def __init__(self, piece: Piece):
+        self.piece = piece
+        self.corner_array_indices = set()
+
+
+piece_data_list = []
+for piece in ALL_PIECES:
+    piece_data_list.append(PieceData(piece))
+
+
+class PieceOrientationData:
+    def __init__(self, piece_orientation: PieceOrientation, mask_array_start_index):
+        self.piece_orientation = piece_orientation
+        self.drawing = piece_orientation.get_ascii_drawing()
+
+        self.width = max(piece_orientation.coordinates[:, 0]) + 1
+        self.height = max(piece_orientation.coordinates[:, 1]) + 1
+
+        self.mask_array_start_index = mask_array_start_index
+
+        # print(piece_orientation)
+        # print(piece_orientation.coordinates)
+        # print(f'width: {self.width}, height: {self.height}')
+
+        region = np.zeros((self.width, self.height), dtype=bool)
+        shifted_region = np.zeros((self.width + 2, self.height + 2), dtype=bool)
+        adjacency_region = np.zeros((self.width + 2, self.height + 2), dtype=bool)
+        diagonal_region = np.zeros((self.width + 2, self.height + 2), dtype=bool)
+
+        for (x, y) in piece_orientation.coordinates:
+            region[x, y] = 1
+            shifted_region[x + 1, y + 1] = 1
+            adjacency_region[x + 1, y] = 1
+            adjacency_region[x + 1, y + 2] = 1
+            adjacency_region[x, y + 1] = 1
+            adjacency_region[x + 2, y + 1] = 1
+            diagonal_region[x, y] = 1
+            diagonal_region[x + 2, y] = 1
+            diagonal_region[x, y + 2] = 1
+            diagonal_region[x + 2, y + 2] = 1
+
+        adjacency_region &= ~shifted_region
+        diagonal_region &= ~shifted_region
+        diagonal_region &= ~adjacency_region
+
+        self.region = region
+        self.adjacency_region = adjacency_region
+        self.diagonal_region = diagonal_region
+
+        self.region_xy_list = list(zip(*np.where(region)))
+        self.adjacency_xy_list = list(zip(*np.where(adjacency_region)))
+        self.diagonal_xy_list = list(zip(*np.where(diagonal_region)))
+
+        self.row_masks = extract_row_masks(shifted_region)[1:-1]
+        self.adjacency_masks = extract_row_masks(adjacency_region)
+        self.diagonal_masks = extract_row_masks(diagonal_region)
+
+        self.corner_xy_list = []
+        for (x, y) in piece_orientation.coordinates:
+            x += 1
+            y += 1
+            if shifted_region[x, y-1] and shifted_region[x, y+1]:
+                continue
+            if shifted_region[x+1, y] and shifted_region[x-1, y]:
+                continue
+            self.corner_xy_list.append((x, y))
+
+        # print(f'region.shape: {region.shape}')
+        # print(f'row_masks: {self.row_masks}')
+        assert len(self.row_masks) == self.height
+        assert len(self.adjacency_masks) == self.height + 2
+        assert len(self.diagonal_masks) == self.height + 2
+
+    def get_ascii_drawing(self, xy=None):
+        char_matrix = [[' '] * (self.width + 2) for _ in range(self.height + 2)]
+        for x, y in self.region_xy_list:
+            char_matrix[y+1][x+1] = 'o'
+        for x, y in self.adjacency_xy_list:
+            char_matrix[y][x] = '.'
+        for x, y in self.diagonal_xy_list:
+            char_matrix[y][x] = '*'
+
+        if xy is not None:
+            char_matrix[xy[1]][xy[0]] = 'x'
+
+        return '\n'.join(''.join(c) for c in reversed(char_matrix))
+
+kPieceOrientationRowMasks = []
+
+piece_orientation_data_list = []
+for piece_orientation in ALL_PIECE_ORIENTATIONS:
+    i = len(kPieceOrientationRowMasks)
+    data = PieceOrientationData(piece_orientation, i)
+    piece_orientation_data_list.append(data)
+
+    kPieceOrientationRowMasks.extend(data.row_masks)
+    kPieceOrientationRowMasks.extend(data.adjacency_masks)
+    kPieceOrientationRowMasks.extend(data.diagonal_masks)
+
+
+class PieceOrientationCornerData:
+    def __init__(self, index, x, y, piece_index, piece_orientation_index):
+        self.x = x
+        self.y = y
+        self.piece_index = piece_index
+        self.piece_orientation_index = piece_orientation_index
+
+
+piece_orientation_corner_data_list = []
+for piece_orientation_data in piece_orientation_data_list:
+    piece_index = piece_orientation_data.piece_orientation.piece_index
+    piece_data = piece_data_list[piece_index]
+    piece_orientation_index = piece_orientation_data.piece_orientation.index
+    for x, y in piece_orientation_data.corner_xy_list:
+        index = len(piece_orientation_corner_data_list)
+        corner_data = PieceOrientationCornerData(index, x, y, piece_index, piece_orientation_index)
+        piece_orientation_corner_data_list.append(corner_data)
+        piece_data.corner_array_indices.add(index)
 
 
 print('// Auto-generated by py/games/blokus/cpp_writer.py')
@@ -23,388 +145,127 @@ header = """
 #include <games/blokus/Pieces.hpp>
 
 namespace blokus {
+namespace tables {
 """
 print(header)
-print('const Piece kPieces[kNumPieces] = {')
-for p, piece in enumerate(ALL_PIECES):
+print('const _PieceData kPieceData[kNumPieces] = {')
+for p, piece_data in enumerate(piece_data_list):
+    piece = piece_data.piece
     name = piece.name
-    sym_subgroup = piece.sym_subgroup
-    end = ',' if p < len(ALL_PIECES) - 1 else ''
+    end = ',' if p < len(piece_data_list) - 1 else ''
     canonical_orientation = piece.orientations[0]
 
     drawing = canonical_orientation.get_ascii_drawing()
     drawing_lines = drawing.splitlines()[:-1]
 
     print('')
-    print(f'  // p{name}')
+    print(f'  // {name}')
     print('  //')
     for line in drawing_lines:
         print(f'  // {line}')
 
-    o_index = canonical_orientation.index
-    coords_str = ', '.join(extract_column_masks(canonical_orientation.coordinates))
-    print(f'  Piece("{name}", {o_index}, g{sym_subgroup}, {coords_str}){end}')
+    start = min(piece_data.corner_array_indices)
+    n = len(piece_data.corner_array_indices)
+    assert start + n - 1 == max(piece_data.corner_array_indices)
+    print(f'  {{"{name}", {n}, {start}}}{end}')
 
-print('};  // kPieces')
+print('};  // kPieceData ')
 print('')
-print('const PieceOrientation kPieceOrientations[kNumPieceOrientations] = {')
-for o, orientation in enumerate(ALL_PIECE_ORIENTATIONS):
+
+print('const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {')
+for o, piece_orientation_data in enumerate(piece_orientation_data_list):
+    orientation = piece_orientation_data.piece_orientation
     sym_index = orientation.sym_index
     piece = ALL_PIECES[orientation.piece_index]
     name = f'{piece.name}/{sym_index}'
-    end = ',' if o < len(ALL_PIECE_ORIENTATIONS) - 1 else ''
+    end = ',' if o < len(piece_orientation_data_list) - 1 else ''
 
-    drawing = orientation.get_ascii_drawing()
-    drawing_lines = drawing.splitlines()[:-1]
+    drawing = piece_orientation_data.get_ascii_drawing()
+    drawing_lines = drawing.splitlines()
 
     print('')
-    print(f'  // p{name}')
+    print(f'  // {name}')
     print('  //')
     for line in drawing_lines:
         print(f'  // {line}')
 
-    coords_str = ', '.join(extract_column_masks(orientation.coordinates))
-    print(f'  PieceOrientation(p{piece.name}, {coords_str}){end}')
+    mask_array_start_index = piece_orientation_data.mask_array_start_index
+    width = piece_orientation_data.width
+    height = piece_orientation_data.height
+    print(f'  {{{mask_array_start_index}, {width}, {height}}}{end}')
 
-print('};  // kPieceOrientations')
+print('};  // kPieceOrientationData ')
 print('')
 
-# print('const PieceOrientationSquare kPieceOrientationSquares[kNumPieceOrientationSquares] = {')
-# line_blocks = []
-# for o, orientation in enumerate(ALL_PIECE_ORIENTATIONS):
-#     sym_index = orientation.sym_index
-#     piece = ALL_PIECES[orientation.piece_index]
-#     name = f'{piece.name}/{sym_index}'
-#     block = []
-#     for xy in orientation.coordinates:
-#         x, y = xy
-#         block.append(f'  PieceOrientationSquare({o}, {x}, {y})')
+print('const _PieceOrientationCornerData kPieceOrientationCornerData[kNumPieceOrientationCorners] = {')
+for c, piece_orientation_corner_data in enumerate(piece_orientation_corner_data_list):
+    x = piece_orientation_corner_data.x
+    y = piece_orientation_corner_data.y
+    p = piece_orientation_corner_data.piece_index
+    po = piece_orientation_corner_data.piece_orientation_index
 
-#     text = (f'  // {name}\n') + (',\n'.join(block))
-#     line_blocks.append(text)
+    end = ',' if c < len(piece_orientation_corner_data_list) - 1 else ''
 
-# print(',\n\n'.join(line_blocks))
+    orientation = piece_orientation_data_list[po]
+    sym_index = orientation.piece_orientation.sym_index
+    piece = ALL_PIECES[orientation.piece_orientation.piece_index]
+    name = f'{piece.name}/{sym_index}'
 
-# print('};  // kPieceOrientationSquares')
-# print('')
+    drawing = orientation.get_ascii_drawing((x, y))
+    drawing_lines = drawing.splitlines()
 
-print('}  // namespace blokus')
+    print('')
+    print(f'  // {name}')
+    print('  //')
+    for line in drawing_lines:
+        print(f'  // {line}')
+
+    mask_array_start_index = piece_orientation_data.mask_array_start_index
+    height = piece_orientation_data.height
+    width = piece_orientation_data.width
+
+    corner_offset = (y-1, x-1)
+    print(f'  {{{{{y}, {x}}}, {p}, {po}}}{end}')
+
+print('};  // kPieceOrientationCornerData ')
 print('')
 
+print('const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks] = {')
 
-def make_mask(*indices):
-    mask = 0
-    for i in indices:
-        mask |= 1 << i
-    return mask
+O = len(piece_orientation_data_list) - 1
+for o, data in enumerate(piece_orientation_data_list):
+    orientation = data.piece_orientation
+    sym_index = orientation.sym_index
+    piece = ALL_PIECES[orientation.piece_index]
+    name = f'{piece.name}/{sym_index}'
+    end = ',\n' if o < len(piece_orientation_data_list) - 1 else ''
 
+    drawing = data.get_ascii_drawing()
+    drawing_lines = drawing.splitlines()
 
-ADJACENCY_MASKS = [
-    make_mask(4, 5, 11),        # 0
-    make_mask(5, 6, 7),         # 1
-    make_mask(7, 8, 9),         # 2
-    make_mask(9, 10, 11),       # 3
-    make_mask(0, 12, 13, 23),   # 4
-    make_mask(0, 1, 13, 14),    # 5
-    make_mask(1, 14, 15, 16),   # 6
-    make_mask(1, 2, 16, 17),    # 7
-    make_mask(2, 17, 18, 19),   # 8
-    make_mask(2, 3, 19, 20),    # 9
-    make_mask(3, 20, 21, 22),   # 10
-    make_mask(0, 3, 22, 23),    # 11
-    make_mask(4, 24, 25, 39),   # 12
-    make_mask(4, 5, 25, 26),    # 13
-    make_mask(5, 6, 26, 27),    # 14
-    make_mask(6, 27, 28, 29),   # 15
-    make_mask(6, 7, 29, 30),    # 16
-    make_mask(7, 8, 30, 31),    # 17
-    make_mask(8, 31, 32, 33),   # 18
-    make_mask(8, 9, 33, 34),    # 19
-    make_mask(9, 10, 34, 35),   # 20
-    make_mask(10, 35, 36, 37),  # 21
-    make_mask(10, 11, 37, 38),  # 22
-    make_mask(4, 11, 38, 39),   # 23
-    make_mask(12),              # 24
-    make_mask(12, 13),          # 25
-    make_mask(13, 14),          # 26
-    make_mask(14, 15),          # 27
-    make_mask(15),              # 28
-    make_mask(15, 16),          # 29
-    make_mask(16, 17),          # 30
-    make_mask(17, 18),          # 31
-    make_mask(18),              # 32
-    make_mask(18, 19),          # 33
-    make_mask(19, 20),          # 34
-    make_mask(20, 21),          # 35
-    make_mask(21),              # 36
-    make_mask(21, 22),          # 37
-    make_mask(22, 23),          # 38
-    make_mask(12, 23),          # 39
-    ]
+    M = len(data.diagonal_masks) - 1
 
+    print('')
+    print(f'  // {name}')
+    print('  //')
+    for line in drawing_lines:
+        print(f'  // {line}')
 
-def get_set_bits(mask: int) -> List[int]:
-    """
-    Returns a list of the indices of the set bits in the mask.
+    for m, mask in enumerate(data.row_masks):
+        end = '' if m > 0 else '  // main region'
+        print(f'  0b{mask:08b},{end}')
 
-    get_set_bits(0b1010) -> [1, 3]
-    get_set_bits(0b100) -> [2]
-    """
-    bits = []
-    while mask:
-        bit = mask & -mask
-        bits.append(bit.bit_length() - 1)
-        mask ^= bit
+    for m, mask in enumerate(data.adjacency_masks):
+        end = '' if m > 0 else '  // adjacent region'
+        print(f'  0b{mask:08b},{end}')
 
-    return bits
+    for m, mask in enumerate(data.diagonal_masks):
+        end = ','
+        if m == 0:
+            end = ',  // diagonal region'
+        elif (o, m) == (O, M):
+            end = ''
+        print(f'  0b{mask:08b}{end}')
 
-
-def rotate_bits(bits: int, start: int, end: int, shift: int) -> int:
-    """
-    Circularly shifts bits[start:end] by shift positions to the right.
-
-    Returns those shifted bits in the same position as they were in the original bits.
-    """
-    mask = ((1 << end) - 1) & ~((1 << start) - 1)
-    sub_bits = (bits & mask) >> start
-    sub_bits1 = sub_bits >> shift
-    sub_bits2 = sub_bits & ((1 << shift) - 1)
-    sub_bits = sub_bits1 | (sub_bits2 << (end - start - shift))
-
-    return sub_bits << start
-
-
-def swap_bits(bits: int, start: int, end: int) -> int:
-    """
-    Swaps bits[k] with bits[start + end - k] for k in (start, (start + end) / 2).
-
-    Returns those swapped bits in the same position as they were in the original bits.
-    """
-    s = sum((1 << (start + end - i)) for i in range(start + 1, end) if bits & (1 << i))
-    return s + (bits & (1 << start))
-
-
-def reverse_bits(n: int) -> int:
-    n = (n >> 1) & 0x5555555555555555 | (n << 1) & 0xAAAAAAAAAAAAAAAA
-    n = (n >> 2) & 0x3333333333333333 | (n << 2) & 0xCCCCCCCCCCCCCCCC
-    n = (n >> 4) & 0x0F0F0F0F0F0F0F0F | (n << 4) & 0xF0F0F0F0F0F0F0F0
-    n = (n >> 8) & 0x00FF00FF00FF00FF | (n << 8) & 0xFF00FF00FF00FF00
-    n = (n >> 16) & 0x0000FFFF0000FFFF | (n << 16) & 0xFFFF0000FFFF0000
-    n = (n >> 32) & 0x00000000FFFFFFFF | (n << 32) & 0xFFFFFFFF00000000
-    return n
-
-
-class Region:
-    """
-    A subset of the L1 radius-5 neighborhood of the origin, excluding the origin.
-
-    This is represented as a mask of the 40 cells in the neighborhood, using the following layout:
-
-                24
-             39 12 25
-          38 23  4 13 26
-       37 22 11  0  5 14 27
-    36 21 10  3     1  6 15 28
-       35 20  9  2  7 16 29
-          34 19  8 17 30
-             33 18 31
-                32
-    """
-    def __init__(self, mask=0):
-        self.mask = mask
-
-    @staticmethod
-    def rotate_mask(mask: int, n: int=1) -> int:
-        out = rotate_bits(mask, 0, 4, n)
-        out += rotate_bits(mask, 4, 12, 2 * n)
-        out += rotate_bits(mask, 12, 24, 3 * n)
-        out += rotate_bits(mask, 24, 40, 4 * n)
-        return out
-
-    @staticmethod
-    def flip_mask(mask: int) -> int:
-        out = swap_bits(mask, 0, 4)
-        out += swap_bits(mask, 4, 12)
-        out += swap_bits(mask, 12, 24)
-        out += swap_bits(mask, 24, 40)
-        return out
-
-    def canonicalize(self) -> 'Region':
-        mask0 = self.mask
-        mask1 = Region.rotate_mask(mask0)
-        mask2 = Region.rotate_mask(mask1)
-        mask3 = Region.rotate_mask(mask2)
-        mask4 = Region.flip_mask(mask0)
-        mask5 = Region.rotate_mask(mask4)
-        mask6 = Region.rotate_mask(mask5)
-        mask7 = Region.rotate_mask(mask6)
-
-        # print('Canonicalizing:')
-        # print('mask0:')
-        # print(self)
-        # print('mask1:')
-        # print(Region(mask1))
-        # print('mask2:')
-        # print(Region(mask2))
-        # print('mask3:')
-        # print(Region(mask3))
-        # print('mask4:')
-        # print(Region(mask4))
-        # print('mask5:')
-        # print(Region(mask5))
-        # print('mask6:')
-        # print(Region(mask6))
-        # print('mask7:')
-        # print(Region(mask7))
-
-        # reverse bits for more intuitive canonicalization
-        masks = [mask0, mask1, mask2, mask3, mask4, mask5, mask6, mask7]
-        reversed_masks = [reverse_bits(m) for m in masks]
-        best_mask = max(reversed_masks)
-        return Region(reverse_bits(best_mask))
-
-    def __eq__(self, other):
-        return self.mask == other.mask
-
-    def __hash__(self):
-        return self.mask
-
-    def __str__(self):
-        rows = [
-            [' ', ' ', ' ', ' ', 24],
-            [' ', ' ', ' ', 39, 12, 25],
-            [' ', ' ', 38, 23, 4, 13, 26],
-            [' ', 37, 22, 11, 0, 5, 14, 27],
-            [36, 21, 10, 3, '+', 1, 6, 15, 28],
-            [' ', 35, 20, 9, 2, 7, 16, 29],
-            [' ', ' ', 34, 19, 8, 17, 30],
-            [' ', ' ', ' ', 33, 18, 31],
-            [' ', ' ', ' ', ' ', 32],
-        ]
-        for r, row in enumerate(rows):
-            for c, cell in enumerate(row):
-                if type(cell) == int:
-                    row[c] = '.' if self.mask & (1 << cell) else ' '
-
-        non_blank_rows = [row for row in rows if any(c != ' ' for c in row)]
-        return '\n'.join([''.join(row) for row in non_blank_rows])
-
-    def __repr__(self) -> str:
-        return str(self)
-
-
-class CrawlArea:
-    def __init__(self, legal_mask=0, illegal_mask=0, depth=1):
-        self.legal_mask = legal_mask
-        self.illegal_mask = illegal_mask
-
-        self.depth = depth
-        self.frontier_mask = 0
-        if depth < 5:
-            # The frontier is the set of cells that are adjacent to the legal region, without
-            # being part of the illegal region.
-            if legal_mask:
-              for b in get_set_bits(legal_mask):
-                  self.frontier_mask |= ADJACENCY_MASKS[b]
-            else:
-                self.frontier_mask = 15
-
-            self.frontier_mask &= ~legal_mask
-            self.frontier_mask &= ~illegal_mask
-
-    def legal_region(self) -> Region:
-        return Region(self.legal_mask)
-
-    def expand(self) -> Iterable['CrawlArea']:
-        if self.depth == 1:
-            assert self.legal_mask == 0, self
-            assert self.illegal_mask == 0, self
-
-            # hard-coded frontier
-            yield CrawlArea(make_mask(0), make_mask(1, 2, 3), 2)
-            yield CrawlArea(make_mask(1), make_mask(2, 3, 0), 2)
-            yield CrawlArea(make_mask(2), make_mask(3, 0, 1), 2)
-            yield CrawlArea(make_mask(3), make_mask(0, 1, 2), 2)
-            yield CrawlArea(make_mask(0, 1), make_mask(2, 3), 2)
-            yield CrawlArea(make_mask(1, 2), make_mask(3, 0), 2)
-            yield CrawlArea(make_mask(2, 3), make_mask(0, 1), 2)
-            yield CrawlArea(make_mask(3, 0), make_mask(1, 2), 2)
-        else:
-            frontier_bits = get_set_bits(self.frontier_mask)
-            B = 1 << len(frontier_bits)
-            for b in range(B):
-                legal_count = 0
-                new_legal = self.legal_mask
-                new_illegal = self.illegal_mask
-                for i, fb in enumerate(frontier_bits):
-                    if b & (1 << i):
-                        new_legal |= 1 << fb
-                        legal_count += 1
-                    else:
-                        new_illegal |= 1 << fb
-
-                if self.depth == 1 and legal_count > 2:
-                    continue
-                new_area = CrawlArea(new_legal, new_illegal, self.depth + 1)
-                yield new_area
-
-    def __eq__(self, other):
-        return self.legal_mask == other.legal_mask and self.illegal_mask == other.illegal_mask
-
-    def __hash__(self):
-        return hash((self.legal_mask, self.illegal_mask))
-
-    def __str__(self):
-        rows = [
-            [' ', ' ', ' ', ' ', 24],
-            [' ', ' ', ' ', 39, 12, 25],
-            [' ', ' ', 38, 23, 4, 13, 26],
-            [' ', 37, 22, 11, 0, 5, 14, 27],
-            [36, 21, 10, 3, '+', 1, 6, 15, 28],
-            [' ', 35, 20, 9, 2, 7, 16, 29],
-            [' ', ' ', 34, 19, 8, 17, 30],
-            [' ', ' ', ' ', 33, 18, 31],
-            [' ', ' ', ' ', ' ', 32],
-        ]
-        for r, row in enumerate(rows):
-            for c, cell in enumerate(row):
-                if type(cell) == int:
-                    legal = self.legal_mask & (1 << cell)
-                    illegal = self.illegal_mask & (1 << cell)
-                    row[c] = 'o' if legal else ('x' if illegal else ' ')
-
-        non_blank_rows = [row for row in rows if any(c != ' ' for c in row)]
-        return '\n'.join([''.join(row) for row in non_blank_rows])
-
-    def __repr__(self) -> str:
-        return str(self)
-
-
-def crawl() -> List[Region]:
-    area = CrawlArea()
-    area_list = [area]
-    area_set = set(area_list)
-    region_set = set([area.legal_region()])
-
-    while area_list:
-        new_area_list = []
-        for area in area_list:
-            for new_area in area.expand():
-                if new_area not in area_set:
-                    region = new_area.legal_region()
-                    canonical_region = region.canonicalize()
-                    # print(f'Area {n}:')
-                    # print(new_area)
-                    # print('-----------------------------')
-                    new_area_list.append(new_area)
-                    area_set.add(new_area)
-                    if canonical_region not in region_set:
-                        region_set.add(canonical_region)
-                        print(f'// Region {len(region_set) - 1}')
-                        print(canonical_region)
-                        print('-----------------------------')
-
-        area_list = new_area_list
-
-
-crawl()
+print('};  // kPieceOrientationRowMasks ')
+print('')

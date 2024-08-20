@@ -126,7 +126,7 @@ class PieceOrientation:
     def __repr__(self):
         return f'PieceOrientation({self.name})'
 
-    def get_ascii_drawing(self) -> str:
+    def get_ascii_drawing(self, xy=None) -> str:
         coordinates = self.coordinates
 
         max_x = max(coordinates[:, 0])
@@ -134,7 +134,10 @@ class PieceOrientation:
 
         char_matrix = [[' '] * (max_x + 1) for _ in range(max_y + 1)]
         for x, y in coordinates:
-            char_matrix[y][x] = 'x'
+            if (x, y) == xy:
+                char_matrix[y][x] = '+'
+            else:
+                char_matrix[y][x] = '.'
 
         return '\n'.join([''.join(c) for c in reversed(char_matrix)] + [self.name])
 
