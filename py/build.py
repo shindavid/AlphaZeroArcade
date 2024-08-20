@@ -170,7 +170,6 @@ def main():
     run(build_cmd)
 
     bin_dir = os.path.join(repo_root, target_dir, 'bin')
-    bin_postfix = 'd' if args.debug else ''
     bins = get_targets(targets, args)
     for b in bins:
         spec = GAME_SPECS_BY_NAME.get(b, None)
@@ -190,7 +189,7 @@ def main():
             print(f'Extra dependency:', os.path.join(cp_loc, os.path.split(dep)[1]))
 
     for b in bins:
-        bin_loc = os.path.join(bin_dir, f'{b}{bin_postfix}')
+        bin_loc = os.path.join(bin_dir, b)
         if os.path.isfile(bin_loc):
             relative_bin_loc = os.path.relpath(bin_loc, cwd)
             print(f'Binary location: {relative_bin_loc}')
