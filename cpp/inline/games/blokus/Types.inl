@@ -1,5 +1,7 @@
 #include <games/blokus/Types.hpp>
 
+#include <iomanip>
+
 namespace blokus {
 
 namespace detail {
@@ -49,7 +51,7 @@ struct BitBoardRange {
 
     bool operator!=(Iterator other) const { return row_ != other.row_ || col_ != other.col_; }
 
-    Location operator*() const { return Location{row_, col_}; }
+    Location operator*() const { return Location{(int8_t)row_, (int8_t)col_}; }
 
     Iterator& operator++() {
       col_++;
@@ -104,7 +106,9 @@ struct BitBoardSliceRange {
 
     bool operator!=(Iterator other) const { return row_ != other.row_ || col_ != other.col_; }
 
-    Location operator*() const { return Location{row_ + bitboard_.num_rows(), col_}; }
+    Location operator*() const {
+      return Location{int8_t(row_ + bitboard_->num_rows()), (int8_t)col_};
+    }
 
     Iterator& operator++() {
       col_++;
@@ -189,57 +193,25 @@ inline void Location::set(int8_t row, int8_t col) {
 
 inline bool Location::valid() const { return row >= 0 && col >= 0; }
 
-inline BoardString::BoardString() {
-  for (int i = 0; i < kBoardDimension; ++i) {
-    for (int j = 0; j < kBoardDimension; ++j) {
-      strs_[i * kBoardDimension + j] = ".";
-    }
-  }
+inline int Location::flatten() const {
+  return row * kBoardDimension + col;
 }
 
-inline void BoardString::print(std::ostream& os) const {
-  os << "   ";
-  for (int col = 0; col < kBoardDimension; ++col) {
-    os << static_cast<char>('A' + col);
-  }
-  os << '\n';
-  for (int row = kBoardDimension - 1; row >= 0; --row) {
-    os << std::setw(2) << (row + 1) << ' ';
-    for (int col = 0; col < kBoardDimension; ++col) {
-      os << strs_[row * kBoardDimension + col];
-    }
-    os << ' ' << std::setw(2) << (row + 1) << '\n';
-  }
-  os << "   ";
-  for (int col = 0; col < kBoardDimension; ++col) {
-    os << static_cast<char>('A' + col);
-  }
-  os << '\n';
-}
-
-inline void BoardString::set(const BitBoard& board, const std::string& str) {
-  for (Location loc : board.get_set_locations()) {
-    strs_[loc.row * kBoardDimension + loc.col] = str;
-  }
-}
-
-inline void BoardString::set(const BitBoardSlice& board, const std::string& str) {
-  for (Location loc : board.get_set_locations()) {
-    strs_[loc.row * kBoardDimension + loc.col] = str;
-  }
+inline Location Location::unflatten(int k) {
+  return {int8_t(k / kBoardDimension), int8_t(k % kBoardDimension)};
 }
 
 inline BitBoard BitBoard::operator|(const BitBoard& other) const {
   BitBoard result;
   for (int i = 0; i < kBoardDimension; ++i) {
-    result.rows[i] = rows[i] | other.rows[i];
+    result.rows_[i] = rows_[i] | other.rows_[i];
   }
   return result;
 }
 
 inline BitBoard& BitBoard::operator&=(const BitBoard& other) {
   for (int i = 0; i < kBoardDimension; ++i) {
-    rows[i] &= other.rows[i];
+    rows_[i] &= other.rows_[i];
   }
   return *this;
 }
@@ -247,31 +219,31 @@ inline BitBoard& BitBoard::operator&=(const BitBoard& other) {
 inline BitBoard BitBoard::operator~() const {
   BitBoard result;
   for (int i = 0; i < kBoardDimension; ++i) {
-    result.rows[i] = (~rows[i]) & ((1 << kBoardDimension) - 1);
+    result.rows_[i] = (~rows_[i]) & ((1 << kBoardDimension) - 1);
   }
   return result;
 }
 
 inline BitBoard& BitBoard::operator|=(const BitBoardSlice& other) {
   for (int i = 0; i < other.num_rows(); ++i) {
-    rows[i + other.start_row()] |= other.get_row(i);
+    rows_[i + other.start_row()] |= other.get_row(i);
   }
   return *this;
 }
 
 inline bool BitBoard::any() const {
   for (int i = 0; i < kBoardDimension; ++i) {
-    if (rows[i]) return true;
+    if (rows_[i]) return true;
   }
   return false;
 }
 
-inline void BitBoard::clear() { std::memset(rows, 0, sizeof(rows)); }
+inline void BitBoard::clear() { std::memset(rows_, 0, sizeof(rows_)); }
 
-inline int BitBoard::count() {
+inline int BitBoard::count() const {
   int count = 0;
   for (int i = 0; i < kBoardDimension; ++i) {
-    count += std::popcount(rows[i]);
+    count += std::popcount(rows_[i]);
   }
   return count;
 }
@@ -280,15 +252,15 @@ inline void BitBoard::clear_at_and_after(const Location& loc) {
   int r = loc.row;
   int c = loc.col;
 
-  rows[r] &= (1 << c) - 1;
+  rows_[r] &= (1 << c) - 1;
   for (int i = r + 1; i < kBoardDimension; ++i) {
-    rows[i] = 0;
+    rows_[i] = 0;
   }
 }
 
-inline bool BitBoard::get(int row, int col) const { return rows[row] & (1 << col); }
+inline bool BitBoard::get(int row, int col) const { return rows_[row] & (1 << col); }
 
-inline void BitBoard::set(int row, int col) { rows[row] |= (1 << col); }
+inline void BitBoard::set(int row, int col) { rows_[row] |= (1 << col); }
 
 inline void BitBoard::set(const Location& loc) { set(loc.row, loc.col); }
 
@@ -346,7 +318,7 @@ inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
 
 inline bool BitBoard::intersects(const BitBoardSlice& other) const {
   for (int i = 0; i < other.num_rows(); ++i) {
-    if (rows[i + other.start_row()] & other.get_row(i)) return true;
+    if (rows_[i + other.start_row()] & other.get_row(i)) return true;
   }
   return false;
 }
@@ -362,48 +334,84 @@ inline BitBoardSlice::BitBoardSlice(const uint32_t* rows, int num_rows, int row_
 
 inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
 
-inline const char* Piece::name() const { return kPieceData[index_].name.c_str(); }
+inline BoardString::BoardString() {
+  for (int i = 0; i < kBoardDimension; ++i) {
+    for (int j = 0; j < kBoardDimension; ++j) {
+      strs_[i][j] = ".";
+    }
+  }
+}
+
+inline void BoardString::print(std::ostream& os) const {
+  os << "   ";
+  for (int col = 0; col < kBoardDimension; ++col) {
+    os << static_cast<char>('A' + col);
+  }
+  os << '\n';
+  for (int row = kBoardDimension - 1; row >= 0; --row) {
+    os << std::setw(2) << (row + 1) << ' ';
+    for (int col = 0; col < kBoardDimension; ++col) {
+      os << strs_[row][col];
+    }
+    os << ' ' << std::setw(2) << (row + 1) << '\n';
+  }
+  os << "   ";
+  for (int col = 0; col < kBoardDimension; ++col) {
+    os << static_cast<char>('A' + col);
+  }
+  os << '\n';
+}
+
+inline void BoardString::set(const BitBoard& board, const std::string& str) {
+  for (Location loc : board.get_set_locations()) {
+    strs_[loc.row][loc.col] = str;
+  }
+}
+
+inline void BoardString::set(const BitBoardSlice& board, const std::string& str) {
+  for (Location loc : board.get_set_locations()) {
+    strs_[loc.row][loc.col] = str;
+  }
+}
+
+inline const char* Piece::name() const { return tables::kPieceData[index_].name; }
 
 inline auto Piece::get_corners(corner_constraint_t constraint) const {
-  int c = kPieceData[index_].corner_array_start_index;
-  int n = kPieceData[index_].num_corner_array_indices;
+  int c = tables::kPieceData[index_].corner_array_start_index;
+  int n = tables::kPieceData[index_].num_corner_array_indices;
 
   return detail::PieceOrientationCornerRange(c, c + n);
 }
 
 inline const uint8_t* PieceOrientation::row_masks() const {
-  const auto& data = kPieceOrientationData[index_];
-  return &kPieceOrientationRowMasks[data.mask_array_start_index];
+  const auto& data = tables::kPieceOrientationData[index_];
+  return &tables::kPieceOrientationRowMasks[data.mask_array_start_index];
 }
 
 inline const uint8_t* PieceOrientation::adjacent_row_masks() const {
-  const auto& data = kPieceOrientationData[index_];
-  return &kPieceOrientationRowMasks[data.mask_array_start_index + height()];
+  const auto& data = tables::kPieceOrientationData[index_];
+  return &tables::kPieceOrientationRowMasks[data.mask_array_start_index + height()];
 }
 
 inline const uint8_t* PieceOrientation::diagonal_row_masks() const {
-  const auto& data = kPieceOrientationData[index_];
-  return &kPieceOrientationRowMasks[data.mask_array_start_index + 2 * height() + 2];
+  const auto& data = tables::kPieceOrientationData[index_];
+  return &tables::kPieceOrientationRowMasks[data.mask_array_start_index + 2 * height() + 2];
 }
 
-inline int PieceOrientation::height() const {
-  return kPieceOrientationData[index_].height;
-}
+inline int PieceOrientation::height() const { return tables::kPieceOrientationData[index_].height; }
 
-inline int PieceOrientation::width() const {
-  return kPieceOrientationData[index_].width;
-}
+inline int PieceOrientation::width() const { return tables::kPieceOrientationData[index_].width; }
 
 inline Piece PieceOrientationCorner::to_piece() const {
-    return kPieceOrientationCornerData[index_].piece;
+  return tables::kPieceOrientationCornerData[index_].piece;
 }
 
 inline PieceOrientation PieceOrientationCorner::to_piece_orientation() const {
-  return kPieceOrientationCornerData[index_].piece_orientation;
+  return tables::kPieceOrientationCornerData[index_].piece_orientation;
 }
 
 inline Location PieceOrientationCorner::corner_offset() const {
-  return kPieceOrientationCornerData[index_].corner_offset;
+  return tables::kPieceOrientationCornerData[index_].corner_offset;
 }
 
 inline BitBoardSlice PieceOrientationCorner::to_bitboard_mask(Location loc) const {

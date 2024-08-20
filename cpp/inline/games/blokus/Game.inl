@@ -4,8 +4,8 @@
 
 namespace blokus {
 
-inline size_t BaseState::hash() const {
-  return util::PODHash<BaseState::core_t>{}(core);
+inline size_t Game::BaseState::hash() const {
+  return util::PODHash<core_t>{}(core);
 }
 
 inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
@@ -15,7 +15,7 @@ inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& sta
 }
 
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
-  return state.cur_color;
+  return state.core.cur_color;
 }
 
 /*

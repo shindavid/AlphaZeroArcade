@@ -41,7 +41,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
           BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
           if (move_mask.empty()) continue;
           if (!unplayable_locations.intersects(move_mask)) {
-            valid_actions[loc] = true;
+            valid_actions[loc.flatten()] = true;
             broke = true;
             break;
           }
@@ -67,13 +67,13 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
     earlier_corner_locations.clear_at_and_after(loc);  // redundancy-representation-removal
     BitBoard unplayable_locations = aux.unplayable_locations[color] | earlier_corner_locations;
 
-    corner_constraint_t constraint = unplayable_locations[color].get_corner_constraint(loc);
+    corner_constraint_t constraint = unplayable_locations.get_corner_constraint(loc);
     for (Piece piece : aux.played_pieces[color].get_unset_bits()) {
       for (PieceOrientationCorner poc : piece.get_corners(constraint)) {
         BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
         if (move_mask.empty()) continue;
         if (!unplayable_locations.intersects(move_mask)) {
-          valid_actions[s] = true;
+          valid_actions[poc] = true;
         }
       }
     }
@@ -97,7 +97,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
     } else {
       util::release_assert(action >= 0 && action < kPass);
       core.pass_count = 0;
-      core.partial_move = action;
+      core.partial_move = Location::unflatten(action);
       return Types::ActionOutcome();
     }
   } else {
@@ -110,7 +110,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
     util::release_assert(core.pass_count == 0);
 
     core.occupied_locations[color] |= move_mask;
-    aux.played_pieces[color].set(poc.piece_index());
+    aux.played_pieces[color].set(poc.to_piece());
     aux.unplayable_locations[color] |= adjacent_mask;
     aux.corner_locations[color] |= diagonal_mask;
 

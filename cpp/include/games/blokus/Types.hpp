@@ -16,8 +16,12 @@ namespace blokus {
 
 #pragma pack(push, 1)
 struct Location {
+  auto operator<=>(const Location& other) const = default;
   void set(int8_t row, int8_t col);
   bool valid() const;
+
+  int flatten() const;
+  static Location unflatten(int k);
 
   int8_t row;
   int8_t col;
@@ -56,6 +60,54 @@ static_assert(sizeof(_PieceOrientationCornerData) == 4);
 class BitBoard;
 class BitBoardSlice;
 
+/*
+ * BitBoard is suitable for storing a board-mask for the entire board
+ */
+class BitBoard {
+ public:
+  auto operator<=>(const BitBoard& other) const = default;
+  BitBoard operator|(const BitBoard& other) const;
+  BitBoard& operator&=(const BitBoard& other);
+  BitBoard operator~() const;
+  BitBoard& operator|=(const BitBoardSlice& other);
+
+  bool any() const;
+  void clear();
+  int count() const;
+  void clear_at_and_after(const Location& loc);
+  uint32_t get_row(int k) const { return rows_[k]; }
+  bool get(int row, int col) const;
+  void set(int row, int col);
+  void set(const Location& loc);
+  auto get_set_locations() const;
+  void write_to(std::bitset<kNumCells>& bitset) const;
+  corner_constraint_t get_corner_constraint(Location loc) const;
+  bool intersects(const BitBoardSlice& other) const;
+
+ protected:
+  uint32_t rows_[kBoardDimension];
+};
+
+/*
+ * BitBoardSlice uses only a subset of the rows of the board. The memory corresponding to the
+ * unused parts is not initialized.
+ */
+class BitBoardSlice {
+ public:
+  BitBoardSlice(const uint32_t* rows, int num_rows, int row_offset);
+
+  uint32_t get_row(int k) const { return rows_[k]; }
+  int num_rows() const { return num_rows_; }
+  bool empty() const { return num_rows_ == 0; }
+  int start_row() const { return start_row_; }
+  auto get_set_locations() const;
+
+ protected:
+  uint32_t rows_[kBoardDimension];
+  int num_rows_;
+  int start_row_;
+};
+
 class BoardString {
  public:
   BoardString();
@@ -68,58 +120,11 @@ class BoardString {
   std::string strs_[kBoardDimension][kBoardDimension];
 };
 
-/*
- * BitBoard is suitable for storing a board-mask for the entire board
- */
-class BitBoard {
- public:
-  BitBoard operator|(const BitBoard& other) const;
-  BitBoard& operator&=(const BitBoard& other);
-  BitBoard operator~() const;
-  BitBoard& operator|=(const BitBoardSlice& other);
-
-  bool any() const;
-  void clear();
-  int count();
-  void clear_at_and_after(const Location& loc);
-  uint32_t get_row(int k) const { return rows[k]; }
-  bool get(int row, int col) const;
-  void set(int row, int col);
-  void set(const Location& loc);
-  auto get_set_locations() const;
-  void write_to(std::bitset<kNumCells>& bitset) const;
-  corner_constraint_t get_corner_constraint(Location loc) const;
-  bool intersects(const BitBoardSlice& other) const;
-
- protected:
-  uint32_t rows[kBoardDimension];
-};
-
-/*
- * BitBoardSlice uses only a subset of the rows of the board. The memory corresponding to the
- * unused parts is not initialized.
- */
-class BitBoardSlice {
- public:
-  BitBoardSlice(const uint32_t* rows, int num_rows, int row_offset);
-
-  uint32_t get_row(int k) const { return rows[k]; }
-  int num_rows() const { return num_rows_; }
-  bool empty() const { return num_rows_ == 0; }
-  int start_row() const { return start_row_; }
-  auto get_set_locations() const;
-
- protected:
-  uint32_t rows[kBoardDimension];
-  int num_rows_;
-  int start_row_;
-};
-
 #pragma pack(push, 1)
 class Piece {
  public:
   Piece(piece_index_t index) : index_(index) {}
-  piece_index_t operator() const { return index_; }
+  operator piece_index_t() const { return index_; }
   const char* name() const;
   auto get_corners(corner_constraint_t) const;
 
@@ -133,7 +138,7 @@ static_assert(sizeof(Piece) == 1);
 class PieceOrientation {
  public:
   PieceOrientation(piece_orientation_index_t index) : index_(index) {}
-  piece_orientation_index_t operator() const { return index_; }
+  operator piece_orientation_index_t() const { return index_; }
   const uint8_t* row_masks() const;
   const uint8_t* adjacent_row_masks() const;
   const uint8_t* diagonal_row_masks() const;
@@ -150,7 +155,7 @@ static_assert(sizeof(PieceOrientation) == 1);
 class PieceOrientationCorner {
  public:
   PieceOrientationCorner(piece_orientation_corner_index_t index) : index_(index) {}
-  piece_orientation_corner_index_t operator() const { return index_; }
+  operator piece_orientation_corner_index_t() const { return index_; }
   Piece to_piece() const;
   PieceOrientation to_piece_orientation() const;
   Location corner_offset() const;

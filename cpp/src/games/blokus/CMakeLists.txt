@@ -1,15 +1,18 @@
 add_executable(blokus_tests
         main/UnitTests.cpp
+        Game.cpp
         Pieces.cpp
         )
 
 add_executable(blokus_exe
         main/Blokus.cpp
+        Game.cpp
         Pieces.cpp
         )
 
 add_library(blokus_ffi
         SHARED shared/Blokus_ffi.cpp
+        Game.cpp
         Pieces.cpp
 )
 

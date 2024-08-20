@@ -36,7 +36,8 @@ namespace util {
 // Generic hash function for POD types
 template <typename T>
 struct PODHash {
-  static_assert(std::is_pod_v<T>, "PODHash can only be used with POD types");
+  static_assert(std::is_standard_layout_v<T>, "PODHash can only be used with POD types");
+  static_assert(std::is_trivial_v<T>, "PODHash can only be used with POD types");
   std::size_t operator()(const T& s) const;
 };
 

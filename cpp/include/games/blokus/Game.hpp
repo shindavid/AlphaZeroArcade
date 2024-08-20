@@ -14,9 +14,8 @@
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/TrainingTargets.hpp>
-#include <games/blokus/BitBoard.hpp>
 #include <games/blokus/Constants.hpp>
-#include <games/blokus/Pieces.hpp>
+#include <games/blokus/Types.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -43,11 +42,14 @@ class Game {
    * TODO: use Zobrist-hashing to speed-up hashing.
    */
   struct BaseState {
-    auto operator<=>(const BaseState& other) const = default;
+    auto operator<=>(const BaseState& other) const { return core <=> other.core; }
+    bool operator==(const BaseState& other) const { return core == other.core; }
+    bool operator!=(const BaseState& other) const { return core != other.core; }
     size_t hash() const;
 
     // core_t unambiguously represents the game state.
     struct core_t {
+      auto operator<=>(const core_t& other) const = default;
       BitBoard occupied_locations[kNumColors];
 
       color_t cur_color;
@@ -114,7 +116,8 @@ class Game {
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kBoardDimension, kBoardDimension>>;
+    using Tensor =
+        eigen_util::FTensor<Eigen::Sizes<Constants::kNumPlayers, kBoardDimension, kBoardDimension>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 
