@@ -71,12 +71,12 @@ struct BitBoardRange {
 
    private:
     void skip_to_next() {
-      while (row_ < kBoardDimension && !bitboard_->get_row(row_)) {
+      while (row_ < kBoardDimension && (bitboard_->get_row(row_) >> col_) == 0) {
         row_++;
         col_ = 0;
       }
       if (row_ < kBoardDimension) {
-        col_ = std::countr_zero(bitboard_->get_row(row_));
+        col_ += std::countr_zero(bitboard_->get_row(row_) >> col_);
       }
     }
 
@@ -128,12 +128,12 @@ struct BitBoardSliceRange {
 
    private:
     void skip_to_next() {
-      while (row_ < bitboard_->num_rows() && !bitboard_->get_row(row_)) {
+      while (row_ < kBoardDimension && (bitboard_->get_row(row_) >> col_) == 0) {
         row_++;
         col_ = 0;
       }
       if (row_ < bitboard_->num_rows()) {
-        col_ = std::countr_zero(bitboard_->get_row(row_));
+        col_ += std::countr_zero(bitboard_->get_row(row_) >> col_);
       }
     }
 
