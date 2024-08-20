@@ -1,6 +1,7 @@
 #include <util/CppUtil.hpp>
 
 #include <chrono>
+#include <cstring>
 
 namespace util {
 
