@@ -27,17 +27,18 @@ static_assert(sizeof(Location) == 2);
 
 // Backs the Piece type
 struct _PieceData {
-  std::string name;
+  char name[3];
+  int8_t num_corner_array_indices;
   int corner_array_start_index;
-  int num_corner_array_indices;
 };
+static_assert(sizeof(_PieceData) == 8);
 
 // Backs the PieceOrientation type
 #pragma pack(push, 1)
 struct _PieceOrientationData {
   int16_t mask_array_start_index;
-  int8_t height;
   int8_t width;
+  int8_t height;
 };
 #pragma pack(pop)
 static_assert(sizeof(_PieceOrientationData) == 4);
@@ -182,11 +183,10 @@ static_assert(sizeof(PieceMask) == 4);
 
 namespace tables {
 
-extern const _PieceData kPieceData[];
-extern const _PieceOrientationData kPieceOrientationData[];
-extern const _PieceOrientationCornerData kPieceOrientationCornerData[];
-extern const uint8_t kPieceOrientationRowMasks[];
-extern const piece_orientation_corner_index_t kPieceOrientationCornerArray[];
+extern const _PieceData kPieceData[kNumPieces];
+extern const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations];
+extern const _PieceOrientationCornerData kPieceOrientationCornerData[kNumPieceOrientationCorners];
+extern const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks];
 
 }  // tables
 

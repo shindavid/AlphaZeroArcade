@@ -153,9 +153,7 @@ struct PieceOrientationCornerRange {
 
     bool operator==(Iterator other) const { return index_ == other.index_; }
     bool operator!=(Iterator other) const { return index_ != other.index_; }
-    PieceOrientationCorner operator*() const {
-      return kPieceOrientationCornerArray[index_];
-    }
+    PieceOrientationCorner operator*() const { return index_; }
 
     Iterator& operator++() {
       index_++;

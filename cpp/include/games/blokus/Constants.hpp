@@ -61,12 +61,13 @@ const diagonal_direction_t dNE = 2;
 const diagonal_direction_t dSE = 3;
 
 const int kNumDiagonalDirections = 4;
+const int kMaxPieceHeight = 5;
+const int kMaxScore = 63;  // a generous guess
 const int kBoardDimension = 20;
 const int kNumCells = kBoardDimension * kBoardDimension;
 const int kNumPieceOrientations = 91;
-const int kNumPieceOrientationSquares = 414;
-const int kMaxPieceHeight = 5;
-const int kMaxScore = 89;
+const int kNumPieceOrientationCorners = 309;
+const int kNumPieceOrientationRowMasks = 1102;
 
 const core::action_t kPass = kNumCells;
 
