@@ -18,7 +18,21 @@ std::string get_repr(const B& board) {
 
   std::ostringstream ss;
   s.print(ss);
+  return ss.str();
+}
 
+std::string make_full_piece_repr(PieceOrientationCorner poc, Location loc) {
+  BitBoardSlice mask = poc.to_bitboard_mask(loc);
+  BitBoardSlice adj_mask = poc.to_adjacent_bitboard_mask(loc);
+  BitBoardSlice diag_mask = poc.to_diagonal_bitboard_mask(loc);
+
+  BoardString s;
+  s.set(mask, "o");
+  s.set(adj_mask, "+");
+  s.set(diag_mask, "*");
+
+  std::ostringstream ss;
+  s.print(ss);
   return ss.str();
 }
 
@@ -35,6 +49,13 @@ bool validate_repr(const char* func, int line, const std::string& actual_repr,
   } else {
     return true;
   }
+}
+
+// Return true if the test passes
+bool full_piece_repr_test(const char* file, int line, PieceOrientationCorner poc, int8_t row,
+                          int8_t col, const std::string& expected_repr) {
+  std::string actual_repr = make_full_piece_repr(poc, Location{row, col});
+  return validate_repr(file, line, actual_repr, expected_repr);
 }
 
 void test_location() {
@@ -465,7 +486,302 @@ void test_bit_board() {
 }
 
 void test_piece_orientation_corner() {
-  // TODO
+  // 272: Y5/1
+  //
+  // *....*
+  // .xooo.
+  // *.o..*
+  //  *.*
+  PieceOrientationCorner poc(272);
+
+  Piece p = poc.to_piece();
+  PieceOrientation po = poc.to_piece_orientation();
+
+  if (p != 19) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::to_piece() failure (%d)\n", int(p));
+    return;
+  }
+
+  if (po != 80) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::to_piece_orientation() failure (%d)\n", int(po));
+    return;
+  }
+
+  Location expected_loc{2, 1};
+  Location actual_loc = poc.corner_offset();
+
+  if (actual_loc != expected_loc) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::corner_offset() failure (%d, %d != %d, %d)\n",
+           (int)actual_loc.row, (int)actual_loc.col, (int)expected_loc.row, (int)expected_loc.col);
+    return;
+  }
+
+  BitBoardSlice mask_0_0 = poc.to_bitboard_mask(Location{0, 0});
+  BitBoardSlice mask_0_19 = poc.to_bitboard_mask(Location{0, 19});
+  BitBoardSlice mask_19_0 = poc.to_bitboard_mask(Location{19, 0});
+  BitBoardSlice mask_19_19 = poc.to_bitboard_mask(Location{19, 19});
+
+  if (!mask_0_0.empty()) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::to_bitboard_mask() failure (0, 0) - expected empty\n");
+    return;
+  }
+
+  if (!mask_0_19.empty()) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::to_bitboard_mask() failure (0, 19) - expected empty\n");
+    return;
+  }
+
+  if (mask_19_0.empty()) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::to_bitboard_mask() failure (19, 0) - expected nonempty\n");
+    return;
+  }
+
+  if (!mask_19_19.empty()) {
+    global_fail_count++;
+    printf("PieceOrientationCorner::to_bitboard_mask() failure (0, 19) - expected empty\n");
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 19, 0,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 oooo+............... 20\n"
+                            "19 +o++*............... 19\n"
+                            "18 *+*................. 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 ....................  3\n"
+                            " 2 ....................  2\n"
+                            " 1 ....................  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 19, 1,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 +oooo+.............. 20\n"
+                            "19 *+o++*.............. 19\n"
+                            "18 .*+*................ 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 ....................  3\n"
+                            " 2 ....................  2\n"
+                            " 1 ....................  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 18, 0,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 ++++*............... 20\n"
+                            "19 oooo+............... 19\n"
+                            "18 +o++*............... 18\n"
+                            "17 *+*................. 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 ....................  3\n"
+                            " 2 ....................  2\n"
+                            " 1 ....................  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 18, 1,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 *++++*.............. 20\n"
+                            "19 +oooo+.............. 19\n"
+                            "18 *+o++*.............. 18\n"
+                            "17 .*+*................ 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 ....................  3\n"
+                            " 2 ....................  2\n"
+                            " 1 ....................  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 0,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 .................... 20\n"
+                            "19 .................... 19\n"
+                            "18 .................... 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 ++++*...............  3\n"
+                            " 2 oooo+...............  2\n"
+                            " 1 +o++*...............  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 1,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 .................... 20\n"
+                            "19 .................... 19\n"
+                            "18 .................... 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 *++++*..............  3\n"
+                            " 2 +oooo+..............  2\n"
+                            " 1 *+o++*..............  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 2, 0,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 .................... 20\n"
+                            "19 .................... 19\n"
+                            "18 .................... 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ++++*...............  4\n"
+                            " 3 oooo+...............  3\n"
+                            " 2 +o++*...............  2\n"
+                            " 1 *+*.................  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 2, 1,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 .................... 20\n"
+                            "19 .................... 19\n"
+                            "18 .................... 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 *++++*..............  4\n"
+                            " 3 +oooo+..............  3\n"
+                            " 2 *+o++*..............  2\n"
+                            " 1 .*+*................  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
+  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 16,
+                            "   ABCDEFGHIJKLMNOPQRST\n"
+                            "20 .................... 20\n"
+                            "19 .................... 19\n"
+                            "18 .................... 18\n"
+                            "17 .................... 17\n"
+                            "16 .................... 16\n"
+                            "15 .................... 15\n"
+                            "14 .................... 14\n"
+                            "13 .................... 13\n"
+                            "12 .................... 12\n"
+                            "11 .................... 11\n"
+                            "10 .................... 10\n"
+                            " 9 ....................  9\n"
+                            " 8 ....................  8\n"
+                            " 7 ....................  7\n"
+                            " 6 ....................  6\n"
+                            " 5 ....................  5\n"
+                            " 4 ....................  4\n"
+                            " 3 ...............*++++  3\n"
+                            " 2 ...............+oooo  2\n"
+                            " 1 ...............*+o++  1\n"
+                            "   ABCDEFGHIJKLMNOPQRST\n")) {
+    return;
+  }
+
   printf("Success: %s()\n", __func__);
   global_pass_count++;
 }

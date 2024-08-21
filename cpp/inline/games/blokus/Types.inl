@@ -107,7 +107,7 @@ struct BitBoardSliceRange {
     bool operator!=(Iterator other) const { return row_ != other.row_ || col_ != other.col_; }
 
     Location operator*() const {
-      return Location{int8_t(row_ + bitboard_->num_rows()), (int8_t)col_};
+      return Location{int8_t(row_), (int8_t)col_};
     }
 
     Iterator& operator++() {
@@ -128,11 +128,11 @@ struct BitBoardSliceRange {
 
    private:
     void skip_to_next() {
-      while (row_ < kBoardDimension && (bitboard_->get_row(row_) >> col_) == 0) {
+      while (row_ < bitboard_->end_row() && (bitboard_->get_row(row_) >> col_) == 0) {
         row_++;
         col_ = 0;
       }
-      if (row_ < bitboard_->num_rows()) {
+      if (row_ < bitboard_->end_row()) {
         col_ += std::countr_zero(bitboard_->get_row(row_) >> col_);
       }
     }
@@ -144,8 +144,8 @@ struct BitBoardSliceRange {
 
   BitBoardSliceRange(const BitBoardSlice* bitboard) : bitboard_(bitboard) {}
 
-  Iterator begin() const { return Iterator(bitboard_, 0, 0); }
-  Iterator end() const { return Iterator(bitboard_, bitboard_->num_rows(), 0); }
+  Iterator begin() const { return Iterator(bitboard_, bitboard_->start_row(), 0); }
+  Iterator end() const { return Iterator(bitboard_, bitboard_->end_row(), 0); }
 
  private:
   const BitBoardSlice* bitboard_;
@@ -337,7 +337,7 @@ inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSl
 inline BoardString::BoardString() {
   for (int i = 0; i < kBoardDimension; ++i) {
     for (int j = 0; j < kBoardDimension; ++j) {
-      strs_[i][j] = ".";
+      strs_[i][j] = std::string(".");
     }
   }
 }
@@ -362,15 +362,20 @@ inline void BoardString::print(std::ostream& os) const {
   os << '\n';
 }
 
+inline void BoardString::set(Location loc, const std::string& str) {
+  util::debug_assert(strs_[loc.row][loc.col] == ".");
+  strs_[loc.row][loc.col] = str;
+}
+
 inline void BoardString::set(const BitBoard& board, const std::string& str) {
   for (Location loc : board.get_set_locations()) {
-    strs_[loc.row][loc.col] = str;
+    set(loc, str);
   }
 }
 
 inline void BoardString::set(const BitBoardSlice& board, const std::string& str) {
   for (Location loc : board.get_set_locations()) {
-    strs_[loc.row][loc.col] = str;
+    set(loc, str);
   }
 }
 
@@ -427,20 +432,27 @@ inline BitBoardSlice PieceOrientationCorner::to_bitboard_mask(Location loc) cons
   Location offset = corner_offset();
 
   // out-of-bounds checks
-  int top_margin = kBoardDimension - loc.row + offset.row - height;
-  int bot_margin = loc.row - offset.row;
-  int left_margin = loc.col - offset.col;
-  int right_margin = kBoardDimension - loc.col + offset.col - width;
+  int top_margin = kBoardDimension - loc.row + offset.row - height - 1;
+  int bot_margin = loc.row - offset.row + 1;
+  int left_margin = loc.col - offset.col + 1;
+  int right_margin = kBoardDimension - loc.col + offset.col - width - 1;
+
   if (top_margin < 0 || bot_margin < 0 || left_margin < 0 || right_margin < 0) {
     return BitBoardSlice(nullptr, 0, 0);
   }
 
   uint32_t rows[height];
-  for (int i = 0; i < height; ++i) {
-    rows[i] = uint32_t(base_rows[i]) << (loc.col - offset.col);
+  if (loc.col < offset.col) {
+    for (int i = 0; i < height; ++i) {
+      rows[i] = uint32_t(base_rows[i]) >> (offset.col - loc.col);
+    }
+  } else {
+    for (int i = 0; i < height; ++i) {
+      rows[i] = uint32_t(base_rows[i]) << (loc.col - offset.col);
+    }
   }
 
-  return BitBoardSlice(rows, height, loc.row - offset.row);
+  return BitBoardSlice(rows, height, bot_margin);
 }
 
 inline BitBoardSlice PieceOrientationCorner::to_adjacent_bitboard_mask(Location loc) const {
@@ -449,10 +461,10 @@ inline BitBoardSlice PieceOrientationCorner::to_adjacent_bitboard_mask(Location 
   int width = po.width();
   Location offset = corner_offset();
 
-  int top_margin = kBoardDimension - loc.row + offset.row - height;
-  int bot_margin = loc.row - offset.row;
-  int left_margin = loc.col - offset.col;
-  int right_margin = kBoardDimension - loc.col + offset.col - width;
+  int top_margin = kBoardDimension - loc.row + offset.row - height - 1;
+  int bot_margin = loc.row - offset.row + 1;
+  int left_margin = loc.col - offset.col + 1;
+  int right_margin = kBoardDimension - loc.col + offset.col - width - 1;
 
   util::debug_assert(top_margin >= 0);
   util::debug_assert(bot_margin >= 0);
@@ -468,10 +480,19 @@ inline BitBoardSlice PieceOrientationCorner::to_adjacent_bitboard_mask(Location 
   int n_rows = height + !top_overflow +!bot_overflow;
 
   uint32_t rows[n_rows];
-  for (int i = 0; i < n_rows; ++i) {
-    rows[i] = (uint32_t(base_rows[i + bot_overflow]) << left_margin) & ((1 << kBoardDimension) - 1);
+  if (left_margin == 0) {
+    for (int i = 0; i < n_rows; ++i) {
+      uint32_t base = uint32_t(base_rows[i + bot_overflow]);
+      rows[i] = base >> 1;
+    }
+  } else {
+    for (int i = 0; i < n_rows; ++i) {
+      uint32_t base = uint32_t(base_rows[i + bot_overflow]);
+      rows[i] = (base << (left_margin - 1)) & ((1 << kBoardDimension) - 1);
+    }
   }
-  return BitBoardSlice(rows, height, loc.row - offset.row);
+
+  return BitBoardSlice(rows, n_rows, bot_margin - !bot_overflow);
 }
 
 inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location loc) const {
@@ -480,10 +501,10 @@ inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location 
   int width = po.width();
   Location offset = corner_offset();
 
-  int top_margin = kBoardDimension - loc.row + offset.row - height;
-  int bot_margin = loc.row - offset.row;
-  int left_margin = loc.col - offset.col;
-  int right_margin = kBoardDimension - loc.col + offset.col - width;
+  int top_margin = kBoardDimension - loc.row + offset.row - height - 1;
+  int bot_margin = loc.row - offset.row + 1;
+  int left_margin = loc.col - offset.col + 1;
+  int right_margin = kBoardDimension - loc.col + offset.col - width - 1;
 
   util::debug_assert(top_margin >= 0);
   util::debug_assert(bot_margin >= 0);
@@ -499,10 +520,19 @@ inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location 
   int n_rows = height + !top_overflow + !bot_overflow;
 
   uint32_t rows[n_rows];
-  for (int i = 0; i < n_rows; ++i) {
-    rows[i] = (uint32_t(base_rows[i + bot_overflow]) << left_margin) & ((1 << kBoardDimension) - 1);
+  if (left_margin == 0) {
+    for (int i = 0; i < n_rows; ++i) {
+      uint32_t base = uint32_t(base_rows[i + bot_overflow]);
+      rows[i] = base >> 1;
+    }
+  } else {
+    for (int i = 0; i < n_rows; ++i) {
+      uint32_t base = uint32_t(base_rows[i + bot_overflow]);
+      rows[i] = (base << (left_margin - 1)) & ((1 << kBoardDimension) - 1);
+    }
   }
-  return BitBoardSlice(rows, height, loc.row - offset.row);
+
+  return BitBoardSlice(rows, n_rows, bot_margin - !bot_overflow);
 }
 
 inline auto PieceMask::get_unset_bits() const {

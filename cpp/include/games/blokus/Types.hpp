@@ -107,6 +107,7 @@ class BitBoardSlice {
   int num_rows() const { return num_rows_; }
   bool empty() const { return num_rows_ == 0; }
   int start_row() const { return start_row_; }
+  int end_row() const { return start_row_ + num_rows_; }
   auto get_set_locations() const;
 
  protected:
@@ -119,7 +120,8 @@ class BoardString {
  public:
   BoardString();
   void print(std::ostream&) const;
-  void set(Location loc, const std::string& str) { strs_[loc.row][loc.col] = str; }
+
+  void set(Location loc, const std::string& str);
   void set(const BitBoard& board, const std::string& str);
   void set(const BitBoardSlice& board, const std::string& str);
 
