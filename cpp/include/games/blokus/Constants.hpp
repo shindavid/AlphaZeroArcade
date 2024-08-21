@@ -15,15 +15,15 @@ using group_subset_t = uint8_t;
 
 // which directions are unblocked (at most 2 can ever be unblocked)
 enum corner_constraint_t : uint8_t {
-  ccN,
-  ccE,
-  ccS,
-  ccW,
-  ccNE,
-  ccSE,
-  ccSW,
-  ccNW,
-  ccNone
+  ccNone = 0,
+  ccN = 1,
+  ccE = 2,
+  ccS = 3,
+  ccW = 4,
+  ccNE = 5,
+  ccSE = 6,
+  ccSW = 7,
+  ccNW = 8
 };
 
 const piece_index_t pO1 = 0;
@@ -68,6 +68,7 @@ const int kNumCells = kBoardDimension * kBoardDimension;
 const int kNumPieceOrientations = 91;
 const int kNumPieceOrientationCorners = 309;
 const int kNumPieceOrientationRowMasks = 1102;
+const int kCornerConstraintArraySize = 709;
 
 const core::action_t kPass = kNumCells;
 

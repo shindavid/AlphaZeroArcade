@@ -157,7 +157,7 @@ struct PieceOrientationCornerRange {
 
     bool operator==(Iterator other) const { return index_ == other.index_; }
     bool operator!=(Iterator other) const { return index_ != other.index_; }
-    PieceOrientationCorner operator*() const { return index_; }
+    PieceOrientationCorner operator*() const { return tables::kCornerConstraintArray[index_]; }
 
     Iterator& operator++() {
       index_++;
@@ -377,10 +377,15 @@ inline void BoardString::set(const BitBoardSlice& board, const std::string& str)
 inline const char* Piece::name() const { return tables::kPieceData[index_].name; }
 
 inline auto Piece::get_corners(corner_constraint_t constraint) const {
-  int c = tables::kPieceData[index_].corner_array_start_index;
-  int n = tables::kPieceData[index_].num_corner_array_indices;
+  const auto& data = tables::kPieceData[index_];
 
-  return detail::PieceOrientationCornerRange(c, c + n);
+  int start = data.corner_range_start;
+  for (int c = 0; c < int(constraint); ++c) {
+    start += data.subrange_lengths[(c + 3) / 4];
+  }
+  int end = start + data.subrange_lengths[(int(constraint) + 3) / 4];
+
+  return detail::PieceOrientationCornerRange(start, end);
 }
 
 inline const uint8_t* PieceOrientation::row_masks() const {

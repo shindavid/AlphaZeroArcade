@@ -137,7 +137,7 @@ class PieceOrientation:
             if (x, y) == xy:
                 char_matrix[y][x] = '+'
             else:
-                char_matrix[y][x] = '.'
+                char_matrix[y][x] = 'o'
 
         return '\n'.join([''.join(c) for c in reversed(char_matrix)] + [self.name])
 

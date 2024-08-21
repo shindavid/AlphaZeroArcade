@@ -32,8 +32,15 @@ static_assert(sizeof(Location) == 2);
 // Backs the Piece type
 struct _PieceData {
   char name[3];
-  int8_t num_corner_array_indices;
-  int corner_array_start_index;
+  int8_t subrange_lengths[3];  // indexed by number of unblocked directions
+
+  /*
+   * Indexes into tables::kCornerConstraintArray. Starting from this point, the array contains
+   * subsequences for corner_constraint_t(0), corner_constraint_t(1), ...
+   *
+   * The length of each subsequence can be found in num_oriented_corners.
+   */
+  int16_t corner_range_start;
 };
 static_assert(sizeof(_PieceData) == 8);
 
@@ -188,10 +195,24 @@ static_assert(sizeof(PieceMask) == 4);
 
 namespace tables {
 
+/*
+ * The following tables are computed by py/games/blokus/cpp_writer.py
+ *
+ * Memory size:
+ *
+ * kPieceData: 8 * 21 = 168 bytes
+ * kPieceOrientationData: 4 * 91 = 364 bytes
+ * kPieceOrientationCornerData: 4 * 309 = 1236 bytes
+ * kPieceOrientationRowMasks: 1 * 1102 = 1102 bytes
+ * kCornerConstraintArray: 2 * 709 = 1418 bytes
+ *
+ * Total: 4288 bytes
+ */
 extern const _PieceData kPieceData[kNumPieces];
 extern const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations];
 extern const _PieceOrientationCornerData kPieceOrientationCornerData[kNumPieceOrientationCorners];
 extern const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks];
+extern const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintArraySize];
 
 }  // tables
 
