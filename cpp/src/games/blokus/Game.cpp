@@ -150,13 +150,18 @@ Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) 
 
 void Game::IO::print_state(std::ostream& os, const BaseState& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
+  if (last_action <= kPass) {
+    // This is to avoid printing the board state after a partial-action. This mechanism is a bit
+    // awkward; consider implementing this in a more generic game-agnostic way.
+    return;
+  }
   BoardString bs;
 
   static std::string color_strs[kNumColors] = {
-      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kCircle("B"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kCircle("G"), ansi::kReset(""))};
+      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
 
   for (color_t c = 0; c < kNumColors; ++c) {
     bs.set(state.core.occupied_locations[c], color_strs[c]);
@@ -175,6 +180,7 @@ void Game::IO::print_state(std::ostream& os, const BaseState& state, core::actio
     if (player_names) {
       cx += snprintf(buffer + cx, buf_size - cx, " [%s]", (*player_names)[c].c_str());
     }
+    cx += snprintf(buffer + cx, buf_size - cx, "\n");
   }
 
   util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);

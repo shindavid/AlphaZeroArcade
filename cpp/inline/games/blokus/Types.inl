@@ -361,7 +361,7 @@ inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
         break;
       }
     }
-    if (trivial) continue;
+    if (omit_trivial_rows && trivial) continue;
 
     os << std::setw(2) << (row + 1) << ' ';
     for (int col = 0; col < kBoardDimension; ++col) {

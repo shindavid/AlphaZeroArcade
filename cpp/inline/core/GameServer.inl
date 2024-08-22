@@ -40,6 +40,9 @@ auto GameServer<Game>::Params::make_options_description() {
       .template add_flag<"display-progress-bar", "hide-progress-bar">(
           &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
           "hide progress bar")
+      .template add_flag<"print-game-states", "do-not-print-game-states">(
+          &print_game_states, "print game state between moves",
+          "do not print game state between moves")
       .template add_flag<"announce-game-results", "do-not-announce-game-results">(
           &announce_game_results, "announce result after each individual game",
           "do not announce result after each individual game")
@@ -279,6 +282,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
   FullState state;
   Rules::init_state(state);
+  if (shared_data_.params().print_game_states) {
+    Game::IO::print_state(std::cout, state, -1, &player_names);
+  }
   while (true) {
     seat_index_t seat = Rules::get_current_player(state);
     Player* player = players[seat];
@@ -301,6 +307,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       }
     } else {
       outcome = Rules::apply(state, action);
+      if (shared_data_.params().print_game_states) {
+        Game::IO::print_state(std::cout, state, action, &player_names);
+      }
       for (auto player2 : players) {
         player2->receive_state_change(seat, state, action);
       }

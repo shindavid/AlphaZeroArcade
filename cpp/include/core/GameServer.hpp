@@ -74,6 +74,7 @@ class GameServer {
     int parallelism = 256;  // number of games to run simultaneously
     int port = 0;
     bool display_progress_bar = false;
+    bool print_game_states = false;  // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match
     bool respect_victory_hints = false;  // quit game early if a player claims imminent victory
   };

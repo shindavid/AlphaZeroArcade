@@ -1,6 +1,7 @@
 #include <games/blokus/Game.hpp>
 
 #include <util/CppUtil.hpp>
+#include <util/StringUtil.hpp>
 
 namespace blokus {
 
@@ -30,7 +31,7 @@ inline std::string Game::IO::action_to_str(core::action_t action) {
     Location loc = Location::unflatten(action);
     int row = loc.row + 1;
     char col = 'A' + loc.col;
-    return std::string(1, col) + std::to_string(row);
+    return util::create_string("%c%d", col, row);
   }
 
   PieceOrientationCorner poc = PieceOrientationCorner::from_action(action);

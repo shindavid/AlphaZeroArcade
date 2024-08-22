@@ -11,6 +11,7 @@ namespace ansi {
  * Optional argument is used in non-tty mode.
  */
 inline const char* kCircle(const char* s=nullptr) { return util::tty_mode() ? "\u25CF" : s; }
+inline const char* kRectangle(const char* s=nullptr) { return util::tty_mode() ? "\u2587" : s; }
 inline const char* kBlink(const char* s=nullptr) { return util::tty_mode() ? "\033[5m" : s; }
 inline const char* kRed(const char* s=nullptr) { return util::tty_mode() ? "\033[31m" : s; }
 inline const char* kYellow(const char* s=nullptr) { return util::tty_mode() ? "\033[33m" : s; }
