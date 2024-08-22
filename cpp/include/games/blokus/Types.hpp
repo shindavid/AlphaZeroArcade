@@ -103,7 +103,7 @@ class BitBoardSlice {
  public:
   BitBoardSlice(const uint32_t* rows, int num_rows, int row_offset);
 
-  uint32_t get_row(int k) const { return rows_[k]; }
+  uint32_t get_row(int k) const;
   int num_rows() const { return num_rows_; }
   bool empty() const { return num_rows_ == 0; }
   int start_row() const { return start_row_; }

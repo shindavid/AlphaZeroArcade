@@ -225,8 +225,8 @@ inline BitBoard BitBoard::operator~() const {
 }
 
 inline BitBoard& BitBoard::operator|=(const BitBoardSlice& other) {
-  for (int i = 0; i < other.num_rows(); ++i) {
-    rows_[i + other.start_row()] |= other.get_row(i);
+  for (int i = other.start_row(); i < other.end_row(); ++i) {
+    rows_[i] |= other.get_row(i);
   }
   return *this;
 }
@@ -317,8 +317,8 @@ inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
 }
 
 inline bool BitBoard::intersects(const BitBoardSlice& other) const {
-  for (int i = 0; i < other.num_rows(); ++i) {
-    if (rows_[i + other.start_row()] & other.get_row(i)) return true;
+  for (int i = other.start_row(); i < other.end_row(); ++i) {
+    if (rows_[i] & other.get_row(i)) return true;
   }
   return false;
 }
@@ -330,6 +330,11 @@ inline BitBoardSlice::BitBoardSlice(const uint32_t* rows, int num_rows, int row_
   for (int i = 0; i < num_rows; ++i) {
     rows_[i + row_offset] = rows[i];
   }
+}
+
+inline uint32_t BitBoardSlice::get_row(int k) const {
+  util::debug_assert(k >= start_row_ && k < start_row_ + num_rows_);
+  return rows_[k];
 }
 
 inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
