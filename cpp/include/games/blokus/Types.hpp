@@ -168,6 +168,10 @@ class PieceOrientationCorner {
   Piece to_piece() const;
   PieceOrientation to_piece_orientation() const;
   Location corner_offset() const;
+  std::string name() const;
+
+  static PieceOrientationCorner from_action(core::action_t a);
+  core::action_t to_action() const { return index_ + kNumCells + 1; }
 
   BitBoardSlice to_bitboard_mask(Location loc) const;  // returns empty slice if out-of-bounds
   BitBoardSlice to_adjacent_bitboard_mask(Location loc) const;  // assumes in-bounds

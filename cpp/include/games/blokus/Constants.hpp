@@ -69,6 +69,22 @@ const int kNumPieceOrientations = 91;
 const int kNumPieceOrientationCorners = 309;
 const int kNumPieceOrientationRowMasks = 1102;
 const int kCornerConstraintArraySize = 709;
+const int kNumSquaresPerColor = 89;
+
+/*
+ * We split the move into two parts:
+ *
+ * 1. Location (or pass)
+ * 2. Piece/orientation/corner to place on that location
+ *
+ * To allow an action to be interpretable in a context-free manner, we use disjoint regions of
+ * the action space for each part of the move.
+ *
+ * The first part contributes (kNumCells + 1) values (+1 for pass).
+ *
+ * The second part contributes kNumPieceOrientationCorners values.
+ */
+const int kNumActions = kNumCells + kNumPieceOrientationCorners + 1;
 
 const core::action_t kPass = kNumCells;
 

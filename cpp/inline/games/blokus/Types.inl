@@ -438,6 +438,16 @@ inline Location PieceOrientationCorner::corner_offset() const {
   return tables::kPieceOrientationCornerData[index_].corner_offset;
 }
 
+inline std::string PieceOrientationCorner::name() const {
+  // TODO: better name
+  return std::to_string(index_);
+}
+
+inline PieceOrientationCorner PieceOrientationCorner::from_action(core::action_t a) {
+  util::debug_assert(a >= kNumCells + 1 && a < kNumActions);
+  return a - kNumCells - 1;
+}
+
 inline BitBoardSlice PieceOrientationCorner::to_bitboard_mask(Location loc) const {
   PieceOrientation po = to_piece_orientation();
   const uint8_t* base_rows = po.row_masks();

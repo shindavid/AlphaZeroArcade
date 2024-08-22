@@ -14,6 +14,7 @@ inline const char* kCircle(const char* s=nullptr) { return util::tty_mode() ? "\
 inline const char* kBlink(const char* s=nullptr) { return util::tty_mode() ? "\033[5m" : s; }
 inline const char* kRed(const char* s=nullptr) { return util::tty_mode() ? "\033[31m" : s; }
 inline const char* kYellow(const char* s=nullptr) { return util::tty_mode() ? "\033[33m" : s; }
+inline const char* kGreen(const char* s=nullptr) { return util::tty_mode() ? "\033[32m" : s; }
 inline const char* kBlue(const char* s=nullptr) { return util::tty_mode() ? "\033[34m" : s; }
 inline const char* kWhite(const char* s=nullptr) { return util::tty_mode() ? "\033[37m" : s; }
 inline const char* kReset(const char* s=nullptr) { return util::tty_mode() ? "\033[00m" : s; }

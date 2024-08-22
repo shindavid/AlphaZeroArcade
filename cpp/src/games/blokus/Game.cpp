@@ -1,6 +1,8 @@
 #include <games/blokus/Game.hpp>
 
+#include <util/AnsiCodes.hpp>
 #include <util/CppUtil.hpp>
+#include <util/StringUtil.hpp>
 
 namespace blokus {
 
@@ -73,7 +75,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
         BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
         if (move_mask.empty()) continue;
         if (!unplayable_locations.intersects(move_mask)) {
-          valid_actions[poc] = true;
+          valid_actions[poc.to_action()] = true;
         }
       }
     }
@@ -102,7 +104,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
     }
   } else {
     Location loc = core.partial_move;
-    PieceOrientationCorner poc(action);
+    PieceOrientationCorner poc = PieceOrientationCorner::from_action(action);
     BitBoardSlice move_mask = poc.to_bitboard_mask(loc);
     BitBoardSlice adjacent_mask = poc.to_adjacent_bitboard_mask(loc);
     BitBoardSlice diagonal_mask = poc.to_diagonal_bitboard_mask(loc);
@@ -126,12 +128,11 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
 }
 
 Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) {
-  const FullState::core_t& core = state.core;
   Game::Types::ValueArray array;
 
   int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
-    scores[c] = kNumCells - core.occupied_locations[c].count();
+    scores[c] = state.remaining_square_count(c);
   }
 
   int min_score = scores[0];
@@ -147,9 +148,37 @@ Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) 
   return array;
 }
 
-void Game::IO::print_state(std::ostream&, const BaseState&, core::action_t last_action,
+void Game::IO::print_state(std::ostream& os, const BaseState& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
-  throw std::runtime_error("Not implemented");
+  BoardString bs;
+
+  static std::string color_strs[kNumColors] = {
+      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kCircle("B"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kCircle("Y"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kRed(""), ansi::kCircle("R"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kCircle("G"), ansi::kReset(""))};
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    bs.set(state.core.occupied_locations[c], color_strs[c]);
+  }
+
+  bs.print(os);
+
+  constexpr int buf_size = 4096;
+  char buffer[buf_size];
+  int cx = 0;
+
+  cx += snprintf(buffer + cx, buf_size - cx, "\nScore: Player\n");
+  for (color_t c = 0; c < kNumColors; ++c) {
+    int score = state.remaining_square_count(c);
+    cx += snprintf(buffer + cx, buf_size - cx, "%5d: %s", score, color_strs[c].c_str());
+    if (player_names) {
+      cx += snprintf(buffer + cx, buf_size - cx, " [%s]", (*player_names)[c].c_str());
+    }
+  }
+
+  util::release_assert(cx < buf_size, "Buffer overflow (%d < %d)", cx, buf_size);
+  os << buffer << std::endl;
 }
 
 void Game::IO::print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,

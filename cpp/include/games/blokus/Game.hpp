@@ -26,8 +26,8 @@ class Game {
  public:
   struct Constants {
     static constexpr int kNumPlayers = 4;
-    static constexpr int kNumActions = blokus::kNumCells;
-    static constexpr int kMaxBranchingFactor = blokus::kNumCells;
+    static constexpr int kNumActions = blokus::kNumActions;
+    static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
     static constexpr int kHistorySize = 0;
   };
 
@@ -46,6 +46,7 @@ class Game {
     bool operator==(const BaseState& other) const { return core == other.core; }
     bool operator!=(const BaseState& other) const { return core != other.core; }
     size_t hash() const;
+    int remaining_square_count(color_t) const;
 
     // core_t unambiguously represents the game state.
     struct core_t {
