@@ -347,13 +347,22 @@ inline BoardString::BoardString() {
   }
 }
 
-inline void BoardString::print(std::ostream& os) const {
+inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
   os << "   ";
   for (int col = 0; col < kBoardDimension; ++col) {
     os << static_cast<char>('A' + col);
   }
   os << '\n';
   for (int row = kBoardDimension - 1; row >= 0; --row) {
+    bool trivial = true;
+    for (int col = 0; col < kBoardDimension; ++col) {
+      if (strs_[row][col] != ".") {
+        trivial = false;
+        break;
+      }
+    }
+    if (trivial) continue;
+
     os << std::setw(2) << (row + 1) << ' ';
     for (int col = 0; col < kBoardDimension; ++col) {
       os << strs_[row][col];

@@ -119,7 +119,7 @@ class BitBoardSlice {
 class BoardString {
  public:
   BoardString();
-  void print(std::ostream&) const;
+  void print(std::ostream&, bool omit_trivial_rows=false) const;
 
   void set(Location loc, const std::string& str);
   void set(const BitBoard& board, const std::string& str);
