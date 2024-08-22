@@ -418,6 +418,45 @@ void test_bit_board() {
     }
   }
 
+  // |=
+
+  // 27: O4/0
+  //
+  // *..*
+  // .oo.
+  // .ox.
+  // *..*
+  PieceOrientationCorner poc(27);
+  BitBoardSlice slice = poc.to_bitboard_mask(Location{0, 1});  // snug against bottom left corner
+  BitBoard board11 = board;
+  board11 |= slice;
+
+  std::string actual_repr11 = get_repr(board11);
+  std::string expected_repr11 =
+      "   ABCDEFGHIJKLMNOPQRST\n"
+      " 2 xx..................  2\n"
+      " 1 xx.................x  1\n"
+      "   ABCDEFGHIJKLMNOPQRST\n";
+
+  if (!validate_repr(__func__, __LINE__, actual_repr11, expected_repr11)) {
+    return;
+  }
+
+  // intersects()
+  if (!board.intersects(slice)) {
+    global_fail_count++;
+    printf("BitBoard::intersects() failure @%s:%d\n", __FILE__, __LINE__);
+    return;
+  }
+
+  BitBoard board12;
+  board12.clear();
+  if (board12.intersects(slice)) {
+    global_fail_count++;
+    printf("BitBoard::intersects() failure @%s:%d\n", __FILE__, __LINE__);
+    return;
+  }
+
   printf("Success: %s()\n", __func__);
   global_pass_count++;
 }

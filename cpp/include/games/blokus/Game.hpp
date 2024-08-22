@@ -113,6 +113,11 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
                                    const Types::SearchResults&);
+
+    /*
+     * Inverse operation of print_state(ss, state) in non-tty-mode.
+     */
+    static FullState load(const std::string& str);
   };
 
   struct InputTensorizor {

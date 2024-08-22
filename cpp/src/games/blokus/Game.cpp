@@ -157,6 +157,10 @@ void Game::IO::print_mcts_results(std::ostream&, const Types::PolicyTensor& acti
   throw std::runtime_error("Not implemented");
 }
 
+Game::FullState Game::IO::load(const std::string& str) {
+  throw std::runtime_error("Not implemented");
+}
+
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
                                                                const BaseState* cur) {
   throw std::runtime_error("Not implemented");
