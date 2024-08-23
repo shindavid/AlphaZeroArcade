@@ -186,6 +186,21 @@ struct PieceOrientationCornerRange {
 
 }  // namespace detail
 
+inline color_t char_to_color(char c) {
+  switch (c) {
+    case 'R':
+      return kRed;
+    case 'G':
+      return kGreen;
+    case 'B':
+      return kBlue;
+    case 'Y':
+      return kYellow;
+    default:
+      return kNumColors;
+  }
+}
+
 inline void Location::set(int8_t row, int8_t col) {
   this->row = row;
   this->col = col;
@@ -321,6 +336,60 @@ inline bool BitBoard::intersects(const BitBoardSlice& other) const {
     if (rows_[i] & other.get_row(i)) return true;
   }
   return false;
+}
+
+inline piece_orientation_corner_index_t BitBoard::find(Location loc) const {
+  throw std::runtime_error("Not implemented");
+}
+
+inline BitBoard BitBoard::operator&(const BitBoard& other) const {
+  throw std::runtime_error("Not implemented");
+}
+
+inline BitBoard BitBoard::adjacent_squares() const {
+  constexpr int B = kBoardDimension;
+
+  BitBoard result;
+  result.rows_[0] = (rows_[0] >> 1);
+  result.rows_[0] |= (result.rows_[0] << 2);
+  result.rows_[0] |= rows_[1];
+
+  for (int i = 1; i < B - 1; ++i) {
+    result.rows_[i] = rows_[i] >> 1;
+    result.rows_[i] |= (result.rows_[i] << 2);
+    result.rows_[i] |= rows_[i - 1];
+    result.rows_[i] |= rows_[i + 1];
+  }
+
+  result.rows_[B - 1] = (rows_[B - 1] >> 1);
+  result.rows_[B - 1] |= (result.rows_[B - 1] << 2);
+  result.rows_[B - 1] |= rows_[B - 2];
+  return result;
+}
+
+inline BitBoard BitBoard::diagonal_squares() const {
+  constexpr int B = kBoardDimension;
+
+  BitBoard result;
+  result.rows_[0] = (rows_[1] >> 1);
+  result.rows_[0] |= (result.rows_[0] << 2);
+
+  for (int i = 1; i < B - 1; ++i) {
+    uint32_t row1 = rows_[i - 1];
+    uint32_t row2 = rows_[i + 1];
+
+    uint32_t row3 = row1 >> 1;
+    row3 |= (row3 << 2);
+
+    uint32_t row4 = row2 >> 1;
+    row4 |= (row4 << 2);
+
+    result.rows_[i] = row3 | row4;
+  }
+
+  result.rows_[B - 1] = (rows_[B - 2] >> 1);
+  result.rows_[B - 1] |= (result.rows_[B - 1] << 2);
+  return result;
 }
 
 inline BitBoardSlice::BitBoardSlice(const uint32_t* rows, int num_rows, int row_offset) {

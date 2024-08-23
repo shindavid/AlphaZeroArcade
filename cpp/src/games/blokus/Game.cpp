@@ -6,6 +6,58 @@
 
 namespace blokus {
 
+color_t Game::BaseState::last_placed_piece_color() const {
+  int max = -1;
+  color_t last_color = kNumColors;
+  for (color_t c = 0; c < kNumColors; ++c) {
+    int count = aux.played_pieces[c].count();
+    if (count > max) {
+      max = count;
+      last_color = c;
+    }
+  }
+  return last_color;
+}
+
+void Game::BaseState::compute_aux() {
+  BitBoard occupied;
+  occupied.clear();
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    occupied |= core.occupied_locations[c];
+  }
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    aux.unplayable_locations[c] = occupied | core.occupied_locations[c].adjacent_squares();
+  }
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    aux.corner_locations[c] =
+        core.occupied_locations[c].diagonal_squares() & ~aux.unplayable_locations[c];
+  }
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    aux.played_pieces[c].clear();
+
+    occupied = core.occupied_locations[c];
+    for (Location loc : occupied.get_set_locations()) {
+      PieceOrientationCorner poc = occupied.find(loc);
+      occupied &= ~poc.to_bitboard_mask(loc);
+      util::release_assert(!aux.played_pieces[c].get(poc.to_piece()));
+      aux.played_pieces[c].set(poc.to_piece());
+    }
+  }
+}
+
+void Game::BaseState::validate_aux() const {
+  BaseState copy = *this;
+  copy.compute_aux();
+
+  if (copy.aux != this->aux) {
+    throw std::runtime_error("Auxiliary data is inconsistent with core data");
+  }
+}
+
 void Game::Rules::init_state(FullState& state, group::element_t sym) {
   util::release_assert(sym == group::kIdentity);
   std::memset(&state, 0, sizeof(state));
@@ -84,6 +136,10 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
 }
 
 Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) {
+    state.validate_aux();
+  }
+
   FullState::core_t& core = state.core;
   FullState::aux_t& aux = state.aux;
 
@@ -192,8 +248,28 @@ void Game::IO::print_mcts_results(std::ostream&, const Types::PolicyTensor& acti
   throw std::runtime_error("Not implemented");
 }
 
-Game::FullState Game::IO::load(const std::string& str) {
-  throw std::runtime_error("Not implemented");
+Game::FullState Game::IO::load(const std::string& str, int pass_count) {
+  FullState state;
+  Rules::init_state(state);
+
+  std::vector<std::string> lines = util::splitlines(str);
+  util::release_assert(lines.size() > 21);
+  for (int row = 0; row < kBoardDimension; ++row) {
+    const std::string& line = lines[20 - row];
+    util::release_assert(line.size() == 26);
+    for (int col = 0; col < kBoardDimension; ++col) {
+      char c = line[col + 3];
+      color_t color = char_to_color(c);
+      if (color == kNumColors) continue;
+      state.core.occupied_locations[color].set(row, col);
+    }
+  }
+
+  state.compute_aux();
+  state.core.pass_count = pass_count;
+  state.core.cur_color = (state.last_placed_piece_color() + pass_count + 1) % kNumColors;
+
+  return state;
 }
 
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,

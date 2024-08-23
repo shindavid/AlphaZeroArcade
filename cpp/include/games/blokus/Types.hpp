@@ -14,6 +14,9 @@
  */
 namespace blokus {
 
+// Converts {'B', 'Y', 'R', 'G', *} to {kBlue, kYellow, kRed, kGreen, kNumColors}
+color_t char_to_color(char c);
+
 #pragma pack(push, 1)
 struct Location {
   auto operator<=>(const Location& other) const = default;
@@ -76,6 +79,7 @@ class BitBoard {
   BitBoard operator|(const BitBoard& other) const;
   BitBoard& operator&=(const BitBoard& other);
   BitBoard operator~() const;
+  BitBoard& operator|=(const BitBoard& other);
   BitBoard& operator|=(const BitBoardSlice& other);
 
   bool any() const;
@@ -90,6 +94,17 @@ class BitBoard {
   void write_to(std::bitset<kNumCells>& bitset) const;
   corner_constraint_t get_corner_constraint(Location loc) const;
   bool intersects(const BitBoardSlice& other) const;
+
+  /*
+   * Requires that this is set at loc. Crawls to find all set connected squares starting from loc,
+   * matches that to a specific PieceOrientation po, and returns the corresponding
+   * piece_orientation_corner_index_t.
+   */
+  piece_orientation_corner_index_t find(Location loc) const;
+
+  BitBoard operator&(const BitBoard& other) const;
+  BitBoard adjacent_squares() const;  // All adjacent-neighbors of set squares
+  BitBoard diagonal_squares() const;  // All diagonal-neighbors of set squares
 
  protected:
   uint32_t rows_[kBoardDimension];
@@ -189,7 +204,10 @@ static_assert(sizeof(PieceOrientationCorner) == 2);
 #pragma pack(push, 1)
 class PieceMask {
  public:
+  auto operator<=>(const PieceMask& other) const = default;
   auto get_unset_bits() const;
+  int count() const { return std::popcount(mask_); }
+  bool get(Piece piece) const { return mask_ & (1 << piece); }
   void set(Piece piece) { mask_ |= 1 << piece; }
   void clear() { mask_ = 0; }
 

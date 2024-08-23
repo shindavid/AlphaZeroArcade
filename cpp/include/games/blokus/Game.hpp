@@ -47,6 +47,17 @@ class Game {
     bool operator!=(const BaseState& other) const { return core != other.core; }
     size_t hash() const;
     int remaining_square_count(color_t) const;
+    color_t last_placed_piece_color() const;
+
+    /*
+     * Sets this->aux from this->core.
+     */
+    void compute_aux();
+
+    /*
+     * Throws an exception if aux is not consistent with core.
+     */
+    void validate_aux() const;
 
     // core_t unambiguously represents the game state.
     struct core_t {
@@ -60,8 +71,8 @@ class Game {
       // 1. The location of a piece corner
       // 2. The piece/orientation/square to place on that location
       //
-      // This value stores part 1. A location of (-1, -1) indicates that the player has not yet
-      // selected a location. A location of (-2, -2) indicates that the player has passed.
+      // This value stores part 1. A location of (-1, -1) indicates that the player has not
+      // selected a location.
       Location partial_move;
     };
 
@@ -69,6 +80,7 @@ class Game {
     // tensorization should stay here, but the ones that only facilitate rules-calculations can
     // be moved to FullState to reduce the disk footprint of game logs.
     struct aux_t {
+      auto operator<=>(const aux_t&) const = default;
       PieceMask played_pieces[kNumColors];
       BitBoard unplayable_locations[kNumColors];
       BitBoard corner_locations[kNumColors];
@@ -117,8 +129,10 @@ class Game {
 
     /*
      * Inverse operation of print_state(ss, state) in non-tty-mode.
+     *
+     * Assumes that the last pass_count players have passed.
      */
-    static FullState load(const std::string& str);
+    static FullState load(const std::string& str, int pass_count=0);
   };
 
   struct InputTensorizor {
