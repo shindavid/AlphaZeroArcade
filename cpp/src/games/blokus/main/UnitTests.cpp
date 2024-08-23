@@ -17,7 +17,7 @@ std::string get_repr(const B& board) {
   s.set(board, "x");
 
   std::ostringstream ss;
-  s.print(ss);
+  s.print(ss, true);
   return ss.str();
 }
 

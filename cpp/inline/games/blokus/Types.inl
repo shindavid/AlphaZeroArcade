@@ -239,6 +239,13 @@ inline BitBoard BitBoard::operator~() const {
   return result;
 }
 
+inline BitBoard& BitBoard::operator|=(const BitBoard& other) {
+  for (int i = 0; i < kBoardDimension; ++i) {
+    rows_[i] |= other.get_row(i);
+  }
+  return *this;
+}
+
 inline BitBoard& BitBoard::operator|=(const BitBoardSlice& other) {
   for (int i = other.start_row(); i < other.end_row(); ++i) {
     rows_[i] |= other.get_row(i);
@@ -278,6 +285,18 @@ inline bool BitBoard::get(int row, int col) const { return rows_[row] & (1 << co
 inline void BitBoard::set(int row, int col) { rows_[row] |= (1 << col); }
 
 inline void BitBoard::set(const Location& loc) { set(loc.row, loc.col); }
+
+inline void BitBoard::unset(const BitBoard& other) {
+  for (int i = 0; i < kBoardDimension; ++i) {
+    rows_[i] &= ~other.rows_[i];
+  }
+}
+
+inline void BitBoard::unset(const BitBoardSlice& other) {
+  for (int i = other.start_row(); i < other.end_row(); ++i) {
+    rows_[i] &= ~other.get_row(i);
+  }
+}
 
 inline auto BitBoard::get_set_locations() const { return detail::BitBoardRange(this); }
 

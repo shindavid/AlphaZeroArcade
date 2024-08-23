@@ -67,7 +67,6 @@ struct _PieceOrientationCornerData {
 #pragma pack(pop)
 static_assert(sizeof(_PieceOrientationCornerData) == 4);
 
-class BitBoard;
 class BitBoardSlice;
 
 /*
@@ -90,6 +89,8 @@ class BitBoard {
   bool get(int row, int col) const;
   void set(int row, int col);
   void set(const Location& loc);
+  void unset(const BitBoard&);
+  void unset(const BitBoardSlice&);
   auto get_set_locations() const;
   void write_to(std::bitset<kNumCells>& bitset) const;
   corner_constraint_t get_corner_constraint(Location loc) const;

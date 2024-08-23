@@ -40,7 +40,7 @@ inline float atof_safe(const std::string& s) {
   return f;
 }
 
-std::vector<std::string> split(const std::string& s, const char* t) {
+inline std::vector<std::string> split(const std::string& s, const char* t) {
   std::vector<std::string> result;
 
   std::string_view t_view(t);

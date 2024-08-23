@@ -29,11 +29,8 @@ void Game::BaseState::compute_aux() {
 
   for (color_t c = 0; c < kNumColors; ++c) {
     aux.unplayable_locations[c] = occupied | core.occupied_locations[c].adjacent_squares();
-  }
-
-  for (color_t c = 0; c < kNumColors; ++c) {
-    aux.corner_locations[c] =
-        core.occupied_locations[c].diagonal_squares() & ~aux.unplayable_locations[c];
+    aux.corner_locations[c] = core.occupied_locations[c].diagonal_squares();
+    aux.corner_locations[c].unset(aux.unplayable_locations[c]);
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
@@ -42,7 +39,7 @@ void Game::BaseState::compute_aux() {
     occupied = core.occupied_locations[c];
     for (Location loc : occupied.get_set_locations()) {
       PieceOrientationCorner poc = occupied.find(loc);
-      occupied &= ~poc.to_bitboard_mask(loc);
+      occupied.unset(poc.to_bitboard_mask(loc));
       util::release_assert(!aux.played_pieces[c].get(poc.to_piece()));
       aux.played_pieces[c].set(poc.to_piece());
     }
@@ -174,7 +171,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
 
     for (color_t c = 0; c < kNumColors; ++c) {
       aux.unplayable_locations[c] |= move_mask;
-      aux.corner_locations[c] &= ~aux.unplayable_locations[c];
+      aux.corner_locations[c].unset(aux.unplayable_locations[c]);
     }
 
     core.cur_color = (core.cur_color + 1) % kNumColors;
