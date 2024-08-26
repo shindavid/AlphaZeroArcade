@@ -70,6 +70,7 @@ const int kNumPieceOrientationCorners = 309;
 const int kNumPieceOrientationRowMasks = 1102;
 const int kCornerConstraintArraySize = 709;
 const int kNumSquaresPerColor = 89;
+const int kMiniBoardLookupSize = 91;
 
 /*
  * We split the move into two parts:

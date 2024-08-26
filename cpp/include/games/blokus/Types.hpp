@@ -32,6 +32,12 @@ struct Location {
 #pragma pack(pop)
 static_assert(sizeof(Location) == 2);
 
+struct _MiniBoardLookup {
+  uint32_t key;
+  piece_orientation_corner_index_t value;
+};
+static_assert(sizeof(_MiniBoardLookup) == 8);
+
 // Backs the Piece type
 struct _PieceData {
   char name[3];
@@ -267,6 +273,7 @@ namespace tables {
 extern const _PieceData kPieceData[kNumPieces];
 extern const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations];
 extern const _PieceOrientationCornerData kPieceOrientationCornerData[kNumPieceOrientationCorners];
+extern const _MiniBoardLookup kMiniBoardLookup[kMiniBoardLookupSize];
 extern const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks];
 extern const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintArraySize];
 

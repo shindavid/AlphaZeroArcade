@@ -10,66 +10,90 @@ namespace detail {
 
 // MiniBoard is a specialized struct that is just large enough to store the location of a single
 // piece on the board.
+//
+// loc_ corresponds to the board square that is lexically smallest among the squares occupied by the
+// piece.
+//
+// The remaining occupied squares are stored in mask_, whose indices are given by the following
+// diagram:
+//
+//          28
+//       20 21 22
+//    12 13 14 15 16
+//  4  5  6  7  8  9 10
+//           L  0  1  2  3
 class MiniBoard {
  public:
-  MiniBoard(Location loc) {
-    loc_ = loc;
-    rows_[0] = 1 << 3;
-    for (int r = 1; r < 5; ++r) {
-      rows_[r] = 0;
-    }
-  }
+  MiniBoard(Location loc) : loc_(loc) {}
 
-  bool any() const {
-    for (int r = 0; r < 5; ++r) {
-      if (rows_[r]) return true;
-    }
-    return false;
-  }
+  bool any() const { return mask_; }
 
   Location pop() {
-    for (int r = 0; r < 5; ++r) {
-      if (rows_[r]) {
-        int index = std::countr_zero(rows_[r]);
-        rows_[r] &= ~(1 << index);
-        return {int8_t(r + loc_.row), int8_t(index + loc_.col - 3)};
-      }
+    if (!any()) {
+      throw util::Exception("MiniBoard::pop() called on empty MiniBoard");
     }
 
-    throw std::runtime_error("MiniBoard::pop() called on empty MiniBoard");
+    int i = std::countr_zero(mask_);
+    mask_ &= ~(1 << i);
+    return index_to_location(i);
   }
 
   void set(Location loc) {
-    loc = calibrate(loc);
-    rows_[loc.row] |= 1 << loc.col;
+    int i = location_to_index(loc);
+    mask_ |= 1 << i;
   }
 
   bool get(Location loc) const {
-    loc = calibrate(loc);
-    return rows_[loc.row] & (1 << loc.col);
+    int i = location_to_index(loc);
+    return mask_ & (1 << i);
   }
 
   bool in_bounds(Location loc) const {
-    int8_t r = loc.row - loc_.row;
-    int8_t c = loc.col - loc_.col;
-    return 0 <= r && r < 5 && 0 <= c && c < 5;
+    bool row_ok = loc.row >= row_lower_bound() && loc.row < row_upper_bound();
+    bool col_ok = loc.col >= col_lower_bound() && loc.col < col_upper_bound();
+    return row_ok && col_ok;
   }
 
   piece_orientation_corner_index_t to_piece_orientation_corner_index() const {
-    throw std::runtime_error("MiniBoard::to_piece_orientation_corner_index() not implemented");
+    // binary search over tables::kMiniBoardLookup:
+    int left = 0;
+    int right = kMiniBoardLookupSize;
+    while (left < right) {
+      int mid = (left + right) / 2;
+      if (tables::kMiniBoardLookup[mid].key < mask_) {
+        left = mid + 1;
+      } else {
+        right = mid;
+      }
+    }
+
+    if (left == kMiniBoardLookupSize || tables::kMiniBoardLookup[left].key != mask_) {
+      throw util::Exception(
+          "MiniBoard::to_piece_orientation_corner_index() failed to find key %08x", mask_);
+    }
+    return tables::kMiniBoardLookup[left].value;
   }
 
  private:
-  Location calibrate(Location loc) const {
-    int8_t r = loc.row - loc_.row;
-    int8_t c = loc.col - loc_.col + 3;
-    util::debug_assert(0 <= r && r < 5);
-    util::debug_assert(0 <= c && c < 5);
-    return {r, c};
+  Location index_to_location(int i) const {
+    int r = (i + 4) / 8;
+    int c = (i + r + 2 + 2 * (i < 4)) % 8 - 3;
+    return {int8_t(loc_.row + r), int8_t(loc_.col + c)};
   }
 
-  Location loc_;
-  uint8_t rows_[5];
+  int location_to_index(Location loc) const {
+    int r = loc.row - loc_.row;
+    int c = loc.col - loc_.col;
+    return 7 * r + c + 1 - 2*(r < 1);
+  }
+
+  int8_t row_lower_bound() const { return loc_.row; }
+  int8_t row_upper_bound() const { return int8_t(std::min(loc_.row + 5, kBoardDimension)); }
+  int8_t col_lower_bound() const { return int8_t(std::max(0, loc_.col - 3)); }
+  int8_t col_upper_bound() const { return int8_t(std::min(loc_.col + 4, kBoardDimension)); }
+
+  const Location loc_;
+  uint32_t mask_ = 0;
 };
 
 }  // namespace detail
