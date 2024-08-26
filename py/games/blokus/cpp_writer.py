@@ -116,7 +116,7 @@ class PieceOrientationData:
             if xy is not None:
                 char_matrix[xy[1] - 1][xy[0] - 1] = 'x'
 
-            return '\n'.join(''.join(c) for c in reversed(char_matrix))
+            return '\n'.join(''.join(c).rstrip() for c in reversed(char_matrix))
 
         char_matrix = [[' '] * (self.width + 2) for _ in range(self.height + 2)]
         for x, y in self.region_xy_list:

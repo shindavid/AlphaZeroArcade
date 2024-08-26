@@ -139,7 +139,7 @@ class PieceOrientation:
             else:
                 char_matrix[y][x] = 'o'
 
-        return '\n'.join([''.join(c) for c in reversed(char_matrix)] + [self.name])
+        return '\n'.join([''.join(c).rstrip() for c in reversed(char_matrix)] + [self.name])
 
 
 def get_rank_key(coordinates: PieceOrientationCoordinates):
