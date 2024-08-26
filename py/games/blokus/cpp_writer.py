@@ -107,7 +107,17 @@ class PieceOrientationData:
         assert len(self.adjacency_masks) == self.height + 2
         assert len(self.diagonal_masks) == self.height + 2
 
-    def get_ascii_drawing(self, xy=None):
+    def get_ascii_drawing(self, xy=None, exclude_boundary=False):
+        if exclude_boundary:
+            char_matrix = [[' '] * self.width for _ in range(self.height)]
+            for x, y in self.region_xy_list:
+                char_matrix[y][x] = 'o'
+
+            if xy is not None:
+                char_matrix[xy[1] - 1][xy[0] - 1] = 'x'
+
+            return '\n'.join(''.join(c) for c in reversed(char_matrix))
+
         char_matrix = [[' '] * (self.width + 2) for _ in range(self.height + 2)]
         for x, y in self.region_xy_list:
             char_matrix[y+1][x+1] = 'o'
@@ -293,6 +303,80 @@ for c, piece_orientation_corner_data in enumerate(piece_orientation_corner_data_
 print('};  // kPieceOrientationCornerData')
 print('')
 
+def index_to_location(i):
+    r = (i + 4) // 8
+    c = (i + r + 2 + 2*(i<4)) % 8 - 3
+    return r, c
+
+
+def location_to_index(r, c):
+    assert 0 <= r <= 4 and -3 <= c <= 4, (r, c)
+    i = 7 * r + c + 1 - 2*(r < 1)
+    rr, cc = index_to_location(i)
+    assert (r, c) == (rr, cc), (i, r, c, rr, cc)
+    return i
+
+
+kMiniBoardLookup = []
+
+
+print('const _MiniBoardLookup kMiniBoardLookup[kMiniBoardLookupSize] = {')
+
+for c, piece_orientation_corner_data in enumerate(piece_orientation_corner_data_list):
+    cx = piece_orientation_corner_data.x
+    cy = piece_orientation_corner_data.y
+    po = piece_orientation_corner_data.piece_orientation_index
+    orientation = piece_orientation_data_list[po]
+
+    relative_xy_list = []
+    valid = True
+    for x, y in orientation.piece_orientation.coordinates:
+        x += 1
+        y += 1
+        if (y, x) < (cy, cx):
+            valid = False
+            break
+        if (y, x) > (cy, cx):
+            relative_xy_list.append((x - cx, y - cy))
+
+    if not valid:
+        continue
+
+    mask = 0
+    for x, y in relative_xy_list:
+        i = location_to_index(y, x)
+        mask |= 1 << i
+
+    kMiniBoardLookup.append((mask, c))
+
+
+kMiniBoardLookup.sort()
+
+
+for i, (mask, c) in enumerate(kMiniBoardLookup):
+    piece_orientation_corner_data = piece_orientation_corner_data_list[c]
+    cx = piece_orientation_corner_data.x
+    cy = piece_orientation_corner_data.y
+    po = piece_orientation_corner_data.piece_orientation_index
+    orientation = piece_orientation_data_list[po]
+
+    sym_index = orientation.piece_orientation.sym_index
+    piece = ALL_PIECES[orientation.piece_orientation.piece_index]
+    name = f'{piece.name}/{sym_index}'
+    drawing = orientation.get_ascii_drawing((cx, cy), True)
+    drawing_lines = drawing.splitlines()
+
+    print(f'  // {c}: {name}')
+    print('  //')
+    for line in drawing_lines:
+        print(f'  // {line}')
+
+    end = ',\n' if i < len(kMiniBoardLookup) - 1 else ''
+    print(f'  {{{hex(mask)}, {c}}}{end}')
+
+print('};  // kMiniBoardLookup', len(kMiniBoardLookup))
+print('')
+
 print('const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks] = {')
 
 O = len(piece_orientation_data_list) - 1
@@ -330,21 +414,6 @@ for o, data in enumerate(piece_orientation_data_list):
     print(f'  {main_str}{main_blank}  // main')
     print(f'  {adjacent_str}{adjacent_blank}  // adjacent')
     print(f'  {diagonal_str}{diagonal_blank}  // diagonal')
-    # for m, mask in enumerate(data.row_masks):
-    #     end = '' if m > 0 else '  // main region'
-    #     print(f'  0b{mask:08b},{end}')
-
-    # for m, mask in enumerate(data.adjacency_masks):
-    #     end = '' if m > 0 else '  // adjacent region'
-    #     print(f'  0b{mask:08b},{end}')
-
-    # for m, mask in enumerate(data.diagonal_masks):
-    #     end = ','
-    #     if m == 0:
-    #         end = ',  // diagonal region'
-    #     elif (o, m) == (O, M):
-    #         end = ''
-    #     print(f'  0b{mask:08b}{end}')
 
 print('};  // kPieceOrientationRowMasks')
 print('')
