@@ -76,21 +76,21 @@ class MiniBoard {
 
  private:
   Location index_to_location(int i) const {
-    int r = (i + 4) / 8;
-    int c = (i + r + 2 + 2 * (i < 4)) % 8 - 3;
+    int r = (i + 3) / 8;
+    int c = (i + r + 2 + (i < 5)) % 8 - 3;
     return {int8_t(loc_.row + r), int8_t(loc_.col + c)};
   }
 
   int location_to_index(Location loc) const {
     int r = loc.row - loc_.row;
     int c = loc.col - loc_.col;
-    return 7 * r + c + 1 - 2*(r < 1);
+    return 7 * r + c + 1 - (r < 1);
   }
 
   int8_t row_lower_bound() const { return loc_.row; }
   int8_t row_upper_bound() const { return int8_t(std::min(loc_.row + 5, kBoardDimension)); }
   int8_t col_lower_bound() const { return int8_t(std::max(0, loc_.col - 3)); }
-  int8_t col_upper_bound() const { return int8_t(std::min(loc_.col + 4, kBoardDimension)); }
+  int8_t col_upper_bound() const { return int8_t(std::min(loc_.col + 5, kBoardDimension)); }
 
   const Location loc_;
   uint32_t mask_ = 0;

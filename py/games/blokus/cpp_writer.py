@@ -304,14 +304,14 @@ print('};  // kPieceOrientationCornerData')
 print('')
 
 def index_to_location(i):
-    r = (i + 4) // 8
-    c = (i + r + 2 + 2*(i<4)) % 8 - 3
+    r = (i + 3) // 8
+    c = (i + r + 2 + (i<5)) % 8 - 3
     return r, c
 
 
 def location_to_index(r, c):
     assert 0 <= r <= 4 and -3 <= c <= 4, (r, c)
-    i = 7 * r + c + 1 - 2*(r < 1)
+    i = 7 * r + c + 1 - (r < 1)
     rr, cc = index_to_location(i)
     assert (r, c) == (rr, cc), (i, r, c, rr, cc)
     return i
@@ -336,8 +336,7 @@ for c, piece_orientation_corner_data in enumerate(piece_orientation_corner_data_
         if (y, x) < (cy, cx):
             valid = False
             break
-        if (y, x) > (cy, cx):
-            relative_xy_list.append((x - cx, y - cy))
+        relative_xy_list.append((x - cx, y - cy))
 
     if not valid:
         continue
