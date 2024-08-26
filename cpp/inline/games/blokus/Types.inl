@@ -216,19 +216,36 @@ inline Location Location::unflatten(int k) {
   return {int8_t(k / kBoardDimension), int8_t(k % kBoardDimension)};
 }
 
-inline BitBoard BitBoard::operator|(const BitBoard& other) const {
+template<concepts::BitBoardLike Board>
+inline BitBoard BitBoard::operator|(const Board& other) const {
   BitBoard result;
-  for (int i = 0; i < kBoardDimension; ++i) {
-    result.rows_[i] = rows_[i] | other.rows_[i];
+  int i;
+  for (i = 0; i < other.start_row(); ++i) {
+    result.rows_[i] = rows_[i];
+  }
+  for (int i = other.start_row(); i < other.end_row(); ++i) {
+    result.rows_[i] = rows_[i] | other.get_row(i);
+  }
+  for (i = other.end_row(); i < kBoardDimension; ++i) {
+    result.rows_[i] = rows_[i];
   }
   return result;
 }
 
-inline BitBoard& BitBoard::operator&=(const BitBoard& other) {
-  for (int i = 0; i < kBoardDimension; ++i) {
-    rows_[i] &= other.rows_[i];
+template<concepts::BitBoardLike Board>
+inline BitBoard BitBoard::operator&(const Board& other) const {
+  BitBoard result;
+  int i;
+  for (i = 0; i < other.start_row(); ++i) {
+    result.rows_[i] = 0;
   }
-  return *this;
+  for (i = other.start_row(); i < other.end_row(); ++i) {
+    result.rows_[i] = rows_[i] & other.get_row(i);
+  }
+  for (i = other.end_row(); i < kBoardDimension; ++i) {
+    result.rows_[i] = 0;
+  }
+  return result;
 }
 
 inline BitBoard BitBoard::operator~() const {
@@ -239,16 +256,25 @@ inline BitBoard BitBoard::operator~() const {
   return result;
 }
 
-inline BitBoard& BitBoard::operator|=(const BitBoard& other) {
-  for (int i = 0; i < kBoardDimension; ++i) {
+template <concepts::BitBoardLike Board>
+inline BitBoard& BitBoard::operator|=(const Board& other) {
+  for (int i = other.start_row(); i < other.end_row(); ++i) {
     rows_[i] |= other.get_row(i);
   }
   return *this;
 }
 
-inline BitBoard& BitBoard::operator|=(const BitBoardSlice& other) {
-  for (int i = other.start_row(); i < other.end_row(); ++i) {
-    rows_[i] |= other.get_row(i);
+template <concepts::BitBoardLike Board>
+inline BitBoard& BitBoard::operator&=(const Board& other) {
+  int i;
+  for (i = 0; i < other.start_row(); ++i) {
+    rows_[i] = 0;
+  }
+  for (i = other.start_row(); i < other.end_row(); ++i) {
+    rows_[i] &= other.get_row(i);
+  }
+  for (i = other.end_row(); i < kBoardDimension; ++i) {
+    rows_[i] = 0;
   }
   return *this;
 }
@@ -284,15 +310,8 @@ inline bool BitBoard::get(int row, int col) const { return rows_[row] & (1 << co
 
 inline void BitBoard::set(int row, int col) { rows_[row] |= (1 << col); }
 
-inline void BitBoard::set(const Location& loc) { set(loc.row, loc.col); }
-
-inline void BitBoard::unset(const BitBoard& other) {
-  for (int i = 0; i < kBoardDimension; ++i) {
-    rows_[i] &= ~other.rows_[i];
-  }
-}
-
-inline void BitBoard::unset(const BitBoardSlice& other) {
+template <concepts::BitBoardLike Board>
+inline void BitBoard::unset(const Board& other) {
   for (int i = other.start_row(); i < other.end_row(); ++i) {
     rows_[i] &= ~other.get_row(i);
   }
@@ -350,7 +369,8 @@ inline corner_constraint_t BitBoard::get_corner_constraint(Location loc) const {
   return ccNone;
 }
 
-inline bool BitBoard::intersects(const BitBoardSlice& other) const {
+template <concepts::BitBoardLike Board>
+inline bool BitBoard::intersects(const Board& other) const {
   for (int i = other.start_row(); i < other.end_row(); ++i) {
     if (rows_[i] & other.get_row(i)) return true;
   }
@@ -358,10 +378,6 @@ inline bool BitBoard::intersects(const BitBoardSlice& other) const {
 }
 
 inline piece_orientation_corner_index_t BitBoard::find(Location loc) const {
-  throw std::runtime_error("Not implemented");
-}
-
-inline BitBoard BitBoard::operator&(const BitBoard& other) const {
   throw std::runtime_error("Not implemented");
 }
 
@@ -469,13 +485,8 @@ inline void BoardString::set(Location loc, const std::string& str) {
   strs_[loc.row][loc.col] = str;
 }
 
-inline void BoardString::set(const BitBoard& board, const std::string& str) {
-  for (Location loc : board.get_set_locations()) {
-    set(loc, str);
-  }
-}
-
-inline void BoardString::set(const BitBoardSlice& board, const std::string& str) {
+template<concepts::BitBoardLike Board>
+inline void BoardString::set(const Board& board, const std::string& str) {
   for (Location loc : board.get_set_locations()) {
     set(loc, str);
   }

@@ -67,6 +67,17 @@ struct _PieceOrientationCornerData {
 #pragma pack(pop)
 static_assert(sizeof(_PieceOrientationCornerData) == 4);
 
+namespace concepts {
+
+template <class Board>
+concept BitBoardLike = requires(const Board& board, int k) {
+  { board.start_row() } -> std::same_as<int>;
+  { board.end_row() } -> std::same_as<int>;
+  { board.get_row(k) } -> std::same_as<uint32_t>;
+};
+
+}  // namespace concepts
+
 class BitBoardSlice;
 
 /*
@@ -75,11 +86,23 @@ class BitBoardSlice;
 class BitBoard {
  public:
   auto operator<=>(const BitBoard& other) const = default;
-  BitBoard operator|(const BitBoard& other) const;
-  BitBoard& operator&=(const BitBoard& other);
+
+  template<concepts::BitBoardLike Board>
+  BitBoard operator|(const Board& other) const;
+
+  template<concepts::BitBoardLike Board>
+  BitBoard operator&(const Board& other) const;
+
   BitBoard operator~() const;
-  BitBoard& operator|=(const BitBoard& other);
-  BitBoard& operator|=(const BitBoardSlice& other);
+
+  template <concepts::BitBoardLike Board>
+  BitBoard& operator&=(const Board& other);
+
+  template<concepts::BitBoardLike Board>
+  BitBoard& operator|=(const Board& other);
+
+  constexpr int start_row() const { return 0; }
+  constexpr int end_row() const { return kBoardDimension; }
 
   bool any() const;
   void clear();
@@ -87,14 +110,19 @@ class BitBoard {
   void clear_at_and_after(const Location& loc);
   uint32_t get_row(int k) const { return rows_[k]; }
   bool get(int row, int col) const;
+  bool get(const Location& loc) const { return get(loc.row, loc.col); }
   void set(int row, int col);
-  void set(const Location& loc);
-  void unset(const BitBoard&);
-  void unset(const BitBoardSlice&);
+  void set(const Location& loc) { set(loc.row, loc.col); }
+
+  template <concepts::BitBoardLike Board>
+  void unset(const Board&);
+
   auto get_set_locations() const;
   void write_to(std::bitset<kNumCells>& bitset) const;
   corner_constraint_t get_corner_constraint(Location loc) const;
-  bool intersects(const BitBoardSlice& other) const;
+
+  template <concepts::BitBoardLike Board>
+  bool intersects(const Board& other) const;
 
   /*
    * Requires that this is set at loc. Crawls to find all set connected squares starting from loc,
@@ -103,13 +131,13 @@ class BitBoard {
    */
   piece_orientation_corner_index_t find(Location loc) const;
 
-  BitBoard operator&(const BitBoard& other) const;
   BitBoard adjacent_squares() const;  // All adjacent-neighbors of set squares
   BitBoard diagonal_squares() const;  // All diagonal-neighbors of set squares
 
  protected:
   uint32_t rows_[kBoardDimension];
 };
+static_assert(concepts::BitBoardLike<BitBoard>);
 
 /*
  * BitBoardSlice uses only a subset of the rows of the board. The memory corresponding to the
@@ -120,7 +148,6 @@ class BitBoardSlice {
   BitBoardSlice(const uint32_t* rows, int num_rows, int row_offset);
 
   uint32_t get_row(int k) const;
-  int num_rows() const { return num_rows_; }
   bool empty() const { return num_rows_ == 0; }
   int start_row() const { return start_row_; }
   int end_row() const { return start_row_ + num_rows_; }
@@ -131,6 +158,7 @@ class BitBoardSlice {
   int num_rows_;
   int start_row_;
 };
+static_assert(concepts::BitBoardLike<BitBoardSlice>);
 
 class BoardString {
  public:
@@ -138,8 +166,9 @@ class BoardString {
   void print(std::ostream&, bool omit_trivial_rows=false) const;
 
   void set(Location loc, const std::string& str);
-  void set(const BitBoard& board, const std::string& str);
-  void set(const BitBoardSlice& board, const std::string& str);
+
+  template<concepts::BitBoardLike Board>
+  void set(const Board& board, const std::string& str);
 
  private:
   std::string strs_[kBoardDimension][kBoardDimension];
