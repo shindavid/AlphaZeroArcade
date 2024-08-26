@@ -125,9 +125,11 @@ class BitBoard {
   bool intersects(const Board& other) const;
 
   /*
-   * Requires that this is set at loc. Crawls to find all set connected squares starting from loc,
-   * matches that to a specific PieceOrientation po, and returns the corresponding
-   * piece_orientation_corner_index_t.
+   * Requires that this is set at loc, and that none of the lexicographically smaller set squares
+   * are connected to loc.
+   *
+   * Crawls to find the connected subset of squares containing loc, matches that to a specific
+   * PieceOrientation po, and returns the corresponding piece_orientation_corner_index_t.
    */
   piece_orientation_corner_index_t find(Location loc) const;
 

@@ -2,18 +2,21 @@ add_executable(blokus_tests
         main/UnitTests.cpp
         Game.cpp
         Pieces.cpp
+        Types.cpp
         )
 
 add_executable(blokus_exe
         main/Blokus.cpp
         Game.cpp
         Pieces.cpp
+        Types.cpp
         )
 
 add_library(blokus_ffi
         SHARED shared/Blokus_ffi.cpp
         Game.cpp
         Pieces.cpp
+        Types.cpp
 )
 
 set_target_properties(blokus_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")

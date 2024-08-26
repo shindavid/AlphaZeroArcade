@@ -377,10 +377,6 @@ inline bool BitBoard::intersects(const Board& other) const {
   return false;
 }
 
-inline piece_orientation_corner_index_t BitBoard::find(Location loc) const {
-  throw std::runtime_error("Not implemented");
-}
-
 inline BitBoard BitBoard::adjacent_squares() const {
   constexpr int B = kBoardDimension;
 
