@@ -27,7 +27,7 @@ const _PieceData kPieceData[kNumPieces] = {
 
   // L3
   //
-  // o 
+  // o
   // oo
   {"L3", {0, 2, 5}, 33},
 
@@ -47,15 +47,15 @@ const _PieceData kPieceData[kNumPieces] = {
 
   // T4
   //
-  // o 
+  // o
   // oo
-  // o 
+  // o
   {"T4", {0, 3, 6}, 77},
 
   // L4
   //
-  // o 
-  // o 
+  // o
+  // o
   // oo
   {"L4", {0, 4, 10}, 113},
 
@@ -63,14 +63,14 @@ const _PieceData kPieceData[kNumPieces] = {
   //
   //  o
   // oo
-  // o 
+  // o
   {"S4", {0, 2, 6}, 169},
 
   // F5
   //
-  //  o 
+  //  o
   // ooo
-  // o  
+  // o
   {"F5", {0, 6, 14}, 201},
 
   // I5
@@ -84,9 +84,9 @@ const _PieceData kPieceData[kNumPieces] = {
 
   // L5
   //
-  // o 
-  // o 
-  // o 
+  // o
+  // o
+  // o
   // oo
   {"L5", {0, 4, 10}, 293},
 
@@ -94,65 +94,65 @@ const _PieceData kPieceData[kNumPieces] = {
   //
   //  o
   // oo
-  // o 
-  // o 
+  // o
+  // o
   {"N5", {0, 4, 12}, 349},
 
   // P5
   //
-  // o 
+  // o
   // oo
   // oo
   {"P5", {0, 2, 10}, 413},
 
   // T5
   //
-  // o  
+  // o
   // ooo
-  // o  
+  // o
   {"T5", {0, 3, 6}, 461},
 
   // U5
   //
   // oo
-  // o 
+  // o
   // oo
   {"U5", {0, 2, 6}, 497},
 
   // V5
   //
-  // o  
-  // o  
+  // o
+  // o
   // ooo
   {"V5", {0, 2, 5}, 529},
 
   // W5
   //
   //  oo
-  // oo 
-  // o  
+  // oo
+  // o
   {"W5", {0, 2, 7}, 557},
 
   // X5
   //
-  //  o 
+  //  o
   // ooo
-  //  o 
+  //  o
   {"X5", {0, 1, 2}, 593},
 
   // Y5
   //
-  // o 
-  // o 
+  // o
+  // o
   // oo
-  // o 
+  // o
   {"Y5", {0, 6, 12}, 605},
 
   // Z5
   //
   //   o
   // ooo
-  // o  
+  // o
   {"Z5", {0, 2, 6}, 677}
 };  // kPieceData
 
@@ -3653,6 +3653,618 @@ const _PieceOrientationCornerData kPieceOrientationCornerData[kNumPieceOrientati
   {{3, 3}, 20, 90}
 };  // kPieceOrientationCornerData
 
+const _MiniBoardLookup kMiniBoardLookup[kMiniBoardLookupSize] = {
+  // 0: O1/0
+  //
+  // x
+  {0x0, 0},
+
+  // 3: I2/1
+  //
+  // xo
+  {0x1, 3},
+
+  // 7: I3/1
+  //
+  // xoo
+  {0x3, 7},
+
+  // 23: I4/1
+  //
+  // xooo
+  {0x7, 23},
+
+  // 115: I5/1
+  //
+  // xoooo
+  {0xf, 115},
+
+  // 1: I2/0
+  //
+  // o
+  // x
+  {0x100, 1},
+
+  // 9: L3/0
+  //
+  // o
+  // xo
+  {0x101, 9},
+
+  // 62: L4/7
+  //
+  // o
+  // xoo
+  {0x103, 62},
+
+  // 138: L5/7
+  //
+  // o
+  // xooo
+  {0x107, 138},
+
+  // 16: L3/2
+  //
+  // oo
+  //  x
+  {0x180, 16},
+
+  // 70: S4/1
+  //
+  // oo
+  //  xo
+  {0x181, 70},
+
+  // 154: N5/3
+  //
+  // oo
+  //  xoo
+  {0x183, 154},
+
+  // 57: L4/5
+  //
+  // ooo
+  //   x
+  {0x1c0, 57},
+
+  // 146: N5/1
+  //
+  // ooo
+  //   xo
+  {0x1c1, 146},
+
+  // 133: L5/5
+  //
+  // oooo
+  //    x
+  {0x1e0, 133},
+
+  // 18: L3/3
+  //
+  //  o
+  // xo
+  {0x201, 18},
+
+  // 38: T4/3
+  //
+  //  o
+  // xoo
+  {0x203, 38},
+
+  // 290: Y5/7
+  //
+  //  o
+  // xooo
+  {0x207, 290},
+
+  // 12: L3/1
+  //
+  // oo
+  // x
+  {0x300, 12},
+
+  // 25: O4/0
+  //
+  // oo
+  // xo
+  {0x301, 25},
+
+  // 201: P5/7
+  //
+  // oo
+  // xoo
+  {0x303, 201},
+
+  // 33: T4/1
+  //
+  // ooo
+  //  x
+  {0x380, 33},
+
+  // 194: P5/5
+  //
+  // ooo
+  //  xo
+  {0x381, 194},
+
+  // 285: Y5/5
+  //
+  // oooo
+  //   x
+  {0x3c0, 285},
+
+  // 50: L4/3
+  //
+  //   o
+  // xoo
+  {0x403, 50},
+
+  // 278: Y5/3
+  //
+  //   o
+  // xooo
+  {0x407, 278},
+
+  // 229: U5/3
+  //
+  // o o
+  // xoo
+  {0x503, 229},
+
+  // 77: S4/5
+  //
+  //  oo
+  // xo
+  {0x601, 77},
+
+  // 185: P5/3
+  //
+  //  oo
+  // xoo
+  {0x603, 185},
+
+  // 44: L4/1
+  //
+  // ooo
+  // x
+  {0x700, 44},
+
+  // 177: P5/1
+  //
+  // ooo
+  // xo
+  {0x701, 177},
+
+  // 221: U5/1
+  //
+  // ooo
+  // x o
+  {0x702, 221},
+
+  // 273: Y5/1
+  //
+  // oooo
+  //  x
+  {0x780, 273},
+
+  // 126: L5/3
+  //
+  //    o
+  // xooo
+  {0x807, 126},
+
+  // 169: N5/7
+  //
+  //   oo
+  // xoo
+  {0xc03, 169},
+
+  // 161: N5/5
+  //
+  //  ooo
+  // xo
+  {0xe01, 161},
+
+  // 120: L5/1
+  //
+  // oooo
+  // x
+  {0xf00, 120},
+
+  // 303: Z5/4
+  //
+  // o
+  // ooo
+  //   x
+  {0x21c0, 303},
+
+  // 75: S4/4
+  //
+  // o
+  // oo
+  //  x
+  {0x4180, 75},
+
+  // 262: W5/3
+  //
+  // o
+  // oo
+  //  xo
+  {0x4181, 262},
+
+  // 107: F5/6
+  //
+  //  o
+  // ooo
+  //   x
+  {0x41c0, 107},
+
+  // 99: F5/4
+  //
+  // o
+  // ooo
+  //  x
+  {0x4380, 99},
+
+  // 253: W5/1
+  //
+  // oo
+  //  oo
+  //   x
+  {0x6180, 253},
+
+  // 5: I3/0
+  //
+  // o
+  // o
+  // x
+  {0x8100, 5},
+
+  // 41: L4/0
+  //
+  // o
+  // o
+  // xo
+  {0x8101, 41},
+
+  // 233: V5/0
+  //
+  // o
+  // o
+  // xoo
+  {0x8103, 233},
+
+  // 36: T4/2
+  //
+  //  o
+  // oo
+  //  x
+  {0x8180, 36},
+
+  // 94: F5/3
+  //
+  //  o
+  // oo
+  //  xo
+  {0x8181, 94},
+
+  // 212: T5/2
+  //
+  //   o
+  // ooo
+  //   x
+  {0x81c0, 212},
+
+  // 29: T4/0
+  //
+  // o
+  // oo
+  // x
+  {0x8300, 29},
+
+  // 173: P5/0
+  //
+  // o
+  // oo
+  // xo
+  {0x8301, 173},
+
+  // 266: X5/0
+  //
+  //  o
+  // ooo
+  //  x
+  {0x8380, 266},
+
+  // 205: T5/0
+  //
+  // o
+  // ooo
+  // x
+  {0x8700, 205},
+
+  // 48: L4/2
+  //
+  // oo
+  //  o
+  //  x
+  {0xc100, 48},
+
+  // 298: Z5/1
+  //
+  // oo
+  //  o
+  //  xo
+  {0xc101, 298},
+
+  // 183: P5/2
+  //
+  // oo
+  // oo
+  //  x
+  {0xc180, 183},
+
+  // 86: F5/1
+  //
+  // oo
+  //  oo
+  //  x
+  {0xc300, 86},
+
+  // 240: V5/2
+  //
+  // ooo
+  //   o
+  //   x
+  {0xe100, 240},
+
+  // 59: L4/6
+  //
+  //  o
+  //  o
+  // xo
+  {0x10201, 59},
+
+  // 214: T5/3
+  //
+  //  o
+  //  o
+  // xoo
+  {0x10203, 214},
+
+  // 65: S4/0
+  //
+  //  o
+  // oo
+  // x
+  {0x10300, 65},
+
+  // 197: P5/6
+  //
+  //  o
+  // oo
+  // xo
+  {0x10301, 197},
+
+  // 90: F5/2
+  //
+  //   o
+  // ooo
+  //  x
+  {0x10380, 90},
+
+  // 109: F5/7
+  //
+  //  o
+  //  oo
+  // xo
+  {0x10601, 109},
+
+  // 81: F5/0
+  //
+  //  o
+  // ooo
+  // x
+  {0x10700, 81},
+
+  // 53: L4/4
+  //
+  // oo
+  // o
+  // x
+  {0x18100, 53},
+
+  // 217: U5/0
+  //
+  // oo
+  // o
+  // xo
+  {0x18101, 217},
+
+  // 102: F5/5
+  //
+  //  oo
+  // oo
+  //  x
+  {0x18180, 102},
+
+  // 225: U5/2
+  //
+  // oo
+  //  o
+  // xo
+  {0x18201, 225},
+
+  // 189: P5/4
+  //
+  // oo
+  // oo
+  // x
+  {0x18300, 189},
+
+  // 209: T5/1
+  //
+  // ooo
+  //  o
+  //  x
+  {0x1c100, 209},
+
+  // 242: V5/3
+  //
+  //   o
+  //   o
+  // xoo
+  {0x20403, 242},
+
+  // 255: W5/2
+  //
+  //   o
+  //  oo
+  // xo
+  {0x20601, 255},
+
+  // 293: Z5/0
+  //
+  //   o
+  // ooo
+  // x
+  {0x20700, 293},
+
+  // 305: Z5/5
+  //
+  //  oo
+  //  o
+  // xo
+  {0x30201, 305},
+
+  // 245: W5/0
+  //
+  //  oo
+  // oo
+  // x
+  {0x30300, 245},
+
+  // 236: V5/1
+  //
+  // ooo
+  // o
+  // x
+  {0x38100, 236},
+
+  // 159: N5/4
+  //
+  // o
+  // o
+  // oo
+  //  x
+  {0x204180, 159},
+
+  // 167: N5/6
+  //
+  // o
+  // oo
+  //  o
+  //  x
+  {0x20c100, 167},
+
+  // 21: I4/0
+  //
+  // o
+  // o
+  // o
+  // x
+  {0x408100, 21},
+
+  // 117: L5/0
+  //
+  // o
+  // o
+  // o
+  // xo
+  {0x408101, 117},
+
+  // 288: Y5/6
+  //
+  //  o
+  //  o
+  // oo
+  //  x
+  {0x408180, 288},
+
+  // 269: Y5/0
+  //
+  // o
+  // o
+  // oo
+  // x
+  {0x408300, 269},
+
+  // 276: Y5/2
+  //
+  //  o
+  // oo
+  //  o
+  //  x
+  {0x40c100, 276},
+
+  // 281: Y5/4
+  //
+  // o
+  // oo
+  // o
+  // x
+  {0x418100, 281},
+
+  // 124: L5/2
+  //
+  // oo
+  //  o
+  //  o
+  //  x
+  {0x608100, 124},
+
+  // 135: L5/6
+  //
+  //  o
+  //  o
+  //  o
+  // xo
+  {0x810201, 135},
+
+  // 149: N5/2
+  //
+  //  o
+  //  o
+  // oo
+  // x
+  {0x810300, 149},
+
+  // 141: N5/0
+  //
+  //  o
+  // oo
+  // o
+  // x
+  {0x818100, 141},
+
+  // 129: L5/4
+  //
+  // oo
+  // o
+  // o
+  // x
+  {0xc08100, 129},
+
+  // 113: I5/0
+  //
+  // o
+  // o
+  // o
+  // o
+  // x
+  {0x20408100, 113}
+};  // kMiniBoardLookup 91
+
 const uint8_t kPieceOrientationRowMasks[kNumPieceOrientationRowMasks] = {
   // O1/0
   //
@@ -4672,7 +5284,7 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // L3
   //
-  // o 
+  // o
   // oo
   12, 16,  // ccN
   15, 18,  // ccE
@@ -4709,9 +5321,9 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // T4
   //
-  // o 
+  // o
   // oo
-  // o 
+  // o
   29, 33, 36,  // ccN
   32, 35, 38,  // ccE
   30, 37, 39,  // ccS
@@ -4723,8 +5335,8 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // L4
   //
-  // o 
-  // o 
+  // o
+  // o
   // oo
   44, 48, 53, 57,  // ccN
   47, 50, 56, 59,  // ccE
@@ -4739,7 +5351,7 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
   //
   //  o
   // oo
-  // o 
+  // o
   65, 75,  // ccN
   69, 77,  // ccE
   68, 74,  // ccS
@@ -4751,9 +5363,9 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // F5
   //
-  //  o 
+  //  o
   // ooo
-  // o  
+  // o
   81, 86, 90, 99, 102, 107,  // ccN
   85, 89, 93, 101, 105, 109,  // ccE
   83, 92, 95, 98, 106, 111,  // ccS
@@ -4781,9 +5393,9 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // L5
   //
-  // o 
-  // o 
-  // o 
+  // o
+  // o
+  // o
   // oo
   120, 124, 129, 133,  // ccN
   123, 126, 132, 135,  // ccE
@@ -4798,8 +5410,8 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
   //
   //  o
   // oo
-  // o 
-  // o 
+  // o
+  // o
   141, 149, 159, 167,  // ccN
   145, 153, 161, 169,  // ccE
   144, 152, 158, 166,  // ccS
@@ -4811,7 +5423,7 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // P5
   //
-  // o 
+  // o
   // oo
   // oo
   183, 189,  // ccN
@@ -4825,9 +5437,9 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // T5
   //
-  // o  
+  // o
   // ooo
-  // o  
+  // o
   205, 209, 212,  // ccN
   208, 211, 214,  // ccE
   206, 213, 215,  // ccS
@@ -4840,7 +5452,7 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
   // U5
   //
   // oo
-  // o 
+  // o
   // oo
   221, 223,  // ccN
   225, 226,  // ccE
@@ -4853,8 +5465,8 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // V5
   //
-  // o  
-  // o  
+  // o
+  // o
   // ooo
   236, 240,  // ccN
   239, 242,  // ccE
@@ -4868,8 +5480,8 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
   // W5
   //
   //  oo
-  // oo 
-  // o  
+  // oo
+  // o
   245, 253,  // ccN
   250, 255,  // ccE
   259, 261,  // ccS
@@ -4881,9 +5493,9 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // X5
   //
-  //  o 
+  //  o
   // ooo
-  //  o 
+  //  o
   266,  // ccN
   265,  // ccE
   267,  // ccS
@@ -4895,10 +5507,10 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
 
   // Y5
   //
-  // o 
-  // o 
+  // o
+  // o
   // oo
-  // o 
+  // o
   269, 273, 276, 281, 285, 288,  // ccN
   272, 275, 278, 284, 287, 290,  // ccE
   270, 277, 279, 282, 289, 291,  // ccS
@@ -4912,7 +5524,7 @@ const piece_orientation_corner_index_t kCornerConstraintArray[kCornerConstraintA
   //
   //   o
   // ooo
-  // o  
+  // o
   293, 303,  // ccN
   297, 305,  // ccE
   296, 302,  // ccS
