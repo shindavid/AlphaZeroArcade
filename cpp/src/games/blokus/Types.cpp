@@ -119,9 +119,9 @@ void find_helper(const BitBoard* board, Location loc, int8_t dr, int8_t dc, Mini
 
 }  // namespace detail
 
-std::string BitBoard::to_string(const std::string& s) const {
+std::string BitBoard::to_string(drawing_t c) const {
   BoardString board_string;
-  board_string.set(*this, s);
+  board_string.set(*this, c);
   std::ostringstream ss;
   board_string.print(ss);
   return ss.str();

@@ -118,7 +118,7 @@ class BitBoard {
   constexpr int start_row() const { return 0; }
   constexpr int end_row() const { return kBoardDimension; }
 
-  std::string to_string(const std::string& s) const;
+  std::string to_string(drawing_t) const;
   bool any() const;
   void clear();
   int count() const;
@@ -180,16 +180,15 @@ static_assert(concepts::BitBoardLike<BitBoardSlice>);
 
 class BoardString {
  public:
-  BoardString();
   void print(std::ostream&, bool omit_trivial_rows=false) const;
 
-  void set(Location loc, const std::string& str);
+  void set(Location loc, drawing_t color);
 
   template<concepts::BitBoardLike Board>
-  void set(const Board& board, const std::string& str);
+  void set(const Board& board, drawing_t color);
 
  private:
-  std::string strs_[kBoardDimension][kBoardDimension];
+  drawing_t colors_[kBoardDimension][kBoardDimension] = {};
 };
 
 #pragma pack(push, 1)

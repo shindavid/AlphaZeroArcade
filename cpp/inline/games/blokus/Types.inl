@@ -1,5 +1,7 @@
 #include <games/blokus/Types.hpp>
 
+#include <util/AnsiCodes.hpp>
+
 #include <iomanip>
 
 namespace blokus {
@@ -444,33 +446,39 @@ inline uint32_t BitBoardSlice::get_row(int k) const {
 
 inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
 
-inline BoardString::BoardString() {
-  for (int i = 0; i < kBoardDimension; ++i) {
-    for (int j = 0; j < kBoardDimension; ++j) {
-      strs_[i][j] = std::string(".");
-    }
-  }
-}
-
 inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
+  static std::string color_strs[dNumDrawings] = {
+      ".",
+      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset("")),
+      "o",
+      "+",
+      "*",
+      "x"
+  };
+
   os << "   ";
   for (int col = 0; col < kBoardDimension; ++col) {
     os << static_cast<char>('A' + col);
   }
   os << '\n';
   for (int row = kBoardDimension - 1; row >= 0; --row) {
-    bool trivial = true;
-    for (int col = 0; col < kBoardDimension; ++col) {
-      if (strs_[row][col] != ".") {
-        trivial = false;
-        break;
+    if (omit_trivial_rows) {
+      bool trivial = true;
+      for (int col = 0; col < kBoardDimension; ++col) {
+        if (colors_[row][col] != dBlankSpace) {
+          trivial = false;
+          break;
+        }
       }
+      if (trivial) continue;
     }
-    if (omit_trivial_rows && trivial) continue;
 
     os << std::setw(2) << (row + 1) << ' ';
     for (int col = 0; col < kBoardDimension; ++col) {
-      os << strs_[row][col];
+      os << color_strs[colors_[row][col]];
     }
     os << ' ' << std::setw(2) << (row + 1) << '\n';
   }
@@ -481,15 +489,15 @@ inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
   os << '\n';
 }
 
-inline void BoardString::set(Location loc, const std::string& str) {
-  util::debug_assert(strs_[loc.row][loc.col] == ".");
-  strs_[loc.row][loc.col] = str;
+inline void BoardString::set(Location loc, drawing_t color) {
+  util::debug_assert(colors_[loc.row][loc.col] == dBlankSpace);
+  colors_[loc.row][loc.col] = color;
 }
 
 template<concepts::BitBoardLike Board>
-inline void BoardString::set(const Board& board, const std::string& str) {
+inline void BoardString::set(const Board& board, drawing_t color) {
   for (Location loc : board.get_set_locations()) {
-    set(loc, str);
+    set(loc, color);
   }
 }
 

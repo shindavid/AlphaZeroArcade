@@ -26,6 +26,21 @@ enum corner_constraint_t : uint8_t {
   ccNW = 8
 };
 
+enum drawing_t : uint8_t {
+  dBlankSpace = 0,
+  dBlueSpace = 1,
+  dYellowSpace = 2,
+  dRedSpace = 3,
+  dGreenSpace = 4,
+  dCircle = 5,
+  dPlus = 6,
+  dStar = 7,
+  dTimes = 8,
+  dNumDrawings = 9
+};
+
+inline drawing_t color_to_drawing(color_t c) { return drawing_t(c + 1); }
+
 const piece_index_t pO1 = 0;
 const piece_index_t pI2 = 1;
 const piece_index_t pI3 = 2;

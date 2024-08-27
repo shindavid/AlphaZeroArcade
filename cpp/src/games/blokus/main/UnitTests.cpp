@@ -16,7 +16,7 @@ using Rules = Game::Rules;
 template <typename B>
 std::string get_repr(const B& board) {
   BoardString s;
-  s.set(board, "x");
+  s.set(board, dTimes);
 
   std::ostringstream ss;
   s.print(ss, true);
@@ -25,11 +25,8 @@ std::string get_repr(const B& board) {
 
 std::string get_repr(const BaseState& state) {
   std::ostringstream ss;
-  Game::IO::print_state(ss, state);
-
+  Game::IO::print_state(ss, state, kPass+1);
   std::string s = ss.str();
-
-  // only use the first 22 lines, we don't care about score part
 
   std::vector<std::string> lines;
   std::istringstream iss(s);
@@ -53,9 +50,9 @@ std::string make_full_piece_repr(PieceOrientationCorner poc, Location loc) {
   BitBoardSlice diag_mask = poc.to_diagonal_bitboard_mask(loc);
 
   BoardString s;
-  s.set(mask, "o");
-  s.set(adj_mask, "+");
-  s.set(diag_mask, "*");
+  s.set(mask, dCircle);
+  s.set(adj_mask, dPlus);
+  s.set(diag_mask, dStar);
 
   std::ostringstream ss;
   s.print(ss, true);

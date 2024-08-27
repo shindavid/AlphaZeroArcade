@@ -253,7 +253,7 @@ void Game::IO::print_state(std::ostream& os, const BaseState& state, core::actio
       util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
 
   for (color_t c = 0; c < kNumColors; ++c) {
-    bs.set(state.core.occupied_locations[c], color_strs[c]);
+    bs.set(state.core.occupied_locations[c], color_to_drawing(c));
   }
 
   bs.print(os);
