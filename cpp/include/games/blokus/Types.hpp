@@ -240,6 +240,12 @@ class PieceOrientationCorner {
   BitBoardSlice to_adjacent_bitboard_mask(Location loc) const;  // assumes in-bounds
   BitBoardSlice to_diagonal_bitboard_mask(Location loc) const;  // assumes in-bounds
 
+  /*
+   * If this is positioned at loc, returns the root location of the piece, which is defined as the
+   * lexically smallest location of the piece.
+   */
+  Location get_root_location(Location loc) const;
+
  private:
   piece_orientation_corner_index_t index_;
 };

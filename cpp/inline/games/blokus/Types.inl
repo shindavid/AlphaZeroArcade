@@ -659,6 +659,14 @@ inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location 
   return BitBoardSlice(rows, n_rows, bot_margin - !bot_overflow);
 }
 
+inline Location PieceOrientationCorner::get_root_location(Location loc) const {
+  BitBoardSlice slice = to_bitboard_mask(loc);
+  for (Location root_loc : slice.get_set_locations()) {
+    return root_loc;
+  }
+  throw util::Exception("Unexpected empty slice");
+}
+
 inline PieceMask PieceMask::operator~() const {
   PieceMask result;
   result.mask_ = (~mask_) & ((1 << kNumPieces) - 1);
