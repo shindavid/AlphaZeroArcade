@@ -99,6 +99,7 @@ struct Game {
     using ValueTarget = core::ValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
+    // TODO(FIXME): change this to be 1-hot
     struct OwnershipTarget {
       static constexpr const char* kName = "ownership";
       using Tensor = eigen_util::FTensor<BoardShape>;

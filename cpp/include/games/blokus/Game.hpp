@@ -150,15 +150,13 @@ class Game {
   struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
     using OwnershipShape = Eigen::Sizes<kBoardDimension, kBoardDimension, kNumColors + 1>;
-    using ScoreShape = Eigen::Sizes<Constants::kNumPlayers, kMaxScore + 1>;
+
+    // (player, score, absolute-vs-relative, pdf-vs-cdf)
+    using ScoreShape = Eigen::Sizes<Constants::kNumPlayers, kMaxScore + 1, 2, 2>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
 
-    /*
-     * ScoreTarget predicts the final score for each player. The score is the total number of
-     * squares among unplayed pieces.
-     */
     struct ScoreTarget {
       static constexpr const char* kName = "score";
       using Tensor = eigen_util::FTensor<ScoreShape>;

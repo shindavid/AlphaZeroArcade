@@ -115,6 +115,7 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const Base
   return tensor;
 }
 
+// TODO(FIXME): this should look at the final state, not the current state
 inline Game::TrainingTargets::ScoreMarginTarget::Tensor
 Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;

@@ -100,7 +100,7 @@ class Game {
     using ValueTarget = core::ValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-    // TODO: change this to use PDF/CDF
+    // TODO(FIXME): change this to use PDF/CDF
     struct ScoreMarginTarget {
       static constexpr const char* kName = "score_margin";
       using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
@@ -108,6 +108,7 @@ class Game {
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
+    // TODO(FIXME): change this to be 1-hot
     struct OwnershipTarget {
       static constexpr const char* kName = "ownership";
       using Tensor = eigen_util::FTensor<BoardShape>;

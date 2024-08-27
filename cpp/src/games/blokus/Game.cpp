@@ -374,14 +374,84 @@ Game::FullState Game::IO::load(const std::string& str, int pass_count) {
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
                                                                const BaseState* cur) {
   const BaseState& state = *cur;
+  color_t cp = Rules::get_current_player(state);
   Tensor tensor;
   for (color_t c = 0; c < kNumColors; ++c) {
+    color_t rc = (c - cp) % kNumColors;
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
-        tensor(c, row, col) = state.core.occupied_locations[c].get(row, col);
+        tensor(rc, row, col) = state.core.occupied_locations[c].get(row, col);
       }
     }
   }
+  return tensor;
+}
+
+Game::TrainingTargets::ScoreTarget::Tensor Game::TrainingTargets::ScoreTarget::tensorize(
+    const Types::GameLogView& view) {
+  Tensor tensor;
+  const BaseState& state = *view.final_pos;
+  color_t cp = Rules::get_current_player(state);
+
+  int min_score = kMaxScore;
+  int absolute_scores[kNumColors];
+  for (color_t c = 0; c < kNumColors; ++c) {
+    int score = state.remaining_square_count(c);
+    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
+    absolute_scores[c] = score;
+    min_score = std::min(min_score, score);
+  }
+
+  int relative_scores[kNumColors];
+  for (color_t c = 0; c < kNumColors; ++c) {
+    relative_scores[c] = absolute_scores[c] - min_score;
+  }
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    color_t rc = (c - cp) % kNumColors;
+
+    // absolute-score PDF
+    tensor(rc, absolute_scores[c], 0, 0) = 1;
+
+    // relative-score PDF
+    tensor(rc, relative_scores[c], 1, 0) = 1;
+
+    // absolute-score CDF
+    for (int score = 0; score <= absolute_scores[c]; ++score) {
+      tensor(rc, score, 0, 1) = 1;
+    }
+
+    // relative-score CDF
+    for (int score = 0; score <= relative_scores[c]; ++score) {
+      tensor(rc, score, 1, 1) = 1;
+    }
+  }
+
+  return tensor;
+}
+
+Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipTarget::tensorize(
+    const Types::GameLogView& view) {
+  Tensor tensor;
+  const BaseState& state = *view.final_pos;
+
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      bool unoccupied = true;
+      for (color_t c = 0; c < kNumColors; ++c) {
+        bool x = state.core.occupied_locations[c].get(row, col);
+        if (x) {
+          tensor(row, col, c) = 1;
+          unoccupied = false;
+          break;
+        }
+      }
+      if (unoccupied) {
+        tensor(row, col, kNumColors) = 1;
+      }
+    }
+  }
+
   return tensor;
 }
 
