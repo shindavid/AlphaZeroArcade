@@ -2,6 +2,7 @@
 
 #include <util/Asserts.hpp>
 
+#include <algorithm>
 #include <bit>
 
 namespace blokus {
@@ -189,7 +190,7 @@ void BoardString::pretty_print(std::ostream& os) const {
 
   constexpr int N = 16384;
   char buffer[N] = "";
-  size_t c = 0;
+  int c = 0;
 
   constexpr const char* color_strs[dNumDrawings] = {
       "  ",                         // dBlankSpace
@@ -217,17 +218,17 @@ void BoardString::pretty_print(std::ostream& os) const {
 
   for (int col = 0; col < kBoardDimension; ++col) {
     const char* div = (col == 0) ? top_left_corner : top_intersection;
-    c += snprintf(buffer + c, N - c, "%s%s", div, horizontal_line);
+    c += snprintf(buffer + c, std::max(N - c, 0), "%s%s", div, horizontal_line);
   }
-  c += snprintf(buffer + c, N - c, "%s\n", top_right_corner);
+  c += snprintf(buffer + c, std::max(N - c, 0), "%s\n", top_right_corner);
 
   for (int row = kBoardDimension - 1; row >= 0; --row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       drawing_t d = colors_[row][col];
       util::debug_assert(d >= 0 && d < 5, "%d", int(d));
-      c += snprintf(buffer + c, N - c, "%s%s", vertical_line, color_strs[d]);
+      c += snprintf(buffer + c, std::max(N - c, 0), "%s%s", vertical_line, color_strs[d]);
     }
-    c += snprintf(buffer + c, N - c, "%s\n", vertical_line);
+    c += snprintf(buffer + c, std::max(N - c, 0), "%s\n", vertical_line);
 
     for (int col = 0; col < kBoardDimension; ++col) {
       const char* div;
@@ -236,12 +237,13 @@ void BoardString::pretty_print(std::ostream& os) const {
       } else {
         div = (col == 0) ? left_intersection : corner_intersection;
       }
-      c += snprintf(buffer + c, N - c, "%s%s", div, horizontal_line);
+      c += snprintf(buffer + c, std::max(N - c, 0), "%s%s", div, horizontal_line);
     }
-    c += snprintf(buffer + c, N - c, "%s\n", row == 0 ? bottom_right_corner : right_intersection);
+    c += snprintf(buffer + c, std::max(N - c, 0), "%s\n",
+                  row == 0 ? bottom_right_corner : right_intersection);
   }
 
-  util::release_assert(c < N);
+  util::release_assert(c < N, "BoardString::pretty_print() overflow (%d < %d)", c, N);
   os << buffer;
 }
 
