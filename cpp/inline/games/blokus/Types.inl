@@ -447,16 +447,20 @@ inline uint32_t BitBoardSlice::get_row(int k) const {
 inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
 
 inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
-  static std::string color_strs[dNumDrawings] = {
-      ".",
-      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset("")),
-      "o",
-      "+",
-      "*",
-      "x"
+  if (util::tty_mode()) {
+    pretty_print(os);
+    return;
+  }
+  static char chars[dNumDrawings] = {
+      '.',
+      'B',
+      'Y',
+      'R',
+      'G',
+      'o',
+      '+',
+      '*',
+      'x'
   };
 
   os << "   ";
@@ -478,7 +482,7 @@ inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
 
     os << std::setw(2) << (row + 1) << ' ';
     for (int col = 0; col < kBoardDimension; ++col) {
-      os << color_strs[colors_[row][col]];
+      os << chars[colors_[row][col]];
     }
     os << ' ' << std::setw(2) << (row + 1) << '\n';
   }
@@ -487,6 +491,10 @@ inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
     os << static_cast<char>('A' + col);
   }
   os << '\n';
+}
+
+inline void BoardString::pretty_print(std::ostream&) const {
+  throw util::Exception("Not implemented");
 }
 
 inline void BoardString::set(Location loc, drawing_t color) {

@@ -188,6 +188,8 @@ class BoardString {
   void set(const Board& board, drawing_t color);
 
  private:
+  void pretty_print(std::ostream&) const;
+
   drawing_t colors_[kBoardDimension][kBoardDimension] = {};
 };
 

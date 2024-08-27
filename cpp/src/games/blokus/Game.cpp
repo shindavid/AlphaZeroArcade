@@ -246,12 +246,6 @@ void Game::IO::print_state(std::ostream& os, const BaseState& state, core::actio
   }
   BoardString bs;
 
-  static std::string color_strs[kNumColors] = {
-      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
-      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
-
   for (color_t c = 0; c < kNumColors; ++c) {
     bs.set(state.core.occupied_locations[c], color_to_drawing(c));
   }
@@ -261,6 +255,12 @@ void Game::IO::print_state(std::ostream& os, const BaseState& state, core::actio
   constexpr int buf_size = 4096;
   char buffer[buf_size];
   int cx = 0;
+
+  static std::string color_strs[kNumColors] = {
+      util::create_string("%s%s%s", ansi::kBlue(""), ansi::kRectangle("B"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kYellow(""), ansi::kRectangle("Y"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kRed(""), ansi::kRectangle("R"), ansi::kReset("")),
+      util::create_string("%s%s%s", ansi::kGreen(""), ansi::kRectangle("G"), ansi::kReset(""))};
 
   cx += snprintf(buffer + cx, buf_size - cx, "\nScore: Player\n");
   for (color_t c = 0; c < kNumColors; ++c) {
