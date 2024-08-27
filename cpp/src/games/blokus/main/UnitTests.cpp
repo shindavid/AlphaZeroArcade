@@ -1,6 +1,8 @@
 #include <games/blokus/Game.hpp>
 #include <games/blokus/Types.hpp>
 
+#include <iostream>
+
 int global_pass_count = 0;
 int global_fail_count = 0;
 
@@ -11,7 +13,7 @@ using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
-template<typename B>
+template <typename B>
 std::string get_repr(const B& board) {
   BoardString s;
   s.set(board, "x");
@@ -19,6 +21,30 @@ std::string get_repr(const B& board) {
   std::ostringstream ss;
   s.print(ss, true);
   return ss.str();
+}
+
+std::string get_repr(const BaseState& state) {
+  std::ostringstream ss;
+  Game::IO::print_state(ss, state);
+
+  std::string s = ss.str();
+
+  // only use the first 22 lines, we don't care about score part
+
+  std::vector<std::string> lines;
+  std::istringstream iss(s);
+  std::string line;
+  while (std::getline(iss, line)) {
+    lines.push_back(line);
+  }
+
+  std::string repr;
+  for (int i = 0; i < 22; ++i) {
+    repr += lines[i];
+    repr += '\n';
+  }
+
+  return repr;
 }
 
 std::string make_full_piece_repr(PieceOrientationCorner poc, Location loc) {
@@ -680,11 +706,54 @@ void test_piece_orientation_corner() {
   global_pass_count++;
 }
 
+void test_load() {
+  std::string repr =
+      "   ABCDEFGHIJKLMNOPQRST\n"
+      "20 Y...Y..Y..YY.R....RR 20\n"
+      "19 Y...Y...YY.YYRR...RR 19\n"
+      "18 .Y..Y..YY.R...RR..R. 18\n"
+      "17 .YYY...Y.YRRR...RR.R 17\n"
+      "16 BBY.YYY.BY...RRR..RR 16\n"
+      "15 .B.Y.YB.BYR....R.... 15\n"
+      "14 BB.YYBBB.YRR.R.R.RRR 14\n"
+      "13 ..BBB.YY.YR.RRR.R... 13\n"
+      "12 BB.YBBYYY.R....RRR.. 12\n"
+      "11 B.BYYY...Y..R.R.R.R. 11\n"
+      "10 B.BB..YYYY..RRR....R 10\n"
+      " 9 B.YYYYBRRRRR..G.GG.R  9\n"
+      " 8 .BB.BBBB.BBBB.G..G.R  8\n"
+      " 7 B.BB.GG.B..G.GG.G..R  7\n"
+      " 6 GGGBG.G.BGGG.G.GGGG.  6\n"
+      " 5 BBBGGBGGB..G..G....G  5\n"
+      " 4 B..G.BBB..G...G...GG  4\n"
+      " 3 .BG.G.B.GGG...G..GG.  3\n"
+      " 2 BBG.GGGG.G.GG.G.....  2\n"
+      " 1 BB.G.......GGG.GGGGG  1\n"
+      "   ABCDEFGHIJKLMNOPQRST\n";
+
+  BaseState state = Game::IO::load(repr);
+  std::string repr2 = get_repr(state);
+
+  if (repr != repr2) {
+    global_fail_count++;
+    printf("Game::IO::load() failure\n");
+    printf("repr:\n");
+    std::cout << repr << std::endl;
+    printf("repr2:\n");
+    std::cout << repr2 << std::endl;
+    return;
+  }
+
+  printf("Success: %s()\n", __func__);
+  global_pass_count++;
+}
+
 int main() {
   util::set_tty_mode(false);
   test_location();
   test_bit_board();
   test_piece_orientation_corner();
+  test_load();
 
   if (global_fail_count > 0) {
     int total_count = global_pass_count + global_fail_count;

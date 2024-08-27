@@ -107,7 +107,7 @@ struct BitBoardSliceRange {
     bool operator!=(Iterator other) const { return row_ != other.row_ || col_ != other.col_; }
 
     Location operator*() const {
-      return Location{int8_t(row_), (int8_t)col_};
+      return Location(row_, col_);
     }
 
     Iterator& operator++() {
@@ -201,12 +201,31 @@ inline color_t char_to_color(char c) {
   }
 }
 
+inline char color_to_char(color_t c) {
+  switch (c) {
+    case kRed:
+      return 'R';
+    case kGreen:
+      return 'G';
+    case kBlue:
+      return 'B';
+    case kYellow:
+      return 'Y';
+    default:
+      return '?';
+  }
+}
+
 inline void Location::set(int8_t row, int8_t col) {
   this->row = row;
   this->col = col;
 }
 
 inline bool Location::valid() const { return row >= 0 && col >= 0; }
+
+inline std::string Location::to_string() const {
+  return util::create_string("%c%d", 'A' + col, row + 1);
+}
 
 inline int Location::flatten() const {
   return row * kBoardDimension + col;
@@ -381,20 +400,13 @@ inline BitBoard BitBoard::adjacent_squares() const {
   constexpr int B = kBoardDimension;
 
   BitBoard result;
-  result.rows_[0] = (rows_[0] >> 1);
-  result.rows_[0] |= (result.rows_[0] << 2);
-  result.rows_[0] |= rows_[1];
+  result.rows_[0] = smear_row(rows_[0]) | rows_[1];
 
   for (int i = 1; i < B - 1; ++i) {
-    result.rows_[i] = rows_[i] >> 1;
-    result.rows_[i] |= (result.rows_[i] << 2);
-    result.rows_[i] |= rows_[i - 1];
-    result.rows_[i] |= rows_[i + 1];
+    result.rows_[i] = smear_row(rows_[i]) | rows_[i - 1] | rows_[i + 1];
   }
 
-  result.rows_[B - 1] = (rows_[B - 1] >> 1);
-  result.rows_[B - 1] |= (result.rows_[B - 1] << 2);
-  result.rows_[B - 1] |= rows_[B - 2];
+  result.rows_[B - 1] = smear_row(rows_[B - 1]) | rows_[B - 2];
   return result;
 }
 
@@ -402,25 +414,18 @@ inline BitBoard BitBoard::diagonal_squares() const {
   constexpr int B = kBoardDimension;
 
   BitBoard result;
-  result.rows_[0] = (rows_[1] >> 1);
-  result.rows_[0] |= (result.rows_[0] << 2);
+  result.rows_[0] = smear_row(rows_[1]);
 
   for (int i = 1; i < B - 1; ++i) {
-    uint32_t row1 = rows_[i - 1];
-    uint32_t row2 = rows_[i + 1];
-
-    uint32_t row3 = row1 >> 1;
-    row3 |= (row3 << 2);
-
-    uint32_t row4 = row2 >> 1;
-    row4 |= (row4 << 2);
-
-    result.rows_[i] = row3 | row4;
+    result.rows_[i] = smear_row(rows_[i - 1]) | smear_row(rows_[i + 1]);
   }
 
-  result.rows_[B - 1] = (rows_[B - 2] >> 1);
-  result.rows_[B - 1] |= (result.rows_[B - 1] << 2);
+  result.rows_[B - 1] = smear_row(rows_[B - 2]);
   return result;
+}
+
+inline uint32_t BitBoard::smear_row(uint32_t row) {
+  return ((row >> 1) | (row << 1)) & ((1 << kBoardDimension) - 1);
 }
 
 inline BitBoardSlice::BitBoardSlice(const uint32_t* rows, int num_rows, int row_offset) {
@@ -652,6 +657,27 @@ inline BitBoardSlice PieceOrientationCorner::to_diagonal_bitboard_mask(Location 
   }
 
   return BitBoardSlice(rows, n_rows, bot_margin - !bot_overflow);
+}
+
+inline PieceMask PieceMask::operator~() const {
+  PieceMask result;
+  result.mask_ = (~mask_) & ((1 << kNumPieces) - 1);
+  return result;
+}
+
+inline PieceMask PieceMask::operator&(const PieceMask& other) const {
+  PieceMask result;
+  result.mask_ = mask_ & other.mask_;
+  return result;
+}
+
+inline PieceMask& PieceMask::operator&=(const PieceMask& other) {
+  mask_ &= other.mask_;
+  return *this;
+}
+
+inline auto PieceMask::get_set_bits() const {
+  return detail::PieceMaskRange(mask_);
 }
 
 inline auto PieceMask::get_unset_bits() const {

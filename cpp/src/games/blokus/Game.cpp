@@ -25,11 +25,16 @@ void Game::BaseState::compute_aux() {
 
   for (color_t c = 0; c < kNumColors; ++c) {
     occupied |= core.occupied_locations[c];
+    aux.corner_locations[c].clear();
+    if (!core.occupied_locations[c].any()) {
+      Location loc((kBoardDimension - 1) * (c % 3 > 0), (kBoardDimension - 1) * (c / 2 > 0));
+      aux.corner_locations[c].set(loc);
+    }
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
     aux.unplayable_locations[c] = occupied | core.occupied_locations[c].adjacent_squares();
-    aux.corner_locations[c] = core.occupied_locations[c].diagonal_squares();
+    aux.corner_locations[c] |= core.occupied_locations[c].diagonal_squares();
     aux.corner_locations[c].unset(aux.unplayable_locations[c]);
   }
 
@@ -40,7 +45,6 @@ void Game::BaseState::compute_aux() {
     for (Location loc : occupied.get_set_locations()) {
       PieceOrientationCorner poc = occupied.find(loc);
       occupied.unset(poc.to_bitboard_mask(loc));
-      util::release_assert(!aux.played_pieces[c].get(poc.to_piece()));
       aux.played_pieces[c].set(poc.to_piece());
     }
   }
@@ -51,7 +55,44 @@ void Game::BaseState::validate_aux() const {
   copy.compute_aux();
 
   if (copy.aux != this->aux) {
-    throw std::runtime_error("Auxiliary data is inconsistent with core data");
+    printf("blokus::Game::BaseState validation failure!\n\n");
+    std::ostringstream ss;
+    Game::IO::print_state(ss, *this, kPass+1);
+    std::cout << ss.str() << std::endl;
+
+    for (color_t c = 0; c < kNumColors; ++c) {
+      PieceMask diff1 = copy.aux.played_pieces[c] & ~this->aux.played_pieces[c];
+      PieceMask diff2 = this->aux.played_pieces[c] & ~copy.aux.played_pieces[c];
+      for (Piece p : diff1.get_set_bits()) {
+        printf("played_pieces %c %s: this=0 copy=1\n", color_to_char(c), p.name());
+      }
+      for (Piece p : diff2.get_set_bits()) {
+        printf("played_pieces %c %s: this=1 copy=0\n", color_to_char(c), p.name());
+      }
+
+      BitBoard diff3 = copy.aux.unplayable_locations[c] & ~this->aux.unplayable_locations[c];
+      BitBoard diff4 = this->aux.unplayable_locations[c] & ~copy.aux.unplayable_locations[c];
+      for (Location loc : diff3.get_set_locations()) {
+        printf("unplayable_locations %c@%s: this=0 copy=1\n", color_to_char(c),
+               loc.to_string().c_str());
+      }
+      for (Location loc : diff4.get_set_locations()) {
+        printf("unplayable_locations %c@%s: this=1 copy=0\n", color_to_char(c),
+               loc.to_string().c_str());
+      }
+
+      BitBoard diff5 = copy.aux.corner_locations[c] & ~this->aux.corner_locations[c];
+      BitBoard diff6 = this->aux.corner_locations[c] & ~copy.aux.corner_locations[c];
+      for (Location loc : diff5.get_set_locations()) {
+        printf("corner_locations %c@%s: this=0 copy=1\n", color_to_char(c),
+               loc.to_string().c_str());
+      }
+      for (Location loc : diff6.get_set_locations()) {
+        printf("corner_locations %c@%s: this=1 copy=0\n", color_to_char(c),
+               loc.to_string().c_str());
+      }
+    }
+    throw util::Exception("Auxiliary data is inconsistent with core data");
   }
 }
 
@@ -59,18 +100,13 @@ void Game::Rules::init_state(FullState& state, group::element_t sym) {
   util::release_assert(sym == group::kIdentity);
   std::memset(&state, 0, sizeof(state));
 
-  FullState::core_t& core = state.core;
-  FullState::aux_t& aux = state.aux;
+  state.core.cur_color = kBlue;
+  state.core.partial_move.set(-1, -1);
 
-  core.cur_color = kBlue;
-  core.partial_move.set(-1, -1);
-
-  constexpr int B = kBoardDimension;
-
-  aux.corner_locations[kBlue].set(0, 0);
-  aux.corner_locations[kYellow].set(B - 1, 0);
-  aux.corner_locations[kRed].set(B - 1, B - 1);
-  aux.corner_locations[kGreen].set(0, B - 1);
+  for (color_t c = 0; c < kNumColors; ++c) {
+    Location loc((kBoardDimension-1)*(c%3>0), (kBoardDimension-1)*(c/2>0));
+    state.aux.corner_locations[c].set(loc);
+  }
 }
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
@@ -133,7 +169,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
 }
 
 Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) {
+  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
     state.validate_aux();
   }
 

@@ -24,9 +24,14 @@ namespace detail {
 //           L  0  1  2  3
 class MiniBoard {
  public:
-  MiniBoard(Location loc) : loc_(loc) {}
+  MiniBoard(Location loc)
+      : loc_(loc),
+        row_bounds_{loc.row, int8_t(std::min(loc.row + 5, kBoardDimension))},
+        col_bounds_{int8_t(std::max(0, loc.col - 3)),
+                    int8_t(std::min(loc.col + 5, kBoardDimension))} {}
 
   bool any() const { return mask_; }
+  uint32_t mask() const { return mask_; }
 
   Location pop() {
     if (!any()) {
@@ -87,16 +92,40 @@ class MiniBoard {
     return 7 * r + c + 1 - (r < 1);
   }
 
-  int8_t row_lower_bound() const { return loc_.row; }
-  int8_t row_upper_bound() const { return int8_t(std::min(loc_.row + 5, kBoardDimension)); }
-  int8_t col_lower_bound() const { return int8_t(std::max(0, loc_.col - 3)); }
-  int8_t col_upper_bound() const { return int8_t(std::min(loc_.col + 5, kBoardDimension)); }
+  int8_t row_lower_bound() const { return row_bounds_[0]; }
+  int8_t row_upper_bound() const { return row_bounds_[1]; }
+  int8_t col_lower_bound() const { return col_bounds_[0]; }
+  int8_t col_upper_bound() const { return col_bounds_[1]; }
 
+  uint32_t mask_ = 1;
   const Location loc_;
-  uint32_t mask_ = 0;
+  const int8_t row_bounds_[2];
+  const int8_t col_bounds_[2];
 };
 
+void find_helper(const BitBoard* board, Location loc, int8_t dr, int8_t dc, MiniBoard& visited,
+                 MiniBoard& queue, MiniBoard& connected) {
+  Location neighbor = loc;
+  neighbor.row += dr;
+  neighbor.col += dc;
+
+  if (!visited.in_bounds(neighbor) || visited.get(neighbor)) return;
+  visited.set(neighbor);
+  if (board->get(neighbor)) {
+    queue.set(neighbor);
+    connected.set(neighbor);
+  }
+}
+
 }  // namespace detail
+
+std::string BitBoard::to_string(const std::string& s) const {
+  BoardString board_string;
+  board_string.set(*this, s);
+  std::ostringstream ss;
+  board_string.print(ss);
+  return ss.str();
+}
 
 piece_orientation_corner_index_t BitBoard::find(Location loc) const {
   util::debug_assert(get(loc));
@@ -108,25 +137,12 @@ piece_orientation_corner_index_t BitBoard::find(Location loc) const {
   detail::MiniBoard connected(loc);
 
   while (queue.any()) {
-    Location loc = queue.pop();
+    loc = queue.pop();
 
-    Location neighbors[4] = {
-      {int8_t(loc.row - 1), loc.col},
-      {int8_t(loc.row + 1), loc.col},
-      {loc.row, int8_t(loc.col - 1)},
-      {loc.row, int8_t(loc.col + 1)},
-    };
-
-    for (int i = 0; i < 4; ++i) {
-      Location neighbor = neighbors[i];
-      if (!queue.in_bounds(neighbor) || visited.get(neighbor)) continue;
-
-      visited.set(neighbor);
-      if (get(neighbor)) {
-        queue.set(neighbor);
-        connected.set(neighbor);
-      }
-    }
+    detail::find_helper(this, loc, +1, 0, visited, queue, connected);
+    detail::find_helper(this, loc, 0, +1, visited, queue, connected);
+    detail::find_helper(this, loc, -1, 0, visited, queue, connected);
+    detail::find_helper(this, loc, 0, -1, visited, queue, connected);
   }
 
   return connected.to_piece_orientation_corner_index();

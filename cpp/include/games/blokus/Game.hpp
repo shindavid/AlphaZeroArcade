@@ -48,6 +48,7 @@ class Game {
     size_t hash() const;
     int remaining_square_count(color_t) const;
     color_t last_placed_piece_color() const;
+    int pass_count() const { return core.pass_count; }
 
     /*
      * Sets this->aux from this->core.

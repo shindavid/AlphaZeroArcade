@@ -17,11 +17,19 @@ namespace blokus {
 // Converts {'B', 'Y', 'R', 'G', *} to {kBlue, kYellow, kRed, kGreen, kNumColors}
 color_t char_to_color(char c);
 
+// Converts {kBlue, kYellow, kRed, kGreen, kNumColors} to {'B', 'Y', 'R', 'G', '?'}
+char color_to_char(color_t c);
+
 #pragma pack(push, 1)
 struct Location {
+  Location() = default;
+
+  template<typename R, typename C> Location(R row, C col) : row(row), col(col) {}
+
   auto operator<=>(const Location& other) const = default;
   void set(int8_t row, int8_t col);
   bool valid() const;
+  std::string to_string() const;
 
   int flatten() const;
   static Location unflatten(int k);
@@ -110,6 +118,7 @@ class BitBoard {
   constexpr int start_row() const { return 0; }
   constexpr int end_row() const { return kBoardDimension; }
 
+  std::string to_string(const std::string& s) const;
   bool any() const;
   void clear();
   int count() const;
@@ -143,6 +152,7 @@ class BitBoard {
   BitBoard diagonal_squares() const;  // All diagonal-neighbors of set squares
 
  protected:
+  static uint32_t smear_row(uint32_t);  // Returns 1-dimensional L1-neighbors of distance 1
   uint32_t rows_[kBoardDimension];
 };
 static_assert(concepts::BitBoardLike<BitBoard>);
@@ -243,8 +253,14 @@ static_assert(sizeof(PieceOrientationCorner) == 2);
 class PieceMask {
  public:
   auto operator<=>(const PieceMask& other) const = default;
+
+  PieceMask operator~() const;
+  PieceMask operator&(const PieceMask&) const;
+  PieceMask& operator&=(const PieceMask&);
+  auto get_set_bits() const;
   auto get_unset_bits() const;
   int count() const { return std::popcount(mask_); }
+  bool empty() const { return mask_ == 0; }
   bool get(Piece piece) const { return mask_ & (1 << piece); }
   void set(Piece piece) { mask_ |= 1 << piece; }
   void clear() { mask_ = 0; }
