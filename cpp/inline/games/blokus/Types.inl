@@ -446,57 +446,6 @@ inline uint32_t BitBoardSlice::get_row(int k) const {
 
 inline auto BitBoardSlice::get_set_locations() const { return detail::BitBoardSliceRange(this); }
 
-inline void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
-  if (util::tty_mode()) {
-    pretty_print(os);
-    return;
-  }
-  static char chars[dNumDrawings] = {
-      '.',
-      'B',
-      'Y',
-      'R',
-      'G',
-      'o',
-      '+',
-      '*',
-      'x'
-  };
-
-  os << "   ";
-  for (int col = 0; col < kBoardDimension; ++col) {
-    os << static_cast<char>('A' + col);
-  }
-  os << '\n';
-  for (int row = kBoardDimension - 1; row >= 0; --row) {
-    if (omit_trivial_rows) {
-      bool trivial = true;
-      for (int col = 0; col < kBoardDimension; ++col) {
-        if (colors_[row][col] != dBlankSpace) {
-          trivial = false;
-          break;
-        }
-      }
-      if (trivial) continue;
-    }
-
-    os << std::setw(2) << (row + 1) << ' ';
-    for (int col = 0; col < kBoardDimension; ++col) {
-      os << chars[colors_[row][col]];
-    }
-    os << ' ' << std::setw(2) << (row + 1) << '\n';
-  }
-  os << "   ";
-  for (int col = 0; col < kBoardDimension; ++col) {
-    os << static_cast<char>('A' + col);
-  }
-  os << '\n';
-}
-
-inline void BoardString::pretty_print(std::ostream&) const {
-  throw util::Exception("Not implemented");
-}
-
 inline void BoardString::set(Location loc, drawing_t color) {
   util::debug_assert(colors_[loc.row][loc.col] == dBlankSpace);
   colors_[loc.row][loc.col] = color;
