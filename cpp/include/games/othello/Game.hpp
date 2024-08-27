@@ -100,6 +100,7 @@ class Game {
     using ValueTarget = core::ValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
+    // TODO: change this to use PDF/CDF
     struct ScoreMarginTarget {
       static constexpr const char* kName = "score_margin";
       using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;

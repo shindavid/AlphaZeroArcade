@@ -250,7 +250,7 @@ void Game::IO::print_state(std::ostream& os, const BaseState& state, core::actio
     bs.set(state.core.occupied_locations[c], color_to_drawing(c));
   }
 
-  bs.print(os);
+  bs.pretty_print(os);
 
   constexpr int buf_size = 4096;
   char buffer[buf_size];
@@ -264,8 +264,10 @@ void Game::IO::print_state(std::ostream& os, const BaseState& state, core::actio
 
   cx += snprintf(buffer + cx, buf_size - cx, "\nScore: Player\n");
   for (color_t c = 0; c < kNumColors; ++c) {
+    bool cur = c == state.core.cur_color;
     int score = state.remaining_square_count(c);
-    cx += snprintf(buffer + cx, buf_size - cx, "%5d: %s", score, color_strs[c].c_str());
+    cx += snprintf(buffer + cx, buf_size - cx, "%s%2d: %s", cur ? " * " : "   ", score,
+                   color_strs[c].c_str());
     if (player_names) {
       cx += snprintf(buffer + cx, buf_size - cx, " [%s]", (*player_names)[c].c_str());
     }

@@ -149,11 +149,7 @@ piece_orientation_corner_index_t BitBoard::find(Location loc) const {
 }
 
 void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
-  if (util::tty_mode()) {
-    pretty_print(os);
-    return;
-  }
-  static char chars[dNumDrawings] = {'.', 'B', 'Y', 'R', 'G', 'o', '+', '*', 'x'};
+  constexpr char chars[dNumDrawings] = {'.', 'B', 'Y', 'R', 'G', 'o', '+', '*', 'x'};
 
   os << "   ";
   for (int col = 0; col < kBoardDimension; ++col) {
@@ -185,8 +181,68 @@ void BoardString::print(std::ostream& os, bool omit_trivial_rows) const {
   os << '\n';
 }
 
-void BoardString::pretty_print(std::ostream&) const {
-  throw util::Exception("Not implemented");
+void BoardString::pretty_print(std::ostream& os) const {
+  if (!util::tty_mode()) {
+    print(os);
+    return;
+  }
+
+  constexpr int N = 16384;
+  char buffer[N] = "";
+  size_t c = 0;
+
+  constexpr const char* color_strs[dNumDrawings] = {
+      "  ",                         // dBlankSpace
+      "\033[44m  \033[0m",          // dBlueSpace
+      "\033[43m  \033[0m",          // dYellowSpace
+      "\033[41m  \033[0m",          // dRedSpace
+      "\033[42m  \033[0m",          // dGreenSpace
+      "\033[47m\033[34m⚫\033[0m",  // dCircle
+      "\033[47m\033[34m+\033[0m",   // dPlus
+      "\033[47m\033[34m*\033[0m",   // dStar
+      "\033[47m\033[34m×\033[0m"    // dTimes
+  };
+
+  const char* vertical_line = "│";
+  const char* horizontal_line = "──";
+  const char* corner_intersection = "┼";
+  const char* top_left_corner = "┌";
+  const char* top_right_corner = "┐";
+  const char* bottom_left_corner = "└";
+  const char* bottom_right_corner = "┘";
+  const char* top_intersection = "┬";
+  const char* bottom_intersection = "┴";
+  const char* left_intersection = "├";
+  const char* right_intersection = "┤";
+
+  for (int col = 0; col < kBoardDimension; ++col) {
+    const char* div = (col == 0) ? top_left_corner : top_intersection;
+    c += snprintf(buffer + c, N - c, "%s%s", div, horizontal_line);
+  }
+  c += snprintf(buffer + c, N - c, "%s\n", top_right_corner);
+
+  for (int row = kBoardDimension - 1; row >= 0; --row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      drawing_t d = colors_[row][col];
+      util::debug_assert(d >= 0 && d < 5, "%d", int(d));
+      c += snprintf(buffer + c, N - c, "%s%s", vertical_line, color_strs[d]);
+    }
+    c += snprintf(buffer + c, N - c, "%s\n", vertical_line);
+
+    for (int col = 0; col < kBoardDimension; ++col) {
+      const char* div;
+      if (row == 0) {
+        div = (col == 0) ? bottom_left_corner : bottom_intersection;
+      } else {
+        div = (col == 0) ? left_intersection : corner_intersection;
+      }
+      c += snprintf(buffer + c, N - c, "%s%s", div, horizontal_line);
+    }
+    c += snprintf(buffer + c, N - c, "%s\n", row == 0 ? bottom_right_corner : right_intersection);
+  }
+
+  util::release_assert(c < N);
+  os << buffer;
 }
 
 }  // namespace blokus

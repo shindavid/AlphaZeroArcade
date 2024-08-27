@@ -180,7 +180,8 @@ static_assert(concepts::BitBoardLike<BitBoardSlice>);
 
 class BoardString {
  public:
-  void print(std::ostream&, bool omit_trivial_rows=false) const;
+  void print(std::ostream&, bool omit_trivial_rows = false) const;
+  void pretty_print(std::ostream&) const;
 
   void set(Location loc, drawing_t color);
 
@@ -188,8 +189,6 @@ class BoardString {
   void set(const Board& board, drawing_t color);
 
  private:
-  void pretty_print(std::ostream&) const;
-
   drawing_t colors_[kBoardDimension][kBoardDimension] = {};
 };
 
