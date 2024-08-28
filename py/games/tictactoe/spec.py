@@ -9,7 +9,6 @@ from shared.training_params import TrainingParams
 BOARD_LENGTH = 3
 NUM_ACTIONS = BOARD_LENGTH * BOARD_LENGTH
 NUM_PLAYERS = 2
-NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
 def b7_c32(shape_info_dict: ShapeInfoDict):

@@ -2,6 +2,7 @@
 Wrapper around torch's nn.Module that facilitates caching and save/load mechanics.
 """
 import abc
+import math
 from typing import Optional
 
 import torch
@@ -17,13 +18,6 @@ class LearningTarget:
     - Whether or how to mask rows of data
     - An accuracy measurement function
     """
-    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
-        """
-        Converts the labels produced by the c++ code into the format expected by the loss function.
-        By default, this is a no-op; derived classes can override this.
-        """
-        return labels
-
     @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
         pass
@@ -97,76 +91,50 @@ class ValueTarget(LearningTarget):
         return int(sum((deltas < 0.25).all(dim=1)))
 
 
-class ScoreMarginTarget(LearningTarget):
-    def __init__(self, max_score_margin: int, min_score_margin: Optional[int]=None):
-        """
-        min_score_margin defaults to -max_score_margin
-        """
-        self.max_score_margin = max_score_margin
-        self.min_score_margin = -max_score_margin if min_score_margin is None else min_score_margin
+class ScoreTarget(LearningTarget):
+    """
+    Tensors are of shape (B, D, C, aux...), where:
 
-    def convert_labels(self, categories: torch.Tensor) -> torch.Tensor:
-        # categories -> one-hot
-        assert len(categories.shape) == 2 and categories.shape[1]==1, categories.shape
-        n = categories.shape[0]
-        one_hot = torch.zeros((n, self.max_score_margin - self.min_score_margin + 1))
-        index = categories[:, 0] - self.min_score_margin
-        one_hot[torch.arange(n), index.type(torch.int64)] = 1
-        return one_hot
+    B = batch-size
+    D = num distribution types (2: PDF, CDF)
+    C = number of classes (i.e., number of possible scores)
+    aux... = any number of additional dimensions
 
+    aux... might be nonempty if for example we're predicting for multiple players
+    """
     def loss_fn(self) -> nn.Module:
-        """
-        For the loss, we have a pdf component and a cdf component.
+        pdf_loss_fn = nn.CrossEntropyLoss()
+        cdf_loss_fn = nn.MSELoss()
 
-        For the pdf component, we use cross-entropy loss.
+        def loss(output: torch.Tensor, target: torch.Tensor):
+            assert output.shape == target.shape, (output.shape, target.shape)
+            assert output.shape[1] == 2, output.shape  # PDF, CDF
 
-        For the cdf component, we use MSE loss.
+            pdf_loss = pdf_loss_fn(output[:, 0], target[:, 0])
+            cdf_loss = cdf_loss_fn(output[:, 1], target[:, 1])
 
-        The arguments to the loss function are in pdf form, so the loss function has to do the work
-        of producting the cdf from the pdf.
-        """
-        pdf_loss = nn.CrossEntropyLoss()
-        cdf_loss = nn.MSELoss()
-
-        def loss(predicted_logits: torch.Tensor, actual_one_hot: torch.Tensor):
-            predicted_probs = predicted_logits.softmax(dim=1)
-            predicted_cdf = torch.cumsum(predicted_probs, dim=1)
-            actual_cdf = torch.cumsum(actual_one_hot, dim=1)
-
-            pdf_loss_val = pdf_loss(predicted_logits, actual_one_hot)
-            cdf_loss_val = cdf_loss(predicted_cdf, actual_cdf)
-
-            return pdf_loss_val + cdf_loss_val
+            return pdf_loss + cdf_loss
 
         return loss
 
-    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
-                                    actual_one_hot: torch.Tensor) -> float:
-        return torch.sum(predicted_logits.softmax(dim=1) * actual_one_hot).item()
+    def get_num_correct_predictions(self, output: torch.Tensor, target: torch.Tensor) -> float:
+        return torch.sum(output[:, 0].softmax(dim=1) * target[:, 0]).item()
 
 
 class OwnershipTarget(LearningTarget):
-    def convert_labels(self, labels: torch.Tensor) -> torch.Tensor:
-        return labels.type(torch.int64)  # needed for cross-entropy loss
+    """
+    Tensors are of shape (B, C, aux...), where:
 
+    B = batch-size
+    C = number of classes (i.e., number of possible ownership categories)
+    aux... = any number of additional dimensions
+
+    aux... will typically be the board dimensions.
+    """
     def loss_fn(self) -> nn.Module:
-        """
-        The tensors passed into this loss function are expected to be of shape (N, K, *board),
-        where:
-
-        N = batch size
-        K = number of possible owners
-        *board = the shape of the board
-
-        For our loss function, we do a cross-entropy loss for each square, and then sum them up.
-
-        nn.CrossEntropyLoss nicely handles this exact type of input!
-        """
         return nn.CrossEntropyLoss()
 
-    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
-                                    actual_categories: torch.Tensor) -> float:
-        n = predicted_logits.shape[0]
-        predicted_categories = torch.argmax(predicted_logits, dim=1)
-        matches = (predicted_categories == actual_categories).float()
-        return matches.mean().item() * n
+    def get_num_correct_predictions(self, output: torch.Tensor, target: torch.Tensor) -> float:
+        shape = output.shape
+        n = math.prod(shape[2:])
+        return torch.sum(output.softmax(dim=1) * target).item() / n

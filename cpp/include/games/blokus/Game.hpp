@@ -25,7 +25,7 @@ namespace blokus {
 class Game {
  public:
   struct Constants {
-    static constexpr int kNumPlayers = 4;
+    static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kNumActions = blokus::kNumActions;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
     static constexpr int kHistorySize = 0;
@@ -138,7 +138,7 @@ class Game {
 
   struct InputTensorizor {
     using Tensor =
-        eigen_util::FTensor<Eigen::Sizes<Constants::kNumPlayers, kBoardDimension, kBoardDimension>>;
+        eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kBoardDimension, kBoardDimension>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 
@@ -149,16 +149,21 @@ class Game {
 
   struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
-    using OwnershipShape = Eigen::Sizes<kBoardDimension, kBoardDimension, kNumColors + 1>;
-
-    // (player, score, absolute-vs-relative, pdf-vs-cdf)
-    using ScoreShape = Eigen::Sizes<Constants::kNumPlayers, kMaxScore + 1, 2, 2>;
+    using OwnershipShape = Eigen::Sizes<kNumPlayers + 1, kBoardDimension, kBoardDimension>;
+    using ScoreShape = Eigen::Sizes<2, kMaxScore + 1, kNumPlayers>;  // pdf/cdf, score, player
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
 
-    struct ScoreTarget {
-      static constexpr const char* kName = "score";
+    struct AbsoluteScoreTarget {
+      static constexpr const char* kName = "absolute-score";
+      using Tensor = eigen_util::FTensor<ScoreShape>;
+
+      static Tensor tensorize(const Types::GameLogView& view);
+    };
+
+    struct RelativeScoreTarget {
+      static constexpr const char* kName = "relative-score";
       using Tensor = eigen_util::FTensor<ScoreShape>;
 
       static Tensor tensorize(const Types::GameLogView& view);
@@ -179,8 +184,8 @@ class Game {
     // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
     //                               before the current player's next move.
 
-    using List =
-        mp::TypeList<PolicyTarget, ValueTarget, ScoreTarget, OwnershipTarget>;
+    using List = mp::TypeList<PolicyTarget, ValueTarget, AbsoluteScoreTarget, RelativeScoreTarget,
+                              OwnershipTarget>;
   };
 };
 
