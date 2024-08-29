@@ -54,6 +54,7 @@ class PieceOrientationData:
     def __init__(self, piece_orientation: PieceOrientation, mask_array_start_index):
         self.piece_orientation = piece_orientation
         self.drawing = piece_orientation.get_ascii_drawing()
+        self.canonical_poc = None
 
         self.width = max(piece_orientation.coordinates[:, 0]) + 1
         self.height = max(piece_orientation.coordinates[:, 1]) + 1
@@ -194,6 +195,10 @@ for piece_orientation_data in piece_orientation_data_list:
     for x, y in piece_orientation_data.corner_xy_list:
         index = len(piece_orientation_corner_data_list)
         corner_data = PieceOrientationCornerData(index, x, y, piece_index, piece_orientation_index)
+
+        if piece_orientation_data.canonical_poc is None:
+            piece_orientation_data.canonical_poc = index
+
         piece_orientation_corner_data_list.append(corner_data)
 
         for c in corner_data.compatible_constraints:
@@ -234,11 +239,12 @@ for p, piece_data in enumerate(piece_data_list):
     for line in drawing_lines:
         print(f'  // {line}')
 
+    canonical = canonical_orientation.index
     subrange_lengths = piece_data.subrange_lengths
     corner_range_start = piece_data.corner_range_start
 
     subrange_lengths_str = '{%s}' % (', '.join(map(str, subrange_lengths)))
-    print(f'  {{"{name}", {subrange_lengths_str}, {corner_range_start}}}{end}')
+    print(f'  {{{canonical}, {subrange_lengths_str}, {corner_range_start}}}{end}')
 
 print('};  // kPieceData')
 print('')
@@ -264,7 +270,8 @@ for o, piece_orientation_data in enumerate(piece_orientation_data_list):
     mask_array_start_index = piece_orientation_data.mask_array_start_index
     width = piece_orientation_data.width
     height = piece_orientation_data.height
-    print(f'  {{{mask_array_start_index}, {width}, {height}}}{end}')
+    canonical_poc = piece_orientation_data.canonical_poc
+    print(f'  {{{mask_array_start_index}, {canonical_poc}, {width}, {height}}}{end}')
 
 print('};  // kPieceOrientationData')
 print('')
