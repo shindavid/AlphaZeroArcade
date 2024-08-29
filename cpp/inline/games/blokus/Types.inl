@@ -229,6 +229,28 @@ inline std::string Location::to_string() const {
   return util::create_string("%c%d", 'A' + col, row + 1);
 }
 
+inline Location Location::from_string(const std::string& s) {
+  Location loc(-1, -1);
+  if (s.size() < 2) return loc;
+
+  int r = std::atoi(s.c_str() + 1) - 1;
+  if (r < 0 || r >= kBoardDimension) return loc;
+
+  int c = int(s[0]) - 'A';
+  if (c >= 0 && c < kBoardDimension) {
+    loc.set(r, c);
+    return loc;
+  }
+
+  c = int(s[0]) - 'a';
+  if (c >= 0 && c < kBoardDimension) {
+    loc.set(r, c);
+    return loc;
+  }
+
+  return loc;
+}
+
 inline int Location::flatten() const {
   return row * kBoardDimension + col;
 }
@@ -458,7 +480,7 @@ inline void BoardString::set(const Board& board, drawing_t color) {
   }
 }
 
-inline const char* Piece::name() const { return tables::kPieceData[index_].name; }
+// inline const char* Piece::name() const { return tables::kPieceData[index_].name; }
 
 inline auto Piece::get_corners(corner_constraint_t constraint) const {
   const auto& data = tables::kPieceData[index_];
@@ -470,6 +492,10 @@ inline auto Piece::get_corners(corner_constraint_t constraint) const {
   int end = start + data.subrange_lengths[(int(constraint) + 3) / 4];
 
   return detail::PieceOrientationCornerRange(start, end);
+}
+
+inline piece_orientation_index_t Piece::canonical_orientation() const {
+  return tables::kPieceData[index_].canonical;
 }
 
 inline const uint8_t* PieceOrientation::row_masks() const {
@@ -490,6 +516,10 @@ inline const uint8_t* PieceOrientation::diagonal_row_masks() const {
 inline int PieceOrientation::height() const { return tables::kPieceOrientationData[index_].height; }
 
 inline int PieceOrientation::width() const { return tables::kPieceOrientationData[index_].width; }
+
+inline piece_orientation_corner_index_t PieceOrientation::canonical_corner() const {
+  return tables::kPieceOrientationData[index_].canonical_poc;
+}
 
 inline Piece PieceOrientationCorner::to_piece() const {
   return tables::kPieceOrientationCornerData[index_].piece;

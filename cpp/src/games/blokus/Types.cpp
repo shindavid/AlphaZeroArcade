@@ -230,4 +230,149 @@ void BoardString::pretty_print(std::ostream& os) const {
   os << buffer;
 }
 
+void TuiPrompt::print() {
+  int width = util::get_screen_width();
+
+  std::ostringstream print_lines[kNumLines];
+
+  int cur_width = 0;
+  for (const block_t& block : blocks_) {
+    int potential_width = cur_width + block.width;
+    if (potential_width >= width) {
+      for (auto& line : print_lines) {
+        std::cout << line.str() << std::endl;
+      }
+      std::cout << std::endl;
+      cur_width = 0;
+    }
+
+    for (int i = 0; i < kNumLines; ++i) {
+      print_lines[i] << block.lines[kNumLines - i - 1].str();
+    }
+    cur_width += block.width;
+  }
+
+  for (const auto& line : print_lines) {
+    std::cout << line.str() << std::endl;
+  }
+  std::cout << std::endl;
+}
+
+void Piece::write_to(TuiPrompt& prompt, color_t color) const {
+  PieceOrientation canonical = canonical_orientation();
+  canonical.write_to(prompt, color, index_);
+}
+
+void PieceOrientation::write_to(TuiPrompt& prompt, color_t color, int label) const {
+  std::string label_str = util::create_string("%d", label);
+
+  const uint8_t* row_masks = this->row_masks();
+  int height = this->height();
+  int width = this->width();
+
+  const char* reset = "\033[0m";
+
+  constexpr const char* color_strs[kNumColors] = {
+      "\033[44m",  // cBlue
+      "\033[43m",  // cYellow
+      "\033[41m",  // cRed
+      "\033[42m"   // cGreen
+  };
+  const char* color_str = color_strs[color];
+
+  TuiPrompt::block_t& block = prompt.blocks_.emplace_back();
+  block.width = std::max((int)label_str.size(), 2 * width) + 1;
+  for (int r = 0; r < height; ++r) {
+    std::ostringstream& line = block.lines[r + 2];
+    bool cur_set = false;
+    uint8_t mask = row_masks[r];
+    for (int c = 0; c < width; ++c) {
+      bool set = mask & (1 << (c + 1));
+      if (cur_set && !set) {
+        line << reset;
+      } else if (!cur_set && set) {
+        line << color_str;
+      }
+      cur_set = set;
+      line << "  ";
+    }
+
+    if (cur_set) {
+      line << reset;
+    }
+
+    for (int k = 0; k < (block.width - 2 * width); ++k) {
+      line << " ";
+    }
+  }
+
+  for (int r = height; r < 5; ++r) {
+    std::ostringstream& line = block.lines[r + 2];
+    for (int k = 0; k < block.width; ++k) {
+      line << " ";
+    }
+  }
+
+  block.lines[0] << label_str;
+  for (int k = 0; k < block.width - (int)label_str.size(); ++k) {
+    block.lines[0] << " ";
+  }
+}
+
+void PieceOrientationCorner::pretty_print(std::ostream& os, color_t color) const {
+  PieceOrientation po = to_piece_orientation();
+  const uint8_t* row_masks = po.row_masks();
+  int height = po.height();
+  int width = po.width();
+
+  Location corner = corner_offset();
+  int corner_r = corner.row - 1;
+  int corner_c = corner.col - 1;
+
+  // printf("DBG corner:%s (%d)\n", corner.to_string().c_str(), index_);
+  // std::cout.flush();
+
+  const char* reset = "\033[0m";
+
+  constexpr const char* color_strs[kNumColors] = {
+      "\033[44m",  // cBlue
+      "\033[43m",  // cYellow
+      "\033[41m",  // cRed
+      "\033[42m"   // cGreen
+  };
+  const char* color_str = color_strs[color];
+
+  std::ostringstream streams[height];
+
+  for (int r = 0; r < height; ++r) {
+    std::ostringstream& stream = streams[r];
+    bool cur_set = false;
+    uint8_t mask = row_masks[r];
+    for (int c = 0; c < width; ++c) {
+      bool set = mask & (1 << (c + 1));
+      if (cur_set && !set) {
+        stream << reset;
+      } else if (!cur_set && set) {
+        stream << color_str;
+      }
+      cur_set = set;
+      bool blink = r == corner_r && c == corner_c;
+      if (blink) {
+        stream << ansi::kBlink() << "><" << reset;
+        cur_set = false;
+      } else {
+        stream << "  ";
+      }
+    }
+
+    if (cur_set) {
+      stream << reset;
+    }
+  }
+
+  for (int r = height - 1; r >= 0; --r) {
+    os << streams[r].str() << std::endl;
+  }
+}
+
 }  // namespace blokus

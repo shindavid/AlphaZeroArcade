@@ -20,7 +20,6 @@ color_t char_to_color(char c);
 // Converts {kBlue, kYellow, kRed, kGreen, kNumColors} to {'B', 'Y', 'R', 'G', '?'}
 char color_to_char(color_t c);
 
-#pragma pack(push, 1)
 struct Location {
   Location() = default;
 
@@ -30,6 +29,7 @@ struct Location {
   void set(int8_t row, int8_t col);
   bool valid() const;
   std::string to_string() const;
+  static Location from_string(const std::string& s);  // return invalid Location on failure
 
   int flatten() const;
   static Location unflatten(int k);
@@ -37,7 +37,6 @@ struct Location {
   int8_t row;
   int8_t col;
 };
-#pragma pack(pop)
 static_assert(sizeof(Location) == 2);
 
 struct _MiniBoardLookup {
@@ -48,7 +47,7 @@ static_assert(sizeof(_MiniBoardLookup) == 8);
 
 // Backs the Piece type
 struct _PieceData {
-  char name[3];
+  piece_orientation_index_t canonical;
   int8_t subrange_lengths[3];  // indexed by number of unblocked directions
 
   /*
@@ -59,26 +58,23 @@ struct _PieceData {
    */
   int16_t corner_range_start;
 };
-static_assert(sizeof(_PieceData) == 8);
+static_assert(sizeof(_PieceData) == 6);
 
 // Backs the PieceOrientation type
-#pragma pack(push, 1)
 struct _PieceOrientationData {
   int16_t mask_array_start_index;
+  piece_orientation_corner_index_t canonical_poc;
   int8_t width;
   int8_t height;
 };
-#pragma pack(pop)
-static_assert(sizeof(_PieceOrientationData) == 4);
+static_assert(sizeof(_PieceOrientationData) == 6);
 
 // Backs the PieceOrientationCorner type
-#pragma pack(push, 1)
 struct _PieceOrientationCornerData {
   Location corner_offset;
   piece_index_t piece;
   piece_orientation_index_t piece_orientation;
 };
-#pragma pack(pop)
 static_assert(sizeof(_PieceOrientationCornerData) == 4);
 
 namespace concepts {
@@ -192,21 +188,42 @@ class BoardString {
   drawing_t colors_[kBoardDimension][kBoardDimension] = {};
 };
 
-#pragma pack(push, 1)
+class Piece;
+class PieceOrientation;
+
+class TuiPrompt {
+ public:
+  friend class Piece;
+  friend class PieceOrientation;
+
+  void print();
+
+ private:
+  static constexpr int kNumLines = 7;
+
+  struct block_t {
+    int width;
+    std::ostringstream lines[kNumLines];
+  };
+  using block_vec_t = std::vector<block_t>;
+
+  block_vec_t blocks_;
+};
+
 class Piece {
  public:
   Piece(piece_index_t index) : index_(index) {}
   operator piece_index_t() const { return index_; }
-  const char* name() const;
+  // const char* name() const;
   auto get_corners(corner_constraint_t) const;
+  piece_orientation_index_t canonical_orientation() const;
+  void write_to(TuiPrompt& prompt, color_t) const;
 
  private:
   piece_index_t index_;
 };
-#pragma pack(pop)
 static_assert(sizeof(Piece) == 1);
 
-#pragma pack(push, 1)
 class PieceOrientation {
  public:
   PieceOrientation(piece_orientation_index_t index) : index_(index) {}
@@ -216,14 +233,14 @@ class PieceOrientation {
   const uint8_t* diagonal_row_masks() const;
   int height() const;
   int width() const;
+  piece_orientation_corner_index_t canonical_corner() const;
+  void write_to(TuiPrompt& prompt, color_t, int label) const;
 
  private:
   piece_orientation_index_t index_;
 };
-#pragma pack(pop)
 static_assert(sizeof(PieceOrientation) == 1);
 
-#pragma pack(push, 1)
 class PieceOrientationCorner {
  public:
   PieceOrientationCorner(piece_orientation_corner_index_t index) : index_(index) {}
@@ -232,6 +249,8 @@ class PieceOrientationCorner {
   PieceOrientation to_piece_orientation() const;
   Location corner_offset() const;
   std::string name() const;
+
+  void pretty_print(std::ostream&, color_t) const;
 
   static PieceOrientationCorner from_action(core::action_t a);
   core::action_t to_action() const { return index_ + kNumCells + 1; }
@@ -249,13 +268,11 @@ class PieceOrientationCorner {
  private:
   piece_orientation_corner_index_t index_;
 };
-#pragma pack(pop)
 static_assert(sizeof(PieceOrientationCorner) == 2);
 
 /*
  * PieceMask is suitable for storing a subset of the 21 pieces of the game.
  */
-#pragma pack(push, 1)
 class PieceMask {
  public:
   auto operator<=>(const PieceMask& other) const = default;
@@ -274,7 +291,6 @@ class PieceMask {
  private:
   uint32_t mask_;
 };
-#pragma pack(pop)
 static_assert(sizeof(PieceMask) == 4);
 
 namespace tables {

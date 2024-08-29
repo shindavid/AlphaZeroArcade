@@ -64,10 +64,10 @@ void Game::BaseState::validate_aux() const {
       PieceMask diff1 = copy.aux.played_pieces[c] & ~this->aux.played_pieces[c];
       PieceMask diff2 = this->aux.played_pieces[c] & ~copy.aux.played_pieces[c];
       for (Piece p : diff1.get_set_bits()) {
-        printf("played_pieces %c %s: this=0 copy=1\n", color_to_char(c), p.name());
+        printf("played_pieces %c %d: this=0 copy=1\n", color_to_char(c), (int)p);
       }
       for (Piece p : diff2.get_set_bits()) {
-        printf("played_pieces %c %s: this=1 copy=0\n", color_to_char(c), p.name());
+        printf("played_pieces %c %d: this=1 copy=0\n", color_to_char(c), (int)p);
       }
 
       BitBoard diff3 = copy.aux.unplayable_locations[c] & ~this->aux.unplayable_locations[c];
