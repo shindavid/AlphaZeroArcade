@@ -10,26 +10,26 @@ const _PieceData kPieceData[kNumPieces] = {
   // O1
   //
   // o
-  {"O1", {1, 1, 1}, 0},
+  {0, {1, 1, 1}, 0},
 
   // I2
   //
   // o
   // o
-  {"I2", {0, 1, 2}, 9},
+  {1, {0, 1, 2}, 9},
 
   // I3
   //
   // o
   // o
   // o
-  {"I3", {0, 1, 2}, 21},
+  {3, {0, 1, 2}, 21},
 
   // L3
   //
   // o
   // oo
-  {"L3", {0, 2, 5}, 33},
+  {5, {0, 2, 5}, 33},
 
   // I4
   //
@@ -37,41 +37,41 @@ const _PieceData kPieceData[kNumPieces] = {
   // o
   // o
   // o
-  {"I4", {0, 1, 2}, 61},
+  {9, {0, 1, 2}, 61},
 
   // O4
   //
   // oo
   // oo
-  {"O4", {0, 0, 1}, 73},
+  {11, {0, 0, 1}, 73},
 
   // T4
   //
   // o
   // oo
   // o
-  {"T4", {0, 3, 6}, 77},
+  {12, {0, 3, 6}, 77},
 
   // L4
   //
   // o
   // o
   // oo
-  {"L4", {0, 4, 10}, 113},
+  {16, {0, 4, 10}, 113},
 
   // S4
   //
   //  o
   // oo
   // o
-  {"S4", {0, 2, 6}, 169},
+  {24, {0, 2, 6}, 169},
 
   // F5
   //
   //  o
   // ooo
   // o
-  {"F5", {0, 6, 14}, 201},
+  {28, {0, 6, 14}, 201},
 
   // I5
   //
@@ -80,7 +80,7 @@ const _PieceData kPieceData[kNumPieces] = {
   // o
   // o
   // o
-  {"I5", {0, 1, 2}, 281},
+  {36, {0, 1, 2}, 281},
 
   // L5
   //
@@ -88,7 +88,7 @@ const _PieceData kPieceData[kNumPieces] = {
   // o
   // o
   // oo
-  {"L5", {0, 4, 10}, 293},
+  {38, {0, 4, 10}, 293},
 
   // N5
   //
@@ -96,49 +96,49 @@ const _PieceData kPieceData[kNumPieces] = {
   // oo
   // o
   // o
-  {"N5", {0, 4, 12}, 349},
+  {46, {0, 4, 12}, 349},
 
   // P5
   //
   // o
   // oo
   // oo
-  {"P5", {0, 2, 10}, 413},
+  {54, {0, 2, 10}, 413},
 
   // T5
   //
   // o
   // ooo
   // o
-  {"T5", {0, 3, 6}, 461},
+  {62, {0, 3, 6}, 461},
 
   // U5
   //
   // oo
   // o
   // oo
-  {"U5", {0, 2, 6}, 497},
+  {66, {0, 2, 6}, 497},
 
   // V5
   //
   // o
   // o
   // ooo
-  {"V5", {0, 2, 5}, 529},
+  {70, {0, 2, 5}, 529},
 
   // W5
   //
   //  oo
   // oo
   // o
-  {"W5", {0, 2, 7}, 557},
+  {74, {0, 2, 7}, 557},
 
   // X5
   //
   //  o
   // ooo
   //  o
-  {"X5", {0, 1, 2}, 593},
+  {78, {0, 1, 2}, 593},
 
   // Y5
   //
@@ -146,14 +146,14 @@ const _PieceData kPieceData[kNumPieces] = {
   // o
   // oo
   // o
-  {"Y5", {0, 6, 12}, 605},
+  {79, {0, 6, 12}, 605},
 
   // Z5
   //
   //   o
   // ooo
   // o
-  {"Z5", {0, 2, 6}, 677}
+  {87, {0, 2, 6}, 677}
 };  // kPieceData
 
 const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
@@ -162,7 +162,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.*
   // .o.
   // *.*
-  {0, 1, 1},
+  {0, 0, 1, 1},
 
   // I2/0
   //
@@ -170,14 +170,14 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.
   // .o.
   // *.*
-  {7, 1, 2},
+  {7, 1, 1, 2},
 
   // I2/1
   //
   // *..*
   // .oo.
   // *..*
-  {17, 2, 1},
+  {17, 3, 2, 1},
 
   // I3/0
   //
@@ -186,14 +186,14 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.
   // .o.
   // *.*
-  {24, 1, 3},
+  {24, 5, 1, 3},
 
   // I3/1
   //
   // *...*
   // .ooo.
   // *...*
-  {37, 3, 1},
+  {37, 7, 3, 1},
 
   // L3/0
   //
@@ -201,7 +201,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .oo.
   // *..*
-  {44, 2, 2},
+  {44, 9, 2, 2},
 
   // L3/1
   //
@@ -209,7 +209,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .o.*
   // *.* 
-  {54, 2, 2},
+  {54, 12, 2, 2},
 
   // L3/2
   //
@@ -217,7 +217,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // *.o.
   //  *.*
-  {64, 2, 2},
+  {64, 15, 2, 2},
 
   // L3/3
   //
@@ -225,7 +225,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   // .oo.
   // *..*
-  {74, 2, 2},
+  {74, 18, 2, 2},
 
   // I4/0
   //
@@ -235,14 +235,14 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.
   // .o.
   // *.*
-  {84, 1, 4},
+  {84, 21, 1, 4},
 
   // I4/1
   //
   // *....*
   // .oooo.
   // *....*
-  {100, 4, 1},
+  {100, 23, 4, 1},
 
   // O4/0
   //
@@ -250,7 +250,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .oo.
   // *..*
-  {107, 2, 2},
+  {107, 25, 2, 2},
 
   // T4/0
   //
@@ -259,7 +259,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .o.*
   // *.* 
-  {117, 2, 3},
+  {117, 29, 2, 3},
 
   // T4/1
   //
@@ -267,7 +267,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *.o.*
   //  *.* 
-  {130, 3, 2},
+  {130, 32, 3, 2},
 
   // T4/2
   //
@@ -276,7 +276,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // *.o.
   //  *.*
-  {140, 2, 3},
+  {140, 35, 2, 3},
 
   // T4/3
   //
@@ -284,7 +284,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.*
   // .ooo.
   // *...*
-  {153, 3, 2},
+  {153, 38, 3, 2},
 
   // L4/0
   //
@@ -293,7 +293,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .oo.
   // *..*
-  {163, 2, 3},
+  {163, 41, 2, 3},
 
   // L4/1
   //
@@ -301,7 +301,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // .o..*
   // *.*  
-  {176, 3, 2},
+  {176, 44, 3, 2},
 
   // L4/2
   //
@@ -310,7 +310,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   //  .o.
   //  *.*
-  {186, 2, 3},
+  {186, 47, 2, 3},
 
   // L4/3
   //
@@ -318,7 +318,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *..o.
   // .ooo.
   // *...*
-  {199, 3, 2},
+  {199, 50, 3, 2},
 
   // L4/4
   //
@@ -327,7 +327,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .o. 
   // *.* 
-  {209, 2, 3},
+  {209, 53, 2, 3},
 
   // L4/5
   //
@@ -335,7 +335,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *..o.
   //   *.*
-  {222, 3, 2},
+  {222, 56, 3, 2},
 
   // L4/6
   //
@@ -344,7 +344,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   // .oo.
   // *..*
-  {232, 2, 3},
+  {232, 59, 2, 3},
 
   // L4/7
   //
@@ -352,7 +352,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o..*
   // .ooo.
   // *...*
-  {245, 3, 2},
+  {245, 62, 3, 2},
 
   // S4/0
   //
@@ -361,7 +361,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .o.*
   // *.* 
-  {255, 2, 3},
+  {255, 65, 2, 3},
 
   // S4/1
   //
@@ -369,7 +369,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.*
   // *.oo.
   //  *..*
-  {268, 3, 2},
+  {268, 69, 3, 2},
 
   // S4/4
   //
@@ -378,7 +378,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // *.o.
   //  *.*
-  {278, 2, 3},
+  {278, 73, 2, 3},
 
   // S4/5
   //
@@ -386,7 +386,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.oo.
   // .oo.*
   // *..* 
-  {291, 3, 2},
+  {291, 77, 3, 2},
 
   // F5/0
   //
@@ -395,7 +395,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // .o..*
   // *.*  
-  {301, 3, 3},
+  {301, 81, 3, 3},
 
   // F5/1
   //
@@ -404,7 +404,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.oo.
   //  .o.*
   //  *.* 
-  {314, 3, 3},
+  {314, 85, 3, 3},
 
   // F5/2
   //
@@ -413,7 +413,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *.o.*
   //  *.* 
-  {327, 3, 3},
+  {327, 89, 3, 3},
 
   // F5/3
   //
@@ -422,7 +422,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.*
   // *.oo.
   //  *..*
-  {340, 3, 3},
+  {340, 93, 3, 3},
 
   // F5/4
   //
@@ -431,7 +431,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *.o.*
   //  *.* 
-  {353, 3, 3},
+  {353, 97, 3, 3},
 
   // F5/5
   //
@@ -440,7 +440,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.*
   // *.o. 
   //  *.* 
-  {366, 3, 3},
+  {366, 101, 3, 3},
 
   // F5/6
   //
@@ -449,7 +449,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *..o.
   //   *.*
-  {379, 3, 3},
+  {379, 105, 3, 3},
 
   // F5/7
   //
@@ -458,7 +458,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.oo.
   // .oo.*
   // *..* 
-  {392, 3, 3},
+  {392, 109, 3, 3},
 
   // I5/0
   //
@@ -469,14 +469,14 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.
   // .o.
   // *.*
-  {405, 1, 5},
+  {405, 113, 1, 5},
 
   // I5/1
   //
   // *.....*
   // .ooooo.
   // *.....*
-  {424, 5, 1},
+  {424, 115, 5, 1},
 
   // L5/0
   //
@@ -486,7 +486,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .oo.
   // *..*
-  {431, 2, 4},
+  {431, 117, 2, 4},
 
   // L5/1
   //
@@ -494,7 +494,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oooo.
   // .o...*
   // *.*   
-  {447, 4, 2},
+  {447, 120, 4, 2},
 
   // L5/2
   //
@@ -504,7 +504,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   //  .o.
   //  .o.
   //  *.*
-  {457, 2, 4},
+  {457, 123, 2, 4},
 
   // L5/3
   //
@@ -512,7 +512,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *...o.
   // .oooo.
   // *....*
-  {473, 4, 2},
+  {473, 126, 4, 2},
 
   // L5/4
   //
@@ -522,7 +522,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o. 
   // .o. 
   // *.* 
-  {483, 2, 4},
+  {483, 129, 2, 4},
 
   // L5/5
   //
@@ -530,7 +530,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oooo.
   // *...o.
   //    *.*
-  {499, 4, 2},
+  {499, 132, 4, 2},
 
   // L5/6
   //
@@ -540,7 +540,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   // .oo.
   // *..*
-  {509, 2, 4},
+  {509, 135, 2, 4},
 
   // L5/7
   //
@@ -548,7 +548,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o...*
   // .oooo.
   // *....*
-  {525, 4, 2},
+  {525, 138, 4, 2},
 
   // N5/0
   //
@@ -558,7 +558,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .o. 
   // *.* 
-  {535, 2, 4},
+  {535, 141, 2, 4},
 
   // N5/1
   //
@@ -566,7 +566,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.*
   // *..oo.
   //   *..*
-  {551, 4, 2},
+  {551, 145, 4, 2},
 
   // N5/2
   //
@@ -576,7 +576,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .o.*
   // *.* 
-  {561, 2, 4},
+  {561, 149, 2, 4},
 
   // N5/3
   //
@@ -584,7 +584,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo..*
   // *.ooo.
   //  *...*
-  {577, 4, 2},
+  {577, 153, 4, 2},
 
   // N5/4
   //
@@ -594,7 +594,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // *.o.
   //  *.*
-  {587, 2, 4},
+  {587, 157, 2, 4},
 
   // N5/5
   //
@@ -602,7 +602,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.ooo.
   // .oo..*
   // *..*  
-  {603, 4, 2},
+  {603, 161, 4, 2},
 
   // N5/6
   //
@@ -612,7 +612,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   //  .o.
   //  *.*
-  {613, 2, 4},
+  {613, 165, 2, 4},
 
   // N5/7
   //
@@ -620,7 +620,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *..oo.
   // .ooo.*
   // *...* 
-  {629, 4, 2},
+  {629, 169, 4, 2},
 
   // P5/0
   //
@@ -629,7 +629,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .oo.
   // *..*
-  {639, 2, 3},
+  {639, 173, 2, 3},
 
   // P5/1
   //
@@ -637,7 +637,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // .oo.*
   // *..* 
-  {652, 3, 2},
+  {652, 177, 3, 2},
 
   // P5/2
   //
@@ -646,7 +646,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // *.o.
   //  *.*
-  {662, 2, 3},
+  {662, 181, 2, 3},
 
   // P5/3
   //
@@ -654,7 +654,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.oo.
   // .ooo.
   // *...*
-  {675, 3, 2},
+  {675, 185, 3, 2},
 
   // P5/4
   //
@@ -663,7 +663,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .o.*
   // *.* 
-  {685, 2, 3},
+  {685, 189, 2, 3},
 
   // P5/5
   //
@@ -671,7 +671,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *.oo.
   //  *..*
-  {698, 3, 2},
+  {698, 193, 3, 2},
 
   // P5/6
   //
@@ -680,7 +680,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .oo.
   // *..*
-  {708, 2, 3},
+  {708, 197, 2, 3},
 
   // P5/7
   //
@@ -688,7 +688,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.*
   // .ooo.
   // *...*
-  {721, 3, 2},
+  {721, 201, 3, 2},
 
   // T5/0
   //
@@ -697,7 +697,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // .o..*
   // *.*  
-  {731, 3, 3},
+  {731, 205, 3, 3},
 
   // T5/1
   //
@@ -706,7 +706,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.*
   //  .o. 
   //  *.* 
-  {744, 3, 3},
+  {744, 208, 3, 3},
 
   // T5/2
   //
@@ -715,7 +715,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *..o.
   //   *.*
-  {757, 3, 3},
+  {757, 211, 3, 3},
 
   // T5/3
   //
@@ -724,7 +724,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.*
   // .ooo.
   // *...*
-  {770, 3, 3},
+  {770, 214, 3, 3},
 
   // U5/0
   //
@@ -733,7 +733,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .oo.
   // *..*
-  {783, 2, 3},
+  {783, 217, 2, 3},
 
   // U5/1
   //
@@ -741,7 +741,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // .o.o.
   // *.*.*
-  {796, 3, 2},
+  {796, 221, 3, 2},
 
   // U5/2
   //
@@ -750,7 +750,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   // .oo.
   // *..*
-  {806, 2, 3},
+  {806, 225, 2, 3},
 
   // U5/3
   //
@@ -758,7 +758,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.o.
   // .ooo.
   // *...*
-  {819, 3, 2},
+  {819, 229, 3, 2},
 
   // V5/0
   //
@@ -767,7 +767,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o..*
   // .ooo.
   // *...*
-  {829, 3, 3},
+  {829, 233, 3, 3},
 
   // V5/1
   //
@@ -776,7 +776,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o..*
   // .o.  
   // *.*  
-  {842, 3, 3},
+  {842, 236, 3, 3},
 
   // V5/2
   //
@@ -785,7 +785,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *..o.
   //   .o.
   //   *.*
-  {855, 3, 3},
+  {855, 239, 3, 3},
 
   // V5/3
   //
@@ -794,7 +794,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *..o.
   // .ooo.
   // *...*
-  {868, 3, 3},
+  {868, 242, 3, 3},
 
   // W5/0
   //
@@ -803,7 +803,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.*
   // .o.* 
   // *.*  
-  {881, 3, 3},
+  {881, 245, 3, 3},
 
   // W5/1
   //
@@ -812,7 +812,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.oo.
   //  *.o.
   //   *.*
-  {894, 3, 3},
+  {894, 250, 3, 3},
 
   // W5/2
   //
@@ -821,7 +821,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.oo.
   // .oo.*
   // *..* 
-  {907, 3, 3},
+  {907, 255, 3, 3},
 
   // W5/3
   //
@@ -830,7 +830,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.*
   // *.oo.
   //  *..*
-  {920, 3, 3},
+  {920, 260, 3, 3},
 
   // X5/0
   //
@@ -839,7 +839,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *.o.*
   //  *.* 
-  {933, 3, 3},
+  {933, 265, 3, 3},
 
   // Y5/0
   //
@@ -849,7 +849,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // .o.*
   // *.* 
-  {946, 2, 4},
+  {946, 269, 2, 4},
 
   // Y5/1
   //
@@ -857,7 +857,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oooo.
   // *.o..*
   //  *.*  
-  {962, 4, 2},
+  {962, 272, 4, 2},
 
   // Y5/2
   //
@@ -867,7 +867,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.
   //  .o.
   //  *.*
-  {972, 2, 4},
+  {972, 275, 2, 4},
 
   // Y5/3
   //
@@ -875,7 +875,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *..o.*
   // .oooo.
   // *....*
-  {988, 4, 2},
+  {988, 278, 4, 2},
 
   // Y5/4
   //
@@ -885,7 +885,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .o.*
   // .o. 
   // *.* 
-  {998, 2, 4},
+  {998, 281, 2, 4},
 
   // Y5/5
   //
@@ -893,7 +893,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oooo.
   // *..o.*
   //   *.* 
-  {1014, 4, 2},
+  {1014, 284, 4, 2},
 
   // Y5/6
   //
@@ -903,7 +903,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .oo.
   // *.o.
   //  *.*
-  {1024, 2, 4},
+  {1024, 287, 2, 4},
 
   // Y5/7
   //
@@ -911,7 +911,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o..*
   // .oooo.
   // *....*
-  {1040, 4, 2},
+  {1040, 290, 4, 2},
 
   // Z5/0
   //
@@ -920,7 +920,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // .o..*
   // *.*  
-  {1050, 3, 3},
+  {1050, 293, 3, 3},
 
   // Z5/1
   //
@@ -929,7 +929,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.*
   //  .oo.
   //  *..*
-  {1063, 3, 3},
+  {1063, 297, 3, 3},
 
   // Z5/4
   //
@@ -938,7 +938,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // .ooo.
   // *..o.
   //   *.*
-  {1076, 3, 3},
+  {1076, 301, 3, 3},
 
   // Z5/5
   //
@@ -947,7 +947,7 @@ const _PieceOrientationData kPieceOrientationData[kNumPieceOrientations] = {
   // *.o.*
   // .oo. 
   // *..* 
-  {1089, 3, 3}
+  {1089, 305, 3, 3}
 };  // kPieceOrientationData
 
 const _PieceOrientationCornerData kPieceOrientationCornerData[kNumPieceOrientationCorners] = {
