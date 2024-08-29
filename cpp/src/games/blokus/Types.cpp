@@ -204,44 +204,27 @@ void BoardString::pretty_print(std::ostream& os) const {
       "\033[47m\033[34m×\033[0m"    // dTimes
   };
 
-  const char* vertical_line = "│";
-  const char* horizontal_line = "──";
-  const char* corner_intersection = "┼";
-  const char* top_left_corner = "┌";
-  const char* top_right_corner = "┐";
-  const char* bottom_left_corner = "└";
-  const char* bottom_right_corner = "┘";
-  const char* top_intersection = "┬";
-  const char* bottom_intersection = "┴";
-  const char* left_intersection = "├";
-  const char* right_intersection = "┤";
-
+  c += sprintf(buffer + c, "   ");
   for (int col = 0; col < kBoardDimension; ++col) {
-    const char* div = (col == 0) ? top_left_corner : top_intersection;
-    c += snprintf(buffer + c, std::max(N - c, 0), "%s%s", div, horizontal_line);
+    c += sprintf(buffer + c, " %c", 'A' + col);
   }
-  c += snprintf(buffer + c, std::max(N - c, 0), "%s\n", top_right_corner);
+  c += sprintf(buffer + c, "\n");
 
   for (int row = kBoardDimension - 1; row >= 0; --row) {
+    c += sprintf(buffer + c, "%2d ", row + 1);
     for (int col = 0; col < kBoardDimension; ++col) {
       drawing_t d = colors_[row][col];
       util::debug_assert(d >= 0 && d < 5, "%d", int(d));
-      c += snprintf(buffer + c, std::max(N - c, 0), "%s%s", vertical_line, color_strs[d]);
+      c += snprintf(buffer + c, std::max(N - c, 0), "%s", color_strs[d]);
     }
-    c += snprintf(buffer + c, std::max(N - c, 0), "%s\n", vertical_line);
-
-    for (int col = 0; col < kBoardDimension; ++col) {
-      const char* div;
-      if (row == 0) {
-        div = (col == 0) ? bottom_left_corner : bottom_intersection;
-      } else {
-        div = (col == 0) ? left_intersection : corner_intersection;
-      }
-      c += snprintf(buffer + c, std::max(N - c, 0), "%s%s", div, horizontal_line);
-    }
-    c += snprintf(buffer + c, std::max(N - c, 0), "%s\n",
-                  row == 0 ? bottom_right_corner : right_intersection);
+    c += sprintf(buffer + c, " %2d\n", row + 1);
   }
+
+  c += sprintf(buffer + c, "   ");
+  for (int col = 0; col < kBoardDimension; ++col) {
+    c += sprintf(buffer + c, " %c", 'A' + col);
+  }
+  c += sprintf(buffer + c, "\n");
 
   util::release_assert(c < N, "BoardString::pretty_print() overflow (%d < %d)", c, N);
   os << buffer;

@@ -239,7 +239,7 @@ Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) 
 
 void Game::IO::print_state(std::ostream& os, const BaseState& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
-  if (last_action <= kPass) {
+  if (last_action < kPass && last_action >= 0) {
     // This is to avoid printing the board state after a partial-action. This mechanism is a bit
     // awkward; consider implementing this in a more generic game-agnostic way.
     return;
