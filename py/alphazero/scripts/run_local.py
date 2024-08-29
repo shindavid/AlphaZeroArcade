@@ -79,7 +79,7 @@ def load_args():
     LoggingParams.add_args(parser)
     BuildParams.add_args(parser)
 
-    return parser.parse_args()
+    return parser.parse_args(), game_spec
 
 
 def launch_self_play_server(params_dict, cuda_device: int):
@@ -161,7 +161,7 @@ def launch_loop_controller(params_dict, cuda_device: int):
 
 
 def main():
-    args = load_args()
+    args, game_spec = load_args()
     run_params = RunParams.create(args)
     training_params = TrainingParams.create(args)
     params = Params.create(args)
@@ -201,7 +201,9 @@ def main():
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
         procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
-        procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
+
+        if game_spec.reference_player_family is not None:
+            procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
 
         loop = True
         while loop:

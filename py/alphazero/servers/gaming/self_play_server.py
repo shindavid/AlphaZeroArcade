@@ -163,14 +163,7 @@ class SelfPlayServer:
             '-I': 100,
             '-f': 1.0,
         })
-
-        player2_args = {
-            '--name': 'MCTS2',
-            '--copy-from': 'MCTS',
-        }
-
         player_args_str = make_args_str(player_args)
-        player2_args_str = make_args_str(player2_args)
 
         args = {
             '-G': 0,
@@ -186,8 +179,16 @@ class SelfPlayServer:
         self_play_cmd = [
             binary,
             '--player', '"%s"' % player_args_str,
-            '--player', '"%s"' % player2_args_str,
         ]
+        for p in range(self._session_data.game_spec.num_players - 1):
+            opp_args = {
+                '--name': 'MCTS%d' % (p + 2),
+                '--copy-from': 'MCTS',
+            }
+            opp_args_str = make_args_str(opp_args)
+            self_play_cmd.append('--player')
+            self_play_cmd.append(f'"{opp_args_str}"')
+
         self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 
@@ -220,14 +221,7 @@ class SelfPlayServer:
             '--cuda-device': self._params.cuda_device,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
-
-        player2_args = {
-            '--name': 'MCTS2',
-            '--copy-from': 'MCTS',
-        }
-
         player_args_str = make_args_str(player_args)
-        player2_args_str = make_args_str(player2_args)
 
         args = {
             '-G': 0,
@@ -243,8 +237,16 @@ class SelfPlayServer:
         self_play_cmd = [
             binary,
             '--player', '"%s"' % player_args_str,
-            '--player', '"%s"' % player2_args_str,
         ]
+        for p in range(self._session_data.game_spec.num_players - 1):
+            opp_args = {
+                '--name': 'MCTS%d' % (p + 2),
+                '--copy-from': 'MCTS',
+            }
+            opp_args_str = make_args_str(opp_args)
+            self_play_cmd.append('--player')
+            self_play_cmd.append(f'"{opp_args_str}"')
+
         self_play_cmd.append(make_args_str(args))
         self_play_cmd = ' '.join(map(str, self_play_cmd))
 

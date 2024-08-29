@@ -14,6 +14,7 @@ NUM_POSSIBLE_SCORE_MARGINS = 2 * NUM_SQUARES + 1
 def b19_c64(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
+    score_margin_shape = shape_info_dict['score_margin'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_size = NUM_SQUARES + 1  # + 1 for pass
@@ -67,7 +68,7 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
             ModuleSpec(type='ScoreHead',
                        args=['score_margin', board_size, c_trunk, c_score_margin_hidden,
-                             n_score_margin_hidden, NUM_POSSIBLE_SCORE_MARGINS]),
+                             n_score_margin_hidden, score_margin_shape]),
             ModuleSpec(type='OwnershipHead',
                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
         ],

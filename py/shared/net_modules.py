@@ -324,17 +324,22 @@ class ScoreHead(Head):
     completely understand. I am instead doing something I feel is reasonable, mimicking the flow of
     the ValueHead.
 
-    TODO: having 2 linear layers feels unnecessary. Try removing one, perhaps increasing
-    c_hidden to compensate.
+    TODO: The two linear layers isn't quite right. We should be using the GlobalPoolingLayer here,
+    since in games like go/blokus/othello, scores are obtained by summing up some quantity over each
+    square of the board. Experiment with this.
     """
     def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
-                 n_possible_scores: int):
+                 shape: Shape):
         super(ScoreHead, self).__init__(name, ScoreTarget())
+
+        self.shape = shape
+        assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
+        assert len(shape) == 2, f'Unexpected shape {shape}: not yet supported'
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
-        self.linear2 = nn.Linear(n_hidden, 2 * n_possible_scores)  # 2: PDF, CDF
+        self.linear2 = nn.Linear(n_hidden, math.prod(shape))
 
     def forward(self, x):
         out = x
@@ -344,7 +349,7 @@ class ScoreHead(Head):
         out = self.linear1(out)
         out = self.act(out)
         out = self.linear2(out)
-        out = out.view(out.shape[0], 2, -1)
+        out = out.view(out.shape[0], *self.shape)
         return out
 
 
@@ -357,11 +362,11 @@ class OwnershipHead(Head):
     def __init__(self, name: str, c_in: int, c_hidden: int, shape: Shape):
         super(OwnershipHead, self).__init__(name, OwnershipTarget())
 
-        self.act = F.relu
         self.shape = shape
         assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
         n_categories = shape[0]
 
+        self.act = F.relu
         self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=False)
 
