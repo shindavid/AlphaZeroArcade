@@ -229,6 +229,11 @@ def write_env_sh(env_sh_lines):
     print('    source env_setup.sh')
 
 
+def source_env_sh():
+    if os.system('/bin/bash -c "source .env.sh"'):
+        raise SetupException('Failed to source ./.env.sh')
+
+
 def main():
     print('*' * 80)
     print('Running AlphaZeroArcade setup wizard...')
@@ -242,9 +247,10 @@ def main():
         conda_env = setup_conda(env_sh_lines)
         setup_libtorch(env_sh_lines)
         setup_output_dir(env_sh_lines)
-        setup_local_python_imports(conda_env)
         build_extra_deps()
         write_env_sh(env_sh_lines)
+        source_env_sh()
+        setup_local_python_imports(conda_env)
     except KeyboardInterrupt:
         print('')
         print('Setup wizard was interrupted. Please try again.')
