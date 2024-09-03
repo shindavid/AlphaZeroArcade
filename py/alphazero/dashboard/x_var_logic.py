@@ -84,6 +84,8 @@ class XVarSelector:
                 x_col = x_var.df_col
                 assert x_col in df.columns, f"Column '{x_col}' not found in DataFrame:\n{df}"
                 x = df[x_col]
+                if len(x) == 0:
+                    continue
                 mx = min(x)
                 self._min_x_dict[x_col] = mx if x_col not in self._min_x_dict else \
                     min(self._min_x_dict[x_col], mx)
