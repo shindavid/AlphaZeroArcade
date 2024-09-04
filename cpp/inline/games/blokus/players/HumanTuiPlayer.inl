@@ -13,6 +13,7 @@ namespace blokus {
 inline void HumanTuiPlayer::start_game() {
   pending_poc_ = -1;
   passed_ = false;
+  base_t::start_game();
 }
 
 inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState& state,
@@ -27,7 +28,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState& state,
     pending_poc_ = -1;
     return poc.to_action();
   } else {
-    if (valid_actions.count() == 1) {
+    if (valid_actions[kPass]) {
       return prompt_for_pass();
     }
 
