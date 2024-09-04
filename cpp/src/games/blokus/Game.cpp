@@ -378,7 +378,7 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* 
   Tensor tensor;
   tensor.setZero();
   for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (c - cp) % kNumColors;
+    color_t rc = (kNumColors + c - cp) % kNumColors;
     for (Location loc : state.core.occupied_locations[c].get_set_locations()) {
       tensor(rc, loc.row, loc.col) = 1;
     }
@@ -401,7 +401,7 @@ Game::TrainingTargets::AbsoluteScoreTarget::tensorize(const Types::GameLogView& 
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (c - cp) % kNumColors;
+    color_t rc = (kNumColors + c - cp) % kNumColors;
 
     // PDF
     tensor(0, absolute_scores[c], rc) = 1;
@@ -437,7 +437,7 @@ Game::TrainingTargets::RelativeScoreTarget::tensorize(const Types::GameLogView& 
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (c - cp) % kNumColors;
+    color_t rc = (kNumColors + c - cp) % kNumColors;
 
     // PDF
     tensor(0, relative_scores[c], rc) = 1;
@@ -465,7 +465,7 @@ Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipT
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (c - cp) % kNumColors;
+    color_t rc = (kNumColors + c - cp) % kNumColors;
     for (Location loc : state.core.occupied_locations[c].get_set_locations()) {
       tensor(rc, loc.row, loc.col) = 1;
       tensor(kNumColors, loc.row, loc.col) = 0;
