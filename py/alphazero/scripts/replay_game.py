@@ -36,10 +36,10 @@ def main():
     self_play_filename = args.self_play_filename
 
     if self_play_filename is not None:
-        assert gen is None, 'Cannot specify both --gen/-G and --log-filename/-l'
-        assert run_params.tag is None, 'Cannot specify both --tag/-t and --log-filename/-l'
+        assert gen is None, 'Cannot specify both --gen/-G and --self-play-filename/-s'
+        assert not run_params.tag, 'Cannot specify both --tag/-t and --self-play-filename/-s'
     else:
-        assert run_params.tag is not None, 'Must specify either --tag/-t or --log-filename/-l'
+        assert run_params.tag, 'Must specify either --tag/-t or --self-play-filename/-s'
 
         organizer = DirectoryOrganizer(run_params)
         self_play_filename = organizer.get_any_self_play_data_filename(gen)
