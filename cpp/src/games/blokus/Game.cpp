@@ -378,6 +378,10 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* 
       tensor(rc, loc.row, loc.col) = 1;
     }
   }
+  if (state.core.partial_move.valid()) {
+    Location loc = state.core.partial_move;
+    tensor(kNumColors, loc.row, loc.col) = 1;
+  }
   return tensor;
 }
 
