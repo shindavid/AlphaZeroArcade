@@ -96,12 +96,15 @@ def get_rating_data_list(game: str, tags: List[str]):
 class RatingPlotter:
     def __init__(self, game: str, data_list: List[RatingData]):
         self.game = game
+        self.figure = None
 
         self.x_var_selector = XVarSelector([rd.gen_df for rd in data_list])
         self.y_variable = 'rating_smoothed'
         self.sources: Dict[str, ColumnDataSource] = {}
 
         game = game_index.get_game_spec(game)
+        if game.reference_player_family is None:
+            return
         self.y_limit = game.reference_player_family.max_strength
 
         self.plotted_labels = set()
