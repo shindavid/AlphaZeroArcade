@@ -35,6 +35,7 @@ include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
 
 add_subdirectory("cpp/src")
+add_subdirectory("cpp/src/games/blokus")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")

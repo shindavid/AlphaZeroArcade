@@ -95,6 +95,8 @@ class Game {
 
   struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
+    using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
+    using ScoreMarginShape = Eigen::Sizes<2, 2 * kNumCells + 1>;  // pdf/cdf, score-margin
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
@@ -102,14 +104,14 @@ class Game {
 
     struct ScoreMarginTarget {
       static constexpr const char* kName = "score_margin";
-      using Tensor = eigen_util::FTensor<Eigen::Sizes<1>>;
+      using Tensor = eigen_util::FTensor<ScoreMarginShape>;
 
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
     struct OwnershipTarget {
       static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<BoardShape>;
+      using Tensor = eigen_util::FTensor<OwnershipShape>;
 
       static Tensor tensorize(const Types::GameLogView& view);
     };

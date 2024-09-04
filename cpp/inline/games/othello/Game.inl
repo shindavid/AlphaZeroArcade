@@ -118,25 +118,35 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const Base
 inline Game::TrainingTargets::ScoreMarginTarget::Tensor
 Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
-  const BaseState& state = *view.cur_pos;
-  core::seat_index_t cp = Rules::get_current_player(state);
-  tensor(0) = get_count(state, cp) - get_count(state, 1 - cp);
+  tensor.setZero();
+  const BaseState& state = *view.final_pos;
+  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
+  int score_index = kNumCells + get_count(state, cp) - get_count(state, 1 - cp);
+  util::release_assert(score_index >= 0 && score_index <= kNumCells * 2);
+
+  // PDF
+  tensor(0, score_index) = 1;
+
+  // CDF
+  for (int i = 0; i <= score_index; ++i) {
+    tensor(1, i) = 1;
+  }
   return tensor;
 }
 
 inline Game::TrainingTargets::OwnershipTarget::Tensor
 Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
-  const BaseState& cur_state = *view.cur_pos;
-  const BaseState& final_state = *view.final_pos;
-  core::seat_index_t cp = Rules::get_current_player(cur_state);
+  tensor.setZero();
+  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
-      core::seat_index_t p = get_player_at(final_state, row, col);
-      int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
-      tensor(row, col) = val;
+      core::seat_index_t p = get_player_at(*view.final_pos, row, col);
+      int x = (p == -1) ? 2 : ((p == cp) ? 0 : 1);
+      tensor(x, row, col) = 1;
     }
   }
+
   return tensor;
 }
 

@@ -3,14 +3,13 @@
 /*
  * Various string utilities
  */
+#include <util/Exception.hpp>
 
 #include <cctype>
 #include <cstdarg>
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include <util/Exception.hpp>
 
 namespace util {
 
@@ -24,11 +23,14 @@ constexpr uint64_t str_hash(const char* c);
 float atof_safe(const std::string& s);
 
 /*
- * split(s) behaves just like s.split() in python.
- *
- * TODO: support split(s, t), to behave like s.split(t).
+ * split(s) and split(s, t) behave just like s.split() and s.split(t), respectively, in python.
  */
-std::vector<std::string> split(const std::string& s);
+std::vector<std::string> split(const std::string& s, const char* t="");
+
+/*
+ * splitlines(s) behaves just like s.splitlines() in python.
+ */
+std::vector<std::string> splitlines(const std::string& s);
 
 /*
  * Like sprintf(), but conveniently bypasses need to declare the char buffer at the call-site.

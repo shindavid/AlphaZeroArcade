@@ -178,7 +178,6 @@ class NetTrainer:
             labels_list = data[1:]
             inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
 
-            labels_list = [target.convert_labels(labels) for labels, target in zip(labels_list, net.learning_targets)]
             labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
 
             optimizer.zero_grad()

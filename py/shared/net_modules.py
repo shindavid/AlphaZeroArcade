@@ -26,7 +26,7 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from shared.learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreMarginTarget, ValueTarget
+from shared.learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreTarget, ValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -316,7 +316,7 @@ class ValueHead(Head):
         return out
 
 
-class ScoreMarginHead(Head):
+class ScoreHead(Head):
     """
     This maps to one of the subheads of ValueHead in the KataGo codebase.
 
@@ -324,20 +324,22 @@ class ScoreMarginHead(Head):
     completely understand. I am instead doing something I feel is reasonable, mimicking the flow of
     the ValueHead.
 
-    TODO: having 2 linear layers feels unnecessary. Try removing one, perhaps increasing
-    c_hidden to compensate.
+    TODO: The two linear layers isn't quite right. We should be using the GlobalPoolingLayer here,
+    since in games like go/blokus/othello, scores are obtained by summing up some quantity over each
+    square of the board. Experiment with this.
     """
     def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
-                 max_score_margin: int, min_score_margin: Optional[int]=None):
-        target = ScoreMarginTarget(max_score_margin, min_score_margin)
-        super(ScoreMarginHead, self).__init__(name, target)
+                 shape: Shape):
+        super(ScoreHead, self).__init__(name, ScoreTarget())
 
-        min_score_margin = -max_score_margin if min_score_margin is None else min_score_margin
-        n_possible_score_margins = max_score_margin - min_score_margin + 1
+        self.shape = shape
+        assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
+        assert len(shape) == 2, f'Unexpected shape {shape}: not yet supported'
+
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
-        self.linear2 = nn.Linear(n_hidden, n_possible_score_margins)
+        self.linear2 = nn.Linear(n_hidden, math.prod(shape))
 
     def forward(self, x):
         out = x
@@ -347,6 +349,7 @@ class ScoreMarginHead(Head):
         out = self.linear1(out)
         out = self.act(out)
         out = self.linear2(out)
+        out = out.view(out.shape[0], *self.shape)
         return out
 
 
@@ -356,12 +359,16 @@ class OwnershipHead(Head):
 
     For historical reasons, I am mimicking the flow of the PolicyHead for now.
     """
-    def __init__(self, name: str, c_in: int, c_hidden: int, n_possible_owners: int):
+    def __init__(self, name: str, c_in: int, c_hidden: int, shape: Shape):
         super(OwnershipHead, self).__init__(name, OwnershipTarget())
+
+        self.shape = shape
+        assert len(shape) == 3, f'Unexpected shape {shape}, Conv2d will not work'
+        n_categories = shape[0]
 
         self.act = F.relu
         self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-        self.conv2 = nn.Conv2d(c_hidden, n_possible_owners, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=False)
 
     def forward(self, x):
         out = x
@@ -378,7 +385,7 @@ MODULE_MAP = {
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
     'ValueHead': ValueHead,
-    'ScoreMarginHead': ScoreMarginHead,
+    'ScoreHead': ScoreHead,
     'OwnershipHead': OwnershipHead,
     }
 

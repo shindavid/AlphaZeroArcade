@@ -170,13 +170,14 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const Base
 inline Game::TrainingTargets::OwnershipTarget::Tensor
 Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
-  const BaseState& state = *view.cur_pos;
-  core::seat_index_t cp = Rules::get_current_player(state);
+  tensor.setZero();
+  const BaseState& state = *view.final_pos;
+  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
       core::seat_index_t p = _get_player_at(state, row, col);
-      int val = (p == -1) ? 0 : ((p == cp) ? 2 : 1);
-      tensor(row, col) = val;
+      int x = (p == -1) ? 2 : ((p == cp) ? 0 : 1);
+      tensor(x, row, col) = 1;
     }
   }
   return tensor;

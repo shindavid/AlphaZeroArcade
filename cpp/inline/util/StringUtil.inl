@@ -1,10 +1,10 @@
 #include <util/StringUtil.hpp>
 
-#include <iostream>
-
-#include <boost/algorithm/string.hpp>
-
 #include <util/Exception.hpp>
+
+#include <algorithm>
+#include <iostream>
+#include <sstream>
 
 namespace util {
 
@@ -40,13 +40,49 @@ inline float atof_safe(const std::string& s) {
   return f;
 }
 
-inline std::vector<std::string> split(const std::string &s) {
-  namespace ba = boost::algorithm;
+inline std::vector<std::string> split(const std::string& s, const char* t) {
+  std::vector<std::string> result;
 
-  std::string delims = " \n\t\r\v\f";  // matches python isspace()
-  std::vector<std::string> tokens;
-  ba::split(tokens, s, boost::is_any_of(delims));
-  return tokens;
+  std::string_view t_view(t);
+  if (t_view.empty()) {
+    // Split on any whitespace (like s.split() in Python)
+    std::istringstream stream(s);
+    std::string word;
+    while (stream >> word) {
+      result.push_back(word);
+    }
+  } else {
+    // Split on the specified separator (like s.split(t) in Python)
+    std::string::size_type start = 0;
+    std::string::size_type end;
+
+    while ((end = s.find(t_view, start)) != std::string::npos) {
+      result.push_back(s.substr(start, end - start));
+      start = end + t_view.length();
+    }
+
+    // Add the last part
+    result.push_back(s.substr(start));
+  }
+
+  return result;
+}
+
+inline std::vector<std::string> splitlines(const std::string &s) {
+  std::vector<std::string> result;
+  std::string::size_type start = 0;
+  std::string::size_type end;
+
+  while ((end = s.find('\n', start)) != std::string::npos) {
+    result.push_back(s.substr(start, end - start));
+    start = end + 1;
+  }
+
+  if (start < s.size()) {
+    result.push_back(s.substr(start));
+  }
+
+  return result;
 }
 
 template<int N>

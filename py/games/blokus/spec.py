@@ -1,23 +1,35 @@
 from dataclasses import dataclass
 import math
 
-from games.game_spec import GameSpec, ReferencePlayerFamily
+from games.game_spec import GameSpec
 from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
-BOARD_LENGTH = 8
-NUM_SQUARES = BOARD_LENGTH * BOARD_LENGTH
-NUM_PLAYERS = 2
-NUM_POSSIBLE_SCORE_MARGINS = 2 * NUM_SQUARES + 1
+# constants copied from c++:
+class CppConstants:
+    kNumColors = 4
+    kNumPlayers = kNumColors
+    kMaxScore = 63
+    kBoardDimension = 20
+    kNumCells = kBoardDimension * kBoardDimension
+    kNumPieceOrientationCorners = 309
+    kNumActions = kNumCells + kNumPieceOrientationCorners + 1
 
 
-def b19_c64(shape_info_dict: ShapeInfoDict):
+NUM_PLAYERS = CppConstants.kNumPlayers
+POLICY_SIZE = CppConstants.kNumActions
+NUM_POSSIBLE_SCORES = CppConstants.kMaxScore + 1
+
+
+def b20_c64(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
-    score_margin_shape = shape_info_dict['score_margin'].shape
+    absolute_score_shape = shape_info_dict['absolute-score'].shape
+    relative_score_shape = shape_info_dict['relative-score'].shape
+    assert absolute_score_shape == relative_score_shape
+    score_shape = absolute_score_shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_size = NUM_SQUARES + 1  # + 1 for pass
     c_trunk = 64
     c_mid = 64
     c_policy_hidden = 2
@@ -56,19 +68,23 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block18', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block20', c_trunk, c_mid]),
         ],
+
+        # TODO: bring back score heads once we fix up ScoreHead to work with dim>2 score-shapes.
 
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
+                       args=['policy', board_size, c_trunk, c_policy_hidden, POLICY_SIZE]),
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
-            ModuleSpec(type='PolicyHead',
-                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
-            ModuleSpec(type='ScoreHead',
-                       args=['score_margin', board_size, c_trunk, c_score_margin_hidden,
-                             n_score_margin_hidden, score_margin_shape]),
+            # ModuleSpec(type='ScoreHead',
+            #            args=['absolute-score', board_size, c_trunk, c_score_margin_hidden,
+            #                  n_score_margin_hidden, score_shape]),
+            # ModuleSpec(type='ScoreHead',
+            #            args=['relative-score', board_size, c_trunk, c_score_margin_hidden,
+            #                  n_score_margin_hidden, score_shape]),
             ModuleSpec(type='OwnershipHead',
                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
         ],
@@ -76,39 +92,30 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            'opp_policy': 0.15,
-            'score_margin': 0.02,
+            # 'absolute-score': 0.02,
+            # 'relative-score': 0.02,
             'ownership': 0.15
         },
     )
 
 
 @dataclass
-class OthelloSpec(GameSpec):
-    name = 'othello'
-    extra_runtime_deps = [
-        'extra_deps/edax-reversi/bin/lEdax-x64-modern',
-        'extra_deps/edax-reversi/data',
-        ]
+class BlokusSpec(GameSpec):
+    name = 'blokus'
+    num_players = NUM_PLAYERS
     model_configs = {
-        'default': b19_c64,
-        'b19_c64': b19_c64,
+        'default': b20_c64,
+        'b20_c64': b20_c64,
     }
-    reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
 
     training_params = TrainingParams(
-        window_size_function_str='fixed(300000)',
-        minibatches_per_epoch=500,
-        minibatch_size=100,
+        minibatches_per_epoch=256,
+        minibatch_size=64,
     )
 
     training_player_options = {
-        '-r': 4,
-    }
-
-    rating_player_options = {
-        '-i': 400,
+        '-r': 16,
     }
 
 
-Othello = OthelloSpec()
+Blokus = BlokusSpec()

@@ -40,6 +40,15 @@ class GameSpec(abc.ABC):
         pass
 
     @property
+    def num_players(self) -> int:
+        """
+        The number of players in the game.
+
+        TODO: get this from c++ automagically
+        """
+        return 2
+
+    @property
     def extra_runtime_deps(self) -> List[str]:
         """
         List of extra files that are required to run the game, related to the repo root.

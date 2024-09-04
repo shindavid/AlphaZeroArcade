@@ -74,17 +74,25 @@ def validate_gxx_version():
 
 
 def get_targets(targets: List[str], args) -> List[str]:
-    if targets:
-        return targets
     try:
         cmd = 'cmake --build . --target help'
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, encoding='utf-8')
         stdout = proc.communicate()[0]
-        targets = []
+        output = []
         for line in stdout.splitlines():
             if line.startswith('... '):
-                targets.append(line.split()[1])
-        return targets
+                candidate = line.split()[1]
+                if not targets:
+                    output.append(candidate)
+                else:
+                    underscore = candidate.rfind('_')
+                    if underscore != -1:
+                        if candidate[:underscore] in targets:
+                            if candidate[underscore + 1:] in ('tests', 'exe', 'ffi'):
+                                output.append(candidate)
+                    if candidate in targets:
+                        output.append(candidate)
+        return output
     except:
         return ['???']
 
@@ -170,7 +178,8 @@ def main():
     run(build_cmd)
 
     bin_dir = os.path.join(repo_root, target_dir, 'bin')
-    bin_postfix = 'd' if args.debug else ''
+    tests_dir = os.path.join(repo_root, target_dir, 'bin', 'tests')
+    lib_dir = os.path.join(repo_root, target_dir, 'lib')
     bins = get_targets(targets, args)
     for b in bins:
         spec = GAME_SPECS_BY_NAME.get(b, None)
@@ -190,10 +199,25 @@ def main():
             print(f'Extra dependency:', os.path.join(cp_loc, os.path.split(dep)[1]))
 
     for b in bins:
-        bin_loc = os.path.join(bin_dir, f'{b}{bin_postfix}')
-        if os.path.isfile(bin_loc):
-            relative_bin_loc = os.path.relpath(bin_loc, cwd)
-            print(f'Binary location: {relative_bin_loc}')
+        bin_loc = os.path.join(lib_dir, f'lib{b}.so')
+        if not os.path.isfile(bin_loc):
+            continue
+        relative_bin_loc = os.path.relpath(bin_loc, cwd)
+        print(f'Lib location: {relative_bin_loc}')
+
+    for b in bins:
+        bin_loc = os.path.join(tests_dir, b)
+        if not os.path.isfile(bin_loc):
+            continue
+        relative_bin_loc = os.path.relpath(bin_loc, cwd)
+        print(f'Unit-test location: {relative_bin_loc}')
+
+    for b in bins:
+        bin_loc = os.path.join(bin_dir, b)
+        if not os.path.isfile(bin_loc):
+            continue
+        relative_bin_loc = os.path.relpath(bin_loc, cwd)
+        print(f'Binary location: {relative_bin_loc}')
 
 
 if __name__ == '__main__':

@@ -88,11 +88,6 @@ class SearchThread {
     const ValueArray& value;
   };
 
-  struct evaluation_result_t {
-    NNEvaluation_sptr evaluation;
-    bool backpropagated_virtual_loss;
-  };
-
   struct visitation_t {
     edge_t* edge;
     Node* child;

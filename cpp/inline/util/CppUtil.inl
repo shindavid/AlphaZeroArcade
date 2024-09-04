@@ -1,6 +1,7 @@
 #include <util/CppUtil.hpp>
 
 #include <chrono>
+#include <cstring>
 
 namespace util {
 
@@ -27,6 +28,30 @@ struct TupleHasher {
 };
 
 }  // namespace detail
+
+// Produced by ChatGPT
+template<typename T>
+std::size_t PODHash<T>::operator()(const T& s) const {
+  const std::size_t* data = reinterpret_cast<const std::size_t*>(&s);
+  std::size_t hash = 0;
+
+  // Combine the hashes of each block of bytes
+  for (size_t i = 0; i < sizeof(T) / sizeof(std::size_t); ++i) {
+    hash ^= std::hash<std::size_t>{}(data[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+  }
+
+  // Handle any remaining bytes if T is not a multiple of sizeof(std::size_t)
+  if (sizeof(T) % sizeof(std::size_t) != 0) {
+    std::size_t lastBlock = 0;
+    std::memcpy(
+        &lastBlock,
+        reinterpret_cast<const char*>(&s) + (sizeof(T) / sizeof(std::size_t)) * sizeof(std::size_t),
+        sizeof(T) % sizeof(std::size_t));
+    hash ^= std::hash<std::size_t>{}(lastBlock) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+  }
+
+  return hash;
+}
 
 inline TtyMode* TtyMode::instance() {
   if (!instance_) {

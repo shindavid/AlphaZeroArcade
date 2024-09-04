@@ -90,6 +90,7 @@ class Game {
 
   struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
+    using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
@@ -97,7 +98,7 @@ class Game {
 
     struct OwnershipTarget {
       static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<BoardShape>;
+      using Tensor = eigen_util::FTensor<OwnershipShape>;
 
       static Tensor tensorize(const Types::GameLogView& view);
     };

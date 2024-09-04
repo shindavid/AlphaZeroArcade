@@ -21,6 +21,15 @@ PieceOrientationCoordinates = np.ndarray
 RawPieceOrientationCoordinates = np.ndarray
 
 
+SUBGROUP_DICT = {
+    '0b1': 'C1',
+    '0b11': 'C2',
+    '0b1111': 'C4',
+    '0b110011': 'D2',
+    '0b11111111': 'D4',
+}
+
+
 def normalize(c: RawPieceOrientationCoordinates) -> PieceOrientationCoordinates:
     """
     Shifts to border the x/y-axes within the 1st quadrant.
@@ -96,9 +105,11 @@ def block_str_join(strs: List[str], delim: str) -> str:
 class PieceOrientation:
     _next_index = 0
 
-    def __init__(self, name: str, piece_index: int, coordinates: PieceOrientationCoordinates):
+    def __init__(self, name: str, sym_index: int, piece_index: int,
+                 coordinates: PieceOrientationCoordinates):
         self.index = PieceOrientation._next_index
         PieceOrientation._next_index += 1
+        self.sym_index = sym_index
         self.piece_index = piece_index
         self.name = name
         self.coordinates = coordinates
@@ -115,7 +126,7 @@ class PieceOrientation:
     def __repr__(self):
         return f'PieceOrientation({self.name})'
 
-    def get_ascii_drawing(self) -> str:
+    def get_ascii_drawing(self, xy=None) -> str:
         coordinates = self.coordinates
 
         max_x = max(coordinates[:, 0])
@@ -123,9 +134,12 @@ class PieceOrientation:
 
         char_matrix = [[' '] * (max_x + 1) for _ in range(max_y + 1)]
         for x, y in coordinates:
-            char_matrix[y][x] = 'x'
+            if (x, y) == xy:
+                char_matrix[y][x] = '+'
+            else:
+                char_matrix[y][x] = 'o'
 
-        return '\n'.join([''.join(c) for c in reversed(char_matrix)] + [self.name])
+        return '\n'.join([''.join(c).rstrip() for c in reversed(char_matrix)] + [self.name])
 
 
 def get_rank_key(coordinates: PieceOrientationCoordinates):
@@ -162,17 +176,22 @@ class Piece:
 
         canonical_coordinates = list(sorted(coordinates_dict.values(), key=get_rank_key))[0]
 
+        sym_subgroup = 0
         # now compute orientations relative to canonical
         oset = set()
+        e = 0
         for r, m in [('r', canonical_coordinates), ('R', reflect_over_x_axis(canonical_coordinates))]:
             for n in range(4):
                 m2 = rotate_clockwise(m, n)
                 key = m2.tobytes()
                 if key not in oset:
+                    sym_subgroup += 1 << e
                     descr = f'{name}{r}{n}'
-                    self.orientations.append(PieceOrientation(descr, self.index, m2))
+                    self.orientations.append(PieceOrientation(descr, e, self.index, m2))
                     oset.add(key)
+                e += 1
 
+        self.sym_subgroup = SUBGROUP_DICT[bin(sym_subgroup)]
         self._validate()
 
     def verbose_repr(self) -> str:
