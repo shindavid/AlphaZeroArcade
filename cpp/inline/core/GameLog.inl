@@ -137,7 +137,7 @@ void GameLog<Game>::replay() const {
         if (policy(a) > 0) {
           char p = a == action ? '*' : ' ';
           std::string s = Game::IO::action_to_str(a);
-          std::cout << p << " " << s << ": " << policy(a) << std::endl;
+          printf("%c %s: %.6f\n", p, s.c_str(), policy(a));
           add_newline = true;
         }
       }
