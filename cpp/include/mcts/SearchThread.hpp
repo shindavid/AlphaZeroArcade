@@ -9,6 +9,7 @@
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
+#include <mcts/NNEvaluationRequest.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/PUCTStats.hpp>
@@ -22,6 +23,7 @@ template <core::concepts::Game Game>
 class SearchThread {
  public:
   using NNEvaluation = mcts::NNEvaluation<Game>;
+  using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
   using PUCTStats = mcts::PUCTStats<Game>;
@@ -30,6 +32,7 @@ class SearchThread {
   using edge_t = Node::edge_t;
   using node_pool_index_t = Node::node_pool_index_t;
   using base_state_vec_t = SharedData::base_state_vec_t;
+  using LookupTable = Node::LookupTable;
 
   using FullState = Game::FullState;
   using BaseState = Game::BaseState;
@@ -40,6 +43,8 @@ class SearchThread {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
   using ValueTensor = NNEvaluation::ValueTensor;
+
+  using aux_data_vec_t = NNEvaluationRequest::aux_data_vec_t;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kNumActions = Game::Constants::kNumActions;
@@ -107,6 +112,7 @@ class SearchThread {
   void wait_for_activation() const;
   Node* init_root_node();
   void init_node(state_data_t*, node_pool_index_t, Node* node);
+  void augment_request(NNEvaluationRequest*, Node*);
   void transform_policy(node_pool_index_t, LocalPolicyArray&) const;
   void perform_visits();
   void deactivate() const;
@@ -147,6 +153,7 @@ class SearchThread {
   group::element_t canonical_sym_;
   state_data_t raw_state_data_;
   state_data_t canonical_state_data_;  // pseudo-local-var, here to avoid repeated vector allocation
+  aux_data_vec_t aux_data_vec_;  // pseudo-local-var, here to avoid repeated vector allocation
 
   search_path_t search_path_;
   profiler_t profiler_;

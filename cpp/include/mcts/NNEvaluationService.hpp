@@ -218,6 +218,7 @@ class NNEvaluationService
   std::condition_variable cv_service_loop_;
   std::condition_variable cv_evaluate_;
   std::condition_variable cv_net_weights_;
+  std::condition_variable cv_cache_;
 
   core::NeuralNet net_;
 

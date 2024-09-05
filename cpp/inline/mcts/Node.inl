@@ -338,7 +338,7 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::initialize_edges(const FullState& state) {
+void Node<Game>::initialize_edges() {
   int n_edges = stable_data_.num_valid_actions;
   if (n_edges == 0) return;
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);

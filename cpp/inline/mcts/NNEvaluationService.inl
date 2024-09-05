@@ -148,10 +148,12 @@ NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate()";
   }
 
+  util::release_assert(request.aux_data_vec() == nullptr, "TODO: add batch-request support");
+
   base_state_vec_t& state_history = *request.state_history();
   util::release_assert(!state_history.empty());
   auto eval_key = InputTensorizor::eval_key(&state_history.front(), &state_history.back());
-  cache_key_t cache_key(eval_key, request.sym());
+  cache_key_t cache_key(eval_key, request.eval_sym());
   NNEvaluation_sptr response = check_cache(request, cache_key);
   if (response.get()) return response;
 
@@ -308,15 +310,31 @@ NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, const
   }
 
   std::unique_lock<std::mutex> cache_lock(cache_mutex_);
-  auto cached = cache_.get(cache_key);
-  if (cached.has_value()) {
+  if (cache_.get(cache_key).has_value()) {
     if (mcts::kEnableDebug) {
       LOG_INFO << request.thread_id_whitespace() << "  hit cache";
     }
-    // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
-    perf_stats_.cache_hits++;
-    return cached.value();
+
+    // This key is in the cache. The value might not be set yet, though. A nullptr value indicates
+    // that another thread is currently evaluating this key.
+    cv_cache_.wait(cache_lock, [&] {
+      auto cached = cache_.get(cache_key);
+      // The !has_value case can happen if the cache got cleared while we were waiting.
+      return !cached.has_value() || cached.value();
+    });
+
+    auto cached = cache_.get(cache_key);
+    if (cached.has_value()) {  // check here needed due to potential cache-clear race-condition
+      // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
+      perf_stats_.cache_hits++;
+      return cached.value();
+    }
   }
+
+  // We missed cache. Mark this key as being evaluated.
+  NNEvaluation_asptr value;
+  cache_.insert(cache_key, value);
+
   // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
   perf_stats_.cache_misses++;
   return nullptr;

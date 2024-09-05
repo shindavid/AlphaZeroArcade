@@ -1,6 +1,5 @@
 #include <mcts/SearchThread.hpp>
 
-#include <mcts/NNEvaluationRequest.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 
@@ -88,7 +87,7 @@ Node<Game>* SearchThread<Game>::init_root_node() {
   const FullState& state = shared_data_->root_info.state[canonical_sym_];
   const base_state_vec_t& state_history = shared_data_->root_info.state_history[canonical_sym_];
 
-  root->initialize_edges(state);
+  root->initialize_edges();
   canonical_state_data_.load(state, state_history);
   init_node(&canonical_state_data_, root_index, root);
 
@@ -107,12 +106,16 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
     NNEvaluation_sptr eval_sptr;
     NNEvaluation* eval = nullptr;
     if (nn_eval_service_) {
-      group::element_t sym = 0;
+      group::element_t eval_sym = 0;
       if (manager_params_->apply_random_symmetries) {
         auto mask = Game::Symmetries::get_mask(*state);
-        sym = bitset_util::choose_random_on_index(mask);
+        eval_sym = bitset_util::choose_random_on_index(mask);
       }
-      NNEvaluationRequest request(node, state, state_history, &profiler_, thread_id_, sym);
+      NNEvaluationRequest request(node, state_history, &profiler_, thread_id_, eval_sym);
+      if (node == shared_data_->get_root_node()) {
+        augment_request(&request, node);
+      }
+
       eval_sptr = nn_eval_service_->evaluate(request);
       eval = eval_sptr.get();
     }
@@ -121,6 +124,57 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
 
   auto mcts_key = Game::InputTensorizor::mcts_key(*state);
   shared_data_->lookup_table.insert_node(mcts_key, index);
+}
+
+template <core::concepts::Game Game>
+void SearchThread<Game>::augment_request(NNEvaluationRequest* request, Node* node) {
+  using Group = Game::SymmetryGroup;
+
+  LookupTable& lookup_table = shared_data_->lookup_table;
+  group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
+
+  request->add_aux_data(&aux_data_vec_);
+  aux_data_vec_.clear();
+
+  // Evaluate every child of the root node
+  for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
+    edge_t* edge = node->get_edge(e);
+    if (edge->child_index >= 0) continue;
+
+    // reorient edge->action into raw-orientation
+    core::action_t raw_edge_action = edge->action;
+    Game::Symmetries::apply(raw_edge_action, inv_canonical_sym);
+
+    // apply raw-orientation action to raw-orientation child-state
+    FullState raw_child_state = raw_state_data_.state;  // copy
+    ActionOutcome outcome = Game::Rules::apply(raw_child_state, raw_edge_action);
+
+    // determine canonical orientation of new leaf-state
+    auto canonical_child_sym = Game::Symmetries::get_canonical_symmetry(raw_child_state);
+    edge->sym = Group::compose(canonical_child_sym, inv_canonical_sym);
+
+    FullState canonical_child_state = shared_data_->root_info.state[canonical_child_sym];  // copy
+
+    core::action_t reoriented_action = raw_edge_action;
+    Game::Symmetries::apply(reoriented_action, canonical_child_sym);
+    Game::Rules::apply(canonical_child_state, reoriented_action);
+
+    edge->child_index = lookup_table.alloc_node();
+    Node* child = lookup_table.get_node(edge->child_index);
+    new (child) Node(&lookup_table, canonical_child_state, outcome);
+    child->initialize_edges();
+
+    if (child->is_terminal()) continue;
+
+    group::element_t child_eval_sym = 0;
+    if (manager_params_->apply_random_symmetries) {
+      auto mask = Game::Symmetries::get_mask(canonical_child_state);
+      child_eval_sym = bitset_util::choose_random_on_index(mask);
+    }
+
+    auto* parent_history = &shared_data_->root_info.state_history[canonical_child_sym];
+    aux_data_vec_.emplace_back(parent_history, canonical_child_state, child_eval_sym);
+  }
 }
 
 template <core::concepts::Game Game>
@@ -362,7 +416,7 @@ bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* 
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, state, outcome_);
     search_path_.back().child = child;
-    child->initialize_edges(state);
+    child->initialize_edges();
     virtual_backprop();
     init_node(state_data, edge->child_index, child);
     backprop_with_virtual_undo();
