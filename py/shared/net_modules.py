@@ -320,36 +320,67 @@ class ScoreHead(Head):
     """
     This maps to one of the subheads of ValueHead in the KataGo codebase.
 
-    The actual subhead in KataGo has some intricate scaling complexities which I frankly didn't
-    completely understand. I am instead doing something I feel is reasonable, mimicking the flow of
-    the ValueHead.
-
-    TODO: The two linear layers isn't quite right. We should be using the GlobalPoolingLayer here,
-    since in games like go/blokus/othello, scores are obtained by summing up some quantity over each
-    square of the board. Experiment with this.
+    The design of this mostly matches what is described in the KataGo paper. The scaling component
+    is something I am not sure about - whether it is only needed because KataGo handles multiple
+    board sizes, or if it something that is generally useful. I have included it for now, but it is
+    worth experimenting with removing it.
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
-                 shape: Shape):
+    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
         super(ScoreHead, self).__init__(name, ScoreTarget())
 
         self.shape = shape
         assert shape[0] == 2, f'Unexpected shape {shape}'  # first dim is PDF/CDF
-        assert len(shape) == 2, f'Unexpected shape {shape}: not yet supported'
+        assert len(shape) in (2, 3), f'Unexpected shape {shape}'
+
+        self.shape = shape
+        self.n_scores = shape[1]
+        self.last_dim = shape[0] * math.prod(shape[2:])
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-        self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
-        self.linear2 = nn.Linear(n_hidden, math.prod(shape))
+
+        self.gpool = GlobalPoolingLayer()
+
+        n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
+        self.scale_linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
+        self.scale_linear2 = nn.Linear(n_hidden, 1, bias=True)
+        self.softplus = nn.Softplus()
+
+        self.linear1 = nn.Linear(n_gpool + 1, n_hidden, bias=True)
+        self.linear2 = nn.Linear(n_hidden, self.last_dim, bias=True)
+
+        n_scores = self.n_scores
+        self.constant_row = torch.arange(n_scores).reshape((1, n_scores, 1)) * (1.0 / n_scores)
 
     def forward(self, x):
-        out = x
-        out = self.conv(out)
-        out = self.act(out)
-        out = out.view(out.shape[0], -1)
-        out = self.linear1(out)
-        out = self.act(out)
-        out = self.linear2(out)
-        out = out.view(out.shape[0], *self.shape)
+        N = x.shape[0]
+        n_scores = self.n_scores
+        last_dim = self.last_dim
+
+        out = x  # (N, C_in, H, W)
+        out = self.conv(out)  # (N, C_hidden, H, W)
+        out = self.act(out)  # (N, C_hidden, H, W)
+        out = self.gpool(out)  # (N, n_gpool, 1, 1)
+        out = out.squeeze(-1).squeeze(-1)  # (N, n_gpool)
+
+        scale = self.scale_linear1(out)  # (N, n_hidden)
+        scale = self.act(scale)  # (N, n_hidden)
+        scale = self.scale_linear2(scale)  # (N, 1)
+        scale = self.softplus(scale)  # (N, 1)
+        scale = scale.unsqueeze(2)  # (N, 1, 1)
+        scale = scale.expand(-1, n_scores, last_dim)  # (N, n_scores, last_dim)
+
+        out_s = out.unsqueeze(1)  # (N, 1, n_gpool)
+        out_s = out_s.expand(-1, n_scores, -1)  # (N, n_scores, n_gpool)
+
+        constant_plane = self.constant_row.to(x.device).expand(N, -1, -1)  # (N, n_scores, 1)
+        out_s = torch.cat([out_s, constant_plane], dim=2)  # (N, n_scores, n_gpool + 1)
+        out_s = self.linear1(out_s)  # (N, n_scores, n_hidden)
+        out_s = self.act(out_s)  # (N, n_scores, n_hidden)
+        out_s = self.linear2(out_s)  # (N, n_scores, last_dim)
+
+        out = out_s * scale  # (N, n_scores, last_dim)
+        out = out.view(N, *self.shape)  # (N, *shape)
         return out
 
 

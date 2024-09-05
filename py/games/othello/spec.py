@@ -24,7 +24,7 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
     c_opp_policy_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
-    c_score_margin_hidden = 1
+    c_score_margin_hidden = 32
     n_score_margin_hidden = 32
     c_ownership_hidden = 64
 
@@ -67,7 +67,7 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
             ModuleSpec(type='ScoreHead',
-                       args=['score_margin', board_size, c_trunk, c_score_margin_hidden,
+                       args=['score_margin', c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, score_margin_shape]),
             ModuleSpec(type='OwnershipHead',
                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),

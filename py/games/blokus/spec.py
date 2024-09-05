@@ -24,10 +24,7 @@ NUM_POSSIBLE_SCORES = CppConstants.kMaxScore + 1
 def b20_c64(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
-    absolute_score_shape = shape_info_dict['absolute-score'].shape
-    relative_score_shape = shape_info_dict['relative-score'].shape
-    assert absolute_score_shape == relative_score_shape
-    score_shape = absolute_score_shape
+    score_shape = shape_info_dict['score'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     c_trunk = 64
@@ -36,7 +33,7 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
     c_opp_policy_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
-    c_score_margin_hidden = 1
+    c_score_margin_hidden = 32
     n_score_margin_hidden = 32
     c_ownership_hidden = 64
 
@@ -79,22 +76,25 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
-            # ModuleSpec(type='ScoreHead',
-            #            args=['absolute-score', board_size, c_trunk, c_score_margin_hidden,
-            #                  n_score_margin_hidden, score_shape]),
-            # ModuleSpec(type='ScoreHead',
-            #            args=['relative-score', board_size, c_trunk, c_score_margin_hidden,
-            #                  n_score_margin_hidden, score_shape]),
+            ModuleSpec(type='ScoreHead',
+                       args=['score', c_trunk, c_score_margin_hidden,
+                             n_score_margin_hidden, score_shape]),
             ModuleSpec(type='OwnershipHead',
                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
+            ModuleSpec(type='ScoreHead',
+                       args=['dummy-score', c_trunk, c_score_margin_hidden,
+                             n_score_margin_hidden, score_shape]),
+            ModuleSpec(type='OwnershipHead',
+                       args=['dummy-ownership', c_trunk, c_ownership_hidden, ownership_shape]),
         ],
 
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            # 'absolute-score': 0.02,
-            # 'relative-score': 0.02,
-            'ownership': 0.15
+            'score': 0.02,
+            'ownership': 0.15,
+            'dummy-score': 0.02,
+            'dummy-ownership': 0.15,
         },
     )
 
