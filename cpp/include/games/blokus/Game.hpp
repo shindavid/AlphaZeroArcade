@@ -156,15 +156,8 @@ class Game {
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
 
-    struct AbsoluteScoreTarget {
-      static constexpr const char* kName = "absolute-score";
-      using Tensor = eigen_util::FTensor<ScoreShape>;
-
-      static Tensor tensorize(const Types::GameLogView& view);
-    };
-
-    struct RelativeScoreTarget {
-      static constexpr const char* kName = "relative-score";
+    struct ScoreTarget {
+      static constexpr const char* kName = "score";
       using Tensor = eigen_util::FTensor<ScoreShape>;
 
       static Tensor tensorize(const Types::GameLogView& view);
@@ -180,13 +173,30 @@ class Game {
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
+    struct DummyScoreTarget {
+      static constexpr const char* kName = "dummy-score";
+      using Tensor = eigen_util::FTensor<ScoreShape>;
+
+      static Tensor tensorize(const Types::GameLogView& view);
+    };
+
+    struct DummyOwnershipTarget {
+      static constexpr const char* kName = "dummy-ownership";
+      using Tensor = eigen_util::FTensor<OwnershipShape>;
+
+      static Tensor tensorize(const Types::GameLogView& view);
+    };
+
     // TODO:
     // - UnplayedPiecesTarget
+    // - ReachableSquaresTarget: for each square, whether it is reachable by some player if all
+    //                           other players are forced to pass all their turns.
     // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
     //                               before the current player's next move.
 
-    using List = mp::TypeList<PolicyTarget, ValueTarget, AbsoluteScoreTarget, RelativeScoreTarget,
-                              OwnershipTarget>;
+    using List = mp::TypeList<PolicyTarget, ValueTarget, ScoreTarget,
+                              OwnershipTarget, DummyScoreTarget,
+                              DummyOwnershipTarget>;
   };
 };
 

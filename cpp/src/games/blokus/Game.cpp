@@ -385,54 +385,26 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* 
   return tensor;
 }
 
-Game::TrainingTargets::AbsoluteScoreTarget::Tensor
-Game::TrainingTargets::AbsoluteScoreTarget::tensorize(const Types::GameLogView& view) {
+Game::TrainingTargets::ScoreTarget::Tensor
+Game::TrainingTargets::ScoreTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
   const BaseState& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
+  int min_score = kNumCells;
   int absolute_scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
     int score = state.remaining_square_count(c);
-    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
-    absolute_scores[c] = score;
-  }
-
-  for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (kNumColors + c - cp) % kNumColors;
-
-    // PDF
-    tensor(0, absolute_scores[c], rc) = 1;
-
-    // CDF
-    for (int score = 0; score <= absolute_scores[c]; ++score) {
-      tensor(1, score, rc) = 1;
-    }
-  }
-
-  return tensor;
-}
-
-Game::TrainingTargets::RelativeScoreTarget::Tensor
-Game::TrainingTargets::RelativeScoreTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
-  tensor.setZero();
-  const BaseState& state = *view.final_pos;
-  color_t cp = Rules::get_current_player(*view.cur_pos);
-
-  int min_score = kMaxScore;
-  int absolute_scores[kNumColors];
-  for (color_t c = 0; c < kNumColors; ++c) {
-    int score = state.remaining_square_count(c);
-    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
     absolute_scores[c] = score;
     min_score = std::min(min_score, score);
   }
 
   int relative_scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
-    relative_scores[c] = absolute_scores[c] - min_score;
+    int score = absolute_scores[c] - min_score;
+    relative_scores[c] = score;
+    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
@@ -455,6 +427,67 @@ Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipT
   Tensor tensor;
   tensor.setZero();
   const BaseState& state = *view.final_pos;
+  color_t cp = Rules::get_current_player(*view.cur_pos);
+
+  for (int row = 0; row < kBoardDimension; ++row) {
+    for (int col = 0; col < kBoardDimension; ++col) {
+      tensor(kNumColors, row, col) = 1;
+    }
+  }
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    color_t rc = (kNumColors + c - cp) % kNumColors;
+    for (Location loc : state.core.occupied_locations[c].get_set_locations()) {
+      tensor(rc, loc.row, loc.col) = 1;
+      tensor(kNumColors, loc.row, loc.col) = 0;
+    }
+  }
+
+  return tensor;
+}
+
+Game::TrainingTargets::DummyScoreTarget::Tensor
+Game::TrainingTargets::DummyScoreTarget::tensorize(const Types::GameLogView& view) {
+  Tensor tensor;
+  tensor.setZero();
+  const BaseState& state = *view.cur_pos;
+  color_t cp = Rules::get_current_player(*view.cur_pos);
+
+  int min_score = kNumCells;
+  int absolute_scores[kNumColors];
+  for (color_t c = 0; c < kNumColors; ++c) {
+    int score = state.remaining_square_count(c);
+    absolute_scores[c] = score;
+    min_score = std::min(min_score, score);
+  }
+
+  int relative_scores[kNumColors];
+  for (color_t c = 0; c < kNumColors; ++c) {
+    int score = absolute_scores[c] - min_score;
+    relative_scores[c] = score;
+    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
+  }
+
+  for (color_t c = 0; c < kNumColors; ++c) {
+    color_t rc = (kNumColors + c - cp) % kNumColors;
+
+    // PDF
+    tensor(0, relative_scores[c], rc) = 1;
+
+    // CDF
+    for (int score = 0; score <= relative_scores[c]; ++score) {
+      tensor(1, score, rc) = 1;
+    }
+  }
+
+  return tensor;
+}
+
+Game::TrainingTargets::DummyOwnershipTarget::Tensor
+Game::TrainingTargets::DummyOwnershipTarget::tensorize(const Types::GameLogView& view) {
+  Tensor tensor;
+  tensor.setZero();
+  const BaseState& state = *view.cur_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
   for (int row = 0; row < kBoardDimension; ++row) {
