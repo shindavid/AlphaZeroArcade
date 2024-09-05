@@ -158,6 +158,9 @@ class XVarSelector:
         if not force_refresh and prev_x_index == x_index:
             return
 
+        if prev_x_col not in self._min_x_dict:
+            return
+
         prev_x_min = self._min_x_dict[prev_x_col]
         prev_x_max = self._max_x_dict[prev_x_col]
         prev_x_width = prev_x_max - prev_x_min
