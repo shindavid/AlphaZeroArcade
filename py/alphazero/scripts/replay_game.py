@@ -64,6 +64,8 @@ def main():
     lib.GameLog_replay(log)
     lib.GameLog_delete(log)
 
+    print(f'Finished replaying from {self_play_filename}')
+
 
 if __name__ == '__main__':
     main()
