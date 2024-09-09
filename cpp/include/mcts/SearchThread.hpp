@@ -47,7 +47,7 @@ class SearchThread {
   using ValueArray = Game::Types::ValueArray;
   using ValueTensor = NNEvaluation::ValueTensor;
 
-  using aux_data_vec_t = NNEvaluationRequest::aux_data_vec_t;
+  using item_vec_t = NNEvaluationRequest::item_vec_t;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kNumActions = Game::Constants::kNumActions;
@@ -156,11 +156,18 @@ class SearchThread {
   group::element_t canonical_sym_;
   state_data_t raw_state_data_;
 
-  // pseudo-local-vars, stored as class members to avoid repeated vector allocation:
-  state_data_t canonical_state_data_;
-  aux_data_vec_t aux_data_vec_;
-  base_state_vec_array_t base_state_vec_array_;
-  eval_data_vec_t eval_data_vec_;
+  /*
+   * These variables would more naturally be declared as local variables in the contexts in which
+   * they are used, but they are declared here to avoid repeated allocation/deallocation.
+   */
+  struct pseudo_local_vars_t {
+    state_data_t canonical_state_data;
+    item_vec_t request_items;
+    base_state_vec_array_t base_state_vec_array;
+    eval_data_vec_t eval_data_vec;
+  };
+
+  pseudo_local_vars_t pseudo_local_vars_;
 
   search_path_t search_path_;
   profiler_t profiler_;

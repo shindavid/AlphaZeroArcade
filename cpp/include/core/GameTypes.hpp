@@ -10,6 +10,7 @@
 #include <array>
 #include <bitset>
 #include <string>
+#include <vector>
 
 #include <Eigen/Core>
 
@@ -31,6 +32,7 @@ struct GameTypes {
   using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, Group>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
   using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
+  using state_vec_t = std::vector<BaseState>;
 
   /*
    * Return type for an MCTS search.

@@ -407,6 +407,16 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
 }
 
 template <core::concepts::Game Game>
+bool Node<Game>::all_children_edges_initialized() const {
+  if (stable_data_.num_valid_actions == 0) return true;
+  if (first_edge_index_ == -1) return false;
+  for (int j = 0; j < stable_data_.num_valid_actions; ++j) {
+    if (get_edge(j)->state != kExpanded) return false;
+  }
+  return true;
+}
+
+template <core::concepts::Game Game>
 typename Node<Game>::edge_t* Node<Game>::get_edge(int i) const {
   util::debug_assert(first_edge_index_ != -1);
   return lookup_table_->get_edge(first_edge_index_ + i);
@@ -419,11 +429,13 @@ Node<Game>* Node<Game>::get_child(const edge_t* edge) const {
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::update_child_expand_count() {
-  child_expand_count_++;
-  if (child_expand_count_ != stable_data_.num_valid_actions) return;
+void Node<Game>::update_child_expand_count(int n) {
+  child_expand_count_ += n;
+  util::debug_assert(child_expand_count_ <= stable_data_.num_valid_actions);
+  if (child_expand_count_ < stable_data_.num_valid_actions) return;
 
   // all children have been expanded, check for triviality
+  if (child_expand_count_ == 0) return;
   node_pool_index_t first_child_index = get_edge(0)->child_index;
   for (int i = 1; i < stable_data_.num_valid_actions; ++i) {
     if (get_edge(i)->child_index != first_child_index) return;

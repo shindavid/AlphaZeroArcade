@@ -150,50 +150,34 @@ template <core::concepts::Game Game>
 void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request,
                                          eval_data_vec_t& eval_data_vec) {
   if (mcts::kEnableDebug) {
-    if (request.aux_data_vec()) {
-      LOG_INFO << request.thread_id_whitespace() << "evaluate() - aux: "
-               << request.aux_data_vec()->size();
-    } else {
-      LOG_INFO << request.thread_id_whitespace() << "evaluate()";
-    }
+    LOG_INFO << request.thread_id_whitespace() << "evaluate() - size: " << request.items().size();
   }
 
-  int capacity = 1;
-  if (request.aux_data_vec()) {
-    capacity += request.aux_data_vec()->size();
-  }
-  eval_data_vec.reserve(capacity);
+  eval_data_vec.reserve(request.items().size());
 
-  base_state_vec_t& state_history = *request.state_history();
-  util::debug_assert(!state_history.empty());
-  util::debug_assert(state_history.size() <= Game::Constants::kHistorySize + 1);
-  auto eval_key = InputTensorizor::eval_key(&state_history.front(), &state_history.back());
-  cache_key_t cache_key(eval_key, request.eval_sym());
-  eval_data_vec.emplace_back(request.node(), cache_key);
+  for (size_t a = 0; a < request.items().size(); a++) {
+    const auto& item = request.items()[a];
+    base_state_vec_t& history = *item.history;
+    util::debug_assert(!history.empty());
+    util::debug_assert(history.size() <= Game::Constants::kHistorySize + 1);
 
-  if (request.aux_data_vec()) {
-    for (size_t a = 0; a < request.aux_data_vec()->size(); a++) {
-      const auto& aux_data = (*request.aux_data_vec())[a];
-      base_state_vec_t& parent_history = *aux_data.parent_history;
-      util::debug_assert(!parent_history.empty());
-      util::debug_assert(parent_history.size() <= Game::Constants::kHistorySize + 1);
-
-      bool full = parent_history.size() == Game::Constants::kHistorySize + 1;
-
-      // temporarily overstuff the history to facilitate efficient reuse of parent_history, which
-      // might be shared by multiple aux_data_vec entries:
-      parent_history.push_back(aux_data.child_state);
-
-      auto begin = parent_history.begin();
-      auto end = parent_history.end();
-      if (full) begin++;  // compensate for overstuffing
-      auto child_eval_key = InputTensorizor::eval_key(&(*begin), &(*(end - 1)));
-      parent_history.pop_back();  // undo temporary overstuffing
-
-      cache_key_t cache_key(child_eval_key, aux_data.eval_sym);
-      eval_data_vec.emplace_back(aux_data.child, cache_key, a);
+    if (item.add_state) {
+      history.push_back(item.state);
     }
-    capacity += request.aux_data_vec()->size();
+
+    bool full = history.size() > Game::Constants::kHistorySize + 1;
+
+    auto begin = history.begin();
+    auto end = history.end();
+    if (full) begin++;  // compensate for overstuffing
+    auto eval_key = InputTensorizor::eval_key(&(*begin), &(*(end - 1)));
+
+    if (item.add_state) {
+      history.pop_back();  // undo temporary append
+    }
+
+    cache_key_t cache_key(eval_key, item.eval_sym);
+    eval_data_vec.emplace_back(item.node, cache_key, a);
   }
 
   while (true) {
@@ -456,16 +440,13 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
   request.thread_profiler()->record(SearchThreadRegion::kTensorizing);
 
   cache_key_t cache_key = eval_data.cache_key;
-  base_state_vec_t* state_history;
-  bool overstuffed = false;
-  if (eval_data.aux_index == -1) {
-    state_history = request.state_history();
-  } else {
-    const auto& aux_data = (*request.aux_data_vec())[eval_data.aux_index];
-    state_history = aux_data.parent_history;
-    state_history->push_back(aux_data.child_state);  // overstuff
-    overstuffed = true;
+
+  const auto& item = request.items()[eval_data.aux_index];
+  base_state_vec_t* history = item.history;
+  if (item.add_state) {
+    history->push_back(item.state);
   }
+
   const auto& stable_data = eval_data.node->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
@@ -475,16 +456,16 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
 
-  bool full = state_history->size() == Game::Constants::kHistorySize + 2;
-  auto begin = state_history->begin();
-  auto end = state_history->end();
+  bool full = history->size() > Game::Constants::kHistorySize + 1;
+  auto begin = history->begin();
+  auto end = history->end();
   if (full) begin++;  // compensate for overstuffing
 
   for (auto pos = begin; pos != end; pos++) {
     Game::Symmetries::apply(*pos, sym);
   }
 
-  util::debug_assert(!state_history->empty());
+  util::debug_assert(!history->empty());
   group.input = InputTensorizor::tensorize(&(*begin), &(*(end - 1)));
 
   group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
@@ -492,8 +473,8 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
     Game::Symmetries::apply(*pos, inverse_sym);
   }
 
-  if (overstuffed) {
-    state_history->pop_back();  // undo temporary overstuffing
+  if (item.add_state) {
+    history->pop_back();  // undo temporary overstuffing
   }
 
   group.current_player = current_player;

@@ -191,12 +191,13 @@ class Node {
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
+  bool all_children_edges_initialized() const;
   bool edges_initialized() const { return first_edge_index_ != -1; }
   edge_t* get_edge(int i) const;
   edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
   Node* get_child(const edge_t* edge) const;
-  void update_child_expand_count();
+  void update_child_expand_count(int n=1);
   bool trivial() const { return trivial_; }
 
  private:

@@ -18,42 +18,46 @@ class NNEvaluationRequest {
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
   using Node = mcts::Node<Game>;
+  using state_vec_t = Game::Types::state_vec_t;
 
-  // auxiliary request data, used when we request evaluations for all children of a node alongside
-  // the node itself
-  struct aux_data_t {
-    Node* child;
-    BaseState child_state;  // uses child's canonical-orientation
-    std::vector<BaseState>* parent_history;  // matches child_state's orientation
+  struct Item {
+    BaseState state;
+    Node* node;
+    state_vec_t* history;
     group::element_t eval_sym;
+
+    /*
+     * If true, then the history represented by this item is
+     *
+     * this->history + [this->state]  # python syntax
+     *
+     * Else, the history is just this->history.
+     *
+     * We have this hacky mechanism because K distinct items might share the same first (N-1) items
+     * in their history. Rather than making K copies of the history, we just have all K copies
+     * point to the same (N-1)-length history, and then have a this->state member to represent the
+     * potentially last item in the history.
+     */
+    bool add_state;
   };
-  using aux_data_vec_t = std::vector<aux_data_t>;
+  using item_vec_t = std::vector<Item>;
 
-  NNEvaluationRequest(Node*, std::vector<BaseState>*, search_thread_profiler_t*,
-                      int thread_id, group::element_t eval_sym);
-
-  void add_aux_data(aux_data_vec_t* vec) { aux_data_vec_ = vec; }
+  NNEvaluationRequest(const item_vec_t& items, search_thread_profiler_t* thread_profiler,
+                      int thread_id)
+      : items_(items), thread_profiler_(thread_profiler), thread_id_(thread_id) {}
 
   std::string thread_id_whitespace() const {
     return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
   }
 
-  Node* node() const { return node_; }
-  std::vector<BaseState>* state_history() const { return state_history_; }
   search_thread_profiler_t* thread_profiler() const { return thread_profiler_; }
   int thread_id() const { return thread_id_; }
-  group::element_t eval_sym() const { return eval_sym_; }
-  aux_data_vec_t* aux_data_vec() const { return aux_data_vec_; }
+  const item_vec_t& items() const { return items_; }
 
  private:
-  Node* node_;
-  std::vector<BaseState>* state_history_;
-  search_thread_profiler_t* thread_profiler_;
-  int thread_id_;
-  group::element_t eval_sym_;
-  aux_data_vec_t* aux_data_vec_ = nullptr;
+  const item_vec_t& items_;
+  search_thread_profiler_t* const thread_profiler_;
+  const int thread_id_;
 };
 
 }  // namespace mcts
-
-#include <inline/mcts/NNEvaluationRequest.inl>

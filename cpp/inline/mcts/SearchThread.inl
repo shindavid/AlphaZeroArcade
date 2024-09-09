@@ -82,14 +82,21 @@ Node<Game>* SearchThread<Game>::init_root_node() {
 
   node_pool_index_t root_index = shared_data_->root_info.node_index;
   Node* root = shared_data_->lookup_table.get_node(root_index);
-  if (root->is_terminal() || root->edges_initialized()) return root;
+  if (root->is_terminal()) return root;
+
+  if (!root->edges_initialized()) {
+    root->initialize_edges();
+  }
+
+  if (root->all_children_edges_initialized()) {
+    return root;
+  }
 
   const FullState& state = shared_data_->root_info.state[canonical_sym_];
   const base_state_vec_t& state_history = shared_data_->root_info.state_history[canonical_sym_];
 
-  root->initialize_edges();
-  canonical_state_data_.load(state, state_history);
-  init_node(&canonical_state_data_, root_index, root);
+  pseudo_local_vars_.canonical_state_data.load(state, state_history);
+  init_node(&pseudo_local_vars_.canonical_state_data, root_index, root);
 
   root->stats().RN++;
   return root;
@@ -110,21 +117,24 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
         auto mask = Game::Symmetries::get_mask(*state);
         eval_sym = bitset_util::choose_random_on_index(mask);
       }
-      NNEvaluationRequest request(node, state_history, &profiler_, thread_id_, eval_sym);
+      pseudo_local_vars_.request_items.emplace_back(*state, node, state_history, eval_sym, false);
+      NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
       if (is_root) {
+        pseudo_local_vars_.base_state_vec_array = shared_data_->root_info.state_history;  // copy
         expand_all_children(node, &request);
       }
 
-      nn_eval_service_->evaluate(request, eval_data_vec_);
+      if (!pseudo_local_vars_.request_items.empty()) {
+        nn_eval_service_->evaluate(request, pseudo_local_vars_.eval_data_vec);
 
-      for (eval_data_t& eval_data : eval_data_vec_) {
-        eval_data.node->load_eval(eval_data.value.get(), [&](LocalPolicyArray& P) {
-          transform_policy(index, P);
-        });
+        for (eval_data_t& eval_data : pseudo_local_vars_.eval_data_vec) {
+          eval_data.node->load_eval(eval_data.value.get(),
+                                    [&](LocalPolicyArray& P) { transform_policy(index, P); });
+        }
       }
 
-      eval_data_vec_.clear();
-      aux_data_vec_.clear();
+      pseudo_local_vars_.eval_data_vec.clear();
+      pseudo_local_vars_.request_items.clear();
     } else {
       node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
 
@@ -150,14 +160,9 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
   LookupTable& lookup_table = shared_data_->lookup_table;
   group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
 
-  if (request) {
-    aux_data_vec_.clear();
-    request->add_aux_data(&aux_data_vec_);
-    base_state_vec_array_ = shared_data_->root_info.state_history;  // copy
-  }
-
   // Evaluate every child of the root node
-  for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
+  int n_actions = node->stable_data().num_valid_actions;
+  for (int e = 0; e < n_actions; e++) {
     edge_t* edge = node->get_edge(e);
     if (edge->child_index >= 0) continue;
 
@@ -183,6 +188,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, canonical_child_state, outcome);
     child->initialize_edges();
+    edge->state = Node::kExpanded;
 
     if (child->is_terminal()) continue;
     if (!request) continue;
@@ -193,9 +199,12 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
       child_eval_sym = bitset_util::choose_random_on_index(mask);
     }
 
-    auto* parent_history = &base_state_vec_array_[canonical_child_sym];
-    aux_data_vec_.emplace_back(child, canonical_child_state, parent_history, child_eval_sym);
+    auto* parent_history = &pseudo_local_vars_.base_state_vec_array[canonical_child_sym];
+    pseudo_local_vars_.request_items.emplace_back(canonical_child_state, child, parent_history,
+                                                  child_eval_sym, true);
   }
+
+  node->update_child_expand_count(n_actions);
 }
 
 template <core::concepts::Game Game>
@@ -298,7 +307,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
       state_data_t* state_data = &raw_state_data_;
       if (canonical_sym_ != group::kIdentity) {
         calc_canonical_state_data();
-        state_data = &canonical_state_data_;
+        state_data = &pseudo_local_vars_.canonical_state_data;
       }
 
       if (expand(state_data, node, edge)) return;
@@ -470,14 +479,14 @@ std::string SearchThread<Game>::search_path_str() const {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::calc_canonical_state_data() {
-  canonical_state_data_ = raw_state_data_;
-  for (BaseState& base : canonical_state_data_.state_history) {
+  pseudo_local_vars_.canonical_state_data = raw_state_data_;
+  for (BaseState& base : pseudo_local_vars_.canonical_state_data.state_history) {
     Game::Symmetries::apply(base, canonical_sym_);
   }
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
     using Group = Game::SymmetryGroup;
-    canonical_state_data_.state = shared_data_->root_info.state[canonical_sym_];
+    pseudo_local_vars_.canonical_state_data.state = shared_data_->root_info.state[canonical_sym_];
     group::element_t cur_canonical_sym = shared_data_->root_info.canonical_sym;
     group::element_t leaf_canonical_sym = canonical_sym_;
     for (const visitation_t& visitation : search_path_) {
@@ -485,7 +494,7 @@ void SearchThread<Game>::calc_canonical_state_data() {
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
       Game::Symmetries::apply(action, sym);
-      Game::Rules::apply(canonical_state_data_.state, action);
+      Game::Rules::apply(pseudo_local_vars_.canonical_state_data.state, action);
       cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
     }
 
@@ -493,7 +502,7 @@ void SearchThread<Game>::calc_canonical_state_data() {
                          "cur_canonical_sym=%d leaf_canonical_sym=%d", cur_canonical_sym,
                          leaf_canonical_sym);
   } else {
-    Game::Symmetries::apply(canonical_state_data_.state, canonical_sym_);
+    Game::Symmetries::apply(pseudo_local_vars_.canonical_state_data.state, canonical_sym_);
   }
 }
 
