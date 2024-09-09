@@ -131,7 +131,7 @@ class NNEvaluationService
    * Constructs an evaluation service and returns it.
    *
    * If another service with the same model_filename has already been create()'d, then returns that.
-   * In this case, validates taht the parameters match the existing service.
+   * In this case, validates that the parameters match the existing service.
    */
   static NNEvaluationService* create(const NNEvaluationServiceParams& params);
 
@@ -220,7 +220,7 @@ class NNEvaluationService
     InputTensor input;
     PolicyTensor policy;
     ValueTensor value;
-    ActionValueTensor action_value;
+    ActionValueTensor action_values;
     core::seat_index_t current_player;
     eval_ptr_data_t eval_ptr_data;
   };

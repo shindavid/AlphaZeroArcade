@@ -184,8 +184,9 @@ Node<Game>::Node(LookupTable* table, const FullState& state, const ActionOutcome
     : stable_data_(state, outcome), lookup_table_(table), mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
-typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& params,
-                                                         group::element_t inv_sym) const {
+void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
+                                               group::element_t inv_sym, PolicyTensor& counts,
+                                               ActionValueTensor& action_values) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -195,8 +196,8 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     std::cout << "get_counts()" << std::endl;
   }
 
-  PolicyTensor counts;
   counts.setZero();
+  action_values.setZero();
 
   bool provably_winning = stats_.provably_winning[cp];
   bool provably_losing = stats_.provably_losing[cp];
@@ -210,18 +211,19 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     const char* detail = "";
 
     const Node* child = get_child(edge);
-    if (child) {
-      const auto& stats = child->stats();
-      if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
-        modified_count = 0;
-        detail = " (losing)";
-      } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
-        modified_count = 0;
-        detail = " (?)";
-      } else if (provably_winning) {
-        detail = " (winning)";
-      }
+    util::release_assert(child);
+    const auto& stats = child->stats();
+    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
+      modified_count = 0;
+      detail = " (losing)";
+    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
+      modified_count = 0;
+      detail = " (?)";
+    } else if (provably_winning) {
+      detail = " (winning)";
     }
+
+    float action_value = child->stable_data().V(cp);
 
     if (kEnableDebug) {
       auto action2 = action;
@@ -236,9 +238,8 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     if (modified_count) {
       counts(action) = modified_count;
     }
+    action_values(action) = action_value;
   }
-
-  return counts;
 }
 
 template <core::concepts::Game Game>

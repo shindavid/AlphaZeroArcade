@@ -168,7 +168,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   }
 
   load_action_symmetries(root, &actions[0]);
-  results_.counts = root->get_counts(params_, inv_sym);
+  root->load_counts_and_action_values(params_, inv_sym, results_.counts, results_.action_values);
   results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.current_player];
   results_.trivial = root->trivial();

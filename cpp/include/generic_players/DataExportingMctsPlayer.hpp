@@ -30,6 +30,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;

@@ -45,9 +45,10 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
     policy_target_ptr = &policy_target;
     extract_policy_target(mcts_search_results, &policy_target_ptr);
   }
+  ActionValueTensor action_values = mcts_search_results->action_values;
   core::ActionResponse response =
       base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
-  game_log_->add(state, response.action, policy_target_ptr, use_for_training);
+  game_log_->add(state, response.action, policy_target_ptr, action_values, use_for_training);
   return response;
 }
 

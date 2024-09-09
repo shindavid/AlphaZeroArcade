@@ -22,7 +22,7 @@ class NNEvaluation {
   using DynamicActionArray = Eigen::Array<float, 2, Eigen::Dynamic>;
 
   NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
-               const ActionValueTensor& action_value, const ActionMask& valid_actions);
+               const ActionValueTensor& action_values, const ActionMask& valid_actions);
   const ValueArray& value_distr() const { return value_distr_; }
   const DynamicActionArray& dynamic_action_array() const { return dynamic_action_array_; }
 

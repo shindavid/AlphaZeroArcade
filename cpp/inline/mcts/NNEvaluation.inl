@@ -7,13 +7,13 @@ namespace mcts {
 
 template <core::concepts::Game Game>
 NNEvaluation<Game>::NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
-                                 const ActionValueTensor& action_value,
+                                 const ActionValueTensor& action_values,
                                  const ActionMask& valid_actions)
     : dynamic_action_array_(2, valid_actions.count()) {
   int i = 0;
   for (int a : bitset_util::on_indices(valid_actions)) {
     dynamic_action_array_(0, i) = policy(a);
-    dynamic_action_array_(1, i) = action_value(a);
+    dynamic_action_array_(1, i) = action_values(a);
     i++;
   }
 

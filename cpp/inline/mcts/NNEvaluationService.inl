@@ -114,7 +114,7 @@ inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
          policy_size * sizeof(float));
   memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
          value_size * sizeof(float));
-  memcpy(action_value.data(), torch_action_value.data_ptr<float>() + row * action_value_size,
+  memcpy(action_values.data(), torch_action_value.data_ptr<float>() + row * action_value_size,
          action_value_size * sizeof(float));
 }
 
@@ -315,9 +315,9 @@ void NNEvaluationService<Game>::batch_evaluate() {
 
     group::element_t inv_sym = Game::SymmetryGroup::inverse(edata.sym);
     Game::Symmetries::apply(group.policy, inv_sym);
-    Game::Symmetries::apply(group.action_value, inv_sym);
+    Game::Symmetries::apply(group.action_values, inv_sym);
     edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy,
-                                                        group.action_value, edata.valid_actions));
+                                                        group.action_values, edata.valid_actions));
   }
 
   profiler_.record(NNEvaluationServiceRegion::kAcquiringCacheMutex);

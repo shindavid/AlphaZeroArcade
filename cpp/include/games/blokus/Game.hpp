@@ -155,6 +155,7 @@ class Game {
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
+    using ActionValueTarget = core::ActionValueTarget<Game>;
 
     struct ScoreTarget {
       static constexpr const char* kName = "score";
@@ -194,9 +195,8 @@ class Game {
     // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
     //                               before the current player's next move.
 
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ScoreTarget,
-                              OwnershipTarget, DummyScoreTarget,
-                              DummyOwnershipTarget>;
+    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ScoreTarget,
+                              OwnershipTarget, DummyScoreTarget, DummyOwnershipTarget>;
   };
 };
 

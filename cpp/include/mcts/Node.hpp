@@ -43,6 +43,7 @@ class Node {
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionOutcome = Game::Types::ActionOutcome;
   using player_bitset_t = std::bitset<kNumPlayers>;
   using node_pool_index_t = util::pool_index_t;
@@ -170,7 +171,8 @@ class Node {
 
   Node(LookupTable*, const FullState&, const ActionOutcome&);
 
-  PolicyTensor get_counts(const ManagerParams& params, group::element_t inv_sym) const;
+  void load_counts_and_action_values(const ManagerParams& params, group::element_t inv_sym,
+                                     PolicyTensor& counts, ActionValueTensor& action_values) const;
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
   void update_stats(const UpdateT& update_instruction);

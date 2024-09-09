@@ -43,6 +43,7 @@ struct GameTypes {
     PolicyTensor counts;
     PolicyTensor policy_target;
     PolicyTensor policy_prior;
+    ActionValueTensor action_values;
     ValueArray win_rates;
     ValueArray value_prior;
     ActionSymmetryTable action_symmetry_table;
@@ -62,6 +63,7 @@ struct GameTypes {
     const ValueArray* outcome;
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;
+    const ActionValueTensor* action_values;
   };
 };
 

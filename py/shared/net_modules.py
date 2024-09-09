@@ -490,6 +490,7 @@ class Model(nn.Module):
 
         assert self.heads[0].name == 'policy', 'The first head must be the policy head'
         assert self.heads[1].name == 'value', 'The second head must be the value head'
+        assert self.heads[2].name == 'action-value', 'The thidr head must be the action-value head'
 
         for name in self.loss_weights:
             assert name in head_names, f'Loss weight for unknown head {name}'
@@ -553,7 +554,7 @@ class Model(nn.Module):
         clone = copy.deepcopy(self)
 
         # strip all aux heads to avoid unnecessary c++ computation
-        clone.heads = clone.heads[:2]
+        clone.heads = clone.heads[:3]
 
         clone.to('cpu')
         clone.eval()

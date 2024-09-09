@@ -13,14 +13,14 @@ inline void NeuralNet::load_weights(Value&& value, const std::string& cuda_devic
 }
 
 inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy,
-                               torch::Tensor& value, torch::Tensor& action_value) const {
+                               torch::Tensor& value, torch::Tensor& action_values) const {
   util::release_assert(activated_, "NeuralNet::predict() called while deactivated");
   torch::NoGradGuard no_grad;
 
   auto outputs = module_.forward(input).toTuple();
   policy.copy_(outputs->elements()[0].toTensor());
   value.copy_(outputs->elements()[1].toTensor());
-  action_value.copy_(outputs->elements()[2].toTensor());
+  action_values.copy_(outputs->elements()[2].toTensor());
 }
 
 inline void NeuralNet::deactivate() {
