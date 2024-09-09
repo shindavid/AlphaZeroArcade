@@ -75,6 +75,7 @@ class NNEvaluationService
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
  public:
+  using Node = mcts::Node<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using SharedData = mcts::SharedData<Game>;
@@ -99,6 +100,30 @@ class NNEvaluationService
   using FullState = Game::FullState;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
+
+  using instance_map_t = std::map<std::string, NNEvaluationService*>;
+  using cache_key_t = std::tuple<EvalKey, group::element_t>;
+  using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
+  using profiler_t = nn_evaluation_service_profiler_t;
+
+  enum eval_data_state_t : int8_t {
+    kUnknown = 0,
+    kClaimedByMe = 1,
+    kClaimedByOther = 2,
+    kCompleted = 3
+  };
+
+  // This struct is used to keep track of evaluation requests.
+  struct eval_data_t {
+    eval_data_t(Node* n, const cache_key_t& k, int a = -1) : node(n), cache_key(k), aux_index(a) {}
+
+    Node* node;
+    cache_key_t cache_key;
+    NNEvaluation_sptr value;
+    int aux_index;
+    eval_data_state_t state = kUnknown;
+  };
+  using eval_data_vec_t = std::vector<eval_data_t>;
 
   /*
    * Constructs an evaluation service and returns it.
@@ -134,17 +159,17 @@ class NNEvaluationService
    *
    * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
    */
-  NNEvaluation_sptr evaluate(const NNEvaluationRequest&);
+  void evaluate(const NNEvaluationRequest&, eval_data_vec_t&);
 
   void end_session();
 
   core::perf_stats_t get_perf_stats() override;
 
  private:
-  using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = std::tuple<EvalKey, group::element_t>;
-  using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
-  using profiler_t = nn_evaluation_service_profiler_t;
+  struct index_reservation_t {
+    int start_index;
+    int num_indices;
+  };
 
   NNEvaluationService(const NNEvaluationServiceParams& params);
   ~NNEvaluationService();
@@ -154,15 +179,17 @@ class NNEvaluationService
   void batch_evaluate();
   void loop();
 
-  NNEvaluation_sptr check_cache(const NNEvaluationRequest&, const cache_key_t& cache_key);
+  void check_cache(const NNEvaluationRequest&, eval_data_vec_t& eval_data_vec, int& my_claim_count,
+                   int& other_claim_count);
+
   void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
-  int allocate_reserve_index(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
+  index_reservation_t make_reservation(const NNEvaluationRequest&, int count,
+                                       std::unique_lock<std::mutex>&);
   void tensorize_and_transform_input(const NNEvaluationRequest& request,
-                                     const cache_key_t& cache_key, int reserve_index);
-  void increment_commit_count(const NNEvaluationRequest&);
-  NNEvaluation_sptr get_eval(const NNEvaluationRequest&, int reserve_index,
-                             std::unique_lock<std::mutex>&);
-  void wait_until_all_read(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
+                                     const eval_data_t& eval_data, int reserve_index);
+  void increment_commit_count(const NNEvaluationRequest&, int count);
+  void wait_for_eval(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
+  void wait_until_all_read(const NNEvaluationRequest&, int count, std::unique_lock<std::mutex>&);
 
   void wait_for_unpause();
   void load_initial_weights_if_necessary();

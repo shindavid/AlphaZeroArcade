@@ -19,9 +19,12 @@ class NNEvaluationRequest {
   using FullState = Game::FullState;
   using Node = mcts::Node<Game>;
 
+  // auxiliary request data, used when we request evaluations for all children of a node alongside
+  // the node itself
   struct aux_data_t {
-    std::vector<BaseState>* child_oriented_parent_history;
-    BaseState canonical_child_state;
+    Node* child;
+    BaseState child_state;  // uses child's canonical-orientation
+    std::vector<BaseState>* parent_history;  // matches child_state's orientation
     group::element_t eval_sym;
   };
   using aux_data_vec_t = std::vector<aux_data_t>;

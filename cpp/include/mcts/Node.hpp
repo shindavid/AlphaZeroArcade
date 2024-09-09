@@ -61,6 +61,7 @@ class Node {
     int num_valid_actions;
     core::seat_index_t current_player;
     bool terminal;
+    bool V_valid;
   };
 
   /*

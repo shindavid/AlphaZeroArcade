@@ -103,8 +103,7 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
   state_data->canonical_validate();
 
   if (!node->is_terminal()) {
-    NNEvaluation_sptr eval_sptr;
-    NNEvaluation* eval = nullptr;
+    bool is_root = (node == shared_data_->get_root_node());
     if (nn_eval_service_) {
       group::element_t eval_sym = 0;
       if (manager_params_->apply_random_symmetries) {
@@ -112,14 +111,32 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
         eval_sym = bitset_util::choose_random_on_index(mask);
       }
       NNEvaluationRequest request(node, state_history, &profiler_, thread_id_, eval_sym);
-      if (node == shared_data_->get_root_node()) {
-        augment_request(&request, node);
+      if (is_root) {
+        expand_all_children(node, &request);
       }
 
-      eval_sptr = nn_eval_service_->evaluate(request);
-      eval = eval_sptr.get();
+      nn_eval_service_->evaluate(request, eval_data_vec_);
+
+      for (eval_data_t& eval_data : eval_data_vec_) {
+        eval_data.node->load_eval(eval_data.value.get(), [&](LocalPolicyArray& P) {
+          transform_policy(index, P);
+        });
+      }
+
+      eval_data_vec_.clear();
+      aux_data_vec_.clear();
+    } else {
+      node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
+
+      if (is_root) {
+        expand_all_children(node);
+        for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
+          edge_t* edge = node->get_edge(e);
+          Node* child = node->get_child(edge);
+          child->load_eval(nullptr, [&](LocalPolicyArray& P) {});
+        }
+      }
     }
-    node->load_eval(eval, [&](LocalPolicyArray& P) { transform_policy(index, P); });
   }
 
   auto mcts_key = Game::InputTensorizor::mcts_key(*state);
@@ -127,14 +144,17 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
 }
 
 template <core::concepts::Game Game>
-void SearchThread<Game>::augment_request(NNEvaluationRequest* request, Node* node) {
+void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* request) {
   using Group = Game::SymmetryGroup;
 
   LookupTable& lookup_table = shared_data_->lookup_table;
   group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
 
-  request->add_aux_data(&aux_data_vec_);
-  aux_data_vec_.clear();
+  if (request) {
+    aux_data_vec_.clear();
+    request->add_aux_data(&aux_data_vec_);
+    base_state_vec_array_ = shared_data_->root_info.state_history;  // copy
+  }
 
   // Evaluate every child of the root node
   for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
@@ -165,6 +185,7 @@ void SearchThread<Game>::augment_request(NNEvaluationRequest* request, Node* nod
     child->initialize_edges();
 
     if (child->is_terminal()) continue;
+    if (!request) continue;
 
     group::element_t child_eval_sym = 0;
     if (manager_params_->apply_random_symmetries) {
@@ -172,8 +193,8 @@ void SearchThread<Game>::augment_request(NNEvaluationRequest* request, Node* nod
       child_eval_sym = bitset_util::choose_random_on_index(mask);
     }
 
-    auto* parent_history = &shared_data_->root_info.state_history[canonical_child_sym];
-    aux_data_vec_.emplace_back(parent_history, canonical_child_state, child_eval_sym);
+    auto* parent_history = &base_state_vec_array_[canonical_child_sym];
+    aux_data_vec_.emplace_back(child, canonical_child_state, parent_history, child_eval_sym);
   }
 }
 

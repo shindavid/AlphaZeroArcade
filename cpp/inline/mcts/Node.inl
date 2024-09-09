@@ -10,11 +10,13 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
                                                 const ActionOutcome& outcome) {
   if (outcome.terminal) {
     V = outcome.terminal_value;
+    V_valid = true;
     num_valid_actions = 0;
     current_player = -1;
     terminal = true;
   } else {
     V.setZero();  // to be set lazily
+    V_valid = false;
     valid_action_mask = Game::Rules::get_legal_moves(state);
     num_valid_actions = valid_action_mask.count();
     current_player = Game::Rules::get_current_player(state);
@@ -372,6 +374,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   if (eval) f(P_adjusted);
 
   stable_data_.V = V;
+  stable_data_.V_valid = true;
   stats_.RQ = V;
   stats_.VQ = V;
 

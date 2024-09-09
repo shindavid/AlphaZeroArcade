@@ -32,7 +32,10 @@ class SearchThread {
   using edge_t = Node::edge_t;
   using node_pool_index_t = Node::node_pool_index_t;
   using base_state_vec_t = SharedData::base_state_vec_t;
+  using base_state_vec_array_t = SharedData::base_state_vec_array_t;
   using LookupTable = Node::LookupTable;
+  using eval_data_t = NNEvaluationService::eval_data_t;
+  using eval_data_vec_t = NNEvaluationService::eval_data_vec_t;
 
   using FullState = Game::FullState;
   using BaseState = Game::BaseState;
@@ -112,7 +115,7 @@ class SearchThread {
   void wait_for_activation() const;
   Node* init_root_node();
   void init_node(state_data_t*, node_pool_index_t, Node* node);
-  void augment_request(NNEvaluationRequest*, Node*);
+  void expand_all_children(Node*, NNEvaluationRequest* request=nullptr);
   void transform_policy(node_pool_index_t, LocalPolicyArray&) const;
   void perform_visits();
   void deactivate() const;
@@ -152,8 +155,12 @@ class SearchThread {
 
   group::element_t canonical_sym_;
   state_data_t raw_state_data_;
-  state_data_t canonical_state_data_;  // pseudo-local-var, here to avoid repeated vector allocation
-  aux_data_vec_t aux_data_vec_;  // pseudo-local-var, here to avoid repeated vector allocation
+
+  // pseudo-local-vars, stored as class members to avoid repeated vector allocation:
+  state_data_t canonical_state_data_;
+  aux_data_vec_t aux_data_vec_;
+  base_state_vec_array_t base_state_vec_array_;
+  eval_data_vec_t eval_data_vec_;
 
   search_path_t search_path_;
   profiler_t profiler_;
