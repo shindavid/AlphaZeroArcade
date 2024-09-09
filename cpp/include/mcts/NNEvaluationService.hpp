@@ -89,10 +89,12 @@ class NNEvaluationService
   using InputTensor = Game::InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = NNEvaluation::ValueTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
 
   using InputShape = eigen_util::extract_shape_t<InputTensor>;
   using PolicyShape = Game::Types::PolicyShape;
   using ValueShape = NNEvaluation::ValueShape;
+  using ActionValueShape = Game::Types::ActionValueShape;
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
@@ -212,11 +214,13 @@ class NNEvaluationService
   };
 
   struct tensor_group_t {
-    void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value);
+    void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
+                          torch::Tensor& torch_action_value);
 
     InputTensor input;
     PolicyTensor policy;
     ValueTensor value;
+    ActionValueTensor action_value;
     core::seat_index_t current_player;
     eval_ptr_data_t eval_ptr_data;
   };
@@ -255,6 +259,7 @@ class NNEvaluationService
   torch::Tensor torch_input_gpu_;
   torch::Tensor torch_policy_;
   torch::Tensor torch_value_;
+  torch::Tensor torch_action_value_;
   DynamicInputTensor full_input_;
   cache_t cache_;
 

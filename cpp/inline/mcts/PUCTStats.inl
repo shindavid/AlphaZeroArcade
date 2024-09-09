@@ -45,6 +45,9 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParam
       PL(i) = child_stats.provably_losing[cp];
       N(i) = child_stats.RN;
       VN(i) = child_stats.VN;
+    } else {
+      util::release_assert(!is_root);
+      V(i) = edge->child_V_estimate;
     }
 
     bool fpu = N(i) == 0;

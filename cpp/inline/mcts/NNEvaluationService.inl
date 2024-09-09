@@ -85,6 +85,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(
                          .to(at::Device(params.cuda_device));
   torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
   torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<float>);
+  torch_action_value_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -103,14 +104,18 @@ inline NNEvaluationService<Game>::NNEvaluationService(
 
 template <core::concepts::Game Game>
 inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
-    int row, torch::Tensor& torch_policy, torch::Tensor& torch_value) {
+    int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
+    torch::Tensor& torch_action_value) {
   constexpr size_t policy_size = PolicyShape::total_size;
   constexpr size_t value_size = ValueShape::total_size;
+  constexpr size_t action_value_size = ActionValueShape::total_size;
 
   memcpy(policy.data(), torch_policy.data_ptr<float>() + row * policy_size,
          policy_size * sizeof(float));
   memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
          value_size * sizeof(float));
+  memcpy(action_value.data(), torch_action_value.data_ptr<float>() + row * action_value_size,
+         action_value_size * sizeof(float));
 }
 
 template <core::concepts::Game Game>
@@ -298,19 +303,21 @@ void NNEvaluationService<Game>::batch_evaluate() {
   torch_input_gpu_.copy_(full_input_torch);
 
   profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
-  net_.predict(input_vec_, torch_policy_, torch_value_);
+  net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
     tensor_group_t& group = batch_data_.tensor_groups_[i];
-    group.load_output_from(i, torch_policy_, torch_value_);
+    group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
 
-    Game::Symmetries::apply(group.policy, Game::SymmetryGroup::inverse(edata.sym));
-    edata.eval_ptr.store(
-        std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(edata.sym);
+    Game::Symmetries::apply(group.policy, inv_sym);
+    Game::Symmetries::apply(group.action_value, inv_sym);
+    edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy,
+                                                        group.action_value, edata.valid_actions));
   }
 
   profiler_.record(NNEvaluationServiceRegion::kAcquiringCacheMutex);

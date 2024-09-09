@@ -23,12 +23,14 @@ struct GameTypes {
 
   using PolicyShape = EigenTypes<GameConstants>::PolicyShape;
   using PolicyTensor = EigenTypes<GameConstants>::PolicyTensor;
+  using ActionValueShape = EigenTypes<GameConstants>::ActionValueShape;
+  using ActionValueTensor = EigenTypes<GameConstants>::ActionValueTensor;
   using ValueArray = EigenTypes<GameConstants>::ValueArray;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
   using SymmetryMask = std::bitset<Group::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, Group>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
-  using CompactLocalPolicyArray = Eigen::Array<float, Eigen::Dynamic, 1>;
+  using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
 
   /*
    * Return type for an MCTS search.

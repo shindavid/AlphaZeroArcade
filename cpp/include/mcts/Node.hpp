@@ -40,6 +40,7 @@ class Node {
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using ActionMask = Game::Types::ActionMask;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionOutcome = Game::Types::ActionOutcome;
@@ -104,6 +105,7 @@ class Node {
     int RN = 0;  // real count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
+    float child_V_estimate = 0;  // network estimate of child-value for current-player
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };

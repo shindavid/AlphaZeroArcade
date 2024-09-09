@@ -25,7 +25,8 @@ class NeuralNet {
   template<typename Value>
   void load_weights(Value&& value, const std::string& cuda_device);
 
-  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value) const;
+  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value,
+               torch::Tensor& action_value) const;
 
   /*
    * Moves the model to the CPU. This frees up the GPU for other processes.

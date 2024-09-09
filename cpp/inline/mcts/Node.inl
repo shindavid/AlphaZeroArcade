@@ -359,29 +359,49 @@ template<typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   int n = stable_data_.num_valid_actions;
   ValueArray V;
-  LocalPolicyArray P_raw(n);
 
   if (eval == nullptr) {
     // treat this as uniform P and V
-    V.setConstant(1.0 / kNumPlayers);
-    P_raw.setConstant(1.0 / n);
+    float v = 1.0 / kNumPlayers;
+    float p = 1.0 / n;
+
+    V.setConstant(v);
+
+    stable_data_.V = V;
+    stable_data_.V_valid = true;
+    stats_.RQ = V;
+    stats_.VQ = V;
+
+    for (int i = 0; i < n; ++i) {
+      edge_t* edge = get_edge(i);
+      edge->raw_policy_prior = p;
+      edge->adjusted_policy_prior = p;
+      edge->child_V_estimate = v;
+    }
   } else {
     V = eval->value_distr();
-    P_raw = eval->compact_local_policy_distr();
-  }
+    const auto& dynamic_action_array = eval->dynamic_action_array();
 
-  LocalPolicyArray P_adjusted = P_raw;
-  if (eval) f(P_adjusted);
+    LocalPolicyArray P_raw(n);
+    LocalActionValueArray child_V(n);
 
-  stable_data_.V = V;
-  stable_data_.V_valid = true;
-  stats_.RQ = V;
-  stats_.VQ = V;
+    P_raw = dynamic_action_array.row(0);
+    child_V = dynamic_action_array.row(1);
 
-  for (int i = 0; i < n; ++i) {
-    edge_t* edge = get_edge(i);
-    edge->raw_policy_prior = P_raw[i];
-    edge->adjusted_policy_prior = P_adjusted[i];
+    LocalPolicyArray P_adjusted = P_raw;
+    if (eval) f(P_adjusted);
+
+    stable_data_.V = V;
+    stable_data_.V_valid = true;
+    stats_.RQ = V;
+    stats_.VQ = V;
+
+    for (int i = 0; i < n; ++i) {
+      edge_t* edge = get_edge(i);
+      edge->raw_policy_prior = P_raw[i];
+      edge->adjusted_policy_prior = P_adjusted[i];
+      edge->child_V_estimate = child_V[i];
+    }
   }
 }
 
