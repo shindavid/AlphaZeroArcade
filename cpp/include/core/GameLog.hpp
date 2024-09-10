@@ -180,7 +180,7 @@ class GameLogWriter {
   ~GameLogWriter();
 
   void add(const FullState& state, action_t action, const PolicyTensor* policy_target,
-           const ActionValueTensor& action_values, bool use_for_training);
+           const ActionValueTensor* action_values, bool use_for_training);
   void add_terminal(const FullState& state, const ValueArray& outcome);
   void serialize(std::ostream&) const;
   bool is_previous_entry_used_for_training() const;

@@ -431,7 +431,7 @@ GameLogWriter<Game>::~GameLogWriter() {
 template <concepts::Game Game>
 void GameLogWriter<Game>::add(const FullState& state, action_t action,
                               const PolicyTensor* policy_target,
-                              const ActionValueTensor& action_values, bool use_for_training) {
+                              const ActionValueTensor* action_values, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
   entry->position = state;
@@ -440,7 +440,11 @@ void GameLogWriter<Game>::add(const FullState& state, action_t action,
   } else {
     entry->policy_target.setZero();
   }
-  entry->action_values = action_values;
+  if (action_values) {
+    entry->action_values = *action_values;
+  } else {
+    entry->action_values.setZero();
+  }
   entry->action = action;
   entry->use_for_training = use_for_training;
   entry->policy_target_is_valid = policy_target != nullptr;
