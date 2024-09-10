@@ -21,4 +21,12 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& value, const PolicyTensor& p
   value_distr_ = eigen_util::softmax(eigen_util::reinterpret_as_array(value));
 }
 
+template <core::concepts::Game Game>
+void NNEvaluation<Game>::load(ValueArray& value, LocalPolicyArray& policy,
+                              LocalActionValueArray& action_value) {
+  value = value_distr_;
+  policy = dynamic_action_array_.row(0);
+  action_value = dynamic_action_array_.row(1);
+}
+
 }  // namespace mcts

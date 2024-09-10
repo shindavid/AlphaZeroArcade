@@ -380,14 +380,9 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
       edge->child_V_estimate = v;
     }
   } else {
-    V = eval->value_distr();
-    const auto& dynamic_action_array = eval->dynamic_action_array();
-
     LocalPolicyArray P_raw(n);
     LocalActionValueArray child_V(n);
-
-    P_raw = dynamic_action_array.row(0);
-    child_V = dynamic_action_array.row(1);
+    eval->load(V, P_raw, child_V);
 
     LocalPolicyArray P_adjusted = P_raw;
     if (eval) f(P_adjusted);

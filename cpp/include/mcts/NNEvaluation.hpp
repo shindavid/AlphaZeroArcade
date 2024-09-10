@@ -17,14 +17,15 @@ class NNEvaluation {
   using ValueArray = Game::Types::ValueArray;
   using ValueShape = eigen_util::Shape<Game::Constants::kNumPlayers>;
   using ValueTensor = eigen_util::FTensor<ValueShape>;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using LocalActionValueArray = Game::Types::LocalActionValueArray;
 
   // 2 rows, one for policy, one for child-value
   using DynamicActionArray = Eigen::Array<float, 2, Eigen::Dynamic>;
 
   NNEvaluation(const ValueTensor& value, const PolicyTensor& policy,
                const ActionValueTensor& action_values, const ActionMask& valid_actions);
-  const ValueArray& value_distr() const { return value_distr_; }
-  const DynamicActionArray& dynamic_action_array() const { return dynamic_action_array_; }
+  void load(ValueArray&, LocalPolicyArray&, LocalActionValueArray&);
 
   using sptr = std::shared_ptr<NNEvaluation>;
   using asptr = util::AtomicSharedPtr<NNEvaluation>;
