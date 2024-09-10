@@ -49,7 +49,7 @@ class NNEvaluationRequest {
          bool split_history);
 
     /*
-     * Returns f(&history.front(), &history.back()),
+     * Returns f(history.begin(), history.end()),
      *
      * where history is the *logical* history vector associated with this item. See constructor for
      * details.
