@@ -147,37 +147,9 @@ inline NNEvaluationService<Game>::~NNEvaluationService() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request,
-                                         eval_data_vec_t& eval_data_vec) {
+void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
   if (mcts::kEnableDebug) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate() - size: " << request.items().size();
-  }
-
-  eval_data_vec.reserve(request.items().size());
-
-  for (size_t a = 0; a < request.items().size(); a++) {
-    const auto& item = request.items()[a];
-    base_state_vec_t& history = *item.history;
-    util::debug_assert(!history.empty());
-    util::debug_assert(history.size() <= Game::Constants::kHistorySize + 1);
-
-    if (item.add_state) {
-      history.push_back(item.state);
-    }
-
-    bool full = history.size() > Game::Constants::kHistorySize + 1;
-
-    auto begin = history.begin();
-    auto end = history.end();
-    if (full) begin++;  // compensate for overstuffing
-    auto eval_key = InputTensorizor::eval_key(&(*begin), &(*(end - 1)));
-
-    if (item.add_state) {
-      history.pop_back();  // undo temporary append
-    }
-
-    cache_key_t cache_key(eval_key, item.eval_sym);
-    eval_data_vec.emplace_back(item.node, cache_key, a);
   }
 
   while (true) {
@@ -186,7 +158,7 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request,
 
     std::unique_lock cache_lock(cache_mutex_);
     cv_cache_.wait(cache_lock, [&] {
-      check_cache(request, eval_data_vec, my_claim_count, other_claim_count);
+      check_cache(request, my_claim_count, other_claim_count);
       return my_claim_count > 0 || other_claim_count == 0;
     });
     cache_lock.unlock();
@@ -199,10 +171,10 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request,
     metadata_lock.unlock();
 
     int reservation_count = 0;
-    for (eval_data_t& eval_data : eval_data_vec) {
-      if (eval_data.state != kClaimedByMe) continue;
+    for (const RequestItem& item : request.items()) {
+      if (item.eval_state() != NNEvaluationRequest::kClaimedByMe) continue;
       int reserve_index = reservation.start_index + reservation_count;
-      tensorize_and_transform_input(request, eval_data, reserve_index);
+      tensorize_and_transform_input(request, item, reserve_index);
       reservation_count++;
       if (reservation_count == reservation.num_indices) break;
     }
@@ -346,8 +318,7 @@ void NNEvaluationService<Game>::loop() {
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request,
-                                            eval_data_vec_t& eval_data_vec, int& my_claim_count,
+void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, int& my_claim_count,
                                             int& other_claim_count) {
   request.thread_profiler()->record(SearchThreadRegion::kCheckingCache);
 
@@ -358,19 +329,19 @@ void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request,
              << my_claim_count << ", other_claim_count=" << other_claim_count << ")";
   }
 
-  for (eval_data_t& eval_data : eval_data_vec) {
-    if (eval_data.value) continue;
-    auto lookup = cache_.get(eval_data.cache_key);
+  for (RequestItem& item : request.items()) {
+    if (item.eval()) continue;
+    auto lookup = cache_.get(item.cache_key());
     if (lookup.has_value()) {
       if (lookup.value()) {
-        eval_data.value = lookup.value();
-        eval_data.state = kCompleted;
+        item.set_eval(lookup.value());
+        item.set_eval_state(NNEvaluationRequest::kCompleted);
       } else {
-        eval_data.state = kClaimedByOther;
+        item.set_eval_state(NNEvaluationRequest::kClaimedByOther);
         other_claim_count++;
       }
     } else {
-      eval_data.state = kClaimedByMe;
+      item.set_eval_state(NNEvaluationRequest::kClaimedByMe);
       my_claim_count++;
     }
   }
@@ -435,48 +406,33 @@ NNEvaluationService<Game>::make_reservation(const NNEvaluationRequest& request, 
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluationRequest& request,
-                                                              const eval_data_t& eval_data,
+                                                              const RequestItem& item,
                                                               int reserve_index) {
   request.thread_profiler()->record(SearchThreadRegion::kTensorizing);
 
-  cache_key_t cache_key = eval_data.cache_key;
+  const cache_key_t& cache_key = item.cache_key();
 
-  const auto& item = request.items()[eval_data.aux_index];
-  base_state_vec_t* history = item.history;
-  if (item.add_state) {
-    history->push_back(item.state);
-  }
-
-  const auto& stable_data = eval_data.node->stable_data();
+  const auto& stable_data = item.node()->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
   group::element_t sym = std::get<1>(cache_key);
+  group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
+
+  auto input = item.compute_over_history([&](auto begin, auto end) {
+    for (auto pos = begin; pos != end; pos++) {
+      Game::Symmetries::apply(*pos, sym);
+    }
+    auto out = InputTensorizor::tensorize(begin, end);
+    for (auto pos = begin; pos != end; pos++) {
+      Game::Symmetries::apply(*pos, inverse_sym);
+    }
+    return out;
+  });
 
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
-
-  bool full = history->size() > Game::Constants::kHistorySize + 1;
-  auto begin = history->begin();
-  auto end = history->end();
-  if (full) begin++;  // compensate for overstuffing
-
-  for (auto pos = begin; pos != end; pos++) {
-    Game::Symmetries::apply(*pos, sym);
-  }
-
-  util::debug_assert(!history->empty());
-  group.input = InputTensorizor::tensorize(&(*begin), &(*(end - 1)));
-
-  group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
-  for (auto pos = begin; pos != end; pos++) {
-    Game::Symmetries::apply(*pos, inverse_sym);
-  }
-
-  if (item.add_state) {
-    history->pop_back();  // undo temporary overstuffing
-  }
-
+  group.input = input;
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;

@@ -101,31 +101,12 @@ class NNEvaluationService
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;
   using InputTensorizor = Game::InputTensorizor;
-  using EvalKey = InputTensorizor::EvalKey;
 
+  using RequestItem = NNEvaluationRequest::Item;
   using instance_map_t = std::map<std::string, NNEvaluationService*>;
-  using cache_key_t = std::tuple<EvalKey, group::element_t>;
+  using cache_key_t = NNEvaluationRequest::cache_key_t;
   using cache_t = util::LRUCache<cache_key_t, NNEvaluation_asptr>;
   using profiler_t = nn_evaluation_service_profiler_t;
-
-  enum eval_data_state_t : int8_t {
-    kUnknown = 0,
-    kClaimedByMe = 1,
-    kClaimedByOther = 2,
-    kCompleted = 3
-  };
-
-  // This struct is used to keep track of evaluation requests.
-  struct eval_data_t {
-    eval_data_t(Node* n, const cache_key_t& k, int a = -1) : node(n), cache_key(k), aux_index(a) {}
-
-    Node* node;
-    cache_key_t cache_key;
-    NNEvaluation_sptr value;
-    int aux_index;
-    eval_data_state_t state = kUnknown;
-  };
-  using eval_data_vec_t = std::vector<eval_data_t>;
 
   /*
    * Constructs an evaluation service and returns it.
@@ -161,7 +142,7 @@ class NNEvaluationService
    *
    * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
    */
-  void evaluate(const NNEvaluationRequest&, eval_data_vec_t&);
+  void evaluate(const NNEvaluationRequest&);
 
   void end_session();
 
@@ -181,14 +162,13 @@ class NNEvaluationService
   void batch_evaluate();
   void loop();
 
-  void check_cache(const NNEvaluationRequest&, eval_data_vec_t& eval_data_vec, int& my_claim_count,
-                   int& other_claim_count);
+  void check_cache(const NNEvaluationRequest&, int& my_claim_count, int& other_claim_count);
 
   void wait_until_batch_reservable(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
   index_reservation_t make_reservation(const NNEvaluationRequest&, int count,
                                        std::unique_lock<std::mutex>&);
-  void tensorize_and_transform_input(const NNEvaluationRequest& request,
-                                     const eval_data_t& eval_data, int reserve_index);
+  void tensorize_and_transform_input(const NNEvaluationRequest& request, const RequestItem& item,
+                                     int reserve_index);
   void increment_commit_count(const NNEvaluationRequest&, int count);
   void wait_for_eval(const NNEvaluationRequest&, std::unique_lock<std::mutex>&);
   void wait_until_all_read(const NNEvaluationRequest&, int count, std::unique_lock<std::mutex>&);

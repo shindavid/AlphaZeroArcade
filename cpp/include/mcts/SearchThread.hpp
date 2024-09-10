@@ -34,8 +34,6 @@ class SearchThread {
   using base_state_vec_t = SharedData::base_state_vec_t;
   using base_state_vec_array_t = SharedData::base_state_vec_array_t;
   using LookupTable = Node::LookupTable;
-  using eval_data_t = NNEvaluationService::eval_data_t;
-  using eval_data_vec_t = NNEvaluationService::eval_data_vec_t;
 
   using FullState = Game::FullState;
   using BaseState = Game::BaseState;
@@ -164,7 +162,6 @@ class SearchThread {
     state_data_t canonical_state_data;
     item_vec_t request_items;
     base_state_vec_array_t base_state_vec_array;
-    eval_data_vec_t eval_data_vec;
   };
 
   pseudo_local_vars_t pseudo_local_vars_;
