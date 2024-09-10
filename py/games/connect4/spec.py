@@ -51,7 +51,7 @@ def b7_c64(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
-            ModuleSpec(type='PolicyHead',
+            ModuleSpec(type='ActionValueHead',
                        args=['action-value', board_size, c_trunk, c_policy_hidden, policy_size]),
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
@@ -62,7 +62,7 @@ def b7_c64(shape_info_dict: ShapeInfoDict):
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            'action-value': 0.15,
+            'action-value': 1.0,
             'opp_policy': 0.15,
             'ownership': 0.15,
         },

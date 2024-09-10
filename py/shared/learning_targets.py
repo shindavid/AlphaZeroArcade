@@ -60,6 +60,17 @@ class PolicyTarget(LearningTarget):
         return int(sum(correct_policy_preds))
 
 
+class ActionValueTarget(LearningTarget):
+    def loss_fn(self) -> nn.Module:
+        return nn.MSELoss()
+
+    def get_num_correct_predictions(self, predictions: torch.Tensor,
+                                    labels: torch.Tensor) -> float:
+        predictions_max = torch.argmax(predictions, dim=1)
+        labels_max = torch.argmax(labels, dim=1)
+        return int(sum(predictions_max == labels_max))
+
+
 class ValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         """

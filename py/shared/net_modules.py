@@ -26,7 +26,8 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from shared.learning_targets import LearningTarget, OwnershipTarget, PolicyTarget, ScoreTarget, ValueTarget
+from shared.learning_targets import ActionValueTarget, LearningTarget, OwnershipTarget, \
+    PolicyTarget, ScoreTarget, ValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -230,8 +231,9 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, policy_size: int):
-        super(PolicyHead, self).__init__(name, PolicyTarget())
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, policy_size: int,
+                 target_cls=PolicyTarget):
+        super(PolicyHead, self).__init__(name, target_cls())
 
         policy_shape = (policy_size, )
         self.policy_shape = policy_shape
@@ -249,6 +251,11 @@ class PolicyHead(Head):
         out = self.linear(out)
         out = out.view(-1, *self.policy_shape)
         return out
+
+
+class ActionValueHead(PolicyHead):
+    def __init__(self, *args, **kwargs):
+        super(ActionValueHead, self).__init__(*args, **kwargs, target_cls=ActionValueTarget)
 
 
 class ValueHead(Head):
@@ -410,13 +417,14 @@ class OwnershipHead(Head):
 
 
 MODULE_MAP = {
+    'ActionValueHead': ActionValueHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'ResBlock': ResBlock,
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
-    'ValueHead': ValueHead,
     'ScoreHead': ScoreHead,
+    'ValueHead': ValueHead,
     'OwnershipHead': OwnershipHead,
     }
 
