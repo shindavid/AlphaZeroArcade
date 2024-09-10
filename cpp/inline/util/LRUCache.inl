@@ -15,6 +15,18 @@ void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value) {
     // insert the new item
     list_.push_front(key);
     map_[key] = std::make_pair(value, list_.begin());
+  } else {
+    // move item to the front of the most recently used list
+    typename KeyList::iterator j = i->second.second;
+    if (j != list_.begin()) {
+      list_.erase(j);
+      list_.push_front(key);
+      j = list_.begin();
+      map_[key] = std::make_pair(value, j);
+    }
+
+    // update the value of the existing item
+    i->second.first = value;
   }
 }
 
@@ -29,7 +41,7 @@ boost::optional<Value_> LRUCache<Key_, Value_>::get(const Key& key) {
 
   // return the value, but first update its place in the most
   // recently used list
-  typename KeyList ::iterator j = i->second.second;
+  typename KeyList::iterator j = i->second.second;
   if (j != list_.begin()) {
     // move item to the front of the most recently used list
     list_.erase(j);
@@ -40,7 +52,6 @@ boost::optional<Value_> LRUCache<Key_, Value_>::get(const Key& key) {
     const Value& value = i->second.first;
     map_[key] = std::make_pair(value, j);
 
-    // return the value
     return value;
   } else {
     // the item is already at the front of the most recently
