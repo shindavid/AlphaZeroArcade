@@ -162,6 +162,7 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
       return my_claim_count > 0 || other_claim_count == 0;
     });
     cache_lock.unlock();
+    cv_cache_.notify_all();
 
     if (!my_claim_count) break;
 
