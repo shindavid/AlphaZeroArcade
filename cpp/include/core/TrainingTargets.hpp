@@ -53,7 +53,7 @@ struct ValueTarget {
 
 template<typename Game>
 struct ActionValueTarget {
-  static constexpr const char* kName = "action-value";
+  static constexpr const char* kName = "action_value";
   using Tensor = Game::Types::ActionValueTensor;
   using GameLogView = Game::Types::GameLogView;
 

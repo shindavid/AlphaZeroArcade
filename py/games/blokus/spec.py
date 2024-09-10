@@ -77,7 +77,7 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='ActionValueHead',
-                       args=['action-value', board_size, c_trunk, c_policy_hidden, POLICY_SIZE]),
+                       args=['action_value', board_size, c_trunk, c_policy_hidden, POLICY_SIZE]),
             ModuleSpec(type='ScoreHead',
                        args=['score', c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, score_shape]),
@@ -93,7 +93,7 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            'action-value': 1.0,
+            'action_value': 1.0,
             'score': 0.02,
             'ownership': 0.15,
             'dummy-score': 0.02,

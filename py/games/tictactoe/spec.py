@@ -44,13 +44,13 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='ActionValueHead',
-                       args=['action-value', board_size, c_trunk, c_policy_hidden, policy_size]),
+                       args=['action_value', board_size, c_trunk, c_policy_hidden, policy_size]),
             ],
 
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            'action-value': 1.0,
+            'action_value': 1.0,
         },
     )
 
