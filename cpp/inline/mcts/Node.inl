@@ -232,7 +232,7 @@ void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
       if (modified_count != count) {
         std::cout << " -> " << modified_count;
       }
-      std::cout << detail << std::endl;
+      std::cout << "[" << action_value << "]" << detail << std::endl;
     }
 
     if (modified_count) {
