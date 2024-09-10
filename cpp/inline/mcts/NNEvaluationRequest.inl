@@ -26,7 +26,7 @@ auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
   auto begin = history_->begin();
   auto end = history_->end();
   if (full) begin++;  // compensate for overstuffing
-  auto output = f(&(*begin), &(*(end - 1)));
+  auto output = f(&*begin, &*end);
 
   if (split_history_) {
     history_->pop_back();  // undo temporary append
@@ -38,7 +38,8 @@ auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
 template <core::concepts::Game Game>
 typename NNEvaluationRequest<Game>::cache_key_t NNEvaluationRequest<Game>::Item::make_cache_key(
     group::element_t eval_sym) const {
-  return std::make_tuple(compute_over_history(InputTensorizor::eval_key), eval_sym);
+  return std::make_tuple(compute_over_history(
+      [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); }), eval_sym);
 }
 
 template <core::concepts::Game Game>

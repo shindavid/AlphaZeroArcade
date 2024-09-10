@@ -341,6 +341,7 @@ void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, 
         other_claim_count++;
       }
     } else {
+      cache_.insert(item.cache_key(), NNEvaluation_asptr());
       item.set_eval_state(NNEvaluationRequest::kClaimedByMe);
       my_claim_count++;
     }
@@ -422,7 +423,7 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
     for (auto pos = begin; pos != end; pos++) {
       Game::Symmetries::apply(*pos, sym);
     }
-    auto out = InputTensorizor::tensorize(begin, end);
+    auto out = InputTensorizor::tensorize(begin, end - 1);
     for (auto pos = begin; pos != end; pos++) {
       Game::Symmetries::apply(*pos, inverse_sym);
     }
