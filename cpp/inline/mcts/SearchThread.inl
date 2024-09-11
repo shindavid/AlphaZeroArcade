@@ -111,6 +111,8 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
 
   if (!node->is_terminal()) {
     bool is_root = (node == shared_data_->get_root_node());
+    bool eval_all_children = is_root && shared_data_->search_params.full_search;
+
     if (nn_eval_service_) {
       NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
@@ -122,7 +124,7 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
         }
         pseudo_local_vars_.request_items.emplace_back(node, *state, state_history, eval_sym, false);
       }
-      if (is_root) {
+      if (eval_all_children) {
         pseudo_local_vars_.base_state_vec_array = shared_data_->root_info.state_history;  // copy
         expand_all_children(node, &request);
       }
@@ -141,7 +143,7 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
         node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
       }
 
-      if (is_root) {
+      if (eval_all_children) {
         expand_all_children(node);
         for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
           edge_t* edge = node->get_edge(e);
@@ -217,7 +219,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
 template <core::concepts::Game Game>
 void SearchThread<Game>::transform_policy(node_pool_index_t index, LocalPolicyArray& P) const {
   if (index == shared_data_->root_info.node_index) {
-    if (!shared_data_->search_params.disable_exploration) {
+    if (shared_data_->search_params.full_search) {
       if (manager_params_->dirichlet_mult) {
         add_dirichlet_noise(P);
       }
@@ -517,8 +519,9 @@ template <core::concepts::Game Game>
 int SearchThread<Game>::get_best_child_index(Node* node) {
   profiler_.record(SearchThreadRegion::kPUCT);
 
+  bool is_root = (node == shared_data_->get_root_node());
   const SearchParams& search_params = shared_data_->search_params;
-  PUCTStats stats(*manager_params_, search_params, node, node == shared_data_->get_root_node());
+  PUCTStats stats(*manager_params_, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 
@@ -526,8 +529,10 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   const PVec& N = stats.N;
   PVec& PUCT = stats.PUCT;
 
-  bool add_noise = !search_params.disable_exploration && manager_params_->dirichlet_mult > 0;
-  if (manager_params_->forced_playouts && add_noise) {
+  bool force_playouts = manager_params_->forced_playouts && is_root &&
+                        search_params.full_search && manager_params_->dirichlet_mult > 0;
+
+  if (force_playouts) {
     PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
     auto F1 = (N < n_forced).template cast<float>();
     auto F2 = (N > 0).template cast<float>();

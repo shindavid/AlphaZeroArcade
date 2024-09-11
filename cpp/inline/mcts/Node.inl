@@ -211,6 +211,8 @@ void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
     const char* detail = "";
 
     const Node* child = get_child(edge);
+    if (!child) continue;
+
     const auto& stats = child->stats();
     if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
       modified_count = 0;

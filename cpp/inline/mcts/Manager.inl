@@ -126,7 +126,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   stop_search_threads();
 
   auto& root_info = shared_data_.root_info;
-  bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
+  bool add_noise = params.full_search && params_.dirichlet_mult > 0;
   if (root_info.node_index < 0 || add_noise) {
     const FullState& canonical_state = root_info.state[root_info.canonical_sym];
     ActionOutcome outcome;

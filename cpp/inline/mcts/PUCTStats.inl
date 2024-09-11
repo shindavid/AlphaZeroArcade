@@ -46,7 +46,6 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParam
       N(i) = child_stats.RN;
       VN(i) = child_stats.VN;
     } else {
-      util::release_assert(!is_root);
       V(i) = edge->child_V_estimate;
     }
 
@@ -62,7 +61,7 @@ inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParam
     const auto& stats = node->stats();  // no struct copy, not needed here
     float PV = stats.VQ(cp);
 
-    bool disableFPU = is_root && params.dirichlet_mult > 0 && !search_params.disable_exploration;
+    bool disableFPU = is_root && params.dirichlet_mult > 0 && search_params.full_search;
     float cFPU = disableFPU ? 0.0 : params.cFPU;
     float v = PV - cFPU * sqrt((P * (N > 0).template cast<float>()).sum());
     V = (1 - FPU) * V + FPU * v;
