@@ -78,7 +78,7 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            'action_value': 1.0,
+            'action_value': 10.0,
             'opp_policy': 0.15,
             'score_margin': 0.02,
             'ownership': 0.15,
