@@ -22,7 +22,7 @@ void LRUCache<Key_, Value_>::insert(const Key& key, const Value& value) {
       list_.erase(j);
       list_.push_front(key);
       j = list_.begin();
-      map_[key] = std::make_pair(value, j);
+      i->second.second = j;
     }
 
     // update the value of the existing item
