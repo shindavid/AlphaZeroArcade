@@ -64,6 +64,18 @@ class ActionValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.MSELoss()
 
+    def get_mask(self, labels: torch.Tensor) -> torch.Tensor:
+        """
+        The C++ uses the zero-tensor to represent a row that should be masked.
+        """
+        assert len(labels.shape) == 2, labels.shape
+        n = labels.shape[0]
+        labels = labels.reshape((n, -1))
+
+        label_sums = labels.sum(dim=1)
+        mask = label_sums != 0
+        return mask
+
     def get_num_correct_predictions(self, predictions: torch.Tensor,
                                     labels: torch.Tensor) -> float:
         predictions_max = torch.argmax(predictions, dim=1)

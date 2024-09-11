@@ -168,10 +168,11 @@ class GameLogWriter {
   struct Entry {
     BaseState position;
     PolicyTensor policy_target;  // only valid if policy_target_is_valid
-    ActionValueTensor action_values;
+    ActionValueTensor action_values;  // only valid if action_values_are_valid
     action_t action;
     bool use_for_training;
     bool policy_target_is_valid;
+    bool action_values_are_valid;
     bool terminal;
   };
   using entry_vector_t = std::vector<Entry*>;

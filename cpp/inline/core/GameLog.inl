@@ -448,6 +448,7 @@ void GameLogWriter<Game>::add(const FullState& state, action_t action,
   entry->action = action;
   entry->use_for_training = use_for_training;
   entry->policy_target_is_valid = policy_target != nullptr;
+  entry->action_values_are_valid = action_values != nullptr;
   entry->terminal = false;
   entries_.push_back(entry);
   sample_count_ += use_for_training;
@@ -464,6 +465,7 @@ void GameLogWriter<Game>::add_terminal(const FullState& state, const ValueArray&
   entry->action = -1;
   entry->use_for_training = false;
   entry->policy_target_is_valid = false;
+  entry->action_values_are_valid = false;
   entry->terminal = true;
   entries_.push_back(entry);
 
@@ -523,8 +525,12 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
     }
     policy_target_indices.push_back(policy_target_index);
 
-    action_values_target_indices.push_back(write_policy_target(
-        entry->action_values, dense_action_values_tensors, sparse_action_values_entries));
+    tensor_index_t action_values_target_index = {-1, -1};
+    if (entry->action_values_are_valid) {
+      action_values_target_index = write_policy_target(
+          entry->action_values, dense_action_values_tensors, sparse_action_values_entries);
+    }
+    action_values_target_indices.push_back(action_values_target_index);
   }
 
   Header header;
@@ -577,6 +583,10 @@ GameLogBase::tensor_index_t GameLogWriter<Game>::write_policy_target(
     const PolicyTensor& target, std::vector<PolicyTensor>& dense_tensors,
     std::vector<sparse_tensor_entry_t>& sparse_tensor_entries) {
   int num_nonzero_entries = eigen_util::count(target);
+
+  if (num_nonzero_entries == 0) {
+    return {-1, -1};
+  }
 
   int sparse_repr_size = sizeof(sparse_tensor_entry_t) * num_nonzero_entries;
   int dense_repr_size = sizeof(PolicyTensor);
