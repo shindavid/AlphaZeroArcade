@@ -337,6 +337,8 @@ void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, 
       if (lookup.value()) {
         item.set_eval(lookup.value());
         item.set_eval_state(NNEvaluationRequest::kCompleted);
+      } else if (item.eval_state() == NNEvaluationRequest::kClaimedByMe) {
+        my_claim_count++;
       } else {
         item.set_eval_state(NNEvaluationRequest::kClaimedByOther);
         other_claim_count++;
