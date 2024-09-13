@@ -50,7 +50,7 @@ FloatType Random::uniform_real(FloatType left, FloatType right) {
 
 template <typename RealType>
 RealType Random::exponential(RealType lambda) {
-  std::exponential_distribution<RealType> dist(1.0 / lambda);
+  std::exponential_distribution<RealType> dist(lambda);
   return dist(instance()->prng_);
 }
 
