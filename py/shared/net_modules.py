@@ -340,8 +340,8 @@ class ScoreHead(Head):
         assert len(shape) in (2, 3), f'Unexpected shape {shape}'
 
         self.shape = shape
-        self.n_scores = shape[1]
-        self.last_dim = shape[0] * math.prod(shape[2:])
+        last_dim = shape[0] * math.prod(shape[2:])
+        n_scores = shape[1]
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
@@ -351,18 +351,19 @@ class ScoreHead(Head):
         n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
         self.scale_linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
         self.scale_linear2 = nn.Linear(n_hidden, 1, bias=True)
-        self.softplus = nn.Softplus()
 
-        self.linear1 = nn.Linear(n_gpool + 1, n_hidden, bias=True)
-        self.linear2 = nn.Linear(n_hidden, self.last_dim, bias=True)
+        self.linear_s2 = nn.Linear(n_gpool, n_hidden, bias=True)
+        self.linear_s2off = nn.Linear(1, n_hidden, bias=False)
+        self.linear_s3 = nn.Linear(n_hidden, last_dim, bias=True)
 
-        n_scores = self.n_scores
-        self.constant_row = torch.arange(n_scores).reshape((1, n_scores, 1)) * (1.0 / n_scores)
+        self.register_buffer('constant_row', torch.tensor(
+            data=[i / n_scores for i in range(n_scores)],
+            dtype=torch.float32,
+            requires_grad=False
+            ), persistent=False)
 
     def forward(self, x):
         N = x.shape[0]
-        n_scores = self.n_scores
-        last_dim = self.last_dim
 
         out = x  # (N, C_in, H, W)
         out = self.conv(out)  # (N, C_hidden, H, W)
@@ -370,25 +371,15 @@ class ScoreHead(Head):
         out = self.gpool(out)  # (N, n_gpool, 1, 1)
         out = out.squeeze(-1).squeeze(-1)  # (N, n_gpool)
 
-        scale = self.scale_linear1(out)  # (N, n_hidden)
-        scale = self.act(scale)  # (N, n_hidden)
-        scale = self.scale_linear2(scale)  # (N, 1)
-        scale = self.softplus(scale)  # (N, 1)
-        scale = scale.unsqueeze(2)  # (N, 1, 1)
-        scale = scale.expand(-1, n_scores, last_dim)  # (N, n_scores, last_dim)
+        component1 = self.linear_s2(out).view(N, 1, -1)  # (N, 1, n_hidden)
+        constant_row = self.constant_row.view(1, -1, 1)  # (1, n_scores, 1)
+        component2 = self.linear_s2off(constant_row)  # (1, n_scores, n_hidden)
 
-        out_s = out.unsqueeze(1)  # (N, 1, n_gpool)
-        out_s = out_s.expand(-1, n_scores, -1)  # (N, n_scores, n_gpool)
-
-        constant_plane = self.constant_row.to(x.device).expand(N, -1, -1)  # (N, n_scores, 1)
-        out_s = torch.cat([out_s, constant_plane], dim=2)  # (N, n_scores, n_gpool + 1)
-        out_s = self.linear1(out_s)  # (N, n_scores, n_hidden)
+        out_s = component1 + component2  # (N, n_scores, n_hidden)
         out_s = self.act(out_s)  # (N, n_scores, n_hidden)
-        out_s = self.linear2(out_s)  # (N, n_scores, last_dim)
+        out_s = self.linear_s3(out_s)  # (N, n_scores, last_dim)
 
-        out = out_s * scale  # (N, n_scores, last_dim)
-        out = out.view(N, *self.shape)  # (N, *shape)
-        return out
+        return out_s.view(N, *self.shape)  # (N, *shape)
 
 
 class OwnershipHead(Head):
