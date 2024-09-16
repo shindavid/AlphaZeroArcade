@@ -18,6 +18,7 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& value, const PolicyTensor& p
   }
 
   dynamic_action_array_.row(0) = eigen_util::softmax(dynamic_action_array_.row(0));
+  dynamic_action_array_.row(1) = eigen_util::sigmoid(dynamic_action_array_.row(1));
   value_distr_ = eigen_util::softmax(eigen_util::reinterpret_as_array(value));
 }
 

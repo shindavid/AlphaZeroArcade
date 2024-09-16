@@ -62,7 +62,7 @@ class PolicyTarget(LearningTarget):
 
 class ActionValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
-        return nn.MSELoss()
+        return nn.BCEWithLogitsLoss()
 
     def get_mask(self, labels: torch.Tensor) -> torch.Tensor:
         """
