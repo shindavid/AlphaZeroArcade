@@ -1,6 +1,5 @@
 #include <mcts/SearchThread.hpp>
 
-#include <mcts/NNEvaluationRequest.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 
@@ -83,14 +82,21 @@ Node<Game>* SearchThread<Game>::init_root_node() {
 
   node_pool_index_t root_index = shared_data_->root_info.node_index;
   Node* root = shared_data_->lookup_table.get_node(root_index);
-  if (root->is_terminal() || root->edges_initialized()) return root;
+  if (root->is_terminal()) return root;
+
+  if (!root->edges_initialized()) {
+    root->initialize_edges();
+  }
+
+  if (root->all_children_edges_initialized()) {
+    return root;
+  }
 
   const FullState& state = shared_data_->root_info.state[canonical_sym_];
   const base_state_vec_t& state_history = shared_data_->root_info.state_history[canonical_sym_];
 
-  root->initialize_edges(state);
-  canonical_state_data_.load(state, state_history);
-  init_node(&canonical_state_data_, root_index, root);
+  pseudo_local_vars_.canonical_state_data.load(state, state_history);
+  init_node(&pseudo_local_vars_.canonical_state_data, root_index, root);
 
   root->stats().RN++;
   return root;
@@ -104,19 +110,50 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
   state_data->canonical_validate();
 
   if (!node->is_terminal()) {
-    NNEvaluation_sptr eval_sptr;
-    NNEvaluation* eval = nullptr;
+    bool is_root = (node == shared_data_->get_root_node());
+    bool eval_all_children = is_root && shared_data_->search_params.full_search;
+
     if (nn_eval_service_) {
-      group::element_t sym = 0;
-      if (manager_params_->apply_random_symmetries) {
-        auto mask = Game::Symmetries::get_mask(*state);
-        sym = bitset_util::choose_random_on_index(mask);
+      NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
+
+      if (!node->stable_data().V_valid) {
+        group::element_t eval_sym = 0;
+        if (manager_params_->apply_random_symmetries) {
+          auto mask = Game::Symmetries::get_mask(*state);
+          eval_sym = bitset_util::choose_random_on_index(mask);
+        }
+        pseudo_local_vars_.request_items.emplace_back(node, *state, state_history, eval_sym, false);
       }
-      NNEvaluationRequest request(node, state, state_history, &profiler_, thread_id_, sym);
-      eval_sptr = nn_eval_service_->evaluate(request);
-      eval = eval_sptr.get();
+      if (eval_all_children) {
+        pseudo_local_vars_.base_state_vec_array = shared_data_->root_info.state_history;  // copy
+        expand_all_children(node, &request);
+      }
+
+      if (!pseudo_local_vars_.request_items.empty()) {
+        nn_eval_service_->evaluate(request);
+
+        for (auto& item : pseudo_local_vars_.request_items) {
+          item.node()->load_eval(item.eval(),
+                                 [&](LocalPolicyArray& P) { transform_policy(index, P); });
+        }
+        pseudo_local_vars_.request_items.clear();
+      }
+    } else {
+      if (!node->stable_data().V_valid) {
+        node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
+      }
+
+      if (eval_all_children) {
+        expand_all_children(node);
+        for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
+          edge_t* edge = node->get_edge(e);
+          Node* child = node->get_child(edge);
+          if (!child->stable_data().V_valid) {
+            child->load_eval(nullptr, [&](LocalPolicyArray& P) {});
+          }
+        }
+      }
     }
-    node->load_eval(eval, [&](LocalPolicyArray& P) { transform_policy(index, P); });
   }
 
   auto mcts_key = Game::InputTensorizor::mcts_key(*state);
@@ -124,9 +161,65 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
 }
 
 template <core::concepts::Game Game>
+void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* request) {
+  using Group = Game::SymmetryGroup;
+
+  LookupTable& lookup_table = shared_data_->lookup_table;
+  group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
+
+  // Evaluate every child of the root node
+  int n_actions = node->stable_data().num_valid_actions;
+  int expand_count = 0;
+  for (int e = 0; e < n_actions; e++) {
+    edge_t* edge = node->get_edge(e);
+    if (edge->child_index >= 0) continue;
+
+    // reorient edge->action into raw-orientation
+    core::action_t raw_edge_action = edge->action;
+    Game::Symmetries::apply(raw_edge_action, inv_canonical_sym);
+
+    // apply raw-orientation action to raw-orientation child-state
+    FullState raw_child_state = raw_state_data_.state;  // copy
+    ActionOutcome outcome = Game::Rules::apply(raw_child_state, raw_edge_action);
+
+    // determine canonical orientation of new leaf-state
+    auto canonical_child_sym = Game::Symmetries::get_canonical_symmetry(raw_child_state);
+    edge->sym = Group::compose(canonical_child_sym, inv_canonical_sym);
+
+    FullState canonical_child_state = shared_data_->root_info.state[canonical_child_sym];  // copy
+
+    core::action_t reoriented_action = raw_edge_action;
+    Game::Symmetries::apply(reoriented_action, canonical_child_sym);
+    Game::Rules::apply(canonical_child_state, reoriented_action);
+
+    edge->child_index = lookup_table.alloc_node();
+    Node* child = lookup_table.get_node(edge->child_index);
+    new (child) Node(&lookup_table, canonical_child_state, outcome);
+    child->initialize_edges();
+    edge->state = Node::kExpanded;
+    expand_count++;
+
+    if (child->is_terminal()) continue;
+    if (!request) continue;
+
+    group::element_t child_eval_sym = 0;
+    if (manager_params_->apply_random_symmetries) {
+      auto mask = Game::Symmetries::get_mask(canonical_child_state);
+      child_eval_sym = bitset_util::choose_random_on_index(mask);
+    }
+
+    auto* parent_history = &pseudo_local_vars_.base_state_vec_array[canonical_child_sym];
+    pseudo_local_vars_.request_items.emplace_back(child, canonical_child_state, parent_history,
+                                                  child_eval_sym, true);
+  }
+
+  node->update_child_expand_count(expand_count);
+}
+
+template <core::concepts::Game Game>
 void SearchThread<Game>::transform_policy(node_pool_index_t index, LocalPolicyArray& P) const {
   if (index == shared_data_->root_info.node_index) {
-    if (!shared_data_->search_params.disable_exploration) {
+    if (shared_data_->search_params.full_search) {
       if (manager_params_->dirichlet_mult) {
         add_dirichlet_noise(P);
       }
@@ -223,7 +316,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
       state_data_t* state_data = &raw_state_data_;
       if (canonical_sym_ != group::kIdentity) {
         calc_canonical_state_data();
-        state_data = &canonical_state_data_;
+        state_data = &pseudo_local_vars_.canonical_state_data;
       }
 
       if (expand(state_data, node, edge)) return;
@@ -362,7 +455,7 @@ bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* 
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, state, outcome_);
     search_path_.back().child = child;
-    child->initialize_edges(state);
+    child->initialize_edges();
     virtual_backprop();
     init_node(state_data, edge->child_index, child);
     backprop_with_virtual_undo();
@@ -395,14 +488,14 @@ std::string SearchThread<Game>::search_path_str() const {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::calc_canonical_state_data() {
-  canonical_state_data_ = raw_state_data_;
-  for (BaseState& base : canonical_state_data_.state_history) {
+  pseudo_local_vars_.canonical_state_data = raw_state_data_;
+  for (BaseState& base : pseudo_local_vars_.canonical_state_data.state_history) {
     Game::Symmetries::apply(base, canonical_sym_);
   }
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
     using Group = Game::SymmetryGroup;
-    canonical_state_data_.state = shared_data_->root_info.state[canonical_sym_];
+    pseudo_local_vars_.canonical_state_data.state = shared_data_->root_info.state[canonical_sym_];
     group::element_t cur_canonical_sym = shared_data_->root_info.canonical_sym;
     group::element_t leaf_canonical_sym = canonical_sym_;
     for (const visitation_t& visitation : search_path_) {
@@ -410,7 +503,7 @@ void SearchThread<Game>::calc_canonical_state_data() {
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
       Game::Symmetries::apply(action, sym);
-      Game::Rules::apply(canonical_state_data_.state, action);
+      Game::Rules::apply(pseudo_local_vars_.canonical_state_data.state, action);
       cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
     }
 
@@ -418,7 +511,7 @@ void SearchThread<Game>::calc_canonical_state_data() {
                          "cur_canonical_sym=%d leaf_canonical_sym=%d", cur_canonical_sym,
                          leaf_canonical_sym);
   } else {
-    Game::Symmetries::apply(canonical_state_data_.state, canonical_sym_);
+    Game::Symmetries::apply(pseudo_local_vars_.canonical_state_data.state, canonical_sym_);
   }
 }
 
@@ -426,8 +519,9 @@ template <core::concepts::Game Game>
 int SearchThread<Game>::get_best_child_index(Node* node) {
   profiler_.record(SearchThreadRegion::kPUCT);
 
+  bool is_root = (node == shared_data_->get_root_node());
   const SearchParams& search_params = shared_data_->search_params;
-  PUCTStats stats(*manager_params_, search_params, node, node == shared_data_->get_root_node());
+  PUCTStats stats(*manager_params_, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 
@@ -435,8 +529,10 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   const PVec& N = stats.N;
   PVec& PUCT = stats.PUCT;
 
-  bool add_noise = !search_params.disable_exploration && manager_params_->dirichlet_mult > 0;
-  if (manager_params_->forced_playouts && add_noise) {
+  bool force_playouts = manager_params_->forced_playouts && is_root &&
+                        search_params.full_search && manager_params_->dirichlet_mult > 0;
+
+  if (force_playouts) {
     PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
     auto F1 = (N < n_forced).template cast<float>();
     auto F2 = (N > 0).template cast<float>();

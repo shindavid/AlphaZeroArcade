@@ -19,6 +19,12 @@ typename ValueTarget<Game>::Tensor ValueTarget<Game>::tensorize(const GameLogVie
   return eigen_util::reinterpret_as_tensor<Tensor>(shifted_outcome);
 }
 
+template <typename Game>
+typename ActionValueTarget<Game>::Tensor ActionValueTarget<Game>::tensorize(
+    const GameLogView& view) {
+  return *view.action_values;
+}
+
 template<typename Game>
 typename OppPolicyTarget<Game>::Tensor
 OppPolicyTarget<Game>::tensorize(const GameLogView& view) {

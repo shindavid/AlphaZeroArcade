@@ -98,6 +98,7 @@ struct Game {
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
+    using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
     struct OwnershipTarget {
@@ -107,7 +108,8 @@ struct Game {
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
-    using List = mp::TypeList<PolicyTarget, ValueTarget, OppPolicyTarget, OwnershipTarget>;
+    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,
+                              OwnershipTarget>;
   };
 
  private:

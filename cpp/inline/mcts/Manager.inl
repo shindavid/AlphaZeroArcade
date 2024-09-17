@@ -126,7 +126,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   stop_search_threads();
 
   auto& root_info = shared_data_.root_info;
-  bool add_noise = !params.disable_exploration && params_.dirichlet_mult > 0;
+  bool add_noise = params.full_search && params_.dirichlet_mult > 0;
   if (root_info.node_index < 0 || add_noise) {
     const FullState& canonical_state = root_info.state[root_info.canonical_sym];
     ActionOutcome outcome;
@@ -167,8 +167,9 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
     i++;
   }
 
+  util::debug_assert(root->all_children_edges_initialized());
   load_action_symmetries(root, &actions[0]);
-  results_.counts = root->get_counts(params_, inv_sym);
+  root->load_counts_and_action_values(params_, inv_sym, results_.counts, results_.action_values);
   results_.policy_target = results_.counts;
   results_.provably_lost = stats.provably_losing[stable_data.current_player];
   results_.trivial = root->trivial();
@@ -178,6 +179,7 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
 
   Game::Symmetries::apply(results_.counts, inv_sym);
   Game::Symmetries::apply(results_.policy_target, inv_sym);
+  Game::Symmetries::apply(results_.action_values, inv_sym);
 
   results_.win_rates = stats.RQ;
   results_.value_prior = stable_data.V;

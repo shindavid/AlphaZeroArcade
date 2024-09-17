@@ -160,8 +160,7 @@ class SelfPlayServer:
 
         # for gen-0, sample more positions and use fewer iters per game, so we finish faster
         player_args.update({
-            '-I': 100,
-            '-f': 1.0,
+            '-i': 100,
         })
         player_args_str = make_args_str(player_args)
 

@@ -43,6 +43,9 @@ class GameLogReader:
         filename = ffi.new('char[]', filename.encode('utf-8'))
         return self._lib.GameLog_new(filename)
 
+    def num_sampled_positions(self, log):
+        return self._lib.GameLog_num_sampled_positions(log)
+
     def close_log(self, log):
         self._lib.GameLog_delete(log)
 
@@ -84,6 +87,7 @@ class GameLogReader:
             void GameLog_delete(struct GameLog* log);
             void GameLog_load(struct GameLog* log, int index, bool apply_symmetry,
                        float* input_values, int* target_indices, float** target_value_arrays);
+            int GameLog_num_sampled_positions(struct GameLog* log);
             """)
         return ffi
 

@@ -21,9 +21,9 @@ namespace generic {
 template <core::concepts::Game Game>
 MctsPlayer<Game>::Params::Params(mcts::Mode mode) {
   if (mode == mcts::kCompetitive) {
-    num_fast_iters = 1600;
-    num_full_iters = 0;
-    full_pct = 0.0;
+    num_fast_iters = 0;
+    num_full_iters = 1600;
+    full_pct = 1.0;
     move_temperature_str = "0.5->0.2:2*sqrt(b)";
   } else if (mode == mcts::kTraining) {
     num_fast_iters = 100;
@@ -55,10 +55,10 @@ auto MctsPlayer<Game>::Params::make_options_description() {
   po2::options_description desc("MctsPlayer options");
 
   return desc
-      .template add_option<"num-fast-iters", 'i'>(
+      .template add_option<"num-fast-iters">(
           po::value<int>(&num_fast_iters)->default_value(num_fast_iters),
           "num mcts iterations to do per fast move")
-      .template add_option<"num-full-iters", 'I'>(
+      .template add_option<"num-full-iters", 'i'>(
           po::value<int>(&num_full_iters)->default_value(num_full_iters),
           "num mcts iterations to do per full move")
       .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
@@ -108,9 +108,9 @@ template <core::concepts::Game Game>
 MctsPlayer<Game>::MctsPlayer(const Params& params)
     : params_(params),
       search_params_{
-          {params.num_fast_iters, true},  // kFast
-          {params.num_full_iters},        // kFull
-          {1, true}                       // kRawPolicy
+          {params.num_fast_iters, false},  // kFast
+          {params.num_full_iters},         // kFull
+          {1, false}                       // kRawPolicy
       },
       move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str,
                                                       core::GameVars<Game>::get_bindings())) {

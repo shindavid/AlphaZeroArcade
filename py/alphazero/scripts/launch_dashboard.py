@@ -195,9 +195,11 @@ class DocumentCollection:
 @app.route('/', methods=['GET'])
 def bkapp_page():
     # Get the tags from the session
+    title = f'{run_params.game} Dashboard'
     tags = session.get('tags', default_tags)
     docs = DocumentCollection(tags)
     data = docs.get_base_data()
+    data['title'] = title
     return render_template("dashboard.html", template="Flask", **data)
 
 

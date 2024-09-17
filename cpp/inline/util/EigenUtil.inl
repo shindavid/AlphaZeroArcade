@@ -52,6 +52,11 @@ auto softmax(const Array& array) {
   return z / z.sum();
 }
 
+template <typename Array>
+auto sigmoid(const Array& array) {
+  return 1.0 / (1.0 + (-array).exp());
+}
+
 template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim) {
   using Sizes = extract_shape_t<Tensor>;

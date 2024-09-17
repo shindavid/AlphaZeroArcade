@@ -14,7 +14,7 @@ struct SearchParams {
   static SearchParams make_pondering_params(int limit) { return SearchParams{limit, true, true}; }
 
   int tree_size_limit = 100;
-  bool disable_exploration = false;
+  bool full_search = true;
   bool ponder = false;
 };
 

@@ -207,6 +207,12 @@ template <typename Array>
 auto softmax(const Array& arr);
 
 /*
+ * Applies an element-wise sigmoid function to the input tensor and returns the result.
+ */
+template <typename Array>
+auto sigmoid(const Array& arr);
+
+/*
  * Reverses the elements of tensor along the given dimension.
  *
  * This is a convenience wrapper to tensor.reverse(), as tensor.reverse() has a bulkier API.

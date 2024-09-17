@@ -85,6 +85,7 @@ inline NNEvaluationService<Game>::NNEvaluationService(
                          .to(at::Device(params.cuda_device));
   torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
   torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<float>);
+  torch_action_value_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -103,14 +104,18 @@ inline NNEvaluationService<Game>::NNEvaluationService(
 
 template <core::concepts::Game Game>
 inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
-    int row, torch::Tensor& torch_policy, torch::Tensor& torch_value) {
+    int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
+    torch::Tensor& torch_action_value) {
   constexpr size_t policy_size = PolicyShape::total_size;
   constexpr size_t value_size = ValueShape::total_size;
+  constexpr size_t action_value_size = ActionValueShape::total_size;
 
   memcpy(policy.data(), torch_policy.data_ptr<float>() + row * policy_size,
          policy_size * sizeof(float));
   memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
          value_size * sizeof(float));
+  memcpy(action_values.data(), torch_action_value.data_ptr<float>() + row * action_value_size,
+         action_value_size * sizeof(float));
 }
 
 template <core::concepts::Game Game>
@@ -142,39 +147,51 @@ inline NNEvaluationService<Game>::~NNEvaluationService() {
 }
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::NNEvaluation_sptr
-NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
+void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
   if (mcts::kEnableDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "evaluate()";
+    LOG_INFO << request.thread_id_whitespace() << "evaluate() - size: " << request.items().size();
   }
 
-  base_state_vec_t& state_history = *request.state_history();
-  util::release_assert(!state_history.empty());
-  auto eval_key = InputTensorizor::eval_key(&state_history.front(), &state_history.back());
-  cache_key_t cache_key(eval_key, request.sym());
-  NNEvaluation_sptr response = check_cache(request, cache_key);
-  if (response.get()) return response;
+  while (true) {
+    int my_claim_count = 0;
+    int other_claim_count = 0;
 
-  std::unique_lock<std::mutex> metadata_lock(batch_metadata_.mutex);
-  wait_until_batch_reservable(request, metadata_lock);
-  int my_index = allocate_reserve_index(request, metadata_lock);
-  metadata_lock.unlock();
+    std::unique_lock cache_lock(cache_mutex_);
+    cv_cache_.wait(cache_lock, [&] {
+      check_cache(request, my_claim_count, other_claim_count);
+      return my_claim_count > 0 || other_claim_count == 0;
+    });
+    cache_lock.unlock();
+    cv_cache_.notify_all();
 
-  tensorize_and_transform_input(request, cache_key, my_index);
+    if (!my_claim_count) break;
 
-  metadata_lock.lock();
-  increment_commit_count(request);
-  NNEvaluation_sptr eval_ptr = get_eval(request, my_index, metadata_lock);
-  wait_until_all_read(request, metadata_lock);
-  metadata_lock.unlock();
+    std::unique_lock<std::mutex> metadata_lock(batch_metadata_.mutex);
+    wait_until_batch_reservable(request, metadata_lock);
+    index_reservation_t reservation = make_reservation(request, my_claim_count, metadata_lock);
+    metadata_lock.unlock();
 
-  cv_evaluate_.notify_all();
+    int reservation_count = 0;
+    for (const RequestItem& item : request.items()) {
+      if (item.eval_state() != NNEvaluationRequest::kClaimedByMe) continue;
+      int reserve_index = reservation.start_index + reservation_count;
+      tensorize_and_transform_input(request, item, reserve_index);
+      reservation_count++;
+      if (reservation_count == reservation.num_indices) break;
+    }
 
-  if (mcts::kEnableDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  evaluated!";
+    metadata_lock.lock();
+    increment_commit_count(request, reservation.num_indices);
+    wait_for_eval(request, metadata_lock);
+    wait_until_all_read(request, reservation.num_indices, metadata_lock);
+    metadata_lock.unlock();
+
+    cv_evaluate_.notify_all();
+
+    if (mcts::kEnableDebug) {
+      LOG_INFO << request.thread_id_whitespace() << "  evaluated!";
+    }
   }
-
-  return eval_ptr;
 }
 
 template <core::concepts::Game Game>
@@ -243,29 +260,32 @@ void NNEvaluationService<Game>::batch_evaluate() {
   torch_input_gpu_.copy_(full_input_torch);
 
   profiler_.record(NNEvaluationServiceRegion::kEvaluatingNeuralNet);
-  net_.predict(input_vec_, torch_policy_, torch_value_);
+  net_.predict(input_vec_, torch_policy_, torch_value_, torch_action_value_);
 
   profiler_.record(NNEvaluationServiceRegion::kCopyingToPool);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
     tensor_group_t& group = batch_data_.tensor_groups_[i];
-    group.load_output_from(i, torch_policy_, torch_value_);
+    group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
 
-    Game::Symmetries::apply(group.policy, Game::SymmetryGroup::inverse(edata.sym));
-    edata.eval_ptr.store(
-        std::make_shared<NNEvaluation>(group.value, group.policy, edata.valid_actions));
+    group::element_t inv_sym = Game::SymmetryGroup::inverse(edata.sym);
+    Game::Symmetries::apply(group.policy, inv_sym);
+    Game::Symmetries::apply(group.action_values, inv_sym);
+    edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy,
+                                                        group.action_values, edata.valid_actions));
   }
 
   profiler_.record(NNEvaluationServiceRegion::kAcquiringCacheMutex);
-  std::unique_lock<std::mutex> lock(cache_mutex_);
+  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
   profiler_.record(NNEvaluationServiceRegion::kFinishingUp);
   for (int i = 0; i < batch_metadata_.reserve_index; ++i) {
     const eval_ptr_data_t& edata = batch_data_.tensor_groups_[i].eval_ptr_data;
     cache_.insert(edata.cache_key, edata.eval_ptr);
   }
-  lock.unlock();
+  cache_lock.unlock();
+  cv_cache_.notify_all();
 
   int batch_size = batch_metadata_.reserve_index;
   bool full = batch_size == params_.batch_size_limit;
@@ -299,27 +319,36 @@ void NNEvaluationService<Game>::loop() {
 }
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::NNEvaluation_sptr
-NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, const cache_key_t& cache_key) {
+void NNEvaluationService<Game>::check_cache(const NNEvaluationRequest& request, int& my_claim_count,
+                                            int& other_claim_count) {
   request.thread_profiler()->record(SearchThreadRegion::kCheckingCache);
 
+  my_claim_count = 0;
+  other_claim_count = 0;
   if (mcts::kEnableDebug) {
-    LOG_INFO << request.thread_id_whitespace() << "  waiting for cache lock...";
+    LOG_INFO << request.thread_id_whitespace() << "  waiting for cache lock (my_claim_count="
+             << my_claim_count << ", other_claim_count=" << other_claim_count << ")";
   }
 
-  std::unique_lock<std::mutex> cache_lock(cache_mutex_);
-  auto cached = cache_.get(cache_key);
-  if (cached.has_value()) {
-    if (mcts::kEnableDebug) {
-      LOG_INFO << request.thread_id_whitespace() << "  hit cache";
+  for (RequestItem& item : request.items()) {
+    if (item.eval()) continue;
+    auto lookup = cache_.get(item.cache_key());
+    if (lookup.has_value()) {
+      if (lookup.value()) {
+        item.set_eval(lookup.value());
+        item.set_eval_state(NNEvaluationRequest::kCompleted);
+      } else if (item.eval_state() == NNEvaluationRequest::kClaimedByMe) {
+        my_claim_count++;
+      } else {
+        item.set_eval_state(NNEvaluationRequest::kClaimedByOther);
+        other_claim_count++;
+      }
+    } else {
+      cache_.insert(item.cache_key(), NNEvaluation_asptr());
+      item.set_eval_state(NNEvaluationRequest::kClaimedByMe);
+      my_claim_count++;
     }
-    // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
-    perf_stats_.cache_hits++;
-    return cached.value();
   }
-  // Technically should grab perf_stats_mutex_ here, but it's ok to be a little off
-  perf_stats_.cache_misses++;
-  return nullptr;
 }
 
 template <core::concepts::Game Game>
@@ -346,14 +375,16 @@ void NNEvaluationService<Game>::wait_until_batch_reservable(
 }
 
 template <core::concepts::Game Game>
-int NNEvaluationService<Game>::allocate_reserve_index(
-    const NNEvaluationRequest& request, std::unique_lock<std::mutex>& metadata_lock) {
+typename NNEvaluationService<Game>::index_reservation_t
+NNEvaluationService<Game>::make_reservation(const NNEvaluationRequest& request, int count,
+                                            std::unique_lock<std::mutex>& metadata_lock) {
   request.thread_profiler()->record(SearchThreadRegion::kMisc);
 
-  int my_index = batch_metadata_.reserve_index;
-  util::debug_assert(my_index < params_.batch_size_limit);
-  batch_metadata_.reserve_index++;
-  if (my_index == 0) {
+  int start_index = batch_metadata_.reserve_index;
+  int num_indices = std::min(count, params_.batch_size_limit - start_index);
+  util::debug_assert(num_indices > 0);
+  batch_metadata_.reserve_index += num_indices;
+  if (start_index == 0) {
     deadline_ = std::chrono::steady_clock::now() + timeout_duration_;
   }
   util::debug_assert(batch_metadata_.commit_count < batch_metadata_.reserve_index);
@@ -361,12 +392,12 @@ int NNEvaluationService<Game>::allocate_reserve_index(
   const char* func = __func__;
   if (mcts::kEnableDebug) {
     LOG_INFO << request.thread_id_whitespace() << "  " << func << "(" << batch_metadata_.repr()
-             << ") allocation complete";
+             << ") allocation complete (count=" << count << ", start_index=" << start_index << ")";
   }
   cv_service_loop_.notify_one();
 
   /*
-   * At this point, the work unit is effectively RESERVED but not COMMITTED.
+   * At this point, the work units are effectively RESERVED but not COMMITTED.
    *
    * The significance of being reserved is that other search threads will be blocked from reserving
    * if the batch is fully reserved.
@@ -374,35 +405,38 @@ int NNEvaluationService<Game>::allocate_reserve_index(
    * The significance of not yet being committed is that the service thread won't yet proceed with
    * model eval.
    */
-  return my_index;
+  return index_reservation_t{start_index, num_indices};
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::tensorize_and_transform_input(
-    const NNEvaluationRequest& request, const cache_key_t& cache_key, int reserve_index) {
-  base_state_vec_t& state_history = *request.state_history();
-  const auto& stable_data = request.node()->stable_data();
+void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluationRequest& request,
+                                                              const RequestItem& item,
+                                                              int reserve_index) {
+  request.thread_profiler()->record(SearchThreadRegion::kTensorizing);
+
+  const cache_key_t& cache_key = item.cache_key();
+
+  const auto& stable_data = item.node()->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
   group::element_t sym = std::get<1>(cache_key);
+  group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
 
-  request.thread_profiler()->record(SearchThreadRegion::kTensorizing);
+  auto input = item.compute_over_history([&](auto begin, auto end) {
+    for (auto pos = begin; pos != end; pos++) {
+      Game::Symmetries::apply(*pos, sym);
+    }
+    auto out = InputTensorizor::tensorize(begin, end - 1);
+    for (auto pos = begin; pos != end; pos++) {
+      Game::Symmetries::apply(*pos, inverse_sym);
+    }
+    return out;
+  });
+
   std::unique_lock<std::mutex> lock(batch_data_.mutex);
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
-
-  for (BaseState& pos : state_history) {
-    Game::Symmetries::apply(pos, sym);
-  }
-
-  util::release_assert(!state_history.empty());
-  group.input = InputTensorizor::tensorize(&state_history.front(), &state_history.back());
-
-  group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
-  for (BaseState& pos : state_history) {
-    Game::Symmetries::apply(pos, inverse_sym);
-  }
-
+  group.input = input;
   group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;
@@ -411,10 +445,11 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(
 }
 
 template <core::concepts::Game Game>
-void NNEvaluationService<Game>::increment_commit_count(const NNEvaluationRequest& request) {
+void NNEvaluationService<Game>::increment_commit_count(const NNEvaluationRequest& request,
+                                                       int count) {
   request.thread_profiler()->record(SearchThreadRegion::kIncrementingCommitCount);
 
-  batch_metadata_.commit_count++;
+  batch_metadata_.commit_count += count;
   if (mcts::kEnableDebug) {
     LOG_INFO << request.thread_id_whitespace() << "  " << __func__ << "("
              << batch_metadata_.repr() << ")...";
@@ -423,9 +458,8 @@ void NNEvaluationService<Game>::increment_commit_count(const NNEvaluationRequest
 }
 
 template <core::concepts::Game Game>
-typename NNEvaluationService<Game>::NNEvaluation_sptr
-NNEvaluationService<Game>::get_eval(const NNEvaluationRequest& request, int reserve_index,
-                                    std::unique_lock<std::mutex>& metadata_lock) {
+void NNEvaluationService<Game>::wait_for_eval(const NNEvaluationRequest& request,
+                                              std::unique_lock<std::mutex>& metadata_lock) {
   const char* func = __func__;
   request.thread_profiler()->record(SearchThreadRegion::kWaitingForReservationProcessing);
   if (mcts::kEnableDebug) {
@@ -441,14 +475,14 @@ NNEvaluationService<Game>::get_eval(const NNEvaluationRequest& request, int rese
     return false;
   });
 
-  return batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr.load();
+  // return batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr.load();
 }
 
 template <core::concepts::Game Game>
 void NNEvaluationService<Game>::wait_until_all_read(
-    const NNEvaluationRequest& request, std::unique_lock<std::mutex>& metadata_lock) {
-  util::debug_assert(batch_metadata_.unread_count > 0);
-  batch_metadata_.unread_count--;
+    const NNEvaluationRequest& request, int count, std::unique_lock<std::mutex>& metadata_lock) {
+  util::debug_assert(batch_metadata_.unread_count >= count);
+  batch_metadata_.unread_count -= count;
   cv_service_loop_.notify_all();
 
   const char* func = __func__;
@@ -513,6 +547,9 @@ void NNEvaluationService<Game>::reload_weights(std::stringstream& ss,
   LOG_INFO << "NNEvaluationService: clearing network cache...";
   std::unique_lock cache_lock(cache_mutex_);
   cache_.clear();
+  cache_lock.unlock();
+
+  cv_cache_.notify_all();
 }
 
 template <core::concepts::Game Game>

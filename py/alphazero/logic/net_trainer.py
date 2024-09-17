@@ -63,7 +63,7 @@ class TrainingSubStats:
         loss = self.loss()
         weight = self.loss_weight
         loss_pct = 100. * loss * weight / total_loss if total_loss else 0.0
-        output.append('loss: %8.6f * %5.3f = %8.6f [%6.3f%%]' % (
+        output.append('loss: %8.6f * %6.3f = %8.6f [%6.3f%%]' % (
             loss, weight, loss * weight, loss_pct))
 
         print_fn(''.join(output))

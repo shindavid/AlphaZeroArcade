@@ -31,9 +31,12 @@ struct SharedData {
   using base_state_vec_t = std::vector<BaseState>;
   using node_pool_index_t = Node::node_pool_index_t;
 
+  using FullStateArray = std::array<FullState, SymmetryGroup::kOrder>;
+  using base_state_vec_array_t = std::array<base_state_vec_t, SymmetryGroup::kOrder>;
+
   struct root_info_t {
-    FullState state[SymmetryGroup::kOrder];
-    base_state_vec_t state_history[SymmetryGroup::kOrder];
+    FullStateArray state;
+    base_state_vec_array_t state_history;
 
     group::element_t canonical_sym = -1;
     node_pool_index_t node_index = -1;

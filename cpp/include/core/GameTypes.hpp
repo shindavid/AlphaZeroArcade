@@ -10,6 +10,7 @@
 #include <array>
 #include <bitset>
 #include <string>
+#include <vector>
 
 #include <Eigen/Core>
 
@@ -23,12 +24,15 @@ struct GameTypes {
 
   using PolicyShape = EigenTypes<GameConstants>::PolicyShape;
   using PolicyTensor = EigenTypes<GameConstants>::PolicyTensor;
+  using ActionValueShape = EigenTypes<GameConstants>::ActionValueShape;
+  using ActionValueTensor = EigenTypes<GameConstants>::ActionValueTensor;
   using ValueArray = EigenTypes<GameConstants>::ValueArray;
   using ActionOutcome = core::ActionOutcome<ValueArray>;
   using SymmetryMask = std::bitset<Group::kOrder>;
   using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, Group>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
-  using CompactLocalPolicyArray = Eigen::Array<float, Eigen::Dynamic, 1>;
+  using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
+  using state_vec_t = std::vector<BaseState>;
 
   /*
    * Return type for an MCTS search.
@@ -41,6 +45,7 @@ struct GameTypes {
     PolicyTensor counts;
     PolicyTensor policy_target;
     PolicyTensor policy_prior;
+    ActionValueTensor action_values;
     ValueArray win_rates;
     ValueArray value_prior;
     ActionSymmetryTable action_symmetry_table;
@@ -60,6 +65,7 @@ struct GameTypes {
     const ValueArray* outcome;
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;
+    const ActionValueTensor* action_values;
   };
 };
 

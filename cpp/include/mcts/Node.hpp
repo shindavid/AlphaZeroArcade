@@ -40,8 +40,10 @@ class Node {
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using ActionMask = Game::Types::ActionMask;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionOutcome = Game::Types::ActionOutcome;
   using player_bitset_t = std::bitset<kNumPlayers>;
   using node_pool_index_t = util::pool_index_t;
@@ -61,6 +63,7 @@ class Node {
     int num_valid_actions;
     core::seat_index_t current_player;
     bool terminal;
+    bool V_valid;
   };
 
   /*
@@ -103,6 +106,7 @@ class Node {
     int RN = 0;  // real count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
+    float child_V_estimate = 0;  // network estimate of child-value for current-player
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };
@@ -167,7 +171,8 @@ class Node {
 
   Node(LookupTable*, const FullState&, const ActionOutcome&);
 
-  PolicyTensor get_counts(const ManagerParams& params, group::element_t inv_sym) const;
+  void load_counts_and_action_values(const ManagerParams& params, group::element_t inv_sym,
+                                     PolicyTensor& counts, ActionValueTensor& action_values) const;
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
   void update_stats(const UpdateT& update_instruction);
@@ -181,17 +186,18 @@ class Node {
   std::mutex& mutex() { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
-  void initialize_edges(const FullState&);
+  void initialize_edges();
 
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
 
+  bool all_children_edges_initialized() const;
   bool edges_initialized() const { return first_edge_index_ != -1; }
   edge_t* get_edge(int i) const;
   edge_pool_index_t get_first_edge_index() const { return first_edge_index_; }
   void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
   Node* get_child(const edge_t* edge) const;
-  void update_child_expand_count();
+  void update_child_expand_count(int n=1);
   bool trivial() const { return trivial_; }
 
  private:

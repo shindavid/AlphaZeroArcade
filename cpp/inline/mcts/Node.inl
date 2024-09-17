@@ -10,11 +10,13 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
                                                 const ActionOutcome& outcome) {
   if (outcome.terminal) {
     V = outcome.terminal_value;
+    V_valid = true;
     num_valid_actions = 0;
     current_player = -1;
     terminal = true;
   } else {
     V.setZero();  // to be set lazily
+    V_valid = false;
     valid_action_mask = Game::Rules::get_legal_moves(state);
     num_valid_actions = valid_action_mask.count();
     current_player = Game::Rules::get_current_player(state);
@@ -182,8 +184,9 @@ Node<Game>::Node(LookupTable* table, const FullState& state, const ActionOutcome
     : stable_data_(state, outcome), lookup_table_(table), mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
-typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& params,
-                                                         group::element_t inv_sym) const {
+void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
+                                               group::element_t inv_sym, PolicyTensor& counts,
+                                               ActionValueTensor& action_values) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -193,8 +196,8 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     std::cout << "get_counts()" << std::endl;
   }
 
-  PolicyTensor counts;
   counts.setZero();
+  action_values.setZero();
 
   bool provably_winning = stats_.provably_winning[cp];
   bool provably_losing = stats_.provably_losing[cp];
@@ -208,18 +211,20 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
     const char* detail = "";
 
     const Node* child = get_child(edge);
-    if (child) {
-      const auto& stats = child->stats();
-      if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
-        modified_count = 0;
-        detail = " (losing)";
-      } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
-        modified_count = 0;
-        detail = " (?)";
-      } else if (provably_winning) {
-        detail = " (winning)";
-      }
+    if (!child) continue;
+
+    const auto& stats = child->stats();
+    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
+      modified_count = 0;
+      detail = " (losing)";
+    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
+      modified_count = 0;
+      detail = " (?)";
+    } else if (provably_winning) {
+      detail = " (winning)";
     }
+
+    float action_value = child->stable_data().V(cp);
 
     if (kEnableDebug) {
       auto action2 = action;
@@ -228,15 +233,14 @@ typename Node<Game>::PolicyTensor Node<Game>::get_counts(const ManagerParams& pa
       if (modified_count != count) {
         std::cout << " -> " << modified_count;
       }
-      std::cout << detail << std::endl;
+      std::cout << "[" << action_value << "]" << detail << std::endl;
     }
 
     if (modified_count) {
       counts(action) = modified_count;
     }
+    action_values(action) = action_value;
   }
-
-  return counts;
 }
 
 template <core::concepts::Game Game>
@@ -338,7 +342,7 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::initialize_edges(const FullState& state) {
+void Node<Game>::initialize_edges() {
   int n_edges = stable_data_.num_valid_actions;
   if (n_edges == 0) return;
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);
@@ -357,29 +361,55 @@ template<typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   int n = stable_data_.num_valid_actions;
   ValueArray V;
-  LocalPolicyArray P_raw(n);
 
   if (eval == nullptr) {
     // treat this as uniform P and V
-    V.setConstant(1.0 / kNumPlayers);
-    P_raw.setConstant(1.0 / n);
+    float v = 1.0 / kNumPlayers;
+    float p = 1.0 / n;
+
+    V.setConstant(v);
+
+    stable_data_.V = V;
+    stable_data_.V_valid = true;
+    stats_.RQ = V;
+    stats_.VQ = V;
+
+    for (int i = 0; i < n; ++i) {
+      edge_t* edge = get_edge(i);
+      edge->raw_policy_prior = p;
+      edge->adjusted_policy_prior = p;
+      edge->child_V_estimate = v;
+    }
   } else {
-    V = eval->value_distr();
-    P_raw = eval->compact_local_policy_distr();
+    LocalPolicyArray P_raw(n);
+    LocalActionValueArray child_V(n);
+    eval->load(V, P_raw, child_V);
+
+    LocalPolicyArray P_adjusted = P_raw;
+    if (eval) f(P_adjusted);
+
+    stable_data_.V = V;
+    stable_data_.V_valid = true;
+    stats_.RQ = V;
+    stats_.VQ = V;
+
+    for (int i = 0; i < n; ++i) {
+      edge_t* edge = get_edge(i);
+      edge->raw_policy_prior = P_raw[i];
+      edge->adjusted_policy_prior = P_adjusted[i];
+      edge->child_V_estimate = child_V[i];
+    }
   }
+}
 
-  LocalPolicyArray P_adjusted = P_raw;
-  if (eval) f(P_adjusted);
-
-  stable_data_.V = V;
-  stats_.RQ = V;
-  stats_.VQ = V;
-
-  for (int i = 0; i < n; ++i) {
-    edge_t* edge = get_edge(i);
-    edge->raw_policy_prior = P_raw[i];
-    edge->adjusted_policy_prior = P_adjusted[i];
+template <core::concepts::Game Game>
+bool Node<Game>::all_children_edges_initialized() const {
+  if (stable_data_.num_valid_actions == 0) return true;
+  if (first_edge_index_ == -1) return false;
+  for (int j = 0; j < stable_data_.num_valid_actions; ++j) {
+    if (get_edge(j)->state != kExpanded) return false;
   }
+  return true;
 }
 
 template <core::concepts::Game Game>
@@ -395,11 +425,13 @@ Node<Game>* Node<Game>::get_child(const edge_t* edge) const {
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::update_child_expand_count() {
-  child_expand_count_++;
-  if (child_expand_count_ != stable_data_.num_valid_actions) return;
+void Node<Game>::update_child_expand_count(int n) {
+  child_expand_count_ += n;
+  util::debug_assert(child_expand_count_ <= stable_data_.num_valid_actions);
+  if (child_expand_count_ < stable_data_.num_valid_actions) return;
 
   // all children have been expanded, check for triviality
+  if (child_expand_count_ == 0) return;
   node_pool_index_t first_child_index = get_edge(0)->child_index;
   for (int i = 1; i < stable_data_.num_valid_actions; ++i) {
     if (get_edge(i)->child_index != first_child_index) return;
