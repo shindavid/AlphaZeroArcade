@@ -50,7 +50,7 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
         loss_weights={
             'policy': 1.0,
             'value': 1.5,
-            'action_value': 10.0,
+            'action_value': 1.0,
         },
     )
 
