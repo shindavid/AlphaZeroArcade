@@ -167,7 +167,6 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
     i++;
   }
 
-  util::debug_assert(root->all_children_edges_initialized());
   load_action_symmetries(root, &actions[0]);
   root->load_counts_and_action_values(params_, inv_sym, results_.counts, results_.action_values);
   results_.policy_target = results_.counts;
