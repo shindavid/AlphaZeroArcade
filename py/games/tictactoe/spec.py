@@ -65,7 +65,7 @@ class TicTacToeSpec(GameSpec):
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
 
     training_params = TrainingParams(
-        window_size_function_str='fixed(20000)',
+        target_sample_rate=64,
         minibatches_per_epoch=100,
         minibatch_size=100,
     )
@@ -86,7 +86,7 @@ class TicTacToeSpec(GameSpec):
     }
 
     rating_player_options = {
-        '-i': 1,
+        '-i': 100,
     }
 
 
