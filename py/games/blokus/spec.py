@@ -27,8 +27,9 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
     score_shape = shape_info_dict['score'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    c_trunk = 64
-    c_mid = 64
+    c_trunk = 96
+    c_mid = 96
+    c_gpool = 32
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
     c_value_hidden = 1
@@ -47,19 +48,19 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block5', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlockWithGlobalPooling', args=['block5', c_trunk, c_mid, c_gpool]),
 
             ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block10', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlockWithGlobalPooling', args=['block10', c_trunk, c_mid, c_gpool]),
 
             ModuleSpec(type='ResBlock', args=['block11', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block12', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block13', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block14', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block15', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlockWithGlobalPooling', args=['block15', c_trunk, c_mid, c_gpool]),
 
             ModuleSpec(type='ResBlock', args=['block16', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
