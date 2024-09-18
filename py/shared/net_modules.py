@@ -172,9 +172,10 @@ class ResBlockWithGlobalPooling(nn.Module):
     This corresponds to ResBlock with c_gpool!=None in the KataGo codebase. This has no
     analog in the AlphaGo Zero paper.
     """
-    def __init__(self, c_in_out: int, c_mid_total: int, c_mid_gp: int):
+    def __init__(self, name: str, c_in_out: int, c_mid_total: int, c_mid_gp: int):
         super(ResBlockWithGlobalPooling, self).__init__()
         assert 0 < c_mid_gp < c_mid_total
+        self.name = name
         self.conv1 = ConvBlockWithGlobalPooling(c_in_out, c_mid_total - c_mid_gp, c_mid_gp)
         self.conv2 = ConvBlock(c_mid_total - c_mid_gp, c_in_out)
 
