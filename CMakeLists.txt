@@ -22,36 +22,23 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
-SET(EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
-set(COMMON_LIBS "")  # each item of ALL_EXECUTABLES and ALL_FFI_LIBS will be linked with these
-set(ALL_LIBS "")  # these are linked with each lib of EXTERNAL_LIBS, separate from ALL_FFI_LIBS
-set(ALL_EXECUTABLES "")
-set(ALL_FFI_LIBS "")  # these are linked with each lib of EXTERNAL_LIBS, separate from ALL_LIBS
+# Prioritize system CUDA libraries over Conda libraries
+set(CMAKE_BUILD_RPATH "${CUDA_TOOLKIT_ROOT_DIR}/lib64;${CONDA_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_INSTALL_RPATH "${CUDA_TOOLKIT_ROOT_DIR}/lib64;${CONDA_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(${MY_TINYEXPR_DIR})
+include_directories(SYSTEM ${TORCH_INCLUDE_DIRS})
 
 add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/blokus")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
-
-foreach(tgt ${ALL_LIBS} ${ALL_FFI_LIBS})
-    foreach(lib ${EXTERNAL_LIBS})
-        target_link_libraries(${tgt} ${lib})
-    endforeach()
-endforeach()
-
-foreach(tgt ${ALL_EXECUTABLES} ${ALL_FFI_LIBS})
-    foreach(lib ${COMMON_LIBS})
-        target_link_libraries(${tgt} ${lib})
-    endforeach()
-    set_property(TARGET ${tgt} PROPERTY CXX_STANDARD 20)
-endforeach()
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)

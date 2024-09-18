@@ -1,4 +1,4 @@
-add_library(util-lib
+add_library(util_lib
         core/LoopControllerClient.cpp
         util/BoostUtil.cpp
         util/CudaUtil.cpp
@@ -11,14 +11,11 @@ add_library(util-lib
         ${MY_TINYEXPR_DIR}/tinyexpr.c
         )
 
-set(LOCAL_LIBS util-lib)
-set(COMMON_LIBS ${COMMON_LIBS} ${LOCAL_LIBS} PARENT_SCOPE)
-set(ALL_LIBS ${ALL_LIBS} ${LOCAL_LIBS} PARENT_SCOPE)
+set_target_properties(util_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-add_executable(util_tests
-        util/main/UnitTests.cpp
-        )
-
+add_executable(util_tests util/main/UnitTests.cpp)
 set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
-set(LOCAL_EXECUTABLES util_tests)
-set(ALL_EXECUTABLES ${ALL_EXECUTABLES} ${LOCAL_EXECUTABLES} PARENT_SCOPE)
+
+set(LINK_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(util_lib PRIVATE ${LINK_LIBS})
+target_link_libraries(util_tests PRIVATE util_lib ${LINK_LIBS})

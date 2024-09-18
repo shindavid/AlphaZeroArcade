@@ -1,23 +1,19 @@
-add_executable(blokus_tests
-        main/UnitTests.cpp
-        Game.cpp
-        Pieces.cpp
-        Types.cpp
-        )
-
-add_executable(blokus_exe
-        main/Blokus.cpp
-        Game.cpp
-        Pieces.cpp
-        Types.cpp
-        )
-
-add_library(blokus_ffi
-        SHARED shared/Blokus_ffi.cpp
-        Game.cpp
-        Pieces.cpp
-        Types.cpp
+set(COMMON_SOURCES
+    Game.cpp
+    Pieces.cpp
+    Types.cpp
 )
+
+add_executable(blokus_tests main/UnitTests.cpp ${COMMON_SOURCES})
+add_executable(blokus_exe main/Blokus.cpp ${COMMON_SOURCES})
+add_library(blokus_ffi SHARED shared/Blokus_ffi.cpp ${COMMON_SOURCES})
+set_target_properties(blokus_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
+set(TARGETS blokus_tests blokus_exe blokus_ffi)
+foreach(target ${TARGETS})
+    target_link_libraries(${target} PRIVATE ${LINK_LIBS})
+endforeach()
 
 set_target_properties(blokus_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
 set_target_properties(blokus_exe PROPERTIES OUTPUT_NAME "blokus")
@@ -26,9 +22,3 @@ set_target_properties(blokus_ffi PROPERTIES OUTPUT_NAME "blokus")
 add_custom_target(blokus
     DEPENDS blokus_exe blokus_ffi blokus_tests
 )
-
-set(LOCAL_EXECUTABLES blokus_exe blokus_tests)
-set(ALL_EXECUTABLES ${ALL_EXECUTABLES} ${LOCAL_EXECUTABLES} PARENT_SCOPE)
-
-set(LOCAL_FFI_LIBS blokus_ffi)
-set(ALL_FFI_LIBS ${ALL_FFI_LIBS} ${LOCAL_FFI_LIBS} PARENT_SCOPE)
