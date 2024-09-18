@@ -22,10 +22,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
-# # Prioritize system CUDA libraries over Conda libraries
-# set(CMAKE_BUILD_RPATH "${CUDA_TOOLKIT_ROOT_DIR}/lib64;${CONDA_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib")
-# set(CMAKE_INSTALL_RPATH "${CUDA_TOOLKIT_ROOT_DIR}/lib64;${CONDA_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib")
-# set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+# Suppress compiler warning about runtime search path:
+set(CMAKE_BUILD_RPATH "${CMAKE_BUILD_RPATH};${MY_TORCH_DIR}/lib")
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${MY_TORCH_DIR}/lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
