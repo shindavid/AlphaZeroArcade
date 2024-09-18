@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <mutex>
 
 namespace util {
 
@@ -69,7 +70,18 @@ template <typename TimePoint>
     return std::chrono::time_point_cast<std::chrono::nanoseconds>(t).time_since_epoch().count();
 }
 
-inline int64_t get_unique_id() { return ns_since_epoch(); }
+inline int64_t get_unique_id() {
+  static std::mutex mut;
+  std::lock_guard<std::mutex> lock(mut);
+
+  static int64_t last = 0;
+  int64_t id = ns_since_epoch();
+  while (id <= last) {
+    id = ns_since_epoch();
+  }
+  last = id;
+  return id;
+}
 
 template <typename A>
 constexpr auto to_std_array() {
