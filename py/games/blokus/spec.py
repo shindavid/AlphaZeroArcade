@@ -112,12 +112,13 @@ class BlokusSpec(GameSpec):
     }
 
     training_params = TrainingParams(
+        target_sample_rate=32,
         minibatches_per_epoch=256,
         minibatch_size=64,
     )
 
     training_player_options = {
-        '-r': 16,
+        '-r': 8,
     }
 
 
