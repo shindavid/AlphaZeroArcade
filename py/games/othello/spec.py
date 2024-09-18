@@ -100,7 +100,7 @@ class OthelloSpec(GameSpec):
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
 
     training_params = TrainingParams(
-        window_size_function_str='fixed(300000)',
+        target_sample_rate=64,
         minibatches_per_epoch=500,
         minibatch_size=100,
     )
