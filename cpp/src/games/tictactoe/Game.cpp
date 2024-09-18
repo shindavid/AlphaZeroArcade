@@ -95,9 +95,9 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   int cx = 0;
 
   cx += snprintf(buffer + cx, buf_size - cx, "X: %6.3f%% -> %6.3f%%\n",
-                 100 * net_value(tictactoe::kX), 100 * win_rates(tictactoe::kO));
+                 100 * net_value(tictactoe::kX), 100 * win_rates(tictactoe::kX));
   cx += snprintf(buffer + cx, buf_size - cx, "O: %6.3f%% -> %6.3f%%\n",
-                 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kX));
+                 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kO));
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
   cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
