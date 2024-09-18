@@ -87,6 +87,8 @@ class TicTacToeSpec(GameSpec):
 
     rating_player_options = {
         '-i': 100,
+        '-n': 4,
+        '-t': 0,  # zero-move-temp so we don't do silly misplays
     }
 
 
