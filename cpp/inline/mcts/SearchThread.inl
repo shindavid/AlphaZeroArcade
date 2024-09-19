@@ -521,13 +521,13 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
   bool is_root = (node == shared_data_->get_root_node());
   const SearchParams& search_params = shared_data_->search_params;
-  PUCTStats stats(*manager_params_, search_params, node, is_root);
+  ActionSelector action_selector(*manager_params_, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 
-  const PVec& P = stats.P;
-  const PVec& N = stats.N;
-  PVec& PUCT = stats.PUCT;
+  const PVec& P = action_selector.P;
+  const PVec& N = action_selector.N;
+  PVec& PUCT = action_selector.PUCT;
 
   bool force_playouts = manager_params_->forced_playouts && is_root &&
                         search_params.full_search && manager_params_->dirichlet_mult > 0;
@@ -543,12 +543,12 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   int argmax_index;
   PUCT.maxCoeff(&argmax_index);
 
-  print_puct_details(node, stats, argmax_index);
+  print_action_selection_details(node, action_selector, argmax_index);
   return argmax_index;
 }
 
 template <core::concepts::Game Game>
-void SearchThread<Game>::print_puct_details(Node* node, const PUCTStats& stats,
+void SearchThread<Game>::print_action_selection_details(Node* node, const ActionSelector& selector,
                                             int argmax_index) const {
   if (mcts::kEnableDebug) {
     std::ostringstream ss;
@@ -585,12 +585,12 @@ void SearchThread<Game>::print_puct_details(Node* node, const PUCTStats& stats,
     constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
     using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
 
-    ArrayT2 A2(kNumRows, stats.P.rows());
+    ArrayT2 A2(kNumRows, selector.P.rows());
     A2.setZero();
 
     int r = 0;
 
-    PVec child_addr(stats.P.rows());
+    PVec child_addr(selector.P.rows());
     child_addr.setConstant(-1);
 
     group::element_t inv_sym = Game::SymmetryGroup::inverse(canonical_sym_);
@@ -603,16 +603,16 @@ void SearchThread<Game>::print_puct_details(Node* node, const PUCTStats& stats,
     }
     r++;
 
-    A2.row(r++) = stats.P;
-    A2.row(r++) = stats.V;
-    A2.row(r++) = stats.FPU;
-    A2.row(r++) = stats.PW;
-    A2.row(r++) = stats.PL;
-    A2.row(r++) = stats.E;
-    A2.row(r++) = stats.N;
-    A2.row(r++) = stats.VN;
+    A2.row(r++) = selector.P;
+    A2.row(r++) = selector.V;
+    A2.row(r++) = selector.FPU;
+    A2.row(r++) = selector.PW;
+    A2.row(r++) = selector.PL;
+    A2.row(r++) = selector.E;
+    A2.row(r++) = selector.N;
+    A2.row(r++) = selector.VN;
     A2.row(r++) = child_addr;
-    A2.row(r++) = stats.PUCT;
+    A2.row(r++) = selector.PUCT;
     A2(r, argmax_index) = 1;
 
     A2 = eigen_util::sort_columns(A2);

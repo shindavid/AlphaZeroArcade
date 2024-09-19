@@ -10,7 +10,7 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-struct PUCTStats {
+struct ActionSelector {
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
@@ -18,7 +18,7 @@ struct PUCTStats {
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
-  PUCTStats(const ManagerParams& manager_params, const SearchParams& search_params,
+  ActionSelector(const ManagerParams& manager_params, const SearchParams& search_params,
             const Node* node, bool is_root);
 
   core::seat_index_t cp;
@@ -35,4 +35,4 @@ struct PUCTStats {
 
 }  // namespace mcts
 
-#include <inline/mcts/PUCTStats.inl>
+#include <inline/mcts/ActionSelector.inl>

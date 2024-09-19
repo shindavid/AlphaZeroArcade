@@ -12,7 +12,7 @@
 #include <mcts/NNEvaluationRequest.hpp>
 #include <mcts/NNEvaluationService.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/PUCTStats.hpp>
+#include <mcts/ActionSelector.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
@@ -27,7 +27,7 @@ class SearchThread {
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
-  using PUCTStats = mcts::PUCTStats<Game>;
+  using ActionSelector = mcts::ActionSelector<Game>;
   using SharedData = mcts::SharedData<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using edge_t = Node::edge_t;
@@ -140,7 +140,7 @@ class SearchThread {
    * Tensorizor, since there is coupling with NN architecture (in the form of output heads).
    */
   int get_best_child_index(Node* node);
-  void print_puct_details(Node* node, const PUCTStats& stats, int argmax_index) const;
+  void print_action_selection_details(Node* node, const ActionSelector&, int argmax_index) const;
 
   auto& dirichlet_gen() const { return shared_data_->dirichlet_gen; }
   auto& rng() const { return shared_data_->rng; }

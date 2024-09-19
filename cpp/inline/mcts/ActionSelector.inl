@@ -1,11 +1,11 @@
-#include <mcts/PUCTStats.hpp>
+#include <mcts/ActionSelector.hpp>
 
 #include <bitset>
 
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline PUCTStats<Game>::PUCTStats(const ManagerParams& params, const SearchParams& search_params,
+inline ActionSelector<Game>::ActionSelector(const ManagerParams& params, const SearchParams& search_params,
                                   const Node* node, bool is_root)
     : cp(node->stable_data().current_player),
       P(node->stable_data().num_valid_actions),

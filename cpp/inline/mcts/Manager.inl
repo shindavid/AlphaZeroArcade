@@ -2,7 +2,7 @@
 
 #include <boost/filesystem.hpp>
 
-#include <mcts/PUCTStats.hpp>
+#include <mcts/ActionSelector.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
@@ -302,17 +302,17 @@ inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* ac
 
 template <core::concepts::Game Game>
 void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
-  using PUCTStats = mcts::PUCTStats<Game>;
+  using ActionSelector = mcts::ActionSelector<Game>;
 
   if (params_.no_model) return;
 
   Node* root = shared_data_.get_root_node();
-  PUCTStats stats(params_, search_params, root, true);
+  ActionSelector action_selector(params_, search_params, root, true);
 
-  const auto& P = stats.P;
-  const auto& N = stats.E;
-  const auto& V = stats.V;
-  const auto& PUCT = stats.PUCT;
+  const auto& P = action_selector.P;
+  const auto& N = action_selector.E;
+  const auto& V = action_selector.V;
+  const auto& PUCT = action_selector.PUCT;
 
   auto N_sum = N.sum();
   auto n_forced = (P * params_.k_forced * N_sum).sqrt();
@@ -320,7 +320,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
   auto PUCT_max = PUCT.maxCoeff();
 
   auto N_max = N.maxCoeff();
-  auto sqrt_N = sqrt(N_sum + PUCTStats::eps);
+  auto sqrt_N = sqrt(N_sum + ActionSelector::eps);
 
   auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
 
