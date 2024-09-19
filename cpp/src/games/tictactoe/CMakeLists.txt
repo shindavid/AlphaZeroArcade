@@ -18,6 +18,4 @@ set_target_properties(tictactoe_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXE
 set_target_properties(tictactoe_exe PROPERTIES OUTPUT_NAME "tictactoe")
 set_target_properties(tictactoe_ffi PROPERTIES OUTPUT_NAME "tictactoe")
 
-add_custom_target(tictactoe
-    DEPENDS tictactoe_exe tictactoe_ffi tictactoe_tests
-)
+append_target_metadata("tictactoe" ${TARGETS})

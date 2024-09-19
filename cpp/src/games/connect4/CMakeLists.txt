@@ -18,6 +18,4 @@ set_target_properties(c4_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE
 set_target_properties(c4_exe PROPERTIES OUTPUT_NAME "c4")
 set_target_properties(c4_ffi PROPERTIES OUTPUT_NAME "c4")
 
-add_custom_target(c4
-    DEPENDS c4_exe c4_ffi c4_tests
-)
+append_target_metadata("c4" ${TARGETS})

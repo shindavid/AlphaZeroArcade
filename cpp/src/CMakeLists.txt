@@ -13,9 +13,13 @@ add_library(util_lib
 
 set_target_properties(util_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+set(TARGETS util_tests)
+
 add_executable(util_tests util/main/UnitTests.cpp)
 set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
 
 set(LINK_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(util_lib PRIVATE ${LINK_LIBS})
 target_link_libraries(util_tests PRIVATE util_lib ${LINK_LIBS})
+
+append_target_metadata("aux" ${TARGETS})

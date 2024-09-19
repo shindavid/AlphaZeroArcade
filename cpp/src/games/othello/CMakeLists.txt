@@ -18,6 +18,4 @@ set_target_properties(othello_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECU
 set_target_properties(othello_exe PROPERTIES OUTPUT_NAME "othello")
 set_target_properties(othello_ffi PROPERTIES OUTPUT_NAME "othello")
 
-add_custom_target(othello
-    DEPENDS othello_exe othello_ffi othello_tests
-)
+append_target_metadata("othello" ${TARGETS})

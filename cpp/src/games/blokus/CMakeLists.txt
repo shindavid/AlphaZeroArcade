@@ -19,6 +19,4 @@ set_target_properties(blokus_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUT
 set_target_properties(blokus_exe PROPERTIES OUTPUT_NAME "blokus")
 set_target_properties(blokus_ffi PROPERTIES OUTPUT_NAME "blokus")
 
-add_custom_target(blokus
-    DEPENDS blokus_exe blokus_ffi blokus_tests
-)
+append_target_metadata("blokus" ${TARGETS})

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from dataclasses import dataclass
 import os
 import pkg_resources
 import subprocess
@@ -9,10 +10,16 @@ from typing import List
 from games.index import GAME_SPECS_BY_NAME
 
 
-def run(cmd: str, print_cmd=True):
+def run(cmd: str, print_cmd=True, handler=None):
     if print_cmd:
         print(cmd)
-    if os.system(cmd):
+
+    proc = subprocess.Popen(cmd, shell=True, text=True, stderr=subprocess.PIPE)
+    _, stderr = proc.communicate()
+    if proc.returncode:
+        print(stderr)
+        if handler:
+            handler(stderr)
         sys.exit(1)
 
 
@@ -27,6 +34,15 @@ def get_args():
                         ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
                         ' IS_MACRO_ENABLED() macro function defined in cpp/util/CppUtil.hpp')
     return parser.parse_args()
+
+
+def catch_first_time_ninja_error(stderr):
+    lines = stderr.splitlines()
+    if lines[0].startswith('CMake Error: Error: generator : Ninja'):
+        print('\033[91m')
+        print('It appears that this is your first build since the migration to Ninja.')
+        print('Please do a one-time manual removal of your target/ directory and try again.')
+        print('\033[0m')
 
 
 def validate_gcc_version():
@@ -73,28 +89,34 @@ def validate_gxx_version():
     sys.exit(0)
 
 
-def get_targets(targets: List[str], args) -> List[str]:
-    try:
-        cmd = 'cmake --build . --target help'
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, encoding='utf-8')
-        stdout = proc.communicate()[0]
-        output = []
-        for line in stdout.splitlines():
-            if line.startswith('... '):
-                candidate = line.split()[1]
-                if not targets:
-                    output.append(candidate)
-                else:
-                    underscore = candidate.rfind('_')
-                    if underscore != -1:
-                        if candidate[:underscore] in targets:
-                            if candidate[underscore + 1:] in ('tests', 'exe', 'ffi'):
-                                output.append(candidate)
-                    if candidate in targets:
-                        output.append(candidate)
-        return output
-    except:
-        return ['???']
+@dataclass
+class Target:
+    category: str
+    name: str
+    directory: str
+    filename: str
+
+    @staticmethod
+    def parse(line: str) -> 'Target':
+        tokens = line.split()
+        assert len(tokens) == 4, line
+        return Target(tokens[0], tokens[1], tokens[2], tokens[3])
+
+
+def get_targets(repo_root, target_dir, specified_targets) -> List[Target]:
+    targets_file = os.path.join(repo_root, target_dir, 'targets.txt')
+    if not os.path.exists(targets_file):
+        raise Exception(f'Targets file not found: {targets_file}')
+
+    with open(targets_file, 'r') as f:
+        all_targets = [Target.parse(line) for line in f.readlines()]
+
+    if specified_targets:
+        out1 = [t for t in all_targets if t.name in specified_targets]
+        out2 = [t for t in all_targets if t.category in specified_targets]
+        return out1 + out2
+    else:
+        return all_targets
 
 
 def get_torch_dir():
@@ -143,10 +165,9 @@ def main():
     if args.clean:
         run(f'rm -rf {target_dir}/bin/*')
 
-    # Leaving out Ninja because using Ninja breaks get_targets()
     cmake_cmd_tokens = [
         'cmake',
-        # '-G Ninja',
+        '-G Ninja',
         'CMakeLists.txt',
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
@@ -161,35 +182,36 @@ def main():
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
 
     cmake_cmd = ' '.join(cmake_cmd_tokens)
-    run(cmake_cmd)
+    run(cmake_cmd, handler=catch_first_time_ninja_error)
 
+    expanded_targets = get_targets(repo_root, target_dir, targets)
     os.chdir(target_dir)
-    j = os.cpu_count()
     build_cmd_tokens = [
         'cmake',
         '--build',
         '.',
-        f'-j{j}',
     ]
-    for t in targets:
-        build_cmd_tokens.extend(['--target', t])
+    if not targets:
+        build_cmd_tokens.extend(['--target', 'all'])
+    else:
+        for t in expanded_targets:
+            build_cmd_tokens.extend(['--target', t.name])
 
     build_cmd = ' '.join(build_cmd_tokens)
     run(build_cmd)
 
     bin_dir = os.path.join(repo_root, target_dir, 'bin')
-    tests_dir = os.path.join(repo_root, target_dir, 'bin', 'tests')
-    lib_dir = os.path.join(repo_root, target_dir, 'lib')
-    bins = get_targets(targets, args)
-    for b in bins:
-        spec = GAME_SPECS_BY_NAME.get(b, None)
+
+    categories = set(t.category for t in expanded_targets)
+    for category in categories:
+        spec = GAME_SPECS_BY_NAME.get(category, None)
         if spec is None:
             continue
         extra_deps = spec.extra_runtime_deps
         for dep in extra_deps:
             dep_loc = os.path.join(repo_root, dep)
             if not os.path.exists(dep_loc):
-                print(f'ERROR: extra dependency for {b} not found: {dep}')
+                print(f'ERROR: extra dependency for {category} not found: {dep}')
                 print('Please rerun setup_wizard.py to fix this.')
                 raise Exception()
             extra_dir = os.path.join(bin_dir, 'extra')
@@ -198,26 +220,13 @@ def main():
             run(f'rsync -r {dep_loc} {cp_loc}', print_cmd=False)
             print(f'Extra dependency:', os.path.join(cp_loc, os.path.split(dep)[1]))
 
-    for b in bins:
-        bin_loc = os.path.join(lib_dir, f'lib{b}.so')
-        if not os.path.isfile(bin_loc):
+    expanded_targets.sort(key=lambda t: (t.directory, t.filename))
+    for tgt in expanded_targets:
+        full_path = os.path.join(tgt.directory, tgt.filename)
+        if not os.path.isfile(full_path):
             continue
-        relative_bin_loc = os.path.relpath(bin_loc, cwd)
-        print(f'Lib location: {relative_bin_loc}')
-
-    for b in bins:
-        bin_loc = os.path.join(tests_dir, b)
-        if not os.path.isfile(bin_loc):
-            continue
-        relative_bin_loc = os.path.relpath(bin_loc, cwd)
-        print(f'Unit-test location: {relative_bin_loc}')
-
-    for b in bins:
-        bin_loc = os.path.join(bin_dir, b)
-        if not os.path.isfile(bin_loc):
-            continue
-        relative_bin_loc = os.path.relpath(bin_loc, cwd)
-        print(f'Binary location: {relative_bin_loc}')
+        path = os.path.relpath(full_path, cwd)
+        print(path)
 
 
 if __name__ == '__main__':
