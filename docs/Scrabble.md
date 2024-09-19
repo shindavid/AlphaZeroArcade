@@ -46,13 +46,13 @@ algorithm can work across all phases of the game, with no need for endgame speci
 function is difficult" are exactly the reasons that Alpha-beta pruning failed at go, and AlphaZero was the answer there. If
 this hope turns out be misplaced, we will later explore endgame specializations.
 
-## Nash Information Set MCTS (Nash-ISMCTS)
+## Q-Dispersion Tree Search (QDTS)
 
 We have devised a variant of MCTS that, when used in an AlphaZero loop, is guaranteed to yield
-approximate policy convergence towards Nash Equilibrium. We have named this variant _Nash-ISMCTS_. 
-See [here](Nash-ISMCTS.md) for a full description.
+approximate policy convergence towards Nash Equilibrium. We have named this variant _QDTS_. 
+See [here](Q-Dispersion-Tree-Search.md) for a full description.
 
-In Nash-MCTS, we require a hidden-state-network, $H$, that samples the hidden state of the game.
+In QDTS, we require a hidden-state-network, $H$, that samples the hidden state of the game.
 In Scrabble, you can consider the opponent's entire rack as the hidden state, or you can consider just the leave. We choose to
 use leaves rather than entire racks, as the training targets will be sharper without the diluting
 effect of the uniform random bag replenishment.
@@ -153,5 +153,4 @@ informed by GADDAG-calculated move masks.
 
 A downside of these leaf rollouts is that the randomness of the $H$-sampling and the bag-replenishing from $n$ to $d$
 can introduce noise to the leaf evaluation. This is partially mitigated by the variance-reduction that comes
-from our alternative $Q$ [formulation](Nash-ISMCTS.md#q-calculations), combined with our child value prediction
-[mechanism](Nash-ISMCTS.md#child-value-predictions).
+from our alternative $Q$ formulation, combined with our action-value prediction mechanism (TODO: describe these).
