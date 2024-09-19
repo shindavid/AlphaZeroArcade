@@ -22,6 +22,7 @@ namespace mcts {
 template <core::concepts::Game Game>
 class SearchThread {
  public:
+  using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;

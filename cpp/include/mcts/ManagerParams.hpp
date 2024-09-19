@@ -5,6 +5,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <util/CppUtil.hpp>
@@ -16,6 +17,7 @@ namespace mcts {
  *
  * By contrast, SearchParams pertains to each individual search() call.
  */
+template <core::concepts::Game Game>
 struct ManagerParams : public NNEvaluationServiceParams {
   ManagerParams(mcts::Mode);
 
@@ -35,7 +37,9 @@ struct ManagerParams : public NNEvaluationServiceParams {
   bool enable_pondering = false;  // pondering = think during opponent's turn
   int pondering_tree_size_limit = 4096;
 
-  std::string root_softmax_temperature_str;
+  float starting_root_softmax_temperature = 1.4;
+  float ending_root_softmax_temperature = 1.1;
+  float root_softmax_temperature_half_life = 0.5 * Game::Constants::kOpeningLength;
   float cPUCT = 1.1;
   float cFPU = 0.2;
   float dirichlet_mult = 0.25;

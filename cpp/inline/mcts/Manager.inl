@@ -2,7 +2,6 @@
 
 #include <boost/filesystem.hpp>
 
-#include <core/GameVars.hpp>
 #include <mcts/PUCTStats.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/Asserts.hpp>
@@ -20,8 +19,9 @@ inline Manager<Game>::Manager(const ManagerParams& params)
           SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
       shared_data_(num_search_threads() > 1) {
   shared_data_.manager_id = next_instance_id_++;
-  new (&shared_data_.root_softmax_temperature) math::ExponentialDecay(math::ExponentialDecay::parse(
-      params.root_softmax_temperature_str, core::GameVars<Game>::get_bindings()));
+  new (&shared_data_.root_softmax_temperature) math::ExponentialDecay(
+      params_.starting_root_softmax_temperature, params_.ending_root_softmax_temperature,
+      params_.root_softmax_temperature_half_life);
   namespace bf = boost::filesystem;
 
   if (mcts::kEnableProfiling) {

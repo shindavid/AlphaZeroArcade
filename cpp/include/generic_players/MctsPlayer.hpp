@@ -40,11 +40,14 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     int num_full_iters;
     float full_pct;
     float mean_raw_moves = 0.0;
-    std::string move_temperature_str;
+    float starting_move_temperature;
+    float ending_move_temperature = 0.2;
+    float move_temperature_half_life = 0.5 * Game::Constants::kOpeningLength;
     bool verbose = false;
   };
 
   using MctsManager = mcts::Manager<Game>;
+  using MctsManagerParams = mcts::ManagerParams<Game>;
   using MctsSearchParams = mcts::SearchParams;
   using SearchResults = Game::Types::SearchResults;
   using player_name_array_t = Game::Types::player_name_array_t;
@@ -57,7 +60,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);
-  MctsPlayer(const Params&, const mcts::ManagerParams& manager_params);
+  MctsPlayer(const Params&, const MctsManagerParams& manager_params);
   ~MctsPlayer();
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }

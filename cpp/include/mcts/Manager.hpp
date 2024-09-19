@@ -24,6 +24,7 @@ namespace mcts {
 template <core::concepts::Game Game>
 class Manager {
  public:
+  using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
   using SearchThread = mcts::SearchThread<Game>;

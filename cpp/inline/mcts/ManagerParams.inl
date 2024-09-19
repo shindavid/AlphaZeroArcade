@@ -8,21 +8,24 @@
 
 namespace mcts {
 
-inline ManagerParams::ManagerParams(mcts::Mode mode) {
+template <core::concepts::Game Game>
+inline ManagerParams<Game>::ManagerParams(mcts::Mode mode) {
   if (mode == mcts::kCompetitive) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;
     forced_playouts = false;
-    root_softmax_temperature_str = "1";
+    starting_root_softmax_temperature = 1;
+    ending_root_softmax_temperature = 1;
+    root_softmax_temperature_half_life = 1;
   } else if (mode == mcts::kTraining) {
-    root_softmax_temperature_str = "1.4->1.1:2*sqrt(b)";
     exploit_proven_winners = false;
   } else {
     throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
   }
 }
 
-inline auto ManagerParams::make_options_description() {
+template <core::concepts::Game Game>
+inline auto ManagerParams<Game>::make_options_description() {
   namespace po = boost::program_options;
   namespace po2 = boost_util::program_options;
 
@@ -39,10 +42,18 @@ inline auto ManagerParams::make_options_description() {
           .template add_option<"cpuct", 'c'>(po2::float_value("%.2f", &cPUCT), "cPUCT value")
           .template add_option<"dirichlet-mult", 'd'>(po2::float_value("%.2f", &dirichlet_mult),
                                                       "dirichlet mult")
-          .template add_option<"root-softmax-temp">(
-              po::value<std::string>(&root_softmax_temperature_str)
-                  ->default_value(root_softmax_temperature_str),
-              "root softmax temperature")
+          .template add_hidden_option<"starting-root-softmax-temp">(
+              po::value<float>(&starting_root_softmax_temperature)
+                  ->default_value(starting_root_softmax_temperature),
+              "starting root softmax temperature")
+          .template add_hidden_option<"ending-root-softmax-temp">(
+              po::value<float>(&ending_root_softmax_temperature)
+                  ->default_value(ending_root_softmax_temperature),
+              "ending root softmax temperature")
+          .template add_hidden_option<"root-softmax-temp-half-life">(
+              po::value<float>(&root_softmax_temperature_half_life)
+                  ->default_value(root_softmax_temperature_half_life),
+              "root softmax temperature half-life")
           .template add_option<"dirichlet-alpha-factor">(
               po2::float_value("%.2f", &dirichlet_alpha_factor), "dirichlet alpha factor")
           .template add_flag<"enable-pondering", "disable-pondering">(

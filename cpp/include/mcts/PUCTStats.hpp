@@ -11,6 +11,7 @@ namespace mcts {
 
 template <core::concepts::Game Game>
 struct PUCTStats {
+  using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
 

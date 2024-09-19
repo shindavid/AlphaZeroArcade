@@ -17,6 +17,7 @@ namespace generic {
 template <core::concepts::Game Game>
 class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
  public:
+  using MctsManagerParams = mcts::ManagerParams<Game>;
   using MctsManager = mcts::Manager<Game>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
 
@@ -42,7 +43,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
 
   static manager_map_t manager_cache_;
 
-  mcts::ManagerParams manager_params_;
+  MctsManagerParams manager_params_;
 };
 
 template <core::concepts::Game Game>

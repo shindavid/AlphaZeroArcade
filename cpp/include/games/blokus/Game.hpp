@@ -29,6 +29,7 @@ class Game {
     static constexpr int kNumActions = blokus::kNumActions;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
     static constexpr int kHistorySize = 0;
+    static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
   };
 
   /*

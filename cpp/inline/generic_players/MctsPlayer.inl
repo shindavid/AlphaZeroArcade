@@ -2,7 +2,6 @@
 
 #include <unistd.h>
 
-#include <core/GameVars.hpp>
 #include <util/Asserts.hpp>
 #include <util/BitSet.hpp>
 #include <util/BoostUtil.hpp>
@@ -24,12 +23,12 @@ MctsPlayer<Game>::Params::Params(mcts::Mode mode) {
     num_fast_iters = 0;
     num_full_iters = 1600;
     full_pct = 1.0;
-    move_temperature_str = "0.5->0.2:2*sqrt(b)";
+    starting_move_temperature = 0.5;
   } else if (mode == mcts::kTraining) {
     num_fast_iters = 100;
     num_full_iters = 600;
     full_pct = 0.25;
-    move_temperature_str = "0.8->0.2:2*sqrt(b)";
+    starting_move_temperature = 0.8;
   } else {
     throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
   }
@@ -42,8 +41,7 @@ void MctsPlayer<Game>::Params::dump() const {
   } else {
     util::KeyValueDumper::add("MctsPlayer num fast iters", "%d", num_fast_iters);
     util::KeyValueDumper::add("MctsPlayer num full iters", "%d", num_full_iters);
-    util::KeyValueDumper::add("MctsPlayer num fast iters", "%.8g", full_pct);
-    util::KeyValueDumper::add("MctsPlayer move temperature", "%s", move_temperature_str.c_str());
+    util::KeyValueDumper::add("MctsPlayer pct full iters", "%6.2%%", 100. * full_pct);
   }
 }
 
@@ -66,9 +64,15 @@ auto MctsPlayer<Game>::Params::make_options_description() {
       .template add_option<"mean-raw-moves", 'r'>(
           po2::float_value("%.2f", &mean_raw_moves, mean_raw_moves),
           "mean number of raw policy moves to make at the start of each game")
-      .template add_option<"move-temp", 't'>(
-          po::value<std::string>(&move_temperature_str)->default_value(move_temperature_str),
-          "temperature for move selection")
+      .template add_hidden_option<"starting-move-temp">(
+          po::value<float>(&starting_move_temperature)->default_value(starting_move_temperature),
+          "starting temperature for move selection")
+      .template add_hidden_option<"ending-move-temp">(
+          po::value<float>(&ending_move_temperature)->default_value(ending_move_temperature),
+          "ending temperature for move selection")
+      .template add_option<"move-temp-half-life", 't'>(
+          po::value<float>(&move_temperature_half_life)->default_value(move_temperature_half_life),
+          "half-life for move temperature")
       .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
                                            "mcts player verbose mode");
 }
@@ -85,7 +89,7 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_mana
 }
 
 template <core::concepts::Game Game>
-MctsPlayer<Game>::MctsPlayer(const Params& params, const mcts::ManagerParams& manager_params)
+MctsPlayer<Game>::MctsPlayer(const Params& params, const MctsManagerParams& manager_params)
     : MctsPlayer(params) {
   mcts_manager_ = new MctsManager(manager_params);
   shared_data_ = new SharedData();
@@ -112,8 +116,8 @@ MctsPlayer<Game>::MctsPlayer(const Params& params)
           {params.num_full_iters},         // kFull
           {1, false}                       // kRawPolicy
       },
-      move_temperature_(math::ExponentialDecay::parse(params.move_temperature_str,
-                                                      core::GameVars<Game>::get_bindings())) {
+      move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
+                        params.move_temperature_half_life) {
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }

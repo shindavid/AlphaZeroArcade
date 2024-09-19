@@ -39,6 +39,7 @@ class Game {
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
     static constexpr int kHistorySize = 0;
+    static constexpr float kOpeningLength = 0.1;  // don't tolerate silly blunders on move 2
   };
 
   struct BaseState {

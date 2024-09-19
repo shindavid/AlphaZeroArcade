@@ -34,6 +34,7 @@ class Node {
   static constexpr int kNumActions = Game::Constants::kNumActions;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
+  using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using BaseState = Game::BaseState;
   using FullState = Game::FullState;

@@ -36,6 +36,7 @@ class Game {
     static constexpr int kNumActions = othello::kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
     static constexpr int kHistorySize = 0;
+    static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
   };
 
   struct BaseState {
