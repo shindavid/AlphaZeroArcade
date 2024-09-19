@@ -2,11 +2,11 @@
 set -e
 REPODIR=$(dirname $(dirname $(realpath $0)))
 REPONAME=$(basename $REPODIR)
-IMAGENAME=alphazeroarcade
+IMAGENAME=a0a
 
 found=$(docker ps | grep "$IMAGENAME" | wc -l)
 if [ "$found" == 0 ]; then
-    docker run -d -ti --gpus all --mount type=bind,source=$REPODIR,target="/$REPONAME" -w "/$REPONAME" $IMAGENAME bash
+    docker run -d -ti --gpus all --net=host --mount type=bind,source=$REPODIR,target="/$REPONAME" -w "/$REPONAME" $IMAGENAME bash
 fi
 
 id=$(docker ps | grep "$IMAGENAME" | awk '{print $1}' | head -1)
