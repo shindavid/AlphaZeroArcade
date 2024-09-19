@@ -31,7 +31,6 @@ include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
-include_directories(${MY_TINYEXPR_DIR})
 include_directories(SYSTEM ${TORCH_INCLUDE_DIRS})
 
 # Clear the targets file at the start of the configuration

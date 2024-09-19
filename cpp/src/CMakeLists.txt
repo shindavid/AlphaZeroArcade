@@ -8,7 +8,6 @@ add_library(util_lib
         util/RepoUtil.cpp
         util/SocketUtil.cpp
         util/StaticVars.cpp
-        ${MY_TINYEXPR_DIR}/tinyexpr.c
         )
 
 set_target_properties(util_lib PROPERTIES POSITION_INDEPENDENT_CODE ON)

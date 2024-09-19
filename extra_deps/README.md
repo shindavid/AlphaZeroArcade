@@ -1,15 +1,15 @@
 This directory contains third-party repositories added via `git subtree`.
 
-The tinyexpr directory was added via this command:
+The EigenRand directory was added via this command:
 
 ```
-git subtree add --prefix=extra_deps/tinyexpr https://github.com/codeplea/tinyexpr.git master --squash
+git subtree add --prefix=extra_deps/EigenRand https://github.com/bab2min/EigenRand.git main --squash
 ```
 
 To update to the latest from the source repository, run:
 
 ```
-git subtree pull --prefix=extra_deps/tinyexpr https://github.com/codeplea/tinyexpr.git master --squash
+git subtree pull --prefix=extra_deps/EigenRand https://github.com/bab2min/EigenRand.git main --squash
 ```
 
 and then push the changes.
@@ -17,7 +17,6 @@ and then push the changes.
 Similarly, we have:
 
 ```
-EigenRand: https://github.com/bab2min/EigenRand.git (main)
 connect4: https://github.com/PascalPons/connect4.git (master)
 edax-reversi: https://github.com/abulmo/edax-reversi.git (master)
 ```

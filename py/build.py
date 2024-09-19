@@ -150,7 +150,6 @@ def main():
 
     torch_dir = get_torch_dir()
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
-    tinyexpr_dir = os.path.join(repo_root, 'extra_deps/tinyexpr')
 
     macro_defines = args.macro_defines if args.macro_defines else []
     macro_defines = [f'{d}=1' if d.find('=') == -1 else d for d in macro_defines]
@@ -172,7 +171,6 @@ def main():
         f'-B{target_dir}',
         f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
-        f'-DMY_TINYEXPR_DIR={tinyexpr_dir}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
     conda_prefix = get_conda_prefix()
