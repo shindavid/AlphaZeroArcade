@@ -138,8 +138,9 @@ class Game {
 
   struct InputTensorizor {
     // +1 to record the partial move if necessary.
+    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kHistorySize) + 1;
     using Tensor =
-        eigen_util::FTensor<Eigen::Sizes<kNumPlayers + 1, kBoardDimension, kBoardDimension>>;
+        eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 

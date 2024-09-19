@@ -83,7 +83,8 @@ struct Game {
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers, kNumRows, kNumColumns>>;
+    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kHistorySize);
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 

@@ -96,12 +96,21 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const Base
                                                                       const BaseState* cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);
   Tensor tensor;
-  for (int row = 0; row < kNumRows; ++row) {
-    for (int col = 0; col < kNumColumns; ++col) {
-      core::seat_index_t p = _get_player_at(*cur, row, col);
-      tensor(0, row, col) = (p == cp);
-      tensor(1, row, col) = (p == 1 - cp);
+  tensor.setZero();
+  int i = 0;
+  const BaseState* state = cur;
+  while (true) {
+    for (int row = 0; row < kNumRows; ++row) {
+      for (int col = 0; col < kNumColumns; ++col) {
+        core::seat_index_t p = _get_player_at(*state, row, col);
+        if (p < 0) continue;
+        int x = (Constants::kNumPlayers + cp - p) % Constants::kNumPlayers;
+        tensor(i + x, row, col) = 1;
+      }
     }
+    if (state == start) break;
+    state--;
+    i += kNumPlayers;
   }
   return tensor;
 }

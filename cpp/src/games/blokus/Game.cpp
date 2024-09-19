@@ -368,19 +368,26 @@ Game::FullState Game::IO::load(const std::string& str, int pass_count) {
 
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
                                                                const BaseState* cur) {
-  const BaseState& state = *cur;
-  color_t cp = Rules::get_current_player(state);
+  core::seat_index_t cp = Rules::get_current_player(*cur);
   Tensor tensor;
   tensor.setZero();
-  for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (kNumColors + c - cp) % kNumColors;
-    for (Location loc : state.core.occupied_locations[c].get_set_locations()) {
-      tensor(rc, loc.row, loc.col) = 1;
+  int i = 0;
+  const BaseState* state = cur;
+  while (true) {
+    for (color_t c = 0; c < kNumColors; ++c) {
+      color_t rc = (kNumColors + c - cp) % kNumColors;
+      for (Location loc : state->core.occupied_locations[c].get_set_locations()) {
+        tensor(i + rc, loc.row, loc.col) = 1;
+      }
     }
+    if (state == start) break;
+    state--;
+    i += kNumColors;
   }
-  if (state.core.partial_move.valid()) {
-    Location loc = state.core.partial_move;
-    tensor(kNumColors, loc.row, loc.col) = 1;
+
+  if (cur->core.partial_move.valid()) {
+    Location loc = cur->core.partial_move;
+    tensor(kDim0 - 1, loc.row, loc.col) = 1;
   }
   return tensor;
 }
