@@ -22,11 +22,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-array-bounds -O3 ${TORCH_CXX_
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
-# Suppress compiler warning about runtime search path:
-set(CMAKE_BUILD_RPATH "${CMAKE_BUILD_RPATH};${MY_TORCH_DIR}/lib")
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH};${MY_TORCH_DIR}/lib")
-set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-
 include_directories("cpp/include")
 include_directories("cpp")  # for inline/ subdirectory
 include_directories(${EIGEN3_INCLUDE_DIRS})
