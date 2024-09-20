@@ -27,6 +27,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
 template <core::concepts::Game Game>
 void Node<Game>::stats_t::init_q(const ValueArray& value) {
   RQ = value;
+  RQ_sq = value * value;
   VQ = value;
   for (int p = 0; p < kNumPlayers; ++p) {
     provably_winning[p] = value(p) == 1;
@@ -184,9 +185,8 @@ Node<Game>::Node(LookupTable* table, const FullState& state, const ActionOutcome
     : stable_data_(state, outcome), lookup_table_(table), mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
-void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
-                                               group::element_t inv_sym, PolicyTensor& counts,
-                                               ActionValueTensor& action_values) const {
+void Node<Game>::write_results(const ManagerParams& params, group::element_t inv_sym,
+                               SearchResults& results) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -196,8 +196,15 @@ void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
     std::cout << "get_counts()" << std::endl;
   }
 
+  auto& counts = results.counts;
+  auto& action_values = results.action_values;
+  auto& Q = results.Q;
+  auto& Q_sq = results.Q_sq;
+
   counts.setZero();
   action_values.setZero();
+  Q.setZero();
+  Q_sq.setZero();
 
   bool provably_winning = stats_.provably_winning[cp];
   bool provably_losing = stats_.provably_losing[cp];
@@ -238,6 +245,8 @@ void Node<Game>::load_counts_and_action_values(const ManagerParams& params,
 
     if (modified_count) {
       counts(action) = modified_count;
+      Q(action) = stats.RQ(cp);
+      Q_sq(action) = stats.RQ_sq(cp);
     }
     action_values(action) = action_value;
   }
@@ -258,7 +267,9 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   core::seat_index_t cp = stable_data().current_player;
 
   ValueArray RQ_sum;
+  ValueArray RQ_sq_sum;
   RQ_sum.setZero();
+  RQ_sq_sum.setZero();
   int RN = 0;
 
   /*
@@ -285,6 +296,7 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     const auto& child_stats = child->stats();
     RN += edge->RN;
     RQ_sum += child_stats.RQ * edge->RN;
+    RQ_sq_sum += child_stats.RQ_sq * edge->RN;
 
     cp_has_winning_move |= child_stats.provably_winning[cp];
     all_provably_winning &= child_stats.provably_winning;
@@ -302,6 +314,7 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
 
   if (stats_.RN) {
     RQ_sum += stable_data_.V;
+    RQ_sq_sum += stable_data_.V * stable_data_.V;
     RN++;
   }
 
@@ -319,6 +332,7 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   }
 
   stats_.RQ = RN ? (RQ_sum / RN) : RQ_sum;
+  stats_.RQ_sq = RN ? (RQ_sq_sum / RN) : RQ_sq_sum;
   if (stats_.VN) {
     ValueArray VQ_sum = RQ_sum + make_virtual_loss() * stats_.VN;
     stats_.VQ = VQ_sum / (RN + stats_.VN);
@@ -372,6 +386,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
     stable_data_.V = V;
     stable_data_.V_valid = true;
     stats_.RQ = V;
+    stats_.RQ_sq = V * V;
     stats_.VQ = V;
 
     for (int i = 0; i < n; ++i) {
@@ -391,6 +406,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
     stable_data_.V = V;
     stable_data_.V_valid = true;
     stats_.RQ = V;
+    stats_.RQ_sq = V * V;
     stats_.VQ = V;
 
     for (int i = 0; i < n; ++i) {
