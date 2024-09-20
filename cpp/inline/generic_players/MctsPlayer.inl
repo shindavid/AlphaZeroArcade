@@ -73,6 +73,9 @@ auto MctsPlayer<Game>::Params::make_options_description() {
       .template add_option<"move-temp-half-life", 't'>(
           po::value<float>(&move_temperature_half_life)->default_value(move_temperature_half_life),
           "half-life for move temperature")
+      .template add_option<"lcb-z-score">(
+          po::value<float>(&LCB_z_score)->default_value(LCB_z_score),
+          "z-score for LCB. If zero, disable LCB")
       .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
                                            "mcts player verbose mode");
 }
@@ -179,7 +182,9 @@ template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
+  ActionValueTensor Q_sum, Q_sq_sum;
   PolicyTensor policy;
+  const auto& counts = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   if (search_mode == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
@@ -191,10 +196,16 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       policy_array(a) = mcts_results->policy_prior(a);
     }
   } else {
-    policy = mcts_results->counts;
+    policy = counts;
   }
 
   if (search_mode != core::kRawPolicy) {
+    if (params_.LCB_z_score) {
+      Q_sum = mcts_results->Q * policy;
+      Q_sq_sum = mcts_results->Q_sq * policy;
+      Q_sum = mcts_results->action_symmetry_table.collapse(Q_sum);
+      Q_sq_sum = mcts_results->action_symmetry_table.collapse(Q_sq_sum);
+    }
     policy = mcts_results->action_symmetry_table.collapse(policy);
     float temp = move_temperature_.value();
     if (temp != 0) {
@@ -217,6 +228,95 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       }
     }
     policy = mcts_results->action_symmetry_table.symmetrize(policy);
+    if (params_.LCB_z_score) {
+      Q_sum = mcts_results->action_symmetry_table.symmetrize(Q_sum);
+      Q_sq_sum = mcts_results->action_symmetry_table.symmetrize(Q_sq_sum);
+
+      ActionValueTensor Q = Q_sum / counts;
+      ActionValueTensor Q_sq = Q_sq_sum / counts;
+      ActionValueTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
+      ActionValueTensor Q_sigma = Q_sigma_sq.sqrt();
+
+      ActionValueTensor LCB = Q - params_.LCB_z_score * Q_sigma;
+      auto LCB_array = eigen_util::reinterpret_as_array(LCB);
+
+      float policy_max = -1;
+      float min_LCB = 0;
+      bool min_LCB_set = false;
+
+      // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
+      // min_{i in S} {LCB_array[i])}
+      for (int a : bitset_util::on_indices(valid_actions)) {
+        float p = policy_array(a);
+        if (p <= 0) continue;
+
+        if (p > policy_max) {
+          policy_max = p;
+          min_LCB = LCB_array(a);
+          min_LCB_set = true;
+        } else if (p == policy_max) {
+          min_LCB = std::min(min_LCB, LCB_array(a));
+          min_LCB_set = true;
+        }
+      }
+
+      if (min_LCB_set) {
+        ActionValueTensor UCB = Q + params_.LCB_z_score * Q_sigma;
+        auto UCB_array = eigen_util::reinterpret_as_array(UCB);
+
+        // zero out policy_array wherever UCB < min_LCB
+        auto mask = (UCB_array >= min_LCB).template cast<float>();
+        auto policy_masked = policy_array * mask;
+
+        if (mcts::kEnableDebug) {
+          const char* header[] = {"action", "N", "P", "Q", "Q_sigma", "LCB", "UCB", "P*"};
+          constexpr int nColumns = sizeof(header) / sizeof(header[0]);
+
+          int visited_actions = 0;
+          for (int a : bitset_util::on_indices(valid_actions)) {
+            if (counts(a)) visited_actions++;
+          }
+          // visited_actions = valid_actions.count();
+
+          std::ostringstream ss;
+          using Array = Eigen::Array<float, Eigen::Dynamic, nColumns, 0,
+                                     Game::Constants::kMaxBranchingFactor>;
+          Array arr(visited_actions, nColumns);
+          int r = 0;
+          for (int a : bitset_util::on_indices(valid_actions)) {
+            if (counts(a) == 0) continue;
+
+            int c = 0;
+            arr(r, c++) = a;
+            arr(r, c++) = counts(a);
+            arr(r, c++) = policy(a);
+            arr(r, c++) = Q(a);
+            arr(r, c++) = Q_sigma(a);
+            arr(r, c++) = LCB(a);
+            arr(r, c++) = UCB(a);
+            arr(r, c++) = policy_masked(a);
+
+            r++;
+            util::release_assert(c == nColumns);
+          }
+
+          ss << arr;
+          std::string s = ss.str();
+          std::string first_line = s.substr(0, s.find('\n'));
+          int column_width = (first_line.size() - nColumns + 1) / nColumns;
+          std::string fmt = util::create_string("%%%ds ", column_width);
+
+          std::ostringstream ss2;
+          for (int i = 0; i < nColumns; i++) {
+            ss2 << util::create_string(fmt.c_str(), header[i]);
+          }
+          LOG_INFO << "visited_actions: " << visited_actions;
+          LOG_INFO << "Applying LCB:\n" << ss2.str() << "\n" << s;
+        }
+
+        policy_array = policy_masked;
+      }
+    }
   }
 
   if (!eigen_util::normalize(policy)) {

@@ -46,6 +46,7 @@ class Node {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionOutcome = Game::Types::ActionOutcome;
+  using SearchResults = Game::Types::SearchResults;
   using player_bitset_t = std::bitset<kNumPlayers>;
   using node_pool_index_t = util::pool_index_t;
   using edge_pool_index_t = util::pool_index_t;
@@ -88,10 +89,11 @@ class Node {
     void init_q_and_real_increment(const ValueArray& value);
     void init_q_and_increment_transfer(const ValueArray& value);
 
-    ValueArray RQ;  // excludes virtual loss
-    ValueArray VQ;  // includes virtual loss
-    int RN = 0;     // real count
-    int VN = 0;     // virtual count
+    ValueArray RQ;     // excludes virtual loss
+    ValueArray RQ_sq;  // excludes virtual loss
+    ValueArray VQ;     // includes virtual loss
+    int RN = 0;        // real count
+    int VN = 0;        // virtual count
 
     // TODO: generalize these fields to utility lower/upper bounds
     player_bitset_t provably_winning;
@@ -172,8 +174,8 @@ class Node {
 
   Node(LookupTable*, const FullState&, const ActionOutcome&);
 
-  void load_counts_and_action_values(const ManagerParams& params, group::element_t inv_sym,
-                                     PolicyTensor& counts, ActionValueTensor& action_values) const;
+  void write_results(const ManagerParams& params, group::element_t inv_sym,
+                     SearchResults& results) const;
   ValueArray make_virtual_loss() const;
   template <typename UpdateT>
   void update_stats(const UpdateT& update_instruction);

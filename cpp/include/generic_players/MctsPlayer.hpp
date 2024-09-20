@@ -43,6 +43,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
     float move_temperature_half_life = 0.5 * Game::Constants::kOpeningLength;
+    float LCB_z_score = 2.0;
     bool verbose = false;
   };
 
@@ -57,6 +58,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);

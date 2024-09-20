@@ -45,6 +45,8 @@ struct GameTypes {
     PolicyTensor counts;
     PolicyTensor policy_target;
     PolicyTensor policy_prior;
+    ActionValueTensor Q;
+    ActionValueTensor Q_sq;
     ActionValueTensor action_values;
     ValueArray win_rates;
     ValueArray value_prior;
