@@ -328,10 +328,8 @@ class ScoreHead(Head):
     """
     This maps to one of the subheads of ValueHead in the KataGo codebase.
 
-    The design of this mostly matches what is described in the KataGo paper. The scaling component
-    is something I am not sure about - whether it is only needed because KataGo handles multiple
-    board sizes, or if it something that is generally useful. I have included it for now, but it is
-    worth experimenting with removing it.
+    I attempt to match what is described in the KataGo paper, but it didn't seem to learn well.
+    So I modified it to a design I felt made more sense.
     """
     def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
         super(ScoreHead, self).__init__(name, ScoreTarget())
@@ -341,8 +339,6 @@ class ScoreHead(Head):
         assert len(shape) in (2, 3), f'Unexpected shape {shape}'
 
         self.shape = shape
-        last_dim = shape[0] * math.prod(shape[2:])
-        n_scores = shape[1]
 
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
@@ -350,18 +346,8 @@ class ScoreHead(Head):
         self.gpool = GlobalPoolingLayer()
 
         n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
-        self.scale_linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
-        self.scale_linear2 = nn.Linear(n_hidden, 1, bias=True)
-
-        self.linear_s2 = nn.Linear(n_gpool, n_hidden, bias=True)
-        self.linear_s2off = nn.Linear(1, n_hidden, bias=False)
-        self.linear_s3 = nn.Linear(n_hidden, last_dim, bias=True)
-
-        self.register_buffer('constant_row', torch.tensor(
-            data=[i / n_scores for i in range(n_scores)],
-            dtype=torch.float32,
-            requires_grad=False
-            ), persistent=False)
+        self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
+        self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
 
     def forward(self, x):
         N = x.shape[0]
@@ -372,15 +358,11 @@ class ScoreHead(Head):
         out = self.gpool(out)  # (N, n_gpool, 1, 1)
         out = out.squeeze(-1).squeeze(-1)  # (N, n_gpool)
 
-        component1 = self.linear_s2(out).view(N, 1, -1)  # (N, 1, n_hidden)
-        constant_row = self.constant_row.view(1, -1, 1)  # (1, n_scores, 1)
-        component2 = self.linear_s2off(constant_row)  # (1, n_scores, n_hidden)
+        out = self.linear1(out)  # (N, n_hidden)
+        out = self.act(out)  # (N, n_hidden)
+        out = self.linear2(out)  # (N, *)
 
-        out_s = component1 + component2  # (N, n_scores, n_hidden)
-        out_s = self.act(out_s)  # (N, n_scores, n_hidden)
-        out_s = self.linear_s3(out_s)  # (N, n_scores, last_dim)
-
-        return out_s.view(N, *self.shape)  # (N, *shape)
+        return out.view(N, *self.shape)  # (N, *shape)
 
 
 class OwnershipHead(Head):
@@ -398,7 +380,7 @@ class OwnershipHead(Head):
 
         self.act = F.relu
         self.conv1 = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-        self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv2d(c_hidden, n_categories, kernel_size=1, bias=True)
 
     def forward(self, x):
         out = x
