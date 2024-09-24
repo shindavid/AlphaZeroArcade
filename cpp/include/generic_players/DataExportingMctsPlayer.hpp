@@ -26,7 +26,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
 
   using GameLogWriter = core::GameLogWriter<Game>;
 
-  using FullState = Game::FullState;
+  using BaseState = Game::BaseState;
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
@@ -44,10 +44,10 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   DataExportingMctsPlayer(const TrainingDataWriterParams& writer_params, BaseArgs&&...);
 
   void start_game() override;
-  void receive_state_change(core::seat_index_t seat, const FullState& state,
+  void receive_state_change(core::seat_index_t seat, const BaseState& state,
                             core::action_t action) override;
-  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
-  void end_game(const FullState&, const ValueArray&) override;
+  core::ActionResponse get_action_response(const BaseState&, const ActionMask&) override;
+  void end_game(const BaseState&, const ValueArray&) override;
 
  protected:
   static void extract_policy_target(const SearchResults* results, PolicyTensor** target);

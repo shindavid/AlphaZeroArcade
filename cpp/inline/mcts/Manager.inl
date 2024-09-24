@@ -91,7 +91,7 @@ inline void Manager<Game>::clear() {
 
 template <core::concepts::Game Game>
 inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
-                                                const FullState& state,
+                                                const BaseState&,
                                                 core::action_t action) {
   group::element_t sym = shared_data_.root_info.canonical_sym;
 
@@ -120,7 +120,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
 
 template <core::concepts::Game Game>
 inline const typename Manager<Game>::SearchResults*
-Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
+Manager<Game>::search(const SearchParams& params) {
   using ActionOutcome = Game::Types::ActionOutcome;
 
   stop_search_threads();
@@ -128,15 +128,15 @@ Manager<Game>::search(const FullState& game_state, const SearchParams& params) {
   auto& root_info = shared_data_.root_info;
   bool add_noise = params.full_search && params_.dirichlet_mult > 0;
   if (root_info.node_index < 0 || add_noise) {
-    const FullState& canonical_state = root_info.state[root_info.canonical_sym];
+    const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
     ActionOutcome outcome;
     root_info.node_index = shared_data_.lookup_table.alloc_node();
     Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
-    new (root) Node(&shared_data_.lookup_table, canonical_state, outcome);
+    new (root) Node(&shared_data_.lookup_table, canonical_history, outcome);
   }
 
   if (mcts::kEnableDebug) {
-    Game::IO::print_state(std::cout, root_info.state[group::kIdentity]);
+    Game::IO::print_state(std::cout, root_info.history_array[group::kIdentity].current());
   }
 
   start_search_threads(params);

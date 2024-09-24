@@ -81,7 +81,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   PolicyTensor next_policy = get_policy(state_index + 1);
   ActionValueTensor action_values = get_action_values(state_index);
 
-  int num_states_to_cp = 1 + std::min(Game::Constants::kHistorySize, state_index);
+  int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
   int num_bytes_to_cp = num_states_to_cp * sizeof(BaseState);
 
   BaseState base_states[num_states_to_cp];
@@ -429,7 +429,7 @@ GameLogWriter<Game>::~GameLogWriter() {
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add(const FullState& state, action_t action,
+void GameLogWriter<Game>::add(const BaseState& state, action_t action,
                               const PolicyTensor* policy_target,
                               const ActionValueTensor* action_values, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
@@ -455,7 +455,7 @@ void GameLogWriter<Game>::add(const FullState& state, action_t action,
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add_terminal(const FullState& state, const ValueArray& outcome) {
+void GameLogWriter<Game>::add_terminal(const BaseState& state, const ValueArray& outcome) {
   if (terminal_added_) return;
   terminal_added_ = true;
   Entry* entry = new Entry();

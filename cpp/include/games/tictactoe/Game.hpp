@@ -13,6 +13,7 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <games/tictactoe/Constants.hpp>
 #include <util/EigenUtil.hpp>
@@ -38,7 +39,7 @@ class Game {
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
-    static constexpr int kHistorySize = 0;
+    static constexpr int kNumPreviousStatesToEncode = 0;
     static constexpr float kOpeningLength = 0.1;  // don't tolerate silly blunders on move 2
   };
 
@@ -51,7 +52,8 @@ class Game {
     mask_t cur_player_mask;  // spaces occupied by current player
   };
 
-  struct FullState : public BaseState {};  // trivial-inheritance to test mcts-second-pass-logic
+  using StateHistory = core::SimpleStateHistory<BaseState, Constants::kNumPreviousStatesToEncode>;
+
   using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
 
@@ -64,10 +66,10 @@ class Game {
   };
 
   struct Rules {
-    static void init_state(FullState& state, group::element_t sym = group::kIdentity);
-    static Types::ActionMask get_legal_moves(const FullState& state);
+    static void init_state(BaseState&, group::element_t sym = group::kIdentity);
+    static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::seat_index_t get_current_player(const BaseState&);
-    static Types::ActionOutcome apply(FullState& state, core::action_t action);
+    static Types::ActionOutcome apply(StateHistory&, core::action_t action);
   };
 
   struct IO {
@@ -80,14 +82,14 @@ class Game {
   };
 
   struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kHistorySize);
+    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 
-    static MCTSKey mcts_key(const FullState& state) { return state; }
-    static EvalKey eval_key(const BaseState* start, const BaseState* cur) { return *cur; }
-    static Tensor tensorize(const BaseState* start, const BaseState* cur);
+    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
+    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

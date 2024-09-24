@@ -53,7 +53,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using SearchResults = Game::Types::SearchResults;
   using player_name_array_t = Game::Types::player_name_array_t;
 
-  using FullState = Game::FullState;
+  using BaseState = Game::BaseState;
   using IO = Game::IO;
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
@@ -67,8 +67,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
-  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const BaseState&, core::action_t) override;
+  core::ActionResponse get_action_response(const BaseState&, const ActionMask&) override;
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
@@ -76,7 +76,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
  protected:
   MctsPlayer(const Params&);
 
-  const SearchResults* mcts_search(const FullState& state, core::SearchMode search_mode) const;
+  const SearchResults* mcts_search(core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
   core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
                                                   const ActionMask& valid_actions) const;

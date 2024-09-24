@@ -15,10 +15,9 @@ concept OperatesOn = requires(util::strict_type_match_t<T&> t, group::element_t 
 };
 
 /*
- * If FullState and BaseState are distinct types, one may optionally provide an addition static
- * function:
+ * One may optionally provide an addition static function:
  *
- * void apply(FullState&, group::element_t);
+ * void apply(StateHistory&, group::element_t);
  *
  * Specifying this allows for MCTS optimizations. Without specifying this, MCTS must resort to a
  * "double-pass" through the game-tree on each tree-traversal. We typically expect this overhead to

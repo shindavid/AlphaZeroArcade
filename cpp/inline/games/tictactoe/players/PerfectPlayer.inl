@@ -27,7 +27,7 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 }
 
 inline core::ActionResponse PerfectPlayer::get_action_response(
-    const FullState& state, const ActionMask& valid_actions) {
+    const BaseState& state, const ActionMask& valid_actions) {
   if (params_.strength == 0) {
     return bitset_util::choose_random_on_index(valid_actions);
   }

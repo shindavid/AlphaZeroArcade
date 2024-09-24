@@ -6,7 +6,7 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
+inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
                                                 const ActionOutcome& outcome) {
   if (outcome.terminal) {
     V = outcome.terminal_value;
@@ -17,9 +17,9 @@ inline Node<Game>::stable_data_t::stable_data_t(const FullState& state,
   } else {
     V.setZero();  // to be set lazily
     V_valid = false;
-    valid_action_mask = Game::Rules::get_legal_moves(state);
+    valid_action_mask = Game::Rules::get_legal_moves(history);
     num_valid_actions = valid_action_mask.count();
-    current_player = Game::Rules::get_current_player(state);
+    current_player = Game::Rules::get_current_player(history.current());
     terminal = false;
   }
 }
@@ -181,8 +181,10 @@ int Node<Game>::LookupTable::get_random_mutex_id() const {
 }
 
 template <core::concepts::Game Game>
-Node<Game>::Node(LookupTable* table, const FullState& state, const ActionOutcome& outcome)
-    : stable_data_(state, outcome), lookup_table_(table), mutex_id_(table->get_random_mutex_id()) {}
+Node<Game>::Node(LookupTable* table, const StateHistory& history, const ActionOutcome& outcome)
+    : stable_data_(history, outcome),
+      lookup_table_(table),
+      mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
 void Node<Game>::write_results(const ManagerParams& params, group::element_t inv_sym,
@@ -454,15 +456,6 @@ void Node<Game>::update_child_expand_count(int n) {
   }
 
   trivial_ = true;
-}
-
-template <core::concepts::Game Game>
-group::element_t Node<Game>::make_symmetry(const FullState& state, const ManagerParams& params) {
-  group::element_t sym = 0;
-  if (params.apply_random_symmetries) {
-    sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(state));
-  }
-  return sym;
 }
 
 }  // namespace mcts

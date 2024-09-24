@@ -140,7 +140,7 @@ inline void MctsPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const FullState& state,
+inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const BaseState& state,
                                                     core::action_t action) {
   move_count_++;
   move_temperature_.step();
@@ -159,17 +159,17 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 }
 
 template <core::concepts::Game Game>
-core::ActionResponse MctsPlayer<Game>::get_action_response(const FullState& state,
+core::ActionResponse MctsPlayer<Game>::get_action_response(const BaseState& state,
                                                            const ActionMask& valid_actions) {
   core::SearchMode search_mode = choose_search_mode();
-  const SearchResults* mcts_results = mcts_search(state, search_mode);
+  const SearchResults* mcts_results = mcts_search(search_mode);
   return get_action_response_helper(search_mode, mcts_results, valid_actions);
 }
 
 template <core::concepts::Game Game>
 inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search(
-    const FullState& state, core::SearchMode search_mode) const {
-  return mcts_manager_->search(state, search_params_[search_mode]);
+    core::SearchMode search_mode) const {
+  return mcts_manager_->search(search_params_[search_mode]);
 }
 
 template <core::concepts::Game Game>

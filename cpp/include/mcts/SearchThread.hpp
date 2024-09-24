@@ -32,11 +32,10 @@ class SearchThread {
   using LocalPolicyArray = Node::LocalPolicyArray;
   using edge_t = Node::edge_t;
   using node_pool_index_t = Node::node_pool_index_t;
-  using base_state_vec_t = SharedData::base_state_vec_t;
-  using base_state_vec_array_t = SharedData::base_state_vec_array_t;
+  using StateHistoryArray = SharedData::StateHistoryArray;
   using LookupTable = Node::LookupTable;
 
-  using FullState = Game::FullState;
+  using StateHistory = Game::StateHistory;
   using BaseState = Game::BaseState;
   using ActionOutcome = Game::Types::ActionOutcome;
   using ActionMask = Game::Types::ActionMask;
@@ -100,20 +99,11 @@ class SearchThread {
     Node* child;
   };
 
-  struct state_data_t {
-    void load(const FullState& s, const base_state_vec_t& h);
-    void add_state_to_history();
-    void canonical_validate();
-
-    FullState state;
-    base_state_vec_t state_history;
-  };
-
   using search_path_t = std::vector<visitation_t>;
 
   void wait_for_activation() const;
   Node* init_root_node();
-  void init_node(state_data_t*, node_pool_index_t, Node* node);
+  void init_node(StateHistory*, node_pool_index_t, Node* node);
   void expand_all_children(Node*, NNEvaluationRequest* request=nullptr);
   void transform_policy(node_pool_index_t, LocalPolicyArray&) const;
   void perform_visits();
@@ -126,7 +116,7 @@ class SearchThread {
   void pure_backprop(const ValueArray& value);
   void backprop_with_virtual_undo();
   void short_circuit_backprop();
-  bool expand(state_data_t*, Node*, edge_t*);  // returns true if a new node was expanded
+  bool expand(StateHistory*, Node*, edge_t*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
   void calc_canonical_state_data();
 
@@ -153,16 +143,16 @@ class SearchThread {
   std::thread* thread_ = nullptr;
 
   group::element_t canonical_sym_;
-  state_data_t raw_state_data_;
+  StateHistory raw_history_;
 
   /*
    * These variables would more naturally be declared as local variables in the contexts in which
    * they are used, but they are declared here to avoid repeated allocation/deallocation.
    */
   struct pseudo_local_vars_t {
-    state_data_t canonical_state_data;
+    StateHistory canonical_history;
     item_vec_t request_items;
-    base_state_vec_array_t base_state_vec_array;
+    StateHistoryArray state_history_array;
   };
 
   pseudo_local_vars_t pseudo_local_vars_;

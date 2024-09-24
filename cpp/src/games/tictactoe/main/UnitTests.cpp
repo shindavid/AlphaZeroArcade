@@ -14,17 +14,26 @@
 
 using Game = tictactoe::Game;
 using BaseState = Game::BaseState;
-using FullState = Game::FullState;
+using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
-BaseState make_init_state() {
-  FullState state;
+template<typename... Ts>
+BaseState make_state(Ts... moves) {
+  BaseState state;
   Rules::init_state(state);
-  Rules::apply(state, 7);
-  Rules::apply(state, 2);
-  return state;
+
+  StateHistory history;
+  history.update(state);
+  for (int move : {moves...}) {
+    Rules::apply(history, move);
+  }
+  return history.current();
+}
+
+BaseState make_init_state() {
+  return make_state(7, 2);
 }
 
 PolicyTensor make_policy(int move1, int move2) {
@@ -339,10 +348,7 @@ void test_action_transforms() {
 }
 
 void test_canonicalization() {
-  FullState state;
-  Rules::init_state(state);
-  Rules::apply(state, 2);
-  Rules::apply(state, 1);
+  BaseState state = make_state(2, 1);
 
   std::string expected_repr =
       "0 1 2  | |O|X|\n"

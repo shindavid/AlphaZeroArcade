@@ -2,12 +2,14 @@
 
 namespace tictactoe {
 
-Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+  BaseState state = history.current();
   core::seat_index_t current_player = get_current_player(state);
 
   mask_t piece_mask = mask_t(1) << action;
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
+  history.update(state);
 
   bool win = false;
 
@@ -33,7 +35,8 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   return Types::ActionOutcome();
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  const BaseState& state = history.current();
   Types::ActionMask mask;
   mask.set();
   uint64_t u = state.full_mask;

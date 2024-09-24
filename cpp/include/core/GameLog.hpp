@@ -156,7 +156,6 @@ class GameLogWriter {
  public:
   using Rules = Game::Rules;
   using BaseState = Game::BaseState;
-  using FullState = Game::FullState;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -180,9 +179,9 @@ class GameLogWriter {
   GameLogWriter(game_id_t id, int64_t start_timestamp);
   ~GameLogWriter();
 
-  void add(const FullState& state, action_t action, const PolicyTensor* policy_target,
+  void add(const BaseState& state, action_t action, const PolicyTensor* policy_target,
            const ActionValueTensor* action_values, bool use_for_training);
-  void add_terminal(const FullState& state, const ValueArray& outcome);
+  void add_terminal(const BaseState& state, const ValueArray& outcome);
   void serialize(std::ostream&) const;
   bool is_previous_entry_used_for_training() const;
   int sample_count() const { return sample_count_; }

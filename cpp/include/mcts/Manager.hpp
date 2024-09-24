@@ -36,7 +36,8 @@ class Manager {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
 
-  using FullState = Game::FullState;
+  using BaseState = Game::BaseState;
+  using StateHistory = Game::StateHistory;
   using SearchResults = Game::Types::SearchResults;
 
   Manager(const ManagerParams& params);
@@ -47,8 +48,8 @@ class Manager {
 
   void start();
   void clear();
-  void receive_state_change(core::seat_index_t, const FullState&, core::action_t);
-  const SearchResults* search(const FullState& state, const SearchParams& params);
+  void receive_state_change(core::seat_index_t, const BaseState&, core::action_t);
+  const SearchResults* search(const SearchParams& params);
 
   void start_search_threads(const SearchParams& search_params);
   void wait_for_search_threads();

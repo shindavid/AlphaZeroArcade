@@ -45,30 +45,6 @@ inline void SearchThread<Game>::set_profiling_dir(const boost::filesystem::path&
 }
 
 template <core::concepts::Game Game>
-inline void SearchThread<Game>::state_data_t::load(const FullState& s, const base_state_vec_t& h) {
-  state = s;
-  state_history = h;
-}
-
-template <core::concepts::Game Game>
-inline void SearchThread<Game>::state_data_t::add_state_to_history() {
-  util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
-}
-
-template <core::concepts::Game Game>
-inline void SearchThread<Game>::state_data_t::canonical_validate() {
-  constexpr bool check = IS_MACRO_ENABLED(DEBUG_BUILD);
-
-  if (!check) return;
-  group::element_t e = Game::Symmetries::get_canonical_symmetry(state);
-  if (e == group::kIdentity) return;
-
-  std::cout << "canonical_validate() failure (e=" << e << ")" << std::endl;
-  Game::IO::print_state(std::cout, state);
-  throw std::runtime_error("canonical_validate() failure");
-}
-
-template <core::concepts::Game Game>
 inline void SearchThread<Game>::wait_for_activation() const {
   std::unique_lock lock(shared_data_->search_mutex);
   shared_data_->cv_search_on.wait(lock, [this] {
@@ -92,40 +68,36 @@ Node<Game>* SearchThread<Game>::init_root_node() {
     return root;
   }
 
-  const FullState& state = shared_data_->root_info.state[canonical_sym_];
-  const base_state_vec_t& state_history = shared_data_->root_info.state_history[canonical_sym_];
+  StateHistory& history = shared_data_->root_info.history_array[canonical_sym_];
 
-  pseudo_local_vars_.canonical_state_data.load(state, state_history);
-  init_node(&pseudo_local_vars_.canonical_state_data, root_index, root);
+  pseudo_local_vars_.canonical_history = history;
+  init_node(&history, root_index, root);
 
   root->stats().RN++;
   return root;
 }
 
 template <core::concepts::Game Game>
-inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_index_t index,
+inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index_t index,
                                           Node* node) {
-  FullState* state = &state_data->state;
-  base_state_vec_t* state_history = &state_data->state_history;
-  state_data->canonical_validate();
-
   if (!node->is_terminal()) {
     bool is_root = (node == shared_data_->get_root_node());
     bool eval_all_children = is_root && shared_data_->search_params.full_search;
 
     if (nn_eval_service_) {
+      const BaseState& state = history->current();
       NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
       if (!node->stable_data().V_valid) {
         group::element_t eval_sym = 0;
         if (manager_params_->apply_random_symmetries) {
-          auto mask = Game::Symmetries::get_mask(*state);
+          auto mask = Game::Symmetries::get_mask(state);
           eval_sym = bitset_util::choose_random_on_index(mask);
         }
-        pseudo_local_vars_.request_items.emplace_back(node, *state, state_history, eval_sym, false);
+        pseudo_local_vars_.request_items.emplace_back(node, *history, eval_sym);
       }
       if (eval_all_children) {
-        pseudo_local_vars_.base_state_vec_array = shared_data_->root_info.state_history;  // copy
+        pseudo_local_vars_.state_history_array = shared_data_->root_info.history_array;  // copy
         expand_all_children(node, &request);
       }
 
@@ -156,7 +128,7 @@ inline void SearchThread<Game>::init_node(state_data_t* state_data, node_pool_in
     }
   }
 
-  auto mcts_key = Game::InputTensorizor::mcts_key(*state);
+  auto mcts_key = Game::InputTensorizor::mcts_key(*history);
   shared_data_->lookup_table.insert_node(mcts_key, index);
 }
 
@@ -179,22 +151,24 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     Game::Symmetries::apply(raw_edge_action, inv_canonical_sym);
 
     // apply raw-orientation action to raw-orientation child-state
-    FullState raw_child_state = raw_state_data_.state;  // copy
-    ActionOutcome outcome = Game::Rules::apply(raw_child_state, raw_edge_action);
+    StateHistory raw_child_history = raw_history_;  // copy
+    ActionOutcome outcome = Game::Rules::apply(raw_child_history, raw_edge_action);
 
     // determine canonical orientation of new leaf-state
-    auto canonical_child_sym = Game::Symmetries::get_canonical_symmetry(raw_child_state);
+    auto canonical_child_sym =
+        Game::Symmetries::get_canonical_symmetry(raw_child_history.current());
     edge->sym = Group::compose(canonical_child_sym, inv_canonical_sym);
 
-    FullState canonical_child_state = shared_data_->root_info.state[canonical_child_sym];  // copy
+    StateHistory canonical_child_history =
+        shared_data_->root_info.history_array[canonical_child_sym];  // copy
 
     core::action_t reoriented_action = raw_edge_action;
     Game::Symmetries::apply(reoriented_action, canonical_child_sym);
-    Game::Rules::apply(canonical_child_state, reoriented_action);
+    Game::Rules::apply(canonical_child_history, reoriented_action);
 
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
-    new (child) Node(&lookup_table, canonical_child_state, outcome);
+    new (child) Node(&lookup_table, canonical_child_history, outcome);
     child->initialize_edges();
     edge->state = Node::kExpanded;
     expand_count++;
@@ -204,13 +178,13 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
 
     group::element_t child_eval_sym = 0;
     if (manager_params_->apply_random_symmetries) {
-      auto mask = Game::Symmetries::get_mask(canonical_child_state);
+      auto mask = Game::Symmetries::get_mask(canonical_child_history.current());
       child_eval_sym = bitset_util::choose_random_on_index(mask);
     }
 
-    auto* parent_history = &pseudo_local_vars_.base_state_vec_array[canonical_child_sym];
-    pseudo_local_vars_.request_items.emplace_back(child, canonical_child_state, parent_history,
-                                                  child_eval_sym, true);
+    auto& parent_history = pseudo_local_vars_.state_history_array[canonical_child_sym];
+    pseudo_local_vars_.request_items.emplace_back(
+        child, parent_history, canonical_child_history.current(), child_eval_sym);
   }
 
   node->update_child_expand_count(expand_count);
@@ -234,14 +208,14 @@ inline void SearchThread<Game>::perform_visits() {
   const auto& root_info = shared_data_->root_info;
   canonical_sym_ = root_info.canonical_sym;
   constexpr group::element_t e = group::kIdentity;
-  raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
+  raw_history_ = root_info.history_array[e];
 
   Node* root = init_root_node();
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     visit(root, nullptr);
     canonical_sym_ = root_info.canonical_sym;
-    raw_state_data_.load(root_info.state[e], root_info.state_history[e]);
+    raw_history_ = root_info.history_array[e];
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
   }
@@ -303,23 +277,22 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
       Game::Symmetries::apply(edge_action, inv_canonical_sym);
 
       // apply raw-orientation action to raw-orientation leaf-state
-      outcome_ = Game::Rules::apply(raw_state_data_.state, edge_action);
-      raw_state_data_.add_state_to_history();
+      outcome_ = Game::Rules::apply(raw_history_, edge_action);
 
       // determine canonical orientation of new leaf-state
-      group::element_t new_sym = Game::Symmetries::get_canonical_symmetry(raw_state_data_.state);
+      group::element_t new_sym = Game::Symmetries::get_canonical_symmetry(raw_history_.current());
       edge->sym = Group::compose(new_sym, inv_canonical_sym);
 
       canonical_sym_ = new_sym;
       applied_action = true;
 
-      state_data_t* state_data = &raw_state_data_;
+      StateHistory* state_history = &raw_history_;
       if (canonical_sym_ != group::kIdentity) {
         calc_canonical_state_data();
-        state_data = &pseudo_local_vars_.canonical_state_data;
+        state_history = &pseudo_local_vars_.canonical_history;
       }
 
-      if (expand(state_data, node, edge)) return;
+      if (expand(state_history, node, edge)) return;
     } else if (edge->state == Node::kMidExpansion) {
       node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
     }
@@ -341,8 +314,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
     core::action_t edge_action = edge->action;
     Game::Symmetries::apply(edge_action, inv_canonical_sym);
 
-    outcome_ = Game::Rules::apply(raw_state_data_.state, edge_action);
-    raw_state_data_.add_state_to_history();
+    outcome_ = Game::Rules::apply(raw_history_, edge_action);
     canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
   }
   visit(child, edge);
@@ -436,28 +408,25 @@ void SearchThread<Game>::short_circuit_backprop() {
 }
 
 template <core::concepts::Game Game>
-bool SearchThread<Game>::expand(state_data_t* state_data, Node* parent, edge_t* edge) {
+bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edge) {
   using LookupTable = Node::LookupTable;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
 
   profiler_.record(SearchThreadRegion::kExpand);
 
-  state_data->canonical_validate();
-  const FullState& state = state_data->state;
-
   LookupTable& lookup_table = shared_data_->lookup_table;
-  MCTSKey mcts_key = Game::InputTensorizor::mcts_key(state);
+  MCTSKey mcts_key = Game::InputTensorizor::mcts_key(*history);
   node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
 
   bool is_new_node = child_index < 0;
   if (is_new_node) {
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
-    new (child) Node(&lookup_table, state, outcome_);
+    new (child) Node(&lookup_table, *history, outcome_);
     search_path_.back().child = child;
     child->initialize_edges();
     virtual_backprop();
-    init_node(state_data, edge->child_index, child);
+    init_node(history, edge->child_index, child);
     backprop_with_virtual_undo();
   } else {
     edge->child_index = child_index;
@@ -488,14 +457,14 @@ std::string SearchThread<Game>::search_path_str() const {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::calc_canonical_state_data() {
-  pseudo_local_vars_.canonical_state_data = raw_state_data_;
-  for (BaseState& base : pseudo_local_vars_.canonical_state_data.state_history) {
+  pseudo_local_vars_.canonical_history = raw_history_;
+  for (BaseState& base : pseudo_local_vars_.canonical_history) {
     Game::Symmetries::apply(base, canonical_sym_);
   }
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
     using Group = Game::SymmetryGroup;
-    pseudo_local_vars_.canonical_state_data.state = shared_data_->root_info.state[canonical_sym_];
+    pseudo_local_vars_.canonical_history = shared_data_->root_info.history_array[canonical_sym_];
     group::element_t cur_canonical_sym = shared_data_->root_info.canonical_sym;
     group::element_t leaf_canonical_sym = canonical_sym_;
     for (const visitation_t& visitation : search_path_) {
@@ -503,7 +472,7 @@ void SearchThread<Game>::calc_canonical_state_data() {
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
       Game::Symmetries::apply(action, sym);
-      Game::Rules::apply(pseudo_local_vars_.canonical_state_data.state, action);
+      Game::Rules::apply(pseudo_local_vars_.canonical_history, action);
       cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
     }
 
@@ -511,7 +480,7 @@ void SearchThread<Game>::calc_canonical_state_data() {
                          "cur_canonical_sym=%d leaf_canonical_sym=%d", cur_canonical_sym,
                          leaf_canonical_sym);
   } else {
-    Game::Symmetries::apply(pseudo_local_vars_.canonical_state_data.state, canonical_sym_);
+    Game::Symmetries::apply(pseudo_local_vars_.canonical_history, canonical_sym_);
   }
 }
 
