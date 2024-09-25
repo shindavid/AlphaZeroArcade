@@ -55,7 +55,7 @@ concept GameStateHistory = requires(const State& const_state, const StateHistory
    * In general, classes implenting the GameStateHistory concept may require an extra slot of
    * storage to support this operation efficiently.
    *
-   * This is used in a very specialized context with MCTS.
+   * This is used in a very specialized context within MCTS.
    */
   { history.undo() };
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <util/Exception.hpp>
-
 #include <boost/circular_buffer.hpp>
 
 namespace core {
@@ -27,57 +25,60 @@ class SimpleStateHistory {
 
   void clear() { buf_.clear(); }
 
-  template<typename Rules> void initialize(Rules) {
-    clear();
-    State state;
-    Rules::init_state(state);
-    buf_.push_back(state);
-  }
+  /*
+   * Clears the history, and then adds the initial state according to the Rules.
+   *
+   * Rules is passed as an argument here to make the call-site more readable. We could have passed
+   * Rules as a template parameter, but then we would need to use the "template" keyword at the
+   * call-site, which is distasteful.
+   */
+  template <typename Rules> void initialize(Rules);
 
-  State& extend() {
-    buf_.push_back(buf_.back());
-    return buf_.back();
-  }
+  /*
+   * Push back a copy of the most recent state, and return a reference to it.
+   */
+  State& extend();
 
-  void update(const State& state) {
-    buf_.push_back(state);
-  }
+  /*
+   * Push back the given state.
+   */
+  void update(const State& state);
 
-  void undo() { buf_.pop_back(); }
-  const State& current() const { return buf_.back(); }
-  auto begin() const {
-    auto it = buf_.begin();
-    if (buf_.size() == kMaxSize) {
-      ++it;  // skip the oldest state, it's only there to support undo()
-    }
-    return it;
-  }
+  /*
+   * Undo the most recent update() call. Assumes that the history is not empty, and that any two
+   * undo() calls will have an update() call in between them.
+   *
+   * This is used in a very specialized context within MCTS.
+   */
+  void undo();
+
+  /*
+   * Return a reference to the most recent state in the history. Assumes that the history is not
+   * empty.
+   */
+  const State& current() const;
+
+  auto begin() const;
   auto end() const { return buf_.end(); }
-  auto begin() {
-    auto it = buf_.begin();
-    if (buf_.size() == kMaxSize) {
-      ++it;  // skip the oldest state, it's only there to support undo()
-    }
-    return it;
-  }
+  auto begin();
   auto end() { return buf_.end(); }
 
  private:
   /*
    * We need kNumPastStatesNeeded + 1 for the past states + the current state.
    *
-   * Then, we need another +1 to support the temp_push() method.
+   * Then, we need another +1 to support the undo() method.
    */
   static constexpr size_t kMaxSize = kNumPastStatesNeeded + 2;
 
-  /*
-   * TODO: we use an array for convenience. Consider using a circular buffer instead to avoid
-   * copying within append(). If switching to circular buffer, we just need to be careful about
-   * iterator mechanics.
-   */
+  // NOTE(dshin): I dislike that boost::circular_buffer dynamically allocates its storage. In our
+  // context, we know the capacity at compile-time. We could roll out our own, backed by std::array,
+  // but I'm not sure if it's worth the effort.
   using buffer_t = boost::circular_buffer<State>;
 
   buffer_t buf_;
 };
 
 }  // namespace core
+
+#include <inline/core/SimpleStateHistory.inl>
