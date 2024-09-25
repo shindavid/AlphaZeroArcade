@@ -13,13 +13,13 @@
  */
 
 using Game = c4::Game;
-using BaseState = Game::BaseState;
+using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
-BaseState make_init_state() {
+State make_init_state() {
   StateHistory history;
   history.initialize(Rules{});
 
@@ -45,7 +45,7 @@ const std::string init_state_repr =
     "| | | |R| | | |\n"
     "| | | |R|Y| | |\n";
 
-std::string get_repr(const BaseState& state) {
+std::string get_repr(const State& state) {
   std::ostringstream ss;
   IO::print_state(ss, state);
 
@@ -105,7 +105,7 @@ bool validate_policy(const char* func, int line, const PolicyTensor& actual_poli
 }
 
 void test_identity() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D1::kIdentity;
   group::element_t inv_sym = groups::D1::inverse(sym);
@@ -131,7 +131,7 @@ void test_identity() {
 }
 
 void test_flip() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D1::kFlip;
   group::element_t inv_sym = groups::D1::inverse(sym);

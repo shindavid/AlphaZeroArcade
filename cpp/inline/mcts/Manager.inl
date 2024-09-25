@@ -91,7 +91,7 @@ inline void Manager<Game>::clear() {
 
 template <core::concepts::Game Game>
 inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
-                                                const BaseState&,
+                                                const State&,
                                                 core::action_t action) {
   group::element_t sym = shared_data_.root_info.canonical_sym;
 

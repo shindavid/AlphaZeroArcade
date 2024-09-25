@@ -13,14 +13,14 @@
  */
 
 using Game = tictactoe::Game;
-using BaseState = Game::BaseState;
+using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 template<typename... Ts>
-BaseState make_state(Ts... moves) {
+State make_state(Ts... moves) {
   StateHistory history;
   history.initialize(Rules{});
 
@@ -30,7 +30,7 @@ BaseState make_state(Ts... moves) {
   return history.current();
 }
 
-BaseState make_init_state() {
+State make_init_state() {
   return make_state(7, 2);
 }
 
@@ -47,7 +47,7 @@ const std::string init_state_repr =
     "3 4 5  | | | |\n"
     "6 7 8  | |X| |\n";
 
-std::string get_repr(const BaseState& state) {
+std::string get_repr(const State& state) {
   std::ostringstream ss;
   IO::print_state(ss, state);
 
@@ -107,7 +107,7 @@ bool validate_policy(const char* func, int line, const PolicyTensor& actual_poli
 }
 
 void test_identity() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kIdentity;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -133,7 +133,7 @@ void test_identity() {
 }
 
 void test_rot90_clockwise() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kRot90;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -162,7 +162,7 @@ void test_rot90_clockwise() {
 }
 
 void test_rot180() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kRot180;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -191,7 +191,7 @@ void test_rot180() {
 }
 
 void test_rot270_clockwise() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kRot270;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -220,7 +220,7 @@ void test_rot270_clockwise() {
 }
 
 void test_flip_vertical() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kFlipVertical;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -249,7 +249,7 @@ void test_flip_vertical() {
 }
 
 void test_mirror_horizontal() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kMirrorHorizontal;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -278,7 +278,7 @@ void test_mirror_horizontal() {
 }
 
 void test_flip_main_diag() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kFlipMainDiag;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -307,7 +307,7 @@ void test_flip_main_diag() {
 }
 
 void test_flip_anti_diag() {
-  BaseState state = make_init_state();
+  State state = make_init_state();
 
   group::element_t sym = groups::D4::kFlipAntiDiag;
   group::element_t inv_sym = groups::D4::inverse(sym);
@@ -346,7 +346,7 @@ void test_action_transforms() {
 }
 
 void test_canonicalization() {
-  BaseState state = make_state(2, 1);
+  State state = make_state(2, 1);
 
   std::string expected_repr =
       "0 1 2  | |O|X|\n"

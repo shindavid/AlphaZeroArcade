@@ -21,9 +21,9 @@ concept GameConstants = requires {
   // merely a mild performance hit, while setting it too low results in a crash.
   { util::decay_copy(GC::kMaxBranchingFactor) } -> std::same_as<int>;
 
-  // kNumPreviousStatesToEncode is the number of previous BaseState's that are needed for the neural
-  // network to evaluate the current BaseState. If the neural network does not need any previous
-  // BaseState's, kNumPreviousStatesToEncode should be 0.
+  // kNumPreviousStatesToEncode is the number of previous State's that are needed for the neural
+  // network to evaluate the current State. If the neural network does not need any previous
+  // State's, kNumPreviousStatesToEncode should be 0.
   { util::decay_copy(GC::kNumPreviousStatesToEncode) } -> std::same_as<int>;
 
   // kOpeningLength is a subjectively chosen value that indicates the number of moves that are

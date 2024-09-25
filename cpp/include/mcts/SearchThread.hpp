@@ -36,7 +36,7 @@ class SearchThread {
   using LookupTable = Node::LookupTable;
 
   using StateHistory = Game::StateHistory;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using ActionOutcome = Game::Types::ActionOutcome;
   using ActionMask = Game::Types::ActionMask;
   using NNEvaluation_sptr = NNEvaluation::sptr;

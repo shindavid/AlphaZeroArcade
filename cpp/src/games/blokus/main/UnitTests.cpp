@@ -8,7 +8,7 @@ int global_fail_count = 0;
 
 using namespace blokus;
 
-using BaseState = Game::BaseState;
+using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
@@ -24,7 +24,7 @@ std::string get_repr(const B& board) {
   return ss.str();
 }
 
-std::string get_repr(const BaseState& state) {
+std::string get_repr(const State& state) {
   std::ostringstream ss;
   Game::IO::print_state(ss, state, kPass+1);
   std::string s = ss.str();
@@ -729,7 +729,7 @@ void test_load() {
       " 1 BB.G.......GGG.GGGGG  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  BaseState state = Game::IO::load(repr);
+  State state = Game::IO::load(repr);
   std::string repr2 = get_repr(state);
 
   if (repr != repr2) {

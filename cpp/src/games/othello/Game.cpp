@@ -26,7 +26,7 @@ std::string Game::IO::action_to_str(core::action_t action) {
 
 // copied from edax-reversi repo - board_next()
 Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
-  BaseState& state = history.extend();
+  State& state = history.extend();
 
   if (action == kPass) {
     std::swap(state.cur_player_mask, state.opponent_mask);
@@ -52,7 +52,7 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
   return Types::ActionOutcome();
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const BaseState& state) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   uint64_t mask = get_moves(state.cur_player_mask, state.opponent_mask);
   Types::ActionMask valid_actions;
   uint64_t u = mask;
@@ -65,7 +65,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const BaseState& state) {
   return valid_actions;
 }
 
-void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   Types::ActionMask valid_actions = Rules::get_legal_moves(state);
   bool display_last_action = last_action >= 0;
@@ -115,7 +115,7 @@ void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::actio
   ss << buffer << std::endl;
 }
 
-int Game::IO::print_row(char* buf, int n, const BaseState& state,
+int Game::IO::print_row(char* buf, int n, const State& state,
                         const Types::ActionMask& valid_actions, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
@@ -147,7 +147,7 @@ int Game::IO::print_row(char* buf, int n, const BaseState& state,
   return cx;
 }
 
-Game::Types::ValueArray Game::Rules::compute_outcome(const BaseState& state) {
+Game::Types::ValueArray Game::Rules::compute_outcome(const State& state) {
   Types::ValueArray outcome;
   outcome.setZero();
 

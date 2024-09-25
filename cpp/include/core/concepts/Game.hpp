@@ -31,10 +31,10 @@ namespace concepts {
  *
  * - G::Constants must be a struct satisfying core::concepts::GameConstants.
  *
- * - G::BaseState must be a trivially-copyable POD struct representing the game state. The neural
- *   network input is constructed from an array of recent BaseState's.
+ * - G::State must be a trivially-copyable POD struct representing the game state. The neural
+ *   network input is constructed from an array of recent State's.
  *
- * - G::StateHistory must be a class that stores a history of recent BaseState's. This is used for
+ * - G::StateHistory must be a class that stores a history of recent State's. This is used for
  *   rules-calculations.
  *
  *   For simple games, one can use core::SimpleStateHistory, which assumes that the game rules only
@@ -50,7 +50,7 @@ namespace concepts {
  * - G::IO must be a struct containing static methods for text input/output.
  *
  * - G::InputTensorizor must be a struct containing a static method for converting an array of
- *   G::BaseState's to a tensor, to be used as input to the neural network. It must also contain
+ *   G::State's to a tensor, to be used as input to the neural network. It must also contain
  *   static methods to convert a G::StateHistory to a hashable map-key, to be used for neural network
  *   evaluation caching, and for MCGS node reuse.
  *
@@ -63,19 +63,19 @@ concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
       typename G::Types,
-      core::GameTypes<typename G::Constants, typename G::BaseState, typename G::SymmetryGroup>>;
+      core::GameTypes<typename G::Constants, typename G::State, typename G::SymmetryGroup>>;
 
-  requires std::is_trivial_v<typename G::BaseState>;
-  // requires std::totally_ordered<typename G::BaseState>;
-  // requires core::concepts::GameStateHistory<typename G::StateHistory, typename G::BaseState>;
+  requires std::is_trivial_v<typename G::State>;
+  // requires std::totally_ordered<typename G::State>;
+  // requires core::concepts::GameStateHistory<typename G::StateHistory, typename G::State>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
-                                          typename G::BaseState>;
-  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::BaseState,
+                                          typename G::State>;
+  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State,
                                      typename G::StateHistory>;
-  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::BaseState>;
-  requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::BaseState,
+  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::State>;
+  requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::State,
                                                typename G::StateHistory>;
   requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List,
                                               typename G::Types::GameLogView>;

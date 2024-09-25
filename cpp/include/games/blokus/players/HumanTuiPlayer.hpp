@@ -28,7 +28,7 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   };
   #pragma pack(pop)
 
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using ActionMask = Game::Types::ActionMask;
   using flat_location_t = int;
@@ -36,13 +36,13 @@ class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
   using po_map_t = std::map<piece_orientation_index_t, inner_map_t>;
   using p_map_t = std::map<piece_index_t, po_map_t>;
 
-  core::action_t prompt_for_action(const BaseState&, const ActionMask&) override;
-  void prompt_for_piece(const BaseState&, const p_map_t&, Piece&);
-  bool prompt_for_orientation(const BaseState&, const p_map_t&, Piece&, PieceOrientation&);
-  bool prompt_for_root_location(const BaseState&, const p_map_t&, Piece&, PieceOrientation&,
+  core::action_t prompt_for_action(const State&, const ActionMask&) override;
+  void prompt_for_piece(const State&, const p_map_t&, Piece&);
+  bool prompt_for_orientation(const State&, const p_map_t&, Piece&, PieceOrientation&);
+  bool prompt_for_root_location(const State&, const p_map_t&, Piece&, PieceOrientation&,
                                 Location& root_loc);
   core::action_t prompt_for_pass();
-  void load_actions(p_map_t&, const BaseState&, const ActionMask&) const;
+  void load_actions(p_map_t&, const State&, const ActionMask&) const;
 
   piece_orientation_corner_index_t pending_poc_;
   bool passed_;

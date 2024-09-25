@@ -85,7 +85,7 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
     bool eval_all_children = is_root && shared_data_->search_params.full_search;
 
     if (nn_eval_service_) {
-      const BaseState& state = history->current();
+      const State& state = history->current();
       NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
       if (!node->stable_data().V_valid) {
@@ -458,7 +458,7 @@ std::string SearchThread<Game>::search_path_str() const {
 template <core::concepts::Game Game>
 void SearchThread<Game>::calc_canonical_state_data() {
   pseudo_local_vars_.canonical_history = raw_history_;
-  for (BaseState& base : pseudo_local_vars_.canonical_history) {
+  for (State& base : pseudo_local_vars_.canonical_history) {
     Game::Symmetries::apply(base, canonical_sym_);
   }
 

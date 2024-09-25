@@ -3,7 +3,7 @@
 namespace tictactoe {
 
 Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
-  BaseState& state = history.extend();
+  State& state = history.extend();
   core::seat_index_t current_player = get_current_player(state);
 
   mask_t piece_mask = mask_t(1) << action;
@@ -35,7 +35,7 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
 }
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const BaseState& state = history.current();
+  const State& state = history.current();
   Types::ActionMask mask;
   mask.set();
   uint64_t u = state.full_mask;
@@ -47,7 +47,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history
   return mask;
 }
 
-void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   auto cp = Rules::get_current_player(state);
   mask_t opp_player_mask = state.opponent_mask();

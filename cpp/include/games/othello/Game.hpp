@@ -40,8 +40,8 @@ class Game {
     static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
   };
 
-  struct BaseState {
-    auto operator<=>(const BaseState& other) const = default;
+  struct State {
+    auto operator<=>(const State& other) const = default;
     size_t hash() const;
 
     mask_t opponent_mask;    // spaces occupied by either player
@@ -50,49 +50,49 @@ class Game {
     int8_t pass_count;
   };
 
-  using StateHistory = core::SimpleStateHistory<BaseState, Constants::kNumPreviousStatesToEncode>;
+  using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, State, SymmetryGroup>;
 
   struct Symmetries {
-    static Types::SymmetryMask get_mask(const BaseState& state);
-    static void apply(BaseState& state, group::element_t sym);
+    static Types::SymmetryMask get_mask(const State& state);
+    static void apply(State& state, group::element_t sym);
     static void apply(StateHistory& history, group::element_t sym);  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
-    static group::element_t get_canonical_symmetry(const BaseState& state);
+    static group::element_t get_canonical_symmetry(const State& state);
   };
 
   struct Rules {
-    static void init_state(BaseState&, group::element_t sym = group::kIdentity);
+    static void init_state(State&, group::element_t sym = group::kIdentity);
     static Types::ActionMask get_legal_moves(const StateHistory&);
-    static core::seat_index_t get_current_player(const BaseState&);
+    static core::seat_index_t get_current_player(const State&);
     static Types::ActionOutcome apply(StateHistory&, core::action_t action);
 
-    static Types::ActionMask get_legal_moves(const BaseState&);
+    static Types::ActionMask get_legal_moves(const State&);
 
    private:
-    static Types::ValueArray compute_outcome(const BaseState& state);
+    static Types::ValueArray compute_outcome(const State& state);
   };
 
   struct IO {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action);
-    static void print_state(std::ostream&, const BaseState&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
                                    const Types::SearchResults&);
 
    private:
-    static int print_row(char* buf, int n, const BaseState&, const Types::ActionMask&, row_t row,
+    static int print_row(char* buf, int n, const State&, const Types::ActionMask&, row_t row,
                          column_t blink_column);
   };
 
   struct InputTensorizor {
     static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using MCTSKey = BaseState;
-    using EvalKey = BaseState;
+    using MCTSKey = State;
+    using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
@@ -128,8 +128,8 @@ class Game {
   };
 
  private:
-  static int get_count(const BaseState&, core::seat_index_t seat);
-  static core::seat_index_t get_player_at(const BaseState&, int row, int col);  // -1 for unoccupied
+  static int get_count(const State&, core::seat_index_t seat);
+  static core::seat_index_t get_player_at(const State&, int row, int col);  // -1 for unoccupied
   static mask_t get_moves(mask_t P, mask_t O);
   static mask_t get_some_moves(mask_t P, mask_t mask, int dir);
 };
@@ -141,8 +141,8 @@ extern uint64_t (*flip[kNumGlobalActions])(const uint64_t, const uint64_t);
 namespace std {
 
 template <>
-struct hash<othello::Game::BaseState> {
-  size_t operator()(const othello::Game::BaseState& pos) const { return pos.hash(); }
+struct hash<othello::Game::State> {
+  size_t operator()(const othello::Game::State& pos) const { return pos.hash(); }
 };
 
 }  // namespace std

@@ -36,7 +36,7 @@ class Node {
 
   using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using ActionMask = Game::Types::ActionMask;

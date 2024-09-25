@@ -21,14 +21,14 @@ void DataExportingMctsPlayer<Game>::start_game() {
 
 template <core::concepts::Game Game>
 void DataExportingMctsPlayer<Game>::receive_state_change(core::seat_index_t seat,
-                                                         const BaseState& state,
+                                                         const State& state,
                                                          core::action_t action) {
   base_t::receive_state_change(seat, state, action);
 }
 
 template <core::concepts::Game Game>
 core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
-    const BaseState& state, const ActionMask& valid_actions) {
+    const State& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
   bool use_for_training = search_mode == core::kFull;
   bool previous_used_for_training = game_log_->is_previous_entry_used_for_training();
@@ -58,7 +58,7 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
 }
 
 template <core::concepts::Game Game>
-void DataExportingMctsPlayer<Game>::end_game(const BaseState& state,
+void DataExportingMctsPlayer<Game>::end_game(const State& state,
                                              const ValueArray& outcome) {
   game_log_->add_terminal(state, outcome);
   writer_->close(game_log_);

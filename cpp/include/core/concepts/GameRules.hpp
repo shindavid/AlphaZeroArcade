@@ -8,9 +8,9 @@
 namespace core {
 namespace concepts {
 
-template <typename GR, typename GameTypes, typename BaseState, typename StateHistory>
-concept GameRules = requires(const BaseState& const_base_state, const StateHistory& const_history,
-                             BaseState& base_state, StateHistory& history, group::element_t sym) {
+template <typename GR, typename GameTypes, typename State, typename StateHistory>
+concept GameRules = requires(const State& const_base_state, const StateHistory& const_history,
+                             State& base_state, StateHistory& history, group::element_t sym) {
   { GR::init_state(base_state) };
   { GR::init_state(base_state, sym) };
   { GR::get_legal_moves(const_history) } -> std::same_as<typename GameTypes::ActionMask>;

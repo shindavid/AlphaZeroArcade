@@ -3,7 +3,7 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, const BaseState& state,
+NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, const State& state,
                                       group::element_t eval_sym)
     : node_(node),
       state_(state),

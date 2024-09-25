@@ -22,7 +22,7 @@ class GameServer {
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
   using ActionOutcome = Game::Types::ActionOutcome;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;

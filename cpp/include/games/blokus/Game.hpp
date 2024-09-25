@@ -34,7 +34,7 @@ class Game {
   };
 
   /*
-   * BaseState is split internally into two parts: core_t and aux_t.
+   * State is split internally into two parts: core_t and aux_t.
    *
    * core_t unamgibuously represents the game state.
    *
@@ -43,10 +43,10 @@ class Game {
    *
    * TODO: use Zobrist-hashing to speed-up hashing.
    */
-  struct BaseState {
-    auto operator<=>(const BaseState& other) const { return core <=> other.core; }
-    bool operator==(const BaseState& other) const { return core == other.core; }
-    bool operator!=(const BaseState& other) const { return core != other.core; }
+  struct State {
+    auto operator<=>(const State& other) const { return core <=> other.core; }
+    bool operator==(const State& other) const { return core == other.core; }
+    bool operator!=(const State& other) const { return core != other.core; }
     size_t hash() const;
     int remaining_square_count(color_t) const;
     color_t last_placed_piece_color() const;
@@ -93,7 +93,7 @@ class Game {
     aux_t aux;
   };
 
-  using StateHistory = core::SimpleStateHistory<BaseState, Constants::kNumPreviousStatesToEncode>;
+  using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
 
   /*
    * After the initial placement of the first piece, the rules of the game are symmetric. But the
@@ -102,31 +102,31 @@ class Game {
    * whether exploiting symmetry will be useful, so we use the trivial group.
    */
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, State, SymmetryGroup>;
 
   struct Symmetries {
-    static Types::SymmetryMask get_mask(const BaseState& state);
-    static void apply(BaseState& state, group::element_t sym) {}
+    static Types::SymmetryMask get_mask(const State& state);
+    static void apply(State& state, group::element_t sym) {}
     static void apply(StateHistory& history, group::element_t sym) {}  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym) {}
     static void apply(core::action_t& action, group::element_t sym) {}
-    static group::element_t get_canonical_symmetry(const BaseState& state) { return 0; }
+    static group::element_t get_canonical_symmetry(const State& state) { return 0; }
   };
 
   struct Rules {
-    static void init_state(BaseState&, group::element_t sym = group::kIdentity);
+    static void init_state(State&, group::element_t sym = group::kIdentity);
     static Types::ActionMask get_legal_moves(const StateHistory&);
-    static core::seat_index_t get_current_player(const BaseState&);
+    static core::seat_index_t get_current_player(const State&);
     static Types::ActionOutcome apply(StateHistory&, core::action_t action);
 
    private:
-    static Types::ActionOutcome compute_outcome(const BaseState& state);
+    static Types::ActionOutcome compute_outcome(const State& state);
   };
 
   struct IO {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action);
-    static void print_state(std::ostream&, const BaseState&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
                                    const Types::SearchResults&);
@@ -136,7 +136,7 @@ class Game {
      *
      * Assumes that the last pass_count players have passed.
      */
-    static BaseState load(const std::string& str, int pass_count=0);
+    static State load(const std::string& str, int pass_count=0);
   };
 
   struct InputTensorizor {
@@ -144,8 +144,8 @@ class Game {
     static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode) + 1;
     using Tensor =
         eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using MCTSKey = BaseState;
-    using EvalKey = BaseState;
+    using MCTSKey = State;
+    using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
@@ -209,8 +209,8 @@ class Game {
 namespace std {
 
 template <>
-struct hash<blokus::Game::BaseState> {
-  size_t operator()(const blokus::Game::BaseState& pos) const { return pos.hash(); }
+struct hash<blokus::Game::State> {
+  size_t operator()(const blokus::Game::State& pos) const { return pos.hash(); }
 };
 
 }  // namespace std

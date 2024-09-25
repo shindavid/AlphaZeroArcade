@@ -20,7 +20,7 @@ namespace core {
  * Under the hood, we actually store kNumPastStatesNeeded + 2 states. One +1 factor is for the
  * current state. The other +1 factor is to support an undo() method.
  */
-template <typename BaseState, int kNumPastStatesNeeded>
+template <typename State, int kNumPastStatesNeeded>
 class SimpleStateHistory {
  public:
   SimpleStateHistory() : buf_(kMaxSize) {}
@@ -29,22 +29,22 @@ class SimpleStateHistory {
 
   template<typename Rules> void initialize(Rules) {
     clear();
-    BaseState state;
+    State state;
     Rules::init_state(state);
     buf_.push_back(state);
   }
 
-  BaseState& extend() {
+  State& extend() {
     buf_.push_back(buf_.back());
     return buf_.back();
   }
 
-  void update(const BaseState& state) {
+  void update(const State& state) {
     buf_.push_back(state);
   }
 
   void undo() { buf_.pop_back(); }
-  const BaseState& current() const { return buf_.back(); }
+  const State& current() const { return buf_.back(); }
   auto begin() const {
     auto it = buf_.begin();
     if (buf_.size() == kMaxSize) {
@@ -75,7 +75,7 @@ class SimpleStateHistory {
    * copying within append(). If switching to circular buffer, we just need to be careful about
    * iterator mechanics.
    */
-  using buffer_t = boost::circular_buffer<BaseState>;
+  using buffer_t = boost::circular_buffer<State>;
 
   buffer_t buf_;
 };

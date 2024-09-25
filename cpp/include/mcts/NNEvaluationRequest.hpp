@@ -16,7 +16,7 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluationRequest {
  public:
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using Node = mcts::Node<Game>;
   using InputTensorizor = Game::InputTensorizor;
@@ -43,7 +43,7 @@ class NNEvaluationRequest {
      * The first constructor allows multiple items that share the same history-prefix to share
      * the same history vector, as an optimization.
      */
-    Item(Node* node, StateHistory& history, const BaseState& state, group::element_t eval_sym);
+    Item(Node* node, StateHistory& history, const State& state, group::element_t eval_sym);
     Item(Node* node, StateHistory& history, group::element_t eval_sym);
 
     /*
@@ -67,7 +67,7 @@ class NNEvaluationRequest {
     cache_key_t make_cache_key(group::element_t eval_sym) const;
 
     Node* const node_;
-    const BaseState state_;
+    const State state_;
     StateHistory* const history_;
     const bool split_history_;
     const cache_key_t cache_key_;

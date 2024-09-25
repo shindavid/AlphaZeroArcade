@@ -38,8 +38,8 @@ class EdaxPlayer : public core::AbstractPlayer<Game> {
   EdaxPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const BaseState&, core::action_t) override;
-  core::ActionResponse get_action_response(const BaseState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  core::ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  private:
   void submit_action(const core::action_t);

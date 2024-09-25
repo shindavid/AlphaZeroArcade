@@ -82,14 +82,14 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   ActionValueTensor action_values = get_action_values(state_index);
 
   int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
-  int num_bytes_to_cp = num_states_to_cp * sizeof(BaseState);
+  int num_bytes_to_cp = num_states_to_cp * sizeof(State);
 
-  BaseState base_states[num_states_to_cp];
+  State base_states[num_states_to_cp];
   std::memcpy(&base_states[0], get_state(state_index - num_states_to_cp + 1), num_bytes_to_cp);
 
-  BaseState* start_pos = &base_states[0];
-  BaseState* cur_pos = &base_states[num_states_to_cp - 1];
-  BaseState final_state = *get_state(num_positions() - 1);
+  State* start_pos = &base_states[0];
+  State* cur_pos = &base_states[num_states_to_cp - 1];
+  State final_state = *get_state(num_positions() - 1);
 
   group::element_t sym = 0;
   if (apply_symmetry) {
@@ -131,7 +131,7 @@ template <concepts::Game Game>
 void GameLog<Game>::replay() const {
   int n = num_positions();
   for (int i = 0; i < n; ++i) {
-    const BaseState* pos = get_state(i);
+    const State* pos = get_state(i);
     action_t last_action = get_prev_action(i);
     Game::IO::print_state(std::cout, *pos, last_action);
     if (i < n - 1) {
@@ -258,7 +258,7 @@ int GameLog<Game>::state_start_mem_offset() const {
 
 template <concepts::Game Game>
 int GameLog<Game>::dense_policy_start_mem_offset() const {
-  return state_start_mem_offset_ + align(num_positions() * sizeof(BaseState));
+  return state_start_mem_offset_ + align(num_positions() * sizeof(State));
 }
 
 template <concepts::Game Game>
@@ -294,8 +294,8 @@ const GameLogBase::tensor_index_t* GameLog<Game>::action_values_target_index_sta
 }
 
 template <concepts::Game Game>
-const typename GameLog<Game>::BaseState* GameLog<Game>::state_start_ptr() const {
-  return reinterpret_cast<BaseState*>(buffer_ + state_start_mem_offset_);
+const typename GameLog<Game>::State* GameLog<Game>::state_start_ptr() const {
+  return reinterpret_cast<State*>(buffer_ + state_start_mem_offset_);
 }
 
 template <concepts::Game Game>
@@ -393,7 +393,7 @@ typename GameLog<Game>::ActionValueTensor GameLog<Game>::get_action_values(int s
 }
 
 template <concepts::Game Game>
-const typename GameLog<Game>::BaseState* GameLog<Game>::get_state(int state_index) const {
+const typename GameLog<Game>::State* GameLog<Game>::get_state(int state_index) const {
   return state_start_ptr() + state_index;
 }
 
@@ -429,7 +429,7 @@ GameLogWriter<Game>::~GameLogWriter() {
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add(const BaseState& state, action_t action,
+void GameLogWriter<Game>::add(const State& state, action_t action,
                               const PolicyTensor* policy_target,
                               const ActionValueTensor* action_values, bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
@@ -455,7 +455,7 @@ void GameLogWriter<Game>::add(const BaseState& state, action_t action,
 }
 
 template <concepts::Game Game>
-void GameLogWriter<Game>::add_terminal(const BaseState& state, const ValueArray& outcome) {
+void GameLogWriter<Game>::add_terminal(const State& state, const ValueArray& outcome) {
   if (terminal_added_) return;
   terminal_added_ = true;
   Entry* entry = new Entry();
@@ -488,7 +488,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   std::vector<action_t> actions;
   std::vector<tensor_index_t> policy_target_indices;
   std::vector<tensor_index_t> action_values_target_indices;
-  std::vector<BaseState> states;
+  std::vector<State> states;
   std::vector<PolicyTensor> dense_policy_tensors;
   std::vector<sparse_tensor_entry_t> sparse_policy_entries;
   std::vector<ActionValueTensor> dense_action_values_tensors;

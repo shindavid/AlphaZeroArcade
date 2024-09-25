@@ -9,8 +9,8 @@
 namespace core {
 namespace concepts {
 
-template <typename GI, typename GameTypes, typename BaseState>
-concept GameIO = requires(std::ostream& ss, const BaseState& base_state,
+template <typename GI, typename GameTypes, typename State>
+concept GameIO = requires(std::ostream& ss, const State& base_state,
                           const typename GameTypes::player_name_array_t* player_name_array_ptr,
                           const typename GameTypes::PolicyTensor& policy_tensor,
                           const typename GameTypes::SearchResults& search_results) {

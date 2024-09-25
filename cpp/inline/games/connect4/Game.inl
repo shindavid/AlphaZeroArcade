@@ -12,19 +12,19 @@
 
 namespace c4 {
 
-inline size_t Game::BaseState::hash() const {
+inline size_t Game::State::hash() const {
   auto tuple = std::make_tuple(full_mask, cur_player_mask);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
 }
 
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
   return mask;
 }
 
-inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
+inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   switch (sym) {
     case groups::D1::kIdentity: return;
     case groups::D1::kFlip: {
@@ -72,18 +72,18 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   }
 }
 
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState& state) {
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(BaseState& state, group::element_t sym) {
+inline void Game::Rules::init_state(State& state, group::element_t sym) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const BaseState& state = history.current();
+  const State& state = history.current();
   mask_t bottomed_full_mask = state.full_mask + _full_bottom_mask();
 
   Types::ActionMask mask;
@@ -94,7 +94,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
-inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
+inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return std::popcount(state.full_mask) % 2;
 }
 
@@ -136,7 +136,7 @@ Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view
   return tensor;
 }
 
-inline core::seat_index_t Game::_get_player_at(const BaseState& state, row_t row, column_t col) {
+inline core::seat_index_t Game::_get_player_at(const State& state, row_t row, column_t col) {
   int cp = Rules::get_current_player(state);
   int index = _to_bit_index(row, col);
   bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;

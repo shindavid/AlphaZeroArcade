@@ -12,7 +12,7 @@ void SharedData<Game>::clear() {
     root_info.history_array[sym].initialize(Rules{});
   }
 
-  const BaseState& raw_state = root_info.history_array[group::kIdentity].current();
+  const State& raw_state = root_info.history_array[group::kIdentity].current();
   root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(raw_state);
 }
 
@@ -24,7 +24,7 @@ void SharedData<Game>::update_state(core::action_t action) {
     Game::Rules::apply(root_info.history_array[sym], transformed_action);
   }
 
-  const BaseState& raw_state = root_info.history_array[group::kIdentity].current();
+  const State& raw_state = root_info.history_array[group::kIdentity].current();
   root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(raw_state);
 }
 

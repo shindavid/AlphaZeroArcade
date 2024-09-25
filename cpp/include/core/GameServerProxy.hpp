@@ -20,7 +20,7 @@ class GameServerProxy {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;

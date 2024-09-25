@@ -23,7 +23,7 @@ template <concepts::Game Game>
 class RemotePlayerProxy : public AbstractPlayer<Game> {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
   using Player = AbstractPlayer<Game>;
@@ -59,9 +59,9 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   RemotePlayerProxy(io::Socket* socket, player_id_t player_id, game_thread_id_t game_thread_id);
 
   void start_game() override;
-  void receive_state_change(seat_index_t, const BaseState&, action_t) override;
-  ActionResponse get_action_response(const BaseState&, const ActionMask&) override;
-  void end_game(const BaseState&, const ValueArray&) override;
+  void receive_state_change(seat_index_t, const State&, action_t) override;
+  ActionResponse get_action_response(const State&, const ActionMask&) override;
+  void end_game(const State&, const ValueArray&) override;
 
  private:
   std::condition_variable cv_;

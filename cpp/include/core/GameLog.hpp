@@ -62,7 +62,7 @@ struct GameLogBase {
  * [action_t...]
  * [tensor_index_t...]                  // indices into policy target tensor data
  * [tensor_index_t...]                  // indices into action-value tensor data
- * [Game::BaseState...]                 // all positions, whether sampled or not
+ * [Game::State...]                 // all positions, whether sampled or not
  * [Game::Types::PolicyTensor...]       // data for densely represented policy targets
  * [sparse_tensor_entry_t...]           // data for sparsely represented policy targets
  * [Game::Types::ActionValueTensor...]  // data for densely represented action value targets
@@ -79,7 +79,7 @@ class GameLog : public GameLogBase {
   using InputTensorizor = Game::InputTensorizor;
   using InputTensor = Game::InputTensorizor::Tensor;
   using TrainingTargetsList = Game::TrainingTargets::List;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -125,7 +125,7 @@ class GameLog : public GameLogBase {
   const action_t* action_start_ptr() const;
   const tensor_index_t* policy_target_index_start_ptr() const;
   const tensor_index_t* action_values_target_index_start_ptr() const;
-  const BaseState* state_start_ptr() const;
+  const State* state_start_ptr() const;
   const PolicyTensor* dense_policy_start_ptr() const;
   const sparse_tensor_entry_t* sparse_policy_entry_start_ptr() const;
   const ActionValueTensor* dense_action_values_start_ptr() const;
@@ -134,7 +134,7 @@ class GameLog : public GameLogBase {
 
   PolicyTensor get_policy(int state_index) const;
   ActionValueTensor get_action_values(int state_index) const;
-  const BaseState* get_state(int state_index) const;
+  const State* get_state(int state_index) const;
   action_t get_prev_action(int state_index) const;
   ValueArray get_outcome() const;
   pos_index_t get_pos_index(int sample_index) const;
@@ -155,7 +155,7 @@ template <concepts::Game Game>
 class GameLogWriter {
  public:
   using Rules = Game::Rules;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -165,7 +165,7 @@ class GameLogWriter {
   static_assert(std::is_same_v<PolicyTensor, ActionValueTensor>);
 
   struct Entry {
-    BaseState position;
+    State position;
     PolicyTensor policy_target;  // only valid if policy_target_is_valid
     ActionValueTensor action_values;  // only valid if action_values_are_valid
     action_t action;
@@ -179,9 +179,9 @@ class GameLogWriter {
   GameLogWriter(game_id_t id, int64_t start_timestamp);
   ~GameLogWriter();
 
-  void add(const BaseState& state, action_t action, const PolicyTensor* policy_target,
+  void add(const State& state, action_t action, const PolicyTensor* policy_target,
            const ActionValueTensor* action_values, bool use_for_training);
-  void add_terminal(const BaseState& state, const ValueArray& outcome);
+  void add_terminal(const State& state, const ValueArray& outcome);
   void serialize(std::ostream&) const;
   bool is_previous_entry_used_for_training() const;
   int sample_count() const { return sample_count_; }

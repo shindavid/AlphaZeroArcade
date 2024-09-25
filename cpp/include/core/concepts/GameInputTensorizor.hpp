@@ -8,8 +8,8 @@
 namespace core {
 namespace concepts {
 
-template <typename IT, typename BaseState, typename StateHistory>
-concept GameInputTensorizor = requires(const BaseState& base_state1, const BaseState& base_state2,
+template <typename IT, typename State, typename StateHistory>
+concept GameInputTensorizor = requires(const State& base_state1, const State& base_state2,
                                        const StateHistory& history) {
   requires eigen_util::concepts::FTensor<typename IT::Tensor>;
   requires util::concepts::UsableAsHashMapKey<typename IT::MCTSKey>;

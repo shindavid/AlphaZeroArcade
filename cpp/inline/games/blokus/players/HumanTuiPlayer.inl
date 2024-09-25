@@ -16,7 +16,7 @@ inline void HumanTuiPlayer::start_game() {
   base_t::start_game();
 }
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const BaseState& state,
+inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
                                                         const ActionMask& valid_actions) {
   if (passed_) {
     // no need to keep prompting for moves if we've passed already
@@ -58,7 +58,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const BaseState& state,
   }
 }
 
-inline void HumanTuiPlayer::prompt_for_piece(const BaseState& state, const p_map_t& p_map,
+inline void HumanTuiPlayer::prompt_for_piece(const State& state, const p_map_t& p_map,
                                              Piece& p) {
   if (p >= 0) return;
 
@@ -82,7 +82,7 @@ inline void HumanTuiPlayer::prompt_for_piece(const BaseState& state, const p_map
   }
 }
 
-inline bool HumanTuiPlayer::prompt_for_orientation(const BaseState& state, const p_map_t& p_map,
+inline bool HumanTuiPlayer::prompt_for_orientation(const State& state, const p_map_t& p_map,
                                                    Piece& p, PieceOrientation& po) {
   if (po >= 0) return true;
 
@@ -121,7 +121,7 @@ inline bool HumanTuiPlayer::prompt_for_orientation(const BaseState& state, const
   return true;
 }
 
-inline bool HumanTuiPlayer::prompt_for_root_location(const BaseState& state, const p_map_t& p_map,
+inline bool HumanTuiPlayer::prompt_for_root_location(const State& state, const p_map_t& p_map,
                                                      Piece& p, PieceOrientation& po,
                                                      Location& root_loc) {
   const po_map_t& po_map = p_map.at(p);
@@ -166,7 +166,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_pass() {
   return kPass;
 }
 
-inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const BaseState& state,
+inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
                                          const ActionMask& valid_actions) const {
   for (core::action_t action : bitset_util::on_indices(valid_actions)) {
     // std::cout << "DBG action=" << int(action) << std::endl;

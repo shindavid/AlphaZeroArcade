@@ -24,7 +24,7 @@ template <core::concepts::Game Game>
 struct SharedData {
   using Rules = Game::Rules;
   using Node = mcts::Node<Game>;
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using StateHistory = Game::StateHistory;
   using LookupTable = Node::LookupTable;
   using SymmetryGroup = Game::SymmetryGroup;

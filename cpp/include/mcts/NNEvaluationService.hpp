@@ -97,7 +97,7 @@ class NNEvaluationService
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
-  using BaseState = Game::BaseState;
+  using State = Game::State;
   using InputTensorizor = Game::InputTensorizor;
 
   using RequestItem = NNEvaluationRequest::Item;

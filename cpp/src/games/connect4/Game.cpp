@@ -12,7 +12,7 @@
 namespace c4 {
 
 Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
-  BaseState& state = history.extend();
+  State& state = history.extend();
 
   column_t col = action;
   mask_t piece_mask = (state.full_mask + _bottom_mask(col)) & _column_mask(col);
@@ -66,7 +66,7 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
   return Types::ActionOutcome();
 }
 
-void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   constexpr int buf_size = 4096;
   char buffer[buf_size];
@@ -131,7 +131,7 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   ss << buffer << std::endl;
 }
 
-int Game::IO::print_row(char* buf, int n, const BaseState& state, row_t row, column_t blink_column) {
+int Game::IO::print_row(char* buf, int n, const State& state, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
