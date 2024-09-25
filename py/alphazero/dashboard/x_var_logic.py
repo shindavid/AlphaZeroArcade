@@ -40,12 +40,7 @@ X_VARS = [
     ]
 
 
-_make_x_df_cache = {}
-
 def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
-    if organizer.base_dir in _make_x_df_cache:
-        return _make_x_df_cache[organizer.base_dir]
-
     x_var_dict = defaultdict(lambda: defaultdict(list))  # filename -> table -> XVar
     for x_var in X_VARS:
         x_var_dict[x_var.db_filename_attr][x_var.table].append(x_var)
@@ -84,8 +79,6 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
     for col in full_x_df:
         full_x_df[col] = full_x_df[col].cumsum()
 
-    _make_x_df_cache[organizer.base_dir] = full_x_df
-    print(f"Created x_df for {organizer.base_dir}")
     return full_x_df
 
 
