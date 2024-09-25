@@ -87,7 +87,7 @@ inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
 
 inline void PerfectPlayer::start_game() { move_history_.reset(); }
 
-inline void PerfectPlayer::receive_state_change(core::seat_index_t, const FullState&,
+inline void PerfectPlayer::receive_state_change(core::seat_index_t, const State&,
                                                 core::action_t action) {
   move_history_.append(action);
 }

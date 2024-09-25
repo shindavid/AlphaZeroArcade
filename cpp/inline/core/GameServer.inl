@@ -280,16 +280,17 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     players[p]->start_game();
   }
 
-  FullState state;
-  Rules::init_state(state);
+  StateHistory state_history;
+  state_history.initialize(Rules{});
+
   if (shared_data_.params().print_game_states) {
-    Game::IO::print_state(std::cout, state, -1, &player_names);
+    Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
   }
   while (true) {
-    seat_index_t seat = Rules::get_current_player(state);
+    seat_index_t seat = Rules::get_current_player(state_history.current());
     Player* player = players[seat];
-    auto valid_actions = Rules::get_legal_moves(state);
-    ActionResponse response = player->get_action_response(state, valid_actions);
+    auto valid_actions = Rules::get_legal_moves(state_history);
+    ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
     action_t action = response.action;
 
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
@@ -306,17 +307,17 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
         std::cout << std::endl;
       }
     } else {
-      outcome = Rules::apply(state, action);
+      outcome = Rules::apply(state_history, action);
       if (shared_data_.params().print_game_states) {
-        Game::IO::print_state(std::cout, state, action, &player_names);
+        Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
       }
       for (auto player2 : players) {
-        player2->receive_state_change(seat, state, action);
+        player2->receive_state_change(seat, state_history.current(), action);
       }
     }
     if (outcome.terminal) {
       for (auto player2 : players) {
-        player2->end_game(state, outcome.terminal_value);
+        player2->end_game(state_history.current(), outcome.terminal_value);
       }
       if (shared_data_.params().announce_game_results) {
         printf("Game %ld complete.\n", game_id);

@@ -13,6 +13,7 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <games/tictactoe/Constants.hpp>
 #include <util/EigenUtil.hpp>
@@ -38,12 +39,12 @@ class Game {
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
-    static constexpr int kHistorySize = 0;
+    static constexpr int kNumPreviousStatesToEncode = 0;
     static constexpr float kOpeningLength = 0.1;  // don't tolerate silly blunders on move 2
   };
 
-  struct BaseState {
-    auto operator<=>(const BaseState& other) const = default;
+  struct State {
+    auto operator<=>(const State& other) const = default;
     size_t hash() const;
     mask_t opponent_mask() const { return full_mask ^ cur_player_mask; }
 
@@ -51,43 +52,43 @@ class Game {
     mask_t cur_player_mask;  // spaces occupied by current player
   };
 
-  struct FullState : public BaseState {};  // trivial-inheritance to test mcts-second-pass-logic
+  using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, State, SymmetryGroup>;
 
   struct Symmetries {
-    static Types::SymmetryMask get_mask(const BaseState& state);
-    static void apply(BaseState& state, group::element_t sym);
+    static Types::SymmetryMask get_mask(const State& state);
+    static void apply(State& state, group::element_t sym);
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
-    static group::element_t get_canonical_symmetry(const BaseState& state);
+    static group::element_t get_canonical_symmetry(const State& state);
   };
 
   struct Rules {
-    static void init_state(FullState& state, group::element_t sym = group::kIdentity);
-    static Types::ActionMask get_legal_moves(const FullState& state);
-    static core::seat_index_t get_current_player(const BaseState&);
-    static Types::ActionOutcome apply(FullState& state, core::action_t action);
+    static void init_state(State&, group::element_t sym = group::kIdentity);
+    static Types::ActionMask get_legal_moves(const StateHistory&);
+    static core::seat_index_t get_current_player(const State&);
+    static Types::ActionOutcome apply(StateHistory&, core::action_t action);
   };
 
   struct IO {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action); }
-    static void print_state(std::ostream&, const BaseState&, core::action_t last_action = -1,
+    static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
                                    const Types::SearchResults&);
   };
 
   struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kHistorySize);
+    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
-    using MCTSKey = BaseState;
-    using EvalKey = BaseState;
+    using MCTSKey = State;
+    using EvalKey = State;
 
-    static MCTSKey mcts_key(const FullState& state) { return state; }
-    static EvalKey eval_key(const BaseState* start, const BaseState* cur) { return *cur; }
-    static Tensor tensorize(const BaseState* start, const BaseState* cur);
+    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
+    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {
@@ -115,7 +116,7 @@ class Game {
       make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
 
  private:
-  static core::seat_index_t _get_player_at(const BaseState& state, int row, int col);
+  static core::seat_index_t _get_player_at(const State& state, int row, int col);
 };
 
 }  // namespace tictactoe
@@ -123,8 +124,8 @@ class Game {
 namespace std {
 
 template <>
-struct hash<tictactoe::Game::BaseState> {
-  size_t operator()(const tictactoe::Game::BaseState& pos) const { return pos.hash(); }
+struct hash<tictactoe::Game::State> {
+  size_t operator()(const tictactoe::Game::State& pos) const { return pos.hash(); }
 };
 
 }  // namespace std

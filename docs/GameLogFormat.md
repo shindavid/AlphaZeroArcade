@@ -76,17 +76,17 @@ the number of bytes that a sparse encoding would require.
 
 ## Base states
 
-Each game has a game-specific `BaseState` class. This is a POD struct representing a game state snapshot. See: [GameConcept.md](GameConcept.md) for details.
+Each game has a game-specific `State` class. This is a POD struct representing a game state snapshot. See: [GameConcept.md](GameConcept.md) for details.
 
-This section contains an array of `BaseState` objects, for all states encountered in the game, whether sampled or not, including the
+This section contains an array of `State` objects, for all states encountered in the game, whether sampled or not, including the
 terminal state of the game.
 
 When constructing the neural network input for a given (state-index, sym-index) from a game log, the ffi library loads the log file into memory,
-reads the header to determine section memory offsets, and does a `reinterpret_cast<BaseState>()` to the appropriate location in this section
-to recover a `BaseState`. In games where previous state history is included in the neural network input, the prior states can be found
+reads the header to determine section memory offsets, and does a `reinterpret_cast<State>()` to the appropriate location in this section
+to recover a `State`. In games where previous state history is included in the neural network input, the prior states can be found
 in the preceding block of memory (thus avoiding the need to redundantly record recent-history).
 
-The ffi library API includes a bool `apply_symmetry` parameter. When set to the default value of `true`, this `reinterpret_cast`'ed `BaseState`
+The ffi library API includes a bool `apply_symmetry` parameter. When set to the default value of `true`, this `reinterpret_cast`'ed `State`
 is transformed via a randomly selected symmetry.
 
 ## Dense policy targets

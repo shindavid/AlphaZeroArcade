@@ -22,7 +22,8 @@ class GameServer {
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
   using ActionOutcome = Game::Types::ActionOutcome;
-  using FullState = Game::FullState;
+  using State = Game::State;
+  using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using Player = AbstractPlayer<Game>;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;

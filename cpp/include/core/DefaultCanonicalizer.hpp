@@ -13,14 +13,15 @@ namespace core {
  * returns the first one.
  *
  * This can be inefficient, but it is guaranteed to work for any game, as long as the game's
- * BaseState class is a comparable type.
+ * State class is a comparable type.
  */
 template<concepts::Game Game>
 class DefaultCanonicalizer {
  public:
-  using BaseState = Game::BaseState;
+  using State = Game::State;
+  static_assert(std::totally_ordered<State>, "State must be totally ordered");
 
-  static group::element_t get(const BaseState& state);
+  static group::element_t get(const State& state);
 };
 
 }  // namespace core

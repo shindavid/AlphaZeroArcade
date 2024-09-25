@@ -15,7 +15,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using base_t = core::AbstractPlayer<Game>;
 
   using IO = Game::IO;
-  using FullState = Game::FullState;
+  using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
   using player_array_t = base_t::player_array_t;
@@ -23,9 +23,9 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   HumanTuiPlayer() {}
   virtual ~HumanTuiPlayer() {}
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
-  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
-  void end_game(const FullState&, const ValueArray&) override;
+  void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
+  core::ActionResponse get_action_response(const State&, const ActionMask&) override;
+  void end_game(const State&, const ValueArray&) override;
 
   bool is_human_tui_player() const override { return true; }
 
@@ -36,12 +36,12 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
    *
    * Derived classes must override this method.
    */
-  virtual core::action_t prompt_for_action(const FullState&, const ActionMask&) = 0;
+  virtual core::action_t prompt_for_action(const State&, const ActionMask&) = 0;
 
   /*
    * By default, dispatches to Game::IO::dump(). Can be overridden by derived classes.
    */
-  virtual void print_state(const FullState&, bool terminal);
+  virtual void print_state(const State&, bool terminal);
 
   core::action_t last_action_;
 };

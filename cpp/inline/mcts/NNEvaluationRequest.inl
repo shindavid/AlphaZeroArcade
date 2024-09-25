@@ -3,33 +3,35 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(Node* node, const BaseState& state, state_vec_t* history,
-                                      group::element_t eval_sym, bool split_history)
+NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, const State& state,
+                                      group::element_t eval_sym)
     : node_(node),
       state_(state),
-      history_(history),
-      split_history_(split_history),
+      history_(&history),
+      split_history_(true),
+      cache_key_(make_cache_key(eval_sym)) {}
+
+template <core::concepts::Game Game>
+NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, group::element_t eval_sym)
+    : node_(node),
+      state_(),
+      history_(&history),
+      split_history_(false),
       cache_key_(make_cache_key(eval_sym)) {}
 
 template <core::concepts::Game Game>
 template <typename Func>
 auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
-  util::debug_assert(!history_->empty());
-  util::debug_assert(history_->size() <= Game::Constants::kHistorySize + 1);
-
   if (split_history_) {
-    history_->push_back(state_);  // temporary append
+    history_->update(state_);  // temporary append
   }
-
-  bool full = history_->size() > Game::Constants::kHistorySize + 1;
 
   auto begin = history_->begin();
   auto end = history_->end();
-  if (full) begin++;  // compensate for overstuffing
-  auto output = f(&*begin, &*end);
+  auto output = f(begin, end);
 
   if (split_history_) {
-    history_->pop_back();  // undo temporary append
+    history_->undo();  // undo temporary append
   }
 
   return output;

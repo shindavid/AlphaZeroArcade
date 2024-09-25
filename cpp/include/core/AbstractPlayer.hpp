@@ -31,13 +31,12 @@ namespace core {
  * return the action that you want to take.
  *
  * TODO: for imperfect-information games, these methods should accept an "information set", rather
- * than a FullState. Flush out the details of this if/when we get there.
+ * than a State. Flush out the details of this if/when we get there.
  */
 template <concepts::Game Game>
 class AbstractPlayer {
  public:
-  using BaseState = Game::BaseState;
-  using FullState = Game::FullState;
+  using State = Game::State;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
@@ -53,19 +52,19 @@ class AbstractPlayer {
                  seat_index_t seat_assignment);
 
   virtual void start_game() {}
-  virtual void receive_state_change(seat_index_t, const FullState&, action_t) {}
+  virtual void receive_state_change(seat_index_t, const State&, action_t) {}
 
   /*
-   * The FullState passed in here is guaranteed to be identical to the FullState last received via
+   * The State passed in here is guaranteed to be identical to the State last received via
    * receive_state_change().
    */
-  virtual ActionResponse get_action_response(const FullState&, const ActionMask&) = 0;
+  virtual ActionResponse get_action_response(const State&, const ActionMask&) = 0;
 
   /*
-   * The FullState passed in here is guaranteed to be identical to the FullState last received via
+   * The State passed in here is guaranteed to be identical to the State last received via
    * receive_state_change().
    */
-  virtual void end_game(const FullState&, const ValueArray&) {}
+  virtual void end_game(const State&, const ValueArray&) {}
 
   /*
    * Some extra virtual functions that most subclasses can ignore.

@@ -22,21 +22,19 @@ namespace mcts {
  */
 template <core::concepts::Game Game>
 struct SharedData {
+  using Rules = Game::Rules;
   using Node = mcts::Node<Game>;
-  using BaseState = Game::BaseState;
-  using FullState = Game::FullState;
+  using State = Game::State;
+  using StateHistory = Game::StateHistory;
   using LookupTable = Node::LookupTable;
   using SymmetryGroup = Game::SymmetryGroup;
 
-  using base_state_vec_t = std::vector<BaseState>;
   using node_pool_index_t = Node::node_pool_index_t;
 
-  using FullStateArray = std::array<FullState, SymmetryGroup::kOrder>;
-  using base_state_vec_array_t = std::array<base_state_vec_t, SymmetryGroup::kOrder>;
+  using StateHistoryArray = std::array<StateHistory, SymmetryGroup::kOrder>;
 
   struct root_info_t {
-    FullStateArray state;
-    base_state_vec_array_t state_history;
+    StateHistoryArray history_array;
 
     group::element_t canonical_sym = -1;
     node_pool_index_t node_index = -1;

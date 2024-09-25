@@ -76,17 +76,17 @@ inline void flip_anti_diag(mask_t& mask1, mask_t& mask2) {
 
 }  // namespace detail
 
-inline size_t Game::BaseState::hash() const {
+inline size_t Game::State::hash() const {
   return (size_t(full_mask) << 16) + cur_player_mask;
 }
 
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
   return mask;
 }
 
-inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
+inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   using namespace tictactoe::detail;
   using D4 = groups::D4;
   auto& s = state;
@@ -139,27 +139,28 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   action = lookup[sym * 9 + action];
 }
 
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState& state) {
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
+inline void Game::Rules::init_state(State& state, group::element_t sym) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
 }
 
-inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
+inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return std::popcount(state.full_mask) % 2;
 }
 
-inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                                      const BaseState* cur) {
+template <typename Iterator>
+inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iterator start,
+                                                                      Iterator cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);
   Tensor tensor;
   tensor.setZero();
   int i = 0;
-  const BaseState* state = cur;
+  Iterator state = cur;
   while (true) {
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
@@ -180,7 +181,7 @@ inline Game::TrainingTargets::OwnershipTarget::Tensor
 Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const BaseState& state = *view.final_pos;
+  const State& state = *view.final_pos;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
@@ -192,7 +193,7 @@ Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view
   return tensor;
 }
 
-inline core::seat_index_t Game::_get_player_at(const BaseState& state, int row, int col) {
+inline core::seat_index_t Game::_get_player_at(const State& state, int row, int col) {
   int cp = Rules::get_current_player(state);
   int index = row * kBoardDimension + col;
   bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;

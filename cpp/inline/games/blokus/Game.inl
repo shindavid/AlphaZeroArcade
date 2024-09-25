@@ -5,21 +5,21 @@
 
 namespace blokus {
 
-inline size_t Game::BaseState::hash() const {
+inline size_t Game::State::hash() const {
   return util::PODHash<core_t>{}(core);
 }
 
-inline int Game::BaseState::remaining_square_count(color_t c) const {
+inline int Game::State::remaining_square_count(color_t c) const {
   return kNumSquaresPerColor - core.occupied_locations[c].count();
 }
 
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
   return mask;
 }
 
-inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
+inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.core.cur_color;
 }
 
@@ -36,6 +36,32 @@ inline std::string Game::IO::action_to_str(core::action_t action) {
 
   PieceOrientationCorner poc = PieceOrientationCorner::from_action(action);
   return poc.name();
+}
+
+template <typename Iter>
+Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
+  core::seat_index_t cp = Rules::get_current_player(*cur);
+  Tensor tensor;
+  tensor.setZero();
+  int i = 0;
+  Iter state = cur;
+  while (true) {
+    for (color_t c = 0; c < kNumColors; ++c) {
+      color_t rc = (kNumColors + c - cp) % kNumColors;
+      for (Location loc : state->core.occupied_locations[c].get_set_locations()) {
+        tensor(i + rc, loc.row, loc.col) = 1;
+      }
+    }
+    if (state == start) break;
+    state--;
+    i += kNumColors;
+  }
+
+  if (cur->core.partial_move.valid()) {
+    Location loc = cur->core.partial_move;
+    tensor(kDim0 - 1, loc.row, loc.col) = 1;
+  }
+  return tensor;
 }
 
 }  // namespace blokus

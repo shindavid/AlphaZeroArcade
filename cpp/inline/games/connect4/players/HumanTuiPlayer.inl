@@ -21,13 +21,13 @@ inline void HumanTuiPlayer::start_game() {
   base_t::start_game();
 }
 
-inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const FullState& state,
+inline void HumanTuiPlayer::receive_state_change(core::seat_index_t seat, const State& state,
                                                  core::action_t action) {
   if (move_history_) move_history_->append(action);
   base_t::receive_state_change(seat, state, action);
 }
 
-inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState&, const ActionMask&) {
+inline core::action_t HumanTuiPlayer::prompt_for_action(const State&, const ActionMask&) {
   std::cout << "Enter move [1-7]: ";
   std::cout.flush();
   std::string input;
@@ -41,7 +41,7 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const FullState&, const 
   }
 }
 
-inline void HumanTuiPlayer::print_state(const FullState& state, bool terminal) {
+inline void HumanTuiPlayer::print_state(const State& state, bool terminal) {
   if (oracle_) {
     if (terminal) {
       std::cout << std::endl;  // blank link to retain alignment

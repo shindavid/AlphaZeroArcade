@@ -14,19 +14,19 @@
 
 namespace othello {
 
-inline size_t Game::BaseState::hash() const {
+inline size_t Game::State::hash() const {
   auto tuple = std::make_tuple(opponent_mask, cur_player_mask, cur_player, pass_count);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
 }
 
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const BaseState& state) {
+inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
   Types::SymmetryMask mask;
   mask.set();
   return mask;
 }
 
-inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
+inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   using namespace bitmap_util;
   using D4 = groups::D4;
   auto& s = state;
@@ -40,6 +40,12 @@ inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
     case D4::kMirrorHorizontal: return mirror_horizontal(s.cur_player_mask, s.opponent_mask);
     case D4::kFlipAntiDiag: return flip_anti_diag(s.cur_player_mask, s.opponent_mask);
     default: throw util::Exception("Unknown group element: %d", sym);
+  }
+}
+
+inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
+  for (auto it : history) {
+    apply(it, sym);
   }
 }
 
@@ -82,12 +88,12 @@ inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym
   action = std::countr_zero(mask);
 }
 
-inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState& state) {
+inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& state) {
   using DefaultCanonicalizer = core::DefaultCanonicalizer<Game>;
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
+inline void Game::Rules::init_state(State& state, group::element_t sym) {
   state.opponent_mask = kStartingWhiteMask;
   state.cur_player_mask = kStartingBlackMask;
   state.cur_player = kStartingColor;
@@ -96,17 +102,21 @@ inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
   Symmetries::apply(state, sym);
 }
 
-inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  return get_legal_moves(history.current());
+}
+
+inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.cur_player;
 }
 
-inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                                      const BaseState* cur) {
+template <typename Iter>
+Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);
   Tensor tensor;
   tensor.setZero();
   int i = 0;
-  const BaseState* state = cur;
+  Iter state = cur;
   while (true) {
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {
@@ -127,7 +137,7 @@ inline Game::TrainingTargets::ScoreMarginTarget::Tensor
 Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const BaseState& state = *view.final_pos;
+  const State& state = *view.final_pos;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   int score_index = kNumCells + get_count(state, cp) - get_count(state, 1 - cp);
   util::release_assert(score_index >= 0 && score_index <= kNumCells * 2);
@@ -158,7 +168,7 @@ Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view
   return tensor;
 }
 
-inline int Game::get_count(const BaseState& state, core::seat_index_t seat) {
+inline int Game::get_count(const State& state, core::seat_index_t seat) {
   if (seat == state.cur_player) {
     return std::popcount(state.cur_player_mask);
   } else {
@@ -166,7 +176,7 @@ inline int Game::get_count(const BaseState& state, core::seat_index_t seat) {
   }
 }
 
-inline core::seat_index_t Game::get_player_at(const BaseState& state, int row, int col) {
+inline core::seat_index_t Game::get_player_at(const State& state, int row, int col) {
   int cp = Rules::get_current_player(state);
   int index = row * kBoardDimension + col;
   bool occupied_by_cur_player = (mask_t(1) << index) & state.cur_player_mask;

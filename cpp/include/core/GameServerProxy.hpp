@@ -20,7 +20,8 @@ class GameServerProxy {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr bool kEnableDebug = IS_MACRO_ENABLED(GAME_SERVER_PROXY_DEBUG);
 
-  using FullState = Game::FullState;
+  using State = Game::State;
+  using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
   using ValueArray = Game::Types::ValueArray;
@@ -90,7 +91,7 @@ class GameServerProxy {
     const player_id_t player_id_;
     std::thread* thread_ = nullptr;
 
-    FullState state_;
+    StateHistory history_;
 
     // below fields are used for inter-thread communication
     ActionMask valid_actions_;

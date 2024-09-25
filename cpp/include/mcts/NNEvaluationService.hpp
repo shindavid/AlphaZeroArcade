@@ -79,7 +79,6 @@ class NNEvaluationService
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using SharedData = mcts::SharedData<Game>;
-  using base_state_vec_t = SharedData::base_state_vec_t;
 
   using ActionMask = Game::Types::ActionMask;
 
@@ -98,8 +97,7 @@ class NNEvaluationService
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
-  using BaseState = Game::BaseState;
-  using FullState = Game::FullState;
+  using State = Game::State;
   using InputTensorizor = Game::InputTensorizor;
 
   using RequestItem = NNEvaluationRequest::Item;

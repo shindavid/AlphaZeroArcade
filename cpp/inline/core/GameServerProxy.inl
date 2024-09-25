@@ -140,7 +140,12 @@ void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& pay
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  Rules::init_state(state_);
+  State initial_state;
+  Rules::init_state(initial_state);
+
+  history_.clear();
+  history_.update(initial_state);
+
   player_->init_game(game_id, player_names, seat_assignment);
   player_->start_game();
 }
@@ -152,12 +157,12 @@ void GameServerProxy<Game>::PlayerThread::handle_state_change(const StateChange&
   }
   const char* buf = payload.dynamic_size_section.buf;
 
-  seat_index_t seat = Rules::get_current_player(state_);
+  seat_index_t seat = Rules::get_current_player(history_.current());
   ActionResponse action_response = *reinterpret_cast<const ActionResponse*>(buf);
   action_t action = action_response.action;
-  Rules::apply(state_, action);
+  Rules::apply(history_, action);
 
-  player_->receive_state_change(seat, state_, action);
+  player_->receive_state_change(seat, history_.current(), action);
 }
 
 template <concepts::Game Game>
@@ -182,7 +187,7 @@ void GameServerProxy<Game>::PlayerThread::handle_end_game(const EndGame& payload
   const char* buf = payload.dynamic_size_section.buf;
 
   ValueArray outcome = *reinterpret_cast<const ValueArray*>(buf);
-  player_->end_game(state_, outcome);
+  player_->end_game(history_.current(), outcome);
 }
 
 template <concepts::Game Game>
@@ -217,7 +222,7 @@ void GameServerProxy<Game>::PlayerThread::run() {
     if (!active_) break;
 
     ready_to_get_action_ = false;
-    send_action_packet(player_->get_action_response(state_, valid_actions_));
+    send_action_packet(player_->get_action_response(history_.current(), valid_actions_));
   }
 }
 

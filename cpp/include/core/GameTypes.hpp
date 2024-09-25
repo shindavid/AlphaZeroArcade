@@ -10,13 +10,12 @@
 #include <array>
 #include <bitset>
 #include <string>
-#include <vector>
 
 #include <Eigen/Core>
 
 namespace core {
 
-template <concepts::GameConstants GameConstants, typename BaseState,
+template <concepts::GameConstants GameConstants, typename State,
           group::concepts::FiniteGroup Group>
 struct GameTypes {
   using ActionMask = std::bitset<GameConstants::kNumActions>;
@@ -32,7 +31,6 @@ struct GameTypes {
   using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, Group>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
   using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
-  using state_vec_t = std::vector<BaseState>;
 
   /*
    * Return type for an MCTS search.
@@ -62,8 +60,8 @@ struct GameTypes {
    * training-target classes for each specific Game.
    */
   struct GameLogView {
-    const BaseState* cur_pos;
-    const BaseState* final_pos;
+    const State* cur_pos;
+    const State* final_pos;
     const ValueArray* outcome;
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;

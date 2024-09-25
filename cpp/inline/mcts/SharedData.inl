@@ -9,31 +9,22 @@ void SharedData<Game>::clear() {
   root_info.node_index = -1;
 
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
-    FullState& state = root_info.state[sym];
-    base_state_vec_t& state_history = root_info.state_history[sym];
-
-    Game::Rules::init_state(state, sym);
-    state_history.clear();
-    util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
+    root_info.history_array[sym].initialize(Rules{});
   }
 
-  group::element_t e = group::kIdentity;
-  root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(root_info.state[e]);
+  const State& raw_state = root_info.history_array[group::kIdentity].current();
+  root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(raw_state);
 }
 
 template <core::concepts::Game Game>
 void SharedData<Game>::update_state(core::action_t action) {
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
-    FullState& state = root_info.state[sym];
-    base_state_vec_t& state_history = root_info.state_history[sym];
-
     core::action_t transformed_action = action;
     Game::Symmetries::apply(transformed_action, sym);
-    Game::Rules::apply(state, transformed_action);
-    util::stuff_back<Game::Constants::kHistorySize>(state_history, state);
+    Game::Rules::apply(root_info.history_array[sym], transformed_action);
   }
 
-  const FullState& raw_state = root_info.state[group::kIdentity];
+  const State& raw_state = root_info.history_array[group::kIdentity].current();
   root_info.canonical_sym = Game::Symmetries::get_canonical_symmetry(raw_state);
 }
 

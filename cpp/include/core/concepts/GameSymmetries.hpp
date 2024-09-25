@@ -15,23 +15,22 @@ concept OperatesOn = requires(util::strict_type_match_t<T&> t, group::element_t 
 };
 
 /*
- * If FullState and BaseState are distinct types, one may optionally provide an addition static
- * function:
+ * One may optionally provide an addition static function:
  *
- * void apply(FullState&, group::element_t);
+ * void apply(StateHistory&, group::element_t);
  *
  * Specifying this allows for MCTS optimizations. Without specifying this, MCTS must resort to a
  * "double-pass" through the game-tree on each tree-traversal. We typically expect this overhead to
  * be small compared to the greater cost of neural network inference, but conceivably for some
  * games it could be wise to avoid this if possible.
  */
-template <typename GS, typename GameTypes, typename BaseState>
-concept GameSymmetries = requires(const BaseState& base_state) {
-  { GS::get_mask(base_state) } -> std::same_as<typename GameTypes::SymmetryMask>;
-  requires core::concepts::OperatesOn<GS, BaseState>;
+template <typename GS, typename GameTypes, typename State>
+concept GameSymmetries = requires(const State& state) {
+  { GS::get_mask(state) } -> std::same_as<typename GameTypes::SymmetryMask>;
+  requires core::concepts::OperatesOn<GS, State>;
   requires core::concepts::OperatesOn<GS, typename GameTypes::PolicyTensor>;
   requires core::concepts::OperatesOn<GS, core::action_t>;
-  { GS::get_canonical_symmetry(base_state) } -> std::same_as<group::element_t>;
+  { GS::get_canonical_symmetry(state) } -> std::same_as<group::element_t>;
 };
 
 }  // namespace concepts

@@ -18,14 +18,14 @@ inline void HumanTuiPlayer<Game>::start_game() {
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const FullState&,
+inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const State&,
                                                        core::action_t action) {
   last_action_ = action;
 }
 
 template <core::concepts::Game Game>
 core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
-    const FullState& state, const ActionMask& valid_actions) {
+    const State& state, const ActionMask& valid_actions) {
   util::ScreenClearer::clear_once();
   print_state(state, false);
   bool complain = false;
@@ -46,7 +46,7 @@ core::ActionResponse HumanTuiPlayer<Game>::get_action_response(
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::end_game(const FullState& state, const ValueArray& outcome) {
+inline void HumanTuiPlayer<Game>::end_game(const State& state, const ValueArray& outcome) {
   util::ScreenClearer::clear_once();
   print_state(state, true);
 
@@ -61,7 +61,7 @@ inline void HumanTuiPlayer<Game>::end_game(const FullState& state, const ValueAr
 }
 
 template <core::concepts::Game Game>
-inline void HumanTuiPlayer<Game>::print_state(const FullState& state, bool terminal) {
+inline void HumanTuiPlayer<Game>::print_state(const State& state, bool terminal) {
   IO::print_state(std::cout, state, last_action_, &this->get_player_names());
 }
 

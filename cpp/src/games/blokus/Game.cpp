@@ -6,7 +6,7 @@
 
 namespace blokus {
 
-color_t Game::BaseState::last_placed_piece_color() const {
+color_t Game::State::last_placed_piece_color() const {
   int max = -1;
   color_t last_color = kNumColors;
   for (color_t c = 0; c < kNumColors; ++c) {
@@ -19,7 +19,7 @@ color_t Game::BaseState::last_placed_piece_color() const {
   return last_color;
 }
 
-void Game::BaseState::compute_aux() {
+void Game::State::compute_aux() {
   BitBoard occupied;
   occupied.clear();
 
@@ -50,12 +50,12 @@ void Game::BaseState::compute_aux() {
   }
 }
 
-void Game::BaseState::validate_aux() const {
-  BaseState copy = *this;
+void Game::State::validate_aux() const {
+  State copy = *this;
   copy.compute_aux();
 
   if (copy.aux != this->aux) {
-    printf("blokus::Game::BaseState validation failure!\n\n");
+    printf("blokus::Game::State validation failure!\n\n");
     std::ostringstream ss;
     Game::IO::print_state(ss, *this, kPass+1);
     std::cout << ss.str() << std::endl;
@@ -96,7 +96,7 @@ void Game::BaseState::validate_aux() const {
   }
 }
 
-void Game::Rules::init_state(FullState& state, group::element_t sym) {
+void Game::Rules::init_state(State& state, group::element_t sym) {
   util::release_assert(sym == group::kIdentity);
   std::memset(&state, 0, sizeof(state));
 
@@ -109,9 +109,10 @@ void Game::Rules::init_state(FullState& state, group::element_t sym) {
   }
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
-  const FullState::core_t& core = state.core;
-  const FullState::aux_t& aux = state.aux;
+Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  const State& state = history.current();
+  const State::core_t& core = state.core;
+  const State::aux_t& aux = state.aux;
 
   color_t color = core.cur_color;
 
@@ -168,13 +169,15 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
   return valid_actions;
 }
 
-Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+  State& state = history.extend();
+
   if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
     state.validate_aux();
   }
 
-  FullState::core_t& core = state.core;
-  FullState::aux_t& aux = state.aux;
+  State::core_t& core = state.core;
+  State::aux_t& aux = state.aux;
 
   color_t color = core.cur_color;
   if (!core.partial_move.valid()) {
@@ -216,7 +219,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   }
 }
 
-Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) {
+Game::Types::ActionOutcome Game::Rules::compute_outcome(const State& state) {
   Game::Types::ValueArray array;
 
   int scores[kNumColors];
@@ -237,7 +240,7 @@ Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) 
   return array;
 }
 
-void Game::IO::print_state(std::ostream& os, const BaseState& state, core::action_t last_action,
+void Game::IO::print_state(std::ostream& os, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   BoardString bs;
 
@@ -342,8 +345,8 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
   os << buffer << std::endl;
 }
 
-Game::FullState Game::IO::load(const std::string& str, int pass_count) {
-  FullState state;
+Game::State Game::IO::load(const std::string& str, int pass_count) {
+  State state;
   Rules::init_state(state);
 
   std::vector<std::string> lines = util::splitlines(str);
@@ -366,37 +369,11 @@ Game::FullState Game::IO::load(const std::string& str, int pass_count) {
   return state;
 }
 
-Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                               const BaseState* cur) {
-  core::seat_index_t cp = Rules::get_current_player(*cur);
-  Tensor tensor;
-  tensor.setZero();
-  int i = 0;
-  const BaseState* state = cur;
-  while (true) {
-    for (color_t c = 0; c < kNumColors; ++c) {
-      color_t rc = (kNumColors + c - cp) % kNumColors;
-      for (Location loc : state->core.occupied_locations[c].get_set_locations()) {
-        tensor(i + rc, loc.row, loc.col) = 1;
-      }
-    }
-    if (state == start) break;
-    state--;
-    i += kNumColors;
-  }
-
-  if (cur->core.partial_move.valid()) {
-    Location loc = cur->core.partial_move;
-    tensor(kDim0 - 1, loc.row, loc.col) = 1;
-  }
-  return tensor;
-}
-
 Game::TrainingTargets::ScoreTarget::Tensor
 Game::TrainingTargets::ScoreTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const BaseState& state = *view.final_pos;
+  const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
   int min_score = kNumCells;
@@ -433,7 +410,7 @@ Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipT
     const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const BaseState& state = *view.final_pos;
+  const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
   for (int row = 0; row < kBoardDimension; ++row) {
@@ -457,7 +434,7 @@ Game::TrainingTargets::DummyScoreTarget::Tensor
 Game::TrainingTargets::DummyScoreTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const BaseState& state = *view.cur_pos;
+  const State& state = *view.cur_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
   int min_score = kNumCells;
@@ -494,7 +471,7 @@ Game::TrainingTargets::DummyOwnershipTarget::Tensor
 Game::TrainingTargets::DummyOwnershipTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const BaseState& state = *view.cur_pos;
+  const State& state = *view.cur_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
   for (int row = 0; row < kBoardDimension; ++row) {

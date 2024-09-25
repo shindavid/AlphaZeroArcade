@@ -14,6 +14,7 @@
 #include <core/concepts/GameIO.hpp>
 #include <core/concepts/GameInputTensorizor.hpp>
 #include <core/concepts/GameRules.hpp>
+#include <core/concepts/GameStateHistory.hpp>
 #include <core/concepts/GameSymmetries.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -31,13 +32,15 @@ namespace concepts {
  *
  * - G::Constants must be a struct satisfying core::concepts::GameConstants.
  *
- * - G::FullState must be a class fully representing the game state. This must be castable to a
- *   G::BaseState, which should be a trivially-copyable POD struct. The FullState is used for
- *   rules-calculations, while an array of recent BaseState's is used as neural network input.
+ * - G::State must be a trivially-copyable POD struct representing the game state. The neural
+ *   network input is constructed from an array of recent State's.
  *
- *   For simple games, FullState and BaseState can be the same type. In a game like chess, in order
- *   to support the threefold repetition rule, FullState would need to store a history of past
- *   states (or a Zobrist hash set), while BaseState would just store a history-less board state.
+ * - G::StateHistory must be a class that stores a history of recent State's. This is used for
+ *   rules-calculations.
+ *
+ *   For simple games, one can use core::SimpleStateHistory, which assumes that the game rules only
+ *   care about the current state, and not the history of states. In a game like chess, however, the
+ *   threefold repetition rule and the fifty-move rule require a more sophisticated history.
  *
  * - G::TransformList must be an mp::TypeList that encodes the symmetries of the game. In the game
  *   of go, for instance, since there are 8 symmetries, G::TransformList would contain 8 transform
@@ -48,8 +51,8 @@ namespace concepts {
  * - G::IO must be a struct containing static methods for text input/output.
  *
  * - G::InputTensorizor must be a struct containing a static method for converting an array of
- *   G::BaseState's to a tensor, to be used as input to the neural network. It must also contain
- *   static methods to convert a G::FullState to a hashable map-key, to be used for neural network
+ *   G::State's to a tensor, to be used as input to the neural network. It must also contain
+ *   static methods to convert a G::StateHistory to a hashable map-key, to be used for neural network
  *   evaluation caching, and for MCGS node reuse.
  *
  * - G::TrainingTargets::List must be an mp::TypeList that encodes the training targets used for
@@ -61,20 +64,20 @@ concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
       typename G::Types,
-      core::GameTypes<typename G::Constants, typename G::BaseState, typename G::SymmetryGroup>>;
+      core::GameTypes<typename G::Constants, typename G::State, typename G::SymmetryGroup>>;
 
-  requires std::is_trivial_v<typename G::BaseState>;
-  requires std::totally_ordered<typename G::BaseState>;
-  requires std::derived_from<typename G::FullState, typename G::BaseState>;
+  requires std::is_trivial_v<typename G::State>;
+  requires core::concepts::GameStateHistory<typename G::StateHistory, typename G::State,
+                                            typename G::Rules>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
-                                          typename G::BaseState>;
-  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::BaseState,
-                                     typename G::FullState>;
-  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::BaseState>;
-  requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::BaseState,
-                                               typename G::FullState>;
+                                          typename G::State>;
+  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State,
+                                     typename G::StateHistory>;
+  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::State>;
+  requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::State,
+                                               typename G::StateHistory>;
   requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List,
                                               typename G::Types::GameLogView>;
 };
@@ -82,8 +85,7 @@ concept Game = requires {
 template <class G>
 concept RequiresMctsDoublePass = requires {
   requires core::concepts::Game<G>;
-  requires !std::same_as<typename G::FullState, typename G::BaseState>;
-  requires !OperatesOn<typename G::Symmetries, typename G::FullState>;
+  requires !OperatesOn<typename G::Symmetries, typename G::StateHistory>;
 };
 
 }  // namespace concepts

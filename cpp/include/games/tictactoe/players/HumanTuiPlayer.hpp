@@ -10,11 +10,11 @@ namespace tictactoe {
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  public:
   using base_t = generic::HumanTuiPlayer<Game>;
-  using FullState = Game::FullState;
+  using State = Game::State;
 
  private:
-  core::action_t prompt_for_action(const FullState&, const ActionMask&) override;
-  void print_state(const FullState&, bool terminal) override;
+  core::action_t prompt_for_action(const State&, const ActionMask&) override;
+  void print_state(const State&, bool terminal) override;
 };
 
 }  // namespace tictactoe

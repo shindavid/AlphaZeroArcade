@@ -16,16 +16,14 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluationRequest {
  public:
-  using BaseState = Game::BaseState;
-  using FullState = Game::FullState;
+  using State = Game::State;
+  using StateHistory = Game::StateHistory;
   using Node = mcts::Node<Game>;
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
   using NNEvaluation = mcts::NNEvaluation<Game>;
 
   using NNEvaluation_sptr = NNEvaluation::sptr;
-  using state_vec_t = Game::Types::state_vec_t;
-  using state_vec_iterator_t = state_vec_t::iterator;
   using cache_key_t = std::tuple<EvalKey, group::element_t>;
 
   enum eval_state_t : int8_t {
@@ -40,13 +38,13 @@ class NNEvaluationRequest {
     /*
      * The *logical* history represented by this item is given by (using python notation):
      *
-     * history + ([state] if split_history else [])
+     * (history + [state]) if first_constructor_used else history
      *
-     * This split_history option allows multiple items that share the same history-prefix to share
+     * The first constructor allows multiple items that share the same history-prefix to share
      * the same history vector, as an optimization.
      */
-    Item(Node* node, const BaseState& state, state_vec_t* history, group::element_t eval_sym,
-         bool split_history);
+    Item(Node* node, StateHistory& history, const State& state, group::element_t eval_sym);
+    Item(Node* node, StateHistory& history, group::element_t eval_sym);
 
     /*
      * Returns f(history.begin(), history.end()),
@@ -69,8 +67,8 @@ class NNEvaluationRequest {
     cache_key_t make_cache_key(group::element_t eval_sym) const;
 
     Node* const node_;
-    const BaseState state_;
-    state_vec_t* const history_;
+    const State state_;
+    StateHistory* const history_;
     const bool split_history_;
     const cache_key_t cache_key_;
 

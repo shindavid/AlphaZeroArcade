@@ -36,8 +36,8 @@ class Node {
 
   using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
-  using BaseState = Game::BaseState;
-  using FullState = Game::FullState;
+  using State = Game::State;
+  using StateHistory = Game::StateHistory;
   using MCTSKey = Game::InputTensorizor::MCTSKey;
   using ActionMask = Game::Types::ActionMask;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
@@ -58,7 +58,7 @@ class Node {
   };
 
   struct stable_data_t {
-    stable_data_t(const FullState&, const ActionOutcome&);
+    stable_data_t(const StateHistory&, const ActionOutcome&);
 
     ValueArray V;
     ActionMask valid_action_mask;
@@ -172,7 +172,7 @@ class Node {
     mutable std::mutex map_mutex_;
   };
 
-  Node(LookupTable*, const FullState&, const ActionOutcome&);
+  Node(LookupTable*, const StateHistory&, const ActionOutcome&);
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
                      SearchResults& results) const;
@@ -204,8 +204,6 @@ class Node {
   bool trivial() const { return trivial_; }
 
  private:
-  static group::element_t make_symmetry(const FullState& state, const ManagerParams& params);
-
   stable_data_t stable_data_;
   LookupTable* lookup_table_;
   stats_t stats_;
