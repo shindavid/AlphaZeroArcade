@@ -37,6 +37,8 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
             ],
 
+        neck=None,
+
         heads=[
             ModuleSpec(type='PolicyHead',
                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),

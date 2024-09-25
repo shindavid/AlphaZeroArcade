@@ -85,6 +85,7 @@ class ConvBlock(nn.Module):
     2. Batch normalisation
     3. A rectifier non-linearity
     """
+
     def __init__(self, c_in: int, c_out: int):
         super(ConvBlock, self).__init__()
         self.norm = nn.BatchNorm2d(c_in)
@@ -95,6 +96,24 @@ class ConvBlock(nn.Module):
         out = x
         out = self.act(self.norm(out))
         out = self.conv(out)
+        return out
+
+
+class KataGoNeck(nn.Module):
+    """
+    A final batch-norm + activation layer, before the heads, as described in the KataGo paper.
+
+    In my experiments, I found that this layer worsens network accuracy in c4. I don't have a good
+    hypothesis for why this is the case.
+    """
+    def __init__(self, c_in: int):
+        super(KataGoNeck, self).__init__()
+        self.norm = nn.BatchNorm2d(c_in)
+        self.act = F.relu
+
+    def forward(self, x):
+        out = x
+        out = self.act(self.norm(out))
         return out
 
 
@@ -430,6 +449,7 @@ MODULE_MAP = {
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'GeneralLogitHead': GeneralLogitHead,
+    'KataGoNeck': KataGoNeck,
     'ResBlock': ResBlock,
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
@@ -452,6 +472,7 @@ class ModelConfig:
     stem: ModuleSpec
     blocks: List[ModuleSpec]
     heads: List[ModuleSpec]
+    neck: Optional[ModuleSpec]
     loss_weights: Dict[str, float]
 
     def validate(self):
@@ -471,6 +492,7 @@ class Model(nn.Module):
         self.config = config
         self.stem = Model._construct_module(config.stem)
         self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
+        self.neck = None if config.neck is None else Model._construct_module(config.neck)
         self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
         self.loss_weights = config.loss_weights
 
@@ -493,6 +515,8 @@ class Model(nn.Module):
         out = self.stem(out)
         for block in self.blocks:
             out = block(out)
+        if self.neck is not None:
+            out = self.neck(out)
         return tuple(head(out) for head in self.heads)
 
     @staticmethod

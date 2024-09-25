@@ -71,7 +71,7 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block20', c_trunk, c_mid]),
         ],
 
-        # TODO: bring back score heads once we fix up ScoreHead to work with dim>2 score-shapes.
+        neck=None,
 
         heads=[
             ModuleSpec(type='PolicyHead',
