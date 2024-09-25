@@ -182,12 +182,16 @@ def main():
     cmake_cmd = ' '.join(cmake_cmd_tokens)
     run(cmake_cmd, handler=catch_first_time_ninja_error)
 
+    # Only use half of the available CPU cores for building to avoid overloading the machine
+    num_parallel_jobs = max(1, os.cpu_count() // 2)
+
     expanded_targets = get_targets(repo_root, target_dir, targets)
     os.chdir(target_dir)
     build_cmd_tokens = [
         'cmake',
         '--build',
         '.',
+        '--parallel', str(num_parallel_jobs),
     ]
     if not targets:
         build_cmd_tokens.extend(['--target', 'all'])
