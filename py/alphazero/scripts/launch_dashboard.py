@@ -83,6 +83,8 @@ all_tags = [d for d in os.listdir(game_dir) if os.path.isdir(os.path.join(game_d
 if not all_tags:
     raise ValueError(f'No directories found in {game_dir}')
 
+# sort all_tags based on os.path.getmtime:
+all_tags.sort(key=lambda x: os.path.getmtime(os.path.join(game_dir, x)))
 
 all_training_heads = []
 for tag in all_tags:
@@ -103,7 +105,6 @@ for tag in all_tags:
             all_training_heads.append(h)
 
     conn.close()
-
 
 if run_params.tag:
     tags = run_params.tag.split(',')
