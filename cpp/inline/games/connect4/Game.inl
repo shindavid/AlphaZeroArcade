@@ -38,6 +38,12 @@ inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
   }
 }
 
+inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
+  for (auto it : history) {
+    apply(it, sym);
+  }
+}
+
 inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym) {
   switch (sym) {
     case groups::D1::kIdentity:
@@ -71,14 +77,14 @@ inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
+inline void Game::Rules::init_state(BaseState& state, group::element_t sym) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
-  const BaseState& base = state;
-  mask_t bottomed_full_mask = base.full_mask + _full_bottom_mask();
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  const BaseState& state = history.current();
+  mask_t bottomed_full_mask = state.full_mask + _full_bottom_mask();
 
   Types::ActionMask mask;
   for (int col = 0; col < kNumColumns; ++col) {
@@ -88,17 +94,17 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& sta
   return mask;
 }
 
-inline core::seat_index_t Game::Rules::get_current_player(const BaseState& base) {
-  return std::popcount(base.full_mask) % 2;
+inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
+  return std::popcount(state.full_mask) % 2;
 }
 
-inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                                      const BaseState* cur) {
+template <typename Iter>
+Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);
   Tensor tensor;
   tensor.setZero();
   int i = 0;
-  const BaseState* state = cur;
+  Iter state = cur;
   while (true) {
     for (int row = 0; row < kNumRows; ++row) {
       for (int col = 0; col < kNumColumns; ++col) {

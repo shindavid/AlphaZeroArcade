@@ -14,6 +14,7 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <games/othello/Constants.hpp>
 #include <util/EigenUtil.hpp>
@@ -35,7 +36,7 @@ class Game {
     static constexpr int kNumPlayers = 2;
     static constexpr int kNumActions = othello::kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
-    static constexpr int kHistorySize = 0;
+    static constexpr int kNumPreviousStatesToEncode = 0;
     static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
   };
 
@@ -49,26 +50,29 @@ class Game {
     int8_t pass_count;
   };
 
-  using FullState = BaseState;
+  using StateHistory = core::SimpleStateHistory<BaseState, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const BaseState& state);
     static void apply(BaseState& state, group::element_t sym);
+    static void apply(StateHistory& history, group::element_t sym);  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
     static group::element_t get_canonical_symmetry(const BaseState& state);
   };
 
   struct Rules {
-    static void init_state(FullState& state, group::element_t sym = group::kIdentity);
-    static Types::ActionMask get_legal_moves(const FullState& state);
-    static core::seat_index_t get_current_player(const BaseState& state);
-    static Types::ActionOutcome apply(FullState& state, core::action_t action);
+    static void init_state(BaseState&, group::element_t sym = group::kIdentity);
+    static Types::ActionMask get_legal_moves(const StateHistory&);
+    static core::seat_index_t get_current_player(const BaseState&);
+    static Types::ActionOutcome apply(StateHistory&, core::action_t action);
+
+    static Types::ActionMask get_legal_moves(const BaseState&);
 
    private:
-    static Types::ValueArray compute_outcome(const FullState& state);
+    static Types::ValueArray compute_outcome(const BaseState& state);
   };
 
   struct IO {
@@ -85,14 +89,14 @@ class Game {
   };
 
   struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kHistorySize);
+    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kBoardDimension, kBoardDimension>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 
-    static MCTSKey mcts_key(const FullState& state) { return state; }
-    static EvalKey eval_key(const BaseState* start, const BaseState* cur) { return *cur; }
-    static Tensor tensorize(const BaseState* start, const BaseState* cur);
+    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
+    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

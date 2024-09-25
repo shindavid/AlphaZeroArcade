@@ -14,15 +14,17 @@
 
 using Game = othello::Game;
 using BaseState = Game::BaseState;
+using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 BaseState make_init_state() {
-  BaseState state;
-  Rules::init_state(state);
-  Rules::apply(state, othello::kD3);
-  return state;
+  StateHistory history;
+  history.initialize(Rules{});
+
+  Rules::apply(history, othello::kD3);
+  return history.current();
 }
 
 PolicyTensor make_policy(int move) {

@@ -14,17 +14,19 @@
 
 using Game = c4::Game;
 using BaseState = Game::BaseState;
+using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
 BaseState make_init_state() {
-  BaseState state;
-  Rules::init_state(state);
-  Rules::apply(state, 3);
-  Rules::apply(state, 4);
-  Rules::apply(state, 3);
-  return state;
+  StateHistory history;
+  history.initialize(Rules{});
+
+  Rules::apply(history, 3);
+  Rules::apply(history, 4);
+  Rules::apply(history, 3);
+  return history.current();
 }
 
 PolicyTensor make_policy(int move1, int move2) {

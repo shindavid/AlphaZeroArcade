@@ -13,6 +13,7 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <games/connect4/Constants.hpp>
 #include <util/EigenUtil.hpp>
@@ -40,7 +41,7 @@ struct Game {
     static constexpr int kNumPlayers = 2;
     static constexpr int kNumActions = kNumColumns;
     static constexpr int kMaxBranchingFactor = kNumColumns;
-    static constexpr int kHistorySize = 0;
+    static constexpr int kNumPreviousStatesToEncode = 0;
     static constexpr float kOpeningLength = 10.583;  // likely too big, just keeping previous value
   };
 
@@ -52,23 +53,24 @@ struct Game {
     mask_t cur_player_mask;  // spaces occupied by current player
   };
 
-  using FullState = BaseState;
+  using StateHistory = core::SimpleStateHistory<BaseState, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D1;
   using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const BaseState& state);
     static void apply(BaseState& state, group::element_t sym);
+    static void apply(StateHistory& history, group::element_t sym);  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
     static group::element_t get_canonical_symmetry(const BaseState& state);
   };
 
   struct Rules {
-    static void init_state(FullState& state, group::element_t sym = group::kIdentity);
-    static Types::ActionMask get_legal_moves(const FullState& state);
+    static void init_state(BaseState&, group::element_t sym = group::kIdentity);
+    static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::seat_index_t get_current_player(const BaseState&);
-    static Types::ActionOutcome apply(FullState& state, core::action_t action);
+    static Types::ActionOutcome apply(StateHistory&, core::action_t action);
   };
 
   struct IO {
@@ -84,14 +86,14 @@ struct Game {
   };
 
   struct InputTensorizor {
-    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kHistorySize);
+    static constexpr int kDim0 = kNumPlayers * (1 + Constants::kNumPreviousStatesToEncode);
     using Tensor = eigen_util::FTensor<Eigen::Sizes<kDim0, kNumRows, kNumColumns>>;
     using MCTSKey = BaseState;
     using EvalKey = BaseState;
 
-    static MCTSKey mcts_key(const FullState& state) { return state; }
-    static EvalKey eval_key(const BaseState* start, const BaseState* cur) { return *cur; }
-    static Tensor tensorize(const BaseState* start, const BaseState* cur);
+    static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
+    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
+    template <typename Iter> static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

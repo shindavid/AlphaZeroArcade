@@ -53,7 +53,6 @@ class Game {
   };
 
   using StateHistory = core::SimpleStateHistory<BaseState, Constants::kNumPreviousStatesToEncode>;
-
   using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, BaseState, SymmetryGroup>;
 

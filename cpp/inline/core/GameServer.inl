@@ -280,11 +280,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     players[p]->start_game();
   }
 
-  BaseState initial_state;
-  Rules::init_state(initial_state);
-
   StateHistory state_history;
-  state_history.update(initial_state);
+  state_history.initialize(Rules{});
+
   if (shared_data_.params().print_game_states) {
     Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
   }

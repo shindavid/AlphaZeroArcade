@@ -45,13 +45,13 @@ inline void EdaxPlayer::start_game() {
   in_.flush();
 }
 
-inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const FullState&,
+inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const BaseState&,
                                              core::action_t action) {
   if (seat == this->get_my_seat()) return;
   submit_action(action);
 }
 
-inline core::ActionResponse EdaxPlayer::get_action_response(const FullState&,
+inline core::ActionResponse EdaxPlayer::get_action_response(const BaseState&,
                                                             const ActionMask& valid_actions) {
   int num_valid_actions = valid_actions.count();
   if (params_.verbose) {

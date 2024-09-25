@@ -3,13 +3,12 @@
 namespace tictactoe {
 
 Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
-  BaseState state = history.current();
+  BaseState& state = history.extend();
   core::seat_index_t current_player = get_current_player(state);
 
   mask_t piece_mask = mask_t(1) << action;
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
-  history.update(state);
 
   bool win = false;
 

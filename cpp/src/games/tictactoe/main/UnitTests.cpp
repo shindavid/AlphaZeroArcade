@@ -21,11 +21,9 @@ using Rules = Game::Rules;
 
 template<typename... Ts>
 BaseState make_state(Ts... moves) {
-  BaseState state;
-  Rules::init_state(state);
-
   StateHistory history;
-  history.update(state);
+  history.initialize(Rules{});
+
   for (int move : {moves...}) {
     Rules::apply(history, move);
   }

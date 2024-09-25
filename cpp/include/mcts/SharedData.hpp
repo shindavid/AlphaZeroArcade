@@ -22,6 +22,7 @@ namespace mcts {
  */
 template <core::concepts::Game Game>
 struct SharedData {
+  using Rules = Game::Rules;
   using Node = mcts::Node<Game>;
   using BaseState = Game::BaseState;
   using StateHistory = Game::StateHistory;

@@ -9,6 +9,7 @@ int global_fail_count = 0;
 using namespace blokus;
 
 using BaseState = Game::BaseState;
+using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;

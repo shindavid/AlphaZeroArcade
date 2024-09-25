@@ -43,6 +43,12 @@ inline void Game::Symmetries::apply(BaseState& state, group::element_t sym) {
   }
 }
 
+inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
+  for (auto it : history) {
+    apply(it, sym);
+  }
+}
+
 inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym) {
   using namespace eigen_util;
   using D4 = groups::D4;
@@ -87,7 +93,7 @@ inline group::element_t Game::Symmetries::get_canonical_symmetry(const BaseState
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
+inline void Game::Rules::init_state(BaseState& state, group::element_t sym) {
   state.opponent_mask = kStartingWhiteMask;
   state.cur_player_mask = kStartingBlackMask;
   state.cur_player = kStartingColor;
@@ -96,17 +102,21 @@ inline void Game::Rules::init_state(FullState& state, group::element_t sym) {
   Symmetries::apply(state, sym);
 }
 
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  return get_legal_moves(history.current());
+}
+
 inline core::seat_index_t Game::Rules::get_current_player(const BaseState& state) {
   return state.cur_player;
 }
 
-inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                                      const BaseState* cur) {
+template <typename Iter>
+Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);
   Tensor tensor;
   tensor.setZero();
   int i = 0;
-  const BaseState* state = cur;
+  Iter state = cur;
   while (true) {
     for (int row = 0; row < kBoardDimension; ++row) {
       for (int col = 0; col < kBoardDimension; ++col) {

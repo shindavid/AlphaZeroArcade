@@ -11,15 +11,15 @@
 
 namespace c4 {
 
-Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
-  BaseState& base = state;
+Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+  BaseState& state = history.extend();
 
   column_t col = action;
-  mask_t piece_mask = (base.full_mask + _bottom_mask(col)) & _column_mask(col);
-  core::seat_index_t current_player = Rules::get_current_player(base);
+  mask_t piece_mask = (state.full_mask + _bottom_mask(col)) & _column_mask(col);
+  core::seat_index_t current_player = Rules::get_current_player(state);
 
-  base.cur_player_mask ^= base.full_mask;
-  base.full_mask |= piece_mask;
+  state.cur_player_mask ^= state.full_mask;
+  state.full_mask |= piece_mask;
 
   bool win = false;
 
@@ -43,7 +43,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
       (piece_mask >> 27) * sw_ne_diagonal_block   // sw-ne diagonal 4
   };
 
-  mask_t updated_mask = base.full_mask ^ base.cur_player_mask;
+  mask_t updated_mask = state.full_mask ^ state.cur_player_mask;
   for (mask_t mask : masks) {
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
@@ -57,7 +57,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   if (win) {
     outcome(current_player) = 1.0;
     return Types::ActionOutcome(outcome);
-  } else if (std::popcount(base.full_mask) == kNumCells) {
+  } else if (std::popcount(state.full_mask) == kNumCells) {
     outcome(0) = 0.5;
     outcome(1) = 0.5;
     return Types::ActionOutcome(outcome);
@@ -66,7 +66,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   return Types::ActionOutcome();
 }
 
-void Game::IO::print_state(std::ostream& ss, const BaseState& base, core::action_t last_action,
+void Game::IO::print_state(std::ostream& ss, const BaseState& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
   constexpr int buf_size = 4096;
   char buffer[buf_size];
@@ -80,10 +80,10 @@ void Game::IO::print_state(std::ostream& ss, const BaseState& base, core::action
   column_t blink_column = last_action;
   row_t blink_row = -1;
   if (blink_column >= 0) {
-    blink_row = std::countr_one(base.full_mask >> (blink_column * 8)) - 1;
+    blink_row = std::countr_one(state.full_mask >> (blink_column * 8)) - 1;
   }
   for (row_t row = kNumRows - 1; row >= 0; --row) {
-    cx += print_row(buffer + cx, buf_size - cx, base, row, row == blink_row ? blink_column : -1);
+    cx += print_row(buffer + cx, buf_size - cx, state, row, row == blink_row ? blink_column : -1);
   }
   cx += snprintf(buffer + cx, buf_size - cx, "|1|2|3|4|5|6|7|\n\n");
   if (player_names) {
@@ -131,8 +131,8 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   ss << buffer << std::endl;
 }
 
-int Game::IO::print_row(char* buf, int n, const BaseState& base, row_t row, column_t blink_column) {
-  core::seat_index_t current_player = Rules::get_current_player(base);
+int Game::IO::print_row(char* buf, int n, const BaseState& state, row_t row, column_t blink_column) {
+  core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kRed ? ansi::kRed("R") : ansi::kYellow("Y");
   const char* opp_color = current_player == kRed ? ansi::kYellow("Y") : ansi::kRed("R");
 
@@ -140,8 +140,8 @@ int Game::IO::print_row(char* buf, int n, const BaseState& base, row_t row, colu
 
   for (int col = 0; col < kNumColumns; ++col) {
     int index = _to_bit_index(row, col);
-    bool occupied = (1UL << index) & base.full_mask;
-    bool occupied_by_cur_player = (1UL << index) & base.cur_player_mask;
+    bool occupied = (1UL << index) & state.full_mask;
+    bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
 
     const char* color = occupied ? (occupied_by_cur_player ? cur_color : opp_color) : "";
     const char* c = occupied ? ansi::kCircle("") : " ";

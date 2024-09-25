@@ -96,7 +96,7 @@ void Game::BaseState::validate_aux() const {
   }
 }
 
-void Game::Rules::init_state(FullState& state, group::element_t sym) {
+void Game::Rules::init_state(BaseState& state, group::element_t sym) {
   util::release_assert(sym == group::kIdentity);
   std::memset(&state, 0, sizeof(state));
 
@@ -109,9 +109,10 @@ void Game::Rules::init_state(FullState& state, group::element_t sym) {
   }
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
-  const FullState::core_t& core = state.core;
-  const FullState::aux_t& aux = state.aux;
+Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  const BaseState& state = history.current();
+  const BaseState::core_t& core = state.core;
+  const BaseState::aux_t& aux = state.aux;
 
   color_t color = core.cur_color;
 
@@ -168,13 +169,15 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
   return valid_actions;
 }
 
-Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+  BaseState& state = history.extend();
+
   if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
     state.validate_aux();
   }
 
-  FullState::core_t& core = state.core;
-  FullState::aux_t& aux = state.aux;
+  BaseState::core_t& core = state.core;
+  BaseState::aux_t& aux = state.aux;
 
   color_t color = core.cur_color;
   if (!core.partial_move.valid()) {
@@ -216,7 +219,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   }
 }
 
-Game::Types::ActionOutcome Game::Rules::compute_outcome(const FullState& state) {
+Game::Types::ActionOutcome Game::Rules::compute_outcome(const BaseState& state) {
   Game::Types::ValueArray array;
 
   int scores[kNumColors];
@@ -342,8 +345,8 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
   os << buffer << std::endl;
 }
 
-Game::FullState Game::IO::load(const std::string& str, int pass_count) {
-  FullState state;
+Game::BaseState Game::IO::load(const std::string& str, int pass_count) {
+  BaseState state;
   Rules::init_state(state);
 
   std::vector<std::string> lines = util::splitlines(str);
@@ -364,32 +367,6 @@ Game::FullState Game::IO::load(const std::string& str, int pass_count) {
   state.core.cur_color = (state.last_placed_piece_color() + pass_count + 1) % kNumColors;
 
   return state;
-}
-
-Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(const BaseState* start,
-                                                               const BaseState* cur) {
-  core::seat_index_t cp = Rules::get_current_player(*cur);
-  Tensor tensor;
-  tensor.setZero();
-  int i = 0;
-  const BaseState* state = cur;
-  while (true) {
-    for (color_t c = 0; c < kNumColors; ++c) {
-      color_t rc = (kNumColors + c - cp) % kNumColors;
-      for (Location loc : state->core.occupied_locations[c].get_set_locations()) {
-        tensor(i + rc, loc.row, loc.col) = 1;
-      }
-    }
-    if (state == start) break;
-    state--;
-    i += kNumColors;
-  }
-
-  if (cur->core.partial_move.valid()) {
-    Location loc = cur->core.partial_move;
-    tensor(kDim0 - 1, loc.row, loc.col) = 1;
-  }
-  return tensor;
 }
 
 Game::TrainingTargets::ScoreTarget::Tensor

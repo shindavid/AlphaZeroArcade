@@ -26,7 +26,23 @@ class SimpleStateHistory {
   SimpleStateHistory() : buf_(kMaxSize) {}
 
   void clear() { buf_.clear(); }
-  void update(const BaseState& state) { buf_.push_back(state); }
+
+  template<typename Rules> void initialize(Rules) {
+    clear();
+    BaseState state;
+    Rules::init_state(state);
+    buf_.push_back(state);
+  }
+
+  BaseState& extend() {
+    buf_.push_back(buf_.back());
+    return buf_.back();
+  }
+
+  void update(const BaseState& state) {
+    buf_.push_back(state);
+  }
+
   void undo() { buf_.pop_back(); }
   const BaseState& current() const { return buf_.back(); }
   auto begin() const {

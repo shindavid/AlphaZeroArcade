@@ -19,7 +19,7 @@ namespace c4 {
 class PerfectOracle {
  public:
   using ActionMask = Game::Types::ActionMask;
-  using FullState = Game::FullState;
+  using BaseState = Game::BaseState;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
   static constexpr int kNumClientsPerOracle = 16;
@@ -105,8 +105,8 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
   PerfectPlayer(const Params&);
 
   void start_game() override;
-  void receive_state_change(core::seat_index_t, const FullState&, core::action_t) override;
-  core::ActionResponse get_action_response(const FullState&, const ActionMask&) override;
+  void receive_state_change(core::seat_index_t, const BaseState&, core::action_t) override;
+  core::ActionResponse get_action_response(const BaseState&, const ActionMask&) override;
 
  private:
   const Params params_;

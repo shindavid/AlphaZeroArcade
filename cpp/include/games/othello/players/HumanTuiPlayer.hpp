@@ -8,8 +8,8 @@ namespace othello {
 
 class HumanTuiPlayer : public generic::HumanTuiPlayer<Game> {
  private:
-  using FullState = Game::FullState;
-  core::action_t prompt_for_action(const FullState&, const ActionMask&) override;
+  using BaseState = Game::BaseState;
+  core::action_t prompt_for_action(const BaseState&, const ActionMask&) override;
 };
 
 }  // namespace othello

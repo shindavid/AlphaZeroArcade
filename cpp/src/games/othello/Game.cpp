@@ -25,7 +25,9 @@ std::string Game::IO::action_to_str(core::action_t action) {
 }
 
 // copied from edax-reversi repo - board_next()
-Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t action) {
+Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+  BaseState& state = history.extend();
+
   if (action == kPass) {
     std::swap(state.cur_player_mask, state.opponent_mask);
     state.cur_player = 1 - state.cur_player;
@@ -50,7 +52,7 @@ Game::Types::ActionOutcome Game::Rules::apply(FullState& state, core::action_t a
   return Types::ActionOutcome();
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const FullState& state) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const BaseState& state) {
   uint64_t mask = get_moves(state.cur_player_mask, state.opponent_mask);
   Types::ActionMask valid_actions;
   uint64_t u = mask;
@@ -145,7 +147,7 @@ int Game::IO::print_row(char* buf, int n, const BaseState& state,
   return cx;
 }
 
-Game::Types::ValueArray Game::Rules::compute_outcome(const FullState& state) {
+Game::Types::ValueArray Game::Rules::compute_outcome(const BaseState& state) {
   Types::ValueArray outcome;
   outcome.setZero();
 
