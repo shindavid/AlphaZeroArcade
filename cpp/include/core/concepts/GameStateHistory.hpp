@@ -22,7 +22,7 @@ namespace concepts {
  */
 template <typename StateHistory, typename State, typename Rules>
 concept GameStateHistory = requires(const State& const_state, const StateHistory& const_history,
-                             StateHistory& history) {
+                                    StateHistory& history, group::element_t sym) {
 
   /*
    * Clear the history.
@@ -34,8 +34,11 @@ concept GameStateHistory = requires(const State& const_state, const StateHistory
    * static methods to make the call-sites more readable (otherwise we would need to pass the Rules
    * as a template parameter, which would distastefully require the "template" keyword at the
    * call-site).
+   *
+   * If sym is passed in, the initial state is transformed with that symmetry.
    */
   { history.initialize(Rules{}) };
+  { history.initialize(Rules{}, sym) };
 
   /*
    * Push back a copy of most recent state of the history, and return a reference to it.

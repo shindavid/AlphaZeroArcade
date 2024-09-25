@@ -9,7 +9,7 @@ void SharedData<Game>::clear() {
   root_info.node_index = -1;
 
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
-    root_info.history_array[sym].initialize(Rules{});
+    root_info.history_array[sym].initialize(Rules{}, sym);
   }
 
   const State& raw_state = root_info.history_array[group::kIdentity].current();

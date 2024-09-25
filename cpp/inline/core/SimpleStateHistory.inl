@@ -6,10 +6,10 @@ namespace core {
 
 template <typename State, int kNumPastStatesNeeded>
 template <typename Rules>
-void SimpleStateHistory<State, kNumPastStatesNeeded>::initialize(Rules) {
+void SimpleStateHistory<State, kNumPastStatesNeeded>::initialize(Rules, group::element_t sym) {
   clear();
   State state;
-  Rules::init_state(state);
+  Rules::init_state(state, sym);
   buf_.push_back(state);
 }
 

@@ -140,12 +140,7 @@ void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& pay
   seat_index_t seat_assignment = payload.seat_assignment;
   payload.parse_player_names(player_names);
 
-  State initial_state;
-  Rules::init_state(initial_state);
-
-  history_.clear();
-  history_.update(initial_state);
-
+  history_.initialize(Rules{});
   player_->init_game(game_id, player_names, seat_assignment);
   player_->start_game();
 }

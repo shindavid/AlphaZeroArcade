@@ -71,7 +71,7 @@ Node<Game>* SearchThread<Game>::init_root_node() {
   StateHistory& history = shared_data_->root_info.history_array[canonical_sym_];
 
   pseudo_local_vars_.canonical_history = history;
-  init_node(&history, root_index, root);
+  init_node(&pseudo_local_vars_.canonical_history, root_index, root);
 
   root->stats().RN++;
   return root;
@@ -159,6 +159,8 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
         Game::Symmetries::get_canonical_symmetry(raw_child_history.current());
     edge->sym = Group::compose(canonical_child_sym, inv_canonical_sym);
 
+    // TODO: consider copying the entire history_array up-front, outside of this loop. This should
+    // resultant in less copying if the number of children is larger than the number of symmetries.
     StateHistory canonical_child_history =
         shared_data_->root_info.history_array[canonical_child_sym];  // copy
 

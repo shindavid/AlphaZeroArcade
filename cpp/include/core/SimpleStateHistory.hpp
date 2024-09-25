@@ -1,5 +1,7 @@
 #pragma once
 
+#include <util/FiniteGroups.hpp>
+
 #include <boost/circular_buffer.hpp>
 
 namespace core {
@@ -31,8 +33,10 @@ class SimpleStateHistory {
    * Rules is passed as an argument here to make the call-site more readable. We could have passed
    * Rules as a template parameter, but then we would need to use the "template" keyword at the
    * call-site, which is distasteful.
+   *
+   * If sym is passed in, the initial state is transformed with that symmetry.
    */
-  template <typename Rules> void initialize(Rules);
+  template <typename Rules> void initialize(Rules, group::element_t sym = group::kIdentity);
 
   /*
    * Push back a copy of the most recent state, and return a reference to it.
