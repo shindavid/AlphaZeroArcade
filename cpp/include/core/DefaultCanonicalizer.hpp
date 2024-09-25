@@ -19,6 +19,7 @@ template<concepts::Game Game>
 class DefaultCanonicalizer {
  public:
   using State = Game::State;
+  static_assert(std::totally_ordered<State>, "State must be totally ordered");
 
   static group::element_t get(const State& state);
 };

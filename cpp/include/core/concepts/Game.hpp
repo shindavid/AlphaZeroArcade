@@ -14,6 +14,7 @@
 #include <core/concepts/GameIO.hpp>
 #include <core/concepts/GameInputTensorizor.hpp>
 #include <core/concepts/GameRules.hpp>
+#include <core/concepts/GameStateHistory.hpp>
 #include <core/concepts/GameSymmetries.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
@@ -66,8 +67,8 @@ concept Game = requires {
       core::GameTypes<typename G::Constants, typename G::State, typename G::SymmetryGroup>>;
 
   requires std::is_trivial_v<typename G::State>;
-  // requires std::totally_ordered<typename G::State>;
-  // requires core::concepts::GameStateHistory<typename G::StateHistory, typename G::State>;
+  requires core::concepts::GameStateHistory<typename G::StateHistory, typename G::State,
+                                            typename G::Rules>;
 
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
