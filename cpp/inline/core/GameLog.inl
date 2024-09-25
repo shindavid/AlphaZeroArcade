@@ -84,11 +84,11 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
   int num_bytes_to_cp = num_states_to_cp * sizeof(State);
 
-  State base_states[num_states_to_cp];
-  std::memcpy(&base_states[0], get_state(state_index - num_states_to_cp + 1), num_bytes_to_cp);
+  State states[num_states_to_cp];
+  std::memcpy(&states[0], get_state(state_index - num_states_to_cp + 1), num_bytes_to_cp);
 
-  State* start_pos = &base_states[0];
-  State* cur_pos = &base_states[num_states_to_cp - 1];
+  State* start_pos = &states[0];
+  State* cur_pos = &states[num_states_to_cp - 1];
   State final_state = *get_state(num_positions() - 1);
 
   group::element_t sym = 0;
@@ -97,7 +97,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   }
 
   for (int i = 0; i < num_states_to_cp; ++i) {
-    Game::Symmetries::apply(base_states[i], sym);
+    Game::Symmetries::apply(states[i], sym);
   }
   Game::Symmetries::apply(final_state, sym);
   Game::Symmetries::apply(policy, sym);

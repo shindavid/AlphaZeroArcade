@@ -458,8 +458,8 @@ std::string SearchThread<Game>::search_path_str() const {
 template <core::concepts::Game Game>
 void SearchThread<Game>::calc_canonical_state_data() {
   pseudo_local_vars_.canonical_history = raw_history_;
-  for (State& base : pseudo_local_vars_.canonical_history) {
-    Game::Symmetries::apply(base, canonical_sym_);
+  for (State& state : pseudo_local_vars_.canonical_history) {
+    Game::Symmetries::apply(state, canonical_sym_);
   }
 
   if constexpr (core::concepts::RequiresMctsDoublePass<Game>) {
