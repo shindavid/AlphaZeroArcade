@@ -25,18 +25,20 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     score_shape = shape_info_dict['score'].shape
+    unplayed_pieces_shape = shape_info_dict['unplayed_pieces'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     c_trunk = 96
     c_mid = 96
     c_gpool = 32
     c_policy_hidden = 2
-    c_opp_policy_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
     c_score_margin_hidden = 32
     n_score_margin_hidden = 32
     c_ownership_hidden = 64
+    c_unplayed_pieces_hidden = 32
+    n_unplayed_pieces_hidden = 32
 
     return ModelConfig(
         shape_info_dict=shape_info_dict,
@@ -84,11 +86,9 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
                              n_score_margin_hidden, score_shape]),
             ModuleSpec(type='OwnershipHead',
                        args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
-            ModuleSpec(type='ScoreHead',
-                       args=['dummy-score', c_trunk, c_score_margin_hidden,
-                             n_score_margin_hidden, score_shape]),
-            ModuleSpec(type='OwnershipHead',
-                       args=['dummy-ownership', c_trunk, c_ownership_hidden, ownership_shape]),
+            ModuleSpec(type='GeneralLogitHead',
+                       args=['unplayed_pieces', c_trunk, c_unplayed_pieces_hidden,
+                             n_unplayed_pieces_hidden, unplayed_pieces_shape]),
         ],
 
         loss_weights={
@@ -97,8 +97,7 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
             'action_value': 1.0,
             'score': 0.02,
             'ownership': 0.15,
-            'dummy-score': 0.02,
-            'dummy-ownership': 0.15,
+            'unplayed_pieces': 0.3,
         },
     )
 

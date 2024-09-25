@@ -161,3 +161,18 @@ class OwnershipTarget(LearningTarget):
         shape = output.shape
         n = math.prod(shape[2:])
         return torch.sum(output.softmax(dim=1) * target).item() / n
+
+
+class GeneralLogitTarget(LearningTarget):
+    def loss_fn(self) -> nn.Module:
+        return nn.BCEWithLogitsLoss()
+
+    def get_num_correct_predictions(self, prediction_logits: torch.Tensor,
+                                    labels: torch.Tensor) -> float:
+        prediction_probs = prediction_logits.sigmoid()
+        n = math.prod(labels.shape[1:])
+
+        # If the label is 1, then a prediction of p counts as p correct predictions.
+        # If the label is 0, then a prediction of p counts as 1-p correct predictions.
+        w = labels * prediction_probs + (1 - labels) * (1 - prediction_probs)
+        return torch.sum(w).item() / n

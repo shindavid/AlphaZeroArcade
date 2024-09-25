@@ -376,29 +376,20 @@ Game::TrainingTargets::ScoreTarget::tensorize(const Types::GameLogView& view) {
   const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
-  int min_score = kNumCells;
-  int absolute_scores[kNumColors];
+  int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
     int score = state.remaining_square_count(c);
-    absolute_scores[c] = score;
-    min_score = std::min(min_score, score);
-  }
-
-  int relative_scores[kNumColors];
-  for (color_t c = 0; c < kNumColors; ++c) {
-    int score = absolute_scores[c] - min_score;
-    relative_scores[c] = score;
-    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
+    scores[c] = std::min(score, kVeryBadScore);
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
     color_t rc = (kNumColors + c - cp) % kNumColors;
 
     // PDF
-    tensor(0, relative_scores[c], rc) = 1;
+    tensor(0, scores[c], rc) = 1;
 
     // CDF
-    for (int score = 0; score <= relative_scores[c]; ++score) {
+    for (int score = 0; score <= scores[c]; ++score) {
       tensor(1, score, rc) = 1;
     }
   }
@@ -430,61 +421,18 @@ Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipT
   return tensor;
 }
 
-Game::TrainingTargets::DummyScoreTarget::Tensor
-Game::TrainingTargets::DummyScoreTarget::tensorize(const Types::GameLogView& view) {
+Game::TrainingTargets::UnplayedPiecesTarget::Tensor
+Game::TrainingTargets::UnplayedPiecesTarget::tensorize(const Types::GameLogView& view) {
   Tensor tensor;
   tensor.setZero();
-  const State& state = *view.cur_pos;
+  const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
 
-  int min_score = kNumCells;
-  int absolute_scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
-    int score = state.remaining_square_count(c);
-    absolute_scores[c] = score;
-    min_score = std::min(min_score, score);
-  }
-
-  int relative_scores[kNumColors];
-  for (color_t c = 0; c < kNumColors; ++c) {
-    int score = absolute_scores[c] - min_score;
-    relative_scores[c] = score;
-    util::release_assert(score >= 0 && score <= kMaxScore, "Unexpected score: %d", score);
-  }
-
-  for (color_t c = 0; c < kNumColors; ++c) {
+    const PieceMask& mask = state.aux.played_pieces[c];
     color_t rc = (kNumColors + c - cp) % kNumColors;
-
-    // PDF
-    tensor(0, relative_scores[c], rc) = 1;
-
-    // CDF
-    for (int score = 0; score <= relative_scores[c]; ++score) {
-      tensor(1, score, rc) = 1;
-    }
-  }
-
-  return tensor;
-}
-
-Game::TrainingTargets::DummyOwnershipTarget::Tensor
-Game::TrainingTargets::DummyOwnershipTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
-  tensor.setZero();
-  const State& state = *view.cur_pos;
-  color_t cp = Rules::get_current_player(*view.cur_pos);
-
-  for (int row = 0; row < kBoardDimension; ++row) {
-    for (int col = 0; col < kBoardDimension; ++col) {
-      tensor(kNumColors, row, col) = 1;
-    }
-  }
-
-  for (color_t c = 0; c < kNumColors; ++c) {
-    color_t rc = (kNumColors + c - cp) % kNumColors;
-    for (Location loc : state.core.occupied_locations[c].get_set_locations()) {
-      tensor(rc, loc.row, loc.col) = 1;
-      tensor(kNumColors, loc.row, loc.col) = 0;
+    for (auto p : mask.get_unset_bits()) {
+      tensor(rc, p) = 1;
     }
   }
 

@@ -26,8 +26,8 @@ import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from shared.learning_targets import ActionValueTarget, LearningTarget, OwnershipTarget, \
-    PolicyTarget, ScoreTarget, ValueTarget
+from shared.learning_targets import ActionValueTarget, GeneralLogitTarget, LearningTarget,  \
+    OwnershipTarget, PolicyTarget, ScoreTarget, ValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -371,6 +371,7 @@ class OwnershipHead(Head):
 
     For historical reasons, I am mimicking the flow of the PolicyHead for now.
     """
+
     def __init__(self, name: str, c_in: int, c_hidden: int, shape: Shape):
         super(OwnershipHead, self).__init__(name, OwnershipTarget())
 
@@ -390,10 +391,45 @@ class OwnershipHead(Head):
         return out
 
 
+class GeneralLogitHead(Head):
+    """
+    A head that produces an arbitrarily shaped tensor of logits.
+    """
+    def __init__(self, name: str, c_in: int, c_hidden: int, n_hidden: int, shape: Shape):
+        super(GeneralLogitHead, self).__init__(name, GeneralLogitTarget())
+
+        self.shape = shape
+
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+
+        self.gpool = GlobalPoolingLayer()
+
+        n_gpool = GlobalPoolingLayer.NUM_CHANNELS * c_hidden
+        self.linear1 = nn.Linear(n_gpool, n_hidden, bias=True)
+        self.linear2 = nn.Linear(n_hidden, math.prod(shape), bias=True)
+
+    def forward(self, x):
+        N = x.shape[0]
+
+        out = x  # (N, C_in, H, W)
+        out = self.conv(out)  # (N, C_hidden, H, W)
+        out = self.act(out)  # (N, C_hidden, H, W)
+        out = self.gpool(out)  # (N, n_gpool, 1, 1)
+        out = out.squeeze(-1).squeeze(-1)  # (N, n_gpool)
+
+        out = self.linear1(out)  # (N, n_hidden)
+        out = self.act(out)  # (N, n_hidden)
+        out = self.linear2(out)  # (N, *)
+
+        return out.view(N, *self.shape)  # (N, *shape)
+
+
 MODULE_MAP = {
     'ActionValueHead': ActionValueHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
+    'GeneralLogitHead': GeneralLogitHead,
     'ResBlock': ResBlock,
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,

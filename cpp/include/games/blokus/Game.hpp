@@ -155,7 +155,8 @@ class Game {
   struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kBoardDimension, kBoardDimension>;
     using OwnershipShape = Eigen::Sizes<kNumPlayers + 1, kBoardDimension, kBoardDimension>;
-    using ScoreShape = Eigen::Sizes<2, kMaxScore + 1, kNumPlayers>;  // pdf/cdf, score, player
+    using ScoreShape = Eigen::Sizes<2, kVeryBadScore + 1, kNumPlayers>;  // pdf/cdf, score, player
+    using UnplayedPiecesShape = Eigen::Sizes<kNumPlayers, kNumPieces>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
@@ -178,29 +179,24 @@ class Game {
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
-    struct DummyScoreTarget {
-      static constexpr const char* kName = "dummy-score";
-      using Tensor = eigen_util::FTensor<ScoreShape>;
-
-      static Tensor tensorize(const Types::GameLogView& view);
-    };
-
-    struct DummyOwnershipTarget {
-      static constexpr const char* kName = "dummy-ownership";
-      using Tensor = eigen_util::FTensor<OwnershipShape>;
+    /*
+     * Which pieces are unplayed at the end of the game.
+     */
+    struct UnplayedPiecesTarget {
+      static constexpr const char* kName = "unplayed_pieces";
+      using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
       static Tensor tensorize(const Types::GameLogView& view);
     };
 
     // TODO:
-    // - UnplayedPiecesTarget
     // - ReachableSquaresTarget: for each square, whether it is reachable by some player if all
     //                           other players are forced to pass all their turns.
     // - OpponentReplySquaresTarget: for each square, whether some opponent plays a piece there
     //                               before the current player's next move.
 
     using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ScoreTarget,
-                              OwnershipTarget, DummyScoreTarget, DummyOwnershipTarget>;
+                              OwnershipTarget, UnplayedPiecesTarget>;
   };
 };
 
