@@ -21,10 +21,11 @@ def b7_c64(shape_info_dict: ShapeInfoDict):
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_size = NUM_COLUMNS
-    c_trunk = 64
-    c_mid = 64
+    c_trunk = 128
+    c_mid = 128
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
+    c_action_value_hidden = 16
     c_value_hidden = 1
     n_value_hidden = 256
     c_ownership_hidden = 64
@@ -55,7 +56,8 @@ def b7_c64(shape_info_dict: ShapeInfoDict):
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='ActionValueHead',
-                       args=['action_value', board_size, c_trunk, c_policy_hidden, policy_size]),
+                       args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                             policy_size]),
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
             ModuleSpec(type='OwnershipHead',
