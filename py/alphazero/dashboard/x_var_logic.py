@@ -40,26 +40,43 @@ X_VARS = [
     ]
 
 
+_make_x_df_cache = {}
+
 def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
+    if organizer.base_dir in _make_x_df_cache:
+        return _make_x_df_cache[organizer.base_dir]
+
     x_var_dict = defaultdict(lambda: defaultdict(list))  # filename -> table -> XVar
     for x_var in X_VARS:
         x_var_dict[x_var.db_filename_attr][x_var.table].append(x_var)
 
-    full_x_df = pd.DataFrame()
+    x_df_list = []
     for db_filename_attr, subdict in x_var_dict.items():
         db_filename = getattr(organizer, db_filename_attr)
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
         for table, x_vars in subdict.items():
-            select_str = ', '.join([x_var.sql_select_str for x_var in x_vars])
+            select_vars = [x_var.sql_select_str for x_var in x_vars]
+            columns = [x_var.df_col for x_var in x_vars]
+
+            if 'mcts_gen' not in columns:
+                columns.append('mcts_gen')
+                select_vars.append('gen')
+
+            select_str = ', '.join(select_vars)
             query = f'SELECT {select_str} FROM {table}'
             values = cursor.execute(query).fetchall()
-            columns = [x_var.df_col for x_var in x_vars]
-            x_df = pd.DataFrame(values, columns=columns)
-            full_x_df = pd.concat([full_x_df, x_df], axis=1)
+            x_df = pd.DataFrame(values, columns=columns).set_index('mcts_gen')
+            x_df_list.append(x_df)
         conn.close()
 
-    full_x_df = full_x_df.set_index('mcts_gen')
+    last_gen = min(x_df.index[-1] for x_df in x_df_list)
+
+    full_x_df = x_df_list[0]
+    for x_df in x_df_list[1:]:
+        full_x_df = full_x_df.merge(x_df, how='outer', left_index=True, right_index=True)
+    full_x_df = full_x_df.fillna(0)
+    full_x_df = full_x_df[full_x_df.index <= last_gen]
 
     full_x_df['train_time'] *= 1e-9  # convert nanoseconds to seconds
     full_x_df['runtime'] *= 1e-9  # convert nanoseconds to seconds
@@ -67,6 +84,8 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
     for col in full_x_df:
         full_x_df[col] = full_x_df[col].cumsum()
 
+    _make_x_df_cache[organizer.base_dir] = full_x_df
+    print(f"Created x_df for {organizer.base_dir}")
     return full_x_df
 
 
