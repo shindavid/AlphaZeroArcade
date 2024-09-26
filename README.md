@@ -38,28 +38,38 @@ Make sure to select a version compatible with the `cuda-toolkit` version that yo
 
 Select a CUDA version and follow the [instructions (cu12.1)](https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=runfile_local) on nvidia's website.
 
-After the installation is done, run the following to see where cuda was installed:
+**Note**: Make sure to only accept installing CUDA toolkit.
+
+After the installation is done, run the following command to see where cuda was installed:
 
 ```
 ls /usr/local/cuda*
 ```
 
-Then, add the following lines to your `.bashrc` files (if you only have a `cuda` folder without a version, then it's fine):
+Then, add the following lines to your `.bashrc` files:
 
 ```
  export PATH="/usr/local/cuda-<version>/bin:$PATH"
- export LD_LIBRARY_PATH="/usr/local/cuda-<12.1>/lib64:$LD_LIBRARY_PATH"
+ export LD_LIBRARY_PATH="/usr/local/cuda-<version>/lib64:$LD_LIBRARY_PATH"
 ```
 
-The following command should show the version of the cuda compiler installed:
+if you only have a `cuda` folder without a `<version>` (e.g `12.1`), then just make sure that its version matches what you installed by inspecting this file:
+
+```
+cat /usr/local/cuda/version.json 
+```
+
+After restarting terminal, run this command to print the version of the CUDA compiler installed:
 ```
 nvcc --version
 ```
 
+
 #### Libtorch
 
-You can download libtorch (it's tied to the pytorch/cuda version) from [here](https://download.pytorch.org/libtorch/cu116). The link has the target CUDA version as a suffix, so, for instance, if you need to find libtorch for different pytorch versions compatible with CUDA 12.1, then you can use this [link](https://download.pytorch.org/libtorch/cu121). 
+Libtorch is **tied** to a pytorch and cuda version pair, and you can find it [here](https://download.pytorch.org/libtorch/cu116). The link has the target CUDA version as a suffix, so, for instance, if you need to find libtorch for different pytorch versions compatible with CUDA 12.1, then you can use this [link](https://download.pytorch.org/libtorch/cu121).
 
+Please make sure to download the **CXX11 ABI shared with deps** release of libtorch.
 
 #### Other Prerequisites
 
