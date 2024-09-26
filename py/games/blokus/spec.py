@@ -21,17 +21,18 @@ POLICY_SIZE = CppConstants.kNumActions
 NUM_POSSIBLE_SCORES = CppConstants.kMaxScore + 1
 
 
-def b20_c64(shape_info_dict: ShapeInfoDict):
+def b20_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     score_shape = shape_info_dict['score'].shape
     unplayed_pieces_shape = shape_info_dict['unplayed_pieces'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    c_trunk = 96
-    c_mid = 96
+    c_trunk = 128
+    c_mid = 128
     c_gpool = 32
     c_policy_hidden = 2
+    c_action_value_hidden = 16
     c_value_hidden = 1
     n_value_hidden = 256
     c_score_margin_hidden = 32
@@ -80,7 +81,8 @@ def b20_c64(shape_info_dict: ShapeInfoDict):
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='ActionValueHead',
-                       args=['action_value', board_size, c_trunk, c_policy_hidden, POLICY_SIZE]),
+                       args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                             POLICY_SIZE]),
             ModuleSpec(type='ScoreHead',
                        args=['score', c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, score_shape]),
@@ -107,8 +109,8 @@ class BlokusSpec(GameSpec):
     name = 'blokus'
     num_players = NUM_PLAYERS
     model_configs = {
-        'default': b20_c64,
-        'b20_c64': b20_c64,
+        'default': b20_c128,
+        'b20_c128': b20_c128,
     }
 
     training_params = TrainingParams(

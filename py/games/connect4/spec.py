@@ -15,7 +15,7 @@ NUM_PLAYERS = 2
 NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
 
 
-def b7_c64(shape_info_dict: ShapeInfoDict):
+def b7_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     board_shape = input_shape[1:]
@@ -80,8 +80,8 @@ class Connect4Spec(GameSpec):
     extra_runtime_deps = ['extra_deps/connect4/c4solver',
                           'extra_deps/connect4/7x6.book']
     model_configs = {
-        'default': b7_c64,
-        'b7_c64': b7_c64,
+        'default': b7_c128,
+        'b7_c128': b7_c128,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
 

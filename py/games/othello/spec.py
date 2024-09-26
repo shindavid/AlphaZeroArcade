@@ -11,18 +11,19 @@ NUM_PLAYERS = 2
 NUM_POSSIBLE_SCORE_MARGINS = 2 * NUM_SQUARES + 1
 
 
-def b19_c64(shape_info_dict: ShapeInfoDict):
+def b19_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     score_margin_shape = shape_info_dict['score_margin'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_size = NUM_SQUARES + 1  # + 1 for pass
-    c_trunk = 96
-    c_mid = 96
+    c_trunk = 128
+    c_mid = 128
     c_gpool = 32
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
+    c_action_value_hidden = 16
     c_value_hidden = 1
     n_value_hidden = 256
     c_score_margin_hidden = 32
@@ -68,7 +69,8 @@ def b19_c64(shape_info_dict: ShapeInfoDict):
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='ActionValueHead',
-                       args=['action_value', board_size, c_trunk, c_policy_hidden, policy_size]),
+                       args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                             policy_size]),
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
             ModuleSpec(type='ScoreHead',
@@ -97,8 +99,8 @@ class OthelloSpec(GameSpec):
         'extra_deps/edax-reversi/data',
         ]
     model_configs = {
-        'default': b19_c64,
-        'b19_c64': b19_c64,
+        'default': b19_c128,
+        'b19_c128': b19_c128,
     }
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
 

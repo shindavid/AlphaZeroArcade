@@ -19,6 +19,7 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
     c_trunk = 32
     c_mid = 32
     c_policy_hidden = 2
+    c_action_value_hidden = 4
     c_value_hidden = 1
     n_value_hidden = 256
 
@@ -46,7 +47,8 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
                              NUM_PLAYERS]),
             ModuleSpec(type='ActionValueHead',
-                       args=['action_value', board_size, c_trunk, c_policy_hidden, policy_size]),
+                       args=['action_value', board_size, c_trunk, c_action_value_hidden,
+                       policy_size]),
             ],
 
         loss_weights={
