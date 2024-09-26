@@ -35,6 +35,9 @@ namespace lczero {
 
 class Position {
  public:
+  Position() = default;  // added for AlphaZeroArcade
+  bool operator==(const Position& other) const = default;  // added for AlphaZeroArcade
+
   // From parent position and move.
   Position(const Position& parent, Move m);
   // From particular position.
@@ -148,6 +151,7 @@ class PositionHistory {
   bool DidRepeatSinceLastZeroingMove() const;
 
  private:
+ public:  // added for AlphaZeroArcade purposes
   int ComputeLastMoveRepetitions(int* cycle_length) const;
 
   std::vector<Position> positions_;
