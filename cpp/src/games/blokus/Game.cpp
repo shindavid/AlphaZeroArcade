@@ -96,8 +96,7 @@ void Game::State::validate_aux() const {
   }
 }
 
-void Game::Rules::init_state(State& state, group::element_t sym) {
-  util::release_assert(sym == group::kIdentity);
+void Game::Rules::init_state(State& state) {
   std::memset(&state, 0, sizeof(state));
 
   state.core.cur_color = kBlue;

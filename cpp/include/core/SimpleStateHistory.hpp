@@ -33,10 +33,8 @@ class SimpleStateHistory {
    * Rules is passed as an argument here to make the call-site more readable. We could have passed
    * Rules as a template parameter, but then we would need to use the "template" keyword at the
    * call-site, which is distasteful.
-   *
-   * If sym is passed in, the initial state is transformed with that symmetry.
    */
-  template <typename Rules> void initialize(Rules, group::element_t sym = group::kIdentity);
+  template <typename Rules> void initialize(Rules);
 
   /*
    * Push back a copy of the most recent state, and return a reference to it.
@@ -61,6 +59,7 @@ class SimpleStateHistory {
    * empty.
    */
   const State& current() const;
+  State& current();
 
   auto begin() const;
   auto end() const { return buf_.end(); }

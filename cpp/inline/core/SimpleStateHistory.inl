@@ -6,10 +6,10 @@ namespace core {
 
 template <typename State, int kNumPastStatesNeeded>
 template <typename Rules>
-void SimpleStateHistory<State, kNumPastStatesNeeded>::initialize(Rules, group::element_t sym) {
+void SimpleStateHistory<State, kNumPastStatesNeeded>::initialize(Rules) {
   clear();
   State state;
-  Rules::init_state(state, sym);
+  Rules::init_state(state);
   buf_.push_back(state);
 }
 
@@ -33,6 +33,12 @@ void SimpleStateHistory<State, kNumPastStatesNeeded>::undo() {
 
 template <typename State, int kNumPastStatesNeeded>
 const State& SimpleStateHistory<State, kNumPastStatesNeeded>::current() const {
+  util::debug_assert(!buf_.empty());
+  return buf_.back();
+}
+
+template <typename State, int kNumPastStatesNeeded>
+State& SimpleStateHistory<State, kNumPastStatesNeeded>::current() {
   util::debug_assert(!buf_.empty());
   return buf_.back();
 }

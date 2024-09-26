@@ -144,7 +144,7 @@ inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& st
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(State& state, group::element_t sym) {
+inline void Game::Rules::init_state(State& state) {
   state.full_mask = 0;
   state.cur_player_mask = 0;
 }

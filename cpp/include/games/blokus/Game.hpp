@@ -114,7 +114,7 @@ class Game {
   };
 
   struct Rules {
-    static void init_state(State&, group::element_t sym = group::kIdentity);
+    static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::seat_index_t get_current_player(const State&);
     static Types::ActionOutcome apply(StateHistory&, core::action_t action);

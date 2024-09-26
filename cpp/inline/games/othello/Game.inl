@@ -93,13 +93,11 @@ inline group::element_t Game::Symmetries::get_canonical_symmetry(const State& st
   return DefaultCanonicalizer::get(state);
 }
 
-inline void Game::Rules::init_state(State& state, group::element_t sym) {
+inline void Game::Rules::init_state(State& state) {
   state.opponent_mask = kStartingWhiteMask;
   state.cur_player_mask = kStartingBlackMask;
   state.cur_player = kStartingColor;
   state.pass_count = 0;
-
-  Symmetries::apply(state, sym);
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
