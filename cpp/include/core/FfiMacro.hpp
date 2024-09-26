@@ -2,7 +2,8 @@
 
 #include <core/GameLog.hpp>
 
-#define FFI_MACRO(GameLog)                                                                 \
+#define FFI_MACRO(Game)                                                                    \
+  using GameLog = core::GameLog<Game>;                                                     \
                                                                                            \
   extern "C" {                                                                             \
                                                                                            \
@@ -22,5 +23,7 @@
                     int* target_indices, float** target_arrays) {                          \
     log->load(index, apply_symmetry, input_values, target_indices, target_arrays);         \
   }                                                                                        \
+                                                                                           \
+  void init() { Game::static_init(); }                                                     \
                                                                                            \
   }  // extern "C"

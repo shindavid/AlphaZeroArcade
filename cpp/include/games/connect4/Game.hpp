@@ -116,6 +116,8 @@ struct Game {
                               OwnershipTarget>;
   };
 
+  static void static_init() {}
+
  private:
   static core::seat_index_t _get_player_at(const State& state, row_t row, column_t col);
   static constexpr int _to_bit_index(row_t row, column_t col);

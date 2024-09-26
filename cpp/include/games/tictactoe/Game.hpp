@@ -115,6 +115,8 @@ class Game {
       make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
       make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
 
+  static void static_init() {}
+
  private:
   static core::seat_index_t _get_player_at(const State& state, int row, int col);
 };

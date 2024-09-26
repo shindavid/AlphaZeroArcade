@@ -127,6 +127,8 @@ class Game {
                               ScoreMarginTarget, OwnershipTarget>;
   };
 
+  static void static_init() {}
+
  private:
   static int get_count(const State&, core::seat_index_t seat);
   static core::seat_index_t get_player_at(const State&, int row, int col);  // -1 for unoccupied
