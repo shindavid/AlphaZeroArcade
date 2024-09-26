@@ -19,9 +19,56 @@ The framework also aims to support games that have one or more of the following 
 
 ## Getting Started
 
-### Env setup
+### OS Setup
 
 The project assumes you are working on a Linux platform. No other OS's will be supported.
+The instructions are made for Ubuntu 22.
+
+#### NVIDIA Driver
+
+Install the driver from the distribution repo, for Ubuntu:
+```
+sudo apt install nvidia-driver-530
+```
+Make sure to select a version compatible with the `cuda-toolkit` version that you also need to install.
+
+**Note**: Avoid installing the driver bundled with `cuda-toolkit` if possible.
+
+#### CUDA Toolkit
+
+Select a CUDA version and follow the [instructions (cu12.1)](https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=runfile_local) on nvidia's website.
+
+After the installation is done, run the following to see where cuda was installed:
+
+```
+ls /usr/local/cuda*
+```
+
+Then, add the following lines to your `.bashrc` files (if you only have a `cuda` folder without a version, then it's fine):
+
+```
+ export PATH="/usr/local/cuda-<version>/bin:$PATH"
+ export LD_LIBRARY_PATH="/usr/local/cuda-<12.1>/lib64:$LD_LIBRARY_PATH"
+```
+
+The following command should show the version of the cuda compiler installed:
+```
+nvcc --version
+```
+
+#### Libtorch
+
+You can download libtorch (it's tied to the pytorch/cuda version) from [here](https://download.pytorch.org/libtorch/cu116). The link has the target CUDA version as a suffix, so, for instance, if you need to find libtorch for different pytorch versions compatible with CUDA 12.1, then you can use this [link](https://download.pytorch.org/libtorch/cu121). 
+
+
+#### Other Prerequisites
+
+1. Install ninja: `sudo apt-get install ninja-build`
+2. Install anaconda (follow the instructions on their website)
+3. Install/Upgrade to g++ version 12. 
+
+
+### Env Setup
 
 To get started, clone the repo, and then run:
 
