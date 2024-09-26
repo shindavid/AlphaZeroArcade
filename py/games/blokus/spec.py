@@ -5,29 +5,19 @@ from games.game_spec import GameSpec
 from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
-# constants copied from c++:
-class CppConstants:
-    kNumColors = 4
-    kNumPlayers = kNumColors
-    kMaxScore = 63
-    kBoardDimension = 20
-    kNumCells = kBoardDimension * kBoardDimension
-    kNumPieceOrientationCorners = 309
-    kNumActions = kNumCells + kNumPieceOrientationCorners + 1
-
-
-NUM_PLAYERS = CppConstants.kNumPlayers
-POLICY_SIZE = CppConstants.kNumActions
-NUM_POSSIBLE_SCORES = CppConstants.kMaxScore + 1
-
 
 def b20_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
+    policy_shape = shape_info_dict['policy'].shape
+    value_shape = shape_info_dict['value'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     score_shape = shape_info_dict['score'].shape
     unplayed_pieces_shape = shape_info_dict['unplayed_pieces'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
+    policy_size = policy_shape[0]
+    value_size = value_shape[0]
+
     c_trunk = 128
     c_mid = 128
     c_gpool = 32
@@ -76,13 +66,13 @@ def b20_c128(shape_info_dict: ShapeInfoDict):
 
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_trunk, c_policy_hidden, POLICY_SIZE]),
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                             NUM_PLAYERS]),
+                             value_size]),
             ModuleSpec(type='ActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                             POLICY_SIZE]),
+                             policy_size]),
             ModuleSpec(type='ScoreHead',
                        args=['score', c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, score_shape]),
@@ -107,7 +97,7 @@ def b20_c128(shape_info_dict: ShapeInfoDict):
 @dataclass
 class BlokusSpec(GameSpec):
     name = 'blokus'
-    num_players = NUM_PLAYERS
+    num_players = 4
     model_configs = {
         'default': b20_c128,
         'b20_c128': b20_c128,

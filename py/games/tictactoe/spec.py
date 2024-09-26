@@ -6,16 +6,15 @@ from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
 
-BOARD_LENGTH = 3
-NUM_ACTIONS = BOARD_LENGTH * BOARD_LENGTH
-NUM_PLAYERS = 2
-
-
 def b7_c32(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
+    policy_shape = shape_info_dict['policy'].shape
+    value_shape = shape_info_dict['value'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_size = NUM_ACTIONS
+    policy_size = policy_shape[0]
+    value_size = value_shape[0]
+
     c_trunk = 32
     c_mid = 32
     c_policy_hidden = 2
@@ -45,7 +44,7 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                             NUM_PLAYERS]),
+                             value_size]),
             ModuleSpec(type='ActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
                        policy_size]),

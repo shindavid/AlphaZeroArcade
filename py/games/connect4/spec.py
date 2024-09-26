@@ -5,22 +5,17 @@ from games.game_spec import GameSpec, ReferencePlayerFamily
 from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
-from typing import Dict
-
-
-NUM_COLUMNS = 7
-NUM_ROWS = 6
-NUM_COLORS = 2
-NUM_PLAYERS = 2
-NUM_POSSIBLE_END_OF_GAME_SQUARE_STATES = NUM_PLAYERS + 1  # +1 for empty square
-
 
 def b7_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
+    policy_shape = shape_info_dict['policy'].shape
+    value_shape = shape_info_dict['value'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_size = NUM_COLUMNS
+    policy_size = policy_shape[0]
+    value_size = value_shape[0]
+
     c_trunk = 128
     c_mid = 128
     c_policy_hidden = 2
@@ -54,7 +49,7 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
             ModuleSpec(type='ValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                             NUM_PLAYERS]),
+                             value_size]),
             ModuleSpec(type='ActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
                              policy_size]),
