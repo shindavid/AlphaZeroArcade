@@ -372,13 +372,15 @@ template <core::concepts::Game Game>
 void SearchThread<Game>::backprop_with_virtual_undo() {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
-  if (mcts::kEnableDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
-  }
-
   edge_t* last_edge = search_path_.back().edge;
   Node* last_node = search_path_.back().child;
   auto value = last_node->stable_data().V;
+
+  if (mcts::kEnableDebug) {
+    LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "
+             << value.transpose();
+  }
+
   last_node->update_stats(InitQAndIncrementTransfer(value));
   last_edge->RN++;
 
@@ -445,13 +447,14 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
 
 template <core::concepts::Game Game>
 std::string SearchThread<Game>::search_path_str() const {
-  group::element_t cur_sym = shared_data_->root_info.canonical_sym;
+  using Group = Game::SymmetryGroup;
+  group::element_t cur_sym = Group::inverse(shared_data_->root_info.canonical_sym);
   std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;
   for (const visitation_t& visitation : search_path_) {
     core::action_t action = visitation.edge->action;
     Game::Symmetries::apply(action, cur_sym);
-    cur_sym = Game::SymmetryGroup::compose(visitation.edge->sym, cur_sym);
+    cur_sym = Group::compose(cur_sym, Group::inverse(visitation.edge->sym));
     vec.push_back(Game::IO::action_to_str(action));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
@@ -480,6 +483,20 @@ void SearchThread<Game>::calc_canonical_state_data() {
                          leaf_canonical_sym);
   } else {
     Game::Symmetries::apply(pseudo_local_vars_.canonical_history, canonical_sym_);
+  }
+
+  if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
+    State s = pseudo_local_vars_.canonical_history.current();
+    Game::Symmetries::apply(s, Game::Symmetries::get_canonical_symmetry(s));
+    if (s != pseudo_local_vars_.canonical_history.current()) {
+      std::cout << "ERROR! Bad Canonicalization!" << std::endl;
+      std::cout << "canonical_sym_: " << int(canonical_sym_) << std::endl;
+      std::cout << "canonical_history.current():" << std::endl;
+      Game::IO::print_state(std::cout, pseudo_local_vars_.canonical_history.current());
+      std::cout << "Should be:" << std::endl;
+      Game::IO::print_state(std::cout, s);
+      util::release_assert(false);
+    }
   }
 }
 
