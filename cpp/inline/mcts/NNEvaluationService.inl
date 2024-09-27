@@ -119,14 +119,8 @@ inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
 }
 
 template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::batch_data_t::batch_data_t(int batch_size) {
-  tensor_groups_ = new tensor_group_t[batch_size];
-}
-
-template <core::concepts::Game Game>
-inline NNEvaluationService<Game>::batch_data_t::~batch_data_t() {
-  delete[] tensor_groups_;
-}
+inline NNEvaluationService<Game>::batch_data_t::batch_data_t(int batch_size)
+    : tensor_groups_(batch_size) {}
 
 template <core::concepts::Game Game>
 inline void NNEvaluationService<Game>::batch_data_t::copy_input_to(
@@ -474,8 +468,6 @@ void NNEvaluationService<Game>::wait_for_eval(const NNEvaluationRequest& request
     }
     return false;
   });
-
-  // return batch_data_.tensor_groups_[reserve_index].eval_ptr_data.eval_ptr.load();
 }
 
 template <core::concepts::Game Game>

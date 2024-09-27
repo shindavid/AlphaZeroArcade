@@ -40,7 +40,7 @@ class Game {
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
     static constexpr int kNumPreviousStatesToEncode = 0;
-    static constexpr float kOpeningLength = 0.1;  // don't tolerate silly blunders on move 2
+    static constexpr float kOpeningLength = 4;
   };
 
   struct State {
@@ -59,6 +59,7 @@ class Game {
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State& state);
     static void apply(State& state, group::element_t sym);
+    static void apply(StateHistory& history, group::element_t sym);  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
     static group::element_t get_canonical_symmetry(const State& state);
@@ -114,6 +115,8 @@ class Game {
   static constexpr mask_t kThreeInARowMasks[] = {
       make_mask(0, 1, 2), make_mask(3, 4, 5), make_mask(6, 7, 8), make_mask(0, 3, 6),
       make_mask(1, 4, 7), make_mask(2, 5, 8), make_mask(0, 4, 8), make_mask(2, 4, 6)};
+
+  static void static_init() {}
 
  private:
   static core::seat_index_t _get_player_at(const State& state, int row, int col);

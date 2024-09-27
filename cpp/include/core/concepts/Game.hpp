@@ -66,7 +66,8 @@ concept Game = requires {
       typename G::Types,
       core::GameTypes<typename G::Constants, typename G::State, typename G::SymmetryGroup>>;
 
-  requires std::is_trivial_v<typename G::State>;
+  requires std::is_default_constructible_v<typename G::State>;
+  requires std::is_trivially_destructible_v<typename G::State>;
   requires core::concepts::GameStateHistory<typename G::StateHistory, typename G::State,
                                             typename G::Rules>;
 
@@ -80,6 +81,10 @@ concept Game = requires {
                                                typename G::StateHistory>;
   requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List,
                                               typename G::Types::GameLogView>;
+
+  // Any game-specific one-time static-initialization code should be placed in a static method
+  // called static_init().
+  { G::static_init() };
 };
 
 template <class G>

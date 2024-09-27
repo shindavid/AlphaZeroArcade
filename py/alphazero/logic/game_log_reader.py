@@ -27,6 +27,7 @@ class GameLogReader:
         self._build_params = build_params
         self._ffi = self._get_ffi()
         self._lib = self._get_shared_lib()
+        self._lib.init()
         self._shape_info_dict: Optional[ShapeInfoDict] = None
 
     def close(self):
@@ -88,6 +89,8 @@ class GameLogReader:
             void GameLog_load(struct GameLog* log, int index, bool apply_symmetry,
                        float* input_values, int* target_indices, float** target_value_arrays);
             int GameLog_num_sampled_positions(struct GameLog* log);
+
+            void init();
             """)
         return ffi
 

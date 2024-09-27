@@ -38,12 +38,6 @@ concept GameStateHistory = requires(const State& const_state, const StateHistory
   { history.initialize(Rules{}) };
 
   /*
-   * Push back a copy of most recent state of the history, and return a reference to it.
-   * Assumes that the history is not empty.
-   */
-  { history.extend() } -> std::same_as<State&>;
-
-  /*
    * Push back the given state.
    */
   { history.update(const_state) };

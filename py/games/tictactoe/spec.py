@@ -6,7 +6,7 @@ from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
 
-def b7_c32(shape_info_dict: ShapeInfoDict):
+def b3_c32(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     policy_shape = shape_info_dict['policy'].shape
     value_shape = shape_info_dict['value'].shape
@@ -19,8 +19,8 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
     c_mid = 32
     c_policy_hidden = 2
     c_action_value_hidden = 4
-    c_value_hidden = 1
-    n_value_hidden = 256
+    c_value_hidden = 2
+    n_value_hidden = 32
 
     return ModelConfig(
         shape_info_dict=shape_info_dict,
@@ -31,10 +31,6 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block5', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
             ],
 
         neck=None,
@@ -62,30 +58,28 @@ def b7_c32(shape_info_dict: ShapeInfoDict):
 class TicTacToeSpec(GameSpec):
     name = 'tictactoe'
     model_configs = {
-        'default': b7_c32,
-        'b7_c32': b7_c32,
+        'default': b3_c32,
+        'b3_c32': b3_c32,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 1)
 
     training_params = TrainingParams(
-        target_sample_rate=64,
-        minibatches_per_epoch=100,
-        minibatch_size=100,
+        target_sample_rate=16,
+        minibatches_per_epoch=64,
     )
 
     # Tic-tac-toe is so simple that most nn evals end up hitting the cache. As a result, the
     # binary tends to be CPU-bound, rather than GPU-bound. Using the default parallelism of 256
-    # leads to CPU-starving, so we drop to 16.
+    # leads to CPU-starving, so we drop it.
     training_options = {
         '-p': 16,
     }
 
     training_player_options = {
-        '-r': 1,
     }
 
     rating_options = {
-        '-p': 16,  # see above comment
+        '-p': 64,  # see above comment
     }
 
     rating_player_options = {

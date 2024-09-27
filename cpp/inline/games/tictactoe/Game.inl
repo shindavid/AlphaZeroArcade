@@ -105,6 +105,12 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
   }
 }
 
+inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
+  for (auto& it : history) {
+    apply(it, sym);
+  }
+}
+
 inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym) {
   using namespace eigen_util;
   using D4 = groups::D4;

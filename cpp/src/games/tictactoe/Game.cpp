@@ -10,6 +10,8 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
 
+  util::release_assert(get_current_player(state) != current_player);  // simple sanity check
+
   bool win = false;
 
   mask_t updated_mask = state.full_mask ^ state.cur_player_mask;

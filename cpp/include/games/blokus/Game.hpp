@@ -198,6 +198,8 @@ class Game {
     using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, ScoreTarget,
                               OwnershipTarget, UnplayedPiecesTarget>;
   };
+
+  static void static_init() {}
 };
 
 }  // namespace blokus

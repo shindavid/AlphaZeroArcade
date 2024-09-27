@@ -205,11 +205,10 @@ class NNEvaluationService
 
   struct batch_data_t {
     batch_data_t(int batch_size);
-    ~batch_data_t();
     void copy_input_to(int num_rows, DynamicInputTensor& full_input);
 
     std::mutex mutex;
-    tensor_group_t* tensor_groups_;
+    std::vector<tensor_group_t> tensor_groups_;
   };
 
   static instance_map_t instance_map_;

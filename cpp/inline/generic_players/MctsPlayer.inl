@@ -235,6 +235,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       ActionValueTensor Q = Q_sum / counts;
       ActionValueTensor Q_sq = Q_sq_sum / counts;
       ActionValueTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
+      Q_sigma_sq = eigen_util::cwiseMax(Q_sigma_sq, 0);  // clip negative values to 0
       ActionValueTensor Q_sigma = Q_sigma_sq.sqrt();
 
       ActionValueTensor LCB = Q - params_.LCB_z_score * Q_sigma;
@@ -276,7 +277,6 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
           for (int a : bitset_util::on_indices(valid_actions)) {
             if (counts(a)) visited_actions++;
           }
-          // visited_actions = valid_actions.count();
 
           std::ostringstream ss;
           using Array = Eigen::Array<float, Eigen::Dynamic, nColumns, 0,

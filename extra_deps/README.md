@@ -1,4 +1,4 @@
-This directory contains third-party repositories added via `git subtree`.
+This directory contains third-party repositories.
 
 The EigenRand directory was added via this command:
 
@@ -33,3 +33,4 @@ And the edax-reversi data/ dir was cloned from:
 https://github.com/abulmo/edax-reversi/releases/download/v4.4/eval.7z
 ```
 
+For lc0, we manually copied specific directories.
