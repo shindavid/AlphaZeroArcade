@@ -257,6 +257,13 @@ template <concepts::FTensor Tensor>
 auto unflatten_index(const Tensor& tensor, int flat_index);
 
 /*
+ * Returns what tensor.cwiseMax(x) *should* return. But cwiseMax() doesn't appear to be supported
+ * yet.
+ */
+template <concepts::FTensor Tensor>
+auto cwiseMax(const Tensor& tensor, float x);
+
+/*
  * Reinterpret a fixed-size tensor as an Eigen::Array<Scalar, N, 1>
  *
  * auto& array = reinterpret_as_array(tensor);

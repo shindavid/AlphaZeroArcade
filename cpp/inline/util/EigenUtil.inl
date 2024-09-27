@@ -115,6 +115,15 @@ auto unflatten_index(const Tensor& tensor, int flat_index) {
 }
 
 template <concepts::FTensor Tensor>
+auto cwiseMax(const Tensor& tensor, float x) {
+  // Convert the 1D index back to a K-dimensional index
+  Tensor out = tensor;
+  auto& array = reinterpret_as_array(out);
+  array = array.cwiseMax(x);
+  return out;
+}
+
+template <concepts::FTensor Tensor>
 const auto& reinterpret_as_array(const Tensor& tensor) {
   using Shape = extract_shape_t<Tensor>;
   constexpr int N = Shape::total_size;
