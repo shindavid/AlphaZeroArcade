@@ -24,7 +24,7 @@ class ExponentialDecay {
 
   void reset() { cur_value_ = start_value_; }
   float value() const { return cur_value_; }
-  void step() { cur_value_ += (end_value_ - cur_value_) * decay_factor_; }
+  void step() { cur_value_ = end_value_ + (cur_value_ - end_value_) * decay_factor_; }
 
  private:
   const float start_value_;
