@@ -59,6 +59,7 @@ class Game {
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State& state);
     static void apply(State& state, group::element_t sym);
+    static void apply(StateHistory& history, group::element_t sym);  // optional
     static void apply(Types::PolicyTensor& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
     static group::element_t get_canonical_symmetry(const State& state);
