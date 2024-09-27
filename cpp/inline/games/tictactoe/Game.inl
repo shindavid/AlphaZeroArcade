@@ -106,7 +106,7 @@ inline void Game::Symmetries::apply(State& state, group::element_t sym) {
 }
 
 inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym) {
-  for (auto it : history) {
+  for (auto& it : history) {
     apply(it, sym);
   }
 }
