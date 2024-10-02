@@ -147,21 +147,16 @@ int Game::IO::print_row(char* buf, int n, const State& state,
   return cx;
 }
 
-Game::Types::ValueArray Game::Rules::compute_outcome(const State& state) {
-  Types::ValueArray outcome;
-  outcome.setZero();
-
+Game::Types::ActionOutcome Game::Rules::compute_outcome(const State& state) {
   int opponent_count = std::popcount(state.opponent_mask);
   int cur_player_count = std::popcount(state.cur_player_mask);
   if (cur_player_count > opponent_count) {
-    outcome(state.cur_player) = 1;
+    return core::WinLossDrawResults::win(state.cur_player);
   } else if (opponent_count > cur_player_count) {
-    outcome(1 - state.cur_player) = 1;
+    return core::WinLossDrawResults::win(1 - state.cur_player);
   } else {
-    outcome.setConstant(0.5);
+    return core::WinLossDrawResults::draw();
   }
-
-  return outcome;
 }
 
 void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
@@ -176,12 +171,17 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   char buffer[buf_size];
   int cx = 0;
 
-  cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kBlue(""),
-                 ansi::kCircle("*"), ansi::kReset(""), 100 * net_value(othello::kBlack),
-                 100 * win_rates(othello::kBlack));
-  cx += snprintf(buffer + cx, buf_size - cx, "%s%s%s: %6.3f%% -> %6.3f%%\n", ansi::kWhite(""),
-                 ansi::kCircle("0"), ansi::kReset(""), 100 * net_value(othello::kWhite),
-                 100 * win_rates(othello::kWhite));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6s%s%s%s %6s%s%s%s\n", "", "", ansi::kBlue(""),
+                 ansi::kCircle("*"), ansi::kReset(""), "", ansi::kWhite(""), ansi::kCircle("0"),
+                 ansi::kReset(""));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(W)", 100 * net_value(0),
+                 100 * net_value(1));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(D)", 100 * net_value(2),
+                 100 * net_value(2));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(L)", 100 * net_value(1),
+                 100 * net_value(0));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "win-rate",
+                 100 * win_rates(0), 100 * win_rates(1));
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
   auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);

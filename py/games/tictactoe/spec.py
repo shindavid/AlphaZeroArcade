@@ -13,7 +13,6 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
     action_value_shape = shape_info_dict['action_value'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_size = policy_shape[0]
 
     assert value_shape == (3,), value_shape
 

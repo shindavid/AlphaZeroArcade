@@ -15,6 +15,7 @@
 #include <core/GameTypes.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
+#include <core/WinLossDrawResults.hpp>
 #include <games/connect4/Constants.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -53,9 +54,10 @@ struct Game {
     mask_t cur_player_mask;  // spaces occupied by current player
   };
 
+  using GameResults = core::WinLossDrawResults;
   using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D1;
-  using Types = core::GameTypes<Constants, State, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State& state);
@@ -101,7 +103,7 @@ struct Game {
     using OwnershipShape = Eigen::Sizes<3, kNumRows, kNumColumns>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::ValueTarget<Game>;
+    using ValueTarget = core::WinLossDrawTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
