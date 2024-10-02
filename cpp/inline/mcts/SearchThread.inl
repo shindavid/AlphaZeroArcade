@@ -87,7 +87,7 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
       const State& state = history->current();
       NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
-      if (!node->stable_data().V_valid) {
+      if (!node->stable_data().VT_valid) {
         group::element_t eval_sym = 0;
         if (manager_params_->apply_random_symmetries) {
           auto mask = Game::Symmetries::get_mask(state);
@@ -110,7 +110,7 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
         pseudo_local_vars_.request_items.clear();
       }
     } else {
-      if (!node->stable_data().V_valid) {
+      if (!node->stable_data().VT_valid) {
         node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
       }
 
@@ -119,7 +119,7 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
         for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
           edge_t* edge = node->get_edge(e);
           Node* child = node->get_child(edge);
-          if (!child->stable_data().V_valid) {
+          if (!child->stable_data().VT_valid) {
             child->load_eval(nullptr, [&](LocalPolicyArray& P) {});
           }
         }
@@ -257,7 +257,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    pure_backprop(stable_data.V);
+    pure_backprop(Game::GameResults::to_value_array(stable_data.VT));
     return;
   }
 
@@ -386,7 +386,7 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
 
   edge_t* last_edge = search_path_.back().edge;
   Node* last_node = search_path_.back().child;
-  auto value = last_node->stable_data().V;
+  auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
   if (mcts::kEnableDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "

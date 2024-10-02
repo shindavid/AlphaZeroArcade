@@ -43,6 +43,7 @@ class Node {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionOutcome = Game::Types::ActionOutcome;
@@ -60,12 +61,12 @@ class Node {
   struct stable_data_t {
     stable_data_t(const StateHistory&, const ActionOutcome&);
 
-    ValueArray V;
+    ValueTensor VT;
     ActionMask valid_action_mask;
     int num_valid_actions;
     core::seat_index_t current_player;
     bool terminal;
-    bool V_valid;
+    bool VT_valid;
   };
 
   /*

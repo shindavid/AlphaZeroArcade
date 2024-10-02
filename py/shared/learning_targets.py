@@ -60,58 +60,49 @@ class PolicyTarget(LearningTarget):
         return int(sum(correct_policy_preds))
 
 
-class ActionValueTarget(LearningTarget):
+class WinLossDrawActionValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
-        return nn.BCEWithLogitsLoss()
-
-    def get_mask(self, labels: torch.Tensor) -> torch.Tensor:
-        """
-        The C++ uses the zero-tensor to represent a row that should be masked.
-        """
-        assert len(labels.shape) == 2, labels.shape
-        n = labels.shape[0]
-        labels = labels.reshape((n, -1))
-
-        label_sums = labels.sum(dim=1)
-        mask = label_sums != 0
-        return mask
-
-    def get_num_correct_predictions(self, predictions: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        predictions_max = torch.argmax(predictions, dim=1)
-        labels_max = torch.argmax(labels, dim=1)
-        return int(sum(predictions_max == labels_max))
-
-
-class ValueTarget(LearningTarget):
-    def loss_fn(self) -> nn.Module:
-        """
-        AlphaGo, KataGo, etc., use the standard [-1, +1] range for value targets, and thus use MSE
-        loss. In our project, however, in an effort to generalize to M-player games, we use a
-        length-M vector of non-negative values summing to 1. So for us cross-entropy loss is more
-        appropriate.
-
-        NOTE: in conversations with David Wu, he suggested relaxing the fixed-utility assumption,
-        to support games like Backgammon where the utility is not fixed. In that case, we would need
-        to use MSE loss. There are some subtle c++ changes that would need to be made to support
-        this.
-        """
         return nn.CrossEntropyLoss()
 
     def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
                                     labels: torch.Tensor) -> float:
-        """
-        Naively using the same implementation as PolicyTarget.get_num_correct_predictions() doesn't
-        work for games that have draws. For example, in TicTacToe, if the true value is [0.5, 0.5],
-        and the network outputs [0.4, 0.6], then the network should get credit for a correct
-        prediction. But the naive implementation would give it no credit.
+        (B, C, A) = predicted_logits.shape  # batch-size, num-classes, num-actions
+        assert C == 4, predicted_logits.shape
+        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
 
-        Instead, in this example, we consider the output of [0.4, 0.6] to be correct, by virtue of
-        the fact that abs([0.4, 0.6] - [0.5, 0.5]) = [0.1, 0.1] is "close enough" to [0, 0].
-        """
+        label_sums = labels.sum(dim=1)
+
+        # check that all label_sums are close to 1:
+        all_ok = torch.allclose(label_sums, torch.ones_like(label_sums))
+        assert all_ok, labels
+
         predicted_probs = predicted_logits.softmax(dim=1)
-        deltas = abs(predicted_probs - labels)
-        return int(sum((deltas < 0.25).all(dim=1)))
+        error = 0.5 * abs(predicted_probs - labels).sum().item()
+
+        num_invalid_labels = labels[:, C - 1, :].sum().item()  # last class is invalid
+        num_valid_labels = B * A - num_invalid_labels
+        assert num_valid_labels > 0, num_valid_labels
+
+        # To be extra strict, we exclude invalid labels from the denominator
+        error_rate = error / num_valid_labels
+        accuracy_rate = 1 - error_rate
+        return accuracy_rate * B
+
+
+class WinLossDrawValueTarget(LearningTarget):
+    def loss_fn(self) -> nn.Module:
+        return nn.CrossEntropyLoss()
+
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
+                                    labels: torch.Tensor) -> float:
+        (B, C) = predicted_logits.shape  # batch-size, num-classes
+        assert C == 3, predicted_logits.shape
+        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
+
+        predicted_probs = predicted_logits.softmax(dim=1)
+        error = 0.5 * abs(predicted_probs - labels).sum().item()
+
+        return B - error
 
 
 class ScoreTarget(LearningTarget):

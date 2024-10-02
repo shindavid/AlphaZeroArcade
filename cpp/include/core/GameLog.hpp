@@ -30,8 +30,9 @@ struct GameLogBase {
     uint32_t num_sparse_policy_entries = 0;
     uint32_t num_dense_action_values = 0;
     uint32_t num_sparse_action_values_entries = 0;
-    uint32_t extra = 0;  // leave extra space for future use (version numbering, etc.)
+    uint64_t extra = 0;  // leave extra space for future use (version numbering, etc.)
   };
+  static_assert(sizeof(Header) == 32);
 
   using pos_index_t = int32_t;
 
@@ -57,12 +58,12 @@ struct GameLogBase {
  * GameLog file format is as follows:
  *
  * [Header]
- * [ValueArray]
+ * [ValueTensor]                        // game result
  * [pos_index_t...]                     // indices of sampled positions
  * [action_t...]
  * [tensor_index_t...]                  // indices into policy target tensor data
  * [tensor_index_t...]                  // indices into action-value tensor data
- * [Game::State...]                 // all positions, whether sampled or not
+ * [Game::State...]                     // all positions, whether sampled or not
  * [Game::Types::PolicyTensor...]       // data for densely represented policy targets
  * [sparse_tensor_entry_t...]           // data for sparsely represented policy targets
  * [Game::Types::ActionValueTensor...]  // data for densely represented action value targets
@@ -82,10 +83,8 @@ class GameLog : public GameLogBase {
   using State = Game::State;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
-
-  static_assert(std::is_same_v<PolicyTensor, ActionValueTensor>);
 
   GameLog(const char* filename);
   ~GameLog();
@@ -136,7 +135,7 @@ class GameLog : public GameLogBase {
   ActionValueTensor get_action_values(int state_index) const;
   const State* get_state(int state_index) const;
   action_t get_prev_action(int state_index) const;
-  ValueArray get_outcome() const;
+  ValueTensor get_outcome() const;
   pos_index_t get_pos_index(int sample_index) const;
 
   const std::string filename_;
@@ -156,13 +155,11 @@ class GameLogWriter {
  public:
   using Rules = Game::Rules;
   using State = Game::State;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using tensor_index_t = GameLogBase::tensor_index_t;
   using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
-
-  static_assert(std::is_same_v<PolicyTensor, ActionValueTensor>);
 
   struct Entry {
     State position;
@@ -181,7 +178,7 @@ class GameLogWriter {
 
   void add(const State& state, action_t action, const PolicyTensor* policy_target,
            const ActionValueTensor* action_values, bool use_for_training);
-  void add_terminal(const State& state, const ValueArray& outcome);
+  void add_terminal(const State& state, const ValueTensor& outcome);
   void serialize(std::ostream&) const;
   bool is_previous_entry_used_for_training() const;
   int sample_count() const { return sample_count_; }
@@ -194,12 +191,13 @@ class GameLogWriter {
   template<typename T>
   static void write_section(std::ostream& os, const T* t, int count=1);
 
-  static tensor_index_t write_policy_target(
-      const PolicyTensor& target, std::vector<PolicyTensor>& dense_tensors,
+  template <eigen_util::concepts::FTensor Tensor>
+  static tensor_index_t write_target(
+      const Tensor& target, std::vector<Tensor>& dense_tensors,
       std::vector<sparse_tensor_entry_t>& sparse_tensor_entries);
 
   entry_vector_t entries_;
-  ValueArray outcome_;
+  ValueTensor outcome_;
   const game_id_t id_;
   const int64_t start_timestamp_;
   int sample_count_ = 0;

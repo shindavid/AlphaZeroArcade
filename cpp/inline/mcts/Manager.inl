@@ -180,10 +180,11 @@ Manager<Game>::search(const SearchParams& params) {
   Game::Symmetries::apply(results_.policy_target, inv_sym);
   Game::Symmetries::apply(results_.Q, inv_sym);
   Game::Symmetries::apply(results_.Q_sq, inv_sym);
-  Game::Symmetries::apply(results_.action_values, inv_sym);
+  eigen_util::apply_per_slice<0>(results_.action_values,
+                                 [&](auto& slice) { Game::Symmetries::apply(slice, inv_sym); });
 
   results_.win_rates = stats.RQ;
-  results_.value_prior = stable_data.V;
+  results_.value_prior = stable_data.VT;
 
   return &results_;
 }

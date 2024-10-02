@@ -41,11 +41,10 @@ struct PolicyTarget {
 };
 
 template<typename Game>
-struct ValueTarget {
+struct WinLossDrawTarget {
+  static_assert(Game::Constants::kNumPlayers == 2);
   static constexpr const char* kName = "value";
-  using ValueArray = Game::Types::ValueArray;
-  using Shape = eigen_util::Shape<eigen_util::extract_length_v<ValueArray>>;
-  using Tensor = eigen_util::FTensor<Shape>;
+  using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
   static Tensor tensorize(const GameLogView& view);
@@ -54,7 +53,7 @@ struct ValueTarget {
 template<typename Game>
 struct ActionValueTarget {
   static constexpr const char* kName = "action_value";
-  using Tensor = Game::Types::ActionValueTensor;
+  using Tensor = Game::Types::FullActionValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
   static Tensor tensorize(const GameLogView& view);

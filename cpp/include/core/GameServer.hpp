@@ -19,6 +19,8 @@ class GameServer {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
+  using GameResults = Game::GameResults;
+  using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
   using ActionOutcome = Game::Types::ActionOutcome;

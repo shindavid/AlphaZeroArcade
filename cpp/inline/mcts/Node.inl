@@ -9,14 +9,14 @@ template <core::concepts::Game Game>
 inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
                                                 const ActionOutcome& outcome) {
   if (outcome.terminal) {
-    V = outcome.terminal_value;
-    V_valid = true;
+    VT = outcome.terminal_tensor;
+    VT_valid = true;
     num_valid_actions = 0;
     current_player = -1;
     terminal = true;
   } else {
-    V.setZero();  // to be set lazily
-    V_valid = false;
+    VT.setZero();  // to be set lazily
+    VT_valid = false;
     valid_action_mask = Game::Rules::get_legal_moves(history);
     num_valid_actions = valid_action_mask.count();
     current_player = Game::Rules::get_current_player(history.current());
@@ -223,7 +223,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       detail = " (winning)";
     }
 
-    float action_value = child->stable_data().V(cp);
+    const ValueTensor& child_value_tensor = child->stable_data().VT;
 
     if (kEnableDebug) {
       auto action2 = action;
@@ -232,7 +232,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       if (modified_count != count) {
         std::cout << " -> " << modified_count;
       }
-      std::cout << "[" << action_value << "]" << detail << std::endl;
+      std::cout << detail << std::endl;
     }
 
     if (modified_count) {
@@ -240,7 +240,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       Q(action) = stats.RQ(cp);
       Q_sq(action) = stats.RQ_sq(cp);
     }
-    action_values(action) = action_value;
+    action_values.chip(action, 1) = child_value_tensor;
   }
 }
 
@@ -306,8 +306,9 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   update_instruction(this);
 
   if (stable_data_.V_valid) {
-    RQ_sum += stable_data_.V;
-    RQ_sq_sum += stable_data_.V * stable_data_.V;
+    ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
+    RQ_sum += VA;
+    RQ_sq_sum += VA * VA;
     RN++;
   }
 
@@ -367,20 +368,17 @@ template <core::concepts::Game Game>
 template<typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   int n = stable_data_.num_valid_actions;
-  ValueArray V;
+  ValueTensor VT;
 
   if (eval == nullptr) {
     // treat this as uniform P and V
-    float v = 1.0 / kNumPlayers;
     float p = 1.0 / n;
 
-    V.setConstant(v);
+    VT.setConstant(1.0 / eigen_util::extract_shape_t<ValueTensor>::total_size);
+    float v = Game::GameResults::to_value_array(VT)(stable_data().current_player);
 
-    stable_data_.V = V;
-    stable_data_.V_valid = true;
-    stats_.RQ = V;
-    stats_.RQ_sq = V * V;
-    stats_.VQ = V;
+    stable_data_.VT = VT;
+    stable_data_.VT_valid = true;
 
     for (int i = 0; i < n; ++i) {
       edge_t* edge = get_edge(i);
@@ -391,16 +389,13 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   } else {
     LocalPolicyArray P_raw(n);
     LocalActionValueArray child_V(n);
-    eval->load(V, P_raw, child_V);
+    eval->load(VT, P_raw, child_V);
 
     LocalPolicyArray P_adjusted = P_raw;
-    if (eval) f(P_adjusted);
+    f(P_adjusted);
 
-    stable_data_.V = V;
-    stable_data_.V_valid = true;
-    stats_.RQ = V;
-    stats_.RQ_sq = V * V;
-    stats_.VQ = V;
+    stable_data_.VT = VT;
+    stable_data_.VT_valid = true;
 
     for (int i = 0; i < n; ++i) {
       edge_t* edge = get_edge(i);
@@ -409,6 +404,14 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
       edge->child_V_estimate = child_V[i];
     }
   }
+
+  util::debug_assert(eigen_util::max(VT) <= 1.0, "VT max: %g @%d", eigen_util::max(VT), __LINE__);
+  util::debug_assert(eigen_util::min(VT) >= 0.0, "VT min: %g @%d", eigen_util::min(VT), __LINE__);
+
+  ValueArray VA = Game::GameResults::to_value_array(VT);
+  stats_.RQ = VA;
+  stats_.RQ_sq = VA * VA;
+  stats_.VQ = VA;
 }
 
 template <core::concepts::Game Game>

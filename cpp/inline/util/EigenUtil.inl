@@ -52,6 +52,13 @@ auto softmax(const Array& array) {
   return z / z.sum();
 }
 
+template <concepts::FTensor Tensor>
+auto softmax(const Tensor& tensor) {
+  auto normalized_tensor = tensor - max(tensor);
+  Tensor z = normalized_tensor.exp();
+  return z / sum(z);
+}
+
 template <typename Array>
 auto sigmoid(const Array& array) {
   return 1.0 / (1.0 + (-array).exp());
@@ -149,6 +156,39 @@ template <concepts::FTensor Tensor, concepts::FArray Array>
 Tensor& reinterpret_as_tensor(Array& array) {
   static_assert(extract_length_v<Array> == extract_shape_t<Tensor>::total_size);
   return reinterpret_cast<Tensor&>(array);
+}
+
+template <int Dim, concepts::FTensor Tensor, typename Func>
+void apply_per_slice(Tensor& t, Func f) {
+  using Shape = extract_shape_t<Tensor>;
+  static_assert(Shape::count == 2);
+  static_assert(Dim >= 0);
+  static_assert(Dim < Shape::count);
+
+  constexpr int N = extract_dim_v<Dim, Shape>;
+  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
+
+  for (int j = 0; j < N; ++j) {
+    SubTensor slice = t.chip(j, Dim);
+    f(slice);
+    t.chip(j, Dim) = slice;
+  }
+}
+
+template <int Dim, concepts::FTensor Tensor, typename Func>
+void compute_per_slice(const Tensor& t, Func f) {
+  using Shape = extract_shape_t<Tensor>;
+  static_assert(Shape::count == 2);
+  static_assert(Dim >= 0);
+  static_assert(Dim < Shape::count);
+
+  constexpr int N = extract_dim_v<Dim, Shape>;
+  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
+
+  for (int j = 0; j < N; ++j) {
+    SubTensor slice = t.chip(j, Dim);
+    f(slice);
+  }
 }
 
 template <concepts::FTensor Tensor>

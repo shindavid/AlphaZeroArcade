@@ -10,10 +10,12 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     policy_shape = shape_info_dict['policy'].shape
     value_shape = shape_info_dict['value'].shape
+    action_value_shape = shape_info_dict['action_value'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
     policy_size = policy_shape[0]
-    value_size = value_shape[0]
+
+    assert value_shape == (3,), value_shape
 
     c_trunk = 32
     c_mid = 32
@@ -37,13 +39,12 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
 
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
-            ModuleSpec(type='ValueHead',
-                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                             value_size]),
-            ModuleSpec(type='ActionValueHead',
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+            ModuleSpec(type='WinLossDrawValueHead',
+                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
+            ModuleSpec(type='WinLossDrawActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                       policy_size]),
+                             action_value_shape]),
             ],
 
         loss_weights={
@@ -76,6 +77,7 @@ class TicTacToeSpec(GameSpec):
     }
 
     training_player_options = {
+        '-r': 2,
     }
 
     rating_options = {
@@ -84,8 +86,8 @@ class TicTacToeSpec(GameSpec):
 
     rating_player_options = {
         '-i': 100,
-        '-n': 4,
-        '-t': 0,  # zero-move-temp so we don't do silly misplays
+        '--starting-move-temp': 0,  # zero-move-temp so we don't do silly misplays
+        '--ending-move-temp': 0,    # zero-move-temp so we don't do silly misplays
     }
 
 

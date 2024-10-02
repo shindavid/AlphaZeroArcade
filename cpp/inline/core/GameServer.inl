@@ -299,8 +299,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
     ActionOutcome outcome;
     if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
-      outcome.terminal_value.setZero();
-      outcome.terminal_value[seat] = 1;
+      outcome = GameResults::win(seat);
       if (shared_data_.params().announce_game_results) {
         printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
                player->get_name().c_str(), int(seat));
@@ -316,18 +315,18 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       }
     }
     if (outcome.terminal) {
+      ValueArray array = GameResults::to_value_array(outcome.terminal_tensor);
       for (auto player2 : players) {
-        player2->end_game(state_history.current(), outcome.terminal_value);
+        player2->end_game(state_history.current(), outcome.terminal_tensor);
       }
       if (shared_data_.params().announce_game_results) {
         printf("Game %ld complete.\n", game_id);
         for (player_id_t p = 0; p < kNumPlayers; ++p) {
-          printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(),
-                 outcome.terminal_value[p]);
+          printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(), array[p]);
         }
         std::cout << std::endl;
       }
-      return outcome.terminal_value;
+      return array;
     }
   }
 
