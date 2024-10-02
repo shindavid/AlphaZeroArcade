@@ -41,11 +41,11 @@ struct GameTypes {
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
   /*
-  * Return type for an MCTS search.
-  *
-  * This is declared here so that we can properly declare the function signature for the
-  * Game::IO::print_mcts_results() function for each specific Game.
-  */
+   * Return type for an MCTS search.
+   *
+   * This is declared here so that we can properly declare the function signature for the
+   * Game::IO::print_mcts_results() function for each specific Game.
+   */
   struct SearchResults {
     ActionMask valid_actions;
     PolicyTensor counts;

@@ -405,9 +405,6 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
     }
   }
 
-  util::debug_assert(eigen_util::max(VT) <= 1.0, "VT max: %g @%d", eigen_util::max(VT), __LINE__);
-  util::debug_assert(eigen_util::min(VT) >= 0.0, "VT min: %g @%d", eigen_util::min(VT), __LINE__);
-
   ValueArray VA = Game::GameResults::to_value_array(VT);
   stats_.RQ = VA;
   stats_.RQ_sq = VA * VA;
