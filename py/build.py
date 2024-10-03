@@ -178,6 +178,8 @@ def main():
         cmake_cmd_tokens.append(f'-DCONDA_PREFIX={conda_prefix}')
     if debug:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
+    else:
+        cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Release')
 
     cmake_cmd = ' '.join(cmake_cmd_tokens)
     run(cmake_cmd, handler=catch_first_time_ninja_error)
