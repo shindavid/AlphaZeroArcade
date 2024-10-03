@@ -69,6 +69,8 @@ class GpuContentionManager:
             return
 
         currently_elevated = [table for table in ratings_tables if table.ratings_prioritized()]
+
+        # TODO: this assert fails sometimes, figure out a fix
         assert len(currently_elevated) <= 1, currently_elevated
         if not elevate:
             for table in currently_elevated:
