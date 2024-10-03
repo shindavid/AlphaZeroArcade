@@ -25,26 +25,16 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::stats_t::init_q(const ValueArray& value) {
+void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
   RQ = value;
   RQ_sq = value * value;
   VQ = value;
-  for (int p = 0; p < kNumPlayers; ++p) {
-    provably_winning[p] = value(p) == 1;
-    provably_losing[p] = value(p) == 0;
+  if (pure) {
+    for (int p = 0; p < kNumPlayers; ++p) {
+      provably_winning[p] = value(p) == 1;
+      provably_losing[p] = value(p) == 0;
+    }
   }
-}
-
-template <core::concepts::Game Game>
-void Node<Game>::stats_t::init_q_and_real_increment(const ValueArray& value) {
-  init_q(value);
-  real_increment();
-}
-
-template <core::concepts::Game Game>
-void Node<Game>::stats_t::init_q_and_increment_transfer(const ValueArray& value) {
-  init_q(value);
-  increment_transfer();
 }
 
 template <core::concepts::Game Game>
@@ -456,6 +446,22 @@ void Node<Game>::update_child_expand_count(int n) {
   }
 
   trivial_ = true;
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::validate_state() const {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  int RN = 0;
+  int VN = 0;
+  for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
+    auto edge = get_edge(i);
+    RN += edge->RN;
+    VN += edge->VN;
+  }
+
+  util::debug_assert(RN == stats_.RN, "[%p] %d != %d", this, RN, stats_.RN);
+  util::debug_assert(VN == stats_.VN, "[%p] %d != %d", this, VN, stats_.VN);
 }
 
 }  // namespace mcts

@@ -5,28 +5,34 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline ActionSelector<Game>::ActionSelector(const ManagerParams& params, const SearchParams& search_params,
-                                  const Node* node, bool is_root)
+inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
+                                            const SearchParams& search_params, const Node* node,
+                                            bool is_root)
     : cp(node->stable_data().current_player),
       P(node->stable_data().num_valid_actions),
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
+      RE(P.rows()),
+      VE(P.rows()),
       E(P.rows()),
-      N(P.rows()),
+      RN(P.rows()),
       VN(P.rows()),
+      N(P.rows()),
       FPU(P.rows()),
       PUCT(P.rows()) {
   P.setZero();
   V.setZero();
   PW.setZero();
   PL.setZero();
+  RE.setZero();
+  VE.setZero();
   E.setZero();
-  N.setZero();
+  RN.setZero();
   VN.setZero();
+  N.setZero();
   FPU.setZero();
 
-  bool fpu_any = false;
   for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
@@ -35,7 +41,8 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params, const S
     using edge_t = Node::edge_t;
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
-    E(i) = edge->RN;
+    RE(i) = edge->RN;
+    VE(i) = edge->VN;
 
     Node* child = node->get_child(edge);
     if (child) {
@@ -43,18 +50,23 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params, const S
       V(i) = child_stats.VQ(cp);
       PW(i) = child_stats.provably_winning[cp];
       PL(i) = child_stats.provably_losing[cp];
-      N(i) = child_stats.RN;
+      RN(i) = child_stats.RN;
       VN(i) = child_stats.VN;
     } else {
       V(i) = edge->child_V_estimate;
     }
-
-    bool fpu = N(i) == 0;
-    FPU[i] = fpu;
-    fpu_any |= fpu;
   }
 
-  if (params.enable_first_play_urgency && fpu_any) {
+  E = RE + VE;
+  N = RN + VN;
+
+  bool fpu_any = false;
+  if (params.enable_first_play_urgency) {
+    FPU = (N == 0).template cast<float>();
+    fpu_any = FPU.any();
+  }
+
+  if (fpu_any) {
     /*
      * Again, we do NOT grab the stats_mutex here!
      */

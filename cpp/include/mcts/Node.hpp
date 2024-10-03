@@ -85,9 +85,7 @@ class Node {
     void virtual_increment() { VN++; }
     void real_increment() { RN++; }
     void increment_transfer() { RN++; VN--; }
-    void init_q(const ValueArray&);
-    void init_q_and_real_increment(const ValueArray& value);
-    void init_q_and_increment_transfer(const ValueArray& value);
+    void init_q(const ValueArray&, bool pure);
 
     ValueArray RQ;     // excludes virtual loss
     ValueArray RQ_sq;  // excludes virtual loss
@@ -107,6 +105,7 @@ class Node {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int RN = 0;  // real count
+    int VN = 0;  // virtual count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
@@ -202,6 +201,9 @@ class Node {
   Node* get_child(const edge_t* edge) const;
   void update_child_expand_count(int n=1);
   bool trivial() const { return trivial_; }
+
+  // NO-OP in release builds, checks various invariants in debug builds
+  void validate_state() const;
 
  private:
   stable_data_t stable_data_;

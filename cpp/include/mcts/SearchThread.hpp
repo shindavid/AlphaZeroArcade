@@ -82,16 +82,11 @@ class SearchThread {
     void operator()(Node* node) const { node->stats().increment_transfer(); }
   };
 
-  struct InitQAndRealIncrement {
-    InitQAndRealIncrement(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().init_q_and_real_increment(value); }
+  struct InitQ {
+    InitQ(const ValueArray& value, bool pure) : value(value), pure(pure) {}
+    void operator()(Node* node) const { node->stats().init_q(value, pure); }
     const ValueArray& value;
-  };
-
-  struct InitQAndIncrementTransfer {
-    InitQAndIncrementTransfer(const ValueArray& value) : value(value) {}
-    void operator()(Node* node) const { node->stats().init_q_and_increment_transfer(value); }
-    const ValueArray& value;
+    const bool pure;
   };
 
   struct visitation_t {
@@ -119,6 +114,10 @@ class SearchThread {
   bool expand(StateHistory*, Node*, edge_t*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
   void calc_canonical_state_data();
+
+  // In debug builds, calls node->validate_state() for each node in search path.
+  // In release builds, NO-OP.
+  void validate_search_path() const;
 
   /*
    * Used in visit().
