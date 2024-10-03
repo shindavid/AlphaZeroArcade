@@ -193,6 +193,35 @@ void compute_per_slice(const Tensor& t, Func f) {
 }
 
 template <concepts::FTensor Tensor>
+void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps) {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  float s = sum(distr);
+  float m = min(distr);
+
+  if (m < 0 || abs(s - 1.0) > eps) {
+    std::ostringstream ss;
+    ss << distr;
+    throw util::Exception("Invalid prob distr: sum=%g, min=%g distr:\n%s", s, m, ss.str().c_str());
+  }
+}
+
+// debug_assert()'s that distr is a valid probability distribution
+template <typename Array>
+void debug_assert_is_valid_prob_distr(const Array& distr, float eps) {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  float s = distr.sum();
+  float m = distr.minCoeff();
+
+  if (m < 0 || abs(s - 1.0) > eps) {
+    std::ostringstream ss;
+    ss << distr;
+    throw util::Exception("Invalid prob distr: sum=%g, min=%g distr:\n%s", s, m, ss.str().c_str());
+  }
+}
+
+template <concepts::FTensor Tensor>
 float sum(const Tensor& tensor) {
   eigen_util::FTensor<Eigen::Sizes<>> out = tensor.sum();
   return out(0);

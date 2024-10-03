@@ -48,6 +48,7 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
 
   dynamic_array_.row(0) = eigen_util::softmax(dynamic_array_.row(0));
   value_ = value;
+  eigen_util::debug_assert_is_valid_prob_distr(value_);
 }
 
 template <core::concepts::Game Game>
@@ -56,6 +57,7 @@ void NNEvaluation<Game>::load(ValueTensor& value, LocalPolicyArray& policy,
   value = value_;
   policy = dynamic_array_.row(0);
   action_value = dynamic_array_.row(1);
+  eigen_util::debug_assert_is_valid_prob_distr(policy);
 }
 
 }  // namespace mcts

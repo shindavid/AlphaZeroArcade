@@ -35,6 +35,8 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
       provably_losing[p] = value(p) == 0;
     }
   }
+
+  eigen_util::debug_assert_is_valid_prob_distr(RQ);
 }
 
 template <core::concepts::Game Game>
@@ -295,6 +297,10 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     all_provably_winning &= child_stats.provably_winning;
     all_provably_losing &= child_stats.provably_losing;
     num_children++;
+
+    if (edge->RN) {
+      eigen_util::debug_assert_is_valid_prob_distr(child_stats.RQ);
+    }
   }
 
   if (skipped) {
@@ -305,11 +311,13 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   std::unique_lock lock(mutex());
   update_instruction(this);
 
-  if (stable_data_.V_valid) {
+  if (stable_data_.VT_valid) {
     ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
     RQ_sum += VA;
     RQ_sq_sum += VA * VA;
     RN++;
+
+    eigen_util::debug_assert_is_valid_prob_distr(VA);
   }
 
   // incorporate bounds from children
@@ -332,6 +340,10 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     stats_.VQ = VQ_sum / (RN + stats_.VN);
   } else {
     stats_.VQ = stats_.RQ;
+  }
+
+  if (RN) {
+    eigen_util::debug_assert_is_valid_prob_distr(stats_.RQ);
   }
 }
 
@@ -409,6 +421,8 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   stats_.RQ = VA;
   stats_.RQ_sq = VA * VA;
   stats_.VQ = VA;
+
+  eigen_util::debug_assert_is_valid_prob_distr(VA);
 }
 
 template <core::concepts::Game Game>
