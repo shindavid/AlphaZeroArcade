@@ -54,9 +54,10 @@ auto softmax(const Array& array) {
 
 template <concepts::FTensor Tensor>
 auto softmax(const Tensor& tensor) {
-  auto normalized_tensor = tensor - max(tensor);
+  Tensor normalized_tensor = tensor - max(tensor);
   Tensor z = normalized_tensor.exp();
-  return z / sum(z);
+  Tensor q = z / sum(z);
+  return q;
 }
 
 template <typename Array>
