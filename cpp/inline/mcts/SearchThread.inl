@@ -547,19 +547,25 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   const PVec& N = action_selector.N;
   PVec& PUCT = action_selector.PUCT;
 
-  bool force_playouts = manager_params_->forced_playouts && is_root &&
-                        search_params.full_search && manager_params_->dirichlet_mult > 0;
-
-  if (force_playouts) {
-    PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
-    auto F1 = (N < n_forced).template cast<float>();
-    auto F2 = (N > 0).template cast<float>();
-    auto F = F1 * F2;
-    PUCT = PUCT * (1 - F) + F * 1e+6;
-  }
-
   int argmax_index;
-  PUCT.maxCoeff(&argmax_index);
+
+  if (search_params.tree_size_limit == 1) {
+    // net-only, use P
+    P.maxCoeff(&argmax_index);
+  } else {
+    bool force_playouts = manager_params_->forced_playouts && is_root &&
+                          search_params.full_search && manager_params_->dirichlet_mult > 0;
+
+    if (force_playouts) {
+      PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
+      auto F1 = (N < n_forced).template cast<float>();
+      auto F2 = (N > 0).template cast<float>();
+      auto F = F1 * F2;
+      PUCT = PUCT * (1 - F) + F * 1e+6;
+    }
+
+    PUCT.maxCoeff(&argmax_index);
+  }
 
   print_action_selection_details(node, action_selector, argmax_index);
   return argmax_index;
