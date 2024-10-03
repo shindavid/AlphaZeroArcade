@@ -66,6 +66,12 @@ struct ManagerParams : public NNEvaluationServiceParams {
   bool exploit_proven_winners = true;
   bool avoid_proven_losers = true;
 
+  /*
+   * If true, we forcibly evaluate all children of root nodes. This is needed in training mode to
+   * create action-value targets.
+   */
+  bool force_evaluate_all_root_children = false;
+
 #ifdef PROFILE_MCTS
   std::string profiling_dir_str;
 #endif  // PROFILE_MCTS

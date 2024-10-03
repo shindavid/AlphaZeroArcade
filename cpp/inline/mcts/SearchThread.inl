@@ -81,7 +81,8 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
                                           Node* node) {
   if (!node->is_terminal()) {
     bool is_root = (node == shared_data_->get_root_node());
-    bool eval_all_children = is_root && shared_data_->search_params.full_search;
+    bool eval_all_children = manager_params_->force_evaluate_all_root_children && is_root &&
+                             shared_data_->search_params.full_search;
 
     if (nn_eval_service_) {
       const State& state = history->current();
