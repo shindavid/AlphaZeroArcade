@@ -24,7 +24,7 @@ struct GameTypes {
   using PolicyShape = Eigen::Sizes<GameConstants::kNumActions>;
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using ValueTensor = GameResults::Tensor;
-  using ValueShape = eigen_util::extract_shape_t<ValueTensor>;
+  using ValueShape = ValueTensor::Dimensions;
   using ActionValueShape = Eigen::Sizes<ValueShape::total_size, GameConstants::kNumActions>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
 

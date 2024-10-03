@@ -386,7 +386,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
     // treat this as uniform P and V
     float p = 1.0 / n;
 
-    VT.setConstant(1.0 / eigen_util::extract_shape_t<ValueTensor>::total_size);
+    VT.setConstant(1.0 / ValueTensor::Dimensions::total_size);
     float v = Game::GameResults::to_value_array(VT)(stable_data().current_player);
 
     stable_data_.VT = VT;

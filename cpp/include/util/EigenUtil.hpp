@@ -168,23 +168,6 @@ concept FArray = is_farray_v<T>;
 
 }  // namespace concepts
 
-/*
- * The following are equivalent:
- *
- * using S = Eigen::Sizes<1, 2, 3>;
- *
- * using T = eigen_util::FTensor<Eigen::Sizes<1, 2, 3>>;
- * using S = extract_shape_t<T>;
- */
-template <typename T>
-struct extract_shape {};
-template <concepts::Shape Shape>
-struct extract_shape<FTensor<Shape>> {
-  using type = Shape;
-};
-template <typename T>
-using extract_shape_t = extract_shape<T>::type;
-
 template <typename T>
 struct extract_length {};
 template <int N>

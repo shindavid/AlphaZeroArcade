@@ -33,7 +33,7 @@ typename ActionValueTarget<Game>::Tensor ActionValueTarget<Game>::tensorize(
   //
   // TODO: considering aligning to current-player before writing to disk. Then we don't need to
   // align on the fly here.
-  using FullShape = eigen_util::extract_shape_t<Tensor>;
+  using FullShape = Tensor::Dimensions;
   static_assert(FullShape::count == 2);
   constexpr int N = eigen_util::extract_dim_v<0, FullShape>;
 
@@ -47,7 +47,7 @@ typename ActionValueTarget<Game>::Tensor ActionValueTarget<Game>::tensorize(
   int j = 0;
   eigen_util::compute_per_slice<1>(*view.action_values, [&](const auto& slice) {
     using SliceT = std::decay_t<decltype(slice)>;
-    using Shape = eigen_util::extract_shape_t<SliceT>;
+    using Shape = SliceT::Dimensions;
     static_assert(eigen_util::extract_dim_v<0, Shape> == N - 1);
 
     SliceT rotated_slice = slice;

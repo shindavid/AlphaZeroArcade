@@ -90,9 +90,9 @@ class NNEvaluationService
   using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
   using FullActionValueTensor = Game::Types::FullActionValueTensor;
 
-  using InputShape = eigen_util::extract_shape_t<InputTensor>;
+  using InputShape = InputTensor::Dimensions;
   using PolicyShape = Game::Types::PolicyShape;
-  using ValueShape = eigen_util::extract_shape_t<ValueTensor>;
+  using ValueShape = ValueTensor::Dimensions;
   using FullActionValueShape = Game::Types::FullActionValueShape;
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;

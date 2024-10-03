@@ -12,7 +12,7 @@ namespace core {
 
 template <eigen_util::concepts::FTensor Tensor>
 void ShapeInfo::init(const char* name, int target_index) {
-  using Shape = eigen_util::extract_shape_t<Tensor>;
+  using Shape = Tensor::Dimensions;
   this->name = name;
   this->dims = new int[Shape::count];
   this->num_dims = Shape::count;
@@ -608,7 +608,7 @@ GameLogBase::tensor_index_t GameLogWriter<Game>::write_target(
 
   int start = sparse_tensor_entries.size();
 
-  constexpr int N = eigen_util::extract_shape_t<Tensor>::total_size;
+  constexpr int N = Tensor::Dimensions::total_size;
   const auto* data = target.data();
   for (int i = 0; i < N; ++i) {
     if (data[i]) {
