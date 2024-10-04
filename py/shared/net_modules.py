@@ -509,6 +509,19 @@ class Model(nn.Module):
     def target_names(self) -> List[str]:
         return [head.name for head in self.heads]
 
+    def get_parameter_counts(self) -> Dict[str, int]:
+        """
+        Returns a dictionary mapping module names to the number of parameters in that module.
+        """
+        counts = {}
+        counts['stem'] = sum(p.numel() for p in self.stem.parameters())
+        counts['blocks'] = sum(p.numel() for block in self.blocks for p in block.parameters())
+        if self.neck is not None:
+            counts['neck'] = sum(p.numel() for p in self.neck.parameters())
+        for head in self.heads:
+            counts[head.name] = sum(p.numel() for p in head.parameters())
+        return counts
+
     def forward(self, x):
         out = x
         out = self.stem(out)
