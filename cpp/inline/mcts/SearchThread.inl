@@ -343,10 +343,12 @@ inline void SearchThread<Game>::virtual_backprop() {
   last_edge->VN++;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
+    // NOTE: always update the child first, then the edge, for better race-handling
     search_path_[i].child->update_stats(VirtualIncrement{});
     search_path_[i].edge->VN++;
   }
   shared_data_->get_root_node()->update_stats(VirtualIncrement{});
+  validate_search_path();
 }
 
 template <core::concepts::Game Game>
@@ -361,12 +363,16 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   util::release_assert(!search_path_.empty());
   edge_t* last_edge = search_path_.back().edge;
   Node* last_node = search_path_.back().child;
+
+  // NOTE: always update the child first, then the edge, for better race-handling
   last_node->update_stats(InitQ(value, true));
   last_edge->RN++;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* child = search_path_[i].child;
+
+    // NOTE: always update the child first, then the edge, for better race-handling
     child->update_stats(RealIncrement{});
     edge->RN++;
   }
@@ -387,6 +393,7 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
              << value.transpose();
   }
 
+  // NOTE: always update the child first, then the edge, for better race-handling
   last_node->update_stats(InitQ(value, false));
   last_edge->RN++;
   last_edge->VN--;
@@ -394,6 +401,8 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* child = search_path_[i].child;
+
+    // NOTE: always update the child first, then the edge, for better race-handling
     child->update_stats(IncrementTransfer{});
     edge->RN++;
     edge->VN--;
@@ -414,6 +423,8 @@ void SearchThread<Game>::short_circuit_backprop() {
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* child = search_path_[i].child;
+
+    // NOTE: always update the child first, then the edge, for better race-handling
     child->update_stats(RealIncrement{});
     edge->RN++;
   }

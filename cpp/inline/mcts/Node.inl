@@ -285,10 +285,11 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
       skipped = true;
       continue;
     }
+    int eRN = edge->RN;
     const auto& child_stats = child->stats();
-    RN += edge->RN;
-    RQ_sum += child_stats.RQ * edge->RN;
-    RQ_sq_sum += child_stats.RQ_sq * edge->RN;
+    RN += eRN;
+    RQ_sum += child_stats.RQ * eRN;
+    RQ_sq_sum += child_stats.RQ_sq * eRN;
 
     cp_has_winning_move |= child_stats.provably_winning[cp];
     all_provably_winning &= child_stats.provably_winning;
@@ -304,7 +305,7 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   std::unique_lock lock(mutex());
   update_instruction(this);
 
-  if (stats_.RN) {
+  if (stable_data_.V_valid) {
     RQ_sum += stable_data_.V;
     RQ_sq_sum += stable_data_.V * stable_data_.V;
     RN++;
@@ -458,10 +459,14 @@ void Node<Game>::validate_state() const {
     auto edge = get_edge(i);
     RN += edge->RN;
     VN += edge->VN;
+    util::debug_assert(edge->RN >= 0);
+    util::debug_assert(edge->VN >= 0);
   }
 
   util::debug_assert(RN == stats_.RN, "[%p] %d != %d", this, RN, stats_.RN);
   util::debug_assert(VN == stats_.VN, "[%p] %d != %d", this, VN, stats_.VN);
+  util::debug_assert(stats_.RN >= 0);
+  util::debug_assert(stats_.VN >= 0);
 }
 
 }  // namespace mcts
