@@ -40,9 +40,8 @@ struct PolicyTarget {
   static Tensor tensorize(const GameLogView& view);
 };
 
-template<typename Game>
-struct WinLossDrawTarget {
-  static_assert(Game::Constants::kNumPlayers == 2);
+template <typename Game>
+struct ValueTarget {
   static constexpr const char* kName = "value";
   using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;

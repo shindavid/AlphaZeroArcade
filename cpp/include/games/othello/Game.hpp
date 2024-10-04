@@ -107,7 +107,7 @@ class Game {
     using ScoreMarginShape = Eigen::Sizes<2, 2 * kNumCells + 1>;  // pdf/cdf, score-margin
 
     using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::WinLossDrawTarget<Game>;
+    using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 

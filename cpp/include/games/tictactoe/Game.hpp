@@ -99,7 +99,7 @@ class Game {
     using OwnershipShape = Eigen::Sizes<3, kBoardDimension, kBoardDimension>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
-    using ValueTarget = core::WinLossDrawTarget<Game>;
+    using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 

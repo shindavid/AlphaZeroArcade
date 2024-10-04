@@ -219,7 +219,7 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
 }
 
 Game::Types::ActionOutcome Game::Rules::compute_outcome(const State& state) {
-  Game::Types::ValueArray array;
+  Game::Types::ValueTensor tensor;
 
   int scores[kNumColors];
   for (color_t c = 0; c < kNumColors; ++c) {
@@ -232,11 +232,11 @@ Game::Types::ActionOutcome Game::Rules::compute_outcome(const State& state) {
   }
 
   for (color_t c = 0; c < kNumColors; ++c) {
-    array[c] = (scores[c] == min_score) ? 1 : 0;
+    tensor(c) = (scores[c] == min_score) ? 1 : 0;
   }
 
-  array /= array.sum();
-  return array;
+  tensor = tensor / eigen_util::sum(tensor);
+  return tensor;
 }
 
 void Game::IO::print_state(std::ostream& os, const State& state, core::action_t last_action,

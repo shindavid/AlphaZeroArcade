@@ -15,6 +15,7 @@
 #include <core/GameTypes.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
+#include <core/WinShareResults.hpp>
 #include <games/blokus/Constants.hpp>
 #include <games/blokus/Types.hpp>
 #include <util/EigenUtil.hpp>
@@ -93,6 +94,7 @@ class Game {
     aux_t aux;
   };
 
+  using GameResults = core::WinShareResults<Constants::kNumPlayers>;
   using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
 
   /*
@@ -102,7 +104,7 @@ class Game {
    * whether exploiting symmetry will be useful, so we use the trivial group.
    */
   using SymmetryGroup = groups::TrivialGroup;
-  using Types = core::GameTypes<Constants, State, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State& state);

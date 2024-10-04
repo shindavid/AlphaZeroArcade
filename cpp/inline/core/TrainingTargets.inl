@@ -11,8 +11,7 @@ PolicyTarget<Game>::tensorize(const GameLogView& view) {
 }
 
 template <typename Game>
-typename WinLossDrawTarget<Game>::Tensor WinLossDrawTarget<Game>::tensorize(
-    const GameLogView& view) {
+typename ValueTarget<Game>::Tensor ValueTarget<Game>::tensorize(const GameLogView& view) {
   using Rules = Game::Rules;
   seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   Tensor tensor = *view.game_result;
