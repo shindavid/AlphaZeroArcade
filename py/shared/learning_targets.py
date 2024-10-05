@@ -7,6 +7,7 @@ from typing import Optional
 
 import torch
 from torch import nn as nn
+from torch.nn import functional as F
 
 
 class LearningTarget:
@@ -60,14 +61,14 @@ class PolicyTarget(LearningTarget):
         return int(sum(correct_policy_preds))
 
 
-class WinLossDrawActionValueTarget(LearningTarget):
+class ActionValueTargetBase(LearningTarget):
+    @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
-        return nn.CrossEntropyLoss()
+        pass
 
     def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
                                     labels: torch.Tensor) -> float:
         (B, C, A) = predicted_logits.shape  # batch-size, num-classes, num-actions
-        assert C == 4, predicted_logits.shape
         assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
 
         label_sums = labels.sum(dim=1)
@@ -85,24 +86,84 @@ class WinLossDrawActionValueTarget(LearningTarget):
 
         # To be extra strict, we exclude invalid labels from the denominator
         error_rate = error / num_valid_labels
-        accuracy_rate = 1 - error_rate
+        accuracy_rate = max(0, 1 - error_rate)
         return accuracy_rate * B
 
 
-class WinLossDrawValueTarget(LearningTarget):
+class ValueTargetBase(LearningTarget):
+    @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
-        return nn.CrossEntropyLoss()
+        pass
 
     def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
                                     labels: torch.Tensor) -> float:
-        (B, C) = predicted_logits.shape  # batch-size, num-classes
-        assert C == 3, predicted_logits.shape
+        (B, _) = predicted_logits.shape  # batch-size, num-classes
         assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
 
         predicted_probs = predicted_logits.softmax(dim=1)
         error = 0.5 * abs(predicted_probs - labels).sum().item()
 
         return B - error
+
+
+class WinLossDrawActionValueTarget(ActionValueTargetBase):
+    def loss_fn(self) -> nn.Module:
+        return nn.CrossEntropyLoss()
+
+
+class WinLossDrawValueTarget(ValueTargetBase):
+    def loss_fn(self) -> nn.Module:
+        return nn.CrossEntropyLoss()
+
+
+class KLDivergencePerPixelLoss(nn.Module):
+    """
+    KL-divergence loss computed per "pixel", averaged over all pixels.
+
+    Assumes 1D-distributions per-pixel, and an arbitrary shape for the pixel dimensions. This is
+    similar to how CrossEntropyLoss works permits pixel-wise classification.
+    """
+    def __init__(self):
+        super(KLDivergencePerPixelLoss, self).__init__()
+
+    def forward(self, logits, target):
+        """
+        Args:
+            logits: Tensor of shape (N, C, *) where N is the batch size, C is the number of classes,
+                    and * represents any number of additional dimensions for "pixels".
+            target: Tensor of shape (N, C, *) where each pixel is a valid probability distribution.
+
+        Returns:
+            Mean KL-divergence loss over all "pixels".
+        """
+        # Ensure logits and target have the same shape
+        assert logits.shape == target.shape, "Logits and target must have the same shape."
+
+        # Apply log-softmax to the logits to get log probabilities
+        log_prob = F.log_softmax(logits, dim=1)  # Log probabilities along class dim (C)
+
+        # Compute KL-divergence: target * (log(target) - log(predicted))
+        kl_div = target * (torch.log(target + 1e-10) - log_prob)  # Small epsilon to avoid log(0)
+
+        # Sum over the class dimension (C) to get the KL-divergence for each "pixel"
+        kl_div = torch.sum(kl_div, dim=1)  # Sum over the class dimension C
+
+        # Return the mean KL-divergence over all "pixels" and batches
+        return kl_div.mean()
+
+
+class WinShareActionValueTarget(ActionValueTargetBase):
+    def loss_fn(self) -> nn.Module:
+        # TODO: try KLDivergencePerPixelLoss instead of CrossEntropyLoss
+        # return KLDivergencePerPixelLoss()
+        return nn.CrossEntropyLoss()
+
+
+class WinShareValueTarget(ValueTargetBase):
+    def loss_fn(self) -> nn.Module:
+        # TODO: try KLDivLoss instead of CrossEntropyLoss
+        # return nn.KLDivLoss(reduction='batchmean')
+        return nn.CrossEntropyLoss()
 
 
 class ScoreTarget(LearningTarget):

@@ -27,7 +27,8 @@ from torch import nn as nn
 from torch.nn import functional as F
 
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
-    PolicyTarget, ScoreTarget, WinLossDrawActionValueTarget, WinLossDrawValueTarget
+    PolicyTarget, ScoreTarget, WinLossDrawActionValueTarget, WinLossDrawValueTarget, \
+    WinShareActionValueTarget, WinShareValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -319,9 +320,6 @@ class WinLossDrawValueHead(Head):
     5. A rectifier non-linearity
     6. A fully connected linear layer to a scalar
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
-
-    TODO: having 2 linear layers feels unnecessary. Try removing one, perhaps increasing
-    c_hidden to compensate.
     """
     def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
         super(WinLossDrawValueHead, self).__init__(name, WinLossDrawValueTarget())
@@ -330,6 +328,73 @@ class WinLossDrawValueHead(Head):
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
         self.linear2 = nn.Linear(n_hidden, 3)
+
+    def forward(self, x):
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear1(out)
+        out = self.act(out)
+        out = self.linear2(out)
+        return out
+
+
+class WinShareActionValueHead(Head):
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super(WinShareActionValueHead, self).__init__(name, WinShareActionValueTarget())
+
+        self.output_shape = output_shape
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def forward(self, x):
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        out = out.view(-1, *self.output_shape)
+        return out
+
+
+class WinShareValueHead(Head):
+    """
+    A head that produces a length-p logit vector, where p is the number of players in the game,
+    usable for zero-sum games with p players for any p>=2. The k'th entry predicts the expected
+    number of win-shares for the k'th player.
+
+    Ideally, our value head predicts all possible outcomes, including all the various k-way draws
+    for first-place, but there are some practical drawbacks to this:
+
+    1. There 2^p - 1 possible outcomes, which can be a lot of logits to predict for large p.
+
+    2. Some of those outcomes may be vanishingly rare, and having target categories that are too
+       rare can lead to prediction trouble.
+
+    Due to these reasons, WinShareValueHead is typically the best value head for multiplayer games.
+
+    We could use CrossEntropyLoss, but it's arguably not appropriate given how we represent draws.
+    We represent a draw between players 0 and 1 as a win-share target of [0.5, 0.5, 0, 0]. Even if
+    the network perfectly predicts a logit vector that softmaxes to [0.5, 0.5, 0, 0], this yields
+    nonzero loss.
+
+    Instead, we use Kullback-Leibler Divergence (KL-Divergence) Loss.
+
+    As for the head architecture, we follow WinLossDrawValueHead, simply changing the final
+    output shape.
+    """
+
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
+                 shape: Shape):
+        super(WinShareValueHead, self).__init__(name, WinShareValueTarget())
+
+        (n_players, ) = shape
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, n_players)
 
     def forward(self, x):
         out = x
@@ -455,6 +520,8 @@ MODULE_MAP = {
     'ScoreHead': ScoreHead,
     'WinLossDrawValueHead': WinLossDrawValueHead,
     'WinLossDrawActionValueHead': WinLossDrawActionValueHead,
+    'WinShareValueHead': WinShareValueHead,
+    'WinShareActionValueHead': WinShareActionValueHead,
     }
 
 
