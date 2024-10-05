@@ -181,11 +181,11 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
   color_t color = core.cur_color;
   if (!core.partial_move.valid()) {
     if (action == kPass) {
-      if (core.pass_count == 3) {  // all players passed, game over
-        return compute_outcome(state);
-      }
       core.cur_color = (core.cur_color + 1) % kNumColors;
       core.pass_count++;
+      if (core.pass_count == 4) {  // all players passed, game over
+        return compute_outcome(state);
+      }
       return Types::ActionOutcome();
     } else {
       util::release_assert(action >= 0 && action < kPass);
