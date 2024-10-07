@@ -21,16 +21,14 @@ namespace core {
  * For games with more than two players, the analog of WinLossDrawResults would demand an output
  * of length 2^p - 1, which is not practical (particularly because many of those outcomes may be
  * sparsely represented in the training data). WinShareResults is a good compromise.
- *
- * TODO: make max/min values in a ValueArray static constexpr attributes of WinShareResults.
- * Then, this can be used for default vitual loss values and for provably winning/losing
- * calculations in MCTS search. Currently, the min/max of 0/1 is implicitly hard-coded in the
- * MCTS logic.
  */
 template<int kNumPlayers>
 struct WinShareResults {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<kNumPlayers>>;
   using ValueArray = eigen_util::FArray<kNumPlayers>;
+
+  static constexpr float kMaxValue = 1.0;
+  static constexpr float kMinValue = 0.0;
 
   static Tensor win(core::seat_index_t seat) {
     Tensor result;

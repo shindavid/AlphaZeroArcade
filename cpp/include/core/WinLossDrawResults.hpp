@@ -11,15 +11,13 @@ namespace core {
 /*
  * WinLossDrawResults can be used for 2-player games with win/loss/draw outcomes, where draws are
  * considered half as valuable as wins.
- *
- * TODO: make max/min values in a ValueArray static constexpr attributes of WinLossDrawResults.
- * Then, this can be used for default vitual loss values and for provably winning/losing
- * calculations in MCTS search. Currently, the min/max of 0/1 is implicitly hard-coded in the
- * MCTS logic.
  */
 struct WinLossDrawResults {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<3>>;  // W, L, D
   using ValueArray = eigen_util::FArray<2>;
+
+  static constexpr float kMaxValue = 1.0;
+  static constexpr float kMinValue = 0.0;
 
   static Tensor draw() {
     Tensor result;

@@ -24,6 +24,11 @@ template <class GR>
 concept GameResults = requires(const typename GR::Tensor& const_tensor_ref,
                                typename GR::Tensor& tensor_ref)
 {
+  // The maximum/minimum value that can be present in the ValueArray representation. This is used
+  // for provably-winning/losing checks, and also for virtual-loss calculations.
+  { util::decay_copy(GR::kMinValue) } -> std::same_as<float>;
+  { util::decay_copy(GR::kMaxValue) } -> std::same_as<float>;
+
   /*
    * The tensor representation of the game result. This is what the game rules outputs, and what the
    * value-head of the neural network aims to learn.

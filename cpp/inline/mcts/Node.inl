@@ -31,8 +31,8 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
   VQ = value;
   if (pure) {
     for (int p = 0; p < kNumPlayers; ++p) {
-      provably_winning[p] = value(p) == 1;
-      provably_losing[p] = value(p) == 0;
+      provably_winning[p] = value(p) >= Game::GameResults::kMaxValue;
+      provably_losing[p] = value(p) <= Game::GameResults::kMinValue;
     }
   }
 
