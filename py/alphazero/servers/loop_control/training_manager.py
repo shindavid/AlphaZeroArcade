@@ -263,8 +263,19 @@ class TrainingManager:
             self._load_last_checkpoint()
 
         logger.info('Model parameter counts:')
-        for name, count in self._net.get_parameter_counts().items():
-            logger.info(f'{name}: {count}')
+        pcounts = self._net.get_parameter_counts()
+        longest_name_len = max(len(name) for name in pcounts)
+        total_count = sum(pcounts.values())
+        count_len = len(str(total_count))
+
+        #    stem:   2308 [14.7%]
+        #  blocks: 206792 [82.3%]
+        # ...
+
+        fmt = f'{{:<{longest_name_len}}} : {{:>{count_len}}} [{{:>5.1f}}%]'
+        for name, count in pcounts.items():
+            pct = 100 * count / total_count
+            logger.info(fmt.format(name, count, pct))
         return self._net, self._opt
 
     def _train_step_helper(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
@@ -322,9 +333,8 @@ class TrainingManager:
         for head_stats in stats.substats_list:
             head_name = head_stats.name
             loss = head_stats.loss()
-            accuracy = head_stats.accuracy()
             loss_weight = head_stats.loss_weight
-            head_data.append((gen, head_name, loss, loss_weight, accuracy))
+            head_data.append((gen, head_name, loss, loss_weight))
 
         with self._controller.training_db_conn_pool.db_lock:
             conn = self._controller.training_db_conn_pool.get_connection()
@@ -336,8 +346,8 @@ class TrainingManager:
                            (gen, start_ts, end_ts, minibatch_size, n_minibatches,
                             window.start, window.end, window.sample_rate))
 
-            cursor.executemany("""INSERT OR REPLACE INTO training_heads (gen, head_name, loss, loss_weight, accuracy)
-                VALUES (?, ?, ?, ?, ?)""", head_data)
+            cursor.executemany("""INSERT OR REPLACE INTO training_heads (gen, head_name, loss, loss_weight)
+                VALUES (?, ?, ?, ?)""", head_data)
 
             conn.commit()
             cursor.close()

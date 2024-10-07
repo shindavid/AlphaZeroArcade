@@ -17,7 +17,6 @@ class LearningTarget:
 
     - The loss function to use for this head
     - Whether or how to mask rows of data
-    - An accuracy measurement function
     """
     @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
@@ -32,10 +31,6 @@ class LearningTarget:
         can override this.
         """
         return None
-
-    @abc.abstractmethod
-    def get_num_correct_predictions(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
-        pass
 
 
 class PolicyTarget(LearningTarget):
@@ -54,16 +49,6 @@ class PolicyTarget(LearningTarget):
         mask = label_sums != 0
         return mask
 
-    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        (B, _) = predicted_logits.shape  # batch-size, num-actions
-        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
-
-        predicted_probs = predicted_logits.softmax(dim=1)
-        error = 0.5 * abs(predicted_probs - labels).sum().item()
-
-        return B - error
-
 
 class WinShareActionValueTarget(LearningTarget):
     """
@@ -75,43 +60,8 @@ class WinShareActionValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.BCEWithLogitsLoss()
 
-    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        """
-        We measure accuracy only on performance on entries where the label is non-zero. This is not
-        perfect, since a zero label could either come from a terminal state or from an invalid
-        action. Accuracy is only for metrics, though, so it's not a big deal.
-        """
-        (B, _) = predicted_logits.shape  # batch-size, num-actions
-        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
 
-        label_mask = torch.where(labels != 0)
-
-        masked_labels = labels[label_mask]
-        masked_predicted_logits = predicted_logits[label_mask]
-        masked_predicted_probs = masked_predicted_logits.sigmoid()
-
-        error = abs(masked_predicted_probs - masked_labels).sum().item()
-        return max(0, B - error)
-
-
-class ValueTargetBase(LearningTarget):
-    @abc.abstractmethod
-    def loss_fn(self) -> nn.Module:
-        pass
-
-    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        (B, _) = predicted_logits.shape  # batch-size, num-classes
-        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
-
-        predicted_probs = predicted_logits.softmax(dim=1)
-        error = 0.5 * abs(predicted_probs - labels).sum().item()
-
-        return B - error
-
-
-class WinLossDrawValueTarget(ValueTargetBase):
+class WinLossDrawValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.CrossEntropyLoss()
 
@@ -154,7 +104,7 @@ class KLDivergencePerPixelLoss(nn.Module):
         return kl_div.mean()
 
 
-class WinShareValueTarget(ValueTargetBase):
+class WinShareValueTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         # TODO: try KLDivLoss instead of CrossEntropyLoss
         # return nn.KLDivLoss(reduction='batchmean')
@@ -187,9 +137,6 @@ class ScoreTarget(LearningTarget):
 
         return loss
 
-    def get_num_correct_predictions(self, output: torch.Tensor, target: torch.Tensor) -> float:
-        return torch.sum(output[:, 0].softmax(dim=1) * target[:, 0]).item()
-
 
 class OwnershipTarget(LearningTarget):
     """
@@ -204,22 +151,7 @@ class OwnershipTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.CrossEntropyLoss()
 
-    def get_num_correct_predictions(self, output: torch.Tensor, target: torch.Tensor) -> float:
-        shape = output.shape
-        n = math.prod(shape[2:])
-        return torch.sum(output.softmax(dim=1) * target).item() / n
-
 
 class GeneralLogitTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.BCEWithLogitsLoss()
-
-    def get_num_correct_predictions(self, prediction_logits: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        prediction_probs = prediction_logits.sigmoid()
-        n = math.prod(labels.shape[1:])
-
-        # If the label is 1, then a prediction of p counts as p correct predictions.
-        # If the label is 0, then a prediction of p counts as 1-p correct predictions.
-        w = labels * prediction_probs + (1 - labels) * (1 - prediction_probs)
-        return torch.sum(w).item() / n

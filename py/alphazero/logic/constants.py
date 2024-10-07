@@ -75,8 +75,7 @@ TRAINING_TABLE_CREATE_CMDS = [
             gen INTEGER,
             head_name TEXT,
             loss FLOAT,
-            loss_weight FLOAT,
-            accuracy FLOAT
+            loss_weight FLOAT
             )""",
 
     """CREATE INDEX training_heads_idx ON training_heads (gen)""",

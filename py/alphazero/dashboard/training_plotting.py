@@ -76,7 +76,7 @@ def create_combined_training_figure(game: str, tags: List[str]):
 class HeadData:
     def __init__(self, conn: sqlite3.Connection, tag: str, head: Optional[str]):
         self.tag = tag
-        columns = ['head_name', 'gen', 'loss', 'loss_weight', 'accuracy']
+        columns = ['head_name', 'gen', 'loss', 'loss_weight']
         self.head = head
         c = conn.cursor()
         if head is None:
@@ -136,7 +136,6 @@ class TrainingPlotter:
 
         self.load()
         self.loss_plot = self.make_loss_plot()
-        self.accuracy_plot = self.make_accuracy_plot()
         self.figure = self.make_figure()
 
     def load(self):
@@ -147,11 +146,10 @@ class TrainingPlotter:
 
     def make_figure(self):
         loss_plot = self.loss_plot
-        accuracy_plot = self.accuracy_plot
-        plots = [loss_plot, accuracy_plot]
+        plots = [loss_plot]
         sources = list(self.sources.values())
         radio_group = self.x_var_selector.create_radio_group(plots, sources)
-        return column(loss_plot, accuracy_plot, radio_group)
+        return column(loss_plot, radio_group)
 
     def make_loss_plot(self):
         head = self.head
@@ -172,26 +170,6 @@ class TrainingPlotter:
                      line_dash='dashed', line_width=1)
         plot.add_layout(hline)
         plot.y_range.start = 0
-
-        plot.legend.location = 'bottom_right'
-        plot.legend.click_policy = 'hide'
-        return plot
-
-    def make_accuracy_plot(self):
-        head = self.head
-        colors = self.colors
-        y = f'accuracy_{head}'
-
-        plot = figure(
-            title=f'Train Accuracy - {head}', y_axis_label='Accuracy',
-            x_range=[0, 1], y_range=[0, 1],
-            active_scroll='xwheel_zoom', tools='pan,box_zoom,xwheel_zoom,reset,save')
-        self.x_var_selector.init_plot(plot)
-
-        for head_data, color in zip(self.head_data_list, colors):
-            label = head_data.tag
-            source = self.sources[label]
-            plot.line('x', y, source=source, line_color=color, legend_label=label)
 
         plot.legend.location = 'bottom_right'
         plot.legend.click_policy = 'hide'

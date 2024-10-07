@@ -28,7 +28,6 @@ class TrainingSubStats:
     def __init__(self, head: Head, loss_weight: float):
         self.head = head
         self.loss_weight = loss_weight
-        self.accuracy_num = 0.0
         self.loss_num = 0.0
         self.den = 0
 
@@ -44,13 +43,8 @@ class TrainingSubStats:
 
     def update(self, results: EvaluationResults):
         n = len(results)
-        self.accuracy_num += self.head.target.get_num_correct_predictions(
-            results.outputs, results.labels)
         self.loss_num += float(results.loss.item()) * n
         self.den += n
-
-    def accuracy(self):
-        return self.accuracy_num / self.den if self.den else 0.0
 
     def loss(self):
         return self.loss_num / self.den if self.den else 0.0
@@ -58,28 +52,24 @@ class TrainingSubStats:
     def dump(self, total_loss, print_fn=print):
         output = [self.descr.rjust(TrainingSubStats.max_descr_len)]
 
-        output.append('   | accuracy: %8.6f   ' % self.accuracy())
-
         loss = self.loss()
         weight = self.loss_weight
         loss_pct = 100. * loss * weight / total_loss if total_loss else 0.0
-        output.append('loss: %8.6f * %6.3f = %8.6f [%6.3f%%]' % (
+        output.append(' loss: %8.6f * %6.3f = %8.6f [%6.3f%%]' % (
             loss, weight, loss * weight, loss_pct))
 
         print_fn(''.join(output))
 
     def to_json(self):
         return {
-            'accuracy': self.accuracy(),
             'loss': self.loss(),
             'loss_weight': self.loss_weight,
             }
 
     @staticmethod
     def dump_total_loss(total_loss, print_fn=print):
-        output = [''.rjust(TrainingSubStats.max_descr_len)]
-        output.append('                    ')  # accuracy - 6 for 'total_'
-        output.append('total_loss:                  = %8.6f' % total_loss)
+        output = ['total'.rjust(TrainingSubStats.max_descr_len)]
+        output.append(' loss:                   = %8.6f' % total_loss)
         print_fn(''.join(output))
 
 
