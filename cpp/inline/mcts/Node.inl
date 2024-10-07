@@ -26,9 +26,8 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
 
 template <core::concepts::Game Game>
 void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
-  RQ = value;
-  RQ_sq = value * value;
-  VQ = value;
+  Q = value;
+  Q_sq = value * value;
   if (pure) {
     for (int p = 0; p < kNumPlayers; ++p) {
       provably_winning[p] = value(p) >= Game::GameResults::kMaxValue;
@@ -36,7 +35,7 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
     }
   }
 
-  eigen_util::debug_assert_is_valid_prob_distr(RQ);
+  eigen_util::debug_assert_is_valid_prob_distr(Q);
 }
 
 template <core::concepts::Game Game>
@@ -207,7 +206,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     const edge_t* edge = get_edge(i);
     core::action_t action = edge->action;
 
-    int count = edge->RN;
+    int count = edge->N;
     int modified_count = count;
     const char* detail = "";
 
@@ -237,8 +236,8 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
     if (modified_count) {
       counts(action) = modified_count;
-      Q(action) = stats.RQ(cp);
-      Q_sq(action) = stats.RQ_sq(cp);
+      Q(action) = stats.Q(cp);
+      Q_sq(action) = stats.Q_sq(cp);
     }
 
     const auto& stable_data = child->stable_data();
@@ -262,11 +261,11 @@ template <typename UpdateT>
 void Node<Game>::update_stats(const UpdateT& update_instruction) {
   core::seat_index_t cp = stable_data().current_player;
 
-  ValueArray RQ_sum;
-  ValueArray RQ_sq_sum;
-  RQ_sum.setZero();
-  RQ_sq_sum.setZero();
-  int RN = 0;
+  ValueArray Q_sum;
+  ValueArray Q_sq_sum;
+  Q_sum.setZero();
+  Q_sq_sum.setZero();
+  int N = 0;
 
   /*
    * provably winning/losing calculation
@@ -289,20 +288,16 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
       skipped = true;
       continue;
     }
-    int eRN = edge->RN;
     const auto& child_stats = child->stats();
-    RN += eRN;
-    RQ_sum += child_stats.RQ * eRN;
-    RQ_sq_sum += child_stats.RQ_sq * eRN;
+    int eN = std::min(edge->N, child_stats.RN);
+    N += eN;
+    Q_sum += child_stats.Q * eN;
+    Q_sq_sum += child_stats.Q_sq * eN;
 
     cp_has_winning_move |= child_stats.provably_winning[cp];
     all_provably_winning &= child_stats.provably_winning;
     all_provably_losing &= child_stats.provably_losing;
     num_children++;
-
-    if (edge->RN) {
-      eigen_util::debug_assert_is_valid_prob_distr(child_stats.RQ);
-    }
   }
 
   if (skipped) {
@@ -315,9 +310,9 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
 
   if (stable_data_.VT_valid) {
     ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
-    RQ_sum += VA;
-    RQ_sq_sum += VA * VA;
-    RN++;
+    Q_sum += VA;
+    Q_sq_sum += VA * VA;
+    N++;
 
     eigen_util::debug_assert_is_valid_prob_distr(VA);
   }
@@ -335,17 +330,11 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
     stats_.provably_losing = all_provably_losing;
   }
 
-  stats_.RQ = RN ? (RQ_sum / RN) : RQ_sum;
-  stats_.RQ_sq = RN ? (RQ_sq_sum / RN) : RQ_sq_sum;
-  if (stats_.VN) {
-    ValueArray VQ_sum = RQ_sum + make_virtual_loss() * stats_.VN;
-    stats_.VQ = VQ_sum / (RN + stats_.VN);
-  } else {
-    stats_.VQ = stats_.RQ;
-  }
+  stats_.Q = N ? (Q_sum / N) : Q_sum;
+  stats_.Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
 
-  if (RN) {
-    eigen_util::debug_assert_is_valid_prob_distr(stats_.RQ);
+  if (N) {
+    eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
   }
 }
 
@@ -420,9 +409,8 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   }
 
   ValueArray VA = Game::GameResults::to_value_array(VT);
-  stats_.RQ = VA;
-  stats_.RQ_sq = VA * VA;
-  stats_.VQ = VA;
+  stats_.Q = VA;
+  stats_.Q_sq = VA * VA;
 
   eigen_util::debug_assert_is_valid_prob_distr(VA);
 }
@@ -469,18 +457,15 @@ template <core::concepts::Game Game>
 void Node<Game>::validate_state() const {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
 
-  int RN = 0;
-  int VN = 0;
+  int N = 0;
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     auto edge = get_edge(i);
-    RN += edge->RN;
-    VN += edge->VN;
-    util::debug_assert(edge->RN >= 0);
-    util::debug_assert(edge->VN >= 0);
+    N += edge->N;
+    util::debug_assert(edge->N >= 0);
   }
 
-  util::debug_assert(RN == stats_.RN, "[%p] %d != %d", this, RN, stats_.RN);
-  util::debug_assert(VN == stats_.VN, "[%p] %d != %d", this, VN, stats_.VN);
+  util::debug_assert(N == stats_.RN + stats_.VN, "[%p] %d != %d + %d", this, N, stats_.RN,
+                     stats_.VN);
   util::debug_assert(stats_.RN >= 0);
   util::debug_assert(stats_.VN >= 0);
 }

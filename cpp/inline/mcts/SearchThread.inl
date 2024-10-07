@@ -305,7 +305,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
   Node* child = node->get_child(edge);
   search_path_.back().child = child;
   if (child) {
-    int edge_count = edge->RN;
+    int edge_count = edge->N;
     int child_count = child->stats().RN;
     if (edge_count < child_count) {
       short_circuit_backprop();
@@ -341,12 +341,12 @@ inline void SearchThread<Game>::virtual_backprop() {
 
   util::release_assert(!search_path_.empty());
   edge_t* last_edge = search_path_.back().edge;
-  last_edge->VN++;
+  last_edge->N++;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     // NOTE: always update the child first, then the edge, for better race-handling
     search_path_[i].child->update_stats(VirtualIncrement{});
-    search_path_[i].edge->VN++;
+    search_path_[i].edge->N++;
   }
   shared_data_->get_root_node()->update_stats(VirtualIncrement{});
   validate_search_path();
@@ -367,7 +367,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
   // NOTE: always update the child first, then the edge, for better race-handling
   last_node->update_stats(InitQ(value, true));
-  last_edge->RN++;
+  last_edge->N++;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
@@ -375,7 +375,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
     // NOTE: always update the child first, then the edge, for better race-handling
     child->update_stats(RealIncrement{});
-    edge->RN++;
+    edge->N++;
   }
   shared_data_->get_root_node()->update_stats(RealIncrement{});
   validate_search_path();
@@ -385,7 +385,6 @@ template <core::concepts::Game Game>
 void SearchThread<Game>::backprop_with_virtual_undo() {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
-  edge_t* last_edge = search_path_.back().edge;
   Node* last_node = search_path_.back().child;
   auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
@@ -394,19 +393,11 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
              << value.transpose();
   }
 
-  // NOTE: always update the child first, then the edge, for better race-handling
   last_node->update_stats(InitQ(value, false));
-  last_edge->RN++;
-  last_edge->VN--;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
     Node* child = search_path_[i].child;
-
-    // NOTE: always update the child first, then the edge, for better race-handling
     child->update_stats(IncrementTransfer{});
-    edge->RN++;
-    edge->VN--;
   }
   shared_data_->get_root_node()->update_stats(IncrementTransfer{});
   validate_search_path();
@@ -419,7 +410,7 @@ void SearchThread<Game>::short_circuit_backprop() {
   }
 
   edge_t* last_edge = search_path_.back().edge;
-  last_edge->RN++;
+  last_edge->N++;
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
@@ -427,7 +418,7 @@ void SearchThread<Game>::short_circuit_backprop() {
 
     // NOTE: always update the child first, then the edge, for better race-handling
     child->update_stats(RealIncrement{});
-    edge->RN++;
+    edge->N++;
   }
   shared_data_->get_root_node()->update_stats(RealIncrement{});
   validate_search_path();
@@ -580,12 +571,11 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     core::seat_index_t cp = node->stable_data().current_player;
 
-    using ArrayT1 = Eigen::Array<float, 3, kNumPlayers>;
+    using ArrayT1 = Eigen::Array<float, 2, kNumPlayers>;
     ArrayT1 A1;
     A1.setZero();
-    A1.row(0) = node->stats().RQ;
-    A1.row(1) = node->stats().VQ;
-    A1(2, cp) = 1;
+    A1.row(0) = node->stats().Q;
+    A1(1, cp) = 1;
 
     std::ostringstream ss1;
     ss1 << A1;
@@ -594,10 +584,9 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     std::vector<std::string> s1_lines;
     boost::split(s1_lines, s1, boost::is_any_of("\n"));
 
-    ss << "RQ:    " << s1_lines[0] << break_plus_thread_id_whitespace();
-    ss << "VQ:    " << s1_lines[1] << break_plus_thread_id_whitespace();
+    ss << "Q :    " << s1_lines[0] << break_plus_thread_id_whitespace();
 
-    std::string cp_line = s1_lines[2];
+    std::string cp_line = s1_lines[1];
     std::replace(cp_line.begin(), cp_line.end(), '0', ' ');
     std::replace(cp_line.begin(), cp_line.end(), '1', '*');
 
@@ -605,7 +594,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     using PVec = LocalPolicyArray;
     using ScalarT = PVec::Scalar;
-    constexpr int kNumRows = 15;  // action, P, V, FPU, PW, PL, RE, VE, E, RN, VN, N, &ch, PUCT, argmax
+    constexpr int kNumRows = 13;  // action, P, V, FPU, PW, PL, E, RN, VN, N, &ch, PUCT, argmax
     constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
     using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
 
@@ -632,8 +621,6 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     A2.row(r++) = selector.FPU;
     A2.row(r++) = selector.PW;
     A2.row(r++) = selector.PL;
-    A2.row(r++) = selector.RE;
-    A2.row(r++) = selector.VE;
     A2.row(r++) = selector.E;
     A2.row(r++) = selector.RN;
     A2.row(r++) = selector.VN;
@@ -658,8 +645,6 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     ss << "FPU:   " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "PW:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "PL:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "RE:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "VE:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "E:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "RN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "VN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();

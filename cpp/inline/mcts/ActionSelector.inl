@@ -13,8 +13,6 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
       V(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
-      RE(P.rows()),
-      VE(P.rows()),
       E(P.rows()),
       RN(P.rows()),
       VN(P.rows()),
@@ -25,8 +23,6 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
   V.setZero();
   PW.setZero();
   PL.setZero();
-  RE.setZero();
-  VE.setZero();
   E.setZero();
   RN.setZero();
   VN.setZero();
@@ -41,23 +37,25 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     using edge_t = Node::edge_t;
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
-    RE(i) = edge->RN;
-    VE(i) = edge->VN;
+    E(i) = edge->N;
 
     Node* child = node->get_child(edge);
     if (child) {
       const auto& child_stats = child->stats();
-      V(i) = child_stats.VQ(cp);
+      V(i) = child_stats.Q(cp);
       PW(i) = child_stats.provably_winning[cp];
       PL(i) = child_stats.provably_losing[cp];
       RN(i) = child_stats.RN;
       VN(i) = child_stats.VN;
+
+      if (VN(i)) {
+        V(i) = (RN(i) * V(i) + VN(i) * Game::GameResults::kMinValue) / (RN(i) + VN(i));
+      }
     } else {
       V(i) = edge->child_V_estimate;
     }
   }
 
-  E = RE + VE;
   N = RN + VN;
 
   bool fpu_any = false;
@@ -71,7 +69,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
      * Again, we do NOT grab the stats_mutex here!
      */
     const auto& stats = node->stats();  // no struct copy, not needed here
-    float PV = stats.VQ(cp);
+    float PV = stats.Q(cp);
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && search_params.full_search;
     float cFPU = disableFPU ? 0.0 : params.cFPU;

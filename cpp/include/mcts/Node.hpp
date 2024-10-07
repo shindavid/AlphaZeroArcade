@@ -88,9 +88,8 @@ class Node {
     void increment_transfer() { RN++; VN--; }
     void init_q(const ValueArray&, bool pure);
 
-    ValueArray RQ;     // excludes virtual loss
-    ValueArray RQ_sq;  // excludes virtual loss
-    ValueArray VQ;     // includes virtual loss
+    ValueArray Q;     // excludes virtual loss
+    ValueArray Q_sq;  // excludes virtual loss
     int RN = 0;        // real count
     int VN = 0;        // virtual count
 
@@ -105,8 +104,7 @@ class Node {
   struct edge_t {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
-    int RN = 0;  // real count
-    int VN = 0;  // virtual count
+    int N = 0;  // real or virtual count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player

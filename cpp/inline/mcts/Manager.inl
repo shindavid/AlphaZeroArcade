@@ -182,7 +182,7 @@ Manager<Game>::search(const SearchParams& params) {
   Game::Symmetries::apply(results_.Q_sq, inv_sym);
   Game::Symmetries::apply(results_.action_values, inv_sym);
 
-  results_.win_rates = stats.RQ;
+  results_.win_rates = stats.Q;
   results_.value_prior = stable_data.VT;
 
   return &results_;

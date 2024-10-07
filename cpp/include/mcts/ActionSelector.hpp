@@ -26,9 +26,7 @@ struct ActionSelector {
   LocalPolicyArray V;    // (virtualized) value
   LocalPolicyArray PW;   // provably-winning
   LocalPolicyArray PL;   // provably-losing
-  LocalPolicyArray RE;   // real edge count
-  LocalPolicyArray VE;   // virtual edge count
-  LocalPolicyArray E;    // RE + VE
+  LocalPolicyArray E;    // edge count
   LocalPolicyArray RN;   // real node count
   LocalPolicyArray VN;   // virtual node count
   LocalPolicyArray N;    // RN + VN
