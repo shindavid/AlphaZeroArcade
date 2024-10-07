@@ -55,8 +55,6 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
                              action_value_shape]),
             ModuleSpec(type='PolicyHead',
                        args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
-            ModuleSpec(type='OwnershipHead',
-                       args=['ownership', c_trunk, c_ownership_hidden, ownership_shape]),
         ],
 
         loss_weights={
@@ -64,7 +62,6 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
             'value': 1.5,
             'action_value': 1.0,
             'opp_policy': 0.15,
-            'ownership': 0.15,
         },
     )
 
