@@ -121,21 +121,6 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter 
   return tensor;
 }
 
-inline Game::TrainingTargets::OwnershipTarget::Tensor
-Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
-  tensor.setZero();
-  core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
-  for (int row = 0; row < kNumRows; ++row) {
-    for (int col = 0; col < kNumColumns; ++col) {
-      core::seat_index_t p = _get_player_at(*view.final_pos, row, col);
-      int x = (p == -1) ? 2 : ((p == cp) ? 0 : 1);
-      tensor(x, row, col) = 1;
-    }
-  }
-  return tensor;
-}
-
 inline core::seat_index_t Game::_get_player_at(const State& state, row_t row, column_t col) {
   int cp = Rules::get_current_player(state);
   int index = _to_bit_index(row, col);

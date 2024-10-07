@@ -11,7 +11,6 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
     policy_shape = shape_info_dict['policy'].shape
     value_shape = shape_info_dict['value'].shape
     action_value_shape = shape_info_dict['action_value'].shape
-    ownership_shape = shape_info_dict['ownership'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
 
@@ -24,7 +23,6 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
     c_action_value_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
-    c_ownership_hidden = 64
 
     return ModelConfig(
         shape_info_dict=shape_info_dict,

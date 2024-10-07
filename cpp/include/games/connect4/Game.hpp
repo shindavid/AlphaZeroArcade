@@ -100,22 +100,13 @@ struct Game {
 
   struct TrainingTargets {
     using BoardShape = Eigen::Sizes<kNumRows, kNumColumns>;
-    using OwnershipShape = Eigen::Sizes<3, kNumRows, kNumColumns>;
 
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
 
-    struct OwnershipTarget {
-      static constexpr const char* kName = "ownership";
-      using Tensor = eigen_util::FTensor<OwnershipShape>;
-
-      static Tensor tensorize(const Types::GameLogView& view);
-    };
-
-    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,
-                              OwnershipTarget>;
+    using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
   };
 
   static void static_init() {}
