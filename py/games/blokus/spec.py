@@ -103,7 +103,7 @@ class BlokusSpec(GameSpec):
     }
 
     training_params = TrainingParams(
-        target_sample_rate=32,
+        target_sample_rate=8,
         minibatches_per_epoch=256,
         minibatch_size=64,
     )

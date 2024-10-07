@@ -23,7 +23,7 @@ def b19_c128(shape_info_dict: ShapeInfoDict):
     c_gpool = 32
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
-    c_action_value_hidden = 16
+    c_action_value_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
     c_score_margin_hidden = 32

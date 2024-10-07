@@ -21,7 +21,7 @@ def b7_c128(shape_info_dict: ShapeInfoDict):
     c_mid = 128
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
-    c_action_value_hidden = 16
+    c_action_value_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
     c_ownership_hidden = 64
