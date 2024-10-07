@@ -80,14 +80,14 @@ inline NNEvaluationService<Game>::NNEvaluationService(
                                                   eigen_util::to_int64_std_array_v<PolicyShape>);
   auto value_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
                                                  eigen_util::to_int64_std_array_v<ValueShape>);
-  auto full_action_value_shape = util::to_std_array<int64_t>(
-      params_.batch_size_limit, eigen_util::to_int64_std_array_v<FullActionValueShape>);
+  auto action_value_shape = util::to_std_array<int64_t>(
+      params_.batch_size_limit, eigen_util::to_int64_std_array_v<ActionValueShape>);
 
   torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<float>)
                          .to(at::Device(params.cuda_device));
   torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
   torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<float>);
-  torch_action_value_ = torch::empty(full_action_value_shape, torch_util::to_dtype_v<float>);
+  torch_action_value_ = torch::empty(action_value_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -110,13 +110,13 @@ inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
     torch::Tensor& torch_action_value) {
   constexpr size_t policy_size = PolicyShape::total_size;
   constexpr size_t value_size = ValueShape::total_size;
-  constexpr size_t action_value_size = FullActionValueShape::total_size;
+  constexpr size_t action_value_size = ActionValueShape::total_size;
 
   memcpy(policy.data(), torch_policy.data_ptr<float>() + row * policy_size,
          policy_size * sizeof(float));
   memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
          value_size * sizeof(float));
-  memcpy(full_action_values.data(),
+  memcpy(action_values.data(),
          torch_action_value.data_ptr<float>() + row * action_value_size,
          action_value_size * sizeof(float));
 }
@@ -266,7 +266,7 @@ void NNEvaluationService<Game>::batch_evaluate() {
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
     edata.eval_ptr.store(
-        std::make_shared<NNEvaluation>(group.value, group.policy, group.full_action_values,
+        std::make_shared<NNEvaluation>(group.value, group.policy, group.action_values,
                                        edata.valid_actions, edata.sym, group.current_player));
   }
 

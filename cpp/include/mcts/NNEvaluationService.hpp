@@ -88,12 +88,12 @@ class NNEvaluationService
   using InputTensor = Game::InputTensorizor::Tensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
-  using FullActionValueTensor = Game::Types::FullActionValueTensor;
+  using ActionValueTensor = Game::Types::ActionValueTensor;
 
   using InputShape = InputTensor::Dimensions;
   using PolicyShape = Game::Types::PolicyShape;
   using ValueShape = ValueTensor::Dimensions;
-  using FullActionValueShape = Game::Types::FullActionValueShape;
+  using ActionValueShape = Game::Types::ActionValueShape;
 
   using DynamicInputTensor = Eigen::Tensor<float, InputShape::count + 1, Eigen::RowMajor>;
 
@@ -198,7 +198,7 @@ class NNEvaluationService
     InputTensor input;
     PolicyTensor policy;
     ValueTensor value;
-    FullActionValueTensor full_action_values;
+    ActionValueTensor action_values;
     core::seat_index_t current_player;
     eval_ptr_data_t eval_ptr_data;
   };

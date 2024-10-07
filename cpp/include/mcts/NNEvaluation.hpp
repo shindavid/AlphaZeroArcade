@@ -12,15 +12,15 @@ namespace mcts {
 template <core::concepts::Game Game>
 class NNEvaluation {
  public:
+  using ActionValueTarget = Game::TrainingTargets::ActionValueTarget;
   using ActionMask = Game::Types::ActionMask;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueTensor = Game::Types::ValueTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using FullActionValueTensor = Game::Types::FullActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
 
-  // 2 rows, one for policy, one for child-value
+  // 2 rows, one for policy, one for action-value
   using DynamicArray = Eigen::Array<float, 2, Eigen::Dynamic>;
 
   /*
@@ -34,7 +34,7 @@ class NNEvaluation {
    * These tensors are then stored as data members.
    */
   NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
-               const FullActionValueTensor& raw_full_action_values,
+               const ActionValueTensor& raw_action_values,
                const ActionMask& valid_actions, group::element_t sym, core::seat_index_t cp);
 
   void load(ValueTensor&, LocalPolicyArray&, LocalActionValueArray&);

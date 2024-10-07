@@ -27,8 +27,8 @@ from torch import nn as nn
 from torch.nn import functional as F
 
 from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
-    PolicyTarget, ScoreTarget, WinLossDrawActionValueTarget, WinLossDrawValueTarget, \
-    WinShareActionValueTarget, WinShareValueTarget
+    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinShareActionValueTarget, \
+    WinShareValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -270,25 +270,6 @@ class PolicyHead(Head):
         return out
 
 
-class WinLossDrawActionValueHead(Head):
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
-        super(WinLossDrawActionValueHead, self).__init__(name, WinLossDrawActionValueTarget())
-
-        self.output_shape = output_shape
-        self.act = F.relu
-        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-        self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
-
-    def forward(self, x):
-        out = x
-        out = self.conv(out)
-        out = self.act(out)
-        out = out.view(out.shape[0], -1)
-        out = self.linear(out)
-        out = out.view(-1, *self.output_shape)
-        return out
-
-
 class WinLossDrawValueHead(Head):
     """
     A head that produces a length-3 logit vector, usable for 2-player games that permit draws.
@@ -341,6 +322,11 @@ class WinLossDrawValueHead(Head):
 
 
 class WinShareActionValueHead(Head):
+    """
+    WinShareActionValueHead is appropriate for games where the action-value head outputs win-share
+    values. This is the case any times the game's ValueHead returns a tensor that gets transformed
+    into a win-share array. This is the case both for WinShareValueHead and WinLossDrawValueHead.
+    """
     def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
         super(WinShareActionValueHead, self).__init__(name, WinShareActionValueTarget())
 
@@ -519,7 +505,6 @@ MODULE_MAP = {
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
     'WinLossDrawValueHead': WinLossDrawValueHead,
-    'WinLossDrawActionValueHead': WinLossDrawActionValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
     }

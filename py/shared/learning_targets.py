@@ -56,38 +56,43 @@ class PolicyTarget(LearningTarget):
 
     def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
                                     labels: torch.Tensor) -> float:
-        selected_moves = torch.argmax(predicted_logits, dim=1)
-        correct_policy_preds = labels.gather(1, selected_moves.view(-1, 1))
-        return int(sum(correct_policy_preds))
-
-
-class ActionValueTargetBase(LearningTarget):
-    @abc.abstractmethod
-    def loss_fn(self) -> nn.Module:
-        pass
-
-    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        (B, C, A) = predicted_logits.shape  # batch-size, num-classes, num-actions
+        (B, _) = predicted_logits.shape  # batch-size, num-actions
         assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
-
-        label_sums = labels.sum(dim=1)
-
-        # check that all label_sums are close to 1:
-        all_ok = torch.allclose(label_sums, torch.ones_like(label_sums))
-        assert all_ok, labels
 
         predicted_probs = predicted_logits.softmax(dim=1)
         error = 0.5 * abs(predicted_probs - labels).sum().item()
 
-        num_invalid_labels = labels[:, C - 1, :].sum().item()  # last class is invalid
-        num_valid_labels = B * A - num_invalid_labels
-        assert num_valid_labels > 0, num_valid_labels
+        return B - error
 
-        # To be extra strict, we exclude invalid labels from the denominator
-        error_rate = error / num_valid_labels
-        accuracy_rate = max(0, 1 - error_rate)
-        return accuracy_rate * B
+
+class WinShareActionValueTarget(LearningTarget):
+    """
+    WinShareActionValueTarget is a LearningTarget for the action-value head for games where the
+    MCTS-propagated value is a win-share value. This is the case for both
+    WinShareDrawActionValueHead and WinLossDrawActionValueHead.
+    """
+    @abc.abstractmethod
+    def loss_fn(self) -> nn.Module:
+        return nn.BCEWithLogitsLoss()
+
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
+                                    labels: torch.Tensor) -> float:
+        """
+        We measure accuracy only on performance on entries where the label is non-zero. This is not
+        perfect, since a zero label could either come from a terminal state or from an invalid
+        action. Accuracy is only for metrics, though, so it's not a big deal.
+        """
+        (B, _) = predicted_logits.shape  # batch-size, num-actions
+        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
+
+        label_mask = torch.where(labels != 0)
+
+        masked_labels = labels[label_mask]
+        masked_predicted_logits = predicted_logits[label_mask]
+        masked_predicted_probs = masked_predicted_logits.sigmoid()
+
+        error = abs(masked_predicted_probs - masked_labels).sum().item()
+        return max(0, B - error)
 
 
 class ValueTargetBase(LearningTarget):
@@ -106,11 +111,6 @@ class ValueTargetBase(LearningTarget):
         return B - error
 
 
-class WinLossDrawActionValueTarget(ActionValueTargetBase):
-    def loss_fn(self) -> nn.Module:
-        return nn.CrossEntropyLoss()
-
-
 class WinLossDrawValueTarget(ValueTargetBase):
     def loss_fn(self) -> nn.Module:
         return nn.CrossEntropyLoss()
@@ -122,6 +122,8 @@ class KLDivergencePerPixelLoss(nn.Module):
 
     Assumes 1D-distributions per-pixel, and an arbitrary shape for the pixel dimensions. This is
     similar to how CrossEntropyLoss works permits pixel-wise classification.
+
+    This is currently unused, and is buggy anyways. Maybe I'll bring it back at some point.
     """
     def __init__(self):
         super(KLDivergencePerPixelLoss, self).__init__()
@@ -150,13 +152,6 @@ class KLDivergencePerPixelLoss(nn.Module):
 
         # Return the mean KL-divergence over all "pixels" and batches
         return kl_div.mean()
-
-
-class WinShareActionValueTarget(ActionValueTargetBase):
-    def loss_fn(self) -> nn.Module:
-        # TODO: try KLDivergencePerPixelLoss instead of CrossEntropyLoss
-        # return KLDivergencePerPixelLoss()
-        return nn.CrossEntropyLoss()
 
 
 class WinShareValueTarget(ValueTargetBase):

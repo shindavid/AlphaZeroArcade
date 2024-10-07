@@ -67,7 +67,7 @@ def b19_c128(shape_info_dict: ShapeInfoDict):
                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
             ModuleSpec(type='WinLossDrawValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
-            ModuleSpec(type='WinLossDrawActionValueHead',
+            ModuleSpec(type='WinShareActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
                              action_value_shape]),
             ModuleSpec(type='PolicyHead',

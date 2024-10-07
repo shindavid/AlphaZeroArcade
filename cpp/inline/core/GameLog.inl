@@ -102,8 +102,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   Game::Symmetries::apply(final_state, sym);
   Game::Symmetries::apply(policy, sym);
   Game::Symmetries::apply(next_policy, sym);
-  eigen_util::apply_per_slice<0>(action_values,
-                                 [&](auto& slice) { Game::Symmetries::apply(slice, sym); });
+  Game::Symmetries::apply(action_values, sym);
 
   ValueTensor outcome = get_outcome();
 

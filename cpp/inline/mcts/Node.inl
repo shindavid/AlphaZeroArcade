@@ -225,8 +225,6 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       detail = " (winning)";
     }
 
-    const ValueTensor& child_value_tensor = child->stable_data().VT;
-
     if (kEnableDebug) {
       auto action2 = action;
       Game::Symmetries::apply(action2, inv_sym);
@@ -242,7 +240,11 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       Q(action) = stats.RQ(cp);
       Q_sq(action) = stats.RQ_sq(cp);
     }
-    action_values.chip(action, 1) = child_value_tensor;
+
+    const auto& stable_data = child->stable_data();
+    util::release_assert(stable_data.VT_valid);
+    ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
+    action_values(action) = VA(cp);
   }
 }
 

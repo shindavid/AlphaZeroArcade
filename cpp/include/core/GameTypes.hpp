@@ -25,12 +25,8 @@ struct GameTypes {
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using ValueTensor = GameResults::Tensor;
   using ValueShape = ValueTensor::Dimensions;
-  using ActionValueShape = Eigen::Sizes<ValueShape::total_size, GameConstants::kNumActions>;
+  using ActionValueShape = Eigen::Sizes<GameConstants::kNumActions>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
-
-  // The +1 is to encode invalid actions
-  using FullActionValueShape = Eigen::Sizes<ValueShape::total_size + 1, GameConstants::kNumActions>;
-  using FullActionValueTensor = eigen_util::FTensor<FullActionValueShape>;
 
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;

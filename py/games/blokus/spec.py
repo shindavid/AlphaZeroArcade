@@ -10,13 +10,12 @@ def b20_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     policy_shape = shape_info_dict['policy'].shape
     value_shape = shape_info_dict['value'].shape
+    action_value_shape = shape_info_dict['action_value'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     score_shape = shape_info_dict['score'].shape
     unplayed_pieces_shape = shape_info_dict['unplayed_pieces'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_size = policy_shape[0]
-    value_size = value_shape[0]
 
     c_trunk = 128
     c_mid = 128
@@ -66,13 +65,13 @@ def b20_c128(shape_info_dict: ShapeInfoDict):
 
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
-            ModuleSpec(type='ValueHead',
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+            ModuleSpec(type='WinShareValueHead',
                        args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                             value_size]),
-            ModuleSpec(type='ActionValueHead',
+                             value_shape]),
+            ModuleSpec(type='WinShareActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                             policy_size]),
+                             action_value_shape]),
             ModuleSpec(type='ScoreHead',
                        args=['score', c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, score_shape]),
