@@ -10,23 +10,21 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
                                             bool is_root)
     : cp(node->stable_data().current_player),
       P(node->stable_data().num_valid_actions),
-      V(P.rows()),
+      Q(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
       E(P.rows()),
       RN(P.rows()),
       VN(P.rows()),
-      N(P.rows()),
       FPU(P.rows()),
       PUCT(P.rows()) {
   P.setZero();
-  V.setZero();
+  Q.setZero();
   PW.setZero();
   PL.setZero();
   E.setZero();
   RN.setZero();
   VN.setZero();
-  N.setZero();
   FPU.setZero();
 
   for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
@@ -42,25 +40,23 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     Node* child = node->get_child(edge);
     if (child) {
       const auto& child_stats = child->stats();
-      V(i) = child_stats.Q(cp);
+      Q(i) = child_stats.Q(cp);
       PW(i) = child_stats.provably_winning[cp];
       PL(i) = child_stats.provably_losing[cp];
       RN(i) = child_stats.RN;
       VN(i) = child_stats.VN;
 
       if (VN(i)) {
-        V(i) = (RN(i) * V(i) + VN(i) * Game::GameResults::kMinValue) / (RN(i) + VN(i));
+        Q(i) = (RN(i) * Q(i) + VN(i) * Game::GameResults::kMinValue) / (RN(i) + VN(i));
       }
     } else {
-      V(i) = edge->child_V_estimate;
+      Q(i) = edge->child_V_estimate;
     }
   }
 
-  N = RN + VN;
-
   bool fpu_any = false;
   if (params.enable_first_play_urgency) {
-    FPU = (N == 0).template cast<float>();
+    FPU = (E == 0).template cast<float>();
     fpu_any = FPU.any();
   }
 
@@ -73,20 +69,20 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
 
     bool disableFPU = is_root && params.dirichlet_mult > 0 && search_params.full_search;
     float cFPU = disableFPU ? 0.0 : params.cFPU;
-    float v = PV - cFPU * sqrt((P * (N > 0).template cast<float>()).sum());
-    V = (1 - FPU) * V + FPU * v;
+    float v = PV - cFPU * sqrt((P * (E > 0).template cast<float>()).sum());
+    Q = (1 - FPU) * Q + FPU * v;
   }
 
   /*
-   * AlphaZero/KataGo defines V to be over a [-1, +1] range, but we use a [0, +1] range.
+   * AlphaZero/KataGo defines Q to be over a [-1, +1] range, but we use a [0, +1] range.
    *
-   * We multiply V by 2 to account for this difference.
+   * We multiply Q by 2 to account for this difference.
    *
    * This could have been accomplished also by multiplying cPUCT by 0.5, but this way maintains
    * better consistency with the AlphaZero/KataGo approach.
    */
 
-  PUCT = 2 * V + params.cPUCT * P * sqrt(E.sum() + eps) / (E + 1);
+  PUCT = 2 * Q + params.cPUCT * P * sqrt(E.sum() + eps) / (E + 1);
 
   if (params.avoid_proven_losers && !PL.all()) {
     PUCT *= (1 - PL);  // zero out provably-losing actions

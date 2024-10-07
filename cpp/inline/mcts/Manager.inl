@@ -312,24 +312,24 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
   ActionSelector action_selector(params_, search_params, root, true);
 
   const auto& P = action_selector.P;
-  const auto& N = action_selector.E;
-  const auto& V = action_selector.V;
+  const auto& E = action_selector.E;
+  const auto& Q = action_selector.Q;
   const auto& PUCT = action_selector.PUCT;
 
-  auto N_sum = N.sum();
-  auto n_forced = (P * params_.k_forced * N_sum).sqrt();
+  auto E_sum = E.sum();
+  auto n_forced = (P * params_.k_forced * E_sum).sqrt();
 
   auto PUCT_max = PUCT.maxCoeff();
 
-  auto N_max = N.maxCoeff();
-  auto sqrt_N = sqrt(N_sum + ActionSelector::eps);
+  auto E_max = E.maxCoeff();
+  auto sqrt_E = sqrt(E_sum + ActionSelector::eps);
 
-  auto N_floor = params_.cPUCT * P * sqrt_N / (PUCT_max - 2 * V) - 1;
+  auto E_floor = params_.cPUCT * P * sqrt_E / (PUCT_max - 2 * Q) - 1;
 
   for (int i = 0; i < root->stable_data().num_valid_actions; ++i) {
-    if (N(i) == N_max) continue;
-    if (!isfinite(N_floor(i))) continue;
-    auto n = std::max(N_floor(i), N(i) - n_forced(i));
+    if (E(i) == E_max) continue;
+    if (!isfinite(E_floor(i))) continue;
+    auto n = std::max(E_floor(i), E(i) - n_forced(i));
     if (n <= 1.0) {
       n = 0;
     }

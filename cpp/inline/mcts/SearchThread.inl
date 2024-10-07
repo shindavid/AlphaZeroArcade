@@ -535,7 +535,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   using PVec = LocalPolicyArray;
 
   const PVec& P = action_selector.P;
-  const PVec& N = action_selector.N;
+  const PVec& E = action_selector.E;
   PVec& PUCT = action_selector.PUCT;
 
   int argmax_index;
@@ -548,9 +548,9 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
                           search_params.full_search && manager_params_->dirichlet_mult > 0;
 
     if (force_playouts) {
-      PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
-      auto F1 = (N < n_forced).template cast<float>();
-      auto F2 = (N > 0).template cast<float>();
+      PVec n_forced = (P * manager_params_->k_forced * E.sum()).sqrt();
+      auto F1 = (E < n_forced).template cast<float>();
+      auto F2 = (E > 0).template cast<float>();
       auto F = F1 * F2;
       PUCT = PUCT * (1 - F) + F * 1e+6;
     }
@@ -594,7 +594,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     using PVec = LocalPolicyArray;
     using ScalarT = PVec::Scalar;
-    constexpr int kNumRows = 13;  // action, P, V, FPU, PW, PL, E, RN, VN, N, &ch, PUCT, argmax
+    constexpr int kNumRows = 12;  // action, P, Q, FPU, PW, PL, E, RN, VN, &ch, PUCT, argmax
     constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
     using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
 
@@ -617,14 +617,13 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     r++;
 
     A2.row(r++) = selector.P;
-    A2.row(r++) = selector.V;
+    A2.row(r++) = selector.Q;
     A2.row(r++) = selector.FPU;
     A2.row(r++) = selector.PW;
     A2.row(r++) = selector.PL;
     A2.row(r++) = selector.E;
     A2.row(r++) = selector.RN;
     A2.row(r++) = selector.VN;
-    A2.row(r++) = selector.N;
     A2.row(r++) = child_addr;
     A2.row(r++) = selector.PUCT;
     A2(r, argmax_index) = 1;
@@ -648,7 +647,6 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     ss << "E:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "RN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "VN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "N:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
 
     std::string ch_line = s2_lines[r++];
     boost::replace_all(ch_line, "-1", "  ");
