@@ -168,23 +168,6 @@ concept FArray = is_farray_v<T>;
 
 }  // namespace concepts
 
-/*
- * The following are equivalent:
- *
- * using S = Eigen::Sizes<1, 2, 3>;
- *
- * using T = eigen_util::FTensor<Eigen::Sizes<1, 2, 3>>;
- * using S = extract_shape_t<T>;
- */
-template <typename T>
-struct extract_shape {};
-template <concepts::Shape Shape>
-struct extract_shape<FTensor<Shape>> {
-  using type = Shape;
-};
-template <typename T>
-using extract_shape_t = extract_shape<T>::type;
-
 template <typename T>
 struct extract_length {};
 template <int N>
@@ -201,10 +184,13 @@ template <typename Scalar, int Rows, int Cols, int Options, int MaxRows, int Max
 auto sort_columns(const Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& array);
 
 /*
- * Returns a float array of the same shape as the input, whose values are positive and summing to 1.
+ * Returns a float of the same shape as the input, whose values are positive and summing to 1.
  */
 template <typename Array>
 auto softmax(const Array& arr);
+
+template <concepts::FTensor Tensor>
+auto softmax(const Tensor& tensor);
 
 /*
  * Applies an element-wise sigmoid function to the input tensor and returns the result.
@@ -279,6 +265,34 @@ const Tensor& reinterpret_as_tensor(const Array& array);
 
 template <concepts::FTensor Tensor, concepts::FArray Array>
 Tensor& reinterpret_as_tensor(Array& array);
+
+/*
+ * For each slice along the given dimension, apply the given function in-place. The function should
+ * accept a tensor-reference of the same shape as the slices.
+ *
+ * Requires Tensor to be a 2D tensor, due to shortcomings with Eigen::Tensor interface.
+ */
+template <int Dim, concepts::FTensor Tensor, typename Func>
+void apply_per_slice(Tensor&, Func);
+
+/*
+ * For each slice along the given dimension, compute the given function. The function should
+ * accept a const-tensor-reference of the same shape as the slices.
+ *
+ * Requires Tensor to be a 2D tensor, due to shortcomings with Eigen::Tensor interface.
+ */
+template <int Dim, concepts::FTensor Tensor, typename Func>
+void compute_per_slice(const Tensor&, Func);
+
+// debug_assert()'s that distr is a valid probability distribution
+// For release-build's, is a no-op
+template <concepts::FTensor Tensor>
+void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps = 1e-5);
+
+// debug_assert()'s that distr is a valid probability distribution
+// For release-build's, is a no-op
+template <typename Array>
+void debug_assert_is_valid_prob_distr(const Array& distr, float eps = 1e-5);
 
 /*
  * Convenience methods that return scalars.

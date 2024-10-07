@@ -262,6 +262,9 @@ class TrainingManager:
         else:
             self._load_last_checkpoint()
 
+        logger.info('Model parameter counts:')
+        for name, count in self._net.get_parameter_counts().items():
+            logger.info(f'{name}: {count}')
         return self._net, self._opt
 
     def _train_step_helper(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):

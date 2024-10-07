@@ -163,7 +163,7 @@ ActionResponse RemotePlayerProxy<Game>::get_action_response(const State& state,
 }
 
 template <concepts::Game Game>
-void RemotePlayerProxy<Game>::end_game(const State& state, const ValueArray& outcome) {
+void RemotePlayerProxy<Game>::end_game(const State& state, const ValueTensor& outcome) {
   Packet<EndGame> packet;
   packet.payload().game_thread_id = game_thread_id_;
   packet.payload().player_id = player_id_;

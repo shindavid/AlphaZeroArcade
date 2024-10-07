@@ -80,12 +80,14 @@ inline NNEvaluationService<Game>::NNEvaluationService(
                                                   eigen_util::to_int64_std_array_v<PolicyShape>);
   auto value_shape = util::to_std_array<int64_t>(params_.batch_size_limit,
                                                  eigen_util::to_int64_std_array_v<ValueShape>);
+  auto action_value_shape = util::to_std_array<int64_t>(
+      params_.batch_size_limit, eigen_util::to_int64_std_array_v<ActionValueShape>);
 
   torch_input_gpu_ = torch::empty(input_shape, torch_util::to_dtype_v<float>)
                          .to(at::Device(params.cuda_device));
   torch_policy_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
   torch_value_ = torch::empty(value_shape, torch_util::to_dtype_v<float>);
-  torch_action_value_ = torch::empty(policy_shape, torch_util::to_dtype_v<float>);
+  torch_action_value_ = torch::empty(action_value_shape, torch_util::to_dtype_v<float>);
 
   input_vec_.push_back(torch_input_gpu_);
   deadline_ = std::chrono::steady_clock::now();
@@ -114,7 +116,8 @@ inline void NNEvaluationService<Game>::tensor_group_t::load_output_from(
          policy_size * sizeof(float));
   memcpy(value.data(), torch_value.data_ptr<float>() + row * value_size,
          value_size * sizeof(float));
-  memcpy(action_values.data(), torch_action_value.data_ptr<float>() + row * action_value_size,
+  memcpy(action_values.data(),
+         torch_action_value.data_ptr<float>() + row * action_value_size,
          action_value_size * sizeof(float));
 }
 
@@ -262,13 +265,9 @@ void NNEvaluationService<Game>::batch_evaluate() {
     group.load_output_from(i, torch_policy_, torch_value_, torch_action_value_);
     eval_ptr_data_t& edata = group.eval_ptr_data;
 
-    eigen_util::right_rotate(eigen_util::reinterpret_as_array(group.value), group.current_player);
-
-    group::element_t inv_sym = Game::SymmetryGroup::inverse(edata.sym);
-    Game::Symmetries::apply(group.policy, inv_sym);
-    Game::Symmetries::apply(group.action_values, inv_sym);
-    edata.eval_ptr.store(std::make_shared<NNEvaluation>(group.value, group.policy,
-                                                        group.action_values, edata.valid_actions));
+    edata.eval_ptr.store(
+        std::make_shared<NNEvaluation>(group.value, group.policy, group.action_values,
+                                       edata.valid_actions, edata.sym, group.current_player));
   }
 
   profiler_.record(NNEvaluationServiceRegion::kAcquiringCacheMutex);

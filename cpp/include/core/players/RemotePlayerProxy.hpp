@@ -25,7 +25,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using Player = AbstractPlayer<Game>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_thread_id_t
   using player_vec_array_t = std::array<player_vec_t, kNumPlayers>;
@@ -61,7 +61,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   void start_game() override;
   void receive_state_change(seat_index_t, const State&, action_t) override;
   ActionResponse get_action_response(const State&, const ActionMask&) override;
-  void end_game(const State&, const ValueArray&) override;
+  void end_game(const State&, const ValueTensor&) override;
 
  private:
   std::condition_variable cv_;

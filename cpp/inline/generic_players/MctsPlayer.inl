@@ -182,8 +182,7 @@ template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
-  ActionValueTensor Q_sum, Q_sq_sum;
-  PolicyTensor policy;
+  PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   auto& policy_array = eigen_util::reinterpret_as_array(policy);
   if (search_mode == core::kRawPolicy) {
@@ -232,13 +231,13 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       Q_sum = mcts_results->action_symmetry_table.symmetrize(Q_sum);
       Q_sq_sum = mcts_results->action_symmetry_table.symmetrize(Q_sq_sum);
 
-      ActionValueTensor Q = Q_sum / counts;
-      ActionValueTensor Q_sq = Q_sq_sum / counts;
-      ActionValueTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
+      PolicyTensor Q = Q_sum / counts;
+      PolicyTensor Q_sq = Q_sq_sum / counts;
+      PolicyTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
       Q_sigma_sq = eigen_util::cwiseMax(Q_sigma_sq, 0);  // clip negative values to 0
-      ActionValueTensor Q_sigma = Q_sigma_sq.sqrt();
+      PolicyTensor Q_sigma = Q_sigma_sq.sqrt();
 
-      ActionValueTensor LCB = Q - params_.LCB_z_score * Q_sigma;
+      PolicyTensor LCB = Q - params_.LCB_z_score * Q_sigma;
       auto LCB_array = eigen_util::reinterpret_as_array(LCB);
 
       float policy_max = -1;
@@ -262,7 +261,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       }
 
       if (min_LCB_set) {
-        ActionValueTensor UCB = Q + params_.LCB_z_score * Q_sigma;
+        PolicyTensor UCB = Q + params_.LCB_z_score * Q_sigma;
         auto UCB_array = eigen_util::reinterpret_as_array(UCB);
 
         // zero out policy_array wherever UCB < min_LCB

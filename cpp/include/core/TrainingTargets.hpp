@@ -40,12 +40,10 @@ struct PolicyTarget {
   static Tensor tensorize(const GameLogView& view);
 };
 
-template<typename Game>
+template <typename Game>
 struct ValueTarget {
   static constexpr const char* kName = "value";
-  using ValueArray = Game::Types::ValueArray;
-  using Shape = eigen_util::Shape<eigen_util::extract_length_v<ValueArray>>;
-  using Tensor = eigen_util::FTensor<Shape>;
+  using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
   static Tensor tensorize(const GameLogView& view);

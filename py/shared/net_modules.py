@@ -21,13 +21,14 @@ import math
 import os
 import pickle
 import tempfile
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
 
-from shared.learning_targets import ActionValueTarget, GeneralLogitTarget, LearningTarget,  \
-    OwnershipTarget, PolicyTarget, ScoreTarget, ValueTarget
+from shared.learning_targets import GeneralLogitTarget, LearningTarget, OwnershipTarget, \
+    PolicyTarget, ScoreTarget, WinLossDrawValueTarget, WinShareActionValueTarget, \
+    WinShareValueTarget
 from util.repo_util import Repo
 from util.torch_util import Shape
 
@@ -251,17 +252,13 @@ class PolicyHead(Head):
     4. A fully connected linear layer that outputs a vector of size 19^2 + 1 = 362 corresponding to
     logit probabilities for all intersections and the pass move
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, policy_size: int,
-                 target_cls=PolicyTarget):
-        super(PolicyHead, self).__init__(name, target_cls())
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super(PolicyHead, self).__init__(name, PolicyTarget())
 
-        policy_shape = (policy_size, )
-        self.policy_shape = policy_shape
-        self.policy_size = policy_size
-
+        self.output_shape = output_shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
-        self.linear = nn.Linear(c_hidden * spatial_size, self.policy_size)
+        self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
 
     def forward(self, x):
         out = x
@@ -269,17 +266,14 @@ class PolicyHead(Head):
         out = self.act(out)
         out = out.view(out.shape[0], -1)
         out = self.linear(out)
-        out = out.view(-1, *self.policy_shape)
+        out = out.view(-1, *self.output_shape)
         return out
 
 
-class ActionValueHead(PolicyHead):
-    def __init__(self, *args, **kwargs):
-        super(ActionValueHead, self).__init__(*args, **kwargs, target_cls=ActionValueTarget)
-
-
-class ValueHead(Head):
+class WinLossDrawValueHead(Head):
     """
+    A head that produces a length-3 logit vector, usable for 2-player games that permit draws.
+
     This maps to the main subhead of ValueHead in the KataGo codebase.
 
     Per David Wu's advice on our 2023-10-26 Zoom meeting, I am NOT replicating KataGo's head
@@ -307,26 +301,82 @@ class ValueHead(Head):
     5. A rectifier non-linearity
     6. A fully connected linear layer to a scalar
     7. A tanh non-linearity outputting a scalar in the range [-1, 1]
-
-    Note that while AlphaGo used a scalar output for the value head, KataGo uses a length-3 logit
-    vector, corresponding to {win, loss, draw} probabilities.
-
-    Because we support p-player games, generalizing KataGo's approach seems like it might be
-    unwieldy, as the number of different win/loss/draw combinations in general p-player games is
-    exponential in p. We instead go with a sort of hybrid approach, using a length-p logit vector,
-    corresponding to each player's expected win-share.
-
-    It is worth mentioning that some time ago, David Wu suggested relaxing various assumptions,
-    like zero-sumness, and like fixed-sized rewards for winning/losing. If/when we explore this,
-    we may want to reexamine our expected win-share representation.
-
-    TODO: having 2 linear layers feels unnecessary. Try removing one, perhaps increasing
-    c_hidden to compensate.
     """
-    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
-                 n_players: int):
-        super(ValueHead, self).__init__(name, ValueTarget())
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int):
+        super(WinLossDrawValueHead, self).__init__(name, WinLossDrawValueTarget())
 
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
+        self.linear2 = nn.Linear(n_hidden, 3)
+
+    def forward(self, x):
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear1(out)
+        out = self.act(out)
+        out = self.linear2(out)
+        return out
+
+
+class WinShareActionValueHead(Head):
+    """
+    WinShareActionValueHead is appropriate for games where the action-value head outputs win-share
+    values. This is the case any times the game's ValueHead returns a tensor that gets transformed
+    into a win-share array. This is the case both for WinShareValueHead and WinLossDrawValueHead.
+    """
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, output_shape: Shape):
+        super(WinShareActionValueHead, self).__init__(name, WinShareActionValueTarget())
+
+        self.output_shape = output_shape
+        self.act = F.relu
+        self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
+        self.linear = nn.Linear(c_hidden * spatial_size, math.prod(output_shape))
+
+    def forward(self, x):
+        out = x
+        out = self.conv(out)
+        out = self.act(out)
+        out = out.view(out.shape[0], -1)
+        out = self.linear(out)
+        out = out.view(-1, *self.output_shape)
+        return out
+
+
+class WinShareValueHead(Head):
+    """
+    A head that produces a length-p logit vector, where p is the number of players in the game,
+    usable for zero-sum games with p players for any p>=2. The k'th entry predicts the expected
+    number of win-shares for the k'th player.
+
+    Ideally, our value head predicts all possible outcomes, including all the various k-way draws
+    for first-place, but there are some practical drawbacks to this:
+
+    1. There 2^p - 1 possible outcomes, which can be a lot of logits to predict for large p.
+
+    2. Some of those outcomes may be vanishingly rare, and having target categories that are too
+       rare can lead to prediction trouble.
+
+    Due to these reasons, WinShareValueHead is typically the best value head for multiplayer games.
+
+    We could use CrossEntropyLoss, but it's arguably not appropriate given how we represent draws.
+    We represent a draw between players 0 and 1 as a win-share target of [0.5, 0.5, 0, 0]. Even if
+    the network perfectly predicts a logit vector that softmaxes to [0.5, 0.5, 0, 0], this yields
+    nonzero loss.
+
+    Instead, we use Kullback-Leibler Divergence (KL-Divergence) Loss.
+
+    As for the head architecture, we follow WinLossDrawValueHead, simply changing the final
+    output shape.
+    """
+
+    def __init__(self, name: str, spatial_size: int, c_in: int, c_hidden: int, n_hidden: int,
+                 shape: Shape):
+        super(WinShareValueHead, self).__init__(name, WinShareValueTarget())
+
+        (n_players, ) = shape
         self.act = F.relu
         self.conv = nn.Conv2d(c_in, c_hidden, kernel_size=1, bias=True)
         self.linear1 = nn.Linear(c_hidden * spatial_size, n_hidden)
@@ -445,17 +495,18 @@ class GeneralLogitHead(Head):
 
 
 MODULE_MAP = {
-    'ActionValueHead': ActionValueHead,
     'ConvBlock': ConvBlock,
     'ConvBlockWithGlobalPooling': ConvBlockWithGlobalPooling,
     'GeneralLogitHead': GeneralLogitHead,
     'KataGoNeck': KataGoNeck,
+    'OwnershipHead': OwnershipHead,
     'ResBlock': ResBlock,
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
-    'ValueHead': ValueHead,
-    'OwnershipHead': OwnershipHead,
+    'WinLossDrawValueHead': WinLossDrawValueHead,
+    'WinShareValueHead': WinShareValueHead,
+    'WinShareActionValueHead': WinShareActionValueHead,
     }
 
 
@@ -509,6 +560,19 @@ class Model(nn.Module):
     @property
     def target_names(self) -> List[str]:
         return [head.name for head in self.heads]
+
+    def get_parameter_counts(self) -> Dict[str, int]:
+        """
+        Returns a dictionary mapping module names to the number of parameters in that module.
+        """
+        counts = {}
+        counts['stem'] = sum(p.numel() for p in self.stem.parameters())
+        counts['blocks'] = sum(p.numel() for block in self.blocks for p in block.parameters())
+        if self.neck is not None:
+            counts['neck'] = sum(p.numel() for p in self.neck.parameters())
+        for head in self.heads:
+            counts[head.name] = sum(p.numel() for p in head.parameters())
+        return counts
 
     def forward(self, x):
         out = x

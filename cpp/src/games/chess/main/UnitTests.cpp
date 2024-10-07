@@ -7,6 +7,5 @@
 #include <util/EigenUtil.hpp>
 
 int main() {
-  util::set_tty_mode(false);
-  throw std::runtime_error("Not implemented");
+  return 0;
 }

@@ -7,6 +7,7 @@ from typing import Optional
 
 import torch
 from torch import nn as nn
+from torch.nn import functional as F
 
 
 class LearningTarget:
@@ -55,63 +56,109 @@ class PolicyTarget(LearningTarget):
 
     def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
                                     labels: torch.Tensor) -> float:
-        selected_moves = torch.argmax(predicted_logits, dim=1)
-        correct_policy_preds = labels.gather(1, selected_moves.view(-1, 1))
-        return int(sum(correct_policy_preds))
+        (B, _) = predicted_logits.shape  # batch-size, num-actions
+        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
+
+        predicted_probs = predicted_logits.softmax(dim=1)
+        error = 0.5 * abs(predicted_probs - labels).sum().item()
+
+        return B - error
 
 
-class ActionValueTarget(LearningTarget):
+class WinShareActionValueTarget(LearningTarget):
+    """
+    WinShareActionValueTarget is a LearningTarget for the action-value head for games where the
+    MCTS-propagated value is a win-share value. This is the case for both
+    WinShareDrawActionValueHead and WinLossDrawActionValueHead.
+    """
+    @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
         return nn.BCEWithLogitsLoss()
-
-    def get_mask(self, labels: torch.Tensor) -> torch.Tensor:
-        """
-        The C++ uses the zero-tensor to represent a row that should be masked.
-        """
-        assert len(labels.shape) == 2, labels.shape
-        n = labels.shape[0]
-        labels = labels.reshape((n, -1))
-
-        label_sums = labels.sum(dim=1)
-        mask = label_sums != 0
-        return mask
-
-    def get_num_correct_predictions(self, predictions: torch.Tensor,
-                                    labels: torch.Tensor) -> float:
-        predictions_max = torch.argmax(predictions, dim=1)
-        labels_max = torch.argmax(labels, dim=1)
-        return int(sum(predictions_max == labels_max))
-
-
-class ValueTarget(LearningTarget):
-    def loss_fn(self) -> nn.Module:
-        """
-        AlphaGo, KataGo, etc., use the standard [-1, +1] range for value targets, and thus use MSE
-        loss. In our project, however, in an effort to generalize to M-player games, we use a
-        length-M vector of non-negative values summing to 1. So for us cross-entropy loss is more
-        appropriate.
-
-        NOTE: in conversations with David Wu, he suggested relaxing the fixed-utility assumption,
-        to support games like Backgammon where the utility is not fixed. In that case, we would need
-        to use MSE loss. There are some subtle c++ changes that would need to be made to support
-        this.
-        """
-        return nn.CrossEntropyLoss()
 
     def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
                                     labels: torch.Tensor) -> float:
         """
-        Naively using the same implementation as PolicyTarget.get_num_correct_predictions() doesn't
-        work for games that have draws. For example, in TicTacToe, if the true value is [0.5, 0.5],
-        and the network outputs [0.4, 0.6], then the network should get credit for a correct
-        prediction. But the naive implementation would give it no credit.
-
-        Instead, in this example, we consider the output of [0.4, 0.6] to be correct, by virtue of
-        the fact that abs([0.4, 0.6] - [0.5, 0.5]) = [0.1, 0.1] is "close enough" to [0, 0].
+        We measure accuracy only on performance on entries where the label is non-zero. This is not
+        perfect, since a zero label could either come from a terminal state or from an invalid
+        action. Accuracy is only for metrics, though, so it's not a big deal.
         """
+        (B, _) = predicted_logits.shape  # batch-size, num-actions
+        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
+
+        label_mask = torch.where(labels != 0)
+
+        masked_labels = labels[label_mask]
+        masked_predicted_logits = predicted_logits[label_mask]
+        masked_predicted_probs = masked_predicted_logits.sigmoid()
+
+        error = abs(masked_predicted_probs - masked_labels).sum().item()
+        return max(0, B - error)
+
+
+class ValueTargetBase(LearningTarget):
+    @abc.abstractmethod
+    def loss_fn(self) -> nn.Module:
+        pass
+
+    def get_num_correct_predictions(self, predicted_logits: torch.Tensor,
+                                    labels: torch.Tensor) -> float:
+        (B, _) = predicted_logits.shape  # batch-size, num-classes
+        assert predicted_logits.shape == labels.shape, (predicted_logits.shape, labels.shape)
+
         predicted_probs = predicted_logits.softmax(dim=1)
-        deltas = abs(predicted_probs - labels)
-        return int(sum((deltas < 0.25).all(dim=1)))
+        error = 0.5 * abs(predicted_probs - labels).sum().item()
+
+        return B - error
+
+
+class WinLossDrawValueTarget(ValueTargetBase):
+    def loss_fn(self) -> nn.Module:
+        return nn.CrossEntropyLoss()
+
+
+class KLDivergencePerPixelLoss(nn.Module):
+    """
+    KL-divergence loss computed per "pixel", averaged over all pixels.
+
+    Assumes 1D-distributions per-pixel, and an arbitrary shape for the pixel dimensions. This is
+    similar to how CrossEntropyLoss works permits pixel-wise classification.
+
+    This is currently unused, and is buggy anyways. Maybe I'll bring it back at some point.
+    """
+    def __init__(self):
+        super(KLDivergencePerPixelLoss, self).__init__()
+
+    def forward(self, logits, target):
+        """
+        Args:
+            logits: Tensor of shape (N, C, *) where N is the batch size, C is the number of classes,
+                    and * represents any number of additional dimensions for "pixels".
+            target: Tensor of shape (N, C, *) where each pixel is a valid probability distribution.
+
+        Returns:
+            Mean KL-divergence loss over all "pixels".
+        """
+        # Ensure logits and target have the same shape
+        assert logits.shape == target.shape, "Logits and target must have the same shape."
+
+        # Apply log-softmax to the logits to get log probabilities
+        log_prob = F.log_softmax(logits, dim=1)  # Log probabilities along class dim (C)
+
+        # Compute KL-divergence: target * (log(target) - log(predicted))
+        kl_div = target * (torch.log(target + 1e-10) - log_prob)  # Small epsilon to avoid log(0)
+
+        # Sum over the class dimension (C) to get the KL-divergence for each "pixel"
+        kl_div = torch.sum(kl_div, dim=1)  # Sum over the class dimension C
+
+        # Return the mean KL-divergence over all "pixels" and batches
+        return kl_div.mean()
+
+
+class WinShareValueTarget(ValueTargetBase):
+    def loss_fn(self) -> nn.Module:
+        # TODO: try KLDivLoss instead of CrossEntropyLoss
+        # return nn.KLDivLoss(reduction='batchmean')
+        return nn.CrossEntropyLoss()
 
 
 class ScoreTarget(LearningTarget):

@@ -17,7 +17,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using IO = Game::IO;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using player_array_t = base_t::player_array_t;
 
   HumanTuiPlayer() {}
@@ -25,7 +25,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   core::ActionResponse get_action_response(const State&, const ActionMask&) override;
-  void end_game(const State&, const ValueArray&) override;
+  void end_game(const State&, const ValueTensor&) override;
 
   bool is_human_tui_player() const override { return true; }
 

@@ -16,6 +16,7 @@
 #include <core/concepts/GameRules.hpp>
 #include <core/concepts/GameStateHistory.hpp>
 #include <core/concepts/GameSymmetries.hpp>
+#include <core/concepts/GameTrainingTargets.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -64,7 +65,8 @@ concept Game = requires {
   requires core::concepts::GameConstants<typename G::Constants>;
   requires std::same_as<
       typename G::Types,
-      core::GameTypes<typename G::Constants, typename G::State, typename G::SymmetryGroup>>;
+      core::GameTypes<typename G::Constants, typename G::State, typename G::GameResults,
+                      typename G::SymmetryGroup>>;
 
   requires std::is_default_constructible_v<typename G::State>;
   requires std::is_trivially_destructible_v<typename G::State>;
@@ -79,8 +81,7 @@ concept Game = requires {
   requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::State>;
   requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::State,
                                                typename G::StateHistory>;
-  requires core::concepts::TrainingTargetList<typename G::TrainingTargets::List,
-                                              typename G::Types::GameLogView>;
+  requires core::concepts::GameTrainingTargets<typename G::TrainingTargets, typename G::Types>;
 
   // Any game-specific one-time static-initialization code should be placed in a static method
   // called static_init().

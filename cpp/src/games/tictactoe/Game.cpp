@@ -22,15 +22,10 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
     }
   }
 
-  Types::ValueArray outcome;
-  outcome.setZero();
   if (win) {
-    outcome(current_player) = 1.0;
-    return Types::ActionOutcome(outcome);
+    return core::WinLossDrawResults::win(current_player);
   } else if (std::popcount(state.full_mask) == kNumCells) {
-    outcome(0) = 0.5;
-    outcome(1) = 0.5;
-    return Types::ActionOutcome(outcome);
+    return core::WinLossDrawResults::draw();
   }
 
   return Types::ActionOutcome();
@@ -98,10 +93,15 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   char buffer[buf_size];
   int cx = 0;
 
-  cx += snprintf(buffer + cx, buf_size - cx, "X: %6.3f%% -> %6.3f%%\n",
-                 100 * net_value(tictactoe::kX), 100 * win_rates(tictactoe::kX));
-  cx += snprintf(buffer + cx, buf_size - cx, "O: %6.3f%% -> %6.3f%%\n",
-                 100 * net_value(tictactoe::kO), 100 * win_rates(tictactoe::kO));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %7s %7s\n", "", "X", "O");
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(W)",
+                 100 * net_value(0), 100 * net_value(1));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(D)",
+                 100 * net_value(2), 100 * net_value(2));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(L)",
+                 100 * net_value(1), 100 * net_value(0));
+  cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "win-rate",
+                 100 * win_rates(0), 100 * win_rates(1));
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
   cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");

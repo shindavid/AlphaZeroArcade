@@ -181,7 +181,7 @@ void GameServerProxy<Game>::PlayerThread::handle_end_game(const EndGame& payload
   }
   const char* buf = payload.dynamic_size_section.buf;
 
-  ValueArray outcome = *reinterpret_cast<const ValueArray*>(buf);
+  ValueTensor outcome = *reinterpret_cast<const ValueTensor*>(buf);
   player_->end_game(history_.current(), outcome);
 }
 

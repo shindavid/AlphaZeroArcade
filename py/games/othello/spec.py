@@ -10,19 +10,20 @@ def b19_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     policy_shape = shape_info_dict['policy'].shape
     value_shape = shape_info_dict['value'].shape
+    action_value_shape = shape_info_dict['action_value'].shape
     ownership_shape = shape_info_dict['ownership'].shape
     score_margin_shape = shape_info_dict['score_margin'].shape
     board_shape = input_shape[1:]
     board_size = math.prod(board_shape)
-    policy_size = policy_shape[0]
-    value_size = value_shape[0]
+
+    assert value_shape == (3,), value_shape
 
     c_trunk = 128
     c_mid = 128
     c_gpool = 32
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
-    c_action_value_hidden = 16
+    c_action_value_hidden = 2
     c_value_hidden = 1
     n_value_hidden = 256
     c_score_margin_hidden = 32
@@ -63,15 +64,14 @@ def b19_c128(shape_info_dict: ShapeInfoDict):
 
         heads=[
             ModuleSpec(type='PolicyHead',
-                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_size]),
-            ModuleSpec(type='ValueHead',
-                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
-                             value_size]),
-            ModuleSpec(type='ActionValueHead',
+                       args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
+            ModuleSpec(type='WinLossDrawValueHead',
+                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
+            ModuleSpec(type='WinShareActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
-                             policy_size]),
+                             action_value_shape]),
             ModuleSpec(type='PolicyHead',
-                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_size]),
+                       args=['opp_policy', board_size, c_trunk, c_opp_policy_hidden, policy_shape]),
             ModuleSpec(type='ScoreHead',
                        args=['score_margin', c_trunk, c_score_margin_hidden,
                              n_score_margin_hidden, score_margin_shape]),

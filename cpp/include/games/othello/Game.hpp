@@ -16,6 +16,7 @@
 #include <core/GameTypes.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
+#include <core/WinLossDrawResults.hpp>
 #include <games/othello/Constants.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -50,9 +51,10 @@ class Game {
     int8_t pass_count;
   };
 
+  using GameResults = core::WinLossDrawResults;
   using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D4;
-  using Types = core::GameTypes<Constants, State, SymmetryGroup>;
+  using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State& state);
@@ -72,7 +74,7 @@ class Game {
     static Types::ActionMask get_legal_moves(const State&);
 
    private:
-    static Types::ValueArray compute_outcome(const State& state);
+    static Types::ActionOutcome compute_outcome(const State& state);
   };
 
   struct IO {

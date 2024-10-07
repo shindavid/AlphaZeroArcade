@@ -81,13 +81,14 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
                                           Node* node) {
   if (!node->is_terminal()) {
     bool is_root = (node == shared_data_->get_root_node());
-    bool eval_all_children = is_root && shared_data_->search_params.full_search;
+    bool eval_all_children = manager_params_->force_evaluate_all_root_children && is_root &&
+                             shared_data_->search_params.full_search;
 
     if (nn_eval_service_) {
       const State& state = history->current();
       NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
-      if (!node->stable_data().V_valid) {
+      if (!node->stable_data().VT_valid) {
         group::element_t eval_sym = 0;
         if (manager_params_->apply_random_symmetries) {
           auto mask = Game::Symmetries::get_mask(state);
@@ -110,7 +111,7 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
         pseudo_local_vars_.request_items.clear();
       }
     } else {
-      if (!node->stable_data().V_valid) {
+      if (!node->stable_data().VT_valid) {
         node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
       }
 
@@ -119,7 +120,7 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
         for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
           edge_t* edge = node->get_edge(e);
           Node* child = node->get_child(edge);
-          if (!child->stable_data().V_valid) {
+          if (!child->stable_data().VT_valid) {
             child->load_eval(nullptr, [&](LocalPolicyArray& P) {});
           }
         }
@@ -257,7 +258,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
-    pure_backprop(stable_data.V);
+    pure_backprop(Game::GameResults::to_value_array(stable_data.VT));
     return;
   }
 
@@ -386,7 +387,7 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
 
   edge_t* last_edge = search_path_.back().edge;
   Node* last_node = search_path_.back().child;
-  auto value = last_node->stable_data().V;
+  auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
   if (mcts::kEnableDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "
@@ -546,19 +547,25 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   const PVec& N = action_selector.N;
   PVec& PUCT = action_selector.PUCT;
 
-  bool force_playouts = manager_params_->forced_playouts && is_root &&
-                        search_params.full_search && manager_params_->dirichlet_mult > 0;
-
-  if (force_playouts) {
-    PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
-    auto F1 = (N < n_forced).template cast<float>();
-    auto F2 = (N > 0).template cast<float>();
-    auto F = F1 * F2;
-    PUCT = PUCT * (1 - F) + F * 1e+6;
-  }
-
   int argmax_index;
-  PUCT.maxCoeff(&argmax_index);
+
+  if (search_params.tree_size_limit == 1) {
+    // net-only, use P
+    P.maxCoeff(&argmax_index);
+  } else {
+    bool force_playouts = manager_params_->forced_playouts && is_root &&
+                          search_params.full_search && manager_params_->dirichlet_mult > 0;
+
+    if (force_playouts) {
+      PVec n_forced = (P * manager_params_->k_forced * N.sum()).sqrt();
+      auto F1 = (N < n_forced).template cast<float>();
+      auto F2 = (N > 0).template cast<float>();
+      auto F = F1 * F2;
+      PUCT = PUCT * (1 - F) + F * 1e+6;
+    }
+
+    PUCT.maxCoeff(&argmax_index);
+  }
 
   print_action_selection_details(node, action_selector, argmax_index);
   return argmax_index;

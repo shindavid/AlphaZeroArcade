@@ -2,7 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/GameConstants.hpp>
-#include <core/EigenTypes.hpp>
+#include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 
 #include <array>
@@ -22,7 +22,7 @@ template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Gr
 class ActionSymmetryTable {
  public:
   using action_array_t = std::array<core::action_t, GameConstants::kNumActions>;
-  using PolicyTensor = EigenTypes<GameConstants>::PolicyTensor;
+  using PolicyTensor = eigen_util::FTensor<Eigen::Sizes<GameConstants::kNumActions>>;
 
   /*
    * Initialize the data structure.

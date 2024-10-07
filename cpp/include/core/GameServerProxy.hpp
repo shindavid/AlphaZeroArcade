@@ -24,7 +24,7 @@ class GameServerProxy {
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
-  using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;
   using player_generator_array_t = std::array<PlayerGenerator*, kNumPlayers>;
   using Player = AbstractPlayer<Game>;

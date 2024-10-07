@@ -52,6 +52,14 @@ auto softmax(const Array& array) {
   return z / z.sum();
 }
 
+template <concepts::FTensor Tensor>
+auto softmax(const Tensor& tensor) {
+  Tensor normalized_tensor = tensor - max(tensor);
+  Tensor z = normalized_tensor.exp();
+  Tensor q = z / sum(z);
+  return q;
+}
+
 template <typename Array>
 auto sigmoid(const Array& array) {
   return 1.0 / (1.0 + (-array).exp());
@@ -59,7 +67,7 @@ auto sigmoid(const Array& array) {
 
 template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim) {
-  using Sizes = extract_shape_t<Tensor>;
+  using Sizes = Tensor::Dimensions;
   constexpr int N = Sizes::count;
   static_assert(N > 0);
 
@@ -71,7 +79,7 @@ auto reverse(const Tensor& tensor, int dim) {
 
 template <concepts::FTensor Tensor>
 auto sample(const Tensor& tensor) {
-  using Shape = extract_shape_t<Tensor>;
+  using Shape = Tensor::Dimensions;
   constexpr size_t N = Shape::total_size;
 
   const auto* data = tensor.data();
@@ -90,7 +98,7 @@ bool normalize(Tensor& tensor, double eps) {
 
 template <concepts::FTensor Tensor>
 void randomly_zero_out(Tensor& tensor, int n) {
-  using Shape = extract_shape_t<Tensor>;
+  using Shape = Tensor::Dimensions;
   constexpr size_t N = Shape::total_size;
 
   auto* data = tensor.data();
@@ -100,7 +108,7 @@ void randomly_zero_out(Tensor& tensor, int n) {
 template <concepts::FTensor Tensor>
 auto unflatten_index(const Tensor& tensor, int flat_index) {
   // Convert the 1D index back to a K-dimensional index
-  using Shape = extract_shape_t<Tensor>;
+  using Shape = Tensor::Dimensions;
   constexpr size_t K = Shape::count;
 
   std::array<int64_t, K> index;
@@ -125,7 +133,7 @@ auto cwiseMax(const Tensor& tensor, float x) {
 
 template <concepts::FTensor Tensor>
 const auto& reinterpret_as_array(const Tensor& tensor) {
-  using Shape = extract_shape_t<Tensor>;
+  using Shape = Tensor::Dimensions;
   constexpr int N = Shape::total_size;
   using Array = FArray<N>;
   return reinterpret_cast<const Array&>(tensor);
@@ -133,7 +141,7 @@ const auto& reinterpret_as_array(const Tensor& tensor) {
 
 template <concepts::FTensor Tensor>
 auto& reinterpret_as_array(Tensor& tensor) {
-  using Shape = extract_shape_t<Tensor>;
+  using Shape = Tensor::Dimensions;
   constexpr int N = Shape::total_size;
   using Array = FArray<N>;
   return reinterpret_cast<Array&>(tensor);
@@ -141,14 +149,76 @@ auto& reinterpret_as_array(Tensor& tensor) {
 
 template <concepts::FTensor Tensor, concepts::FArray Array>
 const Tensor& reinterpret_as_tensor(const Array& array) {
-  static_assert(extract_length_v<Array> == extract_shape_t<Tensor>::total_size);
+  static_assert(extract_length_v<Array> == Tensor::Dimensions::total_size);
   return reinterpret_cast<const Tensor&>(array);
 }
 
 template <concepts::FTensor Tensor, concepts::FArray Array>
 Tensor& reinterpret_as_tensor(Array& array) {
-  static_assert(extract_length_v<Array> == extract_shape_t<Tensor>::total_size);
+  static_assert(extract_length_v<Array> == Tensor::Dimensions::total_size);
   return reinterpret_cast<Tensor&>(array);
+}
+
+template <int Dim, concepts::FTensor Tensor, typename Func>
+void apply_per_slice(Tensor& t, Func f) {
+  using Shape = Tensor::Dimensions;
+  static_assert(Shape::count == 2);
+  static_assert(Dim >= 0);
+  static_assert(Dim < Shape::count);
+
+  constexpr int N = extract_dim_v<Dim, Shape>;
+  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
+
+  for (int j = 0; j < N; ++j) {
+    SubTensor slice = t.chip(j, Dim);
+    f(slice);
+    t.chip(j, Dim) = slice;
+  }
+}
+
+template <int Dim, concepts::FTensor Tensor, typename Func>
+void compute_per_slice(const Tensor& t, Func f) {
+  using Shape = Tensor::Dimensions;
+  static_assert(Shape::count == 2);
+  static_assert(Dim >= 0);
+  static_assert(Dim < Shape::count);
+
+  constexpr int N = extract_dim_v<Dim, Shape>;
+  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
+
+  for (int j = 0; j < N; ++j) {
+    SubTensor slice = t.chip(j, Dim);
+    f(slice);
+  }
+}
+
+template <concepts::FTensor Tensor>
+void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps) {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  float s = sum(distr);
+  float m = min(distr);
+
+  if (m < 0 || abs(s - 1.0) > eps) {
+    std::ostringstream ss;
+    ss << distr;
+    throw util::Exception("Invalid prob distr: sum=%g, min=%g distr:\n%s", s, m, ss.str().c_str());
+  }
+}
+
+// debug_assert()'s that distr is a valid probability distribution
+template <typename Array>
+void debug_assert_is_valid_prob_distr(const Array& distr, float eps) {
+  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+
+  float s = distr.sum();
+  float m = distr.minCoeff();
+
+  if (m < 0 || abs(s - 1.0) > eps) {
+    std::ostringstream ss;
+    ss << distr;
+    throw util::Exception("Invalid prob distr: sum=%g, min=%g distr:\n%s", s, m, ss.str().c_str());
+  }
 }
 
 template <concepts::FTensor Tensor>
@@ -205,7 +275,7 @@ namespace detail {
 
 template <int Dim, concepts::FTensor Tensor>
 struct MatrixSlice {
-  static_assert(Dim * Dim <= extract_shape_t<Tensor>::total_size, "Tensor is too small");
+  static_assert(Dim * Dim <= Tensor::Dimensions::total_size, "Tensor is too small");
   using type = Eigen::Map<
       Eigen::Matrix<typename Tensor::Scalar, Dim, Dim, Eigen::RowMajor | Eigen::DontAlign>>;
 };
@@ -268,7 +338,7 @@ template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor) 
 template <concepts::FTensor Tensor>
 uint64_t hash(const Tensor& tensor) {
   using Scalar = Tensor::Scalar;
-  constexpr int N = extract_shape_t<Tensor>::total_size;
+  constexpr int N = Tensor::Dimensions::total_size;
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }
 

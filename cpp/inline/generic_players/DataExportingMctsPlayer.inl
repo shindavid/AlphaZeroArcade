@@ -59,7 +59,7 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
 
 template <core::concepts::Game Game>
 void DataExportingMctsPlayer<Game>::end_game(const State& state,
-                                             const ValueArray& outcome) {
+                                             const ValueTensor& outcome) {
   game_log_->add_terminal(state, outcome);
   writer_->close(game_log_);
   game_log_ = nullptr;
