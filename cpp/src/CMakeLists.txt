@@ -16,6 +16,7 @@ set(TARGETS util_tests)
 
 add_executable(util_tests util/main/UnitTests.cpp)
 set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${EXECUTABLE_OUTPUT_PATH}/tests")
+target_link_libraries(util_tests PRIVATE GTest::GTest GTest::Main)
 
 set(LINK_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(util_lib PRIVATE ${LINK_LIBS})

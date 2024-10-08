@@ -3,12 +3,10 @@
 #include <util/Random.hpp>
 
 #include <Eigen/Core>
+#include <gtest/gtest.h>
 
 #include <array>
 #include <iostream>
-
-int global_pass_count = 0;
-int global_fail_count = 0;
 
 template <typename T>
 void test_zero_out() {
@@ -24,35 +22,24 @@ void test_zero_out() {
       if (a[i]) counts[i]++;
     }
   }
-  bool fail = false;
   for (size_t i = 0; i < counts.size(); ++i) {
     if (orig_a[i]) {
       double pct = counts[i] * 1.0 / N;
       double error = std::abs(pct - 0.5);
-      fail |= error > 0.01;
+      EXPECT_LT(error, 0.01);
     } else {
-      fail |= (counts[i] != 0);
+      EXPECT_EQ(counts[i], 0);
     }
   }
-
-  if (fail) {
-    printf("%s<%s> failed!\n", __func__, typeid(T).name());
-    for (size_t i = 0; i < counts.size(); ++i) {
-      printf("counts[%d]: %d / %d\n", int(i), counts[i], N);
-    }
-    global_fail_count++;
-    return;
-  }
-  global_pass_count++;
 }
 
-void test_random() {
+TEST(Random, zero_out) {
   test_zero_out<bool>();
   test_zero_out<int>();
 }
 
 template<typename Pool>
-bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
+void test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
   // add 0, 1, 2, ... to the pool, in chunks given by sizes
   int x = 0;
   for (int i = 0; i < num_sizes; ++i) {
@@ -65,19 +52,11 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
 
   // validate size
   std::vector<int> vec = pool.to_vector();
-  if (int(vec.size()) != x) {
-    printf("Expected %d elements, got %lu\n", x, vec.size());
-    global_fail_count++;
-    return false;
-  }
+  EXPECT_EQ(vec.size(), x);
 
   // validate contents
   for (int i = 0; i < x; ++i) {
-    if (vec[i] != i) {
-      printf("pool[%d]: expected %d, got %d\n", i, i, vec[i]);
-      global_fail_count++;
-      return false;
-    }
+    EXPECT_EQ(vec[i], i);
   }
 
   // now remove the square elements
@@ -92,11 +71,7 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
 
   // validate size
   vec = pool.to_vector();
-  if (int(vec.size()) != y) {
-    printf("Expected %d elements, got %lu\n", y, vec.size());
-    global_fail_count++;
-    return false;
-  }
+  EXPECT_EQ(vec.size(), y);
 
   // validate contents
   int sqrt = 0;
@@ -106,36 +81,28 @@ bool test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
       ++sqrt;
       continue;
     }
-    if (vec[k] != i) {
-      printf("pool[%d]: expected %d, got %d\n", k, i, vec[i]);
-      global_fail_count++;
-      return false;
-    }
+    EXPECT_EQ(vec[k], i);
     ++k;
   }
-
-  return true;
 }
 
-void test_alloc_pool() {
-  using pool_t = util::AllocPool<int, 2>;
-  pool_t pool;
+TEST(AllocPool, alloc_pool) {
+  util::AllocPool<int, 2> pool;
 
-  int sizes1[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-  if (!test_alloc_pool_helper(pool, sizes1, sizeof(sizes1) / sizeof(sizes1[0]))) return;
+  int sizes1[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  test_alloc_pool_helper(pool, sizes1, sizeof(sizes1) / sizeof(sizes1[0]));
   pool.clear();
 
   int sizes2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  if (!test_alloc_pool_helper(pool, sizes2, sizeof(sizes2) / sizeof(sizes2[0]))) return;
+  test_alloc_pool_helper(pool, sizes2, sizeof(sizes2) / sizeof(sizes2[0]));
   pool.clear();
 
   int sizes3[] = {100};
-  if (!test_alloc_pool_helper(pool, sizes3, sizeof(sizes3) / sizeof(sizes3[0]))) return;
-
-  global_pass_count++;
+  test_alloc_pool_helper(pool, sizes3, sizeof(sizes3) / sizeof(sizes3[0]));
+  pool.clear();
 }
 
-void test_eigen_sort_columns() {
+TEST(eigen_util, sort_columns) {
   constexpr int kNumRows = 3;
   constexpr int kNumCols = 5;
   constexpr int kMaxNumCols = 10;
@@ -153,20 +120,12 @@ void test_eigen_sort_columns() {
   for (int r = 0; r < kNumRows; ++r) {
     for (int c = 0; c < kNumCols; ++c) {
       float expected = (c + 1) * pow10[r];
-      if (array(r, c) != expected) {
-        printf("%s() failure at %s:%d\n", __func__, __FILE__, __LINE__);
-        printf("Expected %.f at array(%d, %d) but got %.f\n", expected, r, c, array(r, c));
-        std::cout << array << std::endl;
-        global_fail_count++;
-        return;
-      }
+      EXPECT_EQ(array(r, c), expected);
     }
   }
-
-  global_pass_count++;
 }
 
-void test_eigen_rotate() {
+TEST(eigen_util, rotate) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
 
@@ -182,13 +141,7 @@ void test_eigen_rotate() {
     eigen_util::left_rotate(array, i);
 
     Array expected_array = expected_left_rotate_arrays[i];
-    if (!(array == expected_array).all()) {
-      printf("%s() failure at %s:%d\n", __func__, __FILE__, __LINE__);
-      std::cout << "Expected array: " << expected_array.transpose() << std::endl;
-      std::cout << "Actual array:   " << array.transpose() << std::endl;
-      global_fail_count++;
-      return;
-    }
+    EXPECT_TRUE((array == expected_array).all());
   }
 
   Array expected_right_rotate_arrays[N] = {
@@ -203,33 +156,11 @@ void test_eigen_rotate() {
     eigen_util::right_rotate(array, i);
 
     Array expected_array = expected_right_rotate_arrays[i];
-    if (!(array == expected_array).all()) {
-      printf("%s() failure at %s:%d\n", __func__, __FILE__, __LINE__);
-      std::cout << "Expected array: " << expected_array.transpose() << std::endl;
-      std::cout << "Actual array:   " << array.transpose() << std::endl;
-      global_fail_count++;
-      return;
-    }
+    EXPECT_TRUE((array == expected_array).all());
   }
-
-  global_pass_count++;
 }
 
-void test_eigen_util() {
-  test_eigen_sort_columns();
-  test_eigen_rotate();
-}
-
-int main() {
-  test_random();
-  test_alloc_pool();
-  test_eigen_util();
-
-  if (global_fail_count > 0) {
-    int total_count = global_pass_count + global_fail_count;
-    printf("Failed %d of %d test%s!\n", global_fail_count, total_count, total_count > 1 ? "s" : "");
-  } else {
-    printf("All tests passed (%d of %d)!\n", global_pass_count, global_pass_count);
-  }
-  return global_fail_count ? 1 : 0;
+int main(int argc, char** argv) {
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
