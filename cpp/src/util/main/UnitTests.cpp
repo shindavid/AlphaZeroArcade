@@ -135,7 +135,7 @@ void test_alloc_pool() {
   global_pass_count++;
 }
 
-void test_eigen_util() {
+void test_eigen_sort_columns() {
   constexpr int kNumRows = 3;
   constexpr int kNumCols = 5;
   constexpr int kMaxNumCols = 10;
@@ -164,6 +164,60 @@ void test_eigen_util() {
   }
 
   global_pass_count++;
+}
+
+void test_eigen_rotate() {
+  constexpr int N = 4;
+  using Array = eigen_util::FArray<N>;
+
+  Array expected_left_rotate_arrays[N] = {
+    {0, 1, 2, 3},
+    {1, 2, 3, 0},
+    {2, 3, 0, 1},
+    {3, 0, 1, 2}
+  };
+
+  for (int i = 0; i < N; ++i) {
+    Array array{{0, 1, 2, 3}};
+    eigen_util::left_rotate(array, i);
+
+    Array expected_array = expected_left_rotate_arrays[i];
+    if (!(array == expected_array).all()) {
+      printf("%s() failure at %s:%d\n", __func__, __FILE__, __LINE__);
+      std::cout << "Expected array: " << expected_array.transpose() << std::endl;
+      std::cout << "Actual array:   " << array.transpose() << std::endl;
+      global_fail_count++;
+      return;
+    }
+  }
+
+  Array expected_right_rotate_arrays[N] = {
+    {0, 1, 2, 3},
+    {3, 0, 1, 2},
+    {2, 3, 0, 1},
+    {1, 2, 3, 0}
+  };
+
+  for (int i = 0; i < N; ++i) {
+    Array array{{0, 1, 2, 3}};
+    eigen_util::right_rotate(array, i);
+
+    Array expected_array = expected_right_rotate_arrays[i];
+    if (!(array == expected_array).all()) {
+      printf("%s() failure at %s:%d\n", __func__, __FILE__, __LINE__);
+      std::cout << "Expected array: " << expected_array.transpose() << std::endl;
+      std::cout << "Actual array:   " << array.transpose() << std::endl;
+      global_fail_count++;
+      return;
+    }
+  }
+
+  global_pass_count++;
+}
+
+void test_eigen_util() {
+  test_eigen_sort_columns();
+  test_eigen_rotate();
 }
 
 int main() {
