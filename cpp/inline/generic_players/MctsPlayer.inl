@@ -214,7 +214,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       /*
        * This is awkward, but I couldn't get a simpler incantation to work. I want to do:
        *
-       * policy = (policy == policy.maximum()).template cast<torch_util::dtype>();
+       * policy = (policy == policy.maximum()).template cast<float>();
        *
        * But the above doesn't work.
        */
@@ -223,7 +223,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       if (policy_max > 0) {
         PolicyTensor policy_max_broadcasted;
         policy_max_broadcasted.setConstant(policy_max);
-        policy = (policy == policy_max_broadcasted).template cast<torch_util::dtype>();
+        policy = (policy == policy_max_broadcasted).template cast<float>();
       }
     }
     policy = mcts_results->action_symmetry_table.symmetrize(policy);

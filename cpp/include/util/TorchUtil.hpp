@@ -69,8 +69,6 @@
 
 namespace torch_util {
 
-using dtype = float;
-
 template <class T>
 struct TorchType {};
 template <>
@@ -83,10 +81,10 @@ struct TorchType<double> {
 };
 
 /*
- * Wrapper around torch::from_blob(), that properly sets options based on torch_util::dtype.
+ * Convenience-wrapper around torch::from_blob().
  */
 inline auto from_blob(void* data, at::IntArrayRef sizes) {
-  return torch::from_blob(data, sizes, torch::dtype(TorchType<dtype>::value));
+  return torch::from_blob(data, sizes, torch::dtype(TorchType<float>::value));
 }
 
 /*
