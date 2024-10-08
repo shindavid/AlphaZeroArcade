@@ -7,6 +7,7 @@
 
 #include <cctype>
 #include <cstdarg>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <vector>
