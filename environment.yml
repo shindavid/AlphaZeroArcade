@@ -1,8 +1,8 @@
 channels:
-  - main
   - pytorch
-  - defaults
+  - main
   - conda-forge
+  - defaults
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
@@ -27,10 +27,10 @@ dependencies:
   - brotlipy=0.7.0=py310h5764c6d_1004
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2024.3.11=h06a4308_0
+  - ca-certificates=2024.9.24=h06a4308_0
   - cached-property=1.5.2=hd8ed1ab_1
   - cached_property=1.5.2=pyha770c72_1
-  - certifi=2024.6.2=py310h06a4308_0
+  - certifi=2024.8.30=pyhd8ed1ab_0
   - cffi=1.15.1=py310h255011f_0
   - charset-normalizer=2.1.1=pyhd8ed1ab_0
   - click=8.1.7=unix_pyh707e725_0
@@ -64,6 +64,7 @@ dependencies:
   - giflib=5.2.1=h36c2ea0_2
   - gmp=6.2.1=h58526e2_0
   - gnutls=3.7.7=hf3e180e_0
+  - gtest=1.15.2=h434a139_0
   - h5py=3.7.0=nompi_py310h416281c_101
   - hdf5=1.12.2=nompi_h4df4325_100
   - highfive=2.4.1=he05ef13_1
