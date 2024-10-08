@@ -83,17 +83,20 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
 
 
 class XVarSelector:
-    def __init__(self, df_list: List[pd.DataFrame]):
+    def __init__(self, df_list: List[pd.DataFrame], initial_df_col: str = 'mcts_gen'):
         """
         Each DataFrame in df_list is assumed to have a column for each str in X_VAR_COLUMNS.
         """
-        self._x_index = 0
+        self._x_index = None
         self._min_x_dict = {}
         self._max_x_dict = {}
 
         for df in df_list:
-            for x_var in X_VARS:
+            for x_index, x_var in enumerate(X_VARS):
                 x_col = x_var.df_col
+                if x_col == initial_df_col:
+                    assert self._x_index in (None, x_index)
+                    self._x_index = x_index
                 assert x_col in df.columns, f"Column '{x_col}' not found in DataFrame:\n{df}"
                 x = df[x_col]
                 if len(x) == 0:
@@ -104,6 +107,8 @@ class XVarSelector:
                 mx = max(x)
                 self._max_x_dict[x_col] = mx if x_col not in self._max_x_dict else \
                     max(self._max_x_dict[x_col], mx)
+
+        assert self._x_index is not None
 
     @property
     def x_label(self) -> str:
