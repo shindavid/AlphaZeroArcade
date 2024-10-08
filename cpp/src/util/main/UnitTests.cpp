@@ -215,6 +215,7 @@ void test_eigen_rotate() {
   global_pass_count++;
 }
 
+// test
 void test_eigen_util() {
   test_eigen_sort_columns();
   test_eigen_rotate();
