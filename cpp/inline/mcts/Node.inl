@@ -248,17 +248,8 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 }
 
 template <core::concepts::Game Game>
-typename Node<Game>::ValueArray Node<Game>::make_virtual_loss() const {
-  constexpr float x = 1.0 / (kNumPlayers - 1);
-  ValueArray virtual_loss;
-  virtual_loss.setZero();
-  virtual_loss(stable_data().current_player) = x;
-  return virtual_loss;
-}
-
-template <core::concepts::Game Game>
-template <typename UpdateT>
-void Node<Game>::update_stats(const UpdateT& update_instruction) {
+template <typename MutexProtectedFunc>
+void Node<Game>::update_stats(MutexProtectedFunc func) {
   core::seat_index_t cp = stable_data().current_player;
 
   ValueArray Q_sum;
@@ -289,10 +280,12 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
       continue;
     }
     const auto& child_stats = child->stats();
-    int eN = std::min(edge->N, child_stats.RN);
-    N += eN;
-    Q_sum += child_stats.Q * eN;
-    Q_sq_sum += child_stats.Q_sq * eN;
+    if (child_stats.RN > 0) {
+      int eN = edge->N;
+      N += eN;
+      Q_sum += child_stats.Q * eN;
+      Q_sq_sum += child_stats.Q_sq * eN;
+    }
 
     cp_has_winning_move |= child_stats.provably_winning[cp];
     all_provably_winning &= child_stats.provably_winning;
@@ -306,7 +299,7 @@ void Node<Game>::update_stats(const UpdateT& update_instruction) {
   }
 
   std::unique_lock lock(mutex());
-  update_instruction(this);
+  func();
 
   if (stable_data_.VT_valid) {
     ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
@@ -456,8 +449,11 @@ void Node<Game>::update_child_expand_count(int n) {
 template <core::concepts::Game Game>
 void Node<Game>::validate_state() const {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  if (is_terminal()) return;
 
-  int N = 0;
+  std::unique_lock lock(mutex());
+
+  int N = 1;
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     auto edge = get_edge(i);
     N += edge->N;

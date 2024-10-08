@@ -69,28 +69,9 @@ class SearchThread {
   void dump_profiling_stats() { profiler_.dump(64); }
 
  private:
-  struct VirtualIncrement {
-    void operator()(Node* node) const { node->stats().virtual_increment(); }
-  };
-
-  struct RealIncrement {
-    void operator()(Node* node) const { node->stats().real_increment(); }
-  };
-
-  struct IncrementTransfer {
-    void operator()(Node* node) const { node->stats().increment_transfer(); }
-  };
-
-  struct InitQ {
-    InitQ(const ValueArray& value, bool pure) : value(value), pure(pure) {}
-    void operator()(Node* node) const { node->stats().init_q(value, pure); }
-    const ValueArray& value;
-    const bool pure;
-  };
-
   struct visitation_t {
-    edge_t* edge;
-    Node* child;
+    Node* node;
+    edge_t* edge;  // emanates from node, possibly nullptr
   };
 
   using search_path_t = std::vector<visitation_t>;
@@ -103,8 +84,8 @@ class SearchThread {
   void perform_visits();
   void deactivate() const;
   void loop();
-  void print_visit_info(Node* node, edge_t* parent_edge);
-  void visit(Node* node, edge_t* edge);
+  void print_visit_info(Node* node);
+  void visit(Node* node);
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);

@@ -83,15 +83,12 @@ class Node {
    */
   struct stats_t {
     int total_count() const { return RN + VN; }
-    void virtual_increment() { VN++; }
-    void real_increment() { RN++; }
-    void increment_transfer() { RN++; VN--; }
     void init_q(const ValueArray&, bool pure);
 
     ValueArray Q;     // excludes virtual loss
     ValueArray Q_sq;  // excludes virtual loss
-    int RN = 0;        // real count
-    int VN = 0;        // virtual count
+    int RN = 0;       // real count
+    int VN = 0;       // virtual count
 
     // TODO: generalize these fields to utility lower/upper bounds
     player_bitset_t provably_winning;
@@ -174,9 +171,10 @@ class Node {
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
                      SearchResults& results) const;
-  ValueArray make_virtual_loss() const;
-  template <typename UpdateT>
-  void update_stats(const UpdateT& update_instruction);
+
+  template <typename MutexProtectedFunc>
+  void update_stats(MutexProtectedFunc);
+
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 
   const stable_data_t& stable_data() const { return stable_data_; }
@@ -184,7 +182,7 @@ class Node {
   stats_t& stats() { return stats_; }
   bool is_terminal() const { return stable_data_.terminal; }
 
-  std::mutex& mutex() { return lookup_table_->get_mutex(mutex_id_); }
+  std::mutex& mutex() const { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
   void initialize_edges();

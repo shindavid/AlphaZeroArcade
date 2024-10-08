@@ -213,9 +213,10 @@ inline void SearchThread<Game>::perform_visits() {
   raw_history_ = root_info.history_array[e];
 
   Node* root = init_root_node();
-  while (root->stats().total_count() < shared_data_->search_params.tree_size_limit) {
+  while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
-    visit(root, nullptr);
+    search_path_.emplace_back(root, nullptr);
+    visit(root);
     root->validate_state();
     canonical_sym_ = root_info.canonical_sym;
     raw_history_ = root_info.history_array[e];
@@ -242,7 +243,7 @@ inline void SearchThread<Game>::loop() {
 }
 
 template <core::concepts::Game Game>
-void SearchThread<Game>::print_visit_info(Node* node, edge_t* parent_edge) {
+void SearchThread<Game>::print_visit_info(Node* node) {
   if (mcts::kEnableDebug) {
     std::ostringstream ss;
     ss << thread_id_whitespace() << "visit " << search_path_str()
@@ -252,9 +253,9 @@ void SearchThread<Game>::print_visit_info(Node* node, edge_t* parent_edge) {
 }
 
 template <core::concepts::Game Game>
-inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
+inline void SearchThread<Game>::visit(Node* node) {
   using Group = Game::SymmetryGroup;
-  print_visit_info(node, parent_edge);
+  print_visit_info(node);
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
@@ -264,7 +265,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
 
   int child_index = get_best_child_index(node);
   edge_t* edge = node->get_edge(child_index);
-  search_path_.emplace_back(edge, nullptr);
+  search_path_.back().edge = edge;
   bool applied_action = false;
   group::element_t inv_canonical_sym = Group::inverse(canonical_sym_);
   if (edge->state != Node::kExpanded) {
@@ -303,8 +304,8 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
 
   util::release_assert(edge->state == Node::kExpanded);
   Node* child = node->get_child(edge);
-  search_path_.back().child = child;
   if (child) {
+    search_path_.emplace_back(child, nullptr);
     int edge_count = edge->N;
     int child_count = child->stats().RN;
     if (edge_count < child_count) {
@@ -320,7 +321,7 @@ inline void SearchThread<Game>::visit(Node* node, edge_t* parent_edge) {
     outcome_ = Game::Rules::apply(raw_history_, edge_action);
     canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
   }
-  visit(child, edge);
+  visit(child);
 }
 
 template <core::concepts::Game Game>
@@ -340,15 +341,22 @@ inline void SearchThread<Game>::virtual_backprop() {
   }
 
   util::release_assert(!search_path_.empty());
-  edge_t* last_edge = search_path_.back().edge;
-  last_edge->N++;
+  Node* last_node = search_path_.back().node;
+
+  last_node->update_stats([&] {
+    last_node->stats().VN++;
+  });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    // NOTE: always update the child first, then the edge, for better race-handling
-    search_path_[i].child->update_stats(VirtualIncrement{});
-    search_path_[i].edge->N++;
+    edge_t* edge = search_path_[i].edge;
+    Node* node = search_path_[i].node;
+
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->N++;
+      node->stats().VN++;
+    });
   }
-  shared_data_->get_root_node()->update_stats(VirtualIncrement{});
   validate_search_path();
 }
 
@@ -362,22 +370,23 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   }
 
   util::release_assert(!search_path_.empty());
-  edge_t* last_edge = search_path_.back().edge;
-  Node* last_node = search_path_.back().child;
+  Node* last_node = search_path_.back().node;
 
-  // NOTE: always update the child first, then the edge, for better race-handling
-  last_node->update_stats(InitQ(value, true));
-  last_edge->N++;
+  last_node->update_stats([&] {
+    last_node->stats().init_q(value, true);
+    last_node->stats().RN++;
+  });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
-    Node* child = search_path_[i].child;
+    Node* node = search_path_[i].node;
 
-    // NOTE: always update the child first, then the edge, for better race-handling
-    child->update_stats(RealIncrement{});
-    edge->N++;
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->N++;
+      node->stats().RN++;
+    });
   }
-  shared_data_->get_root_node()->update_stats(RealIncrement{});
   validate_search_path();
 }
 
@@ -385,7 +394,7 @@ template <core::concepts::Game Game>
 void SearchThread<Game>::backprop_with_virtual_undo() {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
-  Node* last_node = search_path_.back().child;
+  Node* last_node = search_path_.back().node;
   auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
   if (mcts::kEnableDebug) {
@@ -393,13 +402,20 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
              << value.transpose();
   }
 
-  last_node->update_stats(InitQ(value, false));
+  last_node->update_stats([&] {
+    last_node->stats().init_q(value, false);
+    last_node->stats().RN++;
+    last_node->stats().VN--;
+  });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    Node* child = search_path_[i].child;
-    child->update_stats(IncrementTransfer{});
+    Node* node = search_path_[i].node;
+
+    node->update_stats([&] {
+      node->stats().RN++;
+      node->stats().VN--;
+    });
   }
-  shared_data_->get_root_node()->update_stats(IncrementTransfer{});
   validate_search_path();
 }
 
@@ -409,18 +425,16 @@ void SearchThread<Game>::short_circuit_backprop() {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
-  edge_t* last_edge = search_path_.back().edge;
-  last_edge->N++;
-
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
-    Node* child = search_path_[i].child;
+    Node* node = search_path_[i].node;
 
-    // NOTE: always update the child first, then the edge, for better race-handling
-    child->update_stats(RealIncrement{});
-    edge->N++;
+    // NOTE: always update the edge first, then the parent node
+    node->update_stats([&] {
+      edge->N++;
+      node->stats().RN++;
+    });
   }
-  shared_data_->get_root_node()->update_stats(RealIncrement{});
   validate_search_path();
 }
 
@@ -440,7 +454,7 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, *history, outcome_);
-    search_path_.back().child = child;
+    search_path_.emplace_back(child, nullptr);
     child->initialize_edges();
     virtual_backprop();
     init_node(history, edge->child_index, child);
@@ -465,6 +479,7 @@ std::string SearchThread<Game>::search_path_str() const {
   std::string delim = Game::IO::action_delimiter();
   std::vector<std::string> vec;
   for (const visitation_t& visitation : search_path_) {
+    if (!visitation.edge) continue;
     core::action_t action = visitation.edge->action;
     Game::Symmetries::apply(action, cur_sym);
     cur_sym = Group::compose(cur_sym, Group::inverse(visitation.edge->sym));
@@ -517,11 +532,10 @@ template <core::concepts::Game Game>
 void SearchThread<Game>::validate_search_path() const {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
 
-  for (int i = search_path_.size() - 1; i >= 0; --i) {
-    Node* child = search_path_[i].child;
-    child->validate_state();
+  int N = search_path_.size();
+  for (int i = N - 1; i >= 0; --i) {
+    search_path_[i].node->validate_state();
   }
-  shared_data_->get_root_node()->validate_state();
 }
 
 template <core::concepts::Game Game>
@@ -640,7 +654,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     r = 0;
     ss << "move:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "P:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "V:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
+    ss << "Q:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "FPU:   " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "PW:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
     ss << "PL:    " << s2_lines[r++] << break_plus_thread_id_whitespace();

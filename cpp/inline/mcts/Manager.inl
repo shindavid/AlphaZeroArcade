@@ -133,6 +133,7 @@ Manager<Game>::search(const SearchParams& params) {
     root_info.node_index = shared_data_.lookup_table.alloc_node();
     Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
     new (root) Node(&shared_data_.lookup_table, canonical_history, outcome);
+    root->stats().RN++;
   }
 
   if (mcts::kEnableDebug) {
