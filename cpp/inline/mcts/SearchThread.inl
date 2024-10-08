@@ -391,7 +391,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 }
 
 template <core::concepts::Game Game>
-void SearchThread<Game>::backprop_with_virtual_undo() {
+void SearchThread<Game>::standard_backprop() {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
   Node* last_node = search_path_.back().node;
@@ -402,10 +402,12 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
              << value.transpose();
   }
 
+  bool undo_virtual = manager_params_->num_search_threads > 1;
+
   last_node->update_stats([&] {
     last_node->stats().init_q(value, false);
     last_node->stats().RN++;
-    last_node->stats().VN--;
+    last_node->stats().VN -= undo_virtual;
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
@@ -413,7 +415,7 @@ void SearchThread<Game>::backprop_with_virtual_undo() {
 
     node->update_stats([&] {
       node->stats().RN++;
-      node->stats().VN--;
+      node->stats().VN -= undo_virtual;
     });
   }
   validate_search_path();
@@ -456,9 +458,11 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     new (child) Node(&lookup_table, *history, outcome_);
     search_path_.emplace_back(child, nullptr);
     child->initialize_edges();
-    virtual_backprop();
+    if (manager_params_->num_search_threads > 1) {
+      virtual_backprop();
+    }
     init_node(history, edge->child_index, child);
-    backprop_with_virtual_undo();
+    standard_backprop();
   } else {
     edge->child_index = child_index;
   }
