@@ -149,6 +149,7 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
     LOG_INFO << request.thread_id_whitespace() << "evaluate() - size: " << request.items().size();
   }
 
+  int eval_count = 0;
   while (true) {
     int my_claim_count = 0;
     int other_claim_count = 0;
@@ -185,10 +186,15 @@ void NNEvaluationService<Game>::evaluate(const NNEvaluationRequest& request) {
 
     cv_evaluate_.notify_all();
 
+    eval_count += reservation_count;
     if (mcts::kEnableDebug) {
       LOG_INFO << request.thread_id_whitespace() << "  evaluated!";
     }
   }
+
+  std::unique_lock<std::mutex> perf_stats_lock(perf_stats_mutex_);
+  perf_stats_.cache_misses += eval_count;
+  perf_stats_.cache_hits += request.items().size() - eval_count;
 }
 
 template <core::concepts::Game Game>
