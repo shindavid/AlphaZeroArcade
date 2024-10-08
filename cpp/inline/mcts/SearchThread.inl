@@ -411,9 +411,12 @@ void SearchThread<Game>::standard_backprop() {
   });
 
   for (int i = search_path_.size() - 2; i >= 0; --i) {
+    edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
+    // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
+      edge->N += !undo_virtual;
       node->stats().RN++;
       node->stats().VN -= undo_virtual;
     });
