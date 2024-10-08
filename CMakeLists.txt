@@ -16,6 +16,7 @@ add_definitions(-DNDEBUG)
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
 find_package(Boost COMPONENTS program_options filesystem json log log_setup REQUIRED)
+find_package(GTest REQUIRED)
 
 set(CMAKE_CXX_STANDARD  20)
 
@@ -32,6 +33,7 @@ include_directories("cpp")  # for inline/ subdirectory
 include_directories(${EIGEN3_INCLUDE_DIRS})
 include_directories(${MY_EIGENRAND_DIR})
 include_directories(SYSTEM ${TORCH_INCLUDE_DIRS})
+include_directories(${GTEST_INCLUDE_DIRS})
 
 # Clear the targets file at the start of the configuration
 file(WRITE ${CMAKE_BINARY_DIR}/targets.txt "")
