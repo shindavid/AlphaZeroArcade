@@ -45,12 +45,13 @@ class XVar:
     label: str
     column: str
     apply_cumsum: bool = True
+    is_time_var: bool = False
     func: Optional[Callable[[pd.DataFrame], pd.Series]] = None
 
 
 X_VARS = [
-    XVar('Self-Play Runtime', 'runtime', func=lambda df: 1e-9 * df['runtime']),  # ns -> s
-    XVar('Train Time', 'train_time', func=lambda df: 1e-9 * df['train_time']),  # ns -> s
+    XVar('Self-Play Runtime', 'runtime', is_time_var=True),
+    XVar('Train Time', 'train_time', is_time_var=True),
     XVar('Generation', 'mcts_gen', apply_cumsum=False),
     XVar('Games', 'n_games'),
     XVar('Num Evaluated Positions', 'n_evaluated_positions'),
@@ -93,6 +94,8 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
     for x_var in X_VARS:
         if x_var.func is not None:
             full_x_df[x_var.column] = x_var.func(full_x_df)
+        if x_var.is_time_var:
+            full_x_df[x_var.column] = 1e-9 * full_x_df[x_var.column]  # ns -> s
         if x_var.apply_cumsum:
             full_x_df[x_var.column] = full_x_df[x_var.column].cumsum()
 
@@ -100,10 +103,12 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
 
 
 class XVarSelector:
-    def __init__(self, df_list: List[pd.DataFrame], initial_df_col: str = 'runtime'):
+    def __init__(self, df_list: List[pd.DataFrame], initial_df_col: Optional[str] = None):
         """
         Each DataFrame in df_list is assumed to have a column for each str in X_VAR_COLUMNS.
         """
+        if initial_df_col is None:
+            initial_df_col = X_VARS[0].column
         self._x_index = None
         self._min_x_dict = {}
         self._max_x_dict = {}
@@ -184,6 +189,7 @@ class XVarSelector:
         prev_x_col = self.x_column
 
         self._x_index = x_index
+        x_var = X_VARS[x_index]
         x_col = self.x_column
 
         for source in sources:
@@ -212,7 +218,7 @@ class XVarSelector:
                 plot.x_range.start = x_min + start_pct * x_width
                 plot.x_range.end = x_min + end_pct * x_width
 
-            if x_col in ('runtime', 'train_time'):
+            if x_var.is_time_var:
                 plot.xaxis.formatter = CustomJSTickFormatter(code="""
                     var total_seconds = tick;
                     var days = Math.floor(total_seconds / 86400);
