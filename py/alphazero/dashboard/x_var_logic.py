@@ -14,54 +14,71 @@ import pandas as pd
 from collections import defaultdict
 from dataclasses import dataclass
 import sqlite3
-from typing import List
+from typing import Callable, List, Optional
+
+
+@dataclass
+class SelectVar:
+    db_filename_attr: str
+    table: str
+    df_col: str
+    sql_select_str: str
+    index: bool = False
+
+
+SELECT_VARS = [
+    SelectVar('self_play_db_filename', 'self_play_metadata', 'runtime', 'runtime'),
+    SelectVar('self_play_db_filename', 'self_play_metadata', 'mcts_gen', 'gen', index=True),
+    SelectVar('self_play_db_filename', 'self_play_metadata', 'n_games', 'games'),
+    SelectVar('self_play_db_filename', 'self_play_metadata', 'n_evaluated_positions',
+              'positions_evaluated'),
+    SelectVar('self_play_db_filename', 'self_play_metadata', 'n_batches_evaluated',
+              'batches_evaluated'),
+    SelectVar('training_db_filename', 'training', 'train_time',
+              'training_end_ts - training_start_ts'),
+    SelectVar('training_db_filename', 'training', 'mcts_gen', 'gen', index=True),
+]
 
 
 @dataclass
 class XVar:
-    db_filename_attr: str
-    table: str
     label: str
-    df_col: str
-    sql_select_str: str
+    column: str
+    apply_cumsum: bool = True
+    func: Optional[Callable[[pd.DataFrame], pd.Series]] = None
 
 
 X_VARS = [
-    XVar('self_play_db_filename', 'self_play_metadata', 'Self-Play Runtime',
-         'runtime', 'runtime'),
-    XVar('training_db_filename', 'training', 'Train Time',
-         'train_time', 'training_end_ts - training_start_ts'),
-    XVar('self_play_db_filename', 'self_play_metadata', 'Generation', 'mcts_gen', 'gen'),
-    XVar('self_play_db_filename', 'self_play_metadata', 'Games', 'n_games', 'games'),
-    XVar('self_play_db_filename', 'self_play_metadata', 'Num Evaluated Positions',
-         'n_evaluated_positions', 'positions_evaluated'),
-    XVar('self_play_db_filename', 'self_play_metadata', 'Num Evaluated Batches',
-         'n_batches_evaluated', 'batches_evaluated'),
-    ]
+    XVar('Self-Play Runtime', 'runtime', func=lambda df: 1e-9 * df['runtime']),  # ns -> s
+    XVar('Train Time', 'train_time', func=lambda df: 1e-9 * df['train_time']),  # ns -> s
+    XVar('Generation', 'mcts_gen', apply_cumsum=False),
+    XVar('Games', 'n_games'),
+    XVar('Num Evaluated Positions', 'n_evaluated_positions'),
+]
 
 
 def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
-    x_var_dict = defaultdict(lambda: defaultdict(list))  # filename -> table -> XVar
-    for x_var in X_VARS:
-        x_var_dict[x_var.db_filename_attr][x_var.table].append(x_var)
+    select_var_dict = defaultdict(lambda: defaultdict(list))  # filename -> table -> XVar
+    for select_var in SELECT_VARS:
+        select_var_dict[select_var.db_filename_attr][select_var.table].append(select_var)
 
     x_df_list = []
-    for db_filename_attr, subdict in x_var_dict.items():
+    for db_filename_attr, subdict in select_var_dict.items():
         db_filename = getattr(organizer, db_filename_attr)
         conn = sqlite3.connect(db_filename)
         cursor = conn.cursor()
-        for table, x_vars in subdict.items():
-            select_vars = [x_var.sql_select_str for x_var in x_vars]
-            columns = [x_var.df_col for x_var in x_vars]
+        for table, select_vars in subdict.items():
+            select_strs = [sv.sql_select_str for sv in select_vars]
+            columns = [sv.df_col for sv in select_vars]
 
-            if 'mcts_gen' not in columns:
-                columns.append('mcts_gen')
-                select_vars.append('gen')
-
-            select_str = ', '.join(select_vars)
+            select_str = ', '.join(select_strs)
             query = f'SELECT {select_str} FROM {table}'
             values = cursor.execute(query).fetchall()
-            x_df = pd.DataFrame(values, columns=columns).set_index('mcts_gen')
+
+            index_vars = [sv for sv in select_vars if sv.index]
+            assert len(index_vars) == 1, (db_filename_attr, table, select_vars)
+            index = index_vars[0].df_col
+            x_df = pd.DataFrame(values, columns=columns).set_index(index)
             x_df_list.append(x_df)
         conn.close()
 
@@ -73,17 +90,17 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
     full_x_df = full_x_df.fillna(0)
     full_x_df = full_x_df[full_x_df.index <= last_gen]
 
-    full_x_df['train_time'] *= 1e-9  # convert nanoseconds to seconds
-    full_x_df['runtime'] *= 1e-9  # convert nanoseconds to seconds
-
-    for col in full_x_df:
-        full_x_df[col] = full_x_df[col].cumsum()
+    for x_var in X_VARS:
+        if x_var.func is not None:
+            full_x_df[x_var.column] = x_var.func(full_x_df)
+        if x_var.apply_cumsum:
+            full_x_df[x_var.column] = full_x_df[x_var.column].cumsum()
 
     return full_x_df
 
 
 class XVarSelector:
-    def __init__(self, df_list: List[pd.DataFrame], initial_df_col: str = 'mcts_gen'):
+    def __init__(self, df_list: List[pd.DataFrame], initial_df_col: str = 'runtime'):
         """
         Each DataFrame in df_list is assumed to have a column for each str in X_VAR_COLUMNS.
         """
@@ -93,7 +110,7 @@ class XVarSelector:
 
         for df in df_list:
             for x_index, x_var in enumerate(X_VARS):
-                x_col = x_var.df_col
+                x_col = x_var.column
                 if x_col == initial_df_col:
                     assert self._x_index in (None, x_index)
                     self._x_index = x_index
@@ -120,7 +137,7 @@ class XVarSelector:
 
     @property
     def x_column(self) -> str:
-        return X_VARS[self._x_index].df_col
+        return X_VARS[self._x_index].column
 
     def init_source(self, source: ColumnDataSource):
         """
