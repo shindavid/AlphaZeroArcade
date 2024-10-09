@@ -6,8 +6,9 @@ details about tracking the current x-variable, and switching the x-range when th
 changes.
 """
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from util.bokeh_util import make_time_tick_formatter
 
-from bokeh.models import BasicTickFormatter, ColumnDataSource, CustomJSTickFormatter, RadioGroup
+from bokeh.models import BasicTickFormatter, ColumnDataSource, RadioGroup
 from bokeh.plotting import figure
 import pandas as pd
 
@@ -27,7 +28,7 @@ class SelectVar:
 
 
 SELECT_VARS = [
-    SelectVar('self_play_db_filename', 'self_play_metadata', 'runtime', 'runtime'),
+    SelectVar('self_play_db_filename', 'self_play_metadata', 'runtime', '1e-9 * runtime'),
     SelectVar('self_play_db_filename', 'self_play_metadata', 'mcts_gen', 'gen', index=True),
     SelectVar('self_play_db_filename', 'self_play_metadata', 'n_games', 'games'),
     SelectVar('self_play_db_filename', 'self_play_metadata', 'n_evaluated_positions',
@@ -35,7 +36,7 @@ SELECT_VARS = [
     SelectVar('self_play_db_filename', 'self_play_metadata', 'n_batches_evaluated',
               'batches_evaluated'),
     SelectVar('training_db_filename', 'training', 'train_time',
-              'training_end_ts - training_start_ts'),
+              '1e-9 * (training_end_ts - training_start_ts)'),
     SelectVar('training_db_filename', 'training', 'mcts_gen', 'gen', index=True),
 ]
 
@@ -96,8 +97,6 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
     for x_var in X_VARS:
         if x_var.func is not None:
             full_x_df[x_var.column] = x_var.func(full_x_df)
-        if x_var.is_time_var:
-            full_x_df[x_var.column] = 1e-9 * full_x_df[x_var.column]  # ns -> s
         if x_var.apply_cumsum:
             full_x_df[x_var.column] = full_x_df[x_var.column].cumsum()
 
@@ -221,16 +220,6 @@ class XVarSelector:
                 plot.x_range.end = x_min + end_pct * x_width
 
             if x_var.is_time_var:
-                plot.xaxis.formatter = CustomJSTickFormatter(code="""
-                    var total_seconds = tick;
-                    var days = Math.floor(total_seconds / 86400);
-                    var hours = Math.floor((total_seconds % 86400) / 3600);
-                    var minutes = Math.floor((total_seconds % 3600) / 60);
-                    if (days > 0) {
-                        return days + "d " + hours + "h " + minutes + "m";
-                    } else {
-                        return hours + "h " + minutes + "m";
-                    }
-                """)
+                plot.xaxis.formatter = make_time_tick_formatter(resolution='m')
             else:
                 plot.xaxis.formatter = BasicTickFormatter()
