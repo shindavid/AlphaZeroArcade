@@ -50,6 +50,8 @@ class XVar:
 
 
 X_VARS = [
+    XVar('Total GPU time', 'total_time', is_time_var=True,
+         func=lambda df: df['runtime'] + df['train_time']),
     XVar('Self-Play Runtime', 'runtime', is_time_var=True),
     XVar('Train Time', 'train_time', is_time_var=True),
     XVar('Generation', 'mcts_gen', apply_cumsum=False),
