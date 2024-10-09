@@ -148,9 +148,14 @@ TEST(eigen_util, sort_columns_one_element) {
   }
 }
 
-TEST(eigen_util, softmax_array) {
+TEST(eigen_util, extract_dim_v) {
+  using Sizes = Eigen::Sizes<123, 456, 789>;
+  constexpr int N = eigen_util::extract_dim_v<1, Sizes>;
+  EXPECT_EQ(N, 456);
 
 }
+
+
 
 TEST(eigen_util, rotate) {
   constexpr int N = 4;
