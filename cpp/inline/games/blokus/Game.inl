@@ -5,14 +5,6 @@
 
 namespace blokus {
 
-inline size_t Game::State::hash() const {
-  return util::PODHash<core_t>{}(core);
-}
-
-inline int Game::State::remaining_square_count(color_t c) const {
-  return kNumSquaresPerColor - core.occupied_locations[c].count();
-}
-
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.core.cur_color;
 }

@@ -1,5 +1,6 @@
 set(COMMON_SOURCES
     Game.cpp
+    GameState.cpp
     Pieces.cpp
     Types.cpp
 )
