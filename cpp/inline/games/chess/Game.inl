@@ -14,12 +14,6 @@
 
 namespace chess {
 
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
-  Types::SymmetryMask mask;
-  mask.set();
-  return mask;
-}
-
 inline void Game::Rules::init_state(State& state) {
   // 0, 1 constants match usage in lc0/src/neural/encoder_test.cc
   state = lczero::Position(lczero::ChessBoard::kStartposBoard, 0, 1);

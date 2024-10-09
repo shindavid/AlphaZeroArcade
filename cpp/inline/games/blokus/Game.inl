@@ -13,12 +13,6 @@ inline int Game::State::remaining_square_count(color_t c) const {
   return kNumSquaresPerColor - core.occupied_locations[c].count();
 }
 
-inline Game::Types::SymmetryMask Game::Symmetries::get_mask(const State& state) {
-  Types::SymmetryMask mask;
-  mask.set();
-  return mask;
-}
-
 inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.core.cur_color;
 }

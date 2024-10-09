@@ -14,6 +14,7 @@
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/TrainingTargets.hpp>
+#include <core/TrivialSymmetries.hpp>
 #include <core/WinLossDrawResults.hpp>
 #include <games/chess/Constants.hpp>
 #include <games/chess/LcZeroPositionHistoryAdapter.hpp>
@@ -39,14 +40,7 @@ struct Game {
   using StateHistory = chess::LcZeroPositionHistoryAdapter;
   using SymmetryGroup = groups::TrivialGroup;  // TODO: Implement symmetries
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
-
-  struct Symmetries {
-    static Types::SymmetryMask get_mask(const State& state);
-    static void apply(State& state, group::element_t sym) {}
-    static void apply(Types::PolicyTensor& policy, group::element_t sym) {}
-    static void apply(core::action_t& action, group::element_t sym) {}
-    static group::element_t get_canonical_symmetry(const State& state) { return 0; }
-  };
+  using Symmetries = core::TrivialSymmetries;
 
   struct Rules {
     static void init_state(State&);
