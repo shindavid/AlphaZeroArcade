@@ -14,8 +14,7 @@ These have corresponding launcher scripts in py/alphazero/scripts/:
 - run_ratings_server.py
 
 This script launches 1 server of each type on the local machine, using the above launcher scripts.
-If the local machine does not have enough GPU's to dedicate one to each server, then the servers
-share the GPU's, managing contention via GpuContentionManager.
+If the local machine has multiple GPU's, more than one self-play server can be launched.
 """
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
@@ -184,24 +183,19 @@ def main():
     n = torch.cuda.device_count()
     assert n > 0, 'No GPU found'
 
+    loop_controller_gpu = 0
+    self_play_gpus = [0]  # TODO: add all available here
     if n == 1:
-        loop_controller_gpu = 0
-        self_play_gpu = 0
-        ratings_gpu = 0
-    elif n == 2:
-        loop_controller_gpu = 0
-        self_play_gpu = 1
         ratings_gpu = 0
     else:
-        loop_controller_gpu = 0
-        self_play_gpu = 1
-        ratings_gpu = 2
+        ratings_gpu = 1
 
     procs = []
     try:
         procs.append(('Loop-controller', launch_loop_controller(params_dict, loop_controller_gpu)))
         time.sleep(0.5)  # Give loop-controller time to initialize socket (TODO: fix this hack)
-        procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
+        for self_play_gpu in self_play_gpus:
+            procs.append(('Self-play', launch_self_play_server(params_dict, self_play_gpu)))
 
         if game_spec.reference_player_family is not None:
             procs.append(('Ratings', launch_ratings_server(params_dict, ratings_gpu)))
