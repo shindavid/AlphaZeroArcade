@@ -8,6 +8,7 @@ import sys
 from typing import List
 
 from games.index import GAME_SPECS_BY_NAME
+from util.py_util import CustomHelpFormatter
 
 
 def run(cmd: str, print_cmd=True, handler=None):
@@ -24,7 +25,7 @@ def run(cmd: str, print_cmd=True, handler=None):
 
 
 def get_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
     parser.add_argument('--clean', action='store_true', help='clean out target/.../bin/ directory')
     parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')

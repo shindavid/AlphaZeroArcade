@@ -6,10 +6,11 @@ import sys
 
 from util.repo_util import Repo
 from util import subprocess_util
+from util.py_util import CustomHelpFormatter
 
 
 def get_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     parser.add_argument('-b', '--build', help='Release or Debug. Default: most recent build')
     return parser.parse_args()
 

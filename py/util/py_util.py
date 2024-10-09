@@ -1,6 +1,6 @@
+import argparse
 import hashlib
 import inspect
-import math
 import os
 import shutil
 from typing import List, Union
@@ -178,3 +178,21 @@ def find_largest_gap(items: list):
             largest_gap = gap
             largest_gap_pair = (items[i], items[i + 1])
     return largest_gap_pair
+
+
+class CustomHelpFormatter(argparse.HelpFormatter):
+    """
+    [dshin] I don't like argparse's default help formatting, so I wrote this custom formatter.
+
+    Default format:
+
+        -t TAG, --tag TAG     tag for this run (e.g. "v1")
+
+    Custom format:
+        -t/--tag TAG          tag for this run (e.g. "v1")
+    """
+    def _format_action_invocation(self, action):
+        if action.option_strings:
+            return '/'.join(action.option_strings) + ' ' + self._format_args(action, action.dest.upper())
+        else:
+            return super()._format_action_invocation(action)

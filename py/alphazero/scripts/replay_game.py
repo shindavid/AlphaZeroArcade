@@ -8,13 +8,14 @@ import torch
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
+from util.py_util import CustomHelpFormatter
 
 
 torch.set_printoptions(linewidth=120, sci_mode=False)
 
 
 def load_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
     RunParams.add_args(parser)
     BuildParams.add_args(parser, add_binary_path_option=False)

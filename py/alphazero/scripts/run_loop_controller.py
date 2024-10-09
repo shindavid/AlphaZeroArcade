@@ -9,6 +9,7 @@ from alphazero.servers.loop_control.loop_controller import LoopController, LoopC
 from games.game_spec import GameSpec
 from shared.training_params import TrainingParams
 from util.logging_util import LoggingParams, configure_logger, get_logger
+from util.py_util import CustomHelpFormatter
 
 import os
 from typing import Optional
@@ -18,7 +19,7 @@ logger = get_logger()
 
 
 def load_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
     game_spec: Optional[GameSpec] = RunParams.add_args(parser)
     default_training_params = None if game_spec is None else game_spec.training_params

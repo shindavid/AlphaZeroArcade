@@ -14,10 +14,11 @@ import argparse
 from alphazero.logic.build_params import BuildParams
 from alphazero.servers.gaming.ratings_server import RatingsServer, RatingsServerParams
 from util.logging_util import LoggingParams
+from util.py_util import CustomHelpFormatter
 
 
 def load_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
     RatingsServerParams.add_args(parser)
     LoggingParams.add_args(parser)

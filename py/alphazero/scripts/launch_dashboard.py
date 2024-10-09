@@ -6,6 +6,7 @@ from alphazero.dashboard.self_play_plotting import create_self_play_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.env_util import get_output_dir
+from util.py_util import CustomHelpFormatter
 
 from bokeh.embed import server_document
 from bokeh.plotting import figure
@@ -55,7 +56,7 @@ class Params:
         group.add_argument('-d', '--debug', action='store_true', help='debug mode')
 
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
 RunParams.add_args(parser, multiple_tags=True)
 Params.add_args(parser)

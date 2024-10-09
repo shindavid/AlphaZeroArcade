@@ -15,10 +15,11 @@ import argparse
 from alphazero.logic.build_params import BuildParams
 from alphazero.servers.gaming.self_play_server import SelfPlayServer, SelfPlayServerParams
 from util.logging_util import LoggingParams
+from util.py_util import CustomHelpFormatter
 
 
 def load_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
 
     SelfPlayServerParams.add_args(parser)
     LoggingParams.add_args(parser)
