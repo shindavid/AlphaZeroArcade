@@ -125,6 +125,33 @@ TEST(eigen_util, sort_columns) {
   }
 }
 
+TEST(eigen_util, sort_columns_one_element) {
+  constexpr int kNumRows = 1;
+  constexpr int kNumCols = 1;
+  constexpr int kMaxNumCols = 1;
+  using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
+
+  Array array{
+      {3},
+  };
+
+  array = eigen_util::sort_columns(array);
+
+  Array expected{
+      {3},
+  };
+
+  for (int r = 0; r < array.rows(); r++) {
+    for (int c = 0; c < array.cols(); c++) {
+      EXPECT_EQ(array(r, c), expected(r, c));
+    }
+  }
+}
+
+TEST(eigen_util, softmax_array) {
+
+}
+
 TEST(eigen_util, rotate) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
