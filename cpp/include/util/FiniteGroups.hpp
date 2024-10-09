@@ -36,6 +36,17 @@ struct TrivialGroup {
   static constexpr group::element_t compose(group::element_t x, group::element_t y) { return 0; }
 };
 
+// Cn:
+//
+// 0: identity
+// 1: clockwise rotation by 2pi/N
+template <int N>
+struct CyclicGroup {
+  static constexpr int kOrder = N;
+  static constexpr group::element_t inverse(group::element_t x);
+  static constexpr group::element_t compose(group::element_t x, group::element_t y);
+};
+
 // Dn:
 //
 // 0: identity
@@ -51,6 +62,11 @@ struct DihedralGroup {
 /*
  * Specialization to provide named elements
  */
+struct C2 : public CyclicGroup<2> {
+  static constexpr group::element_t kIdentity = 0;
+  static constexpr group::element_t kRot180 = 1;
+};
+
 struct D1 : public DihedralGroup<1> {
   static constexpr group::element_t kIdentity = 0;
   static constexpr group::element_t kFlip = 1;

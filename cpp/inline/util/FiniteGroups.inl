@@ -6,6 +6,16 @@
 namespace groups {
 
 template <int N>
+constexpr group::element_t CyclicGroup<N>::inverse(group::element_t x) {
+  return N - x;
+}
+
+template <int N>
+constexpr group::element_t CyclicGroup<N>::compose(group::element_t x, group::element_t y) {
+  return (x + y) % N;
+}
+
+template <int N>
 constexpr group::element_t DihedralGroup<N>::inverse(group::element_t x) {
   if (x < N) {  // Rotations
     return (N - x) % N;
