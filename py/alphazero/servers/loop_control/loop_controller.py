@@ -233,10 +233,10 @@ class LoopController(LoopControllerInterface):
                 if msg_handler(conn, msg):
                     break
         except SocketRecvException:
-            logger.warn(
+            logger.warning(
                 f'Encountered SocketRecvException in {thread_name} (conn={conn}):')
         except SocketSendException:
-            logger.warn(
+            logger.warning(
                 f'Encountered SocketSendException in {thread_name} (conn={conn}):',
                 exc_info=True)
         except:

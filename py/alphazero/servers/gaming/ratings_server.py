@@ -92,12 +92,12 @@ class RatingsServer:
                 if self._handle_msg(msg):
                     break
         except SocketRecvException:
-            logger.warn('Encountered SocketRecvException in recv_loop(). '
+            logger.warning('Encountered SocketRecvException in recv_loop(). '
                         'Loop controller likely shut down.')
             self._shutdown_manager.request_shutdown(0)
         except SocketSendException:
             # Include exc_info in send-case because it's a bit more unexpected
-            logger.warn('Encountered SocketSendException in recv_loop(). '
+            logger.warning('Encountered SocketSendException in recv_loop(). '
                         'Loop controller likely shut down.', exc_info=True)
             self._shutdown_manager.request_shutdown(0)
         except:

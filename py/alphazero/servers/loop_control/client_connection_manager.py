@@ -59,7 +59,7 @@ class ClientConnectionManager:
             conns = list(self._connections)
         clashing_conns = [c for c in conns if c.client_gpu_id == gpu_id and c.client_role == role]
         if clashing_conns:
-            logger.warn(f'Rejecting connection due to role/gpu clash: {clashing_conns[0]}')
+            logger.warning(f'Rejecting connection due to role/gpu clash: {clashing_conns[0]}')
 
             reply = {
                 'type': 'handshake-ack',
@@ -71,7 +71,7 @@ class ClientConnectionManager:
             return None
 
         if client_id in [c.client_id for c in conns]:
-            logger.warn(f'Rejecting connection due to bad client-id reuse: {manager_id}, {client_id}, {conns}')
+            logger.warning(f'Rejecting connection due to bad client-id reuse: {manager_id}, {client_id}, {conns}')
 
             reply = {
                 'type': 'handshake-ack',

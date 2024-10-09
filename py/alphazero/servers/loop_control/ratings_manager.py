@@ -228,7 +228,7 @@ class RatingsManager:
                 # We do not release the lock here. The lock is released either when a gen is
                 # fully rated, or when the server disconnects.
         except SocketSendException:
-            logger.warn(f'Error sending to {conn} - server likely disconnected')
+            logger.warning(f'Error sending to {conn} - server likely disconnected')
         except:
             logger.error(f'Unexpected error managing {conn}', exc_info=True)
             self._controller.request_shutdown(1)
@@ -248,7 +248,7 @@ class RatingsManager:
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
         else:
-            logger.warn(f'ratings-server: unknown message type: {msg}')
+            logger.warning(f'ratings-server: unknown message type: {msg}')
         return False
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
@@ -268,7 +268,7 @@ class RatingsManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warn(f'ratings-worker: unknown message type: {msg}')
+            logger.warning(f'ratings-worker: unknown message type: {msg}')
         return False
 
     def _handle_ready(self, conn: ClientConnection):
@@ -327,7 +327,7 @@ class RatingsManager:
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:
-            logger.warn(f'Error sending to {conn} - worker likely disconnected')
+            logger.warning(f'Error sending to {conn} - worker likely disconnected')
         except:
             logger.error(f'Unexpected error managing {conn}', exc_info=True)
             self._controller.request_shutdown(1)

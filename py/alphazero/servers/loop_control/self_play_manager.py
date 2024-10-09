@@ -130,7 +130,7 @@ class SelfPlayManager:
         elif msg_type == 'gen0-complete':
             self._handle_gen0_complete(conn)
         else:
-            logger.warn(f'self-play-server: unknown message type: {msg}')
+            logger.warning(f'self-play-server: unknown message type: {msg}')
         return False
 
     def _worker_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
@@ -155,7 +155,7 @@ class SelfPlayManager:
         elif msg_type == 'done':
             return True
         else:
-            logger.warn(f'self-play-worker: unknown message type: {msg}')
+            logger.warning(f'self-play-worker: unknown message type: {msg}')
         return False
 
     def _set_gen0_completion(self, complete: bool, log=True):
@@ -240,7 +240,7 @@ class SelfPlayManager:
                 time.sleep(3600)  # 1 hour
                 self._restart(conn)
         except SocketSendException:
-            logger.warn(f'Error sending to {conn} - worker likely disconnected')
+            logger.warning(f'Error sending to {conn} - worker likely disconnected')
         except:
             logger.error(f'Unexpected error managing restart loop for {conn}', exc_info=True)
             self._controller.request_shutdown(1)
@@ -276,7 +276,7 @@ class SelfPlayManager:
                     self._pause(conn)
                     table.release_lock(domain)
         except SocketSendException:
-            logger.warn(f'Error sending to {conn} - worker likely disconnected')
+            logger.warning(f'Error sending to {conn} - worker likely disconnected')
         except:
             logger.error(f'Unexpected error managing {conn}', exc_info=True)
             self._controller.request_shutdown(1)

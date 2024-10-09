@@ -126,7 +126,7 @@ class LogForwarder:
                     data['src'] = src
                 self._socket.send_json(data)
         except SocketSendException:
-            logger.warn('Loop controller appears to have disconnected, shutting down...')
+            logger.warning('Loop controller appears to have disconnected, shutting down...')
             self._shutdown_manager.request_shutdown(0)
         except:
             logger.error(f'Unexpected error in log_loop(src={src}):', exc_info=True)
