@@ -7,6 +7,14 @@ namespace core {
 template <typename Value>
 inline void NeuralNet::load_weights(Value&& value, const std::string& cuda_device) {
   util::release_assert(!activated_, "NeuralNet::load_weights() called while activated");
+
+  // TODO: this torch::jit::load() can take 100's of milliseconds. This is perhaps understandable
+  // on the first load, but on subsequent loads during self-play, it feels like it should be
+  // possible for this to be much faster, since the architecture doesn't change, only the weights.
+  //
+  // Not a high priority, but if we want to squeeze out an extra 1-2% of GPU utilization, this is
+  // one place to look. We are potentially looking to migrate from libtorch to a more mature
+  // library (onnx?) - we may get this optimization for free if/when we do that.
   new (&module_) torch::jit::script::Module(torch::jit::load(value));
   device_ = at::Device(cuda_device);
   loaded_ = true;
