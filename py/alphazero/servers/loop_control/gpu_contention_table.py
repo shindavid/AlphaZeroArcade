@@ -132,8 +132,6 @@ class GpuContentionTable:
 
     def hijack_self_play(self):
         with self._lock:
-            if self._states[Domain.SELF_PLAY].management_status != ManagementStatus.ACTIVE:
-                return
             self._set_priority(Domain.SELF_PLAY, HIJACKED_SELF_PLAY_PRIORITY)
             if self._states[Domain.SELF_PLAY].lock_status != LockStatus.ACQUIRED:
                 return
@@ -144,8 +142,6 @@ class GpuContentionTable:
 
     def unhijack_self_play(self):
         with self._lock:
-            if self._states[Domain.SELF_PLAY].management_status != ManagementStatus.ACTIVE:
-                return
             self._set_priority(Domain.SELF_PLAY, DEFAULT_SELF_PLAY_PRIORITY)
             if self._states[Domain.SELF_PLAY].lock_status == LockStatus.ACQUIRED:
                 return
