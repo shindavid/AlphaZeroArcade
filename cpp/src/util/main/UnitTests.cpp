@@ -125,6 +125,79 @@ TEST(eigen_util, sort_columns) {
   }
 }
 
+TEST(eigen_util, sort_columns_one_element) {
+  constexpr int kNumRows = 1;
+  constexpr int kMaxNumCols = 1;
+  using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
+
+  Array array{
+      {3},
+  };
+
+  array = eigen_util::sort_columns(array);
+
+  Array expected{
+      {3},
+  };
+
+  for (int r = 0; r < array.rows(); r++) {
+    for (int c = 0; c < array.cols(); c++) {
+      EXPECT_EQ(array(r, c), expected(r, c));
+    }
+  }
+}
+
+TEST(eigen_util, extract_dim_v) {
+  using Sizes = Eigen::Sizes<123, 456, 789>;
+  constexpr int N = eigen_util::extract_dim_v<1, Sizes>;
+  EXPECT_EQ(N, 456);
+
+}
+
+TEST(eigen_util, UniformDirchletGen) {
+  constexpr int M = 1e5;
+  constexpr int N = 10;
+  float alpha = 0.1;
+
+  eigen_util::UniformDirichletGen<float> gen;
+  Eigen::Rand::P8_mt19937_64 rng{ 35 };
+
+  // dynamic size matrix here due to the size of sample matrix X
+  Eigen::MatrixXf X(M, N);
+  X.setZero();
+
+  for (int i = 0; i < M; ++i) {
+    X.row(i) = gen.template generate<Eigen::Array<float, N, 1>>(rng, alpha).transpose();
+  }
+
+  Eigen::MatrixXf cov = eigen_util::computeCovariance(X);
+
+  // wikipedia formula for Dirichlet moments:
+  // https://en.wikipedia.org/wiki/Dirichlet_distribution
+  float expected_var = 1.0 / N * (1 - 1.0 / N) / (alpha * N + 1);
+  float expected_cor = -1.0 / (N - 1);
+
+  // check the variances
+  for (int i = 0; i < N; i++) {
+    EXPECT_NEAR(cov(i, i), expected_var, std::abs(expected_var) * 0.05);
+  }
+
+  // check the correlations
+  for (int j = 0; j < N; j++) {
+    for (int i = 0; i < j; i++) {
+      EXPECT_NEAR(cov(i, j)/std::sqrt(cov(i, i) * cov(j, j)), expected_cor,
+      std::abs(expected_cor) * 0.05);
+    }
+  }
+
+  // check mean convergence with M according to Central Limit Theorem
+  // 99% confidence interval
+  Eigen::VectorXf mean = X.colwise().mean();
+  for (int i = 0; i < N; i++) {
+    EXPECT_NEAR(mean(i), 1.0 / N, 2.576 * std::sqrt(expected_var / M));
+  }
+}
+
 TEST(eigen_util, rotate) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
