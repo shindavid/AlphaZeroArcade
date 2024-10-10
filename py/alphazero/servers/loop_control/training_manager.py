@@ -103,6 +103,7 @@ class TrainingManager:
         Uses a separate thread to ensure that the DataLoader is properly cleaned up after the
         train step is complete.
         """
+        self._controller.hijack_all_self_play_tables()
         organizer = self._controller.organizer
         fork_info = organizer.fork_info
 
@@ -308,7 +309,7 @@ class TrainingManager:
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
-            self._controller.reset_self_play_locks()
+            self._controller.unhijack_all_self_play_tables()
             table.release_lock(Domain.TRAINING)
             self._controller.handle_new_model()
         except:

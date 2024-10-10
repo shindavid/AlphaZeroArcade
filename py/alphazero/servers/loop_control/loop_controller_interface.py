@@ -96,10 +96,6 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def reset_self_play_locks(self):
-        pass
-
-    @abc.abstractmethod
     def register_shutdown_action(self, action: ShutdownAction):
         pass
 
@@ -139,4 +135,12 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def set_ratings_priority(self, elevate: bool):
+        pass
+
+    @abc.abstractmethod
+    def hijack_all_self_play_tables(self):
+        pass
+
+    @abc.abstractmethod
+    def unhijack_all_self_play_tables(self):
         pass

@@ -27,6 +27,7 @@ class Domain(Enum):
     TRAINING = 'training'
     SELF_PLAY = 'self-play'
     RATINGS = 'ratings'
+    SLEEPING = 'sleeping'
 
     @staticmethod
     def from_role(role: ClientRole):

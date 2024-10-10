@@ -139,9 +139,6 @@ class LoopController(LoopControllerInterface):
     def get_gpu_lock_table(self, gpu_id: GpuId) -> GpuContentionTable:
         return self._gpu_contention_manager.get_gpu_lock_table(gpu_id)
 
-    def reset_self_play_locks(self):
-        self._gpu_contention_manager.reset_self_play_locks()
-
     def register_shutdown_action(self, action: ShutdownAction):
         self._shutdown_manager.register(action)
 
@@ -216,6 +213,12 @@ class LoopController(LoopControllerInterface):
 
     def set_ratings_priority(self, elevate: bool):
         self._gpu_contention_manager.set_ratings_priority(elevate)
+
+    def hijack_all_self_play_tables(self):
+        self._gpu_contention_manager.hijack_all_self_play_tables()
+
+    def unhijack_all_self_play_tables(self):
+        self._gpu_contention_manager.unhijack_all_self_play_tables()
 
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
