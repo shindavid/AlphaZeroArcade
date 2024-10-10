@@ -86,13 +86,10 @@ def make_x_df(organizer: DirectoryOrganizer) -> pd.DataFrame:
             x_df_list.append(x_df)
         conn.close()
 
-    last_gen = min(x_df.index[-1] for x_df in x_df_list)
-
     full_x_df = x_df_list[0]
     for x_df in x_df_list[1:]:
         full_x_df = full_x_df.merge(x_df, how='outer', left_index=True, right_index=True)
     full_x_df = full_x_df.fillna(0)
-    full_x_df = full_x_df[full_x_df.index <= last_gen]
 
     for x_var in X_VARS:
         if x_var.func is not None:
@@ -131,7 +128,8 @@ class XVarSelector:
                 self._max_x_dict[x_col] = mx if x_col not in self._max_x_dict else \
                     max(self._max_x_dict[x_col], mx)
 
-        assert self._x_index is not None
+    def valid(self) -> bool:
+        return self._x_index is not None
 
     @property
     def x_label(self) -> str:

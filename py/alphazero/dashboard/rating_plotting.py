@@ -98,9 +98,13 @@ class RatingPlotter:
         self.game = game
         self.figure = None
 
-        self.x_var_selector = XVarSelector([rd.gen_df for rd in data_list])
         self.y_variable = 'rating_smoothed'
         self.sources: Dict[str, ColumnDataSource] = {}
+
+        self.x_var_selector = XVarSelector([rd.gen_df for rd in data_list])
+
+        if not self.x_var_selector.valid:
+            return
 
         game = game_index.get_game_spec(game)
         if game.reference_player_family is None:
