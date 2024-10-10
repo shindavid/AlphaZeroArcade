@@ -8,6 +8,17 @@
 #include <array>
 #include <iostream>
 
+template<typename Derived>
+Eigen::MatrixXf computeCovariance(const Eigen::MatrixBase<Derived>& X) {
+  Eigen::VectorXf mean = X.colwise().mean();
+  Eigen::MatrixXf centered = X;
+  centered.rowwise() -= mean.transpose();
+
+  // Compute covariance matrix: (1/(n-1)) * (X-mu)^T * (X-mu)
+  Eigen::MatrixXf covariance = (centered.transpose() * centered) / (X.rows() - 1);
+  return covariance;
+}
+
 template <typename T>
 void test_zero_out() {
   util::Random::set_seed(1);
@@ -127,7 +138,6 @@ TEST(eigen_util, sort_columns) {
 
 TEST(eigen_util, sort_columns_one_element) {
   constexpr int kNumRows = 1;
-  constexpr int kNumCols = 1;
   constexpr int kMaxNumCols = 1;
   using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
 
@@ -155,6 +165,47 @@ TEST(eigen_util, extract_dim_v) {
 
 }
 
+TEST(eigen_util, UniformDirchletGen) {
+  constexpr int M = 1e5;
+  constexpr int N = 10;
+  float alpha = 0.1;
+
+  eigen_util::UniformDirichletGen<float> gen;
+  Eigen::Rand::P8_mt19937_64 rng{ 35 };
+
+  
+  Eigen::MatrixXf X(M, N);
+  X.setZero();
+
+  for (int i = 0; i < M; ++i) {
+    X.row(i) = gen.template generate<Eigen::Array<float, N, 1>>(rng, alpha).transpose();
+  }
+  
+  auto cov = computeCovariance(X);
+
+  float expected_var = 1.0 / N * (1 - 1.0 / N) / (alpha * N + 1);
+  float expected_cor = -1.0 / (N - 1);
+  
+  // Check the variances
+  for (int i = 0; i < N; i++) {
+    EXPECT_NEAR(cov(i, i), expected_var, std::abs(expected_var) * 0.05);
+  }
+
+  // check the correlations
+  for (int j = 0; j < N; j++) {
+    for (int i = 0; i < j; i++) {
+      EXPECT_NEAR(cov(i, j)/std::sqrt(cov(i, i) * cov(j, j)), expected_cor, 
+      std::abs(expected_cor) * 0.05);
+    }
+  }
+
+  // check means according to CLT 99% confidence interval
+  Eigen::VectorXf mean = X.colwise().mean();
+  for (int i = 0; i < N; i++) {
+    EXPECT_NEAR(mean(i), 1.0 / N, 2.576 * std::sqrt(expected_var / M));
+  }
+
+}
 
 
 TEST(eigen_util, rotate) {
