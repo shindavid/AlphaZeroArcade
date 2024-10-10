@@ -147,8 +147,8 @@ class GpuContentionTable:
                 return
 
             top_domain = self._get_top_priority_active_domain()
-            assert top_domain is not None, top_domain
-            self._acquire_lock(top_domain)
+            if top_domain == Domain.SELF_PLAY:
+                self._acquire_lock(top_domain)
 
     def acquire_lock(self, domain: Domain) -> bool:
         """
