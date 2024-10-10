@@ -323,4 +323,14 @@ uint64_t hash(const Tensor& tensor) {
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }
 
+template<typename Derived>
+auto computeCovariance(const Eigen::MatrixBase<Derived>& X) {
+  auto mean = X.colwise().mean();
+  auto centered = X.rowwise() - mean;
+
+  // Compute covariance matrix: (1/(n-1)) * (X-mu)^T * (X-mu)
+  auto covariance = (centered.transpose() * centered) / (X.rows() - 1);
+  return covariance;
+}
+
 }  // namespace eigen_util

@@ -59,13 +59,7 @@ constexpr int64_t extract_dim_v = extract_dim<N, T>::value;
 
 /*
  * This serves the same role as Eigen::Rand::DirichletGen. However, that implementation is not
- * well-suited for usages with: (1) fixed dimension Matrices, and (2) a uniform alpha distribution.
- *
- * Eigen::Matrix<float, N, 1> alphaArr;
- * alphaArr.setOnes();  // Set all elements to 1
- * alphaArr *= alpha;     // Scale all elements to 0.1
- * Eigen::Rand::DirichletGen<float, N> dirichletGen(alphaArr);
- * auto samples = dirichletGen.generate(rng, 1);
+ * well-suited for usages with: (1) fixed size structures (Array/Matrix), and (2) a uniform alpha distribution.
  * 
  * This implementation supports only the uniform-alpha case. When fixed-size matrices are used, it
  * avoids unnecessary dynamic memory allocation.
@@ -345,6 +339,9 @@ template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor);
 
 template <concepts::FTensor Tensor>
 uint64_t hash(const Tensor& tensor);
+
+template<typename Derived>
+auto computeCovariance(const Eigen::MatrixBase<Derived>& X);
 
 }  // namespace eigen_util
 
