@@ -22,6 +22,7 @@ class GpuContentionManager:
     Manages contention for GPUs.
     """
     def __init__(self, controller: LoopControllerInterface):
+        self._self_play_hijacked = False
         self._controller = controller
         self._table_lock = threading.Lock()
         self._table: GpuContentionTableDict = defaultdict(dict)
@@ -59,6 +60,9 @@ class GpuContentionManager:
             table = subtable.get(gpu_id.device, None)
             if table is None:
                 table = GpuContentionTable(gpu_id)
+
+                if self._self_play_hijacked:
+                    table.hijack_self_play()
                 subtable[gpu_id.device] = table
             return table
 
@@ -87,17 +91,17 @@ class GpuContentionManager:
         logger.debug(f'Prioritizing ratings for {table}')
         table.prioritize_ratings()
 
-    def reset_self_play_locks(self):
-        """
-        On all GPU's where self-play is holding the lock, temporarily mark training as acquiring
-        the lock, and then immediately mark training as inactive again.
-
-        This forces self-play to release and reacquire the lock. This causes the self-play workers
-        to refresh to the latest model - see SelfPlayManager._manage_worker() for details.
-        """
+    def hijack_all_self_play_tables(self):
+        self._self_play_hijacked = True
         all_tables = self._get_all_tables()
         for table in all_tables:
-            table.reset_self_play_lock()
+            table.hijack_self_play()
+
+    def unhijack_all_self_play_tables(self):
+        self._self_play_hijacked = False
+        all_tables = self._get_all_tables()
+        for table in all_tables:
+            table.unhijack_self_play()
 
     def _get_all_tables(self) -> List[GpuContentionTable]:
         with self._table_lock:

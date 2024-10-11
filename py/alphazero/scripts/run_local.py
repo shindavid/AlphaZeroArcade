@@ -57,6 +57,7 @@ class Params:
     max_positions_per_generation: Optional[int] = \
         default_loop_controller_params.max_positions_per_generation
     rating_tag: str = ''
+    num_cuda_devices_to_use: Optional[int] = None
 
     @staticmethod
     def create(args) -> 'Params':
@@ -68,6 +69,12 @@ class Params:
         LoopControllerParams.add_args(parser, include_cuda_device=False)
         RatingsServerParams.add_args(parser, omit_base=True)
 
+        group = parser.add_argument_group('run_local.py options')
+
+        defaults = Params()
+        group.add_argument('-C', '--num-cuda-devices-to-use', type=int,
+                           default=defaults.num_cuda_devices_to_use,
+                           help='Num cuda devices to use (default: all)')
 
 def load_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
@@ -183,12 +190,12 @@ def main():
     n = torch.cuda.device_count()
     assert n > 0, 'No GPU found'
 
+    if params.num_cuda_devices_to_use is not None:
+        n = params.num_cuda_devices_to_use
+
     loop_controller_gpu = 0
-    self_play_gpus = [0]  # TODO: add all available here
-    if n == 1:
-        ratings_gpu = 0
-    else:
-        ratings_gpu = 1
+    self_play_gpus = list(range(n))
+    ratings_gpu = n - 1
 
     procs = []
     try:

@@ -76,12 +76,11 @@ class SelfPlayManager:
             disconnect_handler=self._handle_worker_disconnect)
 
     def notify_of_new_model(self):
-        gen = self._controller.latest_gen()
-        if gen > 1:
-            return
-
         with self._gen1_lock:
-            self._gen1_model_trained = True
+            if self._gen1_model_trained:
+                return
+
+            self._gen1_model_trained = self._controller.latest_gen() >= 1
             self._gen1_cond.notify_all()
 
     def _check_row_budget(self, gen, rows):

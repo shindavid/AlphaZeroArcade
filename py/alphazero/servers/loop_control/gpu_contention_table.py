@@ -1,9 +1,13 @@
 from alphazero.logic.custom_types import Domain, GpuId
+from util.logging_util import get_logger
 
 from dataclasses import dataclass
 from enum import Enum
 import threading
-from typing import Dict
+from typing import Dict, Optional
+
+
+logger = get_logger()
 
 
 class LockStatus(Enum):
@@ -34,6 +38,14 @@ class DomainState:
         return str(self)
 
 
+PRIORITIZED_RATINGS_PRIORITY = 6
+DEFAULT_TRAINING_PRIORITY = 5
+DEFAULT_SELF_PLAY_PRIORITY = 4
+DEFAULT_RATINGS_PRIORITY = 3
+DEFAULT_SLEEPING_PRIORITY = 2
+HIJACKED_SELF_PLAY_PRIORITY = 1
+
+
 class GpuContentionTable:
     """
     Represents the lock status of a GPU.
@@ -42,25 +54,22 @@ class GpuContentionTable:
 
     If multiple domains want to acquire the lock, it is awarded to the domain that has the current
     highest priority.
-
-    Default priority values (higher values = higher priority):
-
-    training = 3
-    self-play = 2
-    ratings = 1
-
-    If ratings have been starved for too long, then ratings is temporarily elevated to priority 4.
     """
     def __init__(self, gpu_id: GpuId):
         self._gpu_id = gpu_id
         self._states: Dict[Domain, DomainState] = {
-            Domain.TRAINING: DomainState(3),
-            Domain.SELF_PLAY: DomainState(2),
-            Domain.RATINGS: DomainState(1),
+            Domain.TRAINING: DomainState(DEFAULT_TRAINING_PRIORITY),
+            Domain.SELF_PLAY: DomainState(DEFAULT_SELF_PLAY_PRIORITY),
+            Domain.RATINGS: DomainState(DEFAULT_RATINGS_PRIORITY),
+            Domain.SLEEPING: DomainState(DEFAULT_SLEEPING_PRIORITY),
             }
 
         self._lock = threading.Lock()
         self._cond = threading.Condition(self._lock)
+
+        self.activate(Domain.SLEEPING)
+
+        threading.Thread(target=self._sleep, daemon=True, name=f'sleep-thread').start()
 
     @property
     def gpu_id(self) -> GpuId:
@@ -111,23 +120,35 @@ class GpuContentionTable:
 
     def ratings_prioritized(self) -> bool:
         with self._lock:
-            return self._states[Domain.RATINGS].priority == 4
+            return self._states[Domain.RATINGS].priority == PRIORITIZED_RATINGS_PRIORITY
 
     def prioritize_ratings(self):
         with self._lock:
-            p_old = self._states[Domain.RATINGS].priority
-            p_new = 4
-            self._states[Domain.RATINGS].priority = p_new
-            if p_old != p_new:
-                self._cond.notify_all()
+            self._set_priority(Domain.RATINGS, PRIORITIZED_RATINGS_PRIORITY)
 
     def deprioritize_ratings(self):
         with self._lock:
-            p_old = self._states[Domain.RATINGS].priority
-            p_new = 1
-            self._states[Domain.RATINGS].priority = p_new
-            if p_old != p_new:
-                self._cond.notify_all()
+            self._set_priority(Domain.RATINGS, DEFAULT_RATINGS_PRIORITY)
+
+    def hijack_self_play(self):
+        with self._lock:
+            self._set_priority(Domain.SELF_PLAY, HIJACKED_SELF_PLAY_PRIORITY)
+            if self._states[Domain.SELF_PLAY].lock_status != LockStatus.ACQUIRED:
+                return
+
+            top_domain = self._get_top_priority_active_domain()
+            assert top_domain not in (Domain.SELF_PLAY, None), top_domain
+            self._acquire_lock(top_domain)
+
+    def unhijack_self_play(self):
+        with self._lock:
+            self._set_priority(Domain.SELF_PLAY, DEFAULT_SELF_PLAY_PRIORITY)
+            if self._states[Domain.SELF_PLAY].lock_status == LockStatus.ACQUIRED:
+                return
+
+            top_domain = self._get_top_priority_active_domain()
+            if top_domain == Domain.SELF_PLAY:
+                self._acquire_lock(top_domain)
 
     def acquire_lock(self, domain: Domain) -> bool:
         """
@@ -181,27 +202,18 @@ class GpuContentionTable:
             self._cond.wait_for(lambda: not self._active(domain) or self._lock_expired(domain))
             return self._active(domain)
 
-    def reset_self_play_lock(self):
-        """
-        If SELF_PLAY currently holds the lock, then execute these steps:
+    def _get_top_priority_active_domain(self) -> Optional[Domain]:
+        pairs = [(state.priority, domain) for domain, state in self._states.items()
+                 if state.management_status == ManagementStatus.ACTIVE and
+                 state.lock_status != LockStatus.RELEASED]
+        if not pairs:
+            return None
+        return max(pairs)[1]
 
-        1. Set TRAINING to ACQUIRING/ACTIVE/max-priority
-        2. Wait until SELF_PLAY is not ACQUIRED
-        3. Reset TRAINING to original state
-
-        This will cause all self-play-workers to pause, refresh weights, and then unpause. See
-        SelfPlayManager._manage_worker() for details.
-        """
-        with self._lock:
-            if self._states[Domain.SELF_PLAY].lock_status != LockStatus.ACQUIRED:
-                return
-            training_state = self._states[Domain.TRAINING].clone()
-            self._states[Domain.TRAINING].priority = 100
-            self._states[Domain.TRAINING].management_status = ManagementStatus.ACTIVE
-            self._acquire_lock(Domain.TRAINING)
-            self._cond.wait_for(
-                lambda: self._states[Domain.SELF_PLAY].lock_status != LockStatus.ACQUIRED)
-            self._states[Domain.TRAINING] = training_state  # reset to original state
+    def _set_priority(self, domain: Domain, priority: int):
+        prev_priority = self._states[domain].priority
+        self._states[domain].priority = priority
+        if prev_priority != priority:
             self._cond.notify_all()
 
     def _active(self, domain: Domain) -> bool:
@@ -255,6 +267,12 @@ class GpuContentionTable:
                 return True
 
         return False
+
+    def _sleep(self):
+        while True:
+            self.acquire_lock(Domain.SLEEPING)
+            if self.wait_for_lock_expiry(Domain.SLEEPING):
+                self.release_lock(Domain.SLEEPING)
 
     def __str__(self):
         g = self._gpu_id

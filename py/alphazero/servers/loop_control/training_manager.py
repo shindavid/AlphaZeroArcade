@@ -73,18 +73,26 @@ class TrainingManager:
             self._master_list_slice.set_max_forked_client_id(max_forked_client_id)
 
     def wait_until_enough_training_data(self):
-        training_params = self._controller.training_params
         with self._lock:
-            self._master_list_length_for_next_train_loop = get_required_dataset_size(
-                training_params, self._last_sample_window)
-            logger.info(f'Waiting for more training data... (current={self._master_list_length}, '
-                        f'needed={self._master_list_length_for_next_train_loop})')
-            if self._master_list_length >= self._master_list_length_for_next_train_loop:
+            if not self._more_training_data_needed(announce=True):
                 return
             self._ready_event.clear()
 
         # TODO: progress-bar (use module tqdm)
         self._ready_event.wait()
+
+    def _more_training_data_needed(self, announce=False) -> bool:
+        """
+        Assumes that self._lock is held.
+        """
+        training_params = self._controller.training_params
+        self._master_list_length_for_next_train_loop = get_required_dataset_size(
+            training_params, self._last_sample_window)
+        more_needed = self._master_list_length < self._master_list_length_for_next_train_loop
+        if announce and more_needed:
+            logger.info(f'Waiting for more training data... (current={self._master_list_length}, '
+                        f'needed={self._master_list_length_for_next_train_loop})')
+        return more_needed
 
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
@@ -103,36 +111,17 @@ class TrainingManager:
         Uses a separate thread to ensure that the DataLoader is properly cleaned up after the
         train step is complete.
         """
-        organizer = self._controller.organizer
-        fork_info = organizer.fork_info
+        table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
+        table.acquire_lock(Domain.TRAINING)
+        self._controller.hijack_all_self_play_tables()
 
-        forked_base_dir = None if fork_info is None else fork_info.forked_base_dir
-        gen = organizer.get_latest_model_generation() + 1
-        if retrain_from_fork:
-            self._extend_master_list_from_fork(gen)
-        else:
-            self._extend_master_list()
+        while True:
+            self._train_step_helper(retrain_from_fork)
+            if self._more_training_data_needed():
+                break
 
-        dataset = PositionDataset(organizer.base_dir, forked_base_dir, self._master_list_slice,
-                                  self._game_log_reader)
-
-        logger.info('******************************')
-        logger.info(f'Train gen:{gen}')
-        dataset.announce_sampling(logger.info)
-
-        n_minibatches = self._controller.training_params.minibatches_per_epoch
-
-        trainer = NetTrainer(gen, n_minibatches, self._controller.params.cuda_device)
-        with self._lock:
-            self._trainer = trainer
-
-        thread = threading.Thread(target=self._train_step_helper, name='train_step', daemon=False,
-                                  args=(dataset, trainer, gen))
-        thread.start()
-        thread.join()
-
-        with self._lock:
-            self._trainer = None
+        self._controller.unhijack_all_self_play_tables()
+        table.release_lock(Domain.TRAINING)
 
     def handle_new_self_play_positions(self, n_augmented_positions: int):
         with self._lock:
@@ -278,7 +267,41 @@ class TrainingManager:
             logger.info(fmt.format(name, count, pct))
         return self._net, self._opt
 
-    def _train_step_helper(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
+    def _train_step_helper(self, retrain_from_fork: bool):
+        organizer = self._controller.organizer
+        fork_info = organizer.fork_info
+
+        forked_base_dir = None if fork_info is None else fork_info.forked_base_dir
+        gen = organizer.get_latest_model_generation() + 1
+        if retrain_from_fork:
+            self._extend_master_list_from_fork(gen)
+        else:
+            self._extend_master_list()
+
+        dataset = PositionDataset(organizer.base_dir, forked_base_dir, self._master_list_slice,
+                                  self._game_log_reader)
+
+        logger.info('******************************')
+        logger.info(f'Train gen:{gen}')
+        dataset.announce_sampling(logger.info)
+
+        n_minibatches = self._controller.training_params.minibatches_per_epoch
+
+        trainer = NetTrainer(gen, n_minibatches, self._controller.params.cuda_device)
+        with self._lock:
+            self._trainer = trainer
+
+        thread = threading.Thread(target=self._do_training_epoch, name='train_step', daemon=False,
+                                  args=(dataset, trainer, gen))
+        thread.start()
+        thread.join()
+
+        with self._lock:
+            self._trainer = None
+
+        self._controller.handle_new_model()
+
+    def _do_training_epoch(self, dataset: PositionDataset, trainer: NetTrainer, gen: Generation):
         try:
             training_params = self._controller.training_params
             minibatch_size = training_params.minibatch_size
@@ -292,9 +315,6 @@ class TrainingManager:
 
             net, optimizer = self._get_net_and_optimizer()
 
-            table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
-            logger.debug(f'Training table: {table}')
-            table.acquire_lock(Domain.TRAINING)
             stats = trainer.do_training_epoch(loader, net, optimizer, dataset)
 
             if stats is None:
@@ -308,9 +328,6 @@ class TrainingManager:
 
             self._save_model(gen, net)
             self._record_stats(gen, stats)
-            self._controller.reset_self_play_locks()
-            table.release_lock(Domain.TRAINING)
-            self._controller.handle_new_model()
         except:
             logger.error('Unexpected error in train_step():', exc_info=True)
             self._controller.request_shutdown(1)
