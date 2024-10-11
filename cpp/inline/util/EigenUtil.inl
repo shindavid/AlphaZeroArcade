@@ -105,7 +105,6 @@ void randomly_zero_out(Tensor& tensor, int n) {
 
 template <concepts::FTensor Tensor>
 auto cwiseMax(const Tensor& tensor, float x) {
-  // Convert the 1D index back to a K-dimensional index
   Tensor out = tensor;
   auto& array = reinterpret_as_array(out);
   array = array.cwiseMax(x);
@@ -138,39 +137,6 @@ template <concepts::FTensor Tensor, concepts::FArray Array>
 Tensor& reinterpret_as_tensor(Array& array) {
   static_assert(extract_length_v<Array> == Tensor::Dimensions::total_size);
   return reinterpret_cast<Tensor&>(array);
-}
-
-template <int Dim, concepts::FTensor Tensor, typename Func>
-void apply_per_slice(Tensor& t, Func f) {
-  using Shape = Tensor::Dimensions;
-  static_assert(Shape::count == 2);
-  static_assert(Dim >= 0);
-  static_assert(Dim < Shape::count);
-
-  constexpr int N = extract_dim_v<Dim, Shape>;
-  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
-
-  for (int j = 0; j < N; ++j) {
-    SubTensor slice = t.chip(j, Dim);
-    f(slice);
-    t.chip(j, Dim) = slice;
-  }
-}
-
-template <int Dim, concepts::FTensor Tensor, typename Func>
-void compute_per_slice(const Tensor& t, Func f) {
-  using Shape = Tensor::Dimensions;
-  static_assert(Shape::count == 2);
-  static_assert(Dim >= 0);
-  static_assert(Dim < Shape::count);
-
-  constexpr int N = extract_dim_v<Dim, Shape>;
-  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
-
-  for (int j = 0; j < N; ++j) {
-    SubTensor slice = t.chip(j, Dim);
-    f(slice);
-  }
 }
 
 template <concepts::FTensor Tensor>
@@ -323,4 +289,13 @@ uint64_t hash(const Tensor& tensor) {
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }
 
+template<typename Derived>
+auto compute_covariance(const Eigen::MatrixBase<Derived>& X) {
+  auto mean = X.colwise().mean();
+  auto centered = X.rowwise() - mean;
+
+  // Compute covariance matrix: (1/(n-1)) * (X-mu)^T * (X-mu)
+  auto covariance = (centered.transpose() * centered) / (X.rows() - 1);
+  return covariance;
+}
 }  // namespace eigen_util
