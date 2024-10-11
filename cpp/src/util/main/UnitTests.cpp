@@ -254,17 +254,79 @@ TEST(eigen_util, reverse) {
   }
 }
 
+TEST(eigen_util, unflatten_index) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+
+
+  std::array<int64_t, 2> index;
+  index = eigen_util::unflatten_index<Tensor>(tensor, 0);
+  EXPECT_EQ(index[0], 0);
+  EXPECT_EQ(index[1], 0);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 1);
+  EXPECT_EQ(index[0], 0);
+  EXPECT_EQ(index[1], 1);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 2);
+  EXPECT_EQ(index[0], 0);
+  EXPECT_EQ(index[1], 2);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 3);
+  EXPECT_EQ(index[0], 0);
+  EXPECT_EQ(index[1], 3);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 4);
+  EXPECT_EQ(index[0], 1);
+  EXPECT_EQ(index[1], 0);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 5);
+  EXPECT_EQ(index[0], 1);
+  EXPECT_EQ(index[1], 1);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 6);
+  EXPECT_EQ(index[0], 1);
+  EXPECT_EQ(index[1], 2);
+
+  index = eigen_util::unflatten_index<Tensor>(tensor, 7);
+  EXPECT_EQ(index[0], 1);
+  EXPECT_EQ(index[1], 3);
+}
+
+TEST(eigen_util, normalize) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+  using Array = Eigen::Array<float, M, N, Eigen::RowMajor>;
+
+  Array array{{0, 1, 2, 3}, {0, 0, 4, 0}};
+  Array expected = array / array.sum();
+  Tensor tensor = Eigen::TensorMap<Tensor>(array.data(), array.rows(), array.cols());
+
+  bool success = eigen_util::normalize<Tensor>(tensor, 1e-5);
+
+  EXPECT_TRUE(success);
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_NEAR(tensor(i, j), expected(i, j), 1e-5);
+    }
+  }
+}
+
 TEST(eigen_util, sample) {
   constexpr int M = 2;
   constexpr int N = 4;
   constexpr int numSamples = 10000;
 
   using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
-  using Array = Eigen::Array<float, M, N>;
+  using Array = Eigen::Array<float, M, N, Eigen::RowMajor>;
 
-  Array values = {{0, 1, 2, 3}, {0, 0, 4, 0}};
-  Tensor tensor =
-  Eigen::TensorMap<Tensor>(values.data(), values.rows(), values.cols());
+  Array values = {{1, 2, 3, 4}, {5, 6, 7, 8}};
+  Tensor tensor = Eigen::TensorMap<Tensor>(values.data(), values.rows(), values.cols());
   Array expectedFreq = values / values.sum() * numSamples;
 
   Tensor freq;
@@ -287,9 +349,46 @@ TEST(eigen_util, sample) {
       chi2 += diff * diff / expectedFreq(i, j);
     }
   }
-
   // The chi-squared value corresponding to a p-value of 0.05 with 4 degrees of freedom is 9.49
   EXPECT_LT(chi2, 9.49);
+}
+
+TEST(eigen_util, randomly_zero_out) {
+  constexpr int M = 8;
+  constexpr int N = 4;
+  constexpr int numZeroes = 10;
+  static_assert(numZeroes <= M * N, "numZeroes must be less than or equal to M * N");
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+  Tensor tensor;
+  tensor.setRandom();
+
+  eigen_util::randomly_zero_out(tensor, numZeroes);
+
+  auto data = tensor.data();
+  auto size = tensor.size();
+  int zero_count = 0;
+
+  for (int i = 0; i < size; ++i) {
+    if (data[i] == 0) {
+      zero_count++;
+    }
+  }
+  EXPECT_GE(zero_count, 10);
+}
+
+TEST(eigen_util, reinterpret_as_array) {
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
+
+  Tensor tensor;
+  tensor.setValues({{0}, {1}, {2}, {3}});
+
+  auto array = eigen_util::reinterpret_as_array(tensor);
+
+  for (int i = 0; i < N; ++i) {
+    EXPECT_EQ(array(i, 0), tensor(i, 0));
+  }
 }
 
 TEST(eigen_util, rotate) {
