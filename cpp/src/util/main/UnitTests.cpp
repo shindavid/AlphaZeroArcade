@@ -373,6 +373,95 @@ TEST(eigen_util, reinterpret_as_tensor) {
   }
 }
 
+TEST(eigen_util, debug_assert_is_valid_prob_distr_array) {
+  constexpr int N = 4;
+  using Array = eigen_util::FArray<N>;
+
+  Array valid{{0.1, 0.2, 0.3, 0.4}};
+  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr<Array>(valid, 1e-5));
+
+  Array invalid{{0.1, 0.2, 0.3, 0.5}};
+  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr<Array>(invalid, 1e-5));
+}
+
+TEST(eigen_util, debug_assert_is_valid_prob_distr_tensor) {
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
+
+  Tensor valid;
+  valid.setValues({{0.1}, {0.2}, {0.3}, {0.4}});
+  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr<Tensor>(valid, 1e-5));
+
+  Tensor invalid;
+  invalid.setValues({{0.1}, {0.2}, {0.3}, {0.5}});
+  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr<Tensor>(invalid, 1e-5));
+}
+
+TEST(eigen_util, sum) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  float expected = 28;
+
+  float result = eigen_util::sum<Tensor>(tensor);
+  EXPECT_EQ(result, expected);
+}
+
+TEST(eigen_util, max) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  float expected = 7;
+
+  float result = eigen_util::max<Tensor>(tensor);
+  EXPECT_EQ(result, expected);
+}
+
+TEST(eigen_util, min) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  float expected = 0;
+
+  float result = eigen_util::min<Tensor>(tensor);
+  EXPECT_EQ(result, expected);
+}
+
+TEST(eigen_util, any) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  bool expected = true;
+
+  bool result = eigen_util::any<Tensor>(tensor);
+  EXPECT_EQ(result, expected);
+}
+
+TEST(eigen_util, count) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 0}});
+  int expected = 6;
+
+  int result = eigen_util::count<Tensor>(tensor);
+  EXPECT_EQ(result, expected);
+}
+
 TEST(eigen_util, rotate) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
