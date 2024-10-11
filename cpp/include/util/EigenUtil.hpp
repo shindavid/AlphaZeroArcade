@@ -322,6 +322,14 @@ template<int Dim, concepts::FTensor Tensor> void flip_anti_diag(Tensor& tensor);
 template <concepts::FTensor Tensor>
 uint64_t hash(const Tensor& tensor);
 
+/*
+* Note that compute_covariance() returns a tensor *operator*, not a tensor.
+* This means that a construct like this will almost certainly result in unexpected behavior:
+*
+*   x = reverse(x, dim);
+*
+* See: https://eigen.tuxfamily.org/dox/group__TopicAliasing.html
+*/
 template<typename Derived>
 auto compute_covariance(const Eigen::MatrixBase<Derived>& X);
 }  // namespace eigen_util
