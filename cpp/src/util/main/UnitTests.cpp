@@ -125,35 +125,6 @@ TEST(eigen_util, sort_columns) {
   }
 }
 
-TEST(eigen_util, sort_columns_one_element) {
-  constexpr int kNumRows = 1;
-  constexpr int kMaxNumCols = 1;
-  using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
-
-  Array array{
-      {3},
-  };
-
-  array = eigen_util::sort_columns(array);
-
-  Array expected{
-      {3},
-  };
-
-  for (int r = 0; r < array.rows(); r++) {
-    for (int c = 0; c < array.cols(); c++) {
-      EXPECT_EQ(array(r, c), expected(r, c));
-    }
-  }
-}
-
-TEST(eigen_util, extract_dim_v) {
-  using Sizes = Eigen::Sizes<123, 456, 789>;
-  constexpr int N = eigen_util::extract_dim_v<1, Sizes>;
-  EXPECT_EQ(N, 456);
-
-}
-
 TEST(eigen_util, UniformDirchletGen) {
   constexpr int M = 1e5;
   constexpr int N = 10;
@@ -196,6 +167,129 @@ TEST(eigen_util, UniformDirchletGen) {
   for (int i = 0; i < N; i++) {
     EXPECT_NEAR(mean(i), 1.0 / N, 2.576 * std::sqrt(expected_var / M));
   }
+}
+
+TEST(eigen_util, sort_columns_one_element) {
+  constexpr int kNumRows = 1;
+  constexpr int kMaxNumCols = 1;
+  using Array = Eigen::Array<float, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxNumCols>;
+
+  Array array{
+      {3},
+  };
+
+  array = eigen_util::sort_columns(array);
+
+  Array expected{
+      {3},
+  };
+
+  for (int r = 0; r < array.rows(); r++) {
+    for (int c = 0; c < array.cols(); c++) {
+      EXPECT_EQ(array(r, c), expected(r, c));
+    }
+  }
+}
+
+TEST(eigen_util, softmax_Array) {
+  constexpr int N = 4;
+  using Array = eigen_util::FArray<N>;
+
+  Array array{{0, 1, 2, 3}};
+  Array expected{{0.0320586, 0.0871443, 0.2368828, 0.6439143}};
+
+  array = eigen_util::softmax<Array>(array);
+
+  for (int i = 0; i < N; ++i) {
+    EXPECT_NEAR(array(i), expected(i), 1e-5);
+  }
+}
+
+TEST(eigen_util, softmax_Tensor) {
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
+
+  Tensor tensor;
+  tensor.setValues({{0}, {1}, {2}, {3}});
+  Tensor expected;
+  expected.setValues({{0.0320586}, {0.0871443}, {0.2368828}, {0.6439143}});
+
+  tensor = eigen_util::softmax<Tensor>(tensor);
+
+  for (int i = 0; i < N; ++i) {
+    EXPECT_NEAR(tensor(i, 0), expected(i, 0), 1e-5);
+  }
+}
+
+TEST(eigen_util, sigmoid) {
+  constexpr int N = 4;
+  using Array = eigen_util::FArray<N>;
+
+  Array array{{0, 1, 2, 3}};
+  Array expected{{0.5, 0.7310586, 0.8807971, 0.9525741}};
+
+  array = eigen_util::sigmoid<Array>(array);
+
+  for (int i = 0; i < N; ++i) {
+    EXPECT_NEAR(array(i), expected(i), 1e-5);
+  }
+}
+
+TEST(eigen_util, reverse) {
+  constexpr int M = 3;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<3, 4>>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 10, 11}});
+  Tensor expected;
+  expected.setValues({{3, 2, 1, 0}, {7, 6, 5, 4}, {11, 10, 9, 8}});
+
+  Tensor reversed = eigen_util::reverse<Tensor>(tensor, 1);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(reversed(i, j), expected(i, j));
+    }
+  }
+}
+
+TEST(eigen_util, sample) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  constexpr int numSamples = 10000;
+
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+  using Array = Eigen::Array<float, M, N>;
+
+  Array values = {{0, 1, 2, 3}, {0, 0, 4, 0}};
+  Tensor tensor =
+  Eigen::TensorMap<Tensor>(values.data(), values.rows(), values.cols());
+  Array expectedFreq = values / values.sum() * numSamples;
+
+  Tensor freq;
+  freq.setZero();
+  for (int i = 0; i < numSamples; i++) {
+    auto sample = eigen_util::sample<Tensor>(tensor);
+    freq(sample)++;
+  }
+
+  // Chi-Squared Statistic \sum{(O_i - E_i)^2 / E_i}
+  // where O_i is the observed frequency and E_i is the expected frequency
+  float chi2 = 0;
+  for (int i = 0; i < M; i++) {
+    for (int j = 0; j < N; j++) {
+      if (expectedFreq(i, j) == 0) {
+        EXPECT_EQ(freq(i, j), 0);
+        continue;
+      }
+      float diff = freq(i, j) - expectedFreq(i, j);
+      chi2 += diff * diff / expectedFreq(i, j);
+    }
+  }
+
+  // The chi-squared value corresponding to a p-value of 0.05 with 4 degrees of freedom is 9.49
+  EXPECT_LT(chi2, 9.49);
 }
 
 TEST(eigen_util, rotate) {
