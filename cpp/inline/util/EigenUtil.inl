@@ -140,39 +140,6 @@ Tensor& reinterpret_as_tensor(Array& array) {
   return reinterpret_cast<Tensor&>(array);
 }
 
-template <int Dim, concepts::FTensor Tensor, typename Func>
-void apply_per_slice(Tensor& t, Func f) {
-  using Shape = Tensor::Dimensions;
-  static_assert(Shape::count == 2);
-  static_assert(Dim >= 0);
-  static_assert(Dim < Shape::count);
-
-  constexpr int N = extract_dim_v<Dim, Shape>;
-  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
-
-  for (int j = 0; j < N; ++j) {
-    SubTensor slice = t.chip(j, Dim);
-    f(slice);
-    t.chip(j, Dim) = slice;
-  }
-}
-
-template <int Dim, concepts::FTensor Tensor, typename Func>
-void compute_per_slice(const Tensor& t, Func f) {
-  using Shape = Tensor::Dimensions;
-  static_assert(Shape::count == 2);
-  static_assert(Dim >= 0);
-  static_assert(Dim < Shape::count);
-
-  constexpr int N = extract_dim_v<Dim, Shape>;
-  using SubTensor = FTensor<Eigen::Sizes<extract_dim_v<1 - Dim, Shape>>>;
-
-  for (int j = 0; j < N; ++j) {
-    SubTensor slice = t.chip(j, Dim);
-    f(slice);
-  }
-}
-
 template <concepts::FTensor Tensor>
 void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps) {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;

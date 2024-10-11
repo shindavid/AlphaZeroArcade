@@ -255,24 +255,6 @@ const Tensor& reinterpret_as_tensor(const Array& array);
 template <concepts::FTensor Tensor, concepts::FArray Array>
 Tensor& reinterpret_as_tensor(Array& array);
 
-/*
- * For each slice along the given dimension, apply the given function in-place. The function should
- * accept a tensor-reference of the same shape as the slices.
- *
- * Requires Tensor to be a 2D tensor, due to shortcomings with Eigen::Tensor interface.
- */
-template <int Dim, concepts::FTensor Tensor, typename Func>
-void apply_per_slice(Tensor&, Func);
-
-/*
- * For each slice along the given dimension, compute the given function. The function should
- * accept a const-tensor-reference of the same shape as the slices.
- *
- * Requires Tensor to be a 2D tensor, due to shortcomings with Eigen::Tensor interface.
- */
-template <int Dim, concepts::FTensor Tensor, typename Func>
-void compute_per_slice(const Tensor&, Func);
-
 // debug_assert()'s that distr is a valid probability distribution
 // For release-build's, is a no-op
 template <concepts::FTensor Tensor>
