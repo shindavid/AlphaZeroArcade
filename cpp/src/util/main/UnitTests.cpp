@@ -254,49 +254,6 @@ TEST(eigen_util, reverse) {
   }
 }
 
-TEST(eigen_util, unflatten_index) {
-  constexpr int M = 2;
-  constexpr int N = 4;
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
-
-  Tensor tensor;
-  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
-
-
-  std::array<int64_t, 2> index;
-  index = eigen_util::unflatten_index<Tensor>(tensor, 0);
-  EXPECT_EQ(index[0], 0);
-  EXPECT_EQ(index[1], 0);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 1);
-  EXPECT_EQ(index[0], 0);
-  EXPECT_EQ(index[1], 1);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 2);
-  EXPECT_EQ(index[0], 0);
-  EXPECT_EQ(index[1], 2);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 3);
-  EXPECT_EQ(index[0], 0);
-  EXPECT_EQ(index[1], 3);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 4);
-  EXPECT_EQ(index[0], 1);
-  EXPECT_EQ(index[1], 0);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 5);
-  EXPECT_EQ(index[0], 1);
-  EXPECT_EQ(index[1], 1);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 6);
-  EXPECT_EQ(index[0], 1);
-  EXPECT_EQ(index[1], 2);
-
-  index = eigen_util::unflatten_index<Tensor>(tensor, 7);
-  EXPECT_EQ(index[0], 1);
-  EXPECT_EQ(index[1], 3);
-}
-
 TEST(eigen_util, normalize) {
   constexpr int M = 2;
   constexpr int N = 4;
@@ -318,39 +275,31 @@ TEST(eigen_util, normalize) {
 }
 
 TEST(eigen_util, sample) {
-  constexpr int M = 2;
   constexpr int N = 4;
   constexpr int numSamples = 10000;
 
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
-  using Array = Eigen::Array<float, M, N, Eigen::RowMajor>;
+  using Array = eigen_util::FArray<N>;
 
-  Array values = {{1, 2, 3, 4}, {5, 6, 7, 8}};
-  Tensor tensor = Eigen::TensorMap<Tensor>(values.data(), values.rows(), values.cols());
+  Array values = {{1, 2, 3, 4}};
   Array expectedFreq = values / values.sum() * numSamples;
 
-  Tensor freq;
+  Array freq;
   freq.setZero();
   for (int i = 0; i < numSamples; i++) {
-    auto sample = eigen_util::sample<Tensor>(tensor);
+    auto sample = eigen_util::sample<Array>(values);
     freq(sample)++;
   }
 
   // Chi-Squared Statistic \sum{(O_i - E_i)^2 / E_i}
   // where O_i is the observed frequency and E_i is the expected frequency
   float chi2 = 0;
-  for (int i = 0; i < M; i++) {
-    for (int j = 0; j < N; j++) {
-      if (expectedFreq(i, j) == 0) {
-        EXPECT_EQ(freq(i, j), 0);
-        continue;
-      }
-      float diff = freq(i, j) - expectedFreq(i, j);
-      chi2 += diff * diff / expectedFreq(i, j);
-    }
+  for (int i = 0; i < N; i++) {
+    float diff = freq(i) - expectedFreq(i);
+    chi2 += diff * diff / expectedFreq(i);
   }
-  // The chi-squared value corresponding to a p-value of 0.05 with 4 degrees of freedom is 9.49
-  EXPECT_LT(chi2, 9.49);
+
+  // The chi-squared value corresponding to a p-value of 0.05 with 3 degrees of freedom is 7.81
+  EXPECT_LT(chi2, 7.81);
 }
 
 TEST(eigen_util, randomly_zero_out) {
@@ -388,6 +337,39 @@ TEST(eigen_util, reinterpret_as_array) {
 
   for (int i = 0; i < N; ++i) {
     EXPECT_EQ(array(i, 0), tensor(i, 0));
+  }
+}
+
+TEST(eigen_util, cwiseMax) {
+  constexpr int M = 2;
+  constexpr int N = 4;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
+  using Array = Eigen::Array<float, M, N, Eigen::RowMajor>;
+
+  Tensor tensor;
+  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  Array expected = {{2, 2, 2, 3}, {4, 5, 6, 7}};
+
+
+  auto result = eigen_util::cwiseMax<Tensor>(tensor, 2);
+
+  for (int i = 0; i < M; ++i) {
+    for (int j = 0; j < N; ++j) {
+      EXPECT_EQ(result(i, j), expected(i, j));
+    }
+  }
+}
+
+TEST(eigen_util, reinterpret_as_tensor) {
+  constexpr int N = 4;
+  using Array = eigen_util::FArray<N>;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
+
+  Array array{{0, 1, 2, 3}};
+  Tensor tensor = eigen_util::reinterpret_as_tensor<Tensor, Array>(array);
+
+  for (int i = 0; i < N; ++i) {
+    EXPECT_EQ(tensor(i, 0), array(i));
   }
 }
 
