@@ -105,7 +105,6 @@ void randomly_zero_out(Tensor& tensor, int n) {
 
 template <concepts::FTensor Tensor>
 auto cwiseMax(const Tensor& tensor, float x) {
-  // Convert the 1D index back to a K-dimensional index
   Tensor out = tensor;
   auto& array = reinterpret_as_array(out);
   array = array.cwiseMax(x);
