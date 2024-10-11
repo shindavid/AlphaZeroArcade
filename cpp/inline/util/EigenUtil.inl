@@ -332,5 +332,4 @@ auto computeCovariance(const Eigen::MatrixBase<Derived>& X) {
   auto covariance = (centered.transpose() * centered) / (X.rows() - 1);
   return covariance;
 }
-
 }  // namespace eigen_util

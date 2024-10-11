@@ -342,7 +342,6 @@ uint64_t hash(const Tensor& tensor);
 
 template<typename Derived>
 auto computeCovariance(const Eigen::MatrixBase<Derived>& X);
-
 }  // namespace eigen_util
 
 #include <inline/util/EigenUtil.inl>
