@@ -209,13 +209,10 @@ template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim);
 
 /*
- * Accepts a D-dimensional tensor. Randomly samples an index from the tensor, with each index
- * picked proportionally to the value of the tensor at that index.
- *
- * Returns the index as a std::array<int64_t, D>
+ * Returns a random int k, with probability proportional to A[k].
  */
-template <concepts::FTensor Tensor>
-auto sample(const Tensor& tensor);
+template <concepts::FArray Array>
+int sample(const Array& A);
 
 /*
  * Divides tensor by its sum.
@@ -233,14 +230,6 @@ bool normalize(Tensor& tensor, double eps = 1e-8);
  */
 template <concepts::FTensor Tensor>
 void randomly_zero_out(Tensor& tensor, int n);
-
-/*
- * Returns the std::array that fills in the blank in this analogy problem:
- *
- * tensor.data() is to flat_index as tensor is to _____
- */
-template <concepts::FTensor Tensor>
-auto unflatten_index(const Tensor& tensor, int flat_index);
 
 /*
  * Returns what tensor.cwiseMax(x) *should* return. But cwiseMax() doesn't appear to be supported

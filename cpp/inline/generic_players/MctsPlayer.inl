@@ -333,7 +333,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  core::action_t action = eigen_util::sample(policy)[0];
+  core::action_t action = eigen_util::sample(policy_array);
   util::release_assert(valid_actions[action]);
   return action;
 }

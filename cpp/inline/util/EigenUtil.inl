@@ -77,14 +77,11 @@ auto reverse(const Tensor& tensor, int dim) {
   return tensor.reverse(rev);
 }
 
-template <concepts::FTensor Tensor>
-auto sample(const Tensor& tensor) {
-  using Shape = Tensor::Dimensions;
-  constexpr size_t N = Shape::total_size;
-
-  const auto* data = tensor.data();
-  int flat_index = util::Random::weighted_sample(data, data + N);
-  return unflatten_index(tensor, flat_index);
+template <concepts::FArray Array>
+int sample(const Array& A) {
+  const auto* data = A.data();
+  int n = A.rows();
+  return util::Random::weighted_sample(data, data + n);
 }
 
 template <concepts::FTensor Tensor>
@@ -103,23 +100,6 @@ void randomly_zero_out(Tensor& tensor, int n) {
 
   auto* data = tensor.data();
   util::Random::zero_out(data, data + N, n);
-}
-
-template <concepts::FTensor Tensor>
-auto unflatten_index(const Tensor& tensor, int flat_index) {
-  // Convert the 1D index back to a K-dimensional index
-  using Shape = Tensor::Dimensions;
-  constexpr size_t K = Shape::count;
-
-  std::array<int64_t, K> index;
-  int residual = flat_index;
-  for (size_t k = 0; k < K - 1; ++k) {
-    index[k] = residual % tensor.dimension(k);
-    residual /= tensor.dimension(k);
-  }
-  index[K - 1] = residual;
-
-  return index;
 }
 
 template <concepts::FTensor Tensor>
