@@ -113,6 +113,10 @@ class OthelloSpec(GameSpec):
         '-r': 4,
     }
 
+    rating_options = {
+        '-p': 50,  # edax player hogs too much CPU/memory, so limit parallelism
+    }
+
     rating_player_options = {
         '-i': 400,
         '-n': 8,
