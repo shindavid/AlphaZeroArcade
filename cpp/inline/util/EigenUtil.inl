@@ -290,8 +290,16 @@ uint64_t hash(const Tensor& tensor) {
   return util::hash_memory<N * sizeof(Scalar)>(tensor.data());
 }
 
+/*
+* Note that compute_covariance() returns a tensor *operator*, not a tensor.
+* This means that a construct like this will almost certainly result in unexpected behavior:
+*
+*   x = reverse(x, dim);
+*
+* See: https://eigen.tuxfamily.org/dox/group__TopicAliasing.html
+*/
 template<typename Derived>
-auto computeCovariance(const Eigen::MatrixBase<Derived>& X) {
+auto compute_covariance(const Eigen::MatrixBase<Derived>& X) {
   auto mean = X.colwise().mean();
   auto centered = X.rowwise() - mean;
 

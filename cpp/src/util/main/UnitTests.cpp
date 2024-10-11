@@ -141,7 +141,7 @@ TEST(eigen_util, UniformDirchletGen) {
     X.row(i) = gen.template generate<Eigen::Array<float, N, 1>>(rng, alpha).transpose();
   }
 
-  Eigen::MatrixXf cov = eigen_util::computeCovariance(X);
+  Eigen::MatrixXf cov = eigen_util::compute_covariance(X);
 
   // wikipedia formula for Dirichlet moments:
   // https://en.wikipedia.org/wiki/Dirichlet_distribution
@@ -275,6 +275,8 @@ TEST(eigen_util, normalize) {
 }
 
 TEST(eigen_util, sample) {
+  util::Random::set_seed(1);
+
   constexpr int N = 4;
   constexpr int numSamples = 10000;
 
@@ -303,6 +305,8 @@ TEST(eigen_util, sample) {
 }
 
 TEST(eigen_util, randomly_zero_out) {
+  util::Random::set_seed(1);
+
   constexpr int M = 8;
   constexpr int N = 4;
   constexpr int numZeroes = 10;
@@ -310,7 +314,7 @@ TEST(eigen_util, randomly_zero_out) {
 
   using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
   Tensor tensor;
-  tensor.setRandom();
+  tensor.setConstant(1);
 
   eigen_util::randomly_zero_out(tensor, numZeroes);
 
@@ -323,20 +327,22 @@ TEST(eigen_util, randomly_zero_out) {
       zero_count++;
     }
   }
-  EXPECT_GE(zero_count, 10);
+  EXPECT_EQ(zero_count, numZeroes);
 }
 
 TEST(eigen_util, reinterpret_as_array) {
   constexpr int N = 4;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
+  using Array = eigen_util::FArray<N>;
 
   Tensor tensor;
   tensor.setValues({{0}, {1}, {2}, {3}});
+  Array expected_array = {{0, 1, 2, 3}};
 
   auto array = eigen_util::reinterpret_as_array(tensor);
 
   for (int i = 0; i < N; ++i) {
-    EXPECT_EQ(array(i, 0), tensor(i, 0));
+    EXPECT_EQ(array(i, 0), expected_array(i, 0));
   }
 }
 
@@ -349,7 +355,6 @@ TEST(eigen_util, cwiseMax) {
   Tensor tensor;
   tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
   Array expected = {{2, 2, 2, 3}, {4, 5, 6, 7}};
-
 
   auto result = eigen_util::cwiseMax<Tensor>(tensor, 2);
 
@@ -366,10 +371,12 @@ TEST(eigen_util, reinterpret_as_tensor) {
   using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
 
   Array array{{0, 1, 2, 3}};
+  Tensor expected_tensor;
+  expected_tensor.setValues({{0}, {1}, {2}, {3}});
   Tensor tensor = eigen_util::reinterpret_as_tensor<Tensor, Array>(array);
 
   for (int i = 0; i < N; ++i) {
-    EXPECT_EQ(tensor(i, 0), array(i));
+    EXPECT_EQ(tensor(i, 0), expected_tensor(i, 0));
   }
 }
 
@@ -441,12 +448,13 @@ TEST(eigen_util, any) {
   constexpr int N = 4;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<M, N>>;
 
-  Tensor tensor;
-  tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
-  bool expected = true;
+  Tensor tensorHasNonZero;
+  tensorHasNonZero.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
+  Tensor tensorAllZero;
+  tensorAllZero.setValues({{0, 0, 0, 0}, {0, 0, 0, 0}});
 
-  bool result = eigen_util::any<Tensor>(tensor);
-  EXPECT_EQ(result, expected);
+  EXPECT_TRUE(eigen_util::any<Tensor>(tensorHasNonZero));
+  EXPECT_FALSE(eigen_util::any<Tensor>(tensorAllZero));
 }
 
 TEST(eigen_util, count) {
