@@ -6,7 +6,7 @@ from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
 
-def b19_c128(shape_info_dict: ShapeInfoDict):
+def b9_c128(shape_info_dict: ShapeInfoDict):
     input_shape = shape_info_dict['input'].shape
     policy_shape = shape_info_dict['policy'].shape
     value_shape = shape_info_dict['value'].shape
@@ -46,18 +46,6 @@ def b19_c128(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block7', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block8', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block9', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlockWithGlobalPooling', args=['block10', c_trunk, c_mid, c_gpool]),
-
-            ModuleSpec(type='ResBlock', args=['block11', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block12', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block13', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block14', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlockWithGlobalPooling', args=['block15', c_trunk, c_mid, c_gpool]),
-
-            ModuleSpec(type='ResBlock', args=['block16', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block17', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block18', c_trunk, c_mid]),
-            ModuleSpec(type='ResBlock', args=['block19', c_trunk, c_mid]),
         ],
 
         neck=None,
@@ -98,8 +86,8 @@ class OthelloSpec(GameSpec):
         'extra_deps/edax-reversi/data',
         ]
     model_configs = {
-        'default': b19_c128,
-        'b19_c128': b19_c128,
+        'default': b9_c128,
+        'b19_c128': b9_c128,
     }
     reference_player_family = ReferencePlayerFamily('edax', '--depth', 0, 21)
 
