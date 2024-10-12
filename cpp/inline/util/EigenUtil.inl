@@ -139,10 +139,14 @@ Tensor& reinterpret_as_tensor(Array& array) {
   return reinterpret_cast<Tensor&>(array);
 }
 
-template <concepts::FTensor Tensor>
-void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps) {
+template <typename T>
+void debug_assert_is_valid_prob_distr(const T& distr, float eps) {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
+  assert_is_valid_prob_distr(distr, eps);
+}
 
+template <concepts::FTensor Tensor>
+void assert_is_valid_prob_distr(const Tensor& distr, float eps) {
   float s = sum(distr);
   float m = min(distr);
 
@@ -153,11 +157,8 @@ void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps) {
   }
 }
 
-// debug_assert()'s that distr is a valid probability distribution
-template <typename Array>
-void debug_assert_is_valid_prob_distr(const Array& distr, float eps) {
-  if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
-
+template <typename Derived>
+void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float eps) {
   float s = distr.sum();
   float m = distr.minCoeff();
 
