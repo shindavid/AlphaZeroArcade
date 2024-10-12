@@ -89,12 +89,13 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
       NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
       if (!node->stable_data().VT_valid) {
-        group::element_t eval_sym = 0;
+        SymmetryMask sym_mask;
         if (manager_params_->apply_random_symmetries) {
-          auto mask = Game::Symmetries::get_mask(state);
-          eval_sym = bitset_util::choose_random_on_index(mask);
+          sym_mask = Game::Symmetries::get_mask(state);
+        } else {
+          sym_mask[group::kIdentity] = true;
         }
-        pseudo_local_vars_.request_items.emplace_back(node, *history, eval_sym);
+        pseudo_local_vars_.request_items.emplace_back(node, *history, sym_mask);
       }
       if (eval_all_children) {
         pseudo_local_vars_.state_history_array = shared_data_->root_info.history_array;  // copy
@@ -178,15 +179,16 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     if (child->is_terminal()) continue;
     if (!request) continue;
 
-    group::element_t child_eval_sym = 0;
+    SymmetryMask sym_mask;
     if (manager_params_->apply_random_symmetries) {
-      auto mask = Game::Symmetries::get_mask(canonical_child_history.current());
-      child_eval_sym = bitset_util::choose_random_on_index(mask);
+      sym_mask = Game::Symmetries::get_mask(canonical_child_history.current());
+    } else {
+      sym_mask[group::kIdentity] = true;
     }
 
     auto& parent_history = pseudo_local_vars_.state_history_array[canonical_child_sym];
     pseudo_local_vars_.request_items.emplace_back(
-        child, parent_history, canonical_child_history.current(), child_eval_sym);
+        child, parent_history, canonical_child_history.current(), sym_mask);
   }
 
   node->update_child_expand_count(expand_count);

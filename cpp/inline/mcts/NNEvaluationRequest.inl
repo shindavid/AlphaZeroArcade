@@ -4,20 +4,23 @@ namespace mcts {
 
 template <core::concepts::Game Game>
 NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, const State& state,
-                                      group::element_t eval_sym)
+                                      const SymmetryMask& sym_mask)
     : node_(node),
       state_(state),
       history_(&history),
       split_history_(true),
-      cache_key_(make_cache_key(eval_sym)) {}
+      cache_key_(make_cache_key()),
+      sym_mask_(sym_mask) {}
 
 template <core::concepts::Game Game>
-NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history, group::element_t eval_sym)
+NNEvaluationRequest<Game>::Item::Item(Node* node, StateHistory& history,
+                                      const SymmetryMask& sym_mask)
     : node_(node),
       state_(),
       history_(&history),
       split_history_(false),
-      cache_key_(make_cache_key(eval_sym)) {}
+      cache_key_(make_cache_key()),
+      sym_mask_(sym_mask) {}
 
 template <core::concepts::Game Game>
 template <typename Func>
@@ -38,10 +41,10 @@ auto NNEvaluationRequest<Game>::Item::compute_over_history(Func f) const {
 }
 
 template <core::concepts::Game Game>
-typename NNEvaluationRequest<Game>::cache_key_t NNEvaluationRequest<Game>::Item::make_cache_key(
-    group::element_t eval_sym) const {
-  return std::make_tuple(compute_over_history(
-      [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); }), eval_sym);
+typename NNEvaluationRequest<Game>::cache_key_t NNEvaluationRequest<Game>::Item::make_cache_key()
+    const {
+  return compute_over_history(
+      [&](auto begin, auto end) { return InputTensorizor::eval_key(begin, end - 1); });
 }
 
 template <core::concepts::Game Game>
