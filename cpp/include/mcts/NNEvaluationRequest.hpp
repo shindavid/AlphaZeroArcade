@@ -22,10 +22,9 @@ class NNEvaluationRequest {
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
   using NNEvaluation = mcts::NNEvaluation<Game>;
-  using SymmetryMask = Game::Types::SymmetryMask;
 
   using NNEvaluation_sptr = NNEvaluation::sptr;
-  using cache_key_t = EvalKey;
+  using cache_key_t = std::tuple<EvalKey, group::element_t>;
 
   enum eval_state_t : int8_t {
     kUnknown = 0,
@@ -44,8 +43,8 @@ class NNEvaluationRequest {
      * The first constructor allows multiple items that share the same history-prefix to share
      * the same history vector, as an optimization.
      */
-    Item(Node* node, StateHistory& history, const State& state, const SymmetryMask& sym_mask);
-    Item(Node* node, StateHistory& history, const SymmetryMask& sym_mask);
+    Item(Node* node, StateHistory& history, const State& state, group::element_t eval_sym);
+    Item(Node* node, StateHistory& history, group::element_t eval_sym);
 
     /*
      * Returns f(history.begin(), history.end()),
@@ -63,17 +62,15 @@ class NNEvaluationRequest {
     NNEvaluation* eval() const { return eval_.get(); }
     eval_state_t eval_state() const { return eval_state_; }
     const cache_key_t& cache_key() const { return cache_key_; }
-    const SymmetryMask& sym_mask() const { return sym_mask_; }
 
    private:
-    cache_key_t make_cache_key() const;
+    cache_key_t make_cache_key(group::element_t eval_sym) const;
 
     Node* const node_;
     const State state_;
     StateHistory* const history_;
     const bool split_history_;
     const cache_key_t cache_key_;
-    const SymmetryMask sym_mask_;
 
     NNEvaluation_sptr eval_;
     eval_state_t eval_state_ = kUnknown;

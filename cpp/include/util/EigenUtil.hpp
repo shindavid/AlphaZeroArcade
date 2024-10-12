@@ -257,15 +257,13 @@ Tensor& reinterpret_as_tensor(Array& array);
 
 // debug_assert()'s that distr is a valid probability distribution
 // For release-build's, is a no-op
-template <typename T>
-void debug_assert_is_valid_prob_distr(const T& distr, float eps = 1e-5);
-
-// Helper functions for debug_assert_is_valid_prob_distr, pulled out for testing.
-// Performs check regardless of whether it is a release or debug build.
 template <concepts::FTensor Tensor>
-void assert_is_valid_prob_distr(const Tensor& distr, float eps);
-template <typename Derived>
-void assert_is_valid_prob_distr(const Eigen::ArrayBase<Derived>& distr, float eps);
+void debug_assert_is_valid_prob_distr(const Tensor& distr, float eps = 1e-5);
+
+// debug_assert()'s that distr is a valid probability distribution
+// For release-build's, is a no-op
+template <typename Array>
+void debug_assert_is_valid_prob_distr(const Array& distr, float eps = 1e-5);
 
 /*
  * Convenience methods that return scalars.

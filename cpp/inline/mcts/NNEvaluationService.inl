@@ -418,7 +418,7 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
   const auto& stable_data = item.node()->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
-  group::element_t sym = bitset_util::choose_random_on_index(item.sym_mask());
+  group::element_t sym = std::get<1>(cache_key);
   group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
 
   auto input = item.compute_over_history([&](auto begin, auto end) {

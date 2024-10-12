@@ -380,28 +380,28 @@ TEST(eigen_util, reinterpret_as_tensor) {
   }
 }
 
-TEST(eigen_util, assert_is_valid_prob_distr_array) {
+TEST(eigen_util, debug_assert_is_valid_prob_distr_array) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
 
   Array valid{{0.1, 0.2, 0.3, 0.4}};
-  EXPECT_NO_THROW(eigen_util::assert_is_valid_prob_distr(valid, 1e-5));
+  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr(valid, 1e-5));
 
   Array invalid{{0.1, 0.2, 0.3, 0.5}};
-  EXPECT_ANY_THROW(eigen_util::assert_is_valid_prob_distr(invalid, 1e-5));
+  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr(invalid, 1e-5));
 }
 
-TEST(eigen_util, assert_is_valid_prob_distr_tensor) {
+TEST(eigen_util, debug_assert_is_valid_prob_distr_tensor) {
   constexpr int N = 4;
   using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
 
   Tensor valid;
   valid.setValues({{0.1}, {0.2}, {0.3}, {0.4}});
-  EXPECT_NO_THROW(eigen_util::assert_is_valid_prob_distr(valid, 1e-5));
+  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr(valid, 1e-5));
 
   Tensor invalid;
   invalid.setValues({{0.1}, {0.2}, {0.3}, {0.5}});
-  EXPECT_ANY_THROW(eigen_util::assert_is_valid_prob_distr(invalid, 1e-5));
+  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr(invalid, 1e-5));
 }
 
 TEST(eigen_util, sum) {

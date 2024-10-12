@@ -43,7 +43,6 @@ class SearchThread {
   using PolicyShape = Game::Types::PolicyShape;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
-  using SymmetryMask = Game::Types::SymmetryMask;
 
   using item_vec_t = NNEvaluationRequest::item_vec_t;
 
