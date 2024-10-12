@@ -198,7 +198,7 @@ TEST(eigen_util, softmax_Array) {
   Array array{{0, 1, 2, 3}};
   Array expected{{0.0320586, 0.0871443, 0.2368828, 0.6439143}};
 
-  array = eigen_util::softmax<Array>(array);
+  array = eigen_util::softmax(array);
 
   for (int i = 0; i < N; ++i) {
     EXPECT_NEAR(array(i), expected(i), 1e-5);
@@ -214,7 +214,7 @@ TEST(eigen_util, softmax_Tensor) {
   Tensor expected;
   expected.setValues({{0.0320586}, {0.0871443}, {0.2368828}, {0.6439143}});
 
-  tensor = eigen_util::softmax<Tensor>(tensor);
+  tensor = eigen_util::softmax(tensor);
 
   for (int i = 0; i < N; ++i) {
     EXPECT_NEAR(tensor(i, 0), expected(i, 0), 1e-5);
@@ -228,7 +228,7 @@ TEST(eigen_util, sigmoid) {
   Array array{{0, 1, 2, 3}};
   Array expected{{0.5, 0.7310586, 0.8807971, 0.9525741}};
 
-  array = eigen_util::sigmoid<Array>(array);
+  array = eigen_util::sigmoid(array);
 
   for (int i = 0; i < N; ++i) {
     EXPECT_NEAR(array(i), expected(i), 1e-5);
@@ -245,7 +245,7 @@ TEST(eigen_util, reverse) {
   Tensor expected;
   expected.setValues({{3, 2, 1, 0}, {7, 6, 5, 4}, {11, 10, 9, 8}});
 
-  Tensor reversed = eigen_util::reverse<Tensor>(tensor, 1);
+  Tensor reversed = eigen_util::reverse(tensor, 1);
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
@@ -264,7 +264,7 @@ TEST(eigen_util, normalize) {
   Array expected = array / array.sum();
   Tensor tensor = Eigen::TensorMap<Tensor>(array.data(), array.rows(), array.cols());
 
-  bool success = eigen_util::normalize<Tensor>(tensor, 1e-5);
+  bool success = eigen_util::normalize(tensor, 1e-5);
 
   EXPECT_TRUE(success);
   for (int i = 0; i < M; ++i) {
@@ -288,7 +288,7 @@ TEST(eigen_util, sample) {
   Array freq;
   freq.setZero();
   for (int i = 0; i < numSamples; i++) {
-    auto sample = eigen_util::sample<Array>(values);
+    auto sample = eigen_util::sample(values);
     freq(sample)++;
   }
 
@@ -356,7 +356,7 @@ TEST(eigen_util, cwiseMax) {
   tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
   Array expected = {{2, 2, 2, 3}, {4, 5, 6, 7}};
 
-  auto result = eigen_util::cwiseMax<Tensor>(tensor, 2);
+  auto result = eigen_util::cwiseMax(tensor, 2);
 
   for (int i = 0; i < M; ++i) {
     for (int j = 0; j < N; ++j) {
@@ -373,7 +373,7 @@ TEST(eigen_util, reinterpret_as_tensor) {
   Array array{{0, 1, 2, 3}};
   Tensor expected_tensor;
   expected_tensor.setValues({{0}, {1}, {2}, {3}});
-  Tensor tensor = eigen_util::reinterpret_as_tensor<Tensor, Array>(array);
+  Tensor tensor = eigen_util::reinterpret_as_tensor<Tensor>(array);
 
   for (int i = 0; i < N; ++i) {
     EXPECT_EQ(tensor(i, 0), expected_tensor(i, 0));
@@ -385,10 +385,10 @@ TEST(eigen_util, debug_assert_is_valid_prob_distr_array) {
   using Array = eigen_util::FArray<N>;
 
   Array valid{{0.1, 0.2, 0.3, 0.4}};
-  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr<Array>(valid, 1e-5));
+  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr(valid, 1e-5));
 
   Array invalid{{0.1, 0.2, 0.3, 0.5}};
-  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr<Array>(invalid, 1e-5));
+  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr(invalid, 1e-5));
 }
 
 TEST(eigen_util, debug_assert_is_valid_prob_distr_tensor) {
@@ -397,11 +397,11 @@ TEST(eigen_util, debug_assert_is_valid_prob_distr_tensor) {
 
   Tensor valid;
   valid.setValues({{0.1}, {0.2}, {0.3}, {0.4}});
-  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr<Tensor>(valid, 1e-5));
+  EXPECT_NO_THROW(eigen_util::debug_assert_is_valid_prob_distr(valid, 1e-5));
 
   Tensor invalid;
   invalid.setValues({{0.1}, {0.2}, {0.3}, {0.5}});
-  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr<Tensor>(invalid, 1e-5));
+  EXPECT_ANY_THROW(eigen_util::debug_assert_is_valid_prob_distr(invalid, 1e-5));
 }
 
 TEST(eigen_util, sum) {
@@ -413,7 +413,7 @@ TEST(eigen_util, sum) {
   tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
   float expected = 28;
 
-  float result = eigen_util::sum<Tensor>(tensor);
+  float result = eigen_util::sum(tensor);
   EXPECT_EQ(result, expected);
 }
 
@@ -426,7 +426,7 @@ TEST(eigen_util, max) {
   tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
   float expected = 7;
 
-  float result = eigen_util::max<Tensor>(tensor);
+  float result = eigen_util::max(tensor);
   EXPECT_EQ(result, expected);
 }
 
@@ -439,7 +439,7 @@ TEST(eigen_util, min) {
   tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 7}});
   float expected = 0;
 
-  float result = eigen_util::min<Tensor>(tensor);
+  float result = eigen_util::min(tensor);
   EXPECT_EQ(result, expected);
 }
 
@@ -453,8 +453,8 @@ TEST(eigen_util, any) {
   Tensor tensorAllZero;
   tensorAllZero.setValues({{0, 0, 0, 0}, {0, 0, 0, 0}});
 
-  EXPECT_TRUE(eigen_util::any<Tensor>(tensorHasNonZero));
-  EXPECT_FALSE(eigen_util::any<Tensor>(tensorAllZero));
+  EXPECT_TRUE(eigen_util::any(tensorHasNonZero));
+  EXPECT_FALSE(eigen_util::any(tensorAllZero));
 }
 
 TEST(eigen_util, count) {
@@ -466,7 +466,7 @@ TEST(eigen_util, count) {
   tensor.setValues({{0, 1, 2, 3}, {4, 5, 6, 0}});
   int expected = 6;
 
-  int result = eigen_util::count<Tensor>(tensor);
+  int result = eigen_util::count(tensor);
   EXPECT_EQ(result, expected);
 }
 
