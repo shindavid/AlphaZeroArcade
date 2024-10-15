@@ -7,6 +7,7 @@ add_executable(othello_tests main/UnitTests.cpp ${COMMON_SOURCES})
 add_executable(othello_exe main/Othello.cpp ${COMMON_SOURCES})
 add_library(othello_ffi SHARED shared/Othello_ffi.cpp ${COMMON_SOURCES})
 set_target_properties(othello_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(othello_tests PRIVATE GTest::GTest GTest::Main)
 
 set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 set(TARGETS othello_tests othello_exe othello_ffi)

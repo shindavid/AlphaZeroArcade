@@ -9,6 +9,7 @@ add_executable(blokus_tests main/UnitTests.cpp ${COMMON_SOURCES})
 add_executable(blokus_exe main/Blokus.cpp ${COMMON_SOURCES})
 add_library(blokus_ffi SHARED shared/Blokus_ffi.cpp ${COMMON_SOURCES})
 set_target_properties(blokus_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(blokus_tests PRIVATE GTest::GTest GTest::Main)
 
 set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 set(TARGETS blokus_tests blokus_exe blokus_ffi)

@@ -1,12 +1,14 @@
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include <core/tests/Common.hpp>
 #include <games/othello/Constants.hpp>
 #include <games/othello/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+
+#include <gtest/gtest.h>
+
+#include <sstream>
+#include <string>
+#include <vector>
 
 /*
  * Tests othello symmetry classes.
@@ -69,45 +71,7 @@ std::string get_repr(const State& state) {
   return repr;
 }
 
-int global_pass_count = 0;
-int global_fail_count = 0;
-
-bool validate_state(const char* func, int line, const std::string& actual_repr,
-                    const std::string& expected_repr) {
-  if (actual_repr != expected_repr) {
-    printf("Failure at %s():%d\n", func, line);
-    std::cout << "Expected:" << std::endl;
-    std::cout << expected_repr << std::endl;
-    std::cout << "But got:" << std::endl;
-    std::cout << actual_repr << std::endl;
-    global_fail_count++;
-    return false;
-  } else {
-    return true;
-  }
-}
-
-bool validate_policy(const char* func, int line, const PolicyTensor& actual_policy,
-                     const PolicyTensor& expected_policy) {
-  bool failed = false;
-  for (int c = 0; c < othello::kNumGlobalActions; ++c) {
-    if (actual_policy(c) != expected_policy(c)) {
-      if (!failed) {
-        printf("Failure at %s():%d\n", func, line);
-        failed = true;
-      }
-      printf("Expected policy(%s)=%f, but got %f\n", IO::action_to_str(c).c_str(),
-             expected_policy(c), actual_policy(c));
-    }
-  }
-  if (failed) {
-    global_fail_count++;
-    return false;
-  }
-  return true;
-}
-
-void test_identity() {
+TEST(Symmetry, identity) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kIdentity;
@@ -117,23 +81,20 @@ void test_identity() {
   std::string repr = get_repr(state);
   std::string expected_repr = init_state_repr;
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kA3);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_rot90_clockwise() {
+TEST(Symmetry, rot90_clockwise) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kRot90;
@@ -152,23 +113,20 @@ void test_rot90_clockwise() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kF1);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_rot180() {
+TEST(Symmetry, rot180) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kRot180;
@@ -187,23 +145,20 @@ void test_rot180() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kH6);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_rot270_clockwise() {
+TEST(Symmetry, rot270_clockwise) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kRot270;
@@ -222,23 +177,20 @@ void test_rot270_clockwise() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kC8);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_flip_vertical() {
+TEST(Symmetry, flip_vertical) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kFlipVertical;
@@ -257,23 +209,20 @@ void test_flip_vertical() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kA6);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_mirror_horizontal() {
+TEST(Symmetry, mirror_horizontal) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kMirrorHorizontal;
@@ -292,23 +241,20 @@ void test_mirror_horizontal() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kH3);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_flip_main_diag() {
+TEST(Symmetry, flip_main_diag) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kFlipMainDiag;
@@ -327,23 +273,20 @@ void test_flip_main_diag() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kC1);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_flip_anti_diag() {
+TEST(Symmetry, flip_anti_diag) {
   State state = make_init_state();
 
   group::element_t sym = groups::D4::kFlipAntiDiag;
@@ -362,53 +305,25 @@ void test_flip_anti_diag() {
       " 7| | | | | | | | |\n"
       " 8| | | | | | | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(othello::kA3);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(othello::kF8);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_action_transforms() {
-  if (core::tests::Common<Game>::test_action_transforms(__func__) == false) {
-    global_fail_count++;
-    return;
-  } else {
-    printf("Success: %s()\n", __func__);
-    global_pass_count++;
-  }
+TEST(Symmetry, action_transforms) {
+  core::tests::Common<Game>::gtest_action_transforms();
 }
 
-void test_symmetries() {
-  test_identity();
-  test_rot90_clockwise();
-  test_rot180();
-  test_rot270_clockwise();
-  test_flip_vertical();
-  test_mirror_horizontal();
-  test_flip_main_diag();
-  test_flip_anti_diag();
-  test_action_transforms();
-}
-
-int main() {
+int main(int argc, char** argv) {
   util::set_tty_mode(false);
-  test_symmetries();
-
-  if (global_fail_count > 0) {
-    int total_count = global_pass_count + global_fail_count;
-    printf("Failed %d of %d test%s!\n", global_fail_count, total_count, total_count > 1 ? "s" : "");
-  } else {
-    printf("All tests passed (%d of %d)!\n", global_pass_count, global_pass_count);
-  }
-  return global_fail_count ? 1 : 0;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

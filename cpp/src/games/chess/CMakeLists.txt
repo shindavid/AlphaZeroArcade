@@ -33,6 +33,7 @@ add_executable(chess_tests main/UnitTests.cpp)
 add_executable(chess_exe main/Chess.cpp)
 add_library(chess_ffi SHARED shared/Chess_ffi.cpp)
 set_target_properties(chess_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(chess_tests PRIVATE GTest::GTest GTest::Main)
 
 set(LINK_LIBS lc0_lib chess_lib util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 set(TARGETS chess_tests chess_exe chess_ffi)

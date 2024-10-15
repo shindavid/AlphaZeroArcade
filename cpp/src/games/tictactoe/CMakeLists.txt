@@ -7,6 +7,7 @@ add_executable(tictactoe_tests main/UnitTests.cpp ${COMMON_SOURCES})
 add_executable(tictactoe_exe main/TicTacToe.cpp ${COMMON_SOURCES})
 add_library(tictactoe_ffi SHARED shared/TicTacToe_ffi.cpp ${COMMON_SOURCES})
 set_target_properties(tictactoe_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(tictactoe_tests PRIVATE GTest::GTest GTest::Main)
 
 set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 set(TARGETS tictactoe_tests tictactoe_exe tictactoe_ffi)

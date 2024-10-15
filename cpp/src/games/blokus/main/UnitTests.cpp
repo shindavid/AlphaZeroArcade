@@ -1,10 +1,9 @@
 #include <games/blokus/Game.hpp>
 #include <games/blokus/Types.hpp>
 
-#include <iostream>
+#include <gtest/gtest.h>
 
-int global_pass_count = 0;
-int global_fail_count = 0;
+#include <iostream>
 
 using namespace blokus;
 
@@ -60,79 +59,34 @@ std::string make_full_piece_repr(PieceOrientationCorner poc, Location loc) {
   return ss.str();
 }
 
-/*
- * Validates that the non-trivial lines of actual_repr match expected_repr.
- *
- * Returns true if the test passes. Else, prints the failure, increments global_fail_count, and
- * returns false.
- */
-bool validate_repr(const char* func, int line, const std::string& actual_repr,
-                   const std::string& expected_repr) {
-  if (actual_repr != expected_repr) {
-    printf("Failure at %s():%d\n", func, line);
-    std::cout << "Expected:" << std::endl;
-    std::cout << expected_repr << std::endl;
-    std::cout << "But got:" << std::endl;
-    std::cout << actual_repr << std::endl;
-    global_fail_count++;
-    return false;
-  } else {
-    return true;
-  }
-}
-
 // Return true if the test passes
-bool full_piece_repr_test(const char* file, int line, PieceOrientationCorner poc, int8_t row,
-                          int8_t col, const std::string& expected_repr) {
+void full_piece_repr_test(PieceOrientationCorner poc, int8_t row, int8_t col,
+                          const std::string& expected_repr) {
   std::string actual_repr = make_full_piece_repr(poc, Location{row, col});
-  return validate_repr(file, line, actual_repr, expected_repr);
+  EXPECT_EQ(actual_repr, expected_repr);
 }
 
-void test_location() {
+TEST(Location, flatten) {
   Location invalid_loc{-1, -1};
   Location loc1{0, 0};
   Location loc2{2, 13};
 
-  if (invalid_loc.valid()) {
-    global_fail_count++;
-    std::cout << "Invalid location is valid" << std::endl;
-    return;
-  }
+  EXPECT_FALSE(invalid_loc.valid());
 
   for (auto loc : {loc1, loc2}) {
-    if (!loc.valid()) {
-      global_fail_count++;
-      std::cout << "Valid location is invalid" << std::endl;
-      return;
-    }
+    EXPECT_TRUE(loc.valid());
   }
 
   int f1 = loc1.flatten();
   int f2 = loc2.flatten();
 
-  if (f1 != 0 || f2 != 53) {
-    global_fail_count++;
-    std::cout << "Invalid Location::flatten()" << std::endl;
-    return;
-  }
-
-  if (Location::unflatten(f1) != loc1) {
-    global_fail_count++;
-    std::cout << "Invalid Location::unflatten()" << std::endl;
-    return;
-  }
-
-  if (Location::unflatten(f2) != loc2) {
-    global_fail_count++;
-    std::cout << "Invalid Location::unflatten()" << std::endl;
-    return;
-  }
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_EQ(f1, 0);
+  EXPECT_EQ(f2, 53);
+  EXPECT_EQ(Location::unflatten(f1), loc1);
+  EXPECT_EQ(Location::unflatten(f2), loc2);
 }
 
-void test_bit_board() {
+TEST(BitBoard, all) {
   BitBoard board;
   board.clear();
 
@@ -145,9 +99,7 @@ void test_bit_board() {
       " 1 x..................x  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  if (!validate_repr(__func__, __LINE__, actual_repr, expected_repr)) {
-    return;
-  }
+  EXPECT_EQ(actual_repr, expected_repr);
 
   // |
 
@@ -168,9 +120,7 @@ void test_bit_board() {
       " 1 x..................x  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  if (!validate_repr(__func__, __LINE__, actual_repr3, expected_repr3)) {
-    return;
-  }
+  EXPECT_EQ(actual_repr3, expected_repr3);
 
   // &=
 
@@ -183,9 +133,7 @@ void test_bit_board() {
       " 1 x...................  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  if (!validate_repr(__func__, __LINE__, actual_repr4, expected_repr4)) {
-    return;
-  }
+  EXPECT_EQ(actual_repr4, expected_repr4);
 
   // ~
 
@@ -215,38 +163,17 @@ void test_bit_board() {
       " 1 .xxxxxxxxxxxxxxxxxx.  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  if (!validate_repr(__func__, __LINE__, actual_repr5, expected_repr5)) {
-    return;
-  }
+  EXPECT_EQ(actual_repr5, expected_repr5);
 
   // any()
 
   BitBoard empty_board;
   empty_board.clear();
 
-  if (empty_board.any()) {
-    global_fail_count++;
-    std::cout << "Empty board is not empty" << std::endl;
-    return;
-  }
-
-  if (!board.any()) {
-    global_fail_count++;
-    std::cout << "Non-empty board is empty" << std::endl;
-    return;
-  }
-
-  if (board.count() != 2) {
-    global_fail_count++;
-    std::cout << "BitBoard::count() failure" << std::endl;
-    return;
-  }
-
-  if (board5.count() != 398) {
-    global_fail_count++;
-    std::cout << "BitBoard::count() failure" << std::endl;
-    return;
-  }
+  EXPECT_FALSE(empty_board.any());
+  EXPECT_TRUE(board.any());
+  EXPECT_EQ(board.count(), 2);
+  EXPECT_EQ(board5.count(), 398);
 
   // clear_at_and_after()
 
@@ -264,9 +191,7 @@ void test_bit_board() {
       " 1 .xxxxxxxxxxxxxxxxxx.  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  if (!validate_repr(__func__, __LINE__, actual_repr6, expected_repr6)) {
-    return;
-  }
+  EXPECT_EQ(actual_repr6, expected_repr6);
 
   // get_row()
 
@@ -275,11 +200,7 @@ void test_bit_board() {
   for (int i = 0; i < 4; i++) {
     uint32_t actual = board6.get_row(get_row_k[i]);
     uint32_t expected = get_row_expected[i];
-    if (actual != expected) {
-      global_fail_count++;
-      printf("board6.get_row() failure i=%d (%u != %u)\n", i, actual, expected);
-      return;
-    }
+    EXPECT_EQ(actual, expected);
   }
 
   // get()
@@ -292,11 +213,7 @@ void test_bit_board() {
       } else if (row == 5) {
         expected = col < 3;
       }
-      if (actual != expected) {
-        global_fail_count++;
-        printf("board6.get() failure row=%d col=%d (%d != %d)\n", row, col, actual, expected);
-        return;
-      }
+      EXPECT_EQ(actual, expected);
     }
   }
 
@@ -306,26 +223,12 @@ void test_bit_board() {
 
   int i = 0;
   for (Location actual_loc : board3.get_set_locations()) {
-    if (i >= kNumExpectedLocations) {
-      global_fail_count++;
-      printf("board3.get_set_locations() failure: too many locations\n");
-      return;
-    }
+    EXPECT_LT(i, kNumExpectedLocations);
     Location expected_loc = expected_locations[i];
-    if (actual_loc != expected_loc) {
-      global_fail_count++;
-      printf("board3.get_set_locations() failure: location i=%d (%d, %d) != (%d, %d)\n", i,
-             (int)actual_loc.row, (int)actual_loc.col, (int)expected_loc.row,
-             (int)expected_loc.col);
-      return;
-    }
+    EXPECT_EQ(actual_loc, expected_loc);
     ++i;
   }
-  if (i < kNumExpectedLocations) {
-    global_fail_count++;
-    printf("board3.get_set_locations() failure: too few locations\n");
-    return;
-  }
+  EXPECT_EQ(i, kNumExpectedLocations);
 
   // write_to()
 
@@ -335,11 +238,7 @@ void test_bit_board() {
   }
   std::bitset<kNumCells> actual_bitset;
   board3.write_to(actual_bitset);
-  if (actual_bitset != expected_bitset) {
-    global_fail_count++;
-    printf("board3.write_to() failure\n");
-    return;
-  }
+  EXPECT_EQ(actual_bitset, expected_bitset);
 
   // get_corner_constraint()
 
@@ -359,12 +258,7 @@ void test_bit_board() {
   for (i = 0; i < 8; ++i) {
     corner_constraint_t actual = board7.get_corner_constraint(constraint_locs7[i]);
     corner_constraint_t expected = expected_constraints7[i];
-    if (actual != expected) {
-      global_fail_count++;
-      printf("board7.get_corner_constraint() failure i=%d (%d != %d)\n", i, (int)actual,
-             (int)expected);
-      return;
-    }
+    EXPECT_EQ(actual, expected);
   }
 
   BitBoard board8;
@@ -384,12 +278,7 @@ void test_bit_board() {
   for (i = 0; i < 8; ++i) {
     corner_constraint_t actual = board8.get_corner_constraint(constraint_locs8[i]);
     corner_constraint_t expected = expected_constraints8[i];
-    if (actual != expected) {
-      global_fail_count++;
-      printf("board8.get_corner_constraint() failure i=%d (%d != %d)\n", i, (int)actual,
-             (int)expected);
-      return;
-    }
+    EXPECT_EQ(actual, expected);
   }
 
   BitBoard board9;
@@ -409,12 +298,7 @@ void test_bit_board() {
   for (i = 0; i < 8; ++i) {
     corner_constraint_t actual = board9.get_corner_constraint(constraint_locs9[i]);
     corner_constraint_t expected = expected_constraints9[i];
-    if (actual != expected) {
-      global_fail_count++;
-      printf("board9.get_corner_constraint() failure i=%d (%d != %d)\n", i, (int)actual,
-             (int)expected);
-      return;
-    }
+    EXPECT_EQ(actual, expected);
   }
 
   BitBoard board10;
@@ -434,12 +318,7 @@ void test_bit_board() {
   for (i = 0; i < 8; ++i) {
     corner_constraint_t actual = board10.get_corner_constraint(constraint_locs10[i]);
     corner_constraint_t expected = expected_constraints10[i];
-    if (actual != expected) {
-      global_fail_count++;
-      printf("board10.get_corner_constraint() failure i=%d (%d != %d)\n", i, (int)actual,
-             (int)expected);
-      return;
-    }
+    EXPECT_EQ(actual, expected);
   }
 
   // |=
@@ -462,30 +341,17 @@ void test_bit_board() {
       " 1 xx.................x  1\n"
       "   ABCDEFGHIJKLMNOPQRST\n";
 
-  if (!validate_repr(__func__, __LINE__, actual_repr11, expected_repr11)) {
-    return;
-  }
+  EXPECT_EQ(actual_repr11, expected_repr11);
 
   // intersects()
-  if (!board.intersects(slice)) {
-    global_fail_count++;
-    printf("BitBoard::intersects() failure @%s:%d\n", __FILE__, __LINE__);
-    return;
-  }
+  EXPECT_TRUE(board.intersects(slice));
 
   BitBoard board12;
   board12.clear();
-  if (board12.intersects(slice)) {
-    global_fail_count++;
-    printf("BitBoard::intersects() failure @%s:%d\n", __FILE__, __LINE__);
-    return;
-  }
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_FALSE(board12.intersects(slice));
 }
 
-void test_piece_orientation_corner() {
+TEST(PieceOrientationCorner, all) {
   // 272: Y5/1
   //
   // *....*
@@ -496,215 +362,145 @@ void test_piece_orientation_corner() {
 
   Piece p = poc.to_piece();
   PieceOrientation po = poc.to_piece_orientation();
-
-  if (p != 19) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::to_piece() failure (%d)\n", int(p));
-    return;
-  }
-
-  if (po != 80) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::to_piece_orientation() failure (%d)\n", int(po));
-    return;
-  }
+  EXPECT_EQ(p, 19);
+  EXPECT_EQ(po, 80);
 
   Location expected_loc{2, 1};
   Location actual_loc = poc.corner_offset();
 
-  if (actual_loc != expected_loc) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::corner_offset() failure (%d, %d != %d, %d)\n",
-           (int)actual_loc.row, (int)actual_loc.col, (int)expected_loc.row, (int)expected_loc.col);
-    return;
-  }
+  EXPECT_EQ(actual_loc, expected_loc);
 
   BitBoardSlice mask_0_0 = poc.to_bitboard_mask(Location{0, 0});
   BitBoardSlice mask_0_19 = poc.to_bitboard_mask(Location{0, 19});
   BitBoardSlice mask_19_0 = poc.to_bitboard_mask(Location{19, 0});
   BitBoardSlice mask_19_19 = poc.to_bitboard_mask(Location{19, 19});
 
-  if (!mask_0_0.empty()) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::to_bitboard_mask() failure (0, 0) - expected empty\n");
-    return;
-  }
+  EXPECT_TRUE(mask_0_0.empty());
+  EXPECT_TRUE(mask_0_19.empty());
+  EXPECT_FALSE(mask_19_0.empty());
+  EXPECT_TRUE(mask_19_19.empty());
+  full_piece_repr_test(poc, 19, 0,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 oooo+............... 20\n"
+                       "19 +o++*............... 19\n"
+                       "18 *+*................. 18\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!mask_0_19.empty()) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::to_bitboard_mask() failure (0, 19) - expected empty\n");
-    return;
-  }
+  full_piece_repr_test(poc, 19, 1,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 +oooo+.............. 20\n"
+                       "19 *+o++*.............. 19\n"
+                       "18 .*+*................ 18\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (mask_19_0.empty()) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::to_bitboard_mask() failure (19, 0) - expected nonempty\n");
-    return;
-  }
+  full_piece_repr_test(poc, 18, 0,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 ++++*............... 20\n"
+                       "19 oooo+............... 19\n"
+                       "18 +o++*............... 18\n"
+                       "17 *+*................. 17\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!mask_19_19.empty()) {
-    global_fail_count++;
-    printf("PieceOrientationCorner::to_bitboard_mask() failure (0, 19) - expected empty\n");
-    return;
-  }
+  full_piece_repr_test(poc, 18, 1,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 *++++*.............. 20\n"
+                       "19 +oooo+.............. 19\n"
+                       "18 *+o++*.............. 18\n"
+                       "17 .*+*................ 17\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 19, 0,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 oooo+............... 20\n"
-                            "19 +o++*............... 19\n"
-                            "18 *+*................. 18\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 1, 0,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 3 ++++*...............  3\n"
+                       " 2 oooo+...............  2\n"
+                       " 1 +o++*...............  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 19, 1,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 +oooo+.............. 20\n"
-                            "19 *+o++*.............. 19\n"
-                            "18 .*+*................ 18\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 1, 1,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 3 *++++*..............  3\n"
+                       " 2 +oooo+..............  2\n"
+                       " 1 *+o++*..............  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 18, 0,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 ++++*............... 20\n"
-                            "19 oooo+............... 19\n"
-                            "18 +o++*............... 18\n"
-                            "17 *+*................. 17\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 2, 0,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 4 ++++*...............  4\n"
+                       " 3 oooo+...............  3\n"
+                       " 2 +o++*...............  2\n"
+                       " 1 *+*.................  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 18, 1,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 *++++*.............. 20\n"
-                            "19 +oooo+.............. 19\n"
-                            "18 *+o++*.............. 18\n"
-                            "17 .*+*................ 17\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 2, 1,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 4 *++++*..............  4\n"
+                       " 3 +oooo+..............  3\n"
+                       " 2 *+o++*..............  2\n"
+                       " 1 .*+*................  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 0,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 3 ++++*...............  3\n"
-                            " 2 oooo+...............  2\n"
-                            " 1 +o++*...............  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 1, 16,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 3 ...............*++++  3\n"
+                       " 2 ...............+oooo  2\n"
+                       " 1 ...............*+o++  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 1,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 3 *++++*..............  3\n"
-                            " 2 +oooo+..............  2\n"
-                            " 1 *+o++*..............  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 1, 15,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 3 ..............*++++*  3\n"
+                       " 2 ..............+oooo+  2\n"
+                       " 1 ..............*+o++*  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 2, 0,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 4 ++++*...............  4\n"
-                            " 3 oooo+...............  3\n"
-                            " 2 +o++*...............  2\n"
-                            " 1 *+*.................  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 2, 16,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 4 ...............*++++  4\n"
+                       " 3 ...............+oooo  3\n"
+                       " 2 ...............*+o++  2\n"
+                       " 1 ................*+*.  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 2, 1,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 4 *++++*..............  4\n"
-                            " 3 +oooo+..............  3\n"
-                            " 2 *+o++*..............  2\n"
-                            " 1 .*+*................  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 2, 15,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       " 4 ..............*++++*  4\n"
+                       " 3 ..............+oooo+  3\n"
+                       " 2 ..............*+o++*  2\n"
+                       " 1 ...............*+*..  1\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 16,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 3 ...............*++++  3\n"
-                            " 2 ...............+oooo  2\n"
-                            " 1 ...............*+o++  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 19, 16,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 ...............+oooo 20\n"
+                       "19 ...............*+o++ 19\n"
+                       "18 ................*+*. 18\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 1, 15,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 3 ..............*++++*  3\n"
-                            " 2 ..............+oooo+  2\n"
-                            " 1 ..............*+o++*  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 19, 15,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 ..............+oooo+ 20\n"
+                       "19 ..............*+o++* 19\n"
+                       "18 ...............*+*.. 18\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 2, 16,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 4 ...............*++++  4\n"
-                            " 3 ...............+oooo  3\n"
-                            " 2 ...............*+o++  2\n"
-                            " 1 ................*+*.  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
+  full_piece_repr_test(poc, 18, 16,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 ...............*++++ 20\n"
+                       "19 ...............+oooo 19\n"
+                       "18 ...............*+o++ 18\n"
+                       "17 ................*+*. 17\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 2, 15,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            " 4 ..............*++++*  4\n"
-                            " 3 ..............+oooo+  3\n"
-                            " 2 ..............*+o++*  2\n"
-                            " 1 ...............*+*..  1\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
-
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 19, 16,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 ...............+oooo 20\n"
-                            "19 ...............*+o++ 19\n"
-                            "18 ................*+*. 18\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
-
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 19, 15,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 ..............+oooo+ 20\n"
-                            "19 ..............*+o++* 19\n"
-                            "18 ...............*+*.. 18\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
-
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 18, 16,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 ...............*++++ 20\n"
-                            "19 ...............+oooo 19\n"
-                            "18 ...............*+o++ 18\n"
-                            "17 ................*+*. 17\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
-
-  if (!full_piece_repr_test(__FILE__, __LINE__, poc, 18, 15,
-                            "   ABCDEFGHIJKLMNOPQRST\n"
-                            "20 ..............*++++* 20\n"
-                            "19 ..............+oooo+ 19\n"
-                            "18 ..............*+o++* 18\n"
-                            "17 ...............*+*.. 17\n"
-                            "   ABCDEFGHIJKLMNOPQRST\n")) {
-    return;
-  }
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  full_piece_repr_test(poc, 18, 15,
+                       "   ABCDEFGHIJKLMNOPQRST\n"
+                       "20 ..............*++++* 20\n"
+                       "19 ..............+oooo+ 19\n"
+                       "18 ..............*+o++* 18\n"
+                       "17 ...............*+*.. 17\n"
+                       "   ABCDEFGHIJKLMNOPQRST\n");
 }
 
-void test_load() {
+TEST(State, load) {
   std::string repr =
       "   ABCDEFGHIJKLMNOPQRST\n"
       "20 Y...Y..Y..YY.R....RR 20\n"
@@ -732,32 +528,11 @@ void test_load() {
   State state = Game::IO::load(repr);
   std::string repr2 = get_repr(state);
 
-  if (repr != repr2) {
-    global_fail_count++;
-    printf("Game::IO::load() failure\n");
-    printf("repr:\n");
-    std::cout << repr << std::endl;
-    printf("repr2:\n");
-    std::cout << repr2 << std::endl;
-    return;
-  }
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_EQ(repr, repr2);
 }
 
-int main() {
+int main(int argc, char** argv) {
   util::set_tty_mode(false);
-  test_location();
-  test_bit_board();
-  test_piece_orientation_corner();
-  test_load();
-
-  if (global_fail_count > 0) {
-    int total_count = global_pass_count + global_fail_count;
-    printf("Failed %d of %d test%s!\n", global_fail_count, total_count, total_count > 1 ? "s" : "");
-  } else {
-    printf("All tests passed (%d of %d)!\n", global_pass_count, global_pass_count);
-  }
-  return global_fail_count ? 1 : 0;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
