@@ -276,6 +276,9 @@ template <concepts::FTensor Tensor> float min(const Tensor& tensor);
 template <concepts::FTensor Tensor> bool any(const Tensor& tensor);
 template <concepts::FTensor Tensor> int count(const Tensor& tensor);
 
+template <concepts::FTensor Tensor>
+bool equal(const Tensor& tensor1, const Tensor& tensor2);
+
 /*
  * left_rotate([0, 1, 2, 3], 0) -> [0, 1, 2, 3]
  * left_rotate([0, 1, 2, 3], 1) -> [1, 2, 3, 0]

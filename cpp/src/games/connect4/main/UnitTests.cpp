@@ -1,12 +1,14 @@
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include <core/tests/Common.hpp>
 #include <games/connect4/Constants.hpp>
 #include <games/connect4/Game.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+
+#include <gtest/gtest.h>
+
+#include <sstream>
+#include <string>
+#include <vector>
 
 /*
  * Tests connect4 symmetry classes.
@@ -66,45 +68,7 @@ std::string get_repr(const State& state) {
   return repr;
 }
 
-int global_pass_count = 0;
-int global_fail_count = 0;
-
-bool validate_state(const char* func, int line, const std::string& actual_repr,
-                    const std::string& expected_repr) {
-  if (actual_repr != expected_repr) {
-    printf("Failure at %s():%d\n", func, line);
-    std::cout << "Expected:" << std::endl;
-    std::cout << expected_repr << std::endl;
-    std::cout << "But got:" << std::endl;
-    std::cout << actual_repr << std::endl;
-    global_fail_count++;
-    return false;
-  } else {
-    return true;
-  }
-}
-
-bool validate_policy(const char* func, int line, const PolicyTensor& actual_policy,
-                     const PolicyTensor& expected_policy) {
-  bool failed = false;
-  for (int c = 0; c < Game::Constants::kNumActions; ++c) {
-    if (actual_policy(c) != expected_policy(c)) {
-      if (!failed) {
-        printf("Failure at %s():%d\n", func, line);
-        failed = true;
-      }
-      printf("Expected policy(%s)=%f, but got %f\n", IO::action_to_str(c).c_str(),
-             expected_policy(c), actual_policy(c));
-    }
-  }
-  if (failed) {
-    global_fail_count++;
-    return false;
-  }
-  return true;
-}
-
-void test_identity() {
+TEST(Symmetry, identity) {
   State state = make_init_state();
 
   group::element_t sym = groups::D1::kIdentity;
@@ -114,23 +78,20 @@ void test_identity() {
   std::string repr = get_repr(state);
   std::string expected_repr = init_state_repr;
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(0, 1);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_flip() {
+TEST(Symmetry, flip) {
   State state = make_init_state();
 
   group::element_t sym = groups::D1::kFlip;
@@ -146,47 +107,25 @@ void test_flip() {
       "| | | |R| | | |\n"
       "| | |Y|R| | | |\n";
 
-  if (!validate_state(__func__, __LINE__, repr, expected_repr)) return;
+  EXPECT_EQ(repr, expected_repr);
   Game::Symmetries::apply(state, inv_sym);
-  if (!validate_state(__func__, __LINE__, get_repr(state), init_state_repr)) return;
+  EXPECT_EQ(get_repr(state), init_state_repr);
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
   Game::Symmetries::apply(policy, sym);
   PolicyTensor expected_policy = make_policy(5, 6);
-  if (!validate_policy(__func__, __LINE__, policy, expected_policy)) return;
+  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  if (!validate_policy(__func__, __LINE__, policy, init_policy)) return;
-
-  printf("Success: %s()\n", __func__);
-  global_pass_count++;
+  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
-void test_action_transforms() {
-  if (core::tests::Common<Game>::test_action_transforms(__func__) == false) {
-    global_fail_count++;
-    return;
-  } else {
-    printf("Success: %s()\n", __func__);
-    global_pass_count++;
-  }
+TEST(Symmetry, action_transforms) {
+  core::tests::Common<Game>::gtest_action_transforms();
 }
 
-void test_symmetries() {
-  test_identity();
-  test_flip();
-  test_action_transforms();
-}
-
-int main() {
+int main(int argc, char** argv) {
   util::set_tty_mode(false);
-  test_symmetries();
-
-  if (global_fail_count > 0) {
-    int total_count = global_pass_count + global_fail_count;
-    printf("Failed %d of %d test%s!\n", global_fail_count, total_count, total_count > 1 ? "s" : "");
-  } else {
-    printf("All tests passed (%d of %d)!\n", global_pass_count, global_pass_count);
-  }
-  return global_fail_count ? 1 : 0;
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }

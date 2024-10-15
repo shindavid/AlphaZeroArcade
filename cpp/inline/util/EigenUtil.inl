@@ -205,6 +205,12 @@ int count(const Tensor& tensor) {
   return c;
 }
 
+template <concepts::FTensor Tensor>
+bool equal(const Tensor& tensor1, const Tensor& tensor2) {
+  Eigen::TensorFixedSize<bool, Eigen::Sizes<>, Eigen::RowMajor> out = (tensor1 == tensor2).all();
+  return out();
+}
+
 template <concepts::FArray Array>
 void left_rotate(Array& array, int n) {
   constexpr int N = extract_length_v<Array>;

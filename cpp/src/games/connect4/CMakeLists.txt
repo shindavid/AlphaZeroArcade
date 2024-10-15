@@ -7,6 +7,7 @@ add_executable(c4_tests main/UnitTests.cpp ${COMMON_SOURCES})
 add_executable(c4_exe main/Connect4.cpp ${COMMON_SOURCES})
 add_library(c4_ffi SHARED shared/Connect4_ffi.cpp ${COMMON_SOURCES})
 set_target_properties(c4_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(c4_tests PRIVATE GTest::GTest GTest::Main)
 
 set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 set(TARGETS c4_tests c4_exe c4_ffi)

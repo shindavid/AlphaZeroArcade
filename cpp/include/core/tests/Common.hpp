@@ -22,6 +22,7 @@ struct Common {
    * If these checks pass, returns true. Else, prints failure info to stdout, and returns false.
    */
   static bool test_action_transforms(const char* func);
+  static void gtest_action_transforms();
 };
 
 }  // namespace tests
