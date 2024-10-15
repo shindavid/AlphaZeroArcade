@@ -52,8 +52,12 @@ struct AllSatisfyConcept<Pred, TypeList<Head, Tails...>>
     : std::bool_constant<Pred<Head>::value && AllSatisfyConcept<Pred, TypeList<Tails...>>::value> {
 };
 
+/*
+ * NOTE(dshin): VSCode seems to get confused by the IsTypeList<T> requirement here, even though
+ * gcc compiles it fine. I'm commenting it out to make the IDE happy.
+ */
 template <typename T, template<typename> typename Pred>
-concept IsTypeListSatisfying = IsTypeList<T> && AllSatisfyConcept<Pred, T>::value;
+concept IsTypeListSatisfying = /*IsTypeList<T> &&*/ AllSatisfyConcept<Pred, T>::value;
 
 // length of a typelist
 
