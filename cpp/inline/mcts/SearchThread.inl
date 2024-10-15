@@ -21,9 +21,7 @@ inline SearchThread<Game>::SearchThread(SharedData* shared_data,
     : shared_data_(shared_data),
       nn_eval_service_(nn_eval_service),
       manager_params_(manager_params),
-      thread_id_(thread_id) {
-  thread_ = new std::thread([=, this] { loop(); });
-}
+      thread_id_(thread_id) {}
 
 template <core::concepts::Game Game>
 inline SearchThread<Game>::~SearchThread() {
@@ -32,6 +30,12 @@ inline SearchThread<Game>::~SearchThread() {
   }
   profiler_.dump(1);
   profiler_.close_file();
+}
+
+template <core::concepts::Game Game>
+void SearchThread<Game>::start() {
+  util::release_assert(thread_ == nullptr);
+  thread_ = new std::thread([=, this] { loop(); });
 }
 
 template <core::concepts::Game Game>

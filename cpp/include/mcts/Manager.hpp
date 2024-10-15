@@ -46,6 +46,7 @@ class Manager {
   const ManagerParams& params() const { return params_; }
   int num_search_threads() const { return params().num_search_threads; }
 
+  void start_threads();
   void start();
   void clear();
   void receive_state_change(core::seat_index_t, const State&, core::action_t);

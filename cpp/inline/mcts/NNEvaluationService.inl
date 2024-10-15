@@ -1,6 +1,7 @@
 #include <mcts/NNEvaluationService.hpp>
 
 #include <util/Asserts.hpp>
+#include <util/KeyValueDumper.hpp>
 
 #include <boost/json/src.hpp>
 

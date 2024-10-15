@@ -17,6 +17,8 @@
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
 
+class SearchThreadTest;  // forward-declaration
+
 namespace mcts {
 
 template <core::concepts::Game Game>
@@ -56,6 +58,7 @@ class SearchThread {
                const ManagerParams* manager_params, int thread_id);
   ~SearchThread();
 
+  void start();
   int thread_id() const { return thread_id_; }
   std::string thread_id_whitespace() const {
     return util::make_whitespace(kThreadWhitespaceLength * thread_id_);
@@ -140,6 +143,8 @@ class SearchThread {
   search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
+
+  friend ::SearchThreadTest;
 };
 
 }  // namespace mcts

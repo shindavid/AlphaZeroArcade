@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
+#include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
 #include <util/EigenUtil.hpp>
@@ -23,7 +24,9 @@ namespace mcts {
 template <core::concepts::Game Game>
 struct SharedData {
   using Rules = Game::Rules;
+  using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
+  using ActionOutcome = Game::Types::ActionOutcome;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using LookupTable = Node::LookupTable;
@@ -40,12 +43,13 @@ struct SharedData {
     node_pool_index_t node_index = -1;
   };
 
-  SharedData(bool multithreaded_mode) : lookup_table(multithreaded_mode) {}
+  SharedData(const ManagerParams& manager_params, int manager_id);
   SharedData(const SharedData&) = delete;
   SharedData& operator=(const SharedData&) = delete;
 
   void clear();
   void update_state(core::action_t action);
+  void init_root_info(bool add_noise);
   Node* get_root_node() { return lookup_table.get_node(root_info.node_index); }
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen;
@@ -60,7 +64,7 @@ struct SharedData {
   root_info_t root_info;
 
   SearchParams search_params;
-  int manager_id = -1;
+  const int manager_id = -1;
   bool shutting_down = false;
 };
 

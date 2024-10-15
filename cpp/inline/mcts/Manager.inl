@@ -17,11 +17,7 @@ inline Manager<Game>::Manager(const ManagerParams& params)
     : params_(params),
       pondering_search_params_(
           SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
-      shared_data_(num_search_threads() > 1) {
-  shared_data_.manager_id = next_instance_id_++;
-  new (&shared_data_.root_softmax_temperature) math::ExponentialDecay(
-      params_.starting_root_softmax_temperature, params_.ending_root_softmax_temperature,
-      params_.root_softmax_temperature_half_life);
+      shared_data_(params, next_instance_id_++) {
   namespace bf = boost::filesystem;
 
   if (mcts::kEnableProfiling) {
@@ -49,7 +45,6 @@ inline Manager<Game>::Manager(const ManagerParams& params)
   if (params.enable_pondering && num_search_threads() == 1) {
     throw util::CleanException("pondering mode does not work with only 1 search thread");
   }
-  shared_data_.active_search_threads.resize(num_search_threads());
   for (int i = 0; i < num_search_threads(); ++i) {
     auto thread = new SearchThread(&shared_data_, nn_eval_service_, &params_, i);
     if (mcts::kEnableProfiling) {
@@ -68,6 +63,13 @@ inline Manager<Game>::~Manager() {
   }
   for (auto* thread : search_threads_) {
     delete thread;
+  }
+}
+
+template <core::concepts::Game Game>
+inline void Manager<Game>::start_threads() {
+  for (SearchThread* thread : search_threads_) {
+    thread->start();
   }
 }
 
@@ -121,21 +123,12 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
 template <core::concepts::Game Game>
 inline const typename Manager<Game>::SearchResults*
 Manager<Game>::search(const SearchParams& params) {
-  using ActionOutcome = Game::Types::ActionOutcome;
-
   stop_search_threads();
 
-  auto& root_info = shared_data_.root_info;
   bool add_noise = params.full_search && params_.dirichlet_mult > 0;
-  if (root_info.node_index < 0 || add_noise) {
-    const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
-    ActionOutcome outcome;
-    root_info.node_index = shared_data_.lookup_table.alloc_node();
-    Node* root = shared_data_.lookup_table.get_node(root_info.node_index);
-    new (root) Node(&shared_data_.lookup_table, canonical_history, outcome);
-    root->stats().RN++;
-  }
+  shared_data_.init_root_info(add_noise);
 
+  auto& root_info = shared_data_.root_info;
   if (mcts::kEnableDebug) {
     Game::IO::print_state(std::cout, root_info.history_array[group::kIdentity].current());
   }

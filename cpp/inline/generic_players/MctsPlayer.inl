@@ -98,6 +98,7 @@ MctsPlayer<Game>::MctsPlayer(const Params& params, const MctsManagerParams& mana
   shared_data_ = new SharedData();
   owns_manager_ = true;
   mcts_manager_->set_player_data(shared_data_);
+  mcts_manager_->start_threads();
 }
 
 template <core::concepts::Game Game>
