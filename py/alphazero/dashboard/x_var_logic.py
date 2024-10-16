@@ -155,6 +155,8 @@ class XVarSelector:
 
         Returns True if the initialization succeeds.
         """
+        if self.x_index is None:
+            return False
         x_col = self.x_column
         plot.xaxis.axis_label = self.x_label
         if x_col not in self._min_x_dict:
