@@ -55,7 +55,8 @@ class Node {
   enum expansion_state_t : int8_t {
     kNotExpanded,
     kMidExpansion,
-    kExpanded,
+    kPreExpanded,  // used when evaluating all children when computing AV-targets
+    kExpanded
   };
 
   struct stable_data_t {

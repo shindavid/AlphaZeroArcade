@@ -93,7 +93,7 @@ class SearchThread {
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);
-  void standard_backprop();
+  void standard_backprop(bool undo_virtual);
   void short_circuit_backprop();
   bool expand(StateHistory*, Node*, edge_t*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging

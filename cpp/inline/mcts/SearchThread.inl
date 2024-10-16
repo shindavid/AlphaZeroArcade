@@ -177,7 +177,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     Node* child = lookup_table.get_node(edge->child_index);
     new (child) Node(&lookup_table, canonical_child_history, outcome);
     child->initialize_edges();
-    edge->state = Node::kExpanded;
+    edge->state = Node::kPreExpanded;
     expand_count++;
 
     if (child->is_terminal()) continue;
@@ -305,6 +305,20 @@ inline void SearchThread<Game>::visit(Node* node) {
       if (expand(state_history, node, edge)) return;
     } else if (edge->state == Node::kMidExpansion) {
       node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
+    } else if (edge->state == Node::kPreExpanded) {
+      edge->state = Node::kMidExpansion;
+      lock.unlock();
+
+      util::debug_assert(edge->child_index >= 0);
+      Node* child = shared_data_->lookup_table.get_node(edge->child_index);
+      search_path_.emplace_back(child, nullptr);
+      standard_backprop(false);
+
+      lock.lock();
+      edge->state = Node::kExpanded;
+      lock.unlock();
+      node->cv().notify_all();
+      return;
     }
   }
 
@@ -397,7 +411,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 }
 
 template <core::concepts::Game Game>
-void SearchThread<Game>::standard_backprop() {
+void SearchThread<Game>::standard_backprop(bool undo_virtual) {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
   Node* last_node = search_path_.back().node;
@@ -407,8 +421,6 @@ void SearchThread<Game>::standard_backprop() {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "
              << value.transpose();
   }
-
-  bool undo_virtual = manager_params_->num_search_threads > 1;
 
   last_node->update_stats([&] {
     last_node->stats().init_q(value, false);
@@ -467,11 +479,12 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     new (child) Node(&lookup_table, *history, outcome_);
     search_path_.emplace_back(child, nullptr);
     child->initialize_edges();
-    if (manager_params_->num_search_threads > 1) {
+    bool do_virtual = manager_params_->num_search_threads > 1;
+    if (do_virtual) {
       virtual_backprop();
     }
     init_node(history, edge->child_index, child);
-    standard_backprop();
+    standard_backprop(do_virtual);
   } else {
     edge->child_index = child_index;
   }
