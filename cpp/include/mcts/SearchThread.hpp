@@ -39,12 +39,12 @@ class SearchThread {
 
   using StateHistory = Game::StateHistory;
   using State = Game::State;
-  using ActionOutcome = Game::Types::ActionOutcome;
   using ActionMask = Game::Types::ActionMask;
   using NNEvaluation_sptr = NNEvaluation::sptr;
   using PolicyShape = Game::Types::PolicyShape;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ValueArray = Game::Types::ValueArray;
+  using ValueTensor = Game::Types::ValueTensor;
   using SymmetryMask = Game::Types::SymmetryMask;
 
   using item_vec_t = NNEvaluationRequest::item_vec_t;
@@ -119,7 +119,6 @@ class SearchThread {
   auto& rng() const { return shared_data_->rng; }
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
-  ActionOutcome outcome_;
   SharedData* const shared_data_;
   NNEvaluationService* const nn_eval_service_;
   const ManagerParams* manager_params_;

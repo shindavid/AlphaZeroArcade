@@ -25,16 +25,13 @@ std::string Game::IO::action_to_str(core::action_t action) {
 }
 
 // copied from edax-reversi repo - board_next()
-Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();
 
   if (action == kPass) {
     std::swap(state.cur_player_mask, state.opponent_mask);
     state.cur_player = 1 - state.cur_player;
     state.pass_count++;
-    if (state.pass_count == kNumPlayers) {
-      return compute_outcome(state);
-    }
   } else {
     mask_t flipped = flip[action](state.cur_player_mask, state.opponent_mask);
     mask_t cur_player_mask = state.opponent_mask ^ flipped;
@@ -43,13 +40,22 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
     state.cur_player_mask = cur_player_mask;
     state.cur_player = 1 - state.cur_player;
     state.pass_count = 0;
+  }
+}
 
-    if ((state.opponent_mask | state.cur_player_mask) == kCompleteBoardMask) {
-      return compute_outcome(state);
-    }
+bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
+                              core::action_t last_action, GameResults::Tensor& outcome) {
+  if (state.pass_count == kNumPlayers) {
+    outcome = compute_outcome(state);
+    return true;
   }
 
-  return Types::ActionOutcome();
+  if ((state.opponent_mask | state.cur_player_mask) == kCompleteBoardMask) {
+    outcome = compute_outcome(state);
+    return true;
+  }
+
+  return false;
 }
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
@@ -147,7 +153,7 @@ int Game::IO::print_row(char* buf, int n, const State& state,
   return cx;
 }
 
-Game::Types::ActionOutcome Game::Rules::compute_outcome(const State& state) {
+Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   int opponent_count = std::popcount(state.opponent_mask);
   int cur_player_count = std::popcount(state.cur_player_mask);
   if (cur_player_count > opponent_count) {

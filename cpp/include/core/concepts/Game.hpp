@@ -76,7 +76,8 @@ concept Game = requires {
   requires group::concepts::FiniteGroup<typename G::SymmetryGroup>;
   requires core::concepts::GameSymmetries<typename G::Symmetries, typename G::Types,
                                           typename G::State>;
-  requires core::concepts::GameRules<typename G::Rules, typename G::Types, typename G::State,
+  requires core::concepts::GameRules<typename G::Rules, typename G::Types,
+                                     typename G::GameResults::Tensor, typename G::State,
                                      typename G::StateHistory>;
   requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::State>;
   requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::State,

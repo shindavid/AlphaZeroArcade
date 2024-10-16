@@ -30,13 +30,4 @@ struct ActionResponse {
   bool victory_guarantee;
 };
 
-template<typename ValueArray>
-struct ActionOutcome {
-  ActionOutcome(const ValueArray& value) : terminal_value(value), terminal(true) {}
-  ActionOutcome() : terminal(false) {}
-
-  ValueArray terminal_value;  // only valid if terminal
-  bool terminal;
-};
-
 }  // namespace core

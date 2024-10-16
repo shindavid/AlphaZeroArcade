@@ -297,27 +297,31 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     // the server.
     util::release_assert(valid_actions[action], "Invalid action: %d", action);
 
-    ActionOutcome outcome;
+    ValueTensor outcome;
+    bool terminal = false;
     if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
       outcome = GameResults::win(seat);
+      terminal = true;
       if (shared_data_.params().announce_game_results) {
         printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
                player->get_name().c_str(), int(seat));
         std::cout << std::endl;
       }
     } else {
-      outcome = Rules::apply(state_history, action);
+      Rules::apply(state_history, action);
       if (shared_data_.params().print_game_states) {
         Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
       }
       for (auto player2 : players) {
         player2->receive_state_change(seat, state_history.current(), action);
       }
+
+      terminal = Game::Rules::is_terminal(state_history.current(), seat, action, outcome);
     }
-    if (outcome.terminal) {
-      ValueArray array = GameResults::to_value_array(outcome.terminal_tensor);
+    if (terminal) {
+      ValueArray array = GameResults::to_value_array(outcome);
       for (auto player2 : players) {
-        player2->end_game(state_history.current(), outcome.terminal_tensor);
+        player2->end_game(state_history.current(), outcome);
       }
       if (shared_data_.params().announce_game_results) {
         printf("Game %ld complete.\n", game_id);

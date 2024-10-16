@@ -98,6 +98,17 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return std::popcount(state.full_mask) % 2;
 }
 
+
+inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
+  State& state = history.extend();
+
+  column_t col = action;
+  mask_t piece_mask = (state.full_mask + _bottom_mask(col)) & _column_mask(col);
+
+  state.cur_player_mask ^= state.full_mask;
+  state.full_mask |= piece_mask;
+}
+
 template <typename Iter>
 Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
   core::seat_index_t cp = Rules::get_current_player(*cur);

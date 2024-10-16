@@ -157,7 +157,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
 
     // apply raw-orientation action to raw-orientation child-state
     StateHistory raw_child_history = raw_history_;  // copy
-    ActionOutcome outcome = Game::Rules::apply(raw_child_history, raw_edge_action);
+    Game::Rules::apply(raw_child_history, raw_edge_action);
 
     // determine canonical orientation of new leaf-state
     auto canonical_child_sym =
@@ -175,7 +175,14 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
 
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
-    new (child) Node(&lookup_table, canonical_child_history, outcome);
+
+    ValueTensor game_outcome;
+    if (Game::Rules::is_terminal(raw_child_history.current(), node->stable_data().current_player,
+                                 raw_edge_action, game_outcome)) {
+      new (child) Node(&lookup_table, game_outcome);
+    } else {
+      new (child) Node(&lookup_table, canonical_child_history);
+    }
     child->initialize_edges();
     edge->state = Node::kPreExpanded;
     expand_count++;
@@ -287,7 +294,7 @@ inline void SearchThread<Game>::visit(Node* node) {
       Game::Symmetries::apply(edge_action, inv_canonical_sym);
 
       // apply raw-orientation action to raw-orientation leaf-state
-      outcome_ = Game::Rules::apply(raw_history_, edge_action);
+      Game::Rules::apply(raw_history_, edge_action);
 
       // determine canonical orientation of new leaf-state
       group::element_t new_sym = Game::Symmetries::get_canonical_symmetry(raw_history_.current());
@@ -338,7 +345,7 @@ inline void SearchThread<Game>::visit(Node* node) {
     core::action_t edge_action = edge->action;
     Game::Symmetries::apply(edge_action, inv_canonical_sym);
 
-    outcome_ = Game::Rules::apply(raw_history_, edge_action);
+    Game::Rules::apply(raw_history_, edge_action);
     canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
   }
   visit(child);
@@ -476,7 +483,17 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
   if (is_new_node) {
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
-    new (child) Node(&lookup_table, *history, outcome_);
+
+    ValueTensor game_outcome;
+    core::action_t last_action = edge->action;
+    Game::Symmetries::apply(last_action, edge->sym);
+    if (Game::Rules::is_terminal(history->current(), parent->stable_data().current_player,
+                                 last_action, game_outcome)) {
+      new (child) Node(&lookup_table, game_outcome);
+    } else {
+      new (child) Node(&lookup_table, *history);
+    }
+
     search_path_.emplace_back(child, nullptr);
     child->initialize_edges();
     bool do_virtual = manager_params_->num_search_threads > 1;

@@ -26,7 +26,6 @@ struct SharedData {
   using Rules = Game::Rules;
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
-  using ActionOutcome = Game::Types::ActionOutcome;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using LookupTable = Node::LookupTable;
