@@ -197,10 +197,19 @@ TEST_F(SearchThreadTest, init_root_node) {
   test_init_root_node();
 }
 
-TEST_F(SearchThreadTest, something_else) {
-  init(1, true);
+TEST_F(SearchThreadTest, perform_even_visits) {
+  using SearchResults = Game::Types::SearchResults;
+  constexpr int N = 10000;
+  init(N, true);
   perform_visits();
-  // TODO test something
+  Node *root = shared_data_.lookup_table.get_node(shared_data_.root_info.node_index);
+  SearchResults results;
+  root->write_results(manager_params_, groups::D1::kIdentity, results);
+
+  for (int i = 0; i < results.counts.size(); i++) {
+    EXPECT_NEAR(results.counts(i), N / 7, 1);
+  }
+
 }
 
 int main(int argc, char** argv) {
