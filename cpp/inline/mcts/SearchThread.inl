@@ -173,6 +173,16 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     Game::Symmetries::apply(reoriented_action, canonical_child_sym);
     Game::Rules::apply(canonical_child_history, reoriented_action);
 
+    expand_count++;
+    edge->state = Node::kPreExpanded;
+
+    MCTSKey mcts_key = Game::InputTensorizor::mcts_key(canonical_child_history);
+    node_pool_index_t child_index = lookup_table.lookup_node(mcts_key);
+    if (child_index >= 0) {
+      edge->child_index = child_index;
+      continue;
+    }
+
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
 
@@ -184,8 +194,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
       new (child) Node(&lookup_table, canonical_child_history);
     }
     child->initialize_edges();
-    edge->state = Node::kPreExpanded;
-    expand_count++;
+    shared_data_->lookup_table.insert_node(mcts_key, edge->child_index);
 
     if (child->is_terminal()) continue;
     if (!request) continue;
@@ -319,7 +328,13 @@ inline void SearchThread<Game>::visit(Node* node) {
       util::debug_assert(edge->child_index >= 0);
       Node* child = shared_data_->lookup_table.get_node(edge->child_index);
       search_path_.emplace_back(child, nullptr);
-      standard_backprop(false);
+      int edge_count = edge->N;
+      int child_count = child->stats().RN;
+      if (edge_count < child_count) {
+        short_circuit_backprop();
+      } else {
+        standard_backprop(false);
+      }
 
       lock.lock();
       edge->state = Node::kExpanded;
