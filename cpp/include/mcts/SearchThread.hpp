@@ -46,6 +46,7 @@ class SearchThread {
   using ValueArray = Game::Types::ValueArray;
   using ValueTensor = Game::Types::ValueTensor;
   using SymmetryMask = Game::Types::SymmetryMask;
+  using MCTSKey = Game::InputTensorizor::MCTSKey;
 
   using item_vec_t = NNEvaluationRequest::item_vec_t;
 

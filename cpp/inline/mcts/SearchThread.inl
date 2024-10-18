@@ -470,9 +470,6 @@ void SearchThread<Game>::short_circuit_backprop() {
 
 template <core::concepts::Game Game>
 bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edge) {
-  using LookupTable = Node::LookupTable;
-  using MCTSKey = Game::InputTensorizor::MCTSKey;
-
   profiler_.record(SearchThreadRegion::kExpand);
 
   LookupTable& lookup_table = shared_data_->lookup_table;
