@@ -23,7 +23,6 @@ class GameServer {
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
   using ActionMask = Game::Types::ActionMask;
-  using ActionOutcome = Game::Types::ActionOutcome;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;

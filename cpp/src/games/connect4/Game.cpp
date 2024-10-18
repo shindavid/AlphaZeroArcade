@@ -11,21 +11,18 @@
 
 namespace c4 {
 
-Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
-  State& state = history.extend();
-
-  column_t col = action;
-  mask_t piece_mask = (state.full_mask + _bottom_mask(col)) & _column_mask(col);
-  core::seat_index_t current_player = Rules::get_current_player(state);
-
-  state.cur_player_mask ^= state.full_mask;
-  state.full_mask |= piece_mask;
-
-  bool win = false;
-
+bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
+                              core::action_t last_action, GameResults::Tensor& outcome) {
   constexpr mask_t horizontal_block = 1UL + (1UL << 8) + (1UL << 16) + (1UL << 24);
   constexpr mask_t nw_se_diagonal_block = 1UL + (1UL << 7) + (1UL << 14) + (1UL << 21);
   constexpr mask_t sw_ne_diagonal_block = 1UL + (1UL << 9) + (1UL << 18) + (1UL << 27);
+
+  column_t col = last_action;
+  mask_t piece_mask = ((state.full_mask + _bottom_mask(col)) & (_column_mask(col) << 1)) >> 1;
+
+  util::release_assert(last_player != get_current_player(state));
+  util::release_assert(last_action >= 0);
+  util::release_assert(std::popcount(piece_mask) == 1);
 
   mask_t masks[] = {
       (piece_mask << 1) - (piece_mask >> 3),      // vertical
@@ -47,18 +44,17 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
   for (mask_t mask : masks) {
     // popcount filters out both int overflow and shift-to-zero
     if (((mask & updated_mask) == mask) && std::popcount(mask) == 4) {
-      win = true;
-      break;
+      outcome = core::WinLossDrawResults::win(last_player);
+      return true;
     }
   }
 
-  if (win) {
-    return core::WinLossDrawResults::win(current_player);
-  } else if (std::popcount(state.full_mask) == kNumCells) {
-    return core::WinLossDrawResults::draw();
+  if (std::popcount(state.full_mask) == kNumCells) {
+    outcome = core::WinLossDrawResults::draw();
+    return true;
   }
 
-  return Types::ActionOutcome();
+  return false;
 }
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,

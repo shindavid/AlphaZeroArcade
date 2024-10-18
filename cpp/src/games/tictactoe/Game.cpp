@@ -2,15 +2,17 @@
 
 namespace tictactoe {
 
-Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();
-  core::seat_index_t current_player = get_current_player(state);
 
   mask_t piece_mask = mask_t(1) << action;
   state.cur_player_mask ^= state.full_mask;
   state.full_mask |= piece_mask;
+}
 
-  util::release_assert(get_current_player(state) != current_player);  // simple sanity check
+bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
+                              core::action_t last_action, GameResults::Tensor& outcome) {
+  util::release_assert(get_current_player(state) != last_player);  // simple sanity check
 
   bool win = false;
 
@@ -23,12 +25,14 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
   }
 
   if (win) {
-    return core::WinLossDrawResults::win(current_player);
+    outcome = core::WinLossDrawResults::win(last_player);
+    return true;
   } else if (std::popcount(state.full_mask) == kNumCells) {
-    return core::WinLossDrawResults::draw();
+    outcome = core::WinLossDrawResults::draw();
+    return true;
   }
 
-  return Types::ActionOutcome();
+  return false;
 }
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {

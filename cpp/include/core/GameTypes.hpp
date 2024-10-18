@@ -57,14 +57,6 @@ struct GameTypes {
     bool provably_lost = false;
   };
 
-  struct ActionOutcome {
-    ActionOutcome(const ValueTensor& tensor) : terminal_tensor(tensor), terminal(true) {}
-    ActionOutcome() : terminal(false) {}
-
-    ValueTensor terminal_tensor;  // only valid if terminal
-    bool terminal;
-  };
-
   /*
    * A (symmetry-adjusted) view of a specific position in a game log.
    *

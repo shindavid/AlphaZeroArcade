@@ -35,8 +35,13 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.IsBlackToMove() ? kBlack : kWhite;
 }
 
-inline Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   history.lc0_history().Append(lczero::MoveFromNNIndex(action, 0));
+  throw std::runtime_error("Not implemented");
+}
+
+inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
+                                     core::action_t last_action, GameResults::Tensor& outcome) {
   throw std::runtime_error("Not implemented");
 }
 

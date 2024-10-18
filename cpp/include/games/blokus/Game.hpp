@@ -54,10 +54,12 @@ class Game {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::seat_index_t get_current_player(const State&);
-    static Types::ActionOutcome apply(StateHistory&, core::action_t action);
+    static void apply(StateHistory&, core::action_t action);
+    static bool is_terminal(const State& state, core::seat_index_t last_player,
+                            core::action_t last_action, GameResults::Tensor& outcome);
 
    private:
-    static Types::ActionOutcome compute_outcome(const State& state);
+    static GameResults::Tensor compute_outcome(const State& state);
   };
 
   struct IO {

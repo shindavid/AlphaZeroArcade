@@ -46,7 +46,6 @@ class Node {
   using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
-  using ActionOutcome = Game::Types::ActionOutcome;
   using SearchResults = Game::Types::SearchResults;
   using player_bitset_t = std::bitset<kNumPlayers>;
   using node_pool_index_t = util::pool_index_t;
@@ -60,7 +59,8 @@ class Node {
   };
 
   struct stable_data_t {
-    stable_data_t(const StateHistory&, const ActionOutcome&);
+    stable_data_t(const StateHistory&);  // for non-terminal nodes
+    stable_data_t(const ValueTensor& game_outcome);  // for terminal nodes
 
     ValueTensor VT;
     ActionMask valid_action_mask;
@@ -168,7 +168,8 @@ class Node {
     mutable std::mutex map_mutex_;
   };
 
-  Node(LookupTable*, const StateHistory&, const ActionOutcome&);
+  Node(LookupTable*, const StateHistory&);  // for non-terminal nodes
+  Node(LookupTable*, const ValueTensor& game_outcome);  // for terminal nodes
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
                      SearchResults& results) const;

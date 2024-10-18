@@ -78,7 +78,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history
   return valid_actions;
 }
 
-Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::action_t action) {
+void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();
 
   if (IS_MACRO_ENABLED(DEBUG_BUILD)) {
@@ -93,16 +93,12 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
     if (action == kPass) {
       core.cur_color = (core.cur_color + 1) % kNumColors;
       core.pass_count++;
-      if (core.pass_count == 4) {  // all players passed, game over
-        return compute_outcome(state);
-      }
-      return Types::ActionOutcome();
     } else {
       util::release_assert(action >= 0 && action < kPass);
       core.pass_count = 0;
       core.partial_move = Location::unflatten(action);
-      return Types::ActionOutcome();
     }
+    return;
   } else {
     Location loc = core.partial_move;
     PieceOrientationCorner poc = PieceOrientationCorner::from_action(action);
@@ -124,11 +120,19 @@ Game::Types::ActionOutcome Game::Rules::apply(StateHistory& history, core::actio
 
     core.cur_color = (core.cur_color + 1) % kNumColors;
     core.partial_move.set(-1, -1);
-    return Types::ActionOutcome();
   }
 }
 
-Game::Types::ActionOutcome Game::Rules::compute_outcome(const State& state) {
+bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
+                              core::action_t last_action, GameResults::Tensor& outcome) {
+  if (state.core.pass_count == kNumColors) {
+    outcome = compute_outcome(state);
+    return true;
+  }
+  return false;
+}
+
+Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   Game::Types::ValueTensor tensor;
 
   int scores[kNumColors];

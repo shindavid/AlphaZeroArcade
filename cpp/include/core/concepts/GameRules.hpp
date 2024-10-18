@@ -8,13 +8,19 @@
 namespace core {
 namespace concepts {
 
-template <typename GR, typename GameTypes, typename State, typename StateHistory>
+template <typename GR, typename GameTypes, typename GameResultsTensor, typename State,
+          typename StateHistory>
 concept GameRules = requires(const State& const_state, const StateHistory& const_history,
-                             State& state, StateHistory& history, group::element_t sym) {
+                             State& state, StateHistory& history, group::element_t sym,
+                             core::seat_index_t last_player, core::action_t last_action,
+                             GameResultsTensor& results) {
   { GR::init_state(state) };
   { GR::get_legal_moves(const_history) } -> std::same_as<typename GameTypes::ActionMask>;
   { GR::get_current_player(const_state) } -> std::same_as<core::seat_index_t>;
-  { GR::apply(history, core::action_t{}) } -> std::same_as<typename GameTypes::ActionOutcome>;
+  { GR::apply(history, core::action_t{}) };
+
+  // Return true iff the game has ended. If returning true, set results to the results of the game.
+  { GR::is_terminal(const_state, last_player, last_action, results) } -> std::same_as<bool>;
 };
 
 }  // namespace concepts

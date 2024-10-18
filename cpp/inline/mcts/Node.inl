@@ -6,22 +6,22 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
-                                                const ActionOutcome& outcome) {
-  if (outcome.terminal) {
-    VT = outcome.terminal_tensor;
-    VT_valid = true;
-    num_valid_actions = 0;
-    current_player = -1;
-    terminal = true;
-  } else {
-    VT.setZero();  // to be set lazily
-    VT_valid = false;
-    valid_action_mask = Game::Rules::get_legal_moves(history);
-    num_valid_actions = valid_action_mask.count();
-    current_player = Game::Rules::get_current_player(history.current());
-    terminal = false;
-  }
+inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history) {
+  VT.setZero();  // to be set lazily
+  VT_valid = false;
+  valid_action_mask = Game::Rules::get_legal_moves(history);
+  num_valid_actions = valid_action_mask.count();
+  current_player = Game::Rules::get_current_player(history.current());
+  terminal = false;
+}
+
+template <core::concepts::Game Game>
+inline Node<Game>::stable_data_t::stable_data_t(const ValueTensor& game_outcome) {
+  VT = game_outcome;
+  VT_valid = true;
+  num_valid_actions = 0;
+  current_player = -1;
+  terminal = true;
 }
 
 template <core::concepts::Game Game>
@@ -172,8 +172,14 @@ int Node<Game>::LookupTable::get_random_mutex_id() const {
 }
 
 template <core::concepts::Game Game>
-Node<Game>::Node(LookupTable* table, const StateHistory& history, const ActionOutcome& outcome)
-    : stable_data_(history, outcome),
+Node<Game>::Node(LookupTable* table, const StateHistory& history)
+    : stable_data_(history),
+      lookup_table_(table),
+      mutex_id_(table->get_random_mutex_id()) {}
+
+template <core::concepts::Game Game>
+Node<Game>::Node(LookupTable* table, const ValueTensor& game_outcome)
+    : stable_data_(game_outcome),
       lookup_table_(table),
       mutex_id_(table->get_random_mutex_id()) {}
 
