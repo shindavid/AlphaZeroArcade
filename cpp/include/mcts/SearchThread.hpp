@@ -135,7 +135,7 @@ class SearchThread {
   struct pseudo_local_vars_t {
     StateHistory canonical_history;
     item_vec_t request_items;
-    StateHistoryArray state_history_array;
+    StateHistoryArray root_history_array;
   };
 
   pseudo_local_vars_t pseudo_local_vars_;
