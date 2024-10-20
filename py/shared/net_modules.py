@@ -520,15 +520,16 @@ class ModuleSpec:
 @dataclass
 class ModelConfig:
     shape_info_dict: ShapeInfoDict
-    stem: ModuleSpec
+    stem: Optional[ModuleSpec]
     blocks: List[ModuleSpec]
     heads: List[ModuleSpec]
     neck: Optional[ModuleSpec]
     loss_weights: Dict[str, float]
 
     def validate(self):
-        for spec in [self.stem] + self.blocks + self.heads:
-            assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
+        for spec in [self.stem, self.neck] + self.blocks + self.heads:
+            if spec is not None:
+                assert spec.type in MODULE_MAP, f'Unknown module type {spec.type}'
 
 
 ModelConfigGenerator = Callable[[ShapeInfoDict], ModelConfig]
@@ -543,7 +544,7 @@ class Model(nn.Module):
         self.config = config
         self.stem = Model._construct_module(config.stem)
         self.blocks = nn.ModuleList(map(Model._construct_module, config.blocks))
-        self.neck = None if config.neck is None else Model._construct_module(config.neck)
+        self.neck = Model._construct_module(config.neck)
         self.heads = nn.ModuleList(map(Model._construct_module, config.heads))
         self.loss_weights = config.loss_weights
 
@@ -566,7 +567,8 @@ class Model(nn.Module):
         Returns a dictionary mapping module names to the number of parameters in that module.
         """
         counts = {}
-        counts['stem'] = sum(p.numel() for p in self.stem.parameters())
+        if self.stem is not None:
+            counts['stem'] = sum(p.numel() for p in self.stem.parameters())
         counts['blocks'] = sum(p.numel() for block in self.blocks for p in block.parameters())
         if self.neck is not None:
             counts['neck'] = sum(p.numel() for p in self.neck.parameters())
@@ -576,7 +578,8 @@ class Model(nn.Module):
 
     def forward(self, x):
         out = x
-        out = self.stem(out)
+        if self.stem is not None:
+            out = self.stem(out)
         for block in self.blocks:
             out = block(out)
         if self.neck is not None:
@@ -584,7 +587,9 @@ class Model(nn.Module):
         return tuple(head(out) for head in self.heads)
 
     @staticmethod
-    def _construct_module(spec: ModuleSpec) -> nn.Module:
+    def _construct_module(spec: Optional[ModuleSpec]) -> Optional[nn.Module]:
+        if spec is None:
+            return None
         cls = MODULE_MAP[spec.type]
         return cls(*spec.args, **spec.kwargs)
 
