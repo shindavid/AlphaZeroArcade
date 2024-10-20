@@ -206,6 +206,49 @@ class ResBlockWithGlobalPooling(nn.Module):
         return x + out
 
 
+class TransformerBlock(nn.Module):
+    def __init__(self, input_shape: Shape, embed_dim: int, n_heads: int, n_layers: int,
+                 n_output_channels: int):
+        super(TransformerBlock, self).__init__()
+
+        board_size = math.prod(input_shape[1:])  # H * W
+        n_input_channels = input_shape[0]  # C
+
+        # Input embedding from input channels to embed_dim
+        self.input_embed = nn.Linear(n_input_channels, embed_dim)
+
+        # Absolute position embedding
+        self.positional_embedding = nn.Parameter(torch.zeros(1, board_size, embed_dim))
+
+        # Transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model=embed_dim, nhead=n_heads)
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
+
+        # Final projection to n_output_channels (matching the n-channels expected by heads)
+        self.output_projection = nn.Linear(embed_dim, n_output_channels)
+
+    def forward(self, x):
+        (B, C, H, W) = x.shape
+
+        # Reshape from (B, C, H, W) to (B, H * W, C)
+        x = x.view(B, C, H * W).permute(0, 2, 1)  # Now (B, H * W, C)
+
+        # Apply input embedding and add positional encoding
+        x = self.input_embed(x)  # (B, H * W, E)
+        x = x + self.positional_embedding  # (B, H * W, E)
+
+        # Pass through transformer
+        x = self.transformer_encoder(x)  # (B, H * W, E)
+
+        # Project output back to the number of channels needed by the heads
+        x = self.output_projection(x)  # (B, H * W, n_output_channels)
+
+        # Make the tensor contiguous and reshape back to (B, n_output_channels, H, W)
+        x = x.permute(0, 2, 1).contiguous().view(B, -1, H, W)  # (B, n_output_channels, H, W)
+
+        return x
+
+
 class Head(nn.Module):
     def __init__(self, name: str, target: LearningTarget):
         super(Head, self).__init__()
@@ -504,6 +547,7 @@ MODULE_MAP = {
     'ResBlockWithGlobalPooling': ResBlockWithGlobalPooling,
     'PolicyHead': PolicyHead,
     'ScoreHead': ScoreHead,
+    'TransformerBlock': TransformerBlock,
     'WinLossDrawValueHead': WinLossDrawValueHead,
     'WinShareValueHead': WinShareValueHead,
     'WinShareActionValueHead': WinShareActionValueHead,
