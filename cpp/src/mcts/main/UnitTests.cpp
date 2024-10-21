@@ -1,12 +1,14 @@
 #include <core/tests/Common.hpp>
 #include <games/nim/Constants.hpp>
 #include <games/nim/Game.hpp>
+#include <games/connect4/Game.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
+#include <mcts/Node.hpp>
 
 #include <gtest/gtest.h>
 
@@ -14,58 +16,79 @@
 #include <string>
 #include <vector>
 
-using Game = nim::Game;
+using Game = c4::Game;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
+using search_path_t = mcts::SearchThread<Game>::search_path_t_public;
+using edge_t = mcts::Node<Game>::edge_t;
+using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
+using SearchParams = mcts::SearchParams;
 
 
 class BackpropTest : public testing::Test {
  protected:
-  using Node = mcts::Node<nim::Game>;
-  using SharedData = mcts::SharedData<nim::Game>;
+  using Node = mcts::Node<Game>;
+  using SharedData = mcts::SharedData<Game>;
 
-  void SetUp() override {
-    shared_data_ = std::make_unique<SharedData>(manager_params_, manager_id_);
-  }
-
-  void create_tree() {
-    root_ = shared_data_->lookup_table.create_node();
-    child1_ = shared_data_->lookup_table.create_node();
-    child2_ = shared_data_->lookup_table.create_node();
-
-    root_->add_child(0, child1_);
-    root_->add_child(1, child2_);
-
-    root_->stats().Q(0) = 0.5;
-    root_->stats().Q(1) = 0.5;
-    root_->stats().RN = 10;
-
-    child1_->stats().Q(0) = 0.6;
-    child1_->stats().Q(1) = 0.4;
-    child1_->stats().RN = 5;
-
-    child2_->stats().Q(0) = 0.4;
-    child2_->stats().Q(1) = 0.6;
-    child2_->stats().RN = 5;
-  }
+  BackpropTest() :
+        manager_id_(0),
+        manager_params_(mcts::kCompetitive),
+        shared_data_(manager_params_, manager_id_),
+        root_(nullptr) {}
 
   void test_backprop() {
-    create_tree();
-    root_->backprop(1.0, 0);
-    EXPECT_EQ(root_->stats().Q(0), 0.55);
-    EXPECT_EQ(root_->stats().Q(1), 0.55);
-    EXPECT_EQ(root_->stats().RN, 11);
+    SearchParams search_params{1, true, false};
+    shared_data_.search_params = search_params;
+    shared_data_.init_root_info(false);
+    node_pool_index_t root_index = shared_data_.root_info.node_index;
+    root_ = shared_data_.lookup_table.get_node(root_index);
+
+    auto child1_index = shared_data_.lookup_table.alloc_node();
+    Node* child1 = shared_data_.lookup_table.get_node(child1_index);
+
+    root_->initialize_edges();
+    root_->get_edge(0)->child_index = child1_index;
+    root_->get_edge(0)->action = 1;
+
+    child1->stats().Q(0) = 0.6;
+    child1->stats().Q(1) = 0.4;
+    child1->stats().RN = 0;
+
+    search_path_t search_path;
+    search_path.emplace_back(root_, nullptr);
+    search_path.emplace_back(child1, root_->get_edge(0));
+
+    Node* last_node = search_path_.back().node;
+    const auto& stable_data = last_node->stable_data();
+    auto value = Game::GameResults::to_value_array(stable_data.VT);
+
+    last_node->update_stats([&] {
+      last_node->stats().init_q(value, true);
+      last_node->stats().RN++;
+    });
+
+    for (int i = search_path_.size() - 2; i >= 0; --i) {
+      edge_t* edge = search_path_[i].edge;
+      Node* node = search_path_[i].node;
+
+      // NOTE: always update the edge first, then the parent node
+      node->update_stats([&] {
+        edge->N++;
+        node->stats().RN++;
+      });
+    }
+
+    // std::cout << "Root stats: " << root_->stats().Q << std::endl;
   }
 
-  int manager_id_ = 0;
-  mcts::ManagerParams<nim::Game> manager_params_ = mcts::kCompetitive;
-  std::unique_ptr<SharedData> shared_data_;
+  int manager_id_;
+  mcts::ManagerParams<Game> manager_params_ = mcts::kCompetitive;
+  SharedData shared_data_;
   Node* root_;
-  Node* child1_;
-  Node* child2_;
+  search_path_t search_path_;
 };
 
 TEST_F(BackpropTest, backprop) {
