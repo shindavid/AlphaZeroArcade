@@ -55,13 +55,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
   /*
    * These bools control both MCTS dynamics and the zeroing out of the MCTS counts exported to the
    * player (which in turn is exported as a policy training target).
-   *
-   * By default, in training mode, we set exploit_proven_winners to false. This is based on
-   * empirical evidence that the exploitative behavior slows down learning. One reason this may be
-   * the case is that when we exploit proven winners, we stop exploring other moves, some of which
-   * may also be winners. This leads to policy training targets where one good move is arbitrarily
-   * given all the weight and where other good moves are zeroed out. The neural network evidently
-   * has trouble learning in the presence of such arbitrary masks.
    */
   bool exploit_proven_winners = true;
   bool avoid_proven_losers = true;
