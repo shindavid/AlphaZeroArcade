@@ -72,6 +72,7 @@ add_subdirectory("cpp/src/games/chess")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")
+add_subdirectory("cpp/src/games/nim")
 
 # https://stackoverflow.com/a/31390758/543913
 macro(print_all_variables)
