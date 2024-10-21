@@ -201,12 +201,12 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
       i++;
     }
   }
+  int num_actions = i;
 
-  std::sort(tuples.begin(), tuples.end());
-  std::reverse(tuples.begin(), tuples.end());
+  std::sort(tuples.begin(), tuples.begin() + num_actions);
+  std::reverse(tuples.begin(), tuples.begin() + num_actions);
 
   int num_rows = 10;
-  int num_actions = i;
   cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
   for (i = 0; i < std::min(num_rows, num_actions); ++i) {
     const auto& tuple = tuples[i];

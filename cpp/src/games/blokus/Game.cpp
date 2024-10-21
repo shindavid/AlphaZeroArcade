@@ -224,12 +224,12 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
       i++;
     }
   }
+  int num_actions = i;
 
-  std::sort(tuples.begin(), tuples.end());
-  std::reverse(tuples.begin(), tuples.end());
+  std::sort(tuples.begin(), tuples.begin() + num_actions);
+  std::reverse(tuples.begin(), tuples.begin() + num_actions);
 
   int num_rows = 10;
-  int num_actions = i;
   cx += snprintf(buffer + cx, buf_size - cx, "%4s %8s %8s %8s\n", "Move", "Net", "Count", "MCTS");
   for (i = 0; i < std::min(num_rows, num_actions); ++i) {
     const auto& tuple = tuples[i];
@@ -239,14 +239,7 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
     auto net_p = std::get<2>(tuple);
     int action = std::get<3>(tuple);
 
-    std::string action_str;
-    if (action < kPass) {  // location
-      action_str = Location::unflatten(action).to_string();
-    } else if (action > kPass) {
-      action_str = PieceOrientationCorner::from_action(action).name();
-    } else {
-      action_str = "Pass";
-    }
+    std::string action_str = action_to_str(action);
     cx += snprintf(buffer + cx, buf_size - cx, "%4s %8.3f %8.3f %8.3f\n", action_str.c_str(), net_p,
                    count, action_p);
   }
