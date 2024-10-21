@@ -145,6 +145,9 @@ class SearchThread {
   const int thread_id_;
 
   friend ::SearchThreadTest;
+
+ public:
+  using search_path_t_public = search_path_t;
 };
 
 }  // namespace mcts

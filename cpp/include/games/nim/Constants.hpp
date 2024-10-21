@@ -1,3 +1,5 @@
+#pragma once
+
 namespace nim {
 
 const int kNumPlayers = 2;
