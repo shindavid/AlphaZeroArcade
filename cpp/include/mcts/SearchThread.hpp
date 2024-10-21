@@ -16,8 +16,10 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/GTestUtil.hpp>
 
-class SearchThreadTest;  // forward-declaration
+GTEST_FORWARD_DECLARE(SearchThreadTest, init_root_node);
+GTEST_FORWARD_DECLARE(SearchThreadTest, something_else);
 
 namespace mcts {
 
@@ -144,7 +146,8 @@ class SearchThread {
   profiler_t profiler_;
   const int thread_id_;
 
-  friend ::SearchThreadTest;
+  FRIEND_GTEST(SearchThreadTest, init_root_node);
+  FRIEND_GTEST(SearchThreadTest, something_else);
 };
 
 }  // namespace mcts

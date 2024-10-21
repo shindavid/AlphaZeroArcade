@@ -158,32 +158,6 @@ class SearchThreadTest : public testing::Test {
     shared_data_.init_root_info(add_noise);
   }
 
-  void test_init_root_node() {
-    Node* root = search_thread_.init_root_node();
-    EXPECT_NE(root, nullptr);
-
-    Node::stable_data_t stable_data = root->stable_data();
-    EXPECT_EQ(stable_data.valid_action_mask.count(), 7);
-    EXPECT_EQ(stable_data.num_valid_actions, 7);
-    EXPECT_EQ(stable_data.current_player, 0);
-    EXPECT_FALSE(stable_data.terminal);
-    EXPECT_TRUE(stable_data.VT_valid);
-    EXPECT_NEAR(stable_data.VT(0), 1.0 / 3, 1e-6);
-    EXPECT_NEAR(stable_data.VT(1), 1.0 / 3, 1e-6);
-    EXPECT_NEAR(stable_data.VT(2), 1.0 / 3, 1e-6);
-
-    Node::stats_t stats = root->stats();
-    EXPECT_EQ(stats.RN, 1);
-    EXPECT_EQ(stats.VN, 0);
-    EXPECT_EQ(stats.Q(0), 0.5);
-    EXPECT_EQ(stats.Q(1), 0.5);
-
-    EXPECT_TRUE(root->edges_initialized());
-    EXPECT_FALSE(root->trivial());
-  }
-
-  void perform_visits() { search_thread_.perform_visits(); }
-
   int manager_id_;
   int thread_id_;
   ManagerParams manager_params_;
@@ -194,12 +168,32 @@ class SearchThreadTest : public testing::Test {
 
 TEST_F(SearchThreadTest, init_root_node) {
   init(1, true);
-  test_init_root_node();
+  Node* root = search_thread_.init_root_node();
+  EXPECT_NE(root, nullptr);
+
+  Node::stable_data_t stable_data = root->stable_data();
+  EXPECT_EQ(stable_data.valid_action_mask.count(), 7);
+  EXPECT_EQ(stable_data.num_valid_actions, 7);
+  EXPECT_EQ(stable_data.current_player, 0);
+  EXPECT_FALSE(stable_data.terminal);
+  EXPECT_TRUE(stable_data.VT_valid);
+  EXPECT_NEAR(stable_data.VT(0), 1.0 / 3, 1e-6);
+  EXPECT_NEAR(stable_data.VT(1), 1.0 / 3, 1e-6);
+  EXPECT_NEAR(stable_data.VT(2), 1.0 / 3, 1e-6);
+
+  Node::stats_t stats = root->stats();
+  EXPECT_EQ(stats.RN, 1);
+  EXPECT_EQ(stats.VN, 0);
+  EXPECT_EQ(stats.Q(0), 0.5);
+  EXPECT_EQ(stats.Q(1), 0.5);
+
+  EXPECT_TRUE(root->edges_initialized());
+  EXPECT_FALSE(root->trivial());
 }
 
 TEST_F(SearchThreadTest, something_else) {
   init(1, true);
-  perform_visits();
+  search_thread_.perform_visits();
   // TODO test something
 }
 
