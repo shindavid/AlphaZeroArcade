@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gtest/gtest.h>
+
 /*
  * This contains utility macros for Google Test.
  *
