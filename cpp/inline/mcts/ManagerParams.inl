@@ -18,7 +18,6 @@ inline ManagerParams<Game>::ManagerParams(mcts::Mode mode) {
     ending_root_softmax_temperature = 1;
     root_softmax_temperature_half_life = 1;
   } else if (mode == mcts::kTraining) {
-    exploit_proven_winners = false;
     force_evaluate_all_root_children = true;
   } else {
     throw util::Exception("Unknown mcts::Mode: %d", (int)mode);
