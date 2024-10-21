@@ -300,8 +300,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   }
 
   if (skipped) {
-    all_provably_winning.set(false);
-    all_provably_losing.set(false);
+    all_provably_winning.reset();
+    all_provably_losing.reset();
   }
 
   std::unique_lock lock(mutex());

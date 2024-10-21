@@ -144,7 +144,7 @@ Manager<Game>::search(const SearchParams& params) {
   group::element_t sym = root_info.canonical_sym;
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
-  results_.valid_actions.set(false);
+  results_.valid_actions.reset();
   results_.policy_prior.setZero();
 
   core::action_t actions[stable_data.num_valid_actions];
