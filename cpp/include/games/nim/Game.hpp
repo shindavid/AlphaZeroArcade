@@ -16,7 +16,7 @@
 #include <core/GameTypes.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
-#include <core/WinLossDrawResults.hpp>
+#include <core/WinShareResults.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -38,16 +38,16 @@ struct Game {
     auto operator<=>(const State& other) const = default;
 
     size_t hash() const {
-      auto tuple = std::make_tuple(stones_left, num_moves_played);
+      auto tuple = std::make_tuple(stones_left, current_player);
       std::hash<decltype(tuple)> hasher;
       return hasher(tuple);
     }
 
     int stones_left;
-    int num_moves_played;
+    int current_player;
   };
 
-  using GameResults = core::WinLossDrawResults;
+  using GameResults = core::WinShareResults<Constants::kNumPlayers>;
   using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::TrivialGroup;
   using Symmetries = core::TrivialSymmetries;
@@ -56,38 +56,42 @@ struct Game {
   struct Rules {
     static void init_state(State& state) {
       state.stones_left = nim::kStartingStones;
-      state.num_moves_played = 0;
+      state.current_player = 0;
     }
 
     static Types::ActionMask get_legal_moves(const StateHistory& history) {
       const State& state = history.current();
       Types::ActionMask mask;
 
-      for (int i = 1; i <= nim::kMaxStonesToTake; ++i) {
-        mask[i] = i <= state.stones_left;
+      for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
+        mask[i] = i + 1 <= state.stones_left;
       }
 
       return mask;
     }
 
     static core::seat_index_t get_current_player(const State& state) {
-      return state.num_moves_played % 2;
+      return state.current_player;
     }
 
-    static Types::ActionOutcome apply(StateHistory& history, core::action_t action) {
-      if (action < 1 || action > nim::kMaxStonesToTake) {
+    static void apply(StateHistory& history, core::action_t action) {
+      if (action < 0 || action >= nim::kMaxStonesToTake) {
         throw std::invalid_argument("Invalid action: " + std::to_string(action));
       }
 
-
       State& state = history.current();
-      state.stones_left -= action;
-      state.num_moves_played++;
+      state.stones_left -= action + 1;
+      state.current_player = 1 - state.current_player;
+    }
 
+    static bool is_terminal(const State& state, core::seat_index_t last_player,
+                            core::action_t last_action, GameResults::Tensor& outcome) {
       if (state.stones_left == 0) {
-        return GameResults::win(1 - get_current_player(state));
+        outcome.setZero();
+        outcome(last_player) = 1;
+        return true;
       }
-      return Types::ActionOutcome();
+      return false;
     }
   };
 
