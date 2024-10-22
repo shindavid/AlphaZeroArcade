@@ -34,8 +34,17 @@ class ManagerTest : public testing::Test {
       return params;
     }
 
+    void start_manager() {
+      manager_.start();
+    }
+
     void start_threads() {
       manager_.start_threads();
+    }
+
+    void search() {
+      mcts::SearchParams search_params(100, true);
+      manager_.search(search_params);
     }
 
  private:
@@ -44,8 +53,9 @@ class ManagerTest : public testing::Test {
 };
 
 TEST_F(ManagerTest, backprop) {
-  std::cout << "====TEST: backprop" << std::endl;
+  start_manager();
   start_threads();
+  search();
 }
 
 int main(int argc, char** argv) {
