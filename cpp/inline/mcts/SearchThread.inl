@@ -604,7 +604,7 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
   using PVec = LocalPolicyArray;
 
   const PVec& P = action_selector.P;
-  const PVec& E = action_selector.E;
+  const PVec& mE = action_selector.mE;
   PVec& PUCT = action_selector.PUCT;
 
   int argmax_index;
@@ -617,9 +617,9 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
                           search_params.full_search && manager_params_->dirichlet_mult > 0;
 
     if (force_playouts) {
-      PVec n_forced = (P * manager_params_->k_forced * E.sum()).sqrt();
-      auto F1 = (E < n_forced).template cast<float>();
-      auto F2 = (E > 0).template cast<float>();
+      PVec n_forced = (P * manager_params_->k_forced * mE.sum()).sqrt();
+      auto F1 = (mE < n_forced).template cast<float>();
+      auto F2 = (mE > 0).template cast<float>();
       auto F = F1 * F2;
       PUCT = PUCT * (1 - F) + F * 1e+6;
     }
