@@ -266,7 +266,7 @@ inline void SearchThread<Game>::loop() {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::print_visit_info(Node* node) {
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     std::ostringstream ss;
     ss << thread_id_whitespace() << "visit " << search_path_str()
        << " cp=" << (int)node->stable_data().current_player;
@@ -378,7 +378,7 @@ template <core::concepts::Game Game>
 inline void SearchThread<Game>::virtual_backprop() {
   profiler_.record(SearchThreadRegion::kVirtualBackprop);
 
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
@@ -406,7 +406,7 @@ template <core::concepts::Game Game>
 inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   profiler_.record(SearchThreadRegion::kPureBackprop);
 
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << " "
              << value.transpose();
   }
@@ -439,7 +439,7 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
   Node* last_node = search_path_.back().node;
   auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "
              << value.transpose();
   }
@@ -466,7 +466,7 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::short_circuit_backprop() {
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
@@ -633,8 +633,8 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::print_action_selection_details(Node* node, const ActionSelector& selector,
-                                            int argmax_index) const {
-  if (mcts::kEnableDebug) {
+                                                        int argmax_index) const {
+  if (mcts::kEnableSearchDebug) {
     std::ostringstream ss;
     ss << thread_id_whitespace();
 

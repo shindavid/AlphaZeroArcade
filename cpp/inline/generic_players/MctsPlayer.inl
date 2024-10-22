@@ -269,7 +269,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
         auto mask = (UCB_array >= min_LCB).template cast<float>();
         auto policy_masked = policy_array * mask;
 
-        if (mcts::kEnableDebug) {
+        if (mcts::kEnableSearchDebug) {
           const char* header[] = {"action", "N", "P", "Q", "Q_sigma", "LCB", "UCB", "P*"};
           constexpr int nColumns = sizeof(header) / sizeof(header[0]);
 

@@ -129,7 +129,7 @@ Manager<Game>::search(const SearchParams& params) {
   shared_data_.init_root_info(add_noise);
 
   auto& root_info = shared_data_.root_info;
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     Game::IO::print_state(std::cout, root_info.history_array[group::kIdentity].current());
   }
 

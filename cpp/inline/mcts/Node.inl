@@ -191,7 +191,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
   core::seat_index_t cp = stable_data().current_player;
 
-  if (kEnableDebug) {
+  if (kEnableSearchDebug) {
     std::cout << "get_counts()" << std::endl;
   }
 
@@ -230,7 +230,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       detail = " (winning)";
     }
 
-    if (kEnableDebug) {
+    if (kEnableSearchDebug) {
       auto action2 = action;
       Game::Symmetries::apply(action2, inv_sym);
       std::cout << "  " << Game::IO::action_to_str(action2) << ": " << count;
