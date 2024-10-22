@@ -22,6 +22,8 @@ class ManagerTest : public testing::Test {
   using Game = nim::Game;
   using Manager = mcts::Manager<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
+  using Node = mcts::Node<Game>;
+  using StateHistory = Game::StateHistory;
 
  public:
   ManagerTest():
@@ -42,9 +44,13 @@ class ManagerTest : public testing::Test {
       manager_.start_threads();
     }
 
-    void search() {
-      mcts::SearchParams search_params(100, true);
+    void search(int num_searches = 0){
+      mcts::SearchParams search_params(num_searches, true);
       manager_.search(search_params);
+    }
+
+    Node* get_root_node() {
+      return manager_.shared_data_.get_root_node();
     }
 
  private:
@@ -55,7 +61,11 @@ class ManagerTest : public testing::Test {
 TEST_F(ManagerTest, backprop) {
   start_manager();
   start_threads();
-  search();
+  search(0);
+
+  Node* root = get_root_node();
+
+  std::cout << "root N: " << root->stats().RN << std::endl;
 }
 
 int main(int argc, char** argv) {

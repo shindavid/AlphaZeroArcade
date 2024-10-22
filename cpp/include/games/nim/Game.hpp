@@ -79,7 +79,7 @@ struct Game {
         throw std::invalid_argument("Invalid action: " + std::to_string(action));
       }
 
-      State& state = history.current();
+      State& state = history.extend();
       state.stones_left -= action + 1;
       state.current_player = 1 - state.current_player;
     }

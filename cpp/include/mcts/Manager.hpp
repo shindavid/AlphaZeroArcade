@@ -14,6 +14,9 @@
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 
+GTEST_FORWARD_DECLARE(ManagerTest);
+GTEST_FORWARD_DECLARE(ManagerTest, backprop);
+
 namespace mcts {
 
 /*
@@ -84,6 +87,9 @@ class Manager {
 
   void* player_data_ = nullptr;
   bool connected_ = false;
+
+  FRIEND_GTEST(ManagerTest);
+  FRIEND_GTEST(ManagerTest, backprop);
 };
 
 }  // namespace mcts
