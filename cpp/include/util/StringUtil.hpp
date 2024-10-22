@@ -46,6 +46,12 @@ inline std::string create_string(char const* fmt, ...);
 
 bool ends_with(const std::string& value, const std::string& ending);
 
+/*
+ * Returns the width of the string when printed to the terminal. This is essentially the number of
+ * characters in the string, except that control characters are treated as having zero width.
+ */
+size_t terminal_width(const std::string& str);
+
 }  // namespace util
 
 #include <inline/util/StringUtil.inl>
