@@ -116,11 +116,12 @@ struct Game {
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter> static Tensor tensorize(Iter start, Iter cur) {
+
       Tensor tensor;
       tensor.setZero();
       Iter state = cur;
-      tensor(0) = state.stones_left;
-      tensor(1) = state.num_moves_played;
+      tensor(0) = state->stones_left;
+      tensor(1) = state->current_player;
       return tensor;
     }
   };

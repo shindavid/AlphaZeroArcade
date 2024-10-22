@@ -25,8 +25,18 @@ class ManagerTest : public testing::Test {
 
  public:
   ManagerTest():
-    manager_params_(mcts::kCompetitive),
+    manager_params_(create_manager_params()),
     manager_(manager_params_) {}
+
+    static ManagerParams create_manager_params() {
+      ManagerParams params(mcts::kCompetitive);
+      params.no_model = true;
+      return params;
+    }
+
+    void start_threads() {
+      manager_.start_threads();
+    }
 
  private:
   ManagerParams manager_params_;
@@ -34,7 +44,8 @@ class ManagerTest : public testing::Test {
 };
 
 TEST_F(ManagerTest, backprop) {
-  std::cout << "backprop" << std::endl;
+  std::cout << "====TEST: backprop" << std::endl;
+  start_threads();
 }
 
 int main(int argc, char** argv) {

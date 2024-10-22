@@ -78,6 +78,19 @@ TEST(NimGameTest, InvalidMove) {
   EXPECT_THROW(Rules::apply(history, 3), std::invalid_argument);
 }
 
+TEST(NimGameTest, tensorize) {
+  StateHistory history;
+  history.initialize(Rules{});
+  Rules::apply(history, 2); // Player 0
+  Rules::apply(history, 2); // Player 1
+  Rules::apply(history, 2); // Player 0
+
+  Game::InputTensorizor::Tensor tensor = Game::InputTensorizor::tensorize(history.begin(), history.end());
+
+  EXPECT_EQ(tensor(0), 12);
+  EXPECT_EQ(tensor(1), 1);
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
