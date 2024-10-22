@@ -79,7 +79,7 @@ struct Game {
 
   struct IO {
     static std::string action_delimiter() { return ""; }
-    static std::string action_to_str(core::action_t action) { return std::to_string(action); }
+    static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
