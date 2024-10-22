@@ -53,7 +53,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   static void extract_policy_target(const SearchResults* results, PolicyTensor** target);
 
   TrainingDataWriter* writer_;
-  TrainingDataWriter::GameLogWriter_sptr game_log_;
+  TrainingDataWriter::GameLogWriter_sptr game_log_ = nullptr;
 };
 
 }  // namespace generic

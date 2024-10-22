@@ -30,6 +30,10 @@ auto TrainingDataWriter<Game>::Params::make_options_description() {
 
 template <concepts::Game Game>
 TrainingDataWriter<Game>* TrainingDataWriter<Game>::instantiate(const Params& params) {
+  if (!core::LoopControllerClient::initialized()) {
+    return nullptr;
+  }
+
   if (!instance_) {
     instance_ = new TrainingDataWriter(params);
   } else {
