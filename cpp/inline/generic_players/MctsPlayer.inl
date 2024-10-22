@@ -352,7 +352,7 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   const auto& action_policy = verbose_info_->action_policy;
   const auto& mcts_results = verbose_info_->mcts_results;
 
-  printf("CPU pos eval:\n");
+  std::cout << std::endl << "CPU pos eval:" << std::endl;
   IO::print_mcts_results(std::cout, action_policy, mcts_results);
 }
 
