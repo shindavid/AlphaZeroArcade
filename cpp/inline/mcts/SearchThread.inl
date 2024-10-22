@@ -640,95 +640,73 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     core::seat_index_t cp = node->stable_data().current_player;
 
-    using ArrayT1 = Eigen::Array<float, 2, kNumPlayers>;
-    ArrayT1 A1;
-    A1.setZero();
-    A1.row(0) = node->stats().Q;
-    A1(1, cp) = 1;
+    int n_actions = node->stable_data().num_valid_actions;
 
-    std::ostringstream ss1;
-    ss1 << A1;
-    std::string s1 = ss1.str();
+    ValueArray players;
+    const ValueArray& nQ = node->stats().Q;
+    ValueArray CP;
+    for (int p = 0; p < kNumPlayers; ++p) {
+      players(p) = p;
+      CP(p) = p == cp;
+    }
 
-    std::vector<std::string> s1_lines;
-    boost::split(s1_lines, s1, boost::is_any_of("\n"));
+    std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
+    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
 
-    ss << "Q :    " << s1_lines[0] << break_plus_thread_id_whitespace();
+    eigen_util::PrintArrayFormatMap fmt_map1;
+    fmt_map1["Seat"] = [&](float x) { return std::to_string(int(x)); };
+    fmt_map1["CurP"] = [&](float x) { return std::string(x == cp ? "*" : ""); };
 
-    std::string cp_line = s1_lines[1];
-    std::replace(cp_line.begin(), cp_line.end(), '0', ' ');
-    std::replace(cp_line.begin(), cp_line.end(), '1', '*');
+    std::stringstream ss1;
+    eigen_util::print_array(ss1, player_data, player_columns, &fmt_map1);
 
-    ss << "cp:    " << cp_line << break_plus_thread_id_whitespace();
+    for (const std::string& line : util::splitlines(ss1.str())) {
+      ss << line << break_plus_thread_id_whitespace();
+    }
 
-    using PVec = LocalPolicyArray;
-    using ScalarT = PVec::Scalar;
-    constexpr int kNumRows = 12;  // action, P, Q, FPU, PW, PL, E, RN, VN, &ch, PUCT, argmax
-    constexpr int kMaxCols = PVec::MaxRowsAtCompileTime;
-    using ArrayT2 = Eigen::Array<ScalarT, kNumRows, Eigen::Dynamic, 0, kNumRows, kMaxCols>;
+    const LocalPolicyArray& P = selector.P;
+    const LocalPolicyArray& Q = selector.Q;
+    const LocalPolicyArray& FPU = selector.FPU;
+    const LocalPolicyArray& PW = selector.PW;
+    const LocalPolicyArray& PL = selector.PL;
+    const LocalPolicyArray& E = selector.E;
+    const LocalPolicyArray& mE = selector.mE;
+    const LocalPolicyArray& RN = selector.RN;
+    const LocalPolicyArray& VN = selector.VN;
+    const LocalPolicyArray& PUCT = selector.PUCT;
 
-    ArrayT2 A2(kNumRows, selector.P.rows());
-    A2.setZero();
-
-    int r = 0;
-
-    PVec child_addr(selector.P.rows());
+    LocalPolicyArray actions(n_actions);
+    LocalPolicyArray child_addr(n_actions);
+    LocalPolicyArray argmax(n_actions);
     child_addr.setConstant(-1);
+    argmax.setZero();
+    argmax(argmax_index) = 1;
 
     group::element_t inv_sym = Game::SymmetryGroup::inverse(canonical_sym_);
-    for (int e = 0; e < node->stable_data().num_valid_actions; ++e) {
+    for (int e = 0; e < n_actions; ++e) {
       auto edge = node->get_edge(e);
       core::action_t action = edge->action;
       Game::Symmetries::apply(action, inv_sym);
-      A2(r, e) = action;
+      actions(e) = action;
       child_addr(e) = edge->child_index;
     }
-    r++;
 
-    A2.row(r++) = selector.P;
-    A2.row(r++) = selector.Q;
-    A2.row(r++) = selector.FPU;
-    A2.row(r++) = selector.PW;
-    A2.row(r++) = selector.PL;
-    A2.row(r++) = selector.E;
-    A2.row(r++) = selector.RN;
-    A2.row(r++) = selector.VN;
-    A2.row(r++) = child_addr;
-    A2.row(r++) = selector.PUCT;
-    A2(r, argmax_index) = 1;
+    std::vector<std::string> action_columns = {"action", "P",  "Q",  "FPU", "PW",   "PL",    "E",
+                                               "mE",     "RN", "VN", "&ch", "PUCT", "argmax"};
+    auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+        actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
-    A2 = eigen_util::sort_columns(A2);
+    eigen_util::PrintArrayFormatMap fmt_map2;
+    fmt_map2["action"] = [](float x) { return Game::IO::action_to_str(x); };
+    fmt_map2["&ch"] = [](float x) { return x < 0 ? std::string() : std::to_string((int)x); };
+    fmt_map2["argmax"] = [](float x) { return std::string(x == 0 ? "" : "*"); };
 
-    std::ostringstream ss2;
-    ss2 << A2;
-    std::string s2 = ss2.str();
+    std::stringstream ss2;
+    eigen_util::print_array(ss2, action_data, action_columns, &fmt_map2);
 
-    std::vector<std::string> s2_lines;
-    boost::split(s2_lines, s2, boost::is_any_of("\n"));
-
-    r = 0;
-    ss << "move:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "P:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "Q:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "FPU:   " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "PW:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "PL:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "E:     " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "RN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-    ss << "VN:    " << s2_lines[r++] << break_plus_thread_id_whitespace();
-
-    std::string ch_line = s2_lines[r++];
-    boost::replace_all(ch_line, "-1", "  ");
-
-    ss << "&ch:   " << ch_line << break_plus_thread_id_whitespace();
-    ss << "PUCT:  " << s2_lines[r++] << break_plus_thread_id_whitespace();
-
-    std::string argmax_line = s2_lines[r];
-    std::replace(argmax_line.begin(), argmax_line.end(), '0', ' ');
-    std::replace(argmax_line.begin(), argmax_line.end(), '1', '*');
-
-    ss << "argmax:" << argmax_line << break_plus_thread_id_whitespace();
-    ss << "*************";
+    for (const std::string& line : util::splitlines(ss2.str())) {
+      ss << line << break_plus_thread_id_whitespace();
+    }
 
     LOG_INFO << ss.str();
   }

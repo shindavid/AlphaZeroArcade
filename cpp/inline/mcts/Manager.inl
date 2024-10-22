@@ -345,7 +345,32 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
   if (eigen_util::sum(results_.policy_target) <= 0) {
     // can happen in certain edge cases
     results_.policy_target = results_.counts;
-    return;
+  }
+
+  if (mcts::kEnableSearchDebug) {
+    LocalPolicyArray actions(n_actions);
+    LocalPolicyArray pruned(n_actions);
+
+    for (int i = 0; i < n_actions; ++i) {
+      core::action_t raw_action = root->get_edge(i)->action;
+      core::action_t action = raw_action;
+      Game::Symmetries::apply(action, inv_sym);
+      actions(i) = action;
+      pruned(i) = results_.policy_target(raw_action);
+    }
+
+    LocalPolicyArray target = pruned / pruned.sum();
+
+    std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",  "E",
+                                        "PW",     "PL", "mE", "pruned", "target"};
+    auto data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
+
+    eigen_util::PrintArrayFormatMap fmt_map;
+    fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
+
+    std::cout << std::endl << "Policy target pruning:" << std::endl;
+    eigen_util::print_array(std::cout, data, columns, &fmt_map);
   }
 }
 
