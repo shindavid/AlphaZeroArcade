@@ -27,6 +27,7 @@ class Manager {
   using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
   using Node = mcts::Node<Game>;
+  using LocalPolicyArray = Node::LocalPolicyArray;
   using SearchThread = mcts::SearchThread<Game>;
   using SharedData = mcts::SharedData<Game>;
   using node_pool_index_t = Node::node_pool_index_t;
@@ -68,7 +69,7 @@ class Manager {
 
   void announce_shutdown();
   void load_action_symmetries(Node* root, core::action_t* actions);
-  void prune_policy_target(const SearchParams&);
+  void prune_policy_target(const SearchParams&, group::element_t inv_sym);
   static void init_profiling_dir(const std::string& profiling_dir);
 
   static int next_instance_id_;  // for naming debug/profiling output files

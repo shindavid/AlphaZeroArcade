@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <regex>
 #include <sstream>
 
 namespace util {
@@ -105,6 +106,16 @@ inline std::string create_string(char const *fmt, ...) {
 inline bool ends_with(const std::string& value, const std::string& ending) {
   if (ending.size() > value.size()) return false;
   return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+inline size_t terminal_width(const std::string& str) {
+  // This regular expression matches ANSI escape sequences
+  std::regex ansi_escape("\033\\[[0-9;]*m");
+
+  // Remove all escape sequences using regex
+  std::string cleaned_str = std::regex_replace(str, ansi_escape, "");
+
+  return cleaned_str.size();  // Return the size of the cleaned string
 }
 
 }  // namespace util

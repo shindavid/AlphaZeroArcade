@@ -129,7 +129,7 @@ Manager<Game>::search(const SearchParams& params) {
   shared_data_.init_root_info(add_noise);
 
   auto& root_info = shared_data_.root_info;
-  if (mcts::kEnableDebug) {
+  if (mcts::kEnableSearchDebug) {
     Game::IO::print_state(std::cout, root_info.history_array[group::kIdentity].current());
   }
 
@@ -167,7 +167,7 @@ Manager<Game>::search(const SearchParams& params) {
   results_.provably_lost = stats.provably_losing[stable_data.current_player];
   results_.trivial = root->trivial();
   if (params_.forced_playouts && add_noise) {
-    prune_policy_target(params);
+    prune_policy_target(params, inv_sym);
   }
 
   Game::Symmetries::apply(results_.counts, inv_sym);
@@ -297,7 +297,8 @@ inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* ac
 }
 
 template <core::concepts::Game Game>
-void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
+void Manager<Game>::prune_policy_target(const SearchParams& search_params,
+                                        group::element_t inv_sym) {
   using ActionSelector = mcts::ActionSelector<Game>;
 
   if (params_.no_model) return;
@@ -307,34 +308,69 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params) {
 
   const auto& P = action_selector.P;
   const auto& E = action_selector.E;
+  const auto& PW = action_selector.PW;
+  const auto& PL = action_selector.PL;
+  const auto& mE = action_selector.mE;
   const auto& Q = action_selector.Q;
   const auto& PUCT = action_selector.PUCT;
 
-  auto E_sum = E.sum();
-  auto n_forced = (P * params_.k_forced * E_sum).sqrt();
+  auto mE_sum = mE.sum();
+  auto n_forced = (P * params_.k_forced * mE_sum).sqrt();
 
-  auto PUCT_max = PUCT.maxCoeff();
+  int mE_max_index;
+  auto mE_max = mE.maxCoeff(&mE_max_index);
 
-  auto E_max = E.maxCoeff();
-  auto sqrt_E = sqrt(E_sum + ActionSelector::eps);
+  auto PUCT_max = PUCT(mE_max_index);
+  auto sqrt_mE = sqrt(mE_sum + ActionSelector::eps);
 
-  auto E_floor = params_.cPUCT * P * sqrt_E / (PUCT_max - 2 * Q) - 1;
+  LocalPolicyArray mE_floor = params_.cPUCT * P * sqrt_mE / (PUCT_max - 2 * Q) - 1;
 
-  for (int i = 0; i < root->stable_data().num_valid_actions; ++i) {
-    if (E(i) == E_max) continue;
-    if (!isfinite(E_floor(i))) continue;
-    auto n = std::max(E_floor(i), E(i) - n_forced(i));
+  int n_actions = root->stable_data().num_valid_actions;
+  for (int i = 0; i < n_actions; ++i) {
+    edge_t* edge = root->get_edge(i);
+    if (mE(i) == 0) {
+      results_.policy_target(edge->action) = 0;
+      continue;
+    }
+    if (mE(i) == mE_max) continue;
+    if (!isfinite(mE_floor(i))) continue;
+    if (mE_floor(i) >= mE(i)) continue;
+    auto n = std::max(mE_floor(i), mE(i) - n_forced(i));
     if (n <= 1.0) {
       n = 0;
     }
-    edge_t* edge = root->get_edge(i);
     results_.policy_target(edge->action) = n;
   }
 
   if (eigen_util::sum(results_.policy_target) <= 0) {
     // can happen in certain edge cases
     results_.policy_target = results_.counts;
-    return;
+  }
+
+  if (mcts::kEnableSearchDebug) {
+    LocalPolicyArray actions(n_actions);
+    LocalPolicyArray pruned(n_actions);
+
+    for (int i = 0; i < n_actions; ++i) {
+      core::action_t raw_action = root->get_edge(i)->action;
+      core::action_t action = raw_action;
+      Game::Symmetries::apply(action, inv_sym);
+      actions(i) = action;
+      pruned(i) = results_.policy_target(raw_action);
+    }
+
+    LocalPolicyArray target = pruned / pruned.sum();
+
+    std::vector<std::string> columns = {"action", "P",  "Q",  "PUCT",  "E",
+                                        "PW",     "PL", "mE", "pruned", "target"};
+    auto data = eigen_util::sort_rows(
+        eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
+
+    eigen_util::PrintArrayFormatMap fmt_map;
+    fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
+
+    std::cout << std::endl << "Policy target pruning:" << std::endl;
+    eigen_util::print_array(std::cout, data, columns, &fmt_map);
   }
 }
 

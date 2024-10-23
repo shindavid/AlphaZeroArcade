@@ -14,6 +14,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
       PW(P.rows()),
       PL(P.rows()),
       E(P.rows()),
+      mE(P.rows()),
       RN(P.rows()),
       VN(P.rows()),
       FPU(P.rows()),
@@ -23,6 +24,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
   PW.setZero();
   PL.setZero();
   E.setZero();
+  mE.setZero();
   RN.setZero();
   VN.setZero();
   FPU.setZero();
@@ -73,6 +75,24 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     Q = (1 - FPU) * Q + FPU * v;
   }
 
+  LocalPolicyArray mask(P.rows());
+  mask.setConstant(1);
+
+  if (params.avoid_proven_losers || params.exploit_proven_winners) {
+    if (params.avoid_proven_losers) {
+      mask *= (1 - PL);  // zero out provably-losing actions
+    }
+    if (params.exploit_proven_winners && PW.any()) {
+      mask *= PW;  // zero out non-provably-winning actions
+    }
+
+    if ((mask == 0).all()) {
+      mask.setConstant(1);  // if all actions are masked out, unmask all actions
+    }
+  }
+
+  mE = mask * E;
+
   /*
    * AlphaZero/KataGo defines Q to be over a [-1, +1] range, but we use a [0, +1] range.
    *
@@ -82,14 +102,8 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
    * better consistency with the AlphaZero/KataGo approach.
    */
 
-  PUCT = 2 * Q + params.cPUCT * P * sqrt(E.sum() + eps) / (E + 1);
-
-  if (params.avoid_proven_losers && !PL.all()) {
-    PUCT *= (1 - PL);  // zero out provably-losing actions
-  }
-  if (params.exploit_proven_winners && PW.any()) {
-    PUCT *= PW;
-  }
+  PUCT = 2 * Q + params.cPUCT * P * sqrt(mE.sum() + eps) / (mE + 1);
+  PUCT = mask * PUCT + (1 - mask) * -1e6;
 }
 
 }  // namespace mcts

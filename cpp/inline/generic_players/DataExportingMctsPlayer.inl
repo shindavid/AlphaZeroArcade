@@ -16,7 +16,9 @@ DataExportingMctsPlayer<Game>::DataExportingMctsPlayer(
 template <core::concepts::Game Game>
 void DataExportingMctsPlayer<Game>::start_game() {
   base_t::start_game();
-  game_log_ = writer_->get_log(base_t::get_game_id());
+  if (writer_) {
+    game_log_ = writer_->get_log(base_t::get_game_id());
+  }
 }
 
 template <core::concepts::Game Game>
@@ -31,7 +33,8 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
     const State& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
   bool use_for_training = search_mode == core::kFull;
-  bool previous_used_for_training = game_log_->is_previous_entry_used_for_training();
+  bool previous_used_for_training =
+      game_log_ && game_log_->is_previous_entry_used_for_training();
 
   if (kForceFullSearchIfRecordingAsOppReply && previous_used_for_training) {
     search_mode = core::kFull;
@@ -53,16 +56,20 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
   }
   core::ActionResponse response =
       base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
-  game_log_->add(state, response.action, policy_target_ptr, action_values_ptr, use_for_training);
+  if (game_log_) {
+    game_log_->add(state, response.action, policy_target_ptr, action_values_ptr, use_for_training);
+  }
   return response;
 }
 
 template <core::concepts::Game Game>
 void DataExportingMctsPlayer<Game>::end_game(const State& state,
                                              const ValueTensor& outcome) {
-  game_log_->add_terminal(state, outcome);
-  writer_->close(game_log_);
-  game_log_ = nullptr;
+  if (game_log_) {
+    game_log_->add_terminal(state, outcome);
+    writer_->close(game_log_);
+    game_log_ = nullptr;
+  }
 }
 
 template <core::concepts::Game Game>

@@ -269,49 +269,51 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
         auto mask = (UCB_array >= min_LCB).template cast<float>();
         auto policy_masked = policy_array * mask;
 
-        if (mcts::kEnableDebug) {
-          const char* header[] = {"action", "N", "P", "Q", "Q_sigma", "LCB", "UCB", "P*"};
-          constexpr int nColumns = sizeof(header) / sizeof(header[0]);
-
+        if (mcts::kEnableSearchDebug) {
           int visited_actions = 0;
           for (int a : bitset_util::on_indices(valid_actions)) {
             if (counts(a)) visited_actions++;
           }
 
-          std::ostringstream ss;
-          using Array = Eigen::Array<float, Eigen::Dynamic, nColumns, 0,
-                                     Game::Constants::kMaxBranchingFactor>;
-          Array arr(visited_actions, nColumns);
+          LocalPolicyArray actions_arr(visited_actions);
+          LocalPolicyArray counts_arr(visited_actions);
+          LocalPolicyArray policy_arr(visited_actions);
+          LocalPolicyArray Q_arr(visited_actions);
+          LocalPolicyArray Q_sigma_arr(visited_actions);
+          LocalPolicyArray LCB_arr(visited_actions);
+          LocalPolicyArray UCB_arr(visited_actions);
+          LocalPolicyArray policy_masked_arr(visited_actions);
+
           int r = 0;
           for (int a : bitset_util::on_indices(valid_actions)) {
             if (counts(a) == 0) continue;
 
-            int c = 0;
-            arr(r, c++) = a;
-            arr(r, c++) = counts(a);
-            arr(r, c++) = policy(a);
-            arr(r, c++) = Q(a);
-            arr(r, c++) = Q_sigma(a);
-            arr(r, c++) = LCB(a);
-            arr(r, c++) = UCB(a);
-            arr(r, c++) = policy_masked(a);
+            actions_arr(r) = a;
+            counts_arr(r) = counts(a);
+            policy_arr(r) = policy(a);
+            Q_arr(r) = Q(a);
+            Q_sigma_arr(r) = Q_sigma(a);
+            LCB_arr(r) = LCB(a);
+            UCB_arr(r) = UCB(a);
+            policy_masked_arr(r) = policy_masked(a);
 
             r++;
-            util::release_assert(c == nColumns);
           }
 
-          ss << arr;
-          std::string s = ss.str();
-          std::string first_line = s.substr(0, s.find('\n'));
-          int column_width = (first_line.size() - nColumns + 1) / nColumns;
-          std::string fmt = util::create_string("%%%ds ", column_width);
+          policy_arr /= policy_arr.sum();
+          policy_masked_arr /= policy_masked_arr.sum();
 
-          std::ostringstream ss2;
-          for (int i = 0; i < nColumns; i++) {
-            ss2 << util::create_string(fmt.c_str(), header[i]);
-          }
-          LOG_INFO << "visited_actions: " << visited_actions;
-          LOG_INFO << "Applying LCB:\n" << ss2.str() << "\n" << s;
+          std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
+                                              "Q_sigma", "LCB", "UCB", "P*"};
+          auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(
+              actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr, LCB_arr, UCB_arr,
+              policy_masked_arr));
+
+          eigen_util::PrintArrayFormatMap fmt_map;
+          fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
+
+          std::cout << std::endl << "Applying LCB:" << std::endl;
+          eigen_util::print_array(std::cout, data, columns, &fmt_map);
         }
 
         policy_array = policy_masked;
@@ -352,7 +354,7 @@ inline void MctsPlayer<Game>::verbose_dump() const {
   const auto& action_policy = verbose_info_->action_policy;
   const auto& mcts_results = verbose_info_->mcts_results;
 
-  printf("CPU pos eval:\n");
+  std::cout << std::endl << "CPU pos eval:" << std::endl;
   IO::print_mcts_results(std::cout, action_policy, mcts_results);
 }
 

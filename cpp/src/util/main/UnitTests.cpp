@@ -1,6 +1,7 @@
 #include <util/AllocPool.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Random.hpp>
+#include <util/StringUtil.hpp>
 
 #include <Eigen/Core>
 #include <gtest/gtest.h>
@@ -120,6 +121,31 @@ TEST(eigen_util, sort_columns) {
   for (int r = 0; r < kNumRows; ++r) {
     for (int c = 0; c < kNumCols; ++c) {
       float expected = (c + 1) * pow10[r];
+      EXPECT_EQ(array(r, c), expected);
+    }
+  }
+}
+
+TEST(eigen_util, sort_rows) {
+  constexpr int kNumRows = 5;
+  constexpr int kNumCols = 3;
+  constexpr int kMaxNumRows = 10;
+  using Array = Eigen::Array<float, Eigen::Dynamic, kNumCols, 0, kMaxNumRows, kNumCols>;
+
+  Array array{
+      {3, 30, 300},
+      {1, 10, 100},
+      {5, 50, 500},
+      {4, 40, 400},
+      {2, 20, 200},
+  };
+
+  array = eigen_util::sort_rows(array);
+
+  int pow10[] = {1, 10, 100};
+  for (int r = 0; r < kNumRows; ++r) {
+    for (int c = 0; c < kNumCols; ++c) {
+      float expected = (r + 1) * pow10[c];
       EXPECT_EQ(array(r, c), expected);
     }
   }
@@ -474,12 +500,7 @@ TEST(eigen_util, rotate) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;
 
-  Array expected_left_rotate_arrays[N] = {
-    {0, 1, 2, 3},
-    {1, 2, 3, 0},
-    {2, 3, 0, 1},
-    {3, 0, 1, 2}
-  };
+  Array expected_left_rotate_arrays[N] = {{0, 1, 2, 3}, {1, 2, 3, 0}, {2, 3, 0, 1}, {3, 0, 1, 2}};
 
   for (int i = 0; i < N; ++i) {
     Array array{{0, 1, 2, 3}};
@@ -489,12 +510,7 @@ TEST(eigen_util, rotate) {
     EXPECT_TRUE((array == expected_array).all());
   }
 
-  Array expected_right_rotate_arrays[N] = {
-    {0, 1, 2, 3},
-    {3, 0, 1, 2},
-    {2, 3, 0, 1},
-    {1, 2, 3, 0}
-  };
+  Array expected_right_rotate_arrays[N] = {{0, 1, 2, 3}, {3, 0, 1, 2}, {2, 3, 0, 1}, {1, 2, 3, 0}};
 
   for (int i = 0; i < N; ++i) {
     Array array{{0, 1, 2, 3}};
@@ -503,6 +519,73 @@ TEST(eigen_util, rotate) {
     Array expected_array = expected_right_rotate_arrays[i];
     EXPECT_TRUE((array == expected_array).all());
   }
+}
+
+TEST(eigen_util, print_array) {
+  constexpr int kNumRows = 6;
+  constexpr int kNumCols = 4;
+  constexpr int kMaxRows = 10;
+  using Array = Eigen::Array<float, Eigen::Dynamic, kNumCols, 0, kMaxRows, kNumCols>;
+
+  Array array(kNumRows, kNumCols);
+
+  // Fill the array with values
+  for (int i = 0; i < kNumRows; ++i) {
+    for (int j = 0; j < kNumCols; ++j) {
+      array(i, j) = i * kNumCols + j;
+    }
+  }
+
+  array.col(1) /= 10;
+  array.col(2) /= 10;
+  array(0, 3) = 0.00927465;
+  array(1, 3) = -0.00927465;
+  array(2, 3) = 1.23456e-8;
+
+  std::vector<std::string> column_names = {"col1", "col2", "col3", "col4"};
+
+  eigen_util::PrintArrayFormatMap fmt_map;
+  fmt_map["col1"] = [](float x) { return "foo" + std::to_string((int)x); };
+
+  std::ostringstream ss;
+  eigen_util::print_array(ss, array, column_names, &fmt_map);
+
+  std::string expected_output =
+      " col1 col2 col3     col4\n"
+      " foo0  0.1  0.2 0.009275\n"
+      " foo4  0.5  0.6 -0.00927\n"
+      " foo8  0.9    1 1.235e-8\n"
+      "foo12  1.3  1.4       15\n"
+      "foo16  1.7  1.8       19\n"
+      "foo20  2.1  2.2       23\n";
+
+  EXPECT_EQ(ss.str(), expected_output);
+}
+
+TEST(eigen_util, concatenate_columns) {
+  using Array1 = Eigen::Array<float, 4, 1>;
+  using Array2 = Eigen::Array<float, 4, 3>;
+
+  Array1 a{1, 2, 3, 4};
+  Array1 b{5, 6, 7, 8};
+  Array1 c{9, 10, 11, 12};
+
+  Array2 expected = {{1, 5, 9}, {2, 6, 10}, {3, 7, 11}, {4, 8, 12}};
+
+  Array2 actual = eigen_util::concatenate_columns(a, b, c);
+
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      EXPECT_EQ(actual(i, j), expected(i, j));
+    }
+  }
+}
+
+TEST(StringUtil, terminal_width) {
+  EXPECT_EQ(util::terminal_width(""), 0);
+  EXPECT_EQ(util::terminal_width("hello"), 5);
+  EXPECT_EQ(util::terminal_width("\033[31m\033[00m"), 0);  // red font
+  EXPECT_EQ(util::terminal_width("\033[31mhello\033[00m"), 5);  // red font
 }
 
 int main(int argc, char** argv) {

@@ -191,10 +191,6 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
   core::seat_index_t cp = stable_data().current_player;
 
-  if (kEnableDebug) {
-    std::cout << "get_counts()" << std::endl;
-  }
-
   auto& counts = results.counts;
   auto& action_values = results.action_values;
   auto& Q = results.Q;
@@ -214,7 +210,6 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
     int count = edge->N;
     int modified_count = count;
-    const char* detail = "";
 
     const Node* child = get_child(edge);
     if (!child) continue;
@@ -222,22 +217,8 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     const auto& stats = child->stats();
     if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
       modified_count = 0;
-      detail = " (losing)";
     } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
       modified_count = 0;
-      detail = " (?)";
-    } else if (provably_winning) {
-      detail = " (winning)";
-    }
-
-    if (kEnableDebug) {
-      auto action2 = action;
-      Game::Symmetries::apply(action2, inv_sym);
-      std::cout << "  " << Game::IO::action_to_str(action2) << ": " << count;
-      if (modified_count != count) {
-        std::cout << " -> " << modified_count;
-      }
-      std::cout << detail << std::endl;
     }
 
     if (modified_count) {

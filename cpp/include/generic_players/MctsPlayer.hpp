@@ -59,6 +59,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
+  using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   // uses this constructor when sharing an MCTS manager
   MctsPlayer(const Params&, MctsManager* mcts_manager);

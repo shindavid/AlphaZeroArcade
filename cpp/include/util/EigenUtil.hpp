@@ -180,8 +180,14 @@ inline constexpr int extract_length_v = extract_length<T>::value;
 /*
  * Accepts an Eigen::Array, and sorts the columns based on the values in the first row.
  */
-template <typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
-auto sort_columns(const Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& array);
+template <typename Derived>
+auto sort_columns(const Eigen::ArrayBase<Derived>& array);
+
+/*
+ * Accepts an Eigen::Array, and sorts the rows based on the values in the first column.
+ */
+template <typename Derived>
+auto sort_rows(const Eigen::ArrayBase<Derived>& array);
 
 /*
  * Returns a float of the same shape as the input, whose values are positive and summing to 1.
@@ -337,6 +343,27 @@ uint64_t hash(const Tensor& tensor);
 */
 template<typename Derived>
 auto compute_covariance(const Eigen::MatrixBase<Derived>& X);
+
+using PrintArrayFormatMap = std::map<std::string, std::function<std::string(float)>>;
+
+/*
+ * Prints a 2D array of size (n_rows, n_cols) to the given output stream.
+ *
+ * Expects additionally a vector column_names, of size n_cols, that are used as column headers.
+ *
+ * If fmt_map is not nullptr, it should be a map from column names to functions that convert floats
+ * to strings. If fmt_map is nullptr, or if a given column name is not found in fmt_map, then a
+ * default string conversion is used.
+ */
+template <typename Derived>
+void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
+                 const std::vector<std::string>& column_names,
+                 const PrintArrayFormatMap* fmt_map = nullptr);
+
+template <typename Derived0, typename... Deriveds>
+auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
+                         const Eigen::ArrayBase<Deriveds>&... rest);
+
 }  // namespace eigen_util
 
 #include <inline/util/EigenUtil.inl>

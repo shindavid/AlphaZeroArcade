@@ -3,10 +3,129 @@
 #include <util/Exception.hpp>
 #include <util/Random.hpp>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
 #include <array>
 #include <cstdint>
 
 namespace eigen_util {
+
+namespace detail {
+
+// Helper function to round up at position n-1 if the (n)'th digit is 5 or greater
+inline void round_up(std::string& s, size_t n) {
+  while (n > 0 && (s[n - 1] == '9' || s[n - 1] == '.')) {
+    if (s[n - 1] == '.') {
+      --n;
+      continue;
+    }
+    s[n - 1] = '0';
+    --n;
+  }
+  if (n == 0) {
+    // If rounding overflows all the way back to the start, prepend '1'
+    s = '1' + s;
+  } else {
+    s[n - 1] += 1;  // Increment the digit at n-1
+  }
+}
+
+/*
+ * If s contains a decimal at-or-before the n'th character, chops off everything after the n'th
+ * character, rounding up if appropriate. Then, removes all trailing zeros after the decimal.
+ */
+inline void trim(std::string& s, size_t n) {
+  if (n >= s.size()) {
+    // If n is beyond the length of the string, no trimming or rounding needed
+    return;
+  }
+
+  // Check if we need to round up, based on the character at position n
+  if (n < s.size() && s[n] >= '5') {
+    round_up(s, n);
+  }
+
+  // Trim the string to ensure it has a maximum of n characters
+  s = s.substr(0, n);
+
+  // Remove trailing zeros and the decimal point, if needed
+  size_t dot = s.find('.');
+  if (dot != std::string::npos) {
+    // Remove trailing zeros after the decimal point
+    size_t last_non_zero = s.find_last_not_of('0');
+    if (last_non_zero == dot) {
+      // If the last non-zero character is the decimal point, remove it
+      s = s.substr(0, dot);
+    } else if (last_non_zero != std::string::npos) {
+      // Trim after the last non-zero character
+      s = s.substr(0, last_non_zero + 1);
+    }
+  }
+}
+
+/*
+ * Counts the number of sig-digs in a numerical string.
+ *
+ * Assumes s is in standard notation (not scientific notation), without a leading + sign.
+ *
+ * Treats all leading AND trailing zeros as insignificant.
+ */
+inline int sigfigs(const std::string& s) {
+  std::string t = s;
+  boost::replace_all(t, "-", "");
+  boost::replace_all(t, ".", "");
+  int n = t.size();
+  int a = 0;
+  while (a < n && t.at(a) == '0') a++;
+
+  if (a == n) return 0;
+
+  int b = n - 1;
+  while (b >= 0 && t.at(b) == '0') b--;
+
+  return b - a + 1;
+}
+
+/*
+ * Converts a float to a string of length at most 8.
+ */
+inline std::string float_to_str8(float x) {
+  if (x == 0) return "";
+
+  char buf[32];
+
+  std::sprintf(buf, "%.8f", x);  // Standard
+  std::string s(buf);
+  trim(s, 8);
+
+  std::sprintf(buf, "%.8e", x);  // Scientific
+  std::string s2(buf);
+
+  size_t e = s2.find('e');
+  std::string mantissa = s2.substr(0, e);
+  int exponent = std::atoi(s2.substr(e+1).c_str());
+
+  if (exponent == 0) {
+    return s;
+  }
+
+  std::string exponent_str = std::to_string(exponent);
+
+  int mantissa_capacity = 7 - exponent_str.size();
+  trim(mantissa, mantissa_capacity);
+
+  int scientific_sigfigs = sigfigs(mantissa);
+  int standard_sigfigs = sigfigs(s);
+
+  s2 = mantissa + "e" + exponent_str;
+  if (s.size() > 8 || scientific_sigfigs > standard_sigfigs) {
+    return s2;
+  }
+  return s;
+}
+
+}  // namespace detail
 
 template <typename Scalar>
 template <typename Array, typename Urng, typename... DimTs>
@@ -27,9 +146,9 @@ Array UniformDirichletGen<Scalar>::generate(Urng&& urng, Scalar alpha, DimTs&&..
   return out;
 }
 
-template <typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
-auto sort_columns(const Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>& array) {
-  using Column = Eigen::Array<Scalar, Rows, 1, Options>;
+template<typename Derived>
+auto sort_columns(const Eigen::ArrayBase<Derived>& array) {
+  using Column = std::remove_const_t<decltype(array.col(0).eval())>;
   int n = array.cols();
   Column columns[n];
   for (int i = 0; i < n; ++i) {
@@ -39,9 +158,28 @@ auto sort_columns(const Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCo
     return a(0) < b(0);
   });
 
-  auto out = array;
+  auto out = array.eval();
   for (int i = 0; i < n; ++i) {
     out.col(i) = columns[i];
+  }
+  return out;
+}
+
+template <typename Derived>
+auto sort_rows(const Eigen::ArrayBase<Derived>& array) {
+  using Row = std::remove_const_t<decltype(array.row(0).eval())>;
+  int n = array.rows();
+  Row rows[n];
+  for (int i = 0; i < n; ++i) {
+    rows[i] = array.row(i);
+  }
+  std::sort(rows, rows + n, [](const Row& a, const Row& b) {
+    return a(0) < b(0);
+  });
+
+  auto out = array.eval();
+  for (int i = 0; i < n; ++i) {
+    out.row(i) = rows[i];
   }
   return out;
 }
@@ -305,4 +443,83 @@ auto compute_covariance(const Eigen::MatrixBase<Derived>& X) {
   auto covariance = (centered.transpose() * centered) / (X.rows() - 1);
   return covariance;
 }
+
+template <typename Derived>
+void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
+                 const std::vector<std::string>& column_names, const PrintArrayFormatMap* fmt_map) {
+  int num_rows = array.rows();
+  int num_cols = array.cols();
+
+  util::release_assert(num_cols == int(column_names.size()));
+
+  std::vector<std::vector<std::string>> strs;
+  std::vector<int> max_widths;
+  strs.reserve(num_cols);
+  max_widths.reserve(num_cols);
+
+  for (int j = 0; j < num_cols; ++j) {
+    const std::string& column_name = column_names[j];
+    int max_width = util::terminal_width(column_name);
+
+    std::function<std::string(float)> f = detail::float_to_str8;
+    if (fmt_map) {
+      auto it = fmt_map->find(column_name);
+      if (it != fmt_map->end()) {
+        f = it->second;
+      }
+    }
+
+    std::vector<std::string> col_strs;
+    col_strs.reserve(num_rows + 1);
+    col_strs.push_back(column_name);
+    for (int i = 0; i < num_rows; ++i) {
+      float x = array(i, j);
+      std::string s = f(x);
+      max_width = std::max(max_width, int(util::terminal_width(s)));
+      col_strs.push_back(s);
+    }
+
+    strs.push_back(col_strs);
+    max_widths.push_back(max_width);
+  }
+
+  for (int i = 0; i < num_rows + 1; ++i) {
+    for (int j = 0; j < num_cols; ++j) {
+      os << std::setw(max_widths[j] + (j > 0)) << strs[j][i];
+    }
+    os << std::endl;
+  }
+}
+
+template <typename Derived0, typename... Deriveds>
+auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
+                         const Eigen::ArrayBase<Deriveds>&... rest) {
+  static_assert(Derived0::ColsAtCompileTime == 1);
+  static_assert((std::is_same_v<Derived0, Deriveds> && ...),
+                "All arguments must be of the same type");
+
+  constexpr int num_arrays = sizeof...(rest) + 1;
+  const int rows = first.rows();
+
+  bool sizes_match = (... && (rest.rows() == rows));
+  util::release_assert(sizes_match, "All arrays must have the same number of rows");
+
+  using Scalar = Derived0::Scalar;
+  constexpr int ColsAtCompileTime = num_arrays;
+  constexpr int RowsAtCompileTime = Derived0::RowsAtCompileTime;
+  constexpr int Options = Derived0::Options;
+  constexpr int MaxRowsAtCompileTime = Derived0::MaxRowsAtCompileTime;
+
+  using ResultT =
+      Eigen::Array<Scalar, RowsAtCompileTime, ColsAtCompileTime, Options, MaxRowsAtCompileTime>;
+
+  ResultT result(rows, num_arrays);
+
+  result.col(0) = first;
+  int col_idx = 1;
+  (..., (result.col(col_idx++) = rest));  // Unpack and assign the arrays
+
+  return result;
+}
+
 }  // namespace eigen_util
