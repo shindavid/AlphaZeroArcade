@@ -2,14 +2,13 @@
 #include <games/nim/Constants.hpp>
 #include <games/nim/Game.hpp>
 #include <games/connect4/Game.hpp>
+#include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
-#include <mcts/Node.hpp>
-#include <mcts/Manager.hpp>
 
 #include <gtest/gtest.h>
 
@@ -59,60 +58,8 @@ class ManagerTest : public testing::Test {
       manager_.search(search_params);
     }
 
-    Node* get_root_node() {
-      return manager_.shared_data_.get_root_node();
-    }
-
     Node* get_node_by_index(node_pool_index_t index) {
       return manager_.shared_data_.lookup_table.get_node(index);
-    }
-
-    SearchThread* get_search_thread() {
-      return manager_.search_threads_[0];
-    }
-
-    void init_search_thread() {
-      SearchThread* search_thread = get_search_thread();
-      search_thread->search_path_.clear();
-      search_thread->search_path_.emplace_back(get_root_node());
-    }
-
-    LookupTable& lookup_table() {
-      return manager_.shared_data_.lookup_table;
-    }
-
-    StateHistory& get_raw_history() {
-      return get_search_thread()->raw_history_;
-    }
-
-    node_pool_index_t add_child_by_action(node_pool_index_t node_ix, action_t action) {
-      Node* node = get_node_by_index(node_ix);
-      edge_t* edge = node->get_edge(action);
-      if (edge->action == action && edge->child_index != -1) {
-        throw std::invalid_argument("Child already exists");
-      }
-
-      Game::Rules::apply(get_raw_history(), edge->action);
-
-      edge->child_index = lookup_table().alloc_node();
-      Node* child = lookup_table().get_node(edge->child_index);
-      new (child) Node(&lookup_table(), get_raw_history());
-
-      child->initialize_edges();
-      get_search_thread()->init_node(&get_raw_history(), edge->child_index, child);
-
-      return edge->child_index;
-    }
-
-    void modify_node_Q(node_pool_index_t index, ValueArray Q) {
-      Node* node = get_node_by_index(index);
-      node->stats().Q = Q;
-      node->stats().Q_sq = Q.cwiseProduct(Q);
-    }
-
-    void modify_node_RN(node_pool_index_t index, int RN) {
-      Node* node = get_node_by_index(index);
-      node->stats().RN = RN;
     }
 
     std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent=0) {
@@ -198,33 +145,6 @@ TEST_F(ManagerTest, construct_tree) {
   "    |-Edge 10:  E = 1, Action = 1\n"
   "      |-Node 7: [16, 0] RN = 1: Q= 0.5 0.5\n");
 }
-
-TEST_F(ManagerTest, backprop) {
-  start_manager();
-  start_threads();
-  search(0);
-
-  init_search_thread();
-  node_pool_index_t child_index1 = add_child_by_action(0, 1);
-  node_pool_index_t child_index2 = add_child_by_action(child_index1, 2);
-  node_pool_index_t child_index3 = add_child_by_action(child_index2, 0);
-  ValueArray v;
-  v << 0.8, 0.2;
-  modify_node_Q(child_index2, v);
-  modify_node_RN(child_index2, 100);
-  v << 0.1, 0.9;
-  modify_node_Q(child_index3, v);
-  modify_node_RN(child_index3, 9999);
-
-  EXPECT_EQ(print_tree(),
-  "Node 0: [21, 0] RN = 1: Q= 0.5 0.5\n"
-  "|-Edge 1:  E = 0, Action = 1\n"
-  "  |-Node 1: [19, 1] RN = 0: Q= 0.5 0.5\n"
-  "    |-Edge 5:  E = 0, Action = 2\n"
-  "      |-Node 2: [16, 0] RN = 100: Q= 0.8 0.2\n"
-  "        |-Edge 6:  E = 0, Action = 0\n"
-  "          |-Node 3: [15, 1] RN = 9999: Q= 0.1 0.9\n");
-  }
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);

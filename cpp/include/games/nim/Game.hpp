@@ -16,12 +16,12 @@
 #include <core/GameTypes.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
+#include <core/TrivialSymmetries.hpp>
 #include <core/WinShareResults.hpp>
+#include <games/nim/Constants.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
-#include <games/nim/Constants.hpp>
-#include <core/TrivialSymmetries.hpp>
 
 namespace nim {
 
@@ -31,7 +31,7 @@ struct Game {
     static constexpr int kNumActions = nim::kMaxStonesToTake;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
     static constexpr int kNumPreviousStatesToEncode = 0;
-    static constexpr float kOpeningLength = 0.1;  // not applicable to Nim
+    static constexpr float kOpeningLength = 3.1;  // not applicable to Nim
   };
 
   struct State {
@@ -97,15 +97,15 @@ struct Game {
 
   struct IO {
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action) { return std::to_string(action); }
+    static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
-                            const Types::player_name_array_t* player_names = nullptr) {
-                              throw std::runtime_error("Not implemented");
-                            }
+    const Types::player_name_array_t* player_names = nullptr) {
+      throw std::runtime_error("Not implemented");
+    }
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
-                                   const Types::SearchResults&) {
-                                      throw std::runtime_error("Not implemented");
-                                   }
+    const Types::SearchResults&) {
+      throw std::runtime_error("Not implemented");
+    }
     static std::string state_repr(const State& state) {
       std::ostringstream ss;
       ss << "[" << state.stones_left << ", " << state.current_player << "]";
@@ -114,26 +114,25 @@ struct Game {
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<2>>;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
     using MCTSKey = State;
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter> static Tensor tensorize(Iter start, Iter cur) {
-
       Tensor tensor;
       tensor.setZero();
-      Iter state = cur;
-      tensor(0) = state->stones_left;
-      tensor(1) = state->current_player;
+      Iter state = --cur;
+
+      for (int i = 0; i < state->stones_left; ++i) {
+        tensor(nim::kStartingStones - 1- i) = 1;
+      }
       return tensor;
     }
   };
 
   struct TrainingTargets {
-    using BoardShape = Eigen::Sizes<1>;
-
     using PolicyTarget = core::PolicyTarget<Game>;
     using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
