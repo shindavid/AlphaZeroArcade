@@ -153,7 +153,6 @@ class SearchThread {
   FRIEND_GTEST(SearchThreadTest, something_else);
   FRIEND_GTEST(ManagerTest);
   FRIEND_GTEST(ManagerTest, backprop);
-
 };
 
 }  // namespace mcts

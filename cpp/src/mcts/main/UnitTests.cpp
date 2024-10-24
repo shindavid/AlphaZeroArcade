@@ -152,6 +152,14 @@ class ManagerTest : public testing::Test {
       return oss.str();
     }
 
+    /*
+     * This function prints the tree structure starting from root.
+     * It recursively traverses the tree and prints each node and its edges.
+     * The format is as follows:
+     * - Each node is printed with its index, state representation, RN (visit count), and Q values.
+     * - Each edge is printed with its index, visit count (E), and action.
+     * - Indentation is used to represent the tree structure, with each level of depth indented further.
+    */
     std::string print_tree() {
       State state;
       Game::Rules::init_state(state);
