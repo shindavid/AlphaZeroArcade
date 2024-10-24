@@ -1,15 +1,6 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <functional>
-#include <sstream>
-#include <string>
-
-#include <boost/functional/hash.hpp>
-#include <torch/torch.h>
-
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
@@ -22,6 +13,15 @@
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
+
+#include <boost/functional/hash.hpp>
+#include <torch/torch.h>
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <sstream>
+#include <string>
 
 namespace nim {
 
@@ -99,11 +99,11 @@ struct Game {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
-    const Types::player_name_array_t* player_names = nullptr) {
+                            const Types::player_name_array_t* player_names = nullptr) {
       throw std::runtime_error("Not implemented");
     }
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
-    const Types::SearchResults&) {
+                                   const Types::SearchResults&) {
       throw std::runtime_error("Not implemented");
     }
     static std::string state_repr(const State& state) {
@@ -119,14 +119,18 @@ struct Game {
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
-    template <typename Iter> static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
-    template <typename Iter> static Tensor tensorize(Iter start, Iter cur) {
+    template <typename Iter>
+    static EvalKey eval_key(Iter start, Iter cur) {
+      return *cur;
+    }
+    template <typename Iter>
+    static Tensor tensorize(Iter start, Iter cur) {
       Tensor tensor;
       tensor.setZero();
-      Iter state = --cur;
+      Iter state = cur;
 
       for (int i = 0; i < state->stones_left; ++i) {
-        tensor(nim::kStartingStones - 1- i) = 1;
+        tensor(nim::kStartingStones - 1 - i) = 1;
       }
       return tensor;
     }
@@ -142,7 +146,7 @@ struct Game {
   };
 
   static void static_init() {}
-}; // struct Game
+};  // struct Game
 }  // namespace nim
 
 namespace std {
