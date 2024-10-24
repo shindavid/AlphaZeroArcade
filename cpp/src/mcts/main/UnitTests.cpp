@@ -4,6 +4,8 @@
 #include <games/connect4/Game.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
+#include <mcts/NNEvaluation.hpp>
+#include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
@@ -19,6 +21,61 @@
 using Game = nim::Game;
 using State = Game::State;
 
+class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
+ public:
+  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using ValueTensor = NNEvaluation::ValueTensor;
+  using PolicyTensor = NNEvaluation::PolicyTensor;
+  using ActionValueTensor = NNEvaluation::ActionValueTensor;
+  using ActionMask = NNEvaluation::ActionMask;
+
+  MockNNEvaluationService(bool smart) : smart_(smart) {}
+
+  void evaluate(const NNEvaluationRequest& request) override {
+    ValueTensor value;
+    PolicyTensor policy;
+    ActionValueTensor action_values;
+    group::element_t sym = group::kIdentity;
+
+    for (NNEvaluationRequest::Item& item : request.items()) {
+      ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
+      core::seat_index_t cp = item.node()->stable_data().current_player;
+
+      const State& state = item.cur_state();
+
+      bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
+      if (winning) {
+        core::action_t winning_move = (state.stones_left) % (1 + nim::kMaxStonesToTake) - 1;
+
+        // these are logits
+        float winning_v = smart_ ? 2 : 0;
+        float losing_v = smart_ ? 0 : 2;
+
+        float winning_action_p = smart_ ? 2 : 0;
+        float losing_action_p = smart_ ? 0 : 2;
+
+        value.setValues({winning_v, losing_v});
+
+        policy.setConstant(losing_action_p);
+        policy(winning_move) = winning_action_p;
+
+        action_values.setConstant(losing_v);
+        action_values(winning_move) = winning_v;
+      } else {
+        value.setZero();
+        policy.setZero();
+        action_values.setZero();
+      }
+
+      item.set_eval(
+          std::make_shared<NNEvaluation>(value, policy, action_values, valid_actions, sym, cp));
+    }
+  }
+
+ private:
+  bool smart_;
+};
+
 class ManagerTest : public testing::Test {
  protected:
   using Manager = mcts::Manager<Game>;
@@ -32,11 +89,15 @@ class ManagerTest : public testing::Test {
   using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
   using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
   using ValueArray = Game::Types::ValueArray;
+  using Service = mcts::NNEvaluationServiceBase<Game>;
 
  public:
   ManagerTest():
-    manager_params_(create_manager_params()),
-    manager_(manager_params_) {}
+    manager_params_(create_manager_params()) {}
+
+  ~ManagerTest() override {
+    delete manager_;
+  }
 
     static ManagerParams create_manager_params() {
       ManagerParams params(mcts::kCompetitive);
@@ -44,25 +105,29 @@ class ManagerTest : public testing::Test {
       return params;
     }
 
+    void init_manager(Service* service=nullptr) {
+      manager_ = new Manager(manager_params_, service);
+    }
+
     void start_manager(const std::vector<core::action_t>& initial_actions) {
-      manager_.start();
+      manager_->start();
       for (core::action_t action : initial_actions) {
-        manager_.shared_data_.update_state(action);
+        manager_->shared_data_.update_state(action);
       }
       this->initial_actions_ = initial_actions;
     }
 
     void start_threads() {
-      manager_.start_threads();
+      manager_->start_threads();
     }
 
     void search(int num_searches = 0){
       mcts::SearchParams search_params(num_searches, true);
-      manager_.search(search_params);
+      manager_->search(search_params);
     }
 
     Node* get_node_by_index(node_pool_index_t index) {
-      return manager_.shared_data_.lookup_table.get_node(index);
+      return manager_->shared_data_.lookup_table.get_node(index);
     }
 
     std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent=0) {
@@ -76,7 +141,7 @@ class ManagerTest : public testing::Test {
         oss << std::string((num_indent - 1) * 2, ' ') << marker;
       }
       oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state)
-          << " RN = " << node->stats().RN << ": Q= " << node->stats().Q.transpose() << std::endl;
+          << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
 
       for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
         edge_t* edge = node->get_edge(i);
@@ -122,11 +187,12 @@ class ManagerTest : public testing::Test {
 
  private:
   ManagerParams manager_params_;
-  Manager manager_;
+  Manager* manager_ = nullptr;
   std::vector<core::action_t> initial_actions_;
 };
 
-TEST_F(ManagerTest, construct_tree) {
+TEST_F(ManagerTest, uniform_search) {
+  init_manager();
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
@@ -134,25 +200,87 @@ TEST_F(ManagerTest, construct_tree) {
   search(10);
   std::string tree_str = print_tree();
   EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q= 0.425 0.575\n"
+            "Node 0: [4, 0] RN = 11: Q = 0.425 0.575\n"
             "|-Edge 0:  E = 4, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 4: Q= 0.5 0.5\n"
+            "  |-Node 1: [3, 1] RN = 4: Q = 0.5 0.5\n"
             "    |-Edge 3:  E = 1, Action = 0\n"
-            "      |-Node 4: [2, 0] RN = 1: Q= 0.5 0.5\n"
+            "      |-Node 4: [2, 0] RN = 1: Q = 0.5 0.5\n"
             "    |-Edge 4:  E = 1, Action = 1\n"
-            "      |-Node 5: [1, 0] RN = 1: Q= 0.5 0.5\n"
+            "      |-Node 5: [1, 0] RN = 1: Q = 0.5 0.5\n"
             "    |-Edge 5:  E = 1, Action = 2\n"
-            "      |*Node 6: [0, 0] RN = 2: Q= 0 1\n"
+            "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n"
             "|-Edge 1:  E = 3, Action = 1\n"
-            "  |-Node 2: [2, 1] RN = 3: Q= 0.5 0.5\n"
+            "  |-Node 2: [2, 1] RN = 3: Q = 0.5 0.5\n"
             "    |-Edge 6:  E = 1, Action = 0\n"
-            "      |-Node 5: [1, 0] RN = 1: Q= 0.5 0.5\n"
+            "      |-Node 5: [1, 0] RN = 1: Q = 0.5 0.5\n"
             "    |-Edge 7:  E = 1, Action = 1\n"
-            "      |*Node 6: [0, 0] RN = 2: Q= 0 1\n"
+            "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n"
             "|-Edge 2:  E = 3, Action = 2\n"
-            "  |-Node 3: [1, 1] RN = 3: Q= 0.25 0.75\n"
+            "  |-Node 3: [1, 1] RN = 3: Q = 0.25 0.75\n"
             "    |-Edge 8:  E = 2, Action = 0\n"
-            "      |*Node 6: [0, 0] RN = 2: Q= 0 1\n");
+            "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n");
+}
+
+TEST_F(ManagerTest, smart_search) {
+  MockNNEvaluationService mock_service(true);
+  init_manager(&mock_service);
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+
+  start_manager(initial_actions);
+  start_threads();
+  search(10);
+  std::string tree_str = print_tree();
+  EXPECT_EQ(tree_str,
+            "Node 0: [4, 0] RN = 11: Q = 0.0976812  0.902319\n"
+            "|-Edge 0:  E = 4, Action = 0\n"
+            "  |-Node 1: [3, 1] RN = 4: Q = 0.0397343  0.960266\n"
+            "    |-Edge 5:  E = 3, Action = 2\n"
+            "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n"
+            "|-Edge 1:  E = 3, Action = 1\n"
+            "  |-Node 2: [2, 1] RN = 3: Q = 0.0596015  0.940399\n"
+            "    |-Edge 7:  E = 2, Action = 1\n"
+            "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n"
+            "|-Edge 2:  E = 3, Action = 2\n"
+            "  |-Node 3: [1, 1] RN = 3: Q = 0.0596015  0.940399\n"
+            "    |-Edge 8:  E = 2, Action = 0\n"
+            "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n");
+}
+
+TEST_F(ManagerTest, dumb_search) {
+  MockNNEvaluationService mock_service(false);
+  init_manager(&mock_service);
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+
+  start_manager(initial_actions);
+  start_threads();
+  search(10);
+  std::string tree_str = print_tree();
+  EXPECT_EQ(tree_str,
+            "Node 0: [4, 0] RN = 11: Q = 0.44404 0.55596\n"
+            "|-Edge 0:  E = 4, Action = 0\n"
+            "  |-Node 1: [3, 1] RN = 4: Q = 0.373068 0.626932\n"
+            "    |-Edge 3:  E = 2, Action = 0\n"
+            "      |-Node 2: [2, 0] RN = 2: Q = 0.119203 0.880797\n"
+            "        |-Edge 6:  E = 1, Action = 0\n"
+            "          |-Node 6: [1, 1] RN = 3: Q = 0.440399 0.559601\n"
+            "            |-Edge 11:  E = 2, Action = 0\n"
+            "              |*Node 7: [0, 0] RN = 2: Q = 0 1\n"
+            "    |-Edge 4:  E = 1, Action = 1\n"
+            "      |-Node 3: [1, 0] RN = 2: Q = 0.119203 0.880797\n"
+            "        |-Edge 8:  E = 1, Action = 0\n"
+            "          |*Node 5: [0, 1] RN = 1: Q = 1 0\n"
+            "|-Edge 1:  E = 3, Action = 1\n"
+            "  |-Node 4: [2, 1] RN = 3: Q = 0.5 0.5\n"
+            "    |-Edge 9:  E = 2, Action = 0\n"
+            "      |-Node 3: [1, 0] RN = 2: Q = 0.119203 0.880797\n"
+            "        |-Edge 8:  E = 1, Action = 0\n"
+            "          |*Node 5: [0, 1] RN = 1: Q = 1 0\n"
+            "|-Edge 2:  E = 3, Action = 2\n"
+            "  |-Node 6: [1, 1] RN = 3: Q = 0.440399 0.559601\n"
+            "    |-Edge 11:  E = 2, Action = 0\n"
+            "      |*Node 7: [0, 0] RN = 2: Q = 0 1\n");
 }
 
 int main(int argc, char** argv) {

@@ -13,7 +13,7 @@ template <core::concepts::Game Game>
 int Manager<Game>::next_instance_id_ = 0;
 
 template <core::concepts::Game Game>
-inline Manager<Game>::Manager(const ManagerParams& params)
+inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBase* service)
     : params_(params),
       pondering_search_params_(
           SearchParams::make_pondering_params(params.pondering_tree_size_limit)),
@@ -30,7 +30,10 @@ inline Manager<Game>::Manager(const ManagerParams& params)
     init_profiling_dir(profiling_dir.string());
   }
 
-  if (!params.no_model) {
+  // TODO: if no_model, construct a UniformNNEvaluationService here
+  if (service) {
+    nn_eval_service_ = service;
+  } else if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params);
   } else if (!params.model_filename.empty()) {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
