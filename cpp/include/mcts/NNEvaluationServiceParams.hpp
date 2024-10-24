@@ -23,6 +23,17 @@ struct NNEvaluationServiceParams {
   int batch_size_limit = 216;
   int64_t nn_eval_timeout_ns = util::us_to_ns(250);
   size_t cache_size = 1048576;
+
+#ifdef PROFILE_MCTS
+  std::string profiling_dir_str;
+
+  boost::filesystem::path profiling_dir() const {
+    return boost::filesystem::path(profiling_dir_str);
+  }
+#else   // PROFILE_MCTS
+  boost::filesystem::path profiling_dir() const { return {}; }
+#endif  // PROFILE_MCTS
+
 };
 
 }  // namespace mcts

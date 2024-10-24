@@ -8,6 +8,7 @@
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
+#include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SharedData.hpp>
@@ -71,7 +72,8 @@ namespace mcts {
  */
 template <core::concepts::Game Game>
 class NNEvaluationService
-    : public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
+    : public NNEvaluationServiceBase<Game>,
+      public core::LoopControllerListener<core::LoopControllerInteractionType::kPause>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kReloadWeights>,
       public core::LoopControllerListener<core::LoopControllerInteractionType::kMetricsRequest> {
  public:
@@ -119,11 +121,9 @@ class NNEvaluationService
    *
    * If the thread_ member is already instantiated, then this is a no-op.
    */
-  void connect();
+  void connect() override;
 
-  void disconnect();
-
-  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
+  void disconnect() override;
 
   /*
    * Called by search threads. Returns immediately if we get a cache-hit. Otherwise, blocks on the
@@ -140,9 +140,9 @@ class NNEvaluationService
    *
    * https://discovery.ucl.ac.uk/id/eprint/10045895/1/agz_unformatted_nature.pdf
    */
-  void evaluate(const NNEvaluationRequest&);
+  void evaluate(const NNEvaluationRequest&) override;
 
-  void end_session();
+  void end_session() override;
 
   core::perf_stats_t get_perf_stats() override;
 
@@ -156,6 +156,8 @@ class NNEvaluationService
   ~NNEvaluationService();
 
   std::string dump_key(const char* descr);
+
+  void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 
   void batch_evaluate();
   void loop();

@@ -32,9 +32,6 @@ inline Manager<Game>::Manager(const ManagerParams& params)
 
   if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params);
-    if (mcts::kEnableProfiling) {
-      nn_eval_service_->set_profiling_dir(params.profiling_dir());
-    }
   } else if (!params.model_filename.empty()) {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }

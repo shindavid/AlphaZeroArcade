@@ -10,7 +10,7 @@
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
-#include <mcts/NNEvaluationService.hpp>
+#include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/ActionSelector.hpp>
 #include <mcts/SearchParams.hpp>
@@ -32,7 +32,7 @@ class SearchThread {
   using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
-  using NNEvaluationService = mcts::NNEvaluationService<Game>;
+  using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Game>;
   using Node = mcts::Node<Game>;
   using ActionSelector = mcts::ActionSelector<Game>;
   using SharedData = mcts::SharedData<Game>;
@@ -60,7 +60,7 @@ class SearchThread {
 
   using profiler_t = search_thread_profiler_t;
 
-  SearchThread(SharedData* shared_data, NNEvaluationService* nn_eval_service,
+  SearchThread(SharedData* shared_data, NNEvaluationServiceBase* nn_eval_service,
                const ManagerParams* manager_params, int thread_id);
   ~SearchThread();
 
@@ -126,7 +126,7 @@ class SearchThread {
   float root_softmax_temperature() const { return shared_data_->root_softmax_temperature.value(); }
 
   SharedData* const shared_data_;
-  NNEvaluationService* const nn_eval_service_;
+  NNEvaluationServiceBase* const nn_eval_service_;
   const ManagerParams* manager_params_;
   std::thread* thread_ = nullptr;
 
