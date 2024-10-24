@@ -24,14 +24,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
   auto make_options_description();
   bool operator==(const ManagerParams& other) const = default;
 
-#ifdef PROFILE_MCTS
-  boost::filesystem::path profiling_dir() const {
-    return boost::filesystem::path(profiling_dir_str);
-  }
-#else   // PROFILE_MCTS
-  boost::filesystem::path profiling_dir() const { return {}; }
-#endif  // PROFILE_MCTS
-
   int num_search_threads = 1;
   bool apply_random_symmetries = true;
   bool enable_pondering = false;  // pondering = think during opponent's turn
@@ -64,10 +56,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
    * create action-value targets.
    */
   bool force_evaluate_all_root_children = false;
-
-#ifdef PROFILE_MCTS
-  std::string profiling_dir_str;
-#endif  // PROFILE_MCTS
 };
 
 }  // namespace mcts

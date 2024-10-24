@@ -15,7 +15,7 @@ namespace mcts {
 
 template <core::concepts::Game Game>
 inline SearchThread<Game>::SearchThread(SharedData* shared_data,
-                                        NNEvaluationService* nn_eval_service,
+                                        NNEvaluationServiceBase* nn_eval_service,
                                         const ManagerParams* manager_params,
                                         int thread_id)
     : shared_data_(shared_data),

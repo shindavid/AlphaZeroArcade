@@ -20,6 +20,10 @@ NNEvaluationService<Game>* NNEvaluationService<Game>::create(
   auto it = instance_map_.find(params.model_filename);
   if (it == instance_map_.end()) {
     auto instance = new NNEvaluationService(params);
+
+    if (mcts::kEnableProfiling) {
+      instance->set_profiling_dir(params.profiling_dir());
+    }
     instance_map_[params.model_filename] = instance;
     return instance;
   }
