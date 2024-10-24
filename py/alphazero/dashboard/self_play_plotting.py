@@ -144,6 +144,9 @@ class SelfPlayData:
             if y_var.func is not None:
                 full_df[y_var.column] = y_var.func(full_df)
 
+        # chop off the last row because partial generations are misleading
+        full_df = full_df.iloc[:-1]
+
         self.df = full_df
 
     def join(self, x_df: pd.DataFrame):
