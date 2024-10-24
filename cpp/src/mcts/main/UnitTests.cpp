@@ -21,7 +21,6 @@ using State = Game::State;
 
 class ManagerTest : public testing::Test {
  protected:
-
   using Manager = mcts::Manager<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
@@ -45,8 +44,12 @@ class ManagerTest : public testing::Test {
       return params;
     }
 
-    void start_manager() {
+    void start_manager(const std::vector<core::action_t>& initial_actions) {
       manager_.start();
+      for (core::action_t action : initial_actions) {
+        manager_.shared_data_.update_state(action);
+      }
+      this->initial_actions_ = initial_actions;
     }
 
     void start_threads() {
@@ -68,12 +71,12 @@ class ManagerTest : public testing::Test {
 
       if (num_indent == 0) {
         oss << std::string(num_indent * 2, ' ');
+      } else {
+        const char* marker = node->is_terminal() ? "|*" : "|-";
+        oss << std::string((num_indent - 1) * 2, ' ') << marker;
       }
-      else{
-        oss << std::string((num_indent - 1) * 2, ' ') << "|-";
-      }
-      oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state) << " RN = " << node->stats().RN
-      << ": Q= " << node->stats().Q.transpose() << std::endl;
+      oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state)
+          << " RN = " << node->stats().RN << ": Q= " << node->stats().Q.transpose() << std::endl;
 
       for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
         edge_t* edge = node->get_edge(i);
@@ -105,45 +108,51 @@ class ManagerTest : public testing::Test {
      * The format is as follows:
      * - Each node is printed with its index, state representation, RN (visit count), and Q values.
      * - Each edge is printed with its index, visit count (E), and action.
-     * - Indentation is used to represent the tree structure, with each level of depth indented further.
-    */
+     * - Indentation is used to represent the tree structure, with each level of depth indented
+     * further.
+     */
     std::string print_tree() {
-      State state;
-      Game::Rules::init_state(state);
-      return print_tree(0, state);
+      StateHistory history;
+      history.initialize(Game::Rules{});
+      for (core::action_t action : initial_actions_) {
+        Game::Rules::apply(history, action);
+      }
+      return print_tree(0, history.current());
     }
 
  private:
   ManagerParams manager_params_;
   Manager manager_;
+  std::vector<core::action_t> initial_actions_;
 };
 
 TEST_F(ManagerTest, construct_tree) {
-  start_manager();
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+  start_manager(initial_actions);
   start_threads();
   search(10);
-  EXPECT_EQ(print_tree(),
-  "Node 0: [21, 0] RN = 11: Q= 0.5 0.5\n"
-  "|-Edge 0:  E = 4, Action = 0\n"
-  "  |-Node 1: [20, 1] RN = 4: Q= 0.5 0.5\n"
-  "    |-Edge 3:  E = 1, Action = 0\n"
-  "      |-Node 4: [19, 0] RN = 1: Q= 0.5 0.5\n"
-  "    |-Edge 4:  E = 1, Action = 1\n"
-  "      |-Node 5: [18, 0] RN = 1: Q= 0.5 0.5\n"
-  "    |-Edge 5:  E = 1, Action = 2\n"
-  "      |-Node 6: [17, 0] RN = 1: Q= 0.5 0.5\n"
-  "|-Edge 1:  E = 3, Action = 1\n"
-  "  |-Node 2: [19, 1] RN = 3: Q= 0.5 0.5\n"
-  "    |-Edge 6:  E = 1, Action = 0\n"
-  "      |-Node 5: [18, 0] RN = 1: Q= 0.5 0.5\n"
-  "    |-Edge 7:  E = 1, Action = 1\n"
-  "      |-Node 6: [17, 0] RN = 1: Q= 0.5 0.5\n"
-  "|-Edge 2:  E = 3, Action = 2\n"
-  "  |-Node 3: [18, 1] RN = 3: Q= 0.5 0.5\n"
-  "    |-Edge 9:  E = 1, Action = 0\n"
-  "      |-Node 6: [17, 0] RN = 1: Q= 0.5 0.5\n"
-  "    |-Edge 10:  E = 1, Action = 1\n"
-  "      |-Node 7: [16, 0] RN = 1: Q= 0.5 0.5\n");
+  std::string tree_str = print_tree();
+  EXPECT_EQ(tree_str,
+            "Node 0: [4, 0] RN = 11: Q= 0.425 0.575\n"
+            "|-Edge 0:  E = 4, Action = 0\n"
+            "  |-Node 1: [3, 1] RN = 4: Q= 0.5 0.5\n"
+            "    |-Edge 3:  E = 1, Action = 0\n"
+            "      |-Node 4: [2, 0] RN = 1: Q= 0.5 0.5\n"
+            "    |-Edge 4:  E = 1, Action = 1\n"
+            "      |-Node 5: [1, 0] RN = 1: Q= 0.5 0.5\n"
+            "    |-Edge 5:  E = 1, Action = 2\n"
+            "      |*Node 6: [0, 0] RN = 2: Q= 0 1\n"
+            "|-Edge 1:  E = 3, Action = 1\n"
+            "  |-Node 2: [2, 1] RN = 3: Q= 0.5 0.5\n"
+            "    |-Edge 6:  E = 1, Action = 0\n"
+            "      |-Node 5: [1, 0] RN = 1: Q= 0.5 0.5\n"
+            "    |-Edge 7:  E = 1, Action = 1\n"
+            "      |*Node 6: [0, 0] RN = 2: Q= 0 1\n"
+            "|-Edge 2:  E = 3, Action = 2\n"
+            "  |-Node 3: [1, 1] RN = 3: Q= 0.25 0.75\n"
+            "    |-Edge 8:  E = 2, Action = 0\n"
+            "      |*Node 6: [0, 0] RN = 2: Q= 0 1\n");
 }
 
 int main(int argc, char** argv) {
