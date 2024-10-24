@@ -22,7 +22,7 @@ class GpuContentionManager:
     Manages contention for GPUs.
     """
     def __init__(self, controller: LoopControllerInterface):
-        self._self_play_hijacked = False
+        self._self_play_hijacked = True
         self._controller = controller
         self._table_lock = threading.Lock()
         self._table: GpuContentionTableDict = defaultdict(dict)
