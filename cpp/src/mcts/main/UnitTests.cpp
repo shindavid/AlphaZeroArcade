@@ -17,9 +17,12 @@
 #include <string>
 #include <vector>
 
+using Game = nim::Game;
+using State = Game::State;
+
 class ManagerTest : public testing::Test {
  protected:
-  using Game = nim::Game;
+
   using Manager = mcts::Manager<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using Node = mcts::Node<Game>;
@@ -112,7 +115,7 @@ class ManagerTest : public testing::Test {
       node->stats().RN = RN;
     }
 
-    std::string print_tree(node_pool_index_t node_ix, int num_indent=0) {
+    std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent=0) {
       std::ostringstream oss;
       Node* node = get_node_by_index(node_ix);
 
@@ -122,7 +125,7 @@ class ManagerTest : public testing::Test {
       else{
         oss << std::string((num_indent - 1) * 2, ' ') << "|-";
       }
-      oss << "Node " << node_ix << ": RN = " << node->stats().RN
+      oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state) << " RN = " << node->stats().RN
       << ": Q= " << node->stats().Q.transpose() << std::endl;
 
       for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
@@ -133,14 +136,26 @@ class ManagerTest : public testing::Test {
         }
         edge_pool_index_t edge_index = i + node->get_first_edge_index();
 
+        State new_state = prev_state;
+        StateHistory history;
+        history.update(new_state);
+        Game::Rules::apply(history, edge->action);
+        new_state = history.current();
+
         oss << std::string(num_indent * 2, ' ') << "|-"
         << "Edge " << edge_index
         << ": " << " E = " << edge->N << ", Action = " << edge->action << std::endl;
         if (edge->child_index != -1) {
-          oss << print_tree(edge->child_index, num_indent + 2);
+          oss << print_tree(edge->child_index, new_state, num_indent + 2);
         }
       }
       return oss.str();
+    }
+
+    std::string print_tree() {
+      State state;
+      Game::Rules::init_state(state);
+      return print_tree(0, state);
     }
 
  private:
@@ -152,28 +167,28 @@ TEST_F(ManagerTest, construct_tree) {
   start_manager();
   start_threads();
   search(10);
-  EXPECT_EQ(print_tree(0),
-  "Node 0: RN = 11: Q= 0.5 0.5\n"
+  EXPECT_EQ(print_tree(),
+  "Node 0: [21, 0] RN = 11: Q= 0.5 0.5\n"
   "|-Edge 0:  E = 4, Action = 0\n"
-  "  |-Node 1: RN = 4: Q= 0.5 0.5\n"
+  "  |-Node 1: [20, 1] RN = 4: Q= 0.5 0.5\n"
   "    |-Edge 3:  E = 1, Action = 0\n"
-  "      |-Node 4: RN = 1: Q= 0.5 0.5\n"
+  "      |-Node 4: [19, 0] RN = 1: Q= 0.5 0.5\n"
   "    |-Edge 4:  E = 1, Action = 1\n"
-  "      |-Node 5: RN = 1: Q= 0.5 0.5\n"
+  "      |-Node 5: [18, 0] RN = 1: Q= 0.5 0.5\n"
   "    |-Edge 5:  E = 1, Action = 2\n"
-  "      |-Node 6: RN = 1: Q= 0.5 0.5\n"
+  "      |-Node 6: [17, 0] RN = 1: Q= 0.5 0.5\n"
   "|-Edge 1:  E = 3, Action = 1\n"
-  "  |-Node 2: RN = 3: Q= 0.5 0.5\n"
+  "  |-Node 2: [19, 1] RN = 3: Q= 0.5 0.5\n"
   "    |-Edge 6:  E = 1, Action = 0\n"
-  "      |-Node 5: RN = 1: Q= 0.5 0.5\n"
+  "      |-Node 5: [18, 0] RN = 1: Q= 0.5 0.5\n"
   "    |-Edge 7:  E = 1, Action = 1\n"
-  "      |-Node 6: RN = 1: Q= 0.5 0.5\n"
+  "      |-Node 6: [17, 0] RN = 1: Q= 0.5 0.5\n"
   "|-Edge 2:  E = 3, Action = 2\n"
-  "  |-Node 3: RN = 3: Q= 0.5 0.5\n"
+  "  |-Node 3: [18, 1] RN = 3: Q= 0.5 0.5\n"
   "    |-Edge 9:  E = 1, Action = 0\n"
-  "      |-Node 6: RN = 1: Q= 0.5 0.5\n"
+  "      |-Node 6: [17, 0] RN = 1: Q= 0.5 0.5\n"
   "    |-Edge 10:  E = 1, Action = 1\n"
-  "      |-Node 7: RN = 1: Q= 0.5 0.5\n");
+  "      |-Node 7: [16, 0] RN = 1: Q= 0.5 0.5\n");
 }
 
 TEST_F(ManagerTest, backprop) {
@@ -193,15 +208,15 @@ TEST_F(ManagerTest, backprop) {
   modify_node_Q(child_index3, v);
   modify_node_RN(child_index3, 9999);
 
-  EXPECT_EQ(print_tree(0),
-  "Node 0: RN = 1: Q= 0.5 0.5\n"
+  EXPECT_EQ(print_tree(),
+  "Node 0: [21, 0] RN = 1: Q= 0.5 0.5\n"
   "|-Edge 1:  E = 0, Action = 1\n"
-  "  |-Node 1: RN = 0: Q= 0.5 0.5\n"
+  "  |-Node 1: [19, 1] RN = 0: Q= 0.5 0.5\n"
   "    |-Edge 5:  E = 0, Action = 2\n"
-  "      |-Node 2: RN = 100: Q= 0.8 0.2\n"
+  "      |-Node 2: [16, 0] RN = 100: Q= 0.8 0.2\n"
   "        |-Edge 6:  E = 0, Action = 0\n"
-  "          |-Node 3: RN = 9999: Q= 0.1 0.9\n");
-}
+  "          |-Node 3: [15, 1] RN = 9999: Q= 0.1 0.9\n");
+  }
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);

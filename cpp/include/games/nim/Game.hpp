@@ -106,6 +106,11 @@ struct Game {
                                    const Types::SearchResults&) {
                                       throw std::runtime_error("Not implemented");
                                    }
+    static std::string state_repr(const State& state) {
+      std::ostringstream ss;
+      ss << "[" << state.stones_left << ", " << state.current_player << "]";
+      return ss.str();
+    }
   };
 
   struct InputTensorizor {

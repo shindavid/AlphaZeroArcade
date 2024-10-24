@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <games/nim/Game.hpp>
 
-
 using Game = nim::Game;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
