@@ -46,7 +46,13 @@ class Manager {
   using StateHistory = Game::StateHistory;
   using SearchResults = Game::Types::SearchResults;
 
-  Manager(const ManagerParams& params);
+  /*
+   * Construct a Manager object.
+   *
+   * Can optionally pass in an NNEvaluationService object. This is useful to pass in a mock service
+   * for testing.
+   */
+  Manager(const ManagerParams& params, NNEvaluationServiceBase* service=nullptr);
   ~Manager();
 
   const ManagerParams& params() const { return params_; }
