@@ -131,7 +131,7 @@ TEST(Symmetry, action_transforms) {
 class SearchThreadTest : public testing::Test {
  protected:
   using ManagerParams = mcts::ManagerParams<Game>;
-  using NNEvaluationService = mcts::NNEvaluationService<Game>;
+  using NNEvaluationService = mcts::NNEvaluationServiceBase<Game>;
   using SearchParams = mcts::SearchParams;
   using SearchThread = mcts::SearchThread<Game>;
   using SharedData = mcts::SharedData<Game>;
