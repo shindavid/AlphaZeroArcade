@@ -245,12 +245,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   Q_sq_sum.setZero();
   int N = 0;
 
-  /*
-   * provably winning/losing calculation
-   *
-   * TODO: generalize this by computing lower/upper utility in games with unbounded/non-zero-sum
-   * utilities.
-   */
+  // provably winning/losing calculation
   bool cp_has_winning_move = false;
   int num_children = 0;
 
