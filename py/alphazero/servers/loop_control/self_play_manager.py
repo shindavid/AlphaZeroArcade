@@ -37,13 +37,11 @@ class SelfPlayManager:
         # avoid doing this repeatedly, we grab the value once at start-up, store it as a member, and
         # then update it manually whenever we add new games to the database.
         self._master_list_length: Optional[int] = None
-        self._master_list_length_unflushed: Optional[int] = None
 
         self._pending_game_data = []
 
     def setup(self):
         self._master_list_length = self._fetch_num_total_augmented_positions()
-        self._master_list_length_unflushed = self._master_list_length
 
     def get_num_positions(self):
         return self._master_list_length
@@ -407,10 +405,10 @@ class SelfPlayManager:
         flush = msg['flush']
         done = msg['done']
 
-        use_data = self._master_list_length_unflushed < self._checkpoint
+        use_data = self._master_list_length < self._checkpoint
 
         if use_data:
-            self._master_list_length_unflushed += rows
+            self._master_list_length += rows
             organizer = self._controller.organizer
             # json msg is immediately followed by the game file
             game_dir = os.path.join(organizer.self_play_data_dir, f'client-{client_id}',
@@ -466,7 +464,6 @@ class SelfPlayManager:
         Commits to the database unless cursor is provided, in which case the commit is left to the
         caller.
         """
-        self._master_list_length = self._master_list_length_unflushed
         if not self._pending_game_data:
             return
 
