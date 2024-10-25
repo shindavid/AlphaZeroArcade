@@ -38,12 +38,14 @@ class SelfPlayManager:
         # then update it manually whenever we add new games to the database.
         self._master_list_length: Optional[int] = None
         self._master_list_length_unflushed: Optional[int] = None
+        self._master_list_length_lock = threading.Lock()
 
         self._pending_game_data = []
 
     def setup(self):
-        self._master_list_length = self._fetch_num_total_augmented_positions()
-        self._master_list_length_unflushed = self._master_list_length
+        with self._master_list_length_lock:
+            self._master_list_length = self._fetch_num_total_augmented_positions()
+            self._master_list_length_unflushed = self._master_list_length
 
     def get_num_positions(self):
         return self._master_list_length
@@ -410,7 +412,8 @@ class SelfPlayManager:
         use_data = self._master_list_length_unflushed < self._checkpoint
 
         if use_data:
-            self._master_list_length_unflushed += rows
+            with self._master_list_length_lock:
+                self._master_list_length_unflushed += rows
             organizer = self._controller.organizer
             # json msg is immediately followed by the game file
             game_dir = os.path.join(organizer.self_play_data_dir, f'client-{client_id}',
@@ -466,7 +469,9 @@ class SelfPlayManager:
         Commits to the database unless cursor is provided, in which case the commit is left to the
         caller.
         """
-        self._master_list_length = self._master_list_length_unflushed
+        with self._master_list_length_lock:
+            self._master_list_length = self._master_list_length_unflushed
+
         if not self._pending_game_data:
             return
 
