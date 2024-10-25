@@ -34,7 +34,6 @@ class TrainingManager:
         controller.register_shutdown_action(self._shutdown)
 
         self._controller = controller
-        self._ready_event = threading.Event()
         self._lock = threading.Lock()
 
         self._game_log_reader = GameLogReader(controller.game_spec, controller.build_params)
@@ -43,18 +42,8 @@ class TrainingManager:
         self._net = None
         self._opt = None
 
-        # This is the length that the master_list needs to be before we can start a new train loop.
-        self._master_list_length_for_next_train_loop: int = 0  # initialized lazily
-
         self._last_sample_window: Optional[Window] = None  # initialized lazily
-
-        # The length of the master_list can be computed on-demand by reading the database. To
-        # avoid doing this repeatedly, we grab the value once at start-up, store it as a member, and
-        # then update it manually whenever we add new games to the database.
-        self._master_list_length: Optional[int] = None
-
         self._latest_gen: Generation = 0
-
         self._master_list_slice = PositionListSlice()
 
     def latest_gen(self) -> Generation:
@@ -65,34 +54,14 @@ class TrainingManager:
         Performs some lazy initialization that can't be done in __init__.
         """
         self._last_sample_window = self._load_last_sample_window()
-        self._master_list_length = self._fetch_num_total_augmented_positions()
         self._latest_gen = self._controller.organizer.get_latest_model_generation()
 
         if self._controller.organizer.fork_info is not None:
             max_forked_client_id = self._controller.organizer.fork_info.max_client_id
             self._master_list_slice.set_max_forked_client_id(max_forked_client_id)
 
-    def wait_until_enough_training_data(self):
-        with self._lock:
-            if not self._more_training_data_needed(announce=True):
-                return
-            self._ready_event.clear()
-
-        # TODO: progress-bar (use module tqdm)
-        self._ready_event.wait()
-
-    def _more_training_data_needed(self, announce=False) -> bool:
-        """
-        Assumes that self._lock is held.
-        """
-        training_params = self._controller.training_params
-        self._master_list_length_for_next_train_loop = get_required_dataset_size(
-            training_params, self._last_sample_window)
-        more_needed = self._master_list_length < self._master_list_length_for_next_train_loop
-        if announce and more_needed:
-            logger.info(f'Waiting for more training data... (current={self._master_list_length}, '
-                        f'needed={self._master_list_length_for_next_train_loop})')
-        return more_needed
+    def get_next_checkpoint(self):
+        return get_required_dataset_size(self._controller.training_params, self._last_sample_window)
 
     def retrain_models(self):
         if self._controller.organizer.fork_info is not None:
@@ -113,21 +82,8 @@ class TrainingManager:
         """
         table: GpuContentionTable = self._controller.get_gpu_lock_table_for_training()
         table.acquire_lock(Domain.TRAINING)
-        self._controller.hijack_all_self_play_tables()
-
-        while True:
-            self._train_step_helper(retrain_from_fork)
-            if self._more_training_data_needed():
-                break
-
-        self._controller.unhijack_all_self_play_tables()
+        self._train_step_helper(retrain_from_fork)
         table.release_lock(Domain.TRAINING)
-
-    def handle_new_self_play_positions(self, n_augmented_positions: int):
-        with self._lock:
-            self._master_list_length += n_augmented_positions
-            if self._master_list_length >= self._master_list_length_for_next_train_loop:
-                self._ready_event.set()
 
     def _shutdown(self):
         with self._lock:
@@ -150,35 +106,17 @@ class TrainingManager:
             return Window(0, 0, 0)
         return Window(*row)
 
-    def _fetch_num_total_augmented_positions(self) -> int:
-        with self._controller.self_play_db_conn_pool.db_lock:
-            # Return cumulative_augmented_positions for the last row of games:
-            cursor = self._controller.self_play_db_conn_pool.get_cursor()
-            cursor.execute("""SELECT cumulative_augmented_positions FROM games
-                           ORDER BY id DESC LIMIT 1""")
-            row = cursor.fetchone()
-            cursor.close()
-        if row is not None:
-            return row[0]
-
-        return 0
-
     def _extend_master_list(self):
+        f = self._controller.training_params.window_size_function
+        n = self._controller.get_num_self_play_positions_generated()
+        c = int(n - f(n))
+
+        start = max(0, c)
+        end = n
+
         pool = self._controller.self_play_db_conn_pool
         with pool.db_lock:
             cursor = pool.get_cursor()
-            cursor.execute(
-                """SELECT cumulative_augmented_positions FROM games ORDER BY id DESC LIMIT 1""")
-            row = cursor.fetchone()
-            n = row[0]
-
-            f = self._controller.training_params.window_size_function
-            n = row[0]
-            c = int(n - f(n))
-
-            start = max(0, c)
-            end = n
-
             self._master_list_slice.set_bounds(cursor, start, end)
             cursor.close()
 
