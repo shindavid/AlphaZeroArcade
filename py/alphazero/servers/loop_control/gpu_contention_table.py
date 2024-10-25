@@ -225,7 +225,6 @@ class GpuContentionTable:
         return self._states[domain].management_status == ManagementStatus.INACTIVE
 
     def _acquire_lock(self, domain: Domain) -> bool:
-        logger.debug(f'Acquiring lock for {domain}: {self}')
         assert self._lock.locked(), 'LockTable must be locked'
         if self._states[domain].lock_status == LockStatus.ACQUIRED:
             return True
@@ -280,8 +279,7 @@ class GpuContentionTable:
         t = self._states[Domain.TRAINING]
         s = self._states[Domain.SELF_PLAY]
         r = self._states[Domain.RATINGS]
-        u = self._states[Domain.SLEEPING]
-        return f'LockTable(gpu_id={g}, training={t}, self-play={s}, ratings={r}, sleeping={u})'
+        return f'LockTable(gpu_id={g}, training={t}, self-play={s}, ratings={r})'
 
     def __repr__(self) -> str:
         return str(self)

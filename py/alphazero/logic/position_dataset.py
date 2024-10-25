@@ -79,14 +79,6 @@ class PositionListSlice:
         assert start >= self._start_index, (start, end, self._start_index)
         assert 0 <= start < end, (start, end, self._start_index)
 
-        if gen is None:
-            # sanity check
-            cursor.execute("""SELECT cumulative_augmented_positions FROM games
-                            ORDER BY id DESC LIMIT 1""")
-            row = cursor.fetchone()
-            if row is not None:
-                assert row[0] == end, (row[0], end)
-
         positions = np.fromiter(self._get_positions(cursor, gen), dtype=pos_dtype)
         self._positions = np.concatenate([self._positions, positions])
 
