@@ -64,6 +64,7 @@ class NNEvaluationRequest {
     eval_state_t eval_state() const { return eval_state_; }
     const cache_key_t& cache_key() const { return cache_key_; }
     const SymmetryMask& sym_mask() const { return sym_mask_; }
+    const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
    private:
     cache_key_t make_cache_key() const;

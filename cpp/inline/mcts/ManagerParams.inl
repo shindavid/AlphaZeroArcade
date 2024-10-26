@@ -68,11 +68,6 @@ inline auto ManagerParams<Game>::make_options_description() {
               &forced_playouts, "enable forced playouts", "disable forced playouts")
           .template add_hidden_flag<"enable-first-play-urgency", "disable-first-play-urgency">(
               &enable_first_play_urgency, "enable first play urgency", "disable first play urgency")
-#ifdef PROFILE_MCTS
-          .template add_option<"profiling-dir">(
-              po::value<std::string>(&profiling_dir_str)->default_value(default_profiling_dir),
-              "directory in which to dump mcts profiling stats")
-#endif  // PROFILE_MCTS
       ;
 
   return out.add(NNEvaluationServiceParams::make_options_description());

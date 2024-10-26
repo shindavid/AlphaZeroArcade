@@ -9,6 +9,7 @@
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluationService.hpp>
+#include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SearchThread.hpp>
@@ -29,6 +30,7 @@ class Manager {
  public:
   using ManagerParams = mcts::ManagerParams<Game>;
   using NNEvaluationService = mcts::NNEvaluationService<Game>;
+  using NNEvaluationServiceBase = mcts::NNEvaluationServiceBase<Game>;
   using Node = mcts::Node<Game>;
   using LocalPolicyArray = Node::LocalPolicyArray;
   using SearchThread = mcts::SearchThread<Game>;
@@ -44,7 +46,13 @@ class Manager {
   using StateHistory = Game::StateHistory;
   using SearchResults = Game::Types::SearchResults;
 
-  Manager(const ManagerParams& params);
+  /*
+   * Construct a Manager object.
+   *
+   * Can optionally pass in an NNEvaluationService object. This is useful to pass in a mock service
+   * for testing.
+   */
+  Manager(const ManagerParams& params, NNEvaluationServiceBase* service=nullptr);
   ~Manager();
 
   const ManagerParams& params() const { return params_; }
@@ -81,7 +89,7 @@ class Manager {
   const SearchParams pondering_search_params_;
   SharedData shared_data_;
   search_thread_vec_t search_threads_;
-  NNEvaluationService* nn_eval_service_ = nullptr;
+  NNEvaluationServiceBase* nn_eval_service_ = nullptr;
 
   SearchResults results_;
 
