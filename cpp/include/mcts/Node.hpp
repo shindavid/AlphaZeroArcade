@@ -186,14 +186,15 @@ class Node {
     Node* get_node(node_pool_index_t index) { return &node_pool_[index]; }
     edge_t* get_edge(edge_pool_index_t index) { return &edge_pool_[index]; }
 
+    using map_t = std::unordered_map<MCTSKey, node_pool_index_t>;
+    map_t* map() { return &map_; }
+
     int get_random_mutex_id() const;
     std::mutex& get_mutex(int mutex_id) { return mutex_pool_[mutex_id]; }
     std::condition_variable& get_cv(int mutex_id) { return cv_pool_[mutex_id]; }
 
    private:
     friend class Defragmenter;
-    using map_t = std::unordered_map<MCTSKey, node_pool_index_t>;
-
     map_t map_;
     util::AllocPool<edge_t> edge_pool_;
     util::AllocPool<Node> node_pool_;

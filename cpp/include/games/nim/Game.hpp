@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <core/BasicTypes.hpp>
@@ -12,6 +11,7 @@
 #include <games/nim/Constants.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
+#include <util/Graph.hpp>
 #include <util/MetaProgramming.hpp>
 
 #include <boost/functional/hash.hpp>

@@ -16,7 +16,9 @@
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <util/Graph.hpp>
 #include <util/GTestUtil.hpp>
+
 
 GTEST_FORWARD_DECLARE(SearchThreadTest, init_root_node);
 GTEST_FORWARD_DECLARE(SearchThreadTest, something_else);
@@ -77,6 +79,14 @@ class SearchThread {
   void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 
   void dump_profiling_stats() { profiler_.dump(64); }
+
+  void build_graph(Graph<Game>& graph);
+
+  void export_graph_to_json(const std::string& filename) {
+    Graph<Game> graph;
+    build_graph(graph);
+    graph.export_graph_to_json(filename);
+  }
 
  private:
   struct visitation_t {
