@@ -35,12 +35,14 @@ inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBa
 
   if (service) {
     nn_eval_service_ = service;
-  } else if (params.no_model) {
-    nn_eval_service_ =  new UniformNNEvaluationService<Game>();
-  } else if (!params.no_model) {
+  } else if (params.no_model && params.model_filename.empty()) {
+    nn_eval_service_ = new UniformNNEvaluationService<Game>();
+  } else if (!params.no_model && !params.model_filename.empty()) {
     nn_eval_service_ = NNEvaluationService::create(params);
-  } else if (!params.model_filename.empty()) {
+  } else if (params.no_model) {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
+  } else {
+    throw util::CleanException("Must specify --model_filename/-m or --no-model");
   }
 
   if (num_search_threads() < 1) {
@@ -62,9 +64,8 @@ template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {
   announce_shutdown();
   clear();
-  if (nn_eval_service_) {
-    nn_eval_service_->disconnect();
-  }
+
+  nn_eval_service_->disconnect();
   for (auto* thread : search_threads_) {
     delete thread;
   }
@@ -82,9 +83,7 @@ inline void Manager<Game>::start() {
   clear();
 
   if (!connected_) {
-    if (nn_eval_service_) {
-      nn_eval_service_->connect();
-    }
+    nn_eval_service_->connect();
     connected_ = true;
   }
 }

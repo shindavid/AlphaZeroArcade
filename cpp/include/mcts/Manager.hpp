@@ -69,7 +69,7 @@ class Manager {
   void stop_search_threads();
 
   void end_session() {
-    if (nn_eval_service_) nn_eval_service_->end_session();
+    nn_eval_service_->end_session();
   }
 
   void set_player_data(void* player_data) { player_data_ = player_data; }
