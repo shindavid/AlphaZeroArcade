@@ -80,13 +80,13 @@ class SearchThread {
 
   void dump_profiling_stats() { profiler_.dump(64); }
 
-  void build_graph(Graph<Game>& graph);
-
-  void export_graph_to_json(const std::string& filename) {
-    Graph<Game> graph;
+  void build_graph_viz(util::GraphViz<Game>* graph_viz) {
+    util::Graph<Game> graph;
     build_graph(graph);
-    graph.export_graph_to_json(filename);
+    graph_viz->add_graph(graph);
   }
+
+  void build_graph(util::Graph<Game>& graph);
 
  private:
   struct visitation_t {

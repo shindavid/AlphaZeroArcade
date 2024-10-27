@@ -1,26 +1,27 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
-#include <mcts/Node.hpp>
+
+#include <sstream>
+
+namespace util {
 
 template <core::concepts::Game Game>
 class Graph {
  protected:
-  using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
-  using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
   using ValueArray = Game::Types::ValueArray;
 
   struct Node {
-    node_pool_index_t index;
+    int index;
     int N;
     ValueArray Q;
     std::string state;
   };
 
   struct Edge {
-    edge_pool_index_t index;
-    node_pool_index_t from;
-    node_pool_index_t to;
+    int index;
+    int from;
+    int to;
     int E;
     core::action_t action;
   };
@@ -33,62 +34,56 @@ class Graph {
               [](const Edge& a, const Edge& b) { return a.index < b.index; });
   }
 
-  void export_graph_to_json(const std::string& filename) {
+  std::string graph_repr() {
     sort_by_index();
 
     std::ostringstream oss;
 
     // Nodes
-    oss << "{\n";
-    oss << "  \"nodes\": [\n";
+    oss << "  {\n";
+    oss << "    \"nodes\": [\n";
     for (size_t i = 0; i < nodes.size(); ++i) {
       const Node& node = nodes[i];
-      oss << "    {\n";
-      oss << "      \"index\": " << node.index << ",\n";
-      oss << "      \"N\": " << node.N << ",\n";
-      oss << "      \"Q\": [" << node.Q[0] << ", " << node.Q[1] << "],\n";
-      oss << "      \"state\": \"" << node.state << "\"\n";
-      oss << "    }";
+      oss << "      {\n";
+      oss << "        \"index\": " << node.index << ",\n";
+      oss << "        \"N\": " << node.N << ",\n";
+      oss << "        \"Q\": [" << node.Q[0] << ", " << node.Q[1] << "],\n";
+      oss << "        \"state\": \"" << node.state << "\"\n";
+      oss << "      }";
       if (i < nodes.size() - 1) {
         oss << ",";
       }
       oss << "\n";
     }
-    oss << "  ],\n";
+    oss << "    ],\n";
 
     // Edges
-    oss << "  \"edges\": [\n";
+    oss << "    \"edges\": [\n";
     for (size_t i = 0; i < edges.size(); ++i) {
       const Edge& edge = edges[i];
-      oss << "    {\n";
-      oss << "      \"index\": " << edge.index << ",\n";
-      oss << "      \"from\": " << edge.from << ",\n";
-      oss << "      \"to\": " << edge.to << ",\n";
-      oss << "      \"E\": " << edge.E << ",\n";
-      oss << "      \"action\": " << edge.action << "\n";
-      oss << "    }";
+      oss << "      {\n";
+      oss << "        \"index\": " << edge.index << ",\n";
+      oss << "        \"from\": " << edge.from << ",\n";
+      oss << "        \"to\": " << edge.to << ",\n";
+      oss << "        \"E\": " << edge.E << ",\n";
+      oss << "        \"action\": " << edge.action << "\n";
+      oss << "      }";
       if (i < edges.size() - 1) {
         oss << ",";
       }
       oss << "\n";
     }
-    oss << "  ]\n";
-    // End JSON
-    oss << "}\n";
+    oss << "    ]\n";
+    oss << "  }";
 
-    // Write to file
-    std::ofstream file(filename);
-    if (!file.is_open()) {
-      throw std::runtime_error("Failed to open file for writing: " + filename);
-    }
-    file << oss.str();
+    return oss.str();
   }
 
-  void add_node(node_pool_index_t index, int N, const ValueArray& Q, const std::string& state) {
+  void add_node(int index, int N, const ValueArray& Q, const std::string& state) {
     nodes.emplace_back(index, N, Q, state);
   }
 
-  void add_edge(edge_pool_index_t index, node_pool_index_t from, node_pool_index_t to, int E,
+  void add_edge(int index, int from, int to, int E,
                core::action_t action) {
     edges.emplace_back(index, from, to, E, action);
   }
@@ -97,3 +92,37 @@ class Graph {
   std::vector<Node> nodes;
   std::vector<Edge> edges;
 };
+
+template <core::concepts::Game Game>
+class GraphViz {
+ public:
+  void add_graph(const Graph<Game> graph) { graphs.push_back(graph); }
+
+  std::string combine_json() {
+    std::ostringstream oss;
+    oss << "{\n";
+    oss << "  \"graphs\": [\n";
+    for (size_t i = 0; i < graphs.size(); ++i) {
+      oss << graphs[i].graph_repr();
+      if (i < graphs.size() - 1) {
+        oss << ",";
+      }
+      oss << "\n";
+    }
+    oss << "  ]\n";
+    oss << "}\n";
+    return oss.str();
+  }
+
+  void write_to_json(const std::string& filename) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+      throw std::runtime_error("Failed to open file for writing: " + filename);
+    }
+    file << combine_json();
+  }
+
+ private:
+  std::vector<Graph<Game>> graphs;
+};
+}  // namespace util

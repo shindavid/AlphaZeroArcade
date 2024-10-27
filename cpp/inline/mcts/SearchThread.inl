@@ -8,6 +8,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include <cmath>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -229,8 +230,9 @@ inline void SearchThread<Game>::perform_visits() {
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
 
-    export_graph_to_json("DAGs/search_thread" + std::to_string(root->stats().total_count() - 1) +
-                         ".json");
+    if (manager_params_->graph_viz) {
+      build_graph_viz(manager_params_->graph_viz);
+    }
   }
 }
 
@@ -706,17 +708,20 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
   }
 }
 
-template <core::concepts::Game Game>
-void SearchThread<Game>::build_graph(Graph<Game>& graph) {
+template<core::concepts::Game Game>
+void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
   auto map = shared_data_->lookup_table.map();
+
   for (auto [state, node_ix] : *map) {
     Node* node = shared_data_->lookup_table.get_node(node_ix);
     graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::state_repr(state));
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       edge_t* edge = node->get_edge(i);
+
       if (edge->child_index == -1) {
         continue;
       }
+
       typename Node::edge_pool_index_t edge_index = i + node->get_first_edge_index();
       graph.add_edge(edge_index, node_ix, edge->child_index, edge->N, edge->action);
     }

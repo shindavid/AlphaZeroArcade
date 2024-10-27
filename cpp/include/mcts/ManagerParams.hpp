@@ -1,14 +1,16 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-
-#include <boost/filesystem.hpp>
-
 #include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <util/CppUtil.hpp>
+#include <util/Graph.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <cstdint>
+#include <string>
+
 
 namespace mcts {
 
@@ -56,6 +58,8 @@ struct ManagerParams : public NNEvaluationServiceParams {
    * create action-value targets.
    */
   bool force_evaluate_all_root_children = false;
+
+  util::GraphViz<Game>* graph_viz = nullptr;
 };
 
 }  // namespace mcts
