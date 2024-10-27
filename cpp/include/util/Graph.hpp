@@ -7,10 +7,10 @@
 
 namespace util {
 
-template <typename Game, typename = std::void_t<>>
+template <core::concepts::Game Game, typename = std::void_t<>>
 struct has_state_repr : std::false_type {};
 
-template <typename Game>
+template <core::concepts::Game Game>
 struct has_state_repr<Game, std::void_t<decltype(Game::IO::state_repr(std::declval<const typename Game::State&>()))>>
     : std::true_type {};
 
