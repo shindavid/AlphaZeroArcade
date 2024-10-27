@@ -88,47 +88,30 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
     bool eval_all_children = manager_params_->force_evaluate_all_root_children && is_root &&
                              shared_data_->search_params.full_search;
 
-    if (nn_eval_service_) {
-      const State& state = history->current();
-      NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
+    const State& state = history->current();
+    NNEvaluationRequest request(pseudo_local_vars_.request_items, &profiler_, thread_id_);
 
-      if (!node->stable_data().VT_valid) {
-        SymmetryMask sym_mask;
-        if (manager_params_->apply_random_symmetries) {
-          sym_mask = Game::Symmetries::get_mask(state);
-        } else {
-          sym_mask[group::kIdentity] = true;
-        }
-        pseudo_local_vars_.request_items.emplace_back(node, *history, sym_mask);
+    if (!node->stable_data().VT_valid) {
+      SymmetryMask sym_mask;
+      if (manager_params_->apply_random_symmetries) {
+        sym_mask = Game::Symmetries::get_mask(state);
+      } else {
+        sym_mask[group::kIdentity] = true;
       }
-      if (eval_all_children) {
-        expand_all_children(node, &request);
-      }
+      pseudo_local_vars_.request_items.emplace_back(node, *history, sym_mask);
+    }
+    if (eval_all_children) {
+      expand_all_children(node, &request);
+    }
 
-      if (!pseudo_local_vars_.request_items.empty()) {
-        nn_eval_service_->evaluate(request);
+    if (!pseudo_local_vars_.request_items.empty()) {
+      nn_eval_service_->evaluate(request);
 
-        for (auto& item : pseudo_local_vars_.request_items) {
-          item.node()->load_eval(item.eval(),
-                                 [&](LocalPolicyArray& P) { transform_policy(index, P); });
-        }
-        pseudo_local_vars_.request_items.clear();
+      for (auto& item : pseudo_local_vars_.request_items) {
+        item.node()->load_eval(item.eval(),
+                               [&](LocalPolicyArray& P) { transform_policy(index, P); });
       }
-    } else {
-      if (!node->stable_data().VT_valid) {
-        node->load_eval(nullptr, [&](LocalPolicyArray& P) {});
-      }
-
-      if (eval_all_children) {
-        expand_all_children(node);
-        for (int e = 0; e < node->stable_data().num_valid_actions; e++) {
-          edge_t* edge = node->get_edge(e);
-          Node* child = node->get_child(edge);
-          if (!child->stable_data().VT_valid) {
-            child->load_eval(nullptr, [&](LocalPolicyArray& P) {});
-          }
-        }
-      }
+      pseudo_local_vars_.request_items.clear();
     }
   }
 
