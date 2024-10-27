@@ -14,7 +14,6 @@ class UniformNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
-  using State = Game::State;
 
   void evaluate(const NNEvaluationRequest& request) override {
     ValueTensor value;
