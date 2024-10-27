@@ -3,8 +3,16 @@
 #include <core/concepts/Game.hpp>
 
 #include <sstream>
+#include <type_traits>
 
 namespace util {
+
+template <typename T, typename = std::void_t<>>
+struct has_state_repr : std::false_type {};
+
+template <typename T>
+struct has_state_repr<T, std::void_t<decltype(std::declval<T>().state_repr())>>
+    : std::true_type {};
 
 template <core::concepts::Game Game>
 class Graph {

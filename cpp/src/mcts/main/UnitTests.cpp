@@ -138,6 +138,7 @@ class ManagerTest : public testing::Test {
     } else {
       const char* marker = node->is_terminal() ? "|*" : "|-";
       oss << std::string((num_indent - 1) * 2, ' ') << marker;
+
     }
     oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state)
         << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
@@ -348,13 +349,10 @@ TEST_F(ManagerTest, dumb_search) {
 TEST_F(ManagerTest, graph_viz) {
   util::GraphViz<Game> graph_viz;
   manager_params().graph_viz = &graph_viz;
-
   init_manager();
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake2};
-  start_manager(initial_actions);
+  start_manager();
   start_threads();
-  search(10);
+  search(20);
   graph_viz.combine_json();
   graph_viz.write_to_json("graph_viz_test.json");
 }
