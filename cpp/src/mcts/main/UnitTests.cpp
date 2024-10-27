@@ -354,7 +354,7 @@ TEST_F(ManagerTest, graph_viz) {
   start_threads();
   search(20);
   graph_viz.combine_json();
-  graph_viz.write_to_json("graph_viz_test.json");
+  graph_viz.write_to_json("./py/alphazero/dashboard/graphs/graph_viz_test.json");
 }
 
 TEST_F(ManagerTest, uniform_search_viz) {
@@ -369,7 +369,7 @@ TEST_F(ManagerTest, uniform_search_viz) {
   search(10);
 
   graph_viz.combine_json();
-  graph_viz.write_to_json("uniform_search_viz.json");
+  graph_viz.write_to_json("./py/alphazero/dashboard/graphs/uniform_search_viz.json");
 }
 
 int main(int argc, char** argv) {

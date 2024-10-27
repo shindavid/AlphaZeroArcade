@@ -229,9 +229,11 @@ inline void SearchThread<Game>::perform_visits() {
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
 
-    if constexpr (util::has_state_repr<Game>::value) {
-      if (manager_params_->graph_viz) {
+    if (manager_params_->graph_viz) {
+      if constexpr (util::has_state_repr<Game>::value) {
         build_graph_viz(manager_params_->graph_viz);
+      } else {
+        throw std::runtime_error("GraphViz requires Game to have implemented state_repr in IO");
       }
     }
   }
