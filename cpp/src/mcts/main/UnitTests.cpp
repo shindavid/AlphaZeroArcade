@@ -21,9 +21,7 @@
 
 using Game = nim::Game;
 using State = Game::State;
-using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
-using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
-using ValueArray = Game::Types::ValueArray;
+
 
 class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
  public:
@@ -90,10 +88,13 @@ class ManagerTest : public testing::Test {
   using action_t = core::action_t;
   using edge_t = mcts::Node<Game>::edge_t;
   using LookupTable = mcts::Node<Game>::LookupTable;
+  using node_pool_index_t = mcts::Node<Game>::node_pool_index_t;
+  using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
+  using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
 
  public:
-  ManagerTest(util::GraphViz<Game>* graph_viz = nullptr)
+  ManagerTest()
       : manager_params_(create_manager_params()) {}
 
   void init_manager(Service* service=nullptr) {

@@ -8,7 +8,6 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include <cmath>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -722,7 +721,7 @@ void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
         continue;
       }
 
-      typename Node::edge_pool_index_t edge_index = i + node->get_first_edge_index();
+      int edge_index = i + node->get_first_edge_index();
       graph.add_edge(edge_index, node_ix, edge->child_index, edge->N, edge->action);
     }
   }
