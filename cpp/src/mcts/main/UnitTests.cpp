@@ -357,6 +357,21 @@ TEST_F(ManagerTest, graph_viz) {
   graph_viz.write_to_json("graph_viz_test.json");
 }
 
+TEST_F(ManagerTest, uniform_search_viz) {
+  util::GraphViz<Game> graph_viz;
+  manager_params().graph_viz = &graph_viz;
+
+  init_manager();
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+  start_manager(initial_actions);
+  start_threads();
+  search(10);
+
+  graph_viz.combine_json();
+  graph_viz.write_to_json("uniform_search_viz.json");
+}
+
 int main(int argc, char** argv) {
   util::set_tty_mode(false);
   testing::InitGoogleTest(&argc, argv);
