@@ -1,11 +1,14 @@
 #include <mcts/Manager.hpp>
 
-#include <boost/filesystem.hpp>
-
 #include <mcts/ActionSelector.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <mcts/UniformNNEvaluationService.hpp>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <memory>
 
 namespace mcts {
 
@@ -30,9 +33,10 @@ inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBa
     init_profiling_dir(profiling_dir.string());
   }
 
-  // TODO: if no_model, construct a UniformNNEvaluationService here
   if (service) {
     nn_eval_service_ = service;
+  } else if (params.no_model) {
+    nn_eval_service_ =  new UniformNNEvaluationService<Game>();
   } else if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params);
   } else if (!params.model_filename.empty()) {
