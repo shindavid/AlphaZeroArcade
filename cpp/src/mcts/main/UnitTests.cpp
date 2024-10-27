@@ -22,7 +22,6 @@
 using Game = nim::Game;
 using State = Game::State;
 
-
 class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
  public:
   using NNEvaluation = mcts::NNEvaluation<Game>;
