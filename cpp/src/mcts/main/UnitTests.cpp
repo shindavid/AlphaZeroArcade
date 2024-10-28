@@ -159,7 +159,7 @@ class ManagerTest : public testing::Test {
 
         oss << std::string(num_indent * 2, ' ') << "|-"
         << "Edge " << edge_index
-        << ": " << " E = " << edge->N << ", Action = " << edge->action << std::endl;
+        << ": " << " E = " << edge->E << ", Action = " << edge->action << std::endl;
         if (edge->child_index != -1) {
           oss << print_tree(edge->child_index, new_state, num_indent + 2);
         }

@@ -208,7 +208,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     const edge_t* edge = get_edge(i);
     core::action_t action = edge->action;
 
-    int count = edge->N;
+    int count = edge->E;
     int modified_count = count;
 
     const Node* child = get_child(edge);
@@ -267,10 +267,10 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
     }
     const auto& child_stats = child->stats();
     if (child_stats.RN > 0) {
-      int eN = edge->N;
-      N += eN;
-      Q_sum += child_stats.Q * eN;
-      Q_sq_sum += child_stats.Q_sq * eN;
+      int e = edge->E;
+      N += e;
+      Q_sum += child_stats.Q * e;
+      Q_sq_sum += child_stats.Q_sq * e;
     }
 
     cp_has_winning_move |= child_stats.provably_winning[cp];
@@ -423,8 +423,8 @@ void Node<Game>::validate_state() const {
   int N = 1;
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     auto edge = get_edge(i);
-    N += edge->N;
-    util::debug_assert(edge->N >= 0);
+    N += edge->E;
+    util::debug_assert(edge->E >= 0);
   }
 
   util::debug_assert(N == stats_.RN + stats_.VN, "[%p] %d != %d + %d", this, N, stats_.RN,

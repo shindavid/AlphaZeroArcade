@@ -37,7 +37,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     using edge_t = Node::edge_t;
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
-    E(i) = edge->N;
+    E(i) = edge->E;
 
     Node* child = node->get_child(edge);
     if (child) {

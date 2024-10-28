@@ -102,7 +102,7 @@ class Node {
   struct edge_t {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
-    int N = 0;  // real or virtual count
+    int E = 0;  // real or virtual count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player

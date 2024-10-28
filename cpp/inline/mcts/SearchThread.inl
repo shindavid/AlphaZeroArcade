@@ -311,7 +311,7 @@ inline void SearchThread<Game>::visit(Node* node) {
       util::debug_assert(edge->child_index >= 0);
       Node* child = shared_data_->lookup_table.get_node(edge->child_index);
       search_path_.emplace_back(child, nullptr);
-      int edge_count = edge->N;
+      int edge_count = edge->E;
       int child_count = child->stats().RN;
       if (edge_count < child_count) {
         short_circuit_backprop();
@@ -331,7 +331,7 @@ inline void SearchThread<Game>::visit(Node* node) {
   Node* child = node->get_child(edge);
   if (child) {
     search_path_.emplace_back(child, nullptr);
-    int edge_count = edge->N;
+    int edge_count = edge->E;
     int child_count = child->stats().RN;
     if (edge_count < child_count) {
       short_circuit_backprop();
@@ -378,7 +378,7 @@ inline void SearchThread<Game>::virtual_backprop() {
 
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
-      edge->N++;
+      edge->E++;
       node->stats().VN++;
     });
   }
@@ -408,7 +408,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
-      edge->N++;
+      edge->E++;
       node->stats().RN++;
     });
   }
@@ -439,7 +439,7 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
 
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
-      edge->N += !undo_virtual;
+      edge->E += !undo_virtual;
       node->stats().RN++;
       node->stats().VN -= undo_virtual;
     });
@@ -459,7 +459,7 @@ void SearchThread<Game>::short_circuit_backprop() {
 
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
-      edge->N++;
+      edge->E++;
       node->stats().RN++;
     });
   }
