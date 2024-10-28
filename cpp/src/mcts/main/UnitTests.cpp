@@ -200,24 +200,24 @@ TEST_F(ManagerTest, uniform_search) {
   search(10);
   std::string tree_str = print_tree();
   EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q = 0.425 0.575\n"
-            "|-Edge 0:  E = 4, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 4: Q = 0.5 0.5\n"
+            "Node 0: [4, 0] RN = 11: Q = 0.318182 0.681818\n"
+            "|-Edge 0:  E = 5, Action = 0\n"
+            "  |-Node 1: [3, 1] RN = 5: Q = 0.3 0.7\n"
             "    |-Edge 3:  E = 1, Action = 0\n"
             "      |-Node 4: [2, 0] RN = 1: Q = 0.5 0.5\n"
             "    |-Edge 4:  E = 1, Action = 1\n"
             "      |-Node 5: [1, 0] RN = 1: Q = 0.5 0.5\n"
-            "    |-Edge 5:  E = 1, Action = 2\n"
+            "    |-Edge 5:  E = 2, Action = 2\n"
             "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n"
             "|-Edge 1:  E = 3, Action = 1\n"
-            "  |-Node 2: [2, 1] RN = 3: Q = 0.5 0.5\n"
+            "  |-Node 2: [2, 1] RN = 3: Q = 0.333333 0.666667\n"
             "    |-Edge 6:  E = 1, Action = 0\n"
             "      |-Node 5: [1, 0] RN = 1: Q = 0.5 0.5\n"
             "    |-Edge 7:  E = 1, Action = 1\n"
             "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n"
-            "|-Edge 2:  E = 3, Action = 2\n"
-            "  |-Node 3: [1, 1] RN = 3: Q = 0.25 0.75\n"
-            "    |-Edge 8:  E = 2, Action = 0\n"
+            "|-Edge 2:  E = 2, Action = 2\n"
+            "  |-Node 3: [1, 1] RN = 2: Q = 0.25 0.75\n"
+            "    |-Edge 8:  E = 1, Action = 0\n"
             "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n");
 }
 
@@ -232,17 +232,17 @@ TEST_F(ManagerTest, smart_search) {
   search(10);
   std::string tree_str = print_tree();
   EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q = 0.0976812  0.902319\n"
+            "Node 0: [4, 0] RN = 11: Q = 0.0779644  0.922036\n"
             "|-Edge 0:  E = 4, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 4: Q = 0.0397343  0.960266\n"
+            "  |-Node 1: [3, 1] RN = 4: Q = 0.0298007  0.970199\n"
             "    |-Edge 5:  E = 3, Action = 2\n"
             "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n"
             "|-Edge 1:  E = 3, Action = 1\n"
-            "  |-Node 2: [2, 1] RN = 3: Q = 0.0596015  0.940399\n"
+            "  |-Node 2: [2, 1] RN = 3: Q = 0.0397343  0.960266\n"
             "    |-Edge 7:  E = 2, Action = 1\n"
             "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n"
             "|-Edge 2:  E = 3, Action = 2\n"
-            "  |-Node 3: [1, 1] RN = 3: Q = 0.0596015  0.940399\n"
+            "  |-Node 3: [1, 1] RN = 3: Q = 0.0397343  0.960266\n"
             "    |-Edge 8:  E = 2, Action = 0\n"
             "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n");
 }
@@ -258,29 +258,31 @@ TEST_F(ManagerTest, dumb_search) {
   search(10);
   std::string tree_str = print_tree();
   EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q = 0.44404 0.55596\n"
+            "Node 0: [4, 0] RN = 11: Q = 0.489163 0.510837\n"
             "|-Edge 0:  E = 4, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 4: Q = 0.373068 0.626932\n"
+            "  |-Node 1: [3, 1] RN = 4: Q = 0.5 0.5\n"
             "    |-Edge 3:  E = 2, Action = 0\n"
-            "      |-Node 2: [2, 0] RN = 2: Q = 0.119203 0.880797\n"
+            "      |-Node 2: [2, 0] RN = 2: Q = 0.279801 0.720199\n"
             "        |-Edge 6:  E = 1, Action = 0\n"
-            "          |-Node 6: [1, 1] RN = 3: Q = 0.440399 0.559601\n"
-            "            |-Edge 11:  E = 2, Action = 0\n"
-            "              |*Node 7: [0, 0] RN = 2: Q = 0 1\n"
+            "          |-Node 5: [1, 1] RN = 2: Q = 0.440399 0.559601\n"
+            "            |-Edge 11:  E = 1, Action = 0\n"
+            "              |*Node 6: [0, 0] RN = 1: Q = 0 1\n"
             "    |-Edge 4:  E = 1, Action = 1\n"
-            "      |-Node 3: [1, 0] RN = 2: Q = 0.119203 0.880797\n"
-            "        |-Edge 8:  E = 1, Action = 0\n"
-            "          |*Node 5: [0, 1] RN = 1: Q = 1 0\n"
-            "|-Edge 1:  E = 3, Action = 1\n"
-            "  |-Node 4: [2, 1] RN = 3: Q = 0.5 0.5\n"
-            "    |-Edge 9:  E = 2, Action = 0\n"
-            "      |-Node 3: [1, 0] RN = 2: Q = 0.119203 0.880797\n"
-            "        |-Edge 8:  E = 1, Action = 0\n"
-            "          |*Node 5: [0, 1] RN = 1: Q = 1 0\n"
-            "|-Edge 2:  E = 3, Action = 2\n"
-            "  |-Node 6: [1, 1] RN = 3: Q = 0.440399 0.559601\n"
-            "    |-Edge 11:  E = 2, Action = 0\n"
-            "      |*Node 7: [0, 0] RN = 2: Q = 0 1\n");
+            "      |-Node 4: [1, 0] RN = 2: Q = 0.559601 0.440399\n"
+            "        |-Edge 10:  E = 1, Action = 0\n"
+            "          |*Node 7: [0, 1] RN = 1: Q = 1 0\n"
+            "|-Edge 1:  E = 4, Action = 1\n"
+            "  |-Node 3: [2, 1] RN = 4: Q = 0.5 0.5\n"
+            "    |-Edge 8:  E = 2, Action = 0\n"
+            "      |-Node 4: [1, 0] RN = 2: Q = 0.559601 0.440399\n"
+            "        |-Edge 10:  E = 1, Action = 0\n"
+            "          |*Node 7: [0, 1] RN = 1: Q = 1 0\n"
+            "    |-Edge 9:  E = 1, Action = 1\n"
+            "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n"
+            "|-Edge 2:  E = 2, Action = 2\n"
+            "  |-Node 5: [1, 1] RN = 2: Q = 0.440399 0.559601\n"
+            "    |-Edge 11:  E = 1, Action = 0\n"
+            "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
 }
 
 int main(int argc, char** argv) {
