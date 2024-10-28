@@ -35,14 +35,12 @@ inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBa
 
   if (service) {
     nn_eval_service_ = service;
-  } else if (params.no_model && params.model_filename.empty()) {
-    nn_eval_service_ = new UniformNNEvaluationService<Game>();
-  } else if (!params.no_model && !params.model_filename.empty()) {
+  } else if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params);
-  } else if (params.no_model) {
-    throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
+  } else if (params.model_filename.empty()) {
+    nn_eval_service_ = new UniformNNEvaluationService<Game>();
   } else {
-    throw util::CleanException("Must specify --model_filename/-m or --no-model");
+    throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }
 
   if (num_search_threads() < 1) {
