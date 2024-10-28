@@ -114,10 +114,6 @@ class LoopControllerInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def handle_new_self_play_positions(self, n_augmented_positions: int):
-        pass
-
-    @abc.abstractmethod
     def handle_new_model(self):
         pass
 
@@ -143,4 +139,12 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def unhijack_all_self_play_tables(self):
+        pass
+
+    @abc.abstractmethod
+    def get_num_self_play_positions_generated(self):
+        pass
+
+    @abc.abstractmethod
+    def get_next_checkpoint(self) -> int:
         pass
