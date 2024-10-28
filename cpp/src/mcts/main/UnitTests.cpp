@@ -176,7 +176,7 @@ class ManagerTest : public testing::Test {
         const char* marker = node->is_terminal() ? "|*" : "|-";
         oss << std::string((num_indent - 1) * 2, ' ') << marker;
       }
-      oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state)
+      oss << "Node " << node_ix << ": " << Game::IO::compact_state_repr(prev_state)
           << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
 
       for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {

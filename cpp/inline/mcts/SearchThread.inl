@@ -230,11 +230,7 @@ inline void SearchThread<Game>::perform_visits() {
     if (!shared_data_->search_params.ponder && root->trivial()) break;
 
     if (manager_params_->graph_viz) {
-      if constexpr (util::has_state_repr<Game>::value) {
-        build_graph_viz(manager_params_->graph_viz);
-      } else {
-        throw std::runtime_error("GraphViz requires Game to have implemented state_repr in IO");
-      }
+      build_graph_viz(manager_params_->graph_viz);
     }
   }
 }
@@ -717,7 +713,7 @@ void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
 
   for (auto [state, node_ix] : *map) {
     Node* node = shared_data_->lookup_table.get_node(node_ix);
-    graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::state_repr(state));
+    graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::compact_state_repr(state));
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       edge_t* edge = node->get_edge(i);
 
@@ -726,7 +722,7 @@ void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
       }
 
       int edge_index = i + node->get_first_edge_index();
-      graph.add_edge(edge_index, node_ix, edge->child_index, edge->N, edge->action);
+      graph.add_edge(edge_index, node_ix, edge->child_index, edge->E, edge->action);
     }
   }
 }

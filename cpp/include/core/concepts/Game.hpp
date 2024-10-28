@@ -79,7 +79,8 @@ concept Game = requires {
   requires core::concepts::GameRules<typename G::Rules, typename G::Types,
                                      typename G::GameResults::Tensor, typename G::State,
                                      typename G::StateHistory>;
-  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::State>;
+  requires core::concepts::GameIO<typename G::IO, typename G::Types, typename G::State,
+                                  typename G::MCTSKey>;
   requires core::concepts::GameInputTensorizor<typename G::InputTensorizor, typename G::State,
                                                typename G::StateHistory>;
   requires core::concepts::GameTrainingTargets<typename G::TrainingTargets, typename G::Types>;
