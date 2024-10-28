@@ -343,44 +343,26 @@ void Node<Game>::initialize_edges() {
 }
 
 template <core::concepts::Game Game>
-template<typename PolicyTransformFunc>
+template <typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   int n = stable_data_.num_valid_actions;
   ValueTensor VT;
 
-  if (eval == nullptr) {
-    // treat this as uniform P and V
-    float p = 1.0 / n;
+  LocalPolicyArray P_raw(n);
+  LocalActionValueArray child_V(n);
+  eval->load(VT, P_raw, child_V);
 
-    VT.setConstant(1.0 / ValueTensor::Dimensions::total_size);
-    float v = Game::GameResults::to_value_array(VT)(stable_data().current_player);
+  LocalPolicyArray P_adjusted = P_raw;
+  f(P_adjusted);
 
-    stable_data_.VT = VT;
-    stable_data_.VT_valid = true;
+  stable_data_.VT = VT;
+  stable_data_.VT_valid = true;
 
-    for (int i = 0; i < n; ++i) {
-      edge_t* edge = get_edge(i);
-      edge->raw_policy_prior = p;
-      edge->adjusted_policy_prior = p;
-      edge->child_V_estimate = v;
-    }
-  } else {
-    LocalPolicyArray P_raw(n);
-    LocalActionValueArray child_V(n);
-    eval->load(VT, P_raw, child_V);
-
-    LocalPolicyArray P_adjusted = P_raw;
-    f(P_adjusted);
-
-    stable_data_.VT = VT;
-    stable_data_.VT_valid = true;
-
-    for (int i = 0; i < n; ++i) {
-      edge_t* edge = get_edge(i);
-      edge->raw_policy_prior = P_raw[i];
-      edge->adjusted_policy_prior = P_adjusted[i];
-      edge->child_V_estimate = child_V[i];
-    }
+  for (int i = 0; i < n; ++i) {
+    edge_t* edge = get_edge(i);
+    edge->raw_policy_prior = P_raw[i];
+    edge->adjusted_policy_prior = P_adjusted[i];
+    edge->child_V_estimate = child_V[i];
   }
 
   ValueArray VA = Game::GameResults::to_value_array(VT);

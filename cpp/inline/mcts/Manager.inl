@@ -1,11 +1,14 @@
 #include <mcts/Manager.hpp>
 
-#include <boost/filesystem.hpp>
-
 #include <mcts/ActionSelector.hpp>
 #include <mcts/TypeDefs.hpp>
+#include <mcts/UniformNNEvaluationService.hpp>
 #include <util/Asserts.hpp>
 #include <util/Exception.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <memory>
 
 namespace mcts {
 
@@ -30,12 +33,13 @@ inline Manager<Game>::Manager(const ManagerParams& params, NNEvaluationServiceBa
     init_profiling_dir(profiling_dir.string());
   }
 
-  // TODO: if no_model, construct a UniformNNEvaluationService here
   if (service) {
     nn_eval_service_ = service;
   } else if (!params.no_model) {
     nn_eval_service_ = NNEvaluationService::create(params);
-  } else if (!params.model_filename.empty()) {
+  } else if (params.model_filename.empty()) {
+    nn_eval_service_ = new UniformNNEvaluationService<Game>();
+  } else {
     throw util::CleanException("--model_filename/-m and --no-model cannot be used together");
   }
 
@@ -58,9 +62,8 @@ template <core::concepts::Game Game>
 inline Manager<Game>::~Manager() {
   announce_shutdown();
   clear();
-  if (nn_eval_service_) {
-    nn_eval_service_->disconnect();
-  }
+
+  nn_eval_service_->disconnect();
   for (auto* thread : search_threads_) {
     delete thread;
   }
@@ -78,9 +81,7 @@ inline void Manager<Game>::start() {
   clear();
 
   if (!connected_) {
-    if (nn_eval_service_) {
-      nn_eval_service_->connect();
-    }
+    nn_eval_service_->connect();
     connected_ = true;
   }
 }
