@@ -482,8 +482,11 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
     Game::Symmetries::apply(last_action, edge->sym);
-    if (Game::Rules::is_terminal(history->current(), parent->stable_data().current_player,
-                                 last_action, game_outcome)) {
+
+    bool terminal = Game::Rules::is_terminal(
+        history->current(), parent->stable_data().current_player, last_action, game_outcome);
+
+    if (terminal) {
       new (child) Node(&lookup_table, game_outcome);
     } else {
       new (child) Node(&lookup_table, *history);
@@ -491,12 +494,16 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
 
     search_path_.emplace_back(child, nullptr);
     child->initialize_edges();
-    bool do_virtual = manager_params_->num_search_threads > 1;
+    bool do_virtual = !terminal && manager_params_->num_search_threads > 1;
     if (do_virtual) {
       virtual_backprop();
     }
     init_node(history, edge->child_index, child);
-    standard_backprop(do_virtual);
+    if (terminal) {
+      pure_backprop(Game::GameResults::to_value_array(child->stable_data().VT));
+    } else {
+      standard_backprop(do_virtual);
+    }
   } else {
     edge->child_index = child_index;
   }

@@ -237,6 +237,10 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
 void Node<Game>::update_stats(MutexProtectedFunc func) {
+  std::unique_lock lock(mutex());
+  func();
+  lock.unlock();
+
   core::seat_index_t cp = stable_data().current_player;
 
   ValueArray Q_sum;
@@ -280,9 +284,6 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
     all_provably_losing.reset();
   }
 
-  std::unique_lock lock(mutex());
-  func();
-
   if (stable_data_.VT_valid) {
     ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
     Q_sum += VA;
@@ -291,6 +292,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 
     eigen_util::debug_assert_is_valid_prob_distr(VA);
   }
+
+  lock.lock();
 
   // incorporate bounds from children
   int num_valid_actions = stable_data_.num_valid_actions;
