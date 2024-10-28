@@ -37,10 +37,19 @@ class NNEvaluation {
                const ActionValueTensor& raw_action_values,
                const ActionMask& valid_actions, group::element_t sym, core::seat_index_t cp);
 
+  // This constructor is used by create_uniform(). We would declare this as private if we could,
+  // but can't because std::make_shared<> needs to call it.
+  NNEvaluation(const ActionMask&);  // used by create_uniform()
+
   void load(ValueTensor&, LocalPolicyArray&, LocalActionValueArray&);
 
   using sptr = std::shared_ptr<NNEvaluation>;
   using asptr = util::AtomicSharedPtr<NNEvaluation>;
+
+  /*
+   * Create a uniform NNEvaluation object. Used by UniformNNEvaluationService.
+   */
+  static sptr create_uniform(const ActionMask& valid_actions);
 
  protected:
   ValueTensor value_;

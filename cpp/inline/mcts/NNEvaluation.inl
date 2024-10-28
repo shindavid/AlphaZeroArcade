@@ -42,12 +42,30 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
 }
 
 template <core::concepts::Game Game>
+NNEvaluation<Game>::NNEvaluation(const ActionMask& valid_actions)
+    : dynamic_array_(2, valid_actions.count()) {
+  float policy_entry = 1.0 / valid_actions.count();
+  float value_entry = 1.0 / value_.size();
+  float action_value_entry = 1.0 / Game::Constants::kNumPlayers;
+
+  value_.setConstant(value_entry);
+  dynamic_array_.row(0).setConstant(policy_entry);
+  dynamic_array_.row(1).setConstant(action_value_entry);
+}
+
+template <core::concepts::Game Game>
 void NNEvaluation<Game>::load(ValueTensor& value, LocalPolicyArray& policy,
                               LocalActionValueArray& action_value) {
   value = value_;
   policy = dynamic_array_.row(0);
   action_value = dynamic_array_.row(1);
   eigen_util::debug_assert_is_valid_prob_distr(policy);
+}
+
+template <core::concepts::Game Game>
+typename NNEvaluation<Game>::sptr NNEvaluation<Game>::create_uniform(
+    const ActionMask& valid_actions) {
+  return std::make_shared<NNEvaluation>(valid_actions);
 }
 
 }  // namespace mcts
