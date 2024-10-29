@@ -32,10 +32,11 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
   Q = value;
   Q_sq = value * value;
   if (pure) {
-    for (int p = 0; p < kNumPlayers; ++p) {
-      provably_winning[p] = value(p) >= Game::GameResults::kMaxValue;
-      provably_losing[p] = value(p) <= Game::GameResults::kMinValue;
-    }
+    Q_lower_bound = value;
+    Q_upper_bound = value;
+  } else {
+    Q_lower_bound.setConstant(Game::GameResults::kMinValue);
+    Q_upper_bound.setConstant(Game::GameResults::kMaxValue);
   }
 
   eigen_util::debug_assert_is_valid_prob_distr(Q);
@@ -204,28 +205,17 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   Q.setZero();
   Q_sq.setZero();
 
-  bool provably_winning = stats_.provably_winning[cp];
-  bool provably_losing = stats_.provably_losing[cp];
-
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
     core::action_t action = edge->action;
-
-    int count = edge->E;
-    int modified_count = count;
 
     const Node* child = get_child(edge);
     if (!child) continue;
 
     const auto& stats = child->stats();
-    if (params.avoid_proven_losers && !provably_losing && stats.provably_losing[cp]) {
-      modified_count = 0;
-    } else if (params.exploit_proven_winners && provably_winning && !stats.provably_winning[cp]) {
-      modified_count = 0;
-    }
 
-    if (modified_count) {
-      counts(action) = modified_count;
+    if (edge->mE) {
+      counts(action) = edge->mE;
       Q(action) = stats.Q(cp);
       Q_sq(action) = stats.Q_sq(cp);
     }
@@ -244,7 +234,83 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   func();
   lock.unlock();
 
-  core::seat_index_t cp = stable_data().current_player;
+  int n_actions = stable_data_.num_valid_actions;
+  core::seat_index_t cp = stable_data_.current_player;
+
+  // find "best" bounds for cp, among children. "Best" means that (lower, upper) is
+  // lexicographically maximal.
+  float best_bounds[2] = {Game::GameResults::kMinValue, Game::GameResults::kMinValue};
+  for (int i = 0; i < n_actions; i++) {
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) continue;
+
+    const auto& child_stats = child->stats();
+    float ql = child_stats.Q_lower_bound(cp);
+    float qu = child_stats.Q_upper_bound(cp);
+
+    if (ql > best_bounds[0]) {
+      best_bounds[0] = ql;
+      best_bounds[1] = qu;
+    } else if (ql == best_bounds[0]) {
+      best_bounds[1] = std::max(best_bounds[1], qu);
+    }
+  }
+
+  bool eliminated_actions[n_actions] = {};
+
+  // eliminate actions based on best_bounds
+  for (int i = 0; i < n_actions; i++) {
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) {
+      eliminated_actions[i] = best_bounds[0] == Game::GameResults::kMaxValue;
+      continue;
+    }
+
+    const auto& child_stats = child->stats();
+    float ql = child_stats.Q_lower_bound(cp);
+    float qu = child_stats.Q_upper_bound(cp);
+
+    // first condition is to prevent self-elimination
+    eliminated_actions[i] = (ql < best_bounds[1] && qu <= best_bounds[0]);
+  }
+
+  ValueArray Q_lower_bound;
+  ValueArray Q_upper_bound;
+
+  Q_lower_bound.setConstant(Game::GameResults::kMaxValue);
+  Q_upper_bound.setConstant(Game::GameResults::kMinValue);
+
+  // update Q bounds based only on non-eliminated children
+  for (int i = 0; i < n_actions; i++) {
+    if (eliminated_actions[i]) continue;
+
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) {
+      Q_lower_bound.setConstant(Game::GameResults::kMinValue);
+      Q_upper_bound.setConstant(Game::GameResults::kMaxValue);
+      break;
+    }
+
+    const auto& child_stats = child->stats();
+    Q_lower_bound = Q_lower_bound.cwiseMin(child_stats.Q_lower_bound);
+    Q_upper_bound = Q_upper_bound.cwiseMax(child_stats.Q_upper_bound);
+  }
+
+  Q_lower_bound(cp) = best_bounds[0];
+
+  // TODO: if zero-sum, we can set Q_upper_bound(p) for all p != cp based on Q_lower_bound(cp)
+  //
+  // As is, if we the best child has Q-bounds of [0.4, 1] while other children remain unexplored,
+  // we will have Q_lower_bound(cp) of 0.4, but Q_upper_bound(p) will be 1 for p != cp. Without
+  // a zero-sum guarantee of the game-rules, that's the best we can do. But if we know that the
+  // Q sum must be 1, then we can set Q_upper_bound(p) = 0.6 for p != cp.
+  for (core::seat_index_t p = 0; p < kNumPlayers; ++p) {
+    if (p == cp) continue;
+    Q_upper_bound(p) = std::min(1.0f - Q_lower_bound(cp), Q_upper_bound(p));
+  }
 
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
@@ -252,67 +318,65 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   Q_sq_sum.setZero();
   int N = 0;
 
-  // provably winning/losing calculation
-  bool cp_has_winning_move = false;
-  int num_children = 0;
+  // update Q based on non-eliminated children
+  for (int i = 0; i < n_actions; i++) {
+    if (eliminated_actions[i]) continue;
 
-  player_bitset_t all_provably_winning;
-  player_bitset_t all_provably_losing;
-  all_provably_winning.set();
-  all_provably_losing.set();
-  bool skipped = false;
-  for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
     const Node* child = get_child(edge);
     if (!child) {
-      skipped = true;
       continue;
     }
+
     const auto& child_stats = child->stats();
     if (child_stats.RN > 0) {
-      int e = edge->E;
+      int e = edge->mE;
       N += e;
       Q_sum += child_stats.Q * e;
       Q_sq_sum += child_stats.Q_sq * e;
     }
-
-    cp_has_winning_move |= child_stats.provably_winning[cp];
-    all_provably_winning &= child_stats.provably_winning;
-    all_provably_losing &= child_stats.provably_losing;
-    num_children++;
   }
 
-  if (skipped) {
-    all_provably_winning.reset();
-    all_provably_losing.reset();
-  }
+  ValueArray Q;
+  ValueArray Q_sq;
 
-  if (stable_data_.VT_valid) {
-    ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
-    Q_sum += VA;
-    Q_sq_sum += VA * VA;
-    N++;
+  if ((Q_lower_bound == Q_upper_bound).all()) {
+    Q = Q_lower_bound;
+    Q_sq = Q_lower_bound * Q_lower_bound;
+  } else {
+    if (stable_data_.VT_valid) {
+      ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
 
-    eigen_util::debug_assert_is_valid_prob_distr(VA);
+      // TODO: cap VA by Q_lower_bound and Q_upper_bound. Need to give some thought on how to do
+      // this properly, given potential zero-sum property.
+
+      Q_sum += VA;
+      Q_sq_sum += VA * VA;
+      N++;
+    }
+
+    if (N) {
+      Q = Q_sum / N;
+      Q_sq = Q_sq_sum / N;
+    } else {
+      Q.setZero();
+      Q_sq.setZero();
+    }
   }
 
   lock.lock();
 
-  // incorporate bounds from children
-  int num_valid_actions = stable_data_.num_valid_actions;
-  if (num_valid_actions == 0) {
-    // terminal state, provably_winning/losing are already set by instruction
-  } else if (cp_has_winning_move) {
-    stats_.provably_winning[cp] = true;
-    stats_.provably_losing.set();
-    stats_.provably_losing[cp] = false;
-  } else if (num_children == num_valid_actions) {
-    stats_.provably_winning = all_provably_winning;
-    stats_.provably_losing = all_provably_losing;
+  for (int i = 0; i < n_actions; i++) {
+    edge_t* edge = get_edge(i);
+    edge->mE = edge->E * !eliminated_actions[i];
   }
 
-  stats_.Q = N ? (Q_sum / N) : Q_sum;
-  stats_.Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
+  stats_.Q = Q;
+  stats_.Q_sq = Q_sq;
+  if (n_actions) {  // if n_actions == 0, we are at a terminal state
+    stats_.Q_lower_bound = Q_lower_bound;
+    stats_.Q_upper_bound = Q_upper_bound;
+  }
 
   if (N) {
     eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);

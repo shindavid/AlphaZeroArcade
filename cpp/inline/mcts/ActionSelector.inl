@@ -11,6 +11,8 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     : cp(node->stable_data().current_player),
       P(node->stable_data().num_valid_actions),
       Q(P.rows()),
+      QLB(P.rows()),
+      QUB(P.rows()),
       PW(P.rows()),
       PL(P.rows()),
       E(P.rows()),
@@ -21,6 +23,8 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
       PUCT(P.rows()) {
   P.setZero();
   Q.setZero();
+  QLB.setConstant(Game::GameResults::kMinValue);
+  QUB.setConstant(Game::GameResults::kMaxValue);
   PW.setZero();
   PL.setZero();
   E.setZero();
@@ -38,13 +42,16 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
     E(i) = edge->E;
+    mE(i) = edge->mE;
 
     Node* child = node->get_child(edge);
     if (child) {
       const auto& child_stats = child->stats();
       Q(i) = child_stats.Q(cp);
-      PW(i) = child_stats.provably_winning[cp];
-      PL(i) = child_stats.provably_losing[cp];
+      QLB(i) = child_stats.Q_lower_bound(cp);
+      QUB(i) = child_stats.Q_upper_bound(cp);
+      PW(i) = QLB(i) == Game::GameResults::kMaxValue;
+      PL(i) = QUB(i) == Game::GameResults::kMinValue;
       RN(i) = child_stats.RN;
       VN(i) = child_stats.VN;
 
@@ -75,23 +82,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     Q = (1 - FPU) * Q + FPU * v;
   }
 
-  LocalPolicyArray mask(P.rows());
-  mask.setConstant(1);
-
-  if (params.avoid_proven_losers || params.exploit_proven_winners) {
-    if (params.avoid_proven_losers) {
-      mask *= (1 - PL);  // zero out provably-losing actions
-    }
-    if (params.exploit_proven_winners && PW.any()) {
-      mask *= PW;  // zero out non-provably-winning actions
-    }
-
-    if ((mask == 0).all()) {
-      mask.setConstant(1);  // if all actions are masked out, unmask all actions
-    }
-  }
-
-  mE = mask * E;
+  auto mask = (mE > 0 || E == 0).template cast<float>();
 
   /*
    * AlphaZero/KataGo defines Q to be over a [-1, +1] range, but we use a [0, +1] range.

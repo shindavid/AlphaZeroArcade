@@ -396,20 +396,38 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   util::release_assert(!search_path_.empty());
   Node* last_node = search_path_.back().node;
 
+  // auto last_stats = last_node->stats();
+
   last_node->update_stats([&] {
     last_node->stats().init_q(value, true);
     last_node->stats().RN++;
   });
 
+  // LOG_INFO << thread_id_whitespace() << "path[" << search_path_.size() - 1 << "] Q:["
+  //          << last_stats.Q.transpose() << "]->[" << last_node->stats().Q.transpose()
+  //          << "] Q_lower:[" << last_stats.Q_lower_bound.transpose() << "]->["
+  //          << last_node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+  //          << last_stats.Q_upper_bound.transpose() << "]->["
+  //          << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
+  //          << last_node->stats().RN;
+
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
+
+    // auto stats = node->stats();
 
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
       edge->E++;
       node->stats().RN++;
     });
+
+    // LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
+    //          << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
+    //          << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+    //          << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
+    //          << "] RN:" << stats.RN << "->" << node->stats().RN;
   }
   validate_search_path();
 }
@@ -426,15 +444,27 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
              << value.transpose();
   }
 
+  // auto last_stats = last_node->stats();
+
   last_node->update_stats([&] {
     last_node->stats().init_q(value, false);
     last_node->stats().RN++;
     last_node->stats().VN -= undo_virtual;
   });
 
+  // LOG_INFO << thread_id_whitespace() << "path[" << search_path_.size() - 1 << "] Q:["
+  //          << last_stats.Q.transpose() << "]->[" << last_node->stats().Q.transpose()
+  //          << "] Q_lower:[" << last_stats.Q_lower_bound.transpose() << "]->["
+  //          << last_node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+  //          << last_stats.Q_upper_bound.transpose() << "]->["
+  //          << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
+  //          << last_node->stats().RN;
+
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
+
+    // auto stats = node->stats();
 
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
@@ -442,6 +472,12 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
       node->stats().RN++;
       node->stats().VN -= undo_virtual;
     });
+
+    // LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
+    //          << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
+    //          << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+    //          << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
+    //          << "] RN:" << stats.RN << "->" << node->stats().RN;
   }
   validate_search_path();
 }
@@ -456,11 +492,19 @@ void SearchThread<Game>::short_circuit_backprop() {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
+    // auto stats = node->stats();
+
     // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
       edge->E++;
       node->stats().RN++;
     });
+
+    // LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
+    //          << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
+    //          << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+    //          << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
+    //          << "] RN:" << stats.RN << "->" << node->stats().RN;
   }
   validate_search_path();
 }
@@ -633,14 +677,16 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     ValueArray players;
     const ValueArray& nQ = node->stats().Q;
+    const ValueArray& nQLB = node->stats().Q_lower_bound;
+    const ValueArray& nQUB = node->stats().Q_upper_bound;
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;
       CP(p) = p == cp;
     }
 
-    std::vector<std::string> player_columns = {"Seat", "Q", "CurP"};
-    auto player_data = eigen_util::concatenate_columns(players, nQ, CP);
+    std::vector<std::string> player_columns = {"Seat", "Q", "QLB", "QUB", "CurP"};
+    auto player_data = eigen_util::concatenate_columns(players, nQ, nQLB, nQUB, CP);
 
     eigen_util::PrintArrayFormatMap fmt_map1;
     fmt_map1["Seat"] = [&](float x) { return std::to_string(int(x)); };
@@ -655,6 +701,8 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 
     const LocalPolicyArray& P = selector.P;
     const LocalPolicyArray& Q = selector.Q;
+    const LocalPolicyArray& QLB = selector.QLB;
+    const LocalPolicyArray& QUB = selector.QUB;
     const LocalPolicyArray& FPU = selector.FPU;
     const LocalPolicyArray& PW = selector.PW;
     const LocalPolicyArray& PL = selector.PL;
@@ -680,10 +728,11 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
       child_addr(e) = edge->child_index;
     }
 
-    std::vector<std::string> action_columns = {"action", "P",  "Q",  "FPU", "PW",   "PL",    "E",
-                                               "mE",     "RN", "VN", "&ch", "PUCT", "argmax"};
+    std::vector<std::string> action_columns = {"action", "P",  "Q",   "QLB",  "QUB",
+                                               "FPU",    "PW", "PL",  "E",    "mE",
+                                               "RN",     "VN", "&ch", "PUCT", "argmax"};
     auto action_data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-        actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
+        actions, P, Q, QLB, QUB, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
     eigen_util::PrintArrayFormatMap fmt_map2;
     fmt_map2["action"] = [](float x) { return Game::IO::action_to_str(x); };
