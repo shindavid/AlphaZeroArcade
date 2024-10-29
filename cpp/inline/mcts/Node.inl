@@ -262,7 +262,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   // Copy Q info
   stats_.Q = Q;
   stats_.Q_sq = Q_sq;
-  if (is_terminal()) {
+  if (!is_terminal()) {
     stats_.Q_lower_bound = Q_lower_bound;
     stats_.Q_upper_bound = Q_upper_bound;
   }
