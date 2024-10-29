@@ -142,6 +142,7 @@ Manager<Game>::search(const SearchParams& params) {
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();
 
+  core::seat_index_t cp = stable_data.current_player;
   group::element_t sym = root_info.canonical_sym;
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
@@ -165,7 +166,7 @@ Manager<Game>::search(const SearchParams& params) {
   load_action_symmetries(root, &actions[0]);
   root->write_results(params_, inv_sym, results_);
   results_.policy_target = results_.counts;
-  results_.provably_lost = stats.provably_losing[stable_data.current_player];
+  results_.provably_lost = stats.Q_upper_bound[cp] == Game::GameResults::kMinValue;
   results_.trivial = root->trivial();
   if (params_.forced_playouts && add_noise) {
     prune_policy_target(params, inv_sym);

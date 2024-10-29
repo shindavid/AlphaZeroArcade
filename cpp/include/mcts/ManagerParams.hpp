@@ -45,13 +45,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
   float k_forced = 2.0;
 
   /*
-   * These bools control both MCTS dynamics and the zeroing out of the MCTS counts exported to the
-   * player (which in turn is exported as a policy training target).
-   */
-  bool exploit_proven_winners = true;
-  bool avoid_proven_losers = true;
-
-  /*
    * If true, we forcibly evaluate all children of root nodes. This is needed in training mode to
    * create action-value targets.
    */

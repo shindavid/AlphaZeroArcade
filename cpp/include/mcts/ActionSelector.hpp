@@ -24,6 +24,8 @@ struct ActionSelector {
   core::seat_index_t cp;
   LocalPolicyArray P;
   LocalPolicyArray Q;    // (virtualized) value
+  LocalPolicyArray QLB;  // Q lower bound
+  LocalPolicyArray QUB;  // Q upper bound
   LocalPolicyArray PW;   // provably-winning
   LocalPolicyArray PL;   // provably-losing
   LocalPolicyArray E;    // edge count

@@ -76,7 +76,6 @@ class Node {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using SearchResults = Game::Types::SearchResults;
-  using player_bitset_t = std::bitset<kNumPlayers>;
   using node_pool_index_t = util::pool_index_t;
   using edge_pool_index_t = util::pool_index_t;
 
@@ -126,9 +125,8 @@ class Node {
     int RN = 0;       // real count
     int VN = 0;       // virtual count
 
-    // TODO: generalize these fields to utility lower/upper bounds
-    player_bitset_t provably_winning;
-    player_bitset_t provably_losing;
+    ValueArray Q_lower_bound;
+    ValueArray Q_upper_bound;
   };
 
   /*
@@ -138,6 +136,7 @@ class Node {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int E = 0;  // real or virtual count
+    int mE = 0;  // masked count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
