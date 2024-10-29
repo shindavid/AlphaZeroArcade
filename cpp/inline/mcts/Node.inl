@@ -235,151 +235,36 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   lock.unlock();
 
   int n_actions = stable_data_.num_valid_actions;
-  core::seat_index_t cp = stable_data_.current_player;
 
-  // find "best" bounds for cp, among children. "Best" means that (lower, upper) is
-  // lexicographically maximal.
-  float best_bounds[2] = {Game::GameResults::kMinValue, Game::GameResults::kMinValue};
-  for (int i = 0; i < n_actions; i++) {
-    const edge_t* edge = get_edge(i);
-    const Node* child = get_child(edge);
-    if (!child) continue;
-
-    const auto& child_stats = child->stats();
-    float ql = child_stats.Q_lower_bound(cp);
-    float qu = child_stats.Q_upper_bound(cp);
-
-    if (ql > best_bounds[0]) {
-      best_bounds[0] = ql;
-      best_bounds[1] = qu;
-    } else if (ql == best_bounds[0]) {
-      best_bounds[1] = std::max(best_bounds[1], qu);
-    }
-  }
+  float best_bounds[2];
+  set_best_bounds(best_bounds);
 
   bool eliminated_actions[n_actions] = {};
-
-  // eliminate actions based on best_bounds
-  for (int i = 0; i < n_actions; i++) {
-    const edge_t* edge = get_edge(i);
-    const Node* child = get_child(edge);
-    if (!child) {
-      eliminated_actions[i] = best_bounds[0] == Game::GameResults::kMaxValue;
-      continue;
-    }
-
-    const auto& child_stats = child->stats();
-    float ql = child_stats.Q_lower_bound(cp);
-    float qu = child_stats.Q_upper_bound(cp);
-
-    // first condition is to prevent self-elimination
-    eliminated_actions[i] = (ql < best_bounds[1] && qu <= best_bounds[0]);
-  }
+  set_eliminated_actions(eliminated_actions, best_bounds);
 
   ValueArray Q_lower_bound;
   ValueArray Q_upper_bound;
-
-  Q_lower_bound.setConstant(Game::GameResults::kMaxValue);
-  Q_upper_bound.setConstant(Game::GameResults::kMinValue);
-
-  // update Q bounds based only on non-eliminated children
-  for (int i = 0; i < n_actions; i++) {
-    if (eliminated_actions[i]) continue;
-
-    const edge_t* edge = get_edge(i);
-    const Node* child = get_child(edge);
-    if (!child) {
-      Q_lower_bound.setConstant(Game::GameResults::kMinValue);
-      Q_upper_bound.setConstant(Game::GameResults::kMaxValue);
-      break;
-    }
-
-    const auto& child_stats = child->stats();
-    Q_lower_bound = Q_lower_bound.cwiseMin(child_stats.Q_lower_bound);
-    Q_upper_bound = Q_upper_bound.cwiseMax(child_stats.Q_upper_bound);
-  }
-
-  Q_lower_bound(cp) = best_bounds[0];
-
-  // TODO: if zero-sum, we can set Q_upper_bound(p) for all p != cp based on Q_lower_bound(cp)
-  //
-  // As is, if we the best child has Q-bounds of [0.4, 1] while other children remain unexplored,
-  // we will have Q_lower_bound(cp) of 0.4, but Q_upper_bound(p) will be 1 for p != cp. Without
-  // a zero-sum guarantee of the game-rules, that's the best we can do. But if we know that the
-  // Q sum must be 1, then we can set Q_upper_bound(p) = 0.6 for p != cp.
-  for (core::seat_index_t p = 0; p < kNumPlayers; ++p) {
-    if (p == cp) continue;
-    Q_upper_bound(p) = std::min(1.0f - Q_lower_bound(cp), Q_upper_bound(p));
-  }
-
-  ValueArray Q_sum;
-  ValueArray Q_sq_sum;
-  Q_sum.setZero();
-  Q_sq_sum.setZero();
-  int N = 0;
-
-  // update Q based on non-eliminated children
-  for (int i = 0; i < n_actions; i++) {
-    if (eliminated_actions[i]) continue;
-
-    const edge_t* edge = get_edge(i);
-    const Node* child = get_child(edge);
-    if (!child) {
-      continue;
-    }
-
-    const auto& child_stats = child->stats();
-    if (child_stats.RN > 0) {
-      int e = edge->mE;
-      N += e;
-      Q_sum += child_stats.Q * e;
-      Q_sq_sum += child_stats.Q_sq * e;
-    }
-  }
+  compute_Q_bounds(Q_lower_bound, Q_upper_bound, eliminated_actions, best_bounds);
 
   ValueArray Q;
   ValueArray Q_sq;
+  compute_Q_values(Q, Q_sq, Q_lower_bound, Q_upper_bound, eliminated_actions);
 
-  if ((Q_lower_bound == Q_upper_bound).all()) {
-    Q = Q_lower_bound;
-    Q_sq = Q_lower_bound * Q_lower_bound;
-  } else {
-    if (stable_data_.VT_valid) {
-      ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
-
-      // TODO: cap VA by Q_lower_bound and Q_upper_bound. Need to give some thought on how to do
-      // this properly, given potential zero-sum property.
-
-      Q_sum += VA;
-      Q_sq_sum += VA * VA;
-      N++;
-    }
-
-    if (N) {
-      Q = Q_sum / N;
-      Q_sq = Q_sq_sum / N;
-    } else {
-      Q.setZero();
-      Q_sq.setZero();
-    }
-  }
-
+  // Now we lock the mutex, and copy the calculated information into the node
   lock.lock();
 
+  // Mask edges that are eliminated
   for (int i = 0; i < n_actions; i++) {
     edge_t* edge = get_edge(i);
     edge->mE = edge->E * !eliminated_actions[i];
   }
 
+  // Copy Q info
   stats_.Q = Q;
   stats_.Q_sq = Q_sq;
-  if (n_actions) {  // if n_actions == 0, we are at a terminal state
+  if (is_terminal()) {
     stats_.Q_lower_bound = Q_lower_bound;
     stats_.Q_upper_bound = Q_upper_bound;
-  }
-
-  if (N) {
-    eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
   }
 }
 
@@ -498,6 +383,167 @@ void Node<Game>::validate_state() const {
                      stats_.VN);
   util::debug_assert(stats_.RN >= 0);
   util::debug_assert(stats_.VN >= 0);
+}
+
+
+template <core::concepts::Game Game>
+void Node<Game>::set_best_bounds(float* best_bounds) const {
+  best_bounds[0] = Game::GameResults::kMinValue;
+  best_bounds[1] = Game::GameResults::kMinValue;
+
+  int n_actions = stable_data_.num_valid_actions;
+  core::seat_index_t cp = stable_data_.current_player;
+
+  bool best_bounds_set = false;
+  for (int i = 0; i < n_actions; i++) {
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) continue;
+
+    const auto& child_stats = child->stats();
+    float ql = child_stats.Q_lower_bound(cp);
+    float qu = child_stats.Q_upper_bound(cp);
+
+    best_bounds_set = true;
+    if (ql > best_bounds[0]) {
+      best_bounds[0] = ql;
+      best_bounds[1] = qu;
+    } else if (ql == best_bounds[0]) {
+      best_bounds[1] = std::max(best_bounds[1], qu);
+    }
+  }
+
+  if (!best_bounds_set) {
+    best_bounds[1] = Game::GameResults::kMaxValue;
+  }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::set_eliminated_actions(bool* eliminated_actions, const float* best_bounds) const {
+  int n_actions = stable_data_.num_valid_actions;
+  core::seat_index_t cp = stable_data_.current_player;
+
+  for (int i = 0; i < n_actions; i++) {
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) {
+      // if best_bounds[0] is kMaxValue, then the position has been proven to be winning, and we
+      // can eliminate not-yet-expanded actions.
+      eliminated_actions[i] = best_bounds[0] == Game::GameResults::kMaxValue;
+      continue;
+    }
+
+    const auto& child_stats = child->stats();
+    float ql = child_stats.Q_lower_bound(cp);
+    float qu = child_stats.Q_upper_bound(cp);
+
+    // The first condition is to prevent self-elimination
+    eliminated_actions[i] = (ql < best_bounds[1] && qu <= best_bounds[0]);
+  }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::compute_Q_bounds(ValueArray& Q_lower_bound, ValueArray& Q_upper_bound,
+                                  const bool* eliminated_actions, const float* best_bounds) const {
+  int n_actions = stable_data_.num_valid_actions;
+  core::seat_index_t cp = stable_data_.current_player;
+
+  Q_lower_bound.setConstant(Game::GameResults::kMaxValue);
+  Q_upper_bound.setConstant(Game::GameResults::kMinValue);
+
+  // update Q bounds based only on non-eliminated children
+  for (int i = 0; i < n_actions; i++) {
+    if (eliminated_actions[i]) continue;
+
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) {
+      Q_lower_bound.setConstant(Game::GameResults::kMinValue);
+      Q_upper_bound.setConstant(Game::GameResults::kMaxValue);
+      break;
+    }
+
+    const auto& child_stats = child->stats();
+    Q_lower_bound = Q_lower_bound.cwiseMin(child_stats.Q_lower_bound);
+    Q_upper_bound = Q_upper_bound.cwiseMax(child_stats.Q_upper_bound);
+  }
+
+  // cp is the current player, and so can choose the best possible action for herself
+  Q_lower_bound(cp) = best_bounds[0];
+
+  // NOTE: the below assumes that the game is zero-sum, with the sum of Q values being 1. This
+  // assumption should be relaxed, and the Game concept API should be extended to specify whether
+  // this assumption holds.
+  //
+  // The below logic recognizes that if cp can force a Q-lower-bound of 0.4 for herself, then the
+  // other players can obtain at best a Q-upper-bound of 0.6.
+  //
+  // It can probably be made more powerful by looking at Q-lower-bounds across all players: if
+  // Player 1 has a Q-lower-bound of 0.4, and Player 2 has a Q-lower-bound of 0.1, then Player 3
+  // can obtain a Q of at most 1.0 - 0.4 - 0.1 = 0.5.
+  for (core::seat_index_t p = 0; p < kNumPlayers; ++p) {
+    if (p == cp) continue;
+    Q_upper_bound(p) = std::min(1.0f - Q_lower_bound(cp), Q_upper_bound(p));
+  }
+}
+
+template <core::concepts::Game Game>
+void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueArray& Q_lower_bound,
+                        const ValueArray& Q_upper_bound, const bool* eliminated_actions) const {
+  int n_actions = stable_data_.num_valid_actions;
+
+  ValueArray Q_sum;
+  ValueArray Q_sq_sum;
+  Q_sum.setZero();
+  Q_sq_sum.setZero();
+  int N = 0;
+
+  // update Q based on non-eliminated children
+  for (int i = 0; i < n_actions; i++) {
+    if (eliminated_actions[i]) continue;
+
+    const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
+    if (!child) {
+      continue;
+    }
+
+    const auto& child_stats = child->stats();
+    if (child_stats.RN > 0) {
+      int e = edge->mE;
+      N += e;
+      Q_sum += child_stats.Q * e;
+      Q_sq_sum += child_stats.Q_sq * e;
+    }
+  }
+
+  if ((Q_lower_bound == Q_upper_bound).all()) {
+    Q = Q_lower_bound;
+    Q_sq = Q_lower_bound * Q_lower_bound;
+  } else {
+    if (stable_data_.VT_valid) {
+      ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
+
+      // TODO: cap VA by Q_lower_bound and Q_upper_bound. Need to give some thought on how to do
+      // this properly, given potential zero-sum property.
+
+      Q_sum += VA;
+      Q_sq_sum += VA * VA;
+      N++;
+    }
+
+    if (N) {
+      Q = Q_sum / N;
+      Q_sq = Q_sq_sum / N;
+    } else {
+      Q.setZero();
+      Q_sq.setZero();
+    }
+  }
+
+  if (N) {
+    eigen_util::debug_assert_is_valid_prob_distr(Q);
+  }
 }
 
 }  // namespace mcts

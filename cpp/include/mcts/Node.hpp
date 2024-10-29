@@ -242,6 +242,65 @@ class Node {
   void validate_state() const;
 
  private:
+  /*
+   * Helper function for update_stats().
+   *
+   * Accepts a pointer to a length-2 float array, best_bounds.
+   *
+   * Finds the "best" Q-bounds for the current player, among expanded children. "Best" means that
+   * (Q_lower_bound, Q_upper_bound) is lexicographically maximal. Sets best_bounds to these values.
+   *
+   * If no children are expanded, then sets best_bounds to [kMinValue, kMaxValue].
+   */
+  void set_best_bounds(float* best_bounds) const;
+
+  /*
+   * Helper function for update_stats().
+   *
+   * Accepts a pointer to a length-(n_actions) bool array, eliminated_actions, and a pointer to a
+   * length-2 float array, best_bounds, which represents the lexicographically maximal Q-bounds
+   * among all children.
+   *
+   * Eliminates actions whose corresponding Q-bounds are strictly dominated by best_bounds. For
+   * such actions, sets eliminated_actions[i] to true.
+   */
+  void set_eliminated_actions(bool* eliminated_actions, const float* best_bounds) const;
+
+  /*
+   * Helper function for update_stats().
+   *
+   * Accepts:
+   *
+   * - References to two ValueArray objects, Q_lower_bound and Q_upper_bound
+   * - A pointer to a length-(n_actions) bool array, eliminated_actions.
+   * - A pointer to a length-2 float array, best_bounds.
+   *
+   * Sets Q_lower_bound[p] to the lowest provable lower-bound on Q for player p if the next action
+   * is chosen from among the non-eliminated actions. Sets Q_upper_bound[p] analogously.
+   */
+  void compute_Q_bounds(ValueArray& Q_lower_bound, ValueArray& Q_upper_bound,
+                        const bool* eliminated_actions, const float* best_bounds) const;
+
+  /*
+   * Helper function for update_stats().
+   *
+   * Accepts:
+   *
+   * - References to two ValueArray objects, Q and Q_sq
+   * - References to two ValueArray objects, Q_lower_bound and Q_upper_bound
+   * - A pointer to a length-(n_actions) bool array, eliminated_actions
+   *
+   * Sets Q to the average Q among all nodes in the depth-1 subtree rooted at this (including this).
+   * Excludes eliminated children when computing the average.
+   *
+   * If Q_lower_bound == Q_upper_bound, then the bounds are collapsed, and Q is set to that
+   * collapsed value.
+   *
+   * Sets Q_sq analogously.
+   */
+  void compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueArray& Q_lower_bound,
+                        const ValueArray& Q_upper_bound, const bool* eliminated_actions) const;
+
   stable_data_t stable_data_;
   LookupTable* lookup_table_;
   stats_t stats_;
