@@ -490,6 +490,13 @@ void Node<Game>::compute_Q_bounds(ValueArray& Q_lower_bound, ValueArray& Q_upper
 template <core::concepts::Game Game>
 void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueArray& Q_lower_bound,
                         const ValueArray& Q_upper_bound, const bool* eliminated_actions) const {
+  if ((Q_lower_bound == Q_upper_bound).all()) {
+    Q = Q_lower_bound;
+    Q_sq = Q * Q;
+    eigen_util::debug_assert_is_valid_prob_distr(Q);
+    return;
+  }
+
   int n_actions = stable_data_.num_valid_actions;
 
   ValueArray Q_sum;
@@ -517,32 +524,25 @@ void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueAr
     }
   }
 
-  if ((Q_lower_bound == Q_upper_bound).all()) {
-    Q = Q_lower_bound;
-    Q_sq = Q_lower_bound * Q_lower_bound;
-  } else {
-    if (stable_data_.VT_valid) {
-      ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
 
-      // TODO: cap VA by Q_lower_bound and Q_upper_bound. Need to give some thought on how to do
-      // this properly, given potential zero-sum property.
+  if (stable_data_.VT_valid) {
+    ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
 
-      Q_sum += VA;
-      Q_sq_sum += VA * VA;
-      N++;
-    }
+    // TODO: cap VA by Q_lower_bound and Q_upper_bound. Need to give some thought on how to do
+    // this properly, given potential zero-sum property.
 
-    if (N) {
-      Q = Q_sum / N;
-      Q_sq = Q_sq_sum / N;
-    } else {
-      Q.setZero();
-      Q_sq.setZero();
-    }
+    Q_sum += VA;
+    Q_sq_sum += VA * VA;
+    N++;
   }
 
   if (N) {
+    Q = Q_sum / N;
+    Q_sq = Q_sq_sum / N;
     eigen_util::debug_assert_is_valid_prob_distr(Q);
+  } else {
+    Q.setZero();
+    Q_sq.setZero();
   }
 }
 
