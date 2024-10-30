@@ -517,7 +517,7 @@ void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueAr
 
     const auto& child_stats = child->stats();
     if (child_stats.RN > 0) {
-      int e = edge->mE;
+      int e = edge->E;
       N += e;
       Q_sum += child_stats.Q * e;
       Q_sq_sum += child_stats.Q_sq * e;
