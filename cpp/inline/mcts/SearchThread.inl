@@ -169,7 +169,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     ValueTensor game_outcome;
     if (Game::Rules::is_terminal(raw_history_.current(), node->stable_data().current_player,
                                  raw_edge_action, game_outcome)) {
-      new (child) Node(&lookup_table, game_outcome);
+      new (child) Node(&lookup_table, canonical_history, game_outcome);
     } else {
       new (child) Node(&lookup_table, canonical_history);
     }
@@ -487,7 +487,7 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
         history->current(), parent->stable_data().current_player, last_action, game_outcome);
 
     if (terminal) {
-      new (child) Node(&lookup_table, game_outcome);
+      new (child) Node(&lookup_table, *history, game_outcome);
     } else {
       new (child) Node(&lookup_table, *history);
     }
