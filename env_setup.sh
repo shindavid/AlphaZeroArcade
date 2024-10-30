@@ -15,22 +15,16 @@ else
 fi
 
 # Validate that md5sum of environment.yml file matches the one in .environment.yml.md5:
-MD5_MATCH=1
+MD5_MATCH=0
 if [ -e "$SCRIPT_DIR/.environment.yml.md5" ]; then
     MD5_SUM=$(md5sum "$SCRIPT_DIR/environment.yml")
     MD5_SUM=$(echo $MD5_SUM | cut -d ' ' -f 1)
     EXPECTED_MD5_SUM=$(cat "$SCRIPT_DIR/.environment.yml.md5")
-    if [ "$MD5_SUM" != "$EXPECTED_MD5_SUM" ]; then
-        MD5_MATCH=0
+    if [ "$MD5_SUM" == "$EXPECTED_MD5_SUM" ]; then
+        MD5_MATCH=1
     fi
-else
-    MD5_MATCH=0
 fi
 
 if [ $MD5_MATCH -eq 0 ]; then
-    # Alert the user in red font:
-    echo -e "\033[0;31m"
-    echo "Your conda environment is out of date. Please run the following command:"
-    echo -e "\033[0m"
-    echo "   ./py/update_conda_env.py"
+    echo "Your conda environment may be out of date. Consider running py/update_conda_env.py"
 fi
