@@ -1,7 +1,6 @@
 #include <core/tests/Common.hpp>
-#include <games/nim/Constants.hpp>
 #include <games/nim/Game.hpp>
-#include <games/connect4/Game.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
@@ -15,6 +14,8 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -294,8 +295,12 @@ TEST_F(NimManagerTest, graph_viz) {
   start_manager();
   start_threads();
   search(20);
-  graph_viz.combine_json();
-  graph_viz.write_to_json("./py/alphazero/dashboard/Graph/graph_jsons/graph_viz_test.json");
+
+  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/graph_viz_test.json";
+  std::ifstream file(file_path);
+  std::string expected_json((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+  EXPECT_EQ(graph_viz.combine_json(), expected_json);
 }
 
 TEST_F(NimManagerTest, uniform_search_viz) {
@@ -309,9 +314,14 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   start_threads();
   search(100);
 
-  graph_viz.combine_json();
-  graph_viz.write_to_json("./py/alphazero/dashboard/Graph/graph_jsons/uniform_search_viz.json");
+  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/uniform_search_viz.json";
+  std::ifstream file(file_path);
+  std::string expected_json((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+  EXPECT_EQ(graph_viz.combine_json(), expected_json);
 }
+
+using TacTacToeManagerTest = ManagerTest<tictactoe::Game>;
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);

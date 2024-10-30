@@ -85,6 +85,29 @@ class Game {
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
                                    const Types::SearchResults&);
+    static std::string state_repr(const State& state) {
+      std::ostringstream ss;
+      core::seat_index_t cp = Rules::get_current_player(state);
+      std::string curr_player_symbol = cp ? "O" : "X";
+      std::string oppo_player_symbol = cp ? "X" : "O";
+
+      for (int row = 0; row < kBoardDimension; ++row) {
+        for (int col = 0; col < kBoardDimension; ++col) {
+          if (state.cur_player_mask & (1 << (3 * row + col))) {
+            ss << curr_player_symbol;
+          } else if (state.full_mask & (1 << (3 * row + col))) {
+            ss << oppo_player_symbol;
+          } else {
+            ss << "_";
+          }
+        }
+        if (row < kBoardDimension - 1) {
+          ss << "\\n";
+        }
+      }
+
+      return ss.str();
+    }
   };
 
   struct InputTensorizor {
