@@ -96,7 +96,7 @@ struct Game {
     }
   };
 
-  struct IO : public core::IOBase<Types, State, MCTSKey> {
+  struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,

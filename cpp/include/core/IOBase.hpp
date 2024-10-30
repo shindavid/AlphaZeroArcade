@@ -2,7 +2,7 @@
 
 namespace core {
 
-template <typename Types, typename State, typename MCTSKey>
+template <typename Types, typename State>
 struct IOBase {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action); }
@@ -14,7 +14,7 @@ struct IOBase {
                                    const Types::SearchResults&) {
       throw std::runtime_error("Not implemented");
     }
-    static std::string compact_state_repr(const MCTSKey& key) {
+    static std::string compact_state_repr(const State& state) {
       throw std::runtime_error("Not implemented");
     }
 };

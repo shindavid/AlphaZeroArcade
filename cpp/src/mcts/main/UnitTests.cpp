@@ -296,7 +296,7 @@ TEST_F(NimManagerTest, graph_viz) {
   start_threads();
   search(20);
 
-  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/graph_viz_test.json";
+  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/nim_uniform.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
@@ -314,7 +314,7 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   start_threads();
   search(100);
 
-  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/uniform_search_viz.json";
+  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/nim_uniform_4_stones.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
+
 namespace nim {
 
 const int kNumPlayers = 2;

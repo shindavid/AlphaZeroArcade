@@ -9,12 +9,11 @@
 namespace core {
 namespace concepts {
 
-template <typename GI, typename GameTypes, typename State, typename MCTSKey>
+template <typename GI, typename GameTypes, typename State>
 concept GameIO = requires(std::ostream& ss, const State& state,
                           const typename GameTypes::player_name_array_t* player_name_array_ptr,
                           const typename GameTypes::PolicyTensor& policy_tensor,
-                          const typename GameTypes::SearchResults& search_results,
-                          const MCTSKey& mcts_key) {
+                          const typename GameTypes::SearchResults& search_results) {
   { GI::action_delimiter() } -> std::same_as<std::string>;
   { GI::action_to_str(core::action_t{}) } -> std::same_as<std::string>;
   { GI::print_state(ss, state, core::action_t{}, player_name_array_ptr) };
@@ -24,7 +23,7 @@ concept GameIO = requires(std::ostream& ss, const State& state,
   // compact_state_repr is used in testing and debugging
   // GraphViz requires Game to have implemented state_repr in IO
   // Some MCTS tests require this to be implemented
-  { GI::compact_state_repr(mcts_key) } -> std::same_as<std::string>;
+  { GI::compact_state_repr(state) } -> std::same_as<std::string>;
 };
 
 }  // namespace concepts
