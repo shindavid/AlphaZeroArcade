@@ -136,11 +136,11 @@ class Node {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int E = 0;  // real or virtual count
-    int mE = 0;  // masked count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
     group::element_t sym = -1;
+    bool eliminated = false;
     expansion_state_t state = kNotExpanded;
   };
 
@@ -211,8 +211,15 @@ class Node {
   void write_results(const ManagerParams& params, group::element_t inv_sym,
                      SearchResults& results) const;
 
+  /*
+   * update_stats() executes f() under the node's mutex, then updates the node's stats by
+   * scanning all children.
+   *
+   * Returns true if a tree-rebuild is needed. This happens if an edge is newly eliminated, and if
+   * earlier elimination of that edge would have caused a different sequence of visits to be taken.
+   */
   template <typename MutexProtectedFunc>
-  void update_stats(MutexProtectedFunc);
+  bool update_stats(MutexProtectedFunc f);
 
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 

@@ -214,8 +214,8 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
     const auto& stats = child->stats();
 
-    if (edge->mE) {
-      counts(action) = edge->mE;
+    if (!edge->eliminated) {
+      counts(action) = edge->E;
       Q(action) = stats.Q(cp);
       Q_sq(action) = stats.Q_sq(cp);
     }
@@ -229,7 +229,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
 
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
-void Node<Game>::update_stats(MutexProtectedFunc func) {
+bool Node<Game>::update_stats(MutexProtectedFunc func) {
   std::unique_lock lock(mutex());
   func();
   lock.unlock();
@@ -254,9 +254,11 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   lock.lock();
 
   // Mask edges that are eliminated
+  bool fresh_elimination = false;
   for (int i = 0; i < n_actions; i++) {
     edge_t* edge = get_edge(i);
-    edge->mE = edge->E * !eliminated_actions[i];
+    fresh_elimination |= !edge->eliminated && eliminated_actions[i];
+    edge->eliminated = eliminated_actions[i];
   }
 
   // Copy Q info
@@ -266,6 +268,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
     stats_.Q_lower_bound = Q_lower_bound;
     stats_.Q_upper_bound = Q_upper_bound;
   }
+
+  return fresh_elimination;
 }
 
 // NOTE: this can be switched to use binary search if we'd like
