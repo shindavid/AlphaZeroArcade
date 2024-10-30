@@ -321,7 +321,23 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   EXPECT_EQ(graph_viz.combine_json(), expected_json);
 }
 
-using TacTacToeManagerTest = ManagerTest<tictactoe::Game>;
+using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
+TEST_F(TicTacToeManagerTest, uniform_search_viz) {
+  util::GraphViz<tictactoe::Game> graph_viz;
+  manager_params().graph_viz = &graph_viz;
+
+  init_manager();
+  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
+  start_manager(initial_actions);
+  start_threads();
+  search(100);
+
+  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/tictactoe_uniform.json";
+  std::ifstream file(file_path);
+  std::string expected_json((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+  EXPECT_EQ(graph_viz.combine_json(), expected_json);
+}
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);

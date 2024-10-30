@@ -229,8 +229,10 @@ inline void SearchThread<Game>::perform_visits() {
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
 
-    if (manager_params_->graph_viz) {
-      build_graph_viz(manager_params_->graph_viz);
+    if IS_MACRO_ENABLED(STORE_STATES) {
+      if (manager_params_->graph_viz) {
+        build_graph_viz(manager_params_->graph_viz);
+      }
     }
   }
 }
