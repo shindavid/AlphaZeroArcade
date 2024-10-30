@@ -14,6 +14,9 @@ if response in ('y', 'Y'):
     os.chdir(repo_root)
 
     os.system(cmd)
+
+    md5_hash = os.popen('md5sum environment.yml').read().split()[0]
+    with open('.environment.yml.md5', 'w') as f:
+        f.write(md5_hash)
 else:
     print('\nExiting without update.')
-

@@ -106,6 +106,10 @@ def setup_conda(env_sh_lines):
         if os.system(f'conda env create -f environment.yml -n {env_name}'):
             raise VerboseSetupException('Failed to create conda environment.')
         print(f'Conda environment {env_name} successfully created!')
+
+        md5_hash = os.popen('md5sum environment.yml').read().split()[0]
+        with open('.environment.yml.md5', 'w') as f:
+            f.write(md5_hash)
     else:
         print(f'Conda environment {env_name} already exists, skipping creation.')
     return env_name

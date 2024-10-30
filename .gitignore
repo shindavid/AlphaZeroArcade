@@ -13,6 +13,7 @@ cmake-build-debug
 
 # env
 .env.sh
+.environment.yml.md5
 
 # cmake build dir
 target
