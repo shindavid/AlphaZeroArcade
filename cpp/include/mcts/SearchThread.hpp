@@ -23,9 +23,6 @@
 GTEST_FORWARD_DECLARE(SearchThreadTest, init_root_node);
 GTEST_FORWARD_DECLARE(SearchThreadTest, something_else);
 
-GTEST_FORWARD_DECLARE(ManagerTest);
-GTEST_FORWARD_DECLARE(ManagerTest, backprop);
-
 namespace mcts {
 
 template <core::concepts::Game Game>
@@ -161,8 +158,6 @@ class SearchThread {
 
   FRIEND_GTEST(SearchThreadTest, init_root_node);
   FRIEND_GTEST(SearchThreadTest, something_else);
-  FRIEND_GTEST(ManagerTest);
-  FRIEND_GTEST(ManagerTest, backprop);
 };
 
 }  // namespace mcts

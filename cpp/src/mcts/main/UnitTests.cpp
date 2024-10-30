@@ -19,12 +19,9 @@
 #include <string>
 #include <vector>
 
-using Game = nim::Game;
-using State = Game::State;
-
-class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
+class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<nim::Game> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using NNEvaluation = mcts::NNEvaluation<nim::Game>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -42,7 +39,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
       ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
       core::seat_index_t cp = item.node()->stable_data().current_player;
 
-      const State& state = item.cur_state();
+      const nim::Game::State& state = item.cur_state();
 
       bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
@@ -77,6 +74,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   bool smart_;
 };
 
+template<core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
   using Manager = mcts::Manager<Game>;
@@ -91,6 +89,7 @@ class ManagerTest : public testing::Test {
   using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
+  using State = Game::State;
 
  public:
   ManagerTest()
@@ -138,7 +137,13 @@ class ManagerTest : public testing::Test {
     } else {
       const char* marker = node->is_terminal() ? "|*" : "|-";
       oss << std::string((num_indent - 1) * 2, ' ') << marker;
-
+    }
+    void start_manager(const std::vector<core::action_t>& initial_actions={}) {
+      manager_->start();
+      for (core::action_t action : initial_actions) {
+        manager_->shared_data()->update_state(action);
+      }
+      this->initial_actions_ = initial_actions;
     }
     oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state)
         << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
@@ -163,7 +168,7 @@ class ManagerTest : public testing::Test {
     }
 
     Node* get_node_by_index(node_pool_index_t index) {
-      return manager_->shared_data_.lookup_table.get_node(index);
+      return manager_->shared_data()->lookup_table.get_node(index);
     }
 
     std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent=0) {
@@ -214,6 +219,12 @@ class ManagerTest : public testing::Test {
      */
     std::string print_tree() {
       StateHistory history;
+
+      history.initialize(typename Game::Rules{});
+      for (core::action_t action : initial_actions_) {
+        Game::Rules::apply(history, action);
+      }
+
       history.update(new_state);
       Game::Rules::apply(history, edge->action);
       new_state = history.current();
@@ -223,7 +234,7 @@ class ManagerTest : public testing::Test {
       << ": " << " E = " << edge->E << ", Action = " << edge->action << std::endl;
       if (edge->child_index != -1) {
         oss << print_tree(edge->child_index, new_state, num_indent + 2);
-      }
+
     }
     return oss.str();
   }
@@ -252,7 +263,8 @@ class ManagerTest : public testing::Test {
   std::vector<core::action_t> initial_actions_;
 };
 
-TEST_F(ManagerTest, uniform_search) {
+using NimManagerTest = ManagerTest<nim::Game>;
+TEST_F(NimManagerTest, uniform_search) {
   init_manager();
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake2};
@@ -282,7 +294,7 @@ TEST_F(ManagerTest, uniform_search) {
             "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n");
 }
 
-TEST_F(ManagerTest, smart_search) {
+TEST_F(NimManagerTest, smart_search) {
   MockNNEvaluationService mock_service(true);
   init_manager(&mock_service);
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
@@ -308,7 +320,7 @@ TEST_F(ManagerTest, smart_search) {
             "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n");
 }
 
-TEST_F(ManagerTest, dumb_search) {
+TEST_F(NimManagerTest, dumb_search) {
   MockNNEvaluationService mock_service(false);
   init_manager(&mock_service);
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
@@ -346,19 +358,20 @@ TEST_F(ManagerTest, dumb_search) {
             "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
 }
 
-TEST_F(ManagerTest, graph_viz) {
-  util::GraphViz<Game> graph_viz;
+
+TEST_F(NimManagerTest, graph_viz) {
+  util::GraphViz<nim::Game> graph_viz;
   manager_params().graph_viz = &graph_viz;
   init_manager();
   start_manager();
   start_threads();
   search(20);
   graph_viz.combine_json();
-  graph_viz.write_to_json("./py/alphazero/dashboard/graphs/graph_viz_test.json");
+  graph_viz.write_to_json("./py/alphazero/dashboard/Graph/graph_jsons/graph_viz_test.json");
 }
 
-TEST_F(ManagerTest, uniform_search_viz) {
-  util::GraphViz<Game> graph_viz;
+TEST_F(NimManagerTest, uniform_search_viz) {
+  util::GraphViz<nim::Game> graph_viz;
   manager_params().graph_viz = &graph_viz;
 
   init_manager();
@@ -366,10 +379,10 @@ TEST_F(ManagerTest, uniform_search_viz) {
                                                  nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
   start_threads();
-  search(10);
+  search(100);
 
   graph_viz.combine_json();
-  graph_viz.write_to_json("./py/alphazero/dashboard/graphs/uniform_search_viz.json");
+  graph_viz.write_to_json("./py/alphazero/dashboard/Graph/graph_jsons/uniform_search_viz.json");
 }
 
 int main(int argc, char** argv) {
