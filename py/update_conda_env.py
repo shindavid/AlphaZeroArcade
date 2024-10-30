@@ -8,6 +8,7 @@ print(cmd)
 
 print('')
 print('This may irreversibly change your conda env.')
+print('Conda packages that you installed manually may be removed.')
 response = input('Are you sure you want to continue? [y/N]: ')
 if response in ('y', 'Y'):
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
