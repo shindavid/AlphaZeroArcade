@@ -56,7 +56,6 @@ class Game {
   using StateHistory = core::SimpleStateHistory<State, Constants::kNumPreviousStatesToEncode>;
   using SymmetryGroup = groups::D4;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
-  using MCTSKey = State;
 
   struct Symmetries {
     static Types::SymmetryMask get_mask(const State& state);

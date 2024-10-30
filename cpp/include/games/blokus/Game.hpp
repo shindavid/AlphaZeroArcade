@@ -50,7 +50,6 @@ class Game {
   using SymmetryGroup = groups::TrivialGroup;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
   using Symmetries = core::TrivialSymmetries;
-  using MCTSKey = State;
 
   struct Rules {
     static void init_state(State&);
