@@ -33,6 +33,8 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
   VN.setZero();
   FPU.setZero();
 
+  LocalPolicyArray eliminated(P.rows());
+
   for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
     /*
      * NOTE: we do NOT grab mutexes here! This means that edge_stats/child_stats can contain
@@ -42,7 +44,8 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
     E(i) = edge->E;
-    mE(i) = edge->mE;
+    eliminated(i) = edge->eliminated;
+    mE(i) = edge->E * !edge->eliminated;
 
     Node* child = node->get_child(edge);
     if (child) {
@@ -82,7 +85,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     Q = (1 - FPU) * Q + FPU * v;
   }
 
-  auto mask = (mE > 0 || E == 0).template cast<float>();
+  auto mask = 1 - eliminated;
 
   /*
    * AlphaZero/KataGo defines Q to be over a [-1, +1] range, but we use a [0, +1] range.
