@@ -26,3 +26,7 @@ with open(file_path, 'w') as fp:
     fp.write('\n'.join(lines[1: -1] + [""]))
 
 print(f"File {file_name} is saved to {file_path}.")
+
+md5_hash = os.popen('md5sum environment.yml').read().split()[0]
+with open('.environment.yml.md5', 'w') as f:
+    f.write(md5_hash)
