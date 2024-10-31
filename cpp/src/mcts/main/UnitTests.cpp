@@ -107,9 +107,11 @@ class ManagerTest : public testing::Test {
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
-    const mcts::SharedData<Game>* shared_data = manager_->shared_data();
-    graph_viz_ = new mcts::GraphViz<Game>(shared_data);
-    manager_->set_post_visit_func([&] { graph_viz_->update(); });
+    if constexpr (IS_MACRO_ENABLED(STORE_STATES)) {
+      const mcts::SharedData<Game>* shared_data = manager_->shared_data();
+      search_log_ = new mcts::SearchLog<Game>(shared_data);
+      manager_->set_post_visit_func([&] { search_log_->update(); });
+    }
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
@@ -133,7 +135,7 @@ class ManagerTest : public testing::Test {
     return manager_->shared_data()->lookup_table.get_node(index);
   }
 
-  mcts::GraphViz<Game>* get_graph_viz() { return graph_viz_; }
+  mcts::SearchLog<Game>* get_search_log() { return search_log_; }
 
   std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent = 0) {
     std::ostringstream oss;
@@ -197,7 +199,7 @@ class ManagerTest : public testing::Test {
   ManagerParams manager_params_;
   Manager* manager_ = nullptr;
   std::vector<core::action_t> initial_actions_;
-  mcts::GraphViz<Game>* graph_viz_ = nullptr;
+  mcts::SearchLog<Game>* search_log_ = nullptr;
 };
 
 using NimManagerTest = ManagerTest<nim::Game>;
@@ -307,7 +309,9 @@ TEST_F(NimManagerTest, graph_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_graph_viz()->combine_json(), expected_json);
+  if (get_search_log()) {
+    EXPECT_EQ(get_search_log()->combine_json(), expected_json);
+  }
 }
 
 TEST_F(NimManagerTest, uniform_search_viz) {
@@ -323,7 +327,9 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_graph_viz()->combine_json(), expected_json);
+  if (get_search_log()) {
+    EXPECT_EQ(get_search_log()->combine_json(), expected_json);
+  }
 }
 
 using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
@@ -339,7 +345,9 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_graph_viz()->combine_json(), expected_json);
+  if (get_search_log()) {
+    EXPECT_EQ(get_search_log()->combine_json(), expected_json);
+  }
 }
 
 

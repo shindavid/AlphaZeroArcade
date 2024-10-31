@@ -49,7 +49,7 @@ inline std::string Graph<Game>::graph_repr() {
   }
 
   template <core::concepts::Game Game>
-  inline std::string GraphViz<Game>::combine_json() {
+  inline std::string SearchLog<Game>::combine_json() {
     std::ostringstream oss;
     oss << "{\n";
     oss << "  \"graphs\": [\n";
@@ -66,7 +66,7 @@ inline std::string Graph<Game>::graph_repr() {
   }
 
   template <core::concepts::Game Game>
-  inline void GraphViz<Game>::write_to_json(const std::string& filename) {
+  inline void SearchLog<Game>::write_to_json(const std::string& filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
       throw std::runtime_error("Failed to open file for writing: " + filename);
@@ -75,7 +75,7 @@ inline std::string Graph<Game>::graph_repr() {
   }
 
   template <core::concepts::Game Game>
-  void GraphViz<Game>::build_graph(Graph<Game>& graph) {
+  void SearchLog<Game>::build_graph(Graph<Game>& graph) {
     using State = Game::State;
     using edge_t = typename Node<Game>::edge_t;
     auto map = shared_data_->lookup_table.map();
@@ -99,15 +99,10 @@ inline std::string Graph<Game>::graph_repr() {
   }
 
   template <core::concepts::Game Game>
-  void GraphViz<Game>::build_graph_viz() {
+  inline void SearchLog<Game>::update() {
     Graph<Game> graph;
     build_graph(graph);
     add_graph(graph);
-  }
-
-  template <core::concepts::Game Game>
-  inline void GraphViz<Game>::update() {
-    build_graph_viz();
   }
 
   }  // namespace mcts

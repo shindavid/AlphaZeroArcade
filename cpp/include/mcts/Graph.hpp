@@ -55,13 +55,12 @@ class Graph {
 };
 
 template <core::concepts::Game Game>
-class GraphViz {
+class SearchLog {
  public:
-  GraphViz(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}
+  SearchLog(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}
 
   void add_graph(const Graph<Game> graph) { graphs.push_back(graph); }
   void build_graph(Graph<Game>& graph);
-  void build_graph_viz();
   void update();
   std::string combine_json();
   void write_to_json(const std::string& filename);
