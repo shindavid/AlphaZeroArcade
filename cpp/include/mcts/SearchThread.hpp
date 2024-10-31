@@ -1,17 +1,17 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
+#include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
+#include <mcts/Graph.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/ActionSelector.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
-#include <util/Graph.hpp>
 #include <util/GTestUtil.hpp>
 
 #include <bitset>
@@ -78,7 +78,7 @@ class SearchThread {
 
   void build_graph_viz();
 
-  void build_graph(util::Graph<Game>& graph);
+  void build_graph(Graph<Game>& graph);
 
  private:
   struct visitation_t {

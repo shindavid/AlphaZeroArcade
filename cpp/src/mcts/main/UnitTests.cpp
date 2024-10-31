@@ -1,6 +1,7 @@
 #include <core/tests/Common.hpp>
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
+#include <mcts/Graph.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
@@ -10,7 +11,6 @@
 #include <mcts/SharedData.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
-#include <util/Graph.hpp>
 
 #include <gtest/gtest.h>
 
@@ -102,7 +102,7 @@ class ManagerTest : public testing::Test {
   }
 
   static ManagerParams create_manager_params() {
-    util::GraphViz<Game>* graph_viz = new util::GraphViz<Game>();
+    mcts::GraphViz<Game>* graph_viz = new mcts::GraphViz<Game>();
     ManagerParams params(mcts::kCompetitive, graph_viz);
     params.no_model = true;
     return params;

@@ -4,7 +4,7 @@
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <util/CppUtil.hpp>
-#include <util/Graph.hpp>
+#include <mcts/Graph.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -16,18 +16,18 @@ namespace mcts {
 
 template <core::concepts::Game Game, bool EnableStorage>
 struct GraphVizPtr {
-  GraphVizPtr(util::GraphViz<Game>* graph_viz = nullptr) {}
+  GraphVizPtr(GraphViz<Game>* graph_viz = nullptr) {}
   bool operator==(const GraphVizPtr& other) const = default;
-  util::GraphViz<Game>* get_graph_viz() const { return nullptr; }
+  GraphViz<Game>* get_graph_viz() const { return nullptr; }
 };
 
 template <core::concepts::Game Game>
 struct GraphVizPtr<Game, true> {
-  GraphVizPtr(util::GraphViz<Game>* graph_viz = nullptr) : graph_viz(graph_viz) {}
+  GraphVizPtr(GraphViz<Game>* graph_viz = nullptr) : graph_viz(graph_viz) {}
   bool operator==(const GraphVizPtr& other) const { return graph_viz == other.graph_viz; }
-  util::GraphViz<Game>* get_graph_viz() const { return graph_viz; }
+  GraphViz<Game>* get_graph_viz() const { return graph_viz; }
 
-  util::GraphViz<Game>* graph_viz = nullptr;
+  GraphViz<Game>* graph_viz = nullptr;
 };
 
 static constexpr bool kStoreStates = IS_MACRO_ENABLED(STORE_STATES);
@@ -39,7 +39,7 @@ static constexpr bool kStoreStates = IS_MACRO_ENABLED(STORE_STATES);
  */
 template <core::concepts::Game Game>
 struct ManagerParams : public NNEvaluationServiceParams, public GraphVizPtr<Game, kStoreStates> {
-  ManagerParams(mcts::Mode, util::GraphViz<Game>* graph_viz = nullptr);
+  ManagerParams(mcts::Mode, GraphViz<Game>* graph_viz = nullptr);
 
   auto make_options_description();
   bool operator==(const ManagerParams& other) const = default;

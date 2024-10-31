@@ -705,7 +705,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
 }
 
 template<core::concepts::Game Game>
-void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
+void SearchThread<Game>::build_graph(Graph<Game>& graph) {
   auto map = shared_data_->lookup_table.map();
 
   for (auto [key, node_ix] : *map) {
@@ -731,7 +731,7 @@ void SearchThread<Game>::build_graph_viz() {
     return;
   }
 
-  util::Graph<Game> graph;
+  Graph<Game> graph;
   build_graph(graph);
   auto graph_viz = manager_params_->get_graph_viz();
   graph_viz->add_graph(graph);
