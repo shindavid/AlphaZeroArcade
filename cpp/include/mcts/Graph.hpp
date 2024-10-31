@@ -3,9 +3,10 @@
 #include <core/concepts/Game.hpp>
 #include <mcts/SharedData.hpp>
 
+#include <boost/json.hpp>
+
 #include <sstream>
 #include <string>
-#include <type_traits>
 
 namespace mcts {
 
@@ -39,7 +40,7 @@ class Graph {
               [](const Edge& a, const Edge& b) { return a.index < b.index; });
   }
 
-  std::string graph_repr();
+  boost::json::object graph_repr();
 
   void add_node(int index, int N, const ValueArray& Q, const std::string& state) {
     nodes.emplace_back(index, N, Q, state);
@@ -62,8 +63,9 @@ class SearchLog {
   void add_graph(const Graph<Game> graph) { graphs.push_back(graph); }
   void build_graph(Graph<Game>& graph);
   void update();
-  std::string combine_json();
-  void write_to_json(const std::string& filename);
+  boost::json::object combine_json();
+  std::string json_str() {return boost::json::serialize(combine_json());};
+  void write_json_to_file(const boost::filesystem::path& filename);
 
  private:
   const SharedData<Game>* shared_data_;

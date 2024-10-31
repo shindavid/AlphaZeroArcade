@@ -303,14 +303,14 @@ TEST_F(NimManagerTest, graph_viz) {
   start_threads();
   search(20);
 
-  // std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/nim_uniform.json";
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
+
   if (get_search_log()) {
-    EXPECT_EQ(get_search_log()->combine_json(), expected_json);
+    EXPECT_EQ(get_search_log()->json_str(), expected_json);
   }
 }
 
@@ -327,8 +327,9 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
+
   if (get_search_log()) {
-    EXPECT_EQ(get_search_log()->combine_json(), expected_json);
+    EXPECT_EQ(get_search_log()->json_str(), expected_json);
   }
 }
 
@@ -345,8 +346,9 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
+
   if (get_search_log()) {
-    EXPECT_EQ(get_search_log()->combine_json(), expected_json);
+    EXPECT_EQ(get_search_log()->json_str(), expected_json);
   }
 }
 
