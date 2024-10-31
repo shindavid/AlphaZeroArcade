@@ -107,8 +107,8 @@ class ManagerTest : public testing::Test {
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
-    mcts::SharedData<Game>* shared_data = manager_->shared_data();
-    mcts::GraphViz<Game>* graph_viz_ = new mcts::GraphViz<Game>(*shared_data);
+    const mcts::SharedData<Game>* shared_data = manager_->shared_data();
+    graph_viz_ = new mcts::GraphViz<Game>(shared_data);
     manager_->set_post_visit_func([&] { graph_viz_->update(); });
   }
 

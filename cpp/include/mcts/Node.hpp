@@ -183,11 +183,13 @@ class Node {
 
     node_pool_index_t alloc_node() { return node_pool_.alloc(1); }
     edge_pool_index_t alloc_edges(int k) { return edge_pool_.alloc(k); }
+    const Node* get_node(node_pool_index_t index) const { return &node_pool_[index]; }
     Node* get_node(node_pool_index_t index) { return &node_pool_[index]; }
+    const edge_t* get_edge(edge_pool_index_t index) const { return &edge_pool_[index]; }
     edge_t* get_edge(edge_pool_index_t index) { return &edge_pool_[index]; }
 
     using map_t = std::unordered_map<MCTSKey, node_pool_index_t>;
-    map_t* map() { return &map_; }
+    const map_t* map() const { return &map_; }
 
     int get_random_mutex_id() const;
     std::mutex& get_mutex(int mutex_id) { return mutex_pool_[mutex_id]; }

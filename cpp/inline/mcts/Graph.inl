@@ -78,10 +78,10 @@ inline std::string Graph<Game>::graph_repr() {
   void GraphViz<Game>::build_graph(Graph<Game>& graph) {
     using State = Game::State;
     using edge_t = typename Node<Game>::edge_t;
-    auto map = shared_data_.lookup_table.map();
+    auto map = shared_data_->lookup_table.map();
 
     for (auto [key, node_ix] : *map) {
-      Node<Game>* node = shared_data_.lookup_table.get_node(node_ix);
+      const Node<Game>* node = shared_data_->lookup_table.get_node(node_ix);
       const State* state = node->stable_data().get_state();
       graph.add_node(node_ix, node->stats().RN, node->stats().Q,
                      Game::IO::compact_state_repr(*state));

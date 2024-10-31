@@ -57,7 +57,7 @@ class Graph {
 template <core::concepts::Game Game>
 class GraphViz {
  public:
-  GraphViz(SharedData<Game>& shared_data) : shared_data_(shared_data) {}
+  GraphViz(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}
 
   void add_graph(const Graph<Game> graph) { graphs.push_back(graph); }
   void build_graph(Graph<Game>& graph);
@@ -67,7 +67,7 @@ class GraphViz {
   void write_to_json(const std::string& filename);
 
  private:
-  SharedData<Game>& shared_data_;
+  const SharedData<Game>* shared_data_;
   std::vector<Graph<Game>> graphs;
 };
 
