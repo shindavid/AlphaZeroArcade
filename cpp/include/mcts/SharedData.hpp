@@ -42,7 +42,7 @@ struct SharedData {
     node_pool_index_t node_index = -1;
   };
 
-  SharedData(const ManagerParams& manager_params, int manager_id);
+  SharedData(const ManagerParams& manager_params, int mgr_id);
   SharedData(const SharedData&) = delete;
   SharedData& operator=(const SharedData&) = delete;
 

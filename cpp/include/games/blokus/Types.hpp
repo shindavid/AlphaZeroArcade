@@ -23,10 +23,10 @@ char color_to_char(color_t c);
 struct Location {
   Location() = default;
 
-  template<typename R, typename C> Location(R row, C col) : row(row), col(col) {}
+  template<typename R, typename C> Location(R r, C c) : row(r), col(c) {}
 
   auto operator<=>(const Location& other) const = default;
-  void set(int8_t row, int8_t col);
+  void set(int8_t r, int8_t c);
   bool valid() const;
   std::string to_string() const;
   static Location from_string(const std::string& s);  // return invalid Location on failure

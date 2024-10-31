@@ -19,8 +19,8 @@ void test_zero_out() {
   for (int i = 0; i < N; ++i) {
     std::array<T, 10> a = orig_a;
     util::Random::zero_out(a.begin(), a.end(), 4);
-    for (size_t i = 0; i < a.size(); ++i) {
-      if (a[i]) counts[i]++;
+    for (size_t j = 0; j < a.size(); ++j) {
+      if (a[j]) counts[j]++;
     }
   }
   for (size_t i = 0; i < counts.size(); ++i) {
@@ -46,8 +46,8 @@ void test_alloc_pool_helper(Pool& pool, int* sizes, int num_sizes) {
   for (int i = 0; i < num_sizes; ++i) {
     int size = sizes[i];
     util::pool_index_t idx = pool.alloc(size);
-    for (int i = 0; i < size; ++i) {
-      pool[idx + i] = x++;
+    for (int j = 0; j < size; ++j) {
+      pool[idx + j] = x++;
     }
   }
 

@@ -240,15 +240,15 @@ inline mask_t Game::get_some_moves(mask_t P, mask_t mask, int dir) {
 #else
   // sequential algorithm
   // 7 << + 7 >> + 6 & + 12 |
-  mask_t flip;
+  mask_t flipped;
 
-  flip = (((P << dir) | (P >> dir)) & mask);
-  flip |= (((flip << dir) | (flip >> dir)) & mask);
-  flip |= (((flip << dir) | (flip >> dir)) & mask);
-  flip |= (((flip << dir) | (flip >> dir)) & mask);
-  flip |= (((flip << dir) | (flip >> dir)) & mask);
-  flip |= (((flip << dir) | (flip >> dir)) & mask);
-  return (flip << dir) | (flip >> dir);
+  flipped = (((P << dir) | (P >> dir)) & mask);
+  flipped |= (((flipped << dir) | (flipped >> dir)) & mask);
+  flipped |= (((flipped << dir) | (flipped >> dir)) & mask);
+  flipped |= (((flipped << dir) | (flipped >> dir)) & mask);
+  flipped |= (((flipped << dir) | (flipped >> dir)) & mask);
+  flipped |= (((flipped << dir) | (flipped >> dir)) & mask);
+  return (flipped << dir) | (flipped >> dir);
 
 #endif
 }

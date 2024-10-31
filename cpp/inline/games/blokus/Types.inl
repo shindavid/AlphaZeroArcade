@@ -11,14 +11,14 @@ namespace detail {
 struct PieceMaskRange {
   struct Iterator {
    public:
-    explicit Iterator(uint32_t mask) : mask(mask) {}
+    explicit Iterator(uint32_t mask) : mask_(mask) {}
 
-    bool operator==(Iterator other) const { return mask == other.mask; }
-    bool operator!=(Iterator other) const { return mask != other.mask; }
-    int operator*() const { return std::countr_zero(mask); }
+    bool operator==(Iterator other) const { return mask_ == other.mask_; }
+    bool operator!=(Iterator other) const { return mask_ != other.mask_; }
+    int operator*() const { return std::countr_zero(mask_); }
 
     Iterator& operator++() {
-      mask &= mask - 1;
+      mask_ &= mask_ - 1;
       return *this;
     }
 
@@ -29,16 +29,16 @@ struct PieceMaskRange {
     }
 
    private:
-    uint32_t mask;
+    uint32_t mask_;
   };
 
-  PieceMaskRange(uint32_t mask) : mask(mask) {}
+  PieceMaskRange(uint32_t mask) : mask_(mask) {}
 
-  Iterator begin() const { return Iterator(mask); }
+  Iterator begin() const { return Iterator(mask_); }
   Iterator end() const { return Iterator(0); }
 
  private:
-  uint32_t mask;
+  uint32_t mask_;
 };
 
 struct BitBoardRange {
@@ -218,9 +218,9 @@ inline char color_to_char(color_t c) {
   }
 }
 
-inline void Location::set(int8_t row, int8_t col) {
-  this->row = row;
-  this->col = col;
+inline void Location::set(int8_t r, int8_t c) {
+  this->row = r;
+  this->col = c;
 }
 
 inline bool Location::valid() const { return row >= 0 && col >= 0; }
@@ -266,7 +266,7 @@ inline BitBoard BitBoard::operator|(const Board& other) const {
   for (i = 0; i < other.start_row(); ++i) {
     result.rows_[i] = rows_[i];
   }
-  for (int i = other.start_row(); i < other.end_row(); ++i) {
+  for (i = other.start_row(); i < other.end_row(); ++i) {
     result.rows_[i] = rows_[i] | other.get_row(i);
   }
   for (i = other.end_row(); i < kBoardDimension; ++i) {

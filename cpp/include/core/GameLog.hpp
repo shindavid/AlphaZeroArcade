@@ -11,7 +11,7 @@
 namespace core {
 
 struct ShapeInfo {
-  template <eigen_util::concepts::FTensor Tensor> void init(const char* name, int target_index);
+  template <eigen_util::concepts::FTensor Tensor> void init(const char* nm, int target_idx);
   ~ShapeInfo();
 
   const char* name = nullptr;

@@ -11,12 +11,12 @@
 namespace core {
 
 template <eigen_util::concepts::FTensor Tensor>
-void ShapeInfo::init(const char* name, int target_index) {
+void ShapeInfo::init(const char* nm, int target_idx) {
   using Shape = Tensor::Dimensions;
-  this->name = name;
+  this->name = nm;
   this->dims = new int[Shape::count];
   this->num_dims = Shape::count;
-  this->target_index = target_index;
+  this->target_index = target_idx;
 
   Shape shape;
   for (int i = 0; i < Shape::count; ++i) {
@@ -479,8 +479,6 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
   using GameLog = core::GameLog<Game>;
   using Header = GameLog::Header;
   using pos_index_t = GameLog::pos_index_t;
-  using tensor_index_t = GameLog::tensor_index_t;
-  using sparse_tensor_entry_t = GameLog::sparse_tensor_entry_t;
 
   util::release_assert(!entries_.empty(), "Illegal serialization of empty GameLogWriter");
   int num_entries = entries_.size();
