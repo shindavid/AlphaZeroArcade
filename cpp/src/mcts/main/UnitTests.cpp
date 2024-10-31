@@ -96,20 +96,20 @@ class ManagerTest : public testing::Test {
   ManagerTest() : manager_params_(create_manager_params()) {}
 
   ~ManagerTest() override {
-    auto graph_viz = manager_params_.get_graph_viz();
-    delete graph_viz;
     // delete manager_;
   }
 
   static ManagerParams create_manager_params() {
-    mcts::GraphViz<Game>* graph_viz = new mcts::GraphViz<Game>();
-    ManagerParams params(mcts::kCompetitive, graph_viz);
+    ManagerParams params(mcts::kCompetitive);
     params.no_model = true;
     return params;
   }
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
+    mcts::SharedData<Game>* shared_data = manager_->shared_data();
+    mcts::GraphViz<Game>* graph_viz_ = new mcts::GraphViz<Game>(*shared_data);
+    manager_->set_post_visit_func([&] { graph_viz_->update(); });
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
@@ -132,6 +132,8 @@ class ManagerTest : public testing::Test {
   Node* get_node_by_index(node_pool_index_t index) {
     return manager_->shared_data()->lookup_table.get_node(index);
   }
+
+  mcts::GraphViz<Game>* get_graph_viz() { return graph_viz_; }
 
   std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent = 0) {
     std::ostringstream oss;
@@ -195,6 +197,7 @@ class ManagerTest : public testing::Test {
   ManagerParams manager_params_;
   Manager* manager_ = nullptr;
   std::vector<core::action_t> initial_actions_;
+  mcts::GraphViz<Game>* graph_viz_ = nullptr;
 };
 
 using NimManagerTest = ManagerTest<nim::Game>;
@@ -291,7 +294,7 @@ TEST_F(NimManagerTest, dumb_search) {
             "    |-Edge 11:  E = 1, Action = 0\n"
             "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
 }
-#ifdef STORE_STATES
+
 TEST_F(NimManagerTest, graph_viz) {
   init_manager();
   start_manager();
@@ -304,7 +307,7 @@ TEST_F(NimManagerTest, graph_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_manager_params().get_graph_viz()->combine_json(), expected_json);
+  EXPECT_EQ(get_graph_viz()->combine_json(), expected_json);
 }
 
 TEST_F(NimManagerTest, uniform_search_viz) {
@@ -320,7 +323,7 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_manager_params().get_graph_viz()->combine_json(), expected_json);
+  EXPECT_EQ(get_graph_viz()->combine_json(), expected_json);
 }
 
 using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
@@ -336,9 +339,9 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_manager_params().get_graph_viz()->combine_json(), expected_json);
+  EXPECT_EQ(get_graph_viz()->combine_json(), expected_json);
 }
-#endif
+
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);

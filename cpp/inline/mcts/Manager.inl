@@ -393,4 +393,11 @@ void Manager<Game>::init_profiling_dir(const std::string& profiling_dir) {
   bf::create_directories(path);
 }
 
+template <core::concepts::Game Game>
+void Manager<Game>::set_post_visit_func(std::function<void()> func) {
+  for (SearchThread* thread : search_threads_) {
+    thread->set_post_visit_func(func);
+  }
+}
+
 }  // namespace mcts

@@ -72,6 +72,7 @@ class Manager {
   void set_player_data(void* player_data) { player_data_ = player_data; }
   void* get_player_data() const { return player_data_; }
   SharedData* shared_data() { return &shared_data_; }
+  void set_post_visit_func(std::function<void()> func);
 
  private:
   using search_thread_vec_t = std::vector<SearchThread*>;

@@ -3,7 +3,6 @@
 #include <core/concepts/Game.hpp>
 #include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
-#include <mcts/Graph.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
@@ -79,10 +78,6 @@ class SearchThread {
   using func_t = std::function<void()>;
   void post_visit_func() { post_visit_func_(); }
   void set_post_visit_func(func_t f) { post_visit_func_ = f; }
-
-  void build_graph_viz();
-
-  void build_graph(Graph<Game>& graph);
 
  private:
   struct visitation_t {

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <core/concepts/Game.hpp>
+#include <mcts/SharedData.hpp>
 
 #include <sstream>
+#include <string>
 #include <type_traits>
 
 namespace mcts {
@@ -11,18 +13,20 @@ template <core::concepts::Game Game>
 class Graph {
  protected:
   using ValueArray = Game::Types::ValueArray;
+  using node_index_t = int;
+  using edge_index_t = int;
 
   struct Node {
-    int index;
+    node_index_t index;
     int N;
     ValueArray Q;
     std::string state;
   };
 
   struct Edge {
-    int index;
-    int from;
-    int to;
+    edge_index_t index;
+    node_index_t from;
+    node_index_t to;
     int E;
     core::action_t action;
   };
@@ -53,15 +57,20 @@ class Graph {
 template <core::concepts::Game Game>
 class GraphViz {
  public:
+  GraphViz(SharedData<Game>& shared_data) : shared_data_(shared_data) {}
+
   void add_graph(const Graph<Game> graph) { graphs.push_back(graph); }
-
+  void build_graph(Graph<Game>& graph);
+  void build_graph_viz();
+  void update();
   std::string combine_json();
-
   void write_to_json(const std::string& filename);
 
  private:
+  SharedData<Game>& shared_data_;
   std::vector<Graph<Game>> graphs;
 };
-}  // namespace util
+
+}  // namespace mcts
 
 #include <inline/mcts/Graph.inl>
