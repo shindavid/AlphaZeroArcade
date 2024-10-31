@@ -23,7 +23,7 @@ from IPython.display import display
 from Graph import Graph
 
 # Load the combined JSON file with all snapshots
-with open('graph_jsons/tictactoe_uniform.json', 'r') as f:
+with open('/home/lichensong/projects/AlphaZeroArcade/goldenfiles/mcts_tests/tictactoe_uniform.json', 'r') as f:
     graph_data = json.load(f)
 
 # Extract the list of snapshots from the JSON
