@@ -76,6 +76,10 @@ class SearchThread {
 
   void dump_profiling_stats() { profiler_.dump(64); }
 
+  using func_t = std::function<void()>;
+  void post_visit_func() { post_visit_func_(); }
+  void set_post_visit_func(func_t f) { post_visit_func_ = f; }
+
   void build_graph_viz();
 
   void build_graph(Graph<Game>& graph);
@@ -150,6 +154,7 @@ class SearchThread {
   search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
+  func_t post_visit_func_ = []() {};
 
   FRIEND_GTEST(SearchThreadTest, init_root_node);
   FRIEND_GTEST(SearchThreadTest, something_else);

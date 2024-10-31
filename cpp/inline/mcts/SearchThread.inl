@@ -229,6 +229,7 @@ inline void SearchThread<Game>::perform_visits() {
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
     build_graph_viz();
+    post_visit_func();
   }
 }
 
