@@ -179,9 +179,10 @@ class ManagerTest : public testing::Test {
    * - Indentation is used to represent the tree structure, with each level of depth indented
    * further.
    */
+  using Rules = Game::Rules;
   std::string print_tree() {
     StateHistory history;
-    history.initialize(typename Game::Rules{});
+    history.initialize(Rules{});
     for (core::action_t action : initial_actions_) {
       Game::Rules::apply(history, action);
     }
@@ -297,7 +298,9 @@ TEST_F(NimManagerTest, graph_viz) {
   start_threads();
   search(20);
 
-  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/nim_uniform.json";
+  // std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/nim_uniform.json";
+  boost::filesystem::path file_path =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
@@ -312,7 +315,8 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   start_threads();
   search(100);
 
-  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/nim_uniform_4_stones.json";
+  boost::filesystem::path file_path =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
@@ -326,7 +330,9 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   start_manager(initial_actions);
   start_threads();
   search(100);
-  std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/tictactoe_uniform.json";
+
+  boost::filesystem::path file_path =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());

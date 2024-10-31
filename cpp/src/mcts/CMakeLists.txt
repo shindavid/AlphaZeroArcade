@@ -1,3 +1,5 @@
+# this is a temporary hck until David restructures the cmake files
+
 set(COMMON_SOURCES
     ../games/tictactoe/Game.cpp
     ../games/tictactoe/PerfectStrategyLookupTable.cpp
