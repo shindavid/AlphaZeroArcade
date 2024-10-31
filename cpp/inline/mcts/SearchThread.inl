@@ -228,7 +228,7 @@ inline void SearchThread<Game>::perform_visits() {
     raw_history_ = root_info.history_array[group::kIdentity];
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
-    build_graph_viz(manager_params_->graph_viz);
+    build_graph_viz();
   }
 }
 
@@ -704,23 +704,14 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
   }
 }
 
-template <core::concepts::Game Game>
+template<core::concepts::Game Game>
 void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
-  if IS_MACRO_ENABLED (STORE_STATES) {
-    return;
-  }
-
-  if (!manager_params_->graph_viz) {
-    return;
-  }
-
   auto map = shared_data_->lookup_table.map();
 
   for (auto [key, node_ix] : *map) {
     Node* node = shared_data_->lookup_table.get_node(node_ix);
     const State* state = node->stable_data().get_state();
-    graph.add_node(node_ix, node->stats().RN, node->stats().Q,
-                   Game::IO::compact_state_repr(*state));
+    graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::compact_state_repr(*state));
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       edge_t* edge = node->get_edge(i);
 
@@ -733,4 +724,17 @@ void SearchThread<Game>::build_graph(util::Graph<Game>& graph) {
     }
   }
 }
+
+template<core::concepts::Game Game>
+void SearchThread<Game>::build_graph_viz() {
+  if (manager_params_->get_graph_viz() == nullptr) {
+    return;
+  }
+
+  util::Graph<Game> graph;
+  build_graph(graph);
+  auto graph_viz = manager_params_->get_graph_viz();
+  graph_viz->add_graph(graph);
+}
+
 }  // namespace mcts

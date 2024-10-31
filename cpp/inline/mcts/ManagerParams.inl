@@ -9,7 +9,8 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline ManagerParams<Game>::ManagerParams(mcts::Mode mode) {
+inline ManagerParams<Game>::ManagerParams(mcts::Mode mode, util::GraphViz<Game>* graph_viz)
+    : GraphVizPtr<Game, kStoreStates>(graph_viz) {
   if (mode == mcts::kCompetitive) {
     dirichlet_mult = 0;
     dirichlet_alpha_factor = 0;

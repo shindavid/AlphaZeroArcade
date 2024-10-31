@@ -14,14 +14,32 @@
 
 namespace mcts {
 
+template <core::concepts::Game Game, bool EnableStorage>
+struct GraphVizPtr {
+  GraphVizPtr(util::GraphViz<Game>* graph_viz = nullptr) {}
+  bool operator==(const GraphVizPtr& other) const = default;
+  util::GraphViz<Game>* get_graph_viz() const { return nullptr; }
+};
+
+template <core::concepts::Game Game>
+struct GraphVizPtr<Game, true> {
+  GraphVizPtr(util::GraphViz<Game>* graph_viz = nullptr) : graph_viz(graph_viz) {}
+  bool operator==(const GraphVizPtr& other) const { return graph_viz == other.graph_viz; }
+  util::GraphViz<Game>* get_graph_viz() const { return graph_viz; }
+
+  util::GraphViz<Game>* graph_viz = nullptr;
+};
+
+static constexpr bool kStoreStates = IS_MACRO_ENABLED(STORE_STATES);
+
 /*
  * ManagerParams pertains to a single mcts::Manager instance.
  *
  * By contrast, SearchParams pertains to each individual search() call.
  */
 template <core::concepts::Game Game>
-struct ManagerParams : public NNEvaluationServiceParams {
-  ManagerParams(mcts::Mode);
+struct ManagerParams : public NNEvaluationServiceParams, public GraphVizPtr<Game, kStoreStates> {
+  ManagerParams(mcts::Mode, util::GraphViz<Game>* graph_viz = nullptr);
 
   auto make_options_description();
   bool operator==(const ManagerParams& other) const = default;
@@ -58,8 +76,6 @@ struct ManagerParams : public NNEvaluationServiceParams {
    * create action-value targets.
    */
   bool force_evaluate_all_root_children = false;
-
-  util::GraphViz<Game>* graph_viz = nullptr;
 };
 
 }  // namespace mcts

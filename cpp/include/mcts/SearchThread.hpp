@@ -1,10 +1,5 @@
 #pragma once
 
-#include <bitset>
-#include <mutex>
-#include <thread>
-#include <vector>
-
 #include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
@@ -19,6 +14,10 @@
 #include <util/Graph.hpp>
 #include <util/GTestUtil.hpp>
 
+#include <bitset>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 GTEST_FORWARD_DECLARE(SearchThreadTest, init_root_node);
 GTEST_FORWARD_DECLARE(SearchThreadTest, something_else);
@@ -77,11 +76,7 @@ class SearchThread {
 
   void dump_profiling_stats() { profiler_.dump(64); }
 
-  void build_graph_viz(util::GraphViz<Game>* graph_viz) {
-    util::Graph<Game> graph;
-    build_graph(graph);
-    graph_viz->add_graph(graph);
-  }
+  void build_graph_viz();
 
   void build_graph(util::Graph<Game>& graph);
 

@@ -93,98 +93,102 @@ class ManagerTest : public testing::Test {
   using State = Game::State;
 
  public:
-  ManagerTest()
-      : manager_params_(create_manager_params()) {}
+  ManagerTest() : manager_params_(create_manager_params()) {}
 
-  ~ManagerTest() override { delete manager_; }
+  ~ManagerTest() override {
+    auto graph_viz = manager_params_.get_graph_viz();
+    delete graph_viz;
+    // delete manager_;
+  }
 
   static ManagerParams create_manager_params() {
-    ManagerParams params(mcts::kCompetitive);
+    util::GraphViz<Game>* graph_viz = new util::GraphViz<Game>();
+    ManagerParams params(mcts::kCompetitive, graph_viz);
     params.no_model = true;
     return params;
-    }
+  }
 
-    void init_manager(Service* service=nullptr) {
-      manager_ = new Manager(manager_params_, service);
-    }
+  void init_manager(Service* service = nullptr) {
+    manager_ = new Manager(manager_params_, service);
+  }
 
-    void start_manager(const std::vector<core::action_t>& initial_actions={}) {
-      manager_->start();
-      for (core::action_t action : initial_actions) {
-        manager_->shared_data()->update_state(action);
+  void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
+    manager_->start();
+    for (core::action_t action : initial_actions) {
+      manager_->shared_data()->update_state(action);
+    }
+    this->initial_actions_ = initial_actions;
+  }
+
+  ManagerParams& manager_params() { return manager_params_; }
+
+  void start_threads() { manager_->start_threads(); }
+
+  void search(int num_searches = 0) {
+    mcts::SearchParams search_params(num_searches, true);
+    manager_->search(search_params);
+  }
+
+  Node* get_node_by_index(node_pool_index_t index) {
+    return manager_->shared_data()->lookup_table.get_node(index);
+  }
+
+  std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent = 0) {
+    std::ostringstream oss;
+    Node* node = get_node_by_index(node_ix);
+
+    if (num_indent == 0) {
+      oss << std::string(num_indent * 2, ' ');
+    } else {
+      const char* marker = node->is_terminal() ? "|*" : "|-";
+      oss << std::string((num_indent - 1) * 2, ' ') << marker;
+    }
+    oss << "Node " << node_ix << ": " << Game::IO::compact_state_repr(prev_state)
+        << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
+
+    for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
+      edge_t* edge = node->get_edge(i);
+
+      if (edge->child_index == -1) {
+        continue;
       }
-      this->initial_actions_ = initial_actions;
-    }
+      edge_pool_index_t edge_index = i + node->get_first_edge_index();
 
-    ManagerParams& manager_params() { return manager_params_; }
-
-    void start_threads() {
-      manager_->start_threads();
-    }
-
-    void search(int num_searches = 0){
-      mcts::SearchParams search_params(num_searches, true);
-      manager_->search(search_params);
-    }
-
-    Node* get_node_by_index(node_pool_index_t index) {
-      return manager_->shared_data()->lookup_table.get_node(index);
-    }
-
-    std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent=0) {
-      std::ostringstream oss;
-      Node* node = get_node_by_index(node_ix);
-
-      if (num_indent == 0) {
-        oss << std::string(num_indent * 2, ' ');
-      } else {
-        const char* marker = node->is_terminal() ? "|*" : "|-";
-        oss << std::string((num_indent - 1) * 2, ' ') << marker;
-      }
-      oss << "Node " << node_ix << ": " << Game::IO::compact_state_repr(prev_state)
-          << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
-
-      for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
-        edge_t* edge = node->get_edge(i);
-
-        if (edge->child_index == -1) {
-          continue;
-        }
-        edge_pool_index_t edge_index = i + node->get_first_edge_index();
-
-        State new_state = prev_state;
-        StateHistory history;
-        history.update(new_state);
-        Game::Rules::apply(history, edge->action);
-        new_state = history.current();
-
-        oss << std::string(num_indent * 2, ' ') << "|-"
-        << "Edge " << edge_index
-        << ": " << " E = " << edge->E << ", Action = " << edge->action << std::endl;
-        if (edge->child_index != -1) {
-          oss << print_tree(edge->child_index, new_state, num_indent + 2);
-        }
-      }
-      return oss.str();
-    }
-
-    /*
-     * This function prints the tree structure starting from root.
-     * It recursively traverses the tree and prints each node and its edges.
-     * The format is as follows:
-     * - Each node is printed with its index, state representation, RN (visit count), and Q values.
-     * - Each edge is printed with its index, visit count (E), and action.
-     * - Indentation is used to represent the tree structure, with each level of depth indented
-     * further.
-     */
-    std::string print_tree() {
+      State new_state = prev_state;
       StateHistory history;
-      history.initialize(typename Game::Rules{});
-      for (core::action_t action : initial_actions_) {
-        Game::Rules::apply(history, action);
+      history.update(new_state);
+      Game::Rules::apply(history, edge->action);
+      new_state = history.current();
+
+      oss << std::string(num_indent * 2, ' ') << "|-"
+          << "Edge " << edge_index << ": " << " E = " << edge->E << ", Action = " << edge->action
+          << std::endl;
+      if (edge->child_index != -1) {
+        oss << print_tree(edge->child_index, new_state, num_indent + 2);
       }
-      return print_tree(0, history.current());
     }
+    return oss.str();
+  }
+
+  /*
+   * This function prints the tree structure starting from root.
+   * It recursively traverses the tree and prints each node and its edges.
+   * The format is as follows:
+   * - Each node is printed with its index, state representation, RN (visit count), and Q values.
+   * - Each edge is printed with its index, visit count (E), and action.
+   * - Indentation is used to represent the tree structure, with each level of depth indented
+   * further.
+   */
+  std::string print_tree() {
+    StateHistory history;
+    history.initialize(typename Game::Rules{});
+    for (core::action_t action : initial_actions_) {
+      Game::Rules::apply(history, action);
+    }
+    return print_tree(0, history.current());
+  }
+
+  ManagerParams& get_manager_params() { return manager_params_; }
 
  private:
   ManagerParams manager_params_;
@@ -286,11 +290,8 @@ TEST_F(NimManagerTest, dumb_search) {
             "    |-Edge 11:  E = 1, Action = 0\n"
             "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
 }
-
-
+#ifdef STORE_STATES
 TEST_F(NimManagerTest, graph_viz) {
-  util::GraphViz<nim::Game> graph_viz;
-  manager_params().graph_viz = &graph_viz;
   init_manager();
   start_manager();
   start_threads();
@@ -300,16 +301,13 @@ TEST_F(NimManagerTest, graph_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(graph_viz.combine_json(), expected_json);
+  EXPECT_EQ(get_manager_params().get_graph_viz()->combine_json(), expected_json);
 }
 
 TEST_F(NimManagerTest, uniform_search_viz) {
-  util::GraphViz<nim::Game> graph_viz;
-  manager_params().graph_viz = &graph_viz;
-
   init_manager();
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake2};
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
   start_threads();
   search(100);
@@ -318,26 +316,23 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(graph_viz.combine_json(), expected_json);
+  EXPECT_EQ(get_manager_params().get_graph_viz()->combine_json(), expected_json);
 }
 
 using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
 TEST_F(TicTacToeManagerTest, uniform_search_viz) {
-  util::GraphViz<tictactoe::Game> graph_viz;
-  manager_params().graph_viz = &graph_viz;
-
   init_manager();
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   start_manager(initial_actions);
   start_threads();
   search(100);
-
   std::string file_path = "./py/alphazero/dashboard/Graph/graph_jsons/tictactoe_uniform.json";
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  EXPECT_EQ(graph_viz.combine_json(), expected_json);
+  EXPECT_EQ(get_manager_params().get_graph_viz()->combine_json(), expected_json);
 }
+#endif
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);
