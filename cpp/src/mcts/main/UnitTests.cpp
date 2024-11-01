@@ -93,7 +93,7 @@ class ManagerTest : public testing::Test {
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using State = Game::State;
 
-  static_assert(Node::kStoreStates, "state-storage required for search-viz tests");
+  static_assert(Node::kStoreStates, "state-storage required for search-log tests");
 
  public:
   ManagerTest() : manager_params_(create_manager_params()) {}
@@ -298,7 +298,7 @@ TEST_F(NimManagerTest, dumb_search) {
             "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
 }
 
-TEST_F(NimManagerTest, graph_viz) {
+TEST_F(NimManagerTest, search_log) {
   init_manager();
   start_manager();
   start_threads();
@@ -313,7 +313,7 @@ TEST_F(NimManagerTest, graph_viz) {
   EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
-TEST_F(NimManagerTest, uniform_search_viz) {
+TEST_F(NimManagerTest, uniform_search_log) {
   init_manager();
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
@@ -331,7 +331,7 @@ TEST_F(NimManagerTest, uniform_search_viz) {
 }
 
 using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
-TEST_F(TicTacToeManagerTest, uniform_search_viz) {
+TEST_F(TicTacToeManagerTest, uniform_search_log) {
   init_manager();
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   start_manager(initial_actions);
