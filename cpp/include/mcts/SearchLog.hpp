@@ -44,7 +44,7 @@ class SearchLog {
                 [](const Edge& a, const Edge& b) { return a.index < b.index; });
     }
 
-    boost::json::object graph_repr();
+    boost::json::object graph_repr() const;
 
     void add_node(node_index_t index, int N, const ValueArray& Q, const std::string& state) {
       nodes.emplace_back(index, N, Q, state);

@@ -5,7 +5,7 @@ namespace mcts {
 template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph& graph) {
   using State = Game::State;
-  using edge_t = typename mcts::Node<Game>::edge_t;
+  using edge_t = mcts::Node<Game>::edge_t;
   using mcts_Node = mcts::Node<Game>;
   auto map = shared_data_->lookup_table.map();
 
@@ -31,13 +31,14 @@ template <core::concepts::Game Game>
 inline void SearchLog<Game>::update() {
   Graph graph;
   build_graph(graph);
+  graph.sort_by_index();
   add_graph(graph);
 }
 
 template <core::concepts::Game Game>
 inline boost::json::object SearchLog<Game>::combine_json() {
   boost::json::array graphs_array;
-  for (auto graph : graphs) {
+  for (const auto& graph : graphs) {
     graphs_array.push_back(graph.graph_repr());
   }
 
@@ -60,9 +61,7 @@ inline void SearchLog<Game>::write_json_to_file(const boost::filesystem::path& f
 }
 
 template <core::concepts::Game Game>
-inline boost::json::object SearchLog<Game>::Graph::graph_repr() {
-  sort_by_index();
-
+inline boost::json::object SearchLog<Game>::Graph::graph_repr() const {
   boost::json::object graph_json;
 
   // Nodes
