@@ -6,11 +6,11 @@ template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph& graph) {
   using State = Game::State;
   using edge_t = mcts::Node<Game>::edge_t;
-  using mcts_Node = mcts::Node<Game>;
+  using Node = mcts::Node<Game>;
   auto map = shared_data_->lookup_table.map();
 
   for (auto [key, node_ix] : *map) {
-    const mcts_Node* node = shared_data_->lookup_table.get_node(node_ix);
+    const Node* node = shared_data_->lookup_table.get_node(node_ix);
     const State* state = node->stable_data().get_state();
     graph.add_node(node_ix, node->stats().RN, node->stats().Q,
                    Game::IO::compact_state_repr(*state));
@@ -79,7 +79,7 @@ inline boost::json::object SearchLog<Game>::Graph::graph_repr() const {
 
   // Edges
   boost::json::array edges_array;
-  for (auto& edge : edges) {
+  for (const auto& edge : edges) {
     boost::json::object edge_obj;
     edge_obj["index"] = edge.index;
     edge_obj["from"] = edge.from;
