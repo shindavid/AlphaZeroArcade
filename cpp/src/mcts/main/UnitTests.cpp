@@ -299,6 +299,7 @@ TEST_F(NimManagerTest, dumb_search) {
 
 TEST_F(NimManagerTest, graph_viz) {
   init_manager();
+  if (!get_search_log()) return;
   start_manager();
   start_threads();
   search(20);
@@ -309,13 +310,12 @@ TEST_F(NimManagerTest, graph_viz) {
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
 
-  if (get_search_log()) {
-    EXPECT_EQ(get_search_log()->json_str(), expected_json);
-  }
+  EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
 TEST_F(NimManagerTest, uniform_search_viz) {
   init_manager();
+  if (!get_search_log()) return;
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
@@ -328,14 +328,13 @@ TEST_F(NimManagerTest, uniform_search_viz) {
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
 
-  if (get_search_log()) {
-    EXPECT_EQ(get_search_log()->json_str(), expected_json);
-  }
+  EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
 using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
 TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   init_manager();
+  if (!get_search_log()) return;
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   start_manager(initial_actions);
   start_threads();
@@ -347,9 +346,7 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
 
-  if (get_search_log()) {
-    EXPECT_EQ(get_search_log()->json_str(), expected_json);
-  }
+  EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
 
