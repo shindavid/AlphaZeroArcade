@@ -2,6 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/IOBase.hpp>
@@ -28,7 +29,7 @@
 namespace chess {
 
 struct Game {
-  struct Constants {
+  struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = chess::kNumPlayers;
     static constexpr int kNumActions = chess::kNumActions;
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;

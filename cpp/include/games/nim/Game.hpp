@@ -2,6 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/IOBase.hpp>
@@ -26,12 +27,12 @@
 namespace nim {
 
 struct Game {
-  struct Constants {
+  struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kNumActions = nim::kMaxStonesToTake;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
-    static constexpr int kNumPreviousStatesToEncode = 0;
-    static constexpr float kOpeningLength = 3.1;  // not applicable to Nim
+    static constexpr float kOpeningLength = 3;
+    static constexpr bool kStoreStates = true;  // for mcts unit-tests
   };
 
   struct State {

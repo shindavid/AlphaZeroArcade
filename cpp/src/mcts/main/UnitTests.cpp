@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+
 class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<nim::Game> {
  public:
   using NNEvaluation = mcts::NNEvaluation<nim::Game>;
@@ -92,6 +93,8 @@ class ManagerTest : public testing::Test {
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using State = Game::State;
 
+  static_assert(Node::kStoreStates, "state-storage required for search-viz tests");
+
  public:
   ManagerTest() : manager_params_(create_manager_params()) {}
 
@@ -107,11 +110,9 @@ class ManagerTest : public testing::Test {
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
-    if (IS_MACRO_ENABLED(STORE_STATES)) {
-      const mcts::SharedData<Game>* shared_data = manager_->shared_data();
-      search_log_ = new mcts::SearchLog<Game>(shared_data);
-      manager_->set_post_visit_func([&] { search_log_->update(); });
-    }
+    const mcts::SharedData<Game>* shared_data = manager_->shared_data();
+    search_log_ = new mcts::SearchLog<Game>(shared_data);
+    manager_->set_post_visit_func([&] { search_log_->update(); });
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
@@ -299,7 +300,6 @@ TEST_F(NimManagerTest, dumb_search) {
 
 TEST_F(NimManagerTest, graph_viz) {
   init_manager();
-  if (!get_search_log()) return;
   start_manager();
   start_threads();
   search(20);
@@ -315,7 +315,6 @@ TEST_F(NimManagerTest, graph_viz) {
 
 TEST_F(NimManagerTest, uniform_search_viz) {
   init_manager();
-  if (!get_search_log()) return;
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
@@ -334,7 +333,6 @@ TEST_F(NimManagerTest, uniform_search_viz) {
 using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
 TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   init_manager();
-  if (!get_search_log()) return;
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   start_manager(initial_actions);
   start_threads();
@@ -348,7 +346,6 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
 
   EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
-
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);

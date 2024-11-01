@@ -2,6 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/IOBase.hpp>
@@ -37,12 +38,12 @@ constexpr mask_t make_mask(int a, int b, int c) {
  */
 class Game {
  public:
-  struct Constants {
+  struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
-    static constexpr int kNumPreviousStatesToEncode = 0;
     static constexpr float kOpeningLength = 4;
+    static constexpr bool kStoreStates = true;  // for mcts unit-tests
   };
 
   struct State {

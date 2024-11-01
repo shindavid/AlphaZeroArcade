@@ -24,6 +24,8 @@ concept GameConstants = requires {
   // kNumPreviousStatesToEncode is the number of previous State's that are needed for the neural
   // network to evaluate the current State. If the neural network does not need any previous
   // State's, kNumPreviousStatesToEncode should be 0.
+  //
+  // If using the core::ConstantsBase base-class, this will be 0 by default.
   { util::decay_copy(GC::kNumPreviousStatesToEncode) } -> std::same_as<int>;
 
   // kOpeningLength is a subjectively chosen value that indicates the number of moves that are
@@ -39,6 +41,12 @@ concept GameConstants = requires {
   //
   // KataGo effectively uses a value of 38 for this in 19x19 go.
   { util::decay_copy(GC::kOpeningLength) } -> std::same_as<float>;
+
+  // If kStoreStates is enabled, then the Node will store the State in the Node itself. This can
+  // also be enabled by enabling the STORE_STATES macro.
+  //
+  // If using the core::ConstantsBase base-class, this will be false by default.
+  { util::decay_copy(GC::kStoreStates) } -> std::same_as<bool>;
 };
 
 }  // namespace concepts

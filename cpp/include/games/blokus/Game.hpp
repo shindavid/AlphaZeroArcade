@@ -2,6 +2,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/IOBase.hpp>
@@ -29,11 +30,10 @@ namespace blokus {
 
 class Game {
  public:
-  struct Constants {
+  struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kNumActions = blokus::kNumActions;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
-    static constexpr int kNumPreviousStatesToEncode = 0;
     static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
   };
 
