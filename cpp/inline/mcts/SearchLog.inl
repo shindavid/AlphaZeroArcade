@@ -66,7 +66,7 @@ inline boost::json::object SearchLog<Game>::Graph::graph_repr() const {
 
   // Nodes
   boost::json::array nodes_array;
-  for (auto& node : nodes) {
+  for (const auto& node : nodes) {
     boost::json::object node_obj;
     node_obj["index"] = node.index;
     node_obj["N"] = node.N;
