@@ -10,7 +10,6 @@
 #include <cstdint>
 #include <string>
 
-
 namespace mcts {
 
 /*

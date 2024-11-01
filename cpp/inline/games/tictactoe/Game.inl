@@ -224,7 +224,7 @@ inline std::string Game::IO::compact_state_repr(const State& state) {
       }
     }
     if (row < kBoardDimension - 1) {
-      ss << "\\n";
+      ss << "\n";
     }
   }
 

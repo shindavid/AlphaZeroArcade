@@ -1,42 +1,6 @@
-#include <mcts/Graph.hpp>
+#include <mcts/SearchLog.hpp>
 
 namespace mcts {
-
-template <core::concepts::Game Game>
-inline boost::json::object Graph<Game>::graph_repr() {
-  sort_by_index();
-
-  boost::json::object graph_json;
-
-  // Nodes
-  boost::json::array nodes_array;
-  for (Node& node : nodes) {
-    boost::json::object node_obj;
-    node_obj["index"] = node.index;
-    node_obj["N"] = node.N;
-    node_obj["Q"] = boost::json::array{node.Q[0], node.Q[1]};
-    node_obj["state"] = node.state;
-
-    nodes_array.push_back(node_obj);
-  }
-  graph_json["nodes"] = nodes_array;
-
-  // Edges
-  boost::json::array edges_array;
-  for (Edge& edge : edges) {
-    boost::json::object edge_obj;
-    edge_obj["index"] = edge.index;
-    edge_obj["from"] = edge.from;
-    edge_obj["to"] = edge.to;
-    edge_obj["E"] = edge.E;
-    edge_obj["action"] = edge.action;
-
-    edges_array.push_back(edge_obj);
-  }
-  graph_json["edges"] = edges_array;
-
-  return graph_json;
-}
 
 template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph<Game>& graph) {
@@ -92,6 +56,42 @@ inline void SearchLog<Game>::write_json_to_file(const boost::filesystem::path& f
   } else {
     throw std::runtime_error("Unable to open file: " + filename.string());
   }
+}
+
+template <core::concepts::Game Game>
+inline boost::json::object Graph<Game>::graph_repr() {
+  sort_by_index();
+
+  boost::json::object graph_json;
+
+  // Nodes
+  boost::json::array nodes_array;
+  for (Node& node : nodes) {
+    boost::json::object node_obj;
+    node_obj["index"] = node.index;
+    node_obj["N"] = node.N;
+    node_obj["Q"] = boost::json::array{node.Q[0], node.Q[1]};
+    node_obj["state"] = node.state;
+
+    nodes_array.push_back(node_obj);
+  }
+  graph_json["nodes"] = nodes_array;
+
+  // Edges
+  boost::json::array edges_array;
+  for (Edge& edge : edges) {
+    boost::json::object edge_obj;
+    edge_obj["index"] = edge.index;
+    edge_obj["from"] = edge.from;
+    edge_obj["to"] = edge.to;
+    edge_obj["E"] = edge.E;
+    edge_obj["action"] = edge.action;
+
+    edges_array.push_back(edge_obj);
+  }
+  graph_json["edges"] = edges_array;
+
+  return graph_json;
 }
 
 }  // namespace mcts
