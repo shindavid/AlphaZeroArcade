@@ -209,20 +209,11 @@ inline core::seat_index_t Game::_get_player_at(const State& state, int row, int 
 
 inline std::string Game::IO::compact_state_repr(const State& state) {
   char buf[12];
-  core::seat_index_t cp = Rules::get_current_player(state);
-  char curr_player_symbol = cp ? 'O' : 'X';
-  char oppo_player_symbol = cp ? 'X' : 'O';
+  const char* syms = "_XO";
 
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
-      auto state_player = _get_player_at(state, row, col);
-      if (state_player == cp) {
-        buf[row * 4 + col] = curr_player_symbol;
-      } else if (state_player == 1 - cp) {
-        buf[row * 4 + col] = oppo_player_symbol;
-      } else {
-        buf[row * 4 + col] = '_';
-      }
+      buf[row * 4 + col] = syms[_get_player_at(state, row, col) + 1];
     }
   }
   buf[3] = '\n';
