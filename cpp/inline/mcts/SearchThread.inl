@@ -1,5 +1,6 @@
 #include <mcts/SearchThread.hpp>
 
+#include <mcts/Node.hpp>
 #include <util/Asserts.hpp>
 #include <util/CppUtil.hpp>
 
@@ -227,6 +228,7 @@ inline void SearchThread<Game>::perform_visits() {
     raw_history_ = root_info.history_array[group::kIdentity];
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
+    post_visit_func();
   }
 }
 

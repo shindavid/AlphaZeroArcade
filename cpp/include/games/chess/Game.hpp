@@ -1,18 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <functional>
-#include <sstream>
-#include <string>
-
-#include <boost/functional/hash.hpp>
-#include <torch/torch.h>
-
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/IOBase.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/TrivialSymmetries.hpp>
 #include <core/WinLossDrawResults.hpp>
@@ -23,6 +15,15 @@
 #include <util/MetaProgramming.hpp>
 
 #include <lc0/chess/position.h>
+
+#include <boost/functional/hash.hpp>
+#include <torch/torch.h>
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <sstream>
+#include <string>
 
 namespace chess {
 
@@ -51,7 +52,7 @@ struct Game {
                             core::action_t last_action, GameResults::Tensor& outcome);
   };
 
-  struct IO {
+  struct IO : core::IOBase<Types, State> {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,

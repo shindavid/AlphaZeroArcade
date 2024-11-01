@@ -1,18 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <functional>
-#include <sstream>
-#include <string>
-
-#include <boost/functional/hash.hpp>
-#include <torch/torch.h>
-
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/IOBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/WinLossDrawResults.hpp>
@@ -20,6 +12,15 @@
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
+
+#include <boost/functional/hash.hpp>
+#include <torch/torch.h>
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <sstream>
+#include <string>
 
 namespace tictactoe {
 
@@ -76,13 +77,14 @@ class Game {
                             core::action_t last_action, GameResults::Tensor& outcome);
   };
 
-  struct IO {
+  struct IO : core::IOBase<Types, State> {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
                                    const Types::SearchResults&);
+    static std::string compact_state_repr(const State& state);
   };
 
   struct InputTensorizor {

@@ -1,28 +1,25 @@
 #pragma once
 
-#include <bitset>
-#include <mutex>
-#include <thread>
-#include <vector>
-
 #include <core/concepts/Game.hpp>
+#include <mcts/ActionSelector.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
 #include <mcts/NNEvaluationRequest.hpp>
 #include <mcts/NNEvaluationServiceBase.hpp>
 #include <mcts/Node.hpp>
-#include <mcts/ActionSelector.hpp>
 #include <mcts/SearchParams.hpp>
 #include <mcts/SharedData.hpp>
 #include <mcts/TypeDefs.hpp>
 #include <util/GTestUtil.hpp>
 
+#include <bitset>
+#include <mutex>
+#include <thread>
+#include <vector>
+
 GTEST_FORWARD_DECLARE(SearchThreadTest, init_root_node);
 GTEST_FORWARD_DECLARE(SearchThreadTest, something_else);
-
-GTEST_FORWARD_DECLARE(ManagerTest);
-GTEST_FORWARD_DECLARE(ManagerTest, backprop);
 
 namespace mcts {
 
@@ -77,6 +74,10 @@ class SearchThread {
   void set_profiling_dir(const boost::filesystem::path& profiling_dir);
 
   void dump_profiling_stats() { profiler_.dump(64); }
+
+  using func_t = std::function<void()>;
+  void post_visit_func() { post_visit_func_(); }
+  void set_post_visit_func(func_t f) { post_visit_func_ = f; }
 
  private:
   struct visitation_t {
@@ -148,11 +149,10 @@ class SearchThread {
   search_path_t search_path_;
   profiler_t profiler_;
   const int thread_id_;
+  func_t post_visit_func_ = []() {};
 
   FRIEND_GTEST(SearchThreadTest, init_root_node);
   FRIEND_GTEST(SearchThreadTest, something_else);
-  FRIEND_GTEST(ManagerTest);
-  FRIEND_GTEST(ManagerTest, backprop);
 };
 
 }  // namespace mcts

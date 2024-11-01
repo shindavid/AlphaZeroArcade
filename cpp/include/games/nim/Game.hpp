@@ -1,10 +1,10 @@
-
 #pragma once
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/IOBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/TrivialSymmetries.hpp>
@@ -95,7 +95,7 @@ struct Game {
     }
   };
 
-  struct IO {
+  struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return "-"; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
@@ -106,7 +106,7 @@ struct Game {
                                    const Types::SearchResults&) {
       throw std::runtime_error("Not implemented");
     }
-    static std::string state_repr(const State& state) {
+    static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
       ss << "[" << state.stones_left << ", " << state.current_player << "]";
       return ss.str();

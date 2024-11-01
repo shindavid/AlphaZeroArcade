@@ -1,14 +1,14 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-
-#include <boost/filesystem.hpp>
-
 #include <core/concepts/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/NNEvaluationServiceParams.hpp>
 #include <util/CppUtil.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <cstdint>
+#include <string>
 
 namespace mcts {
 

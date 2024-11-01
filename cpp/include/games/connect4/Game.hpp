@@ -1,18 +1,10 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <functional>
-#include <sstream>
-#include <string>
-
-#include <boost/functional/hash.hpp>
-#include <torch/torch.h>
-
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/IOBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/WinLossDrawResults.hpp>
@@ -20,6 +12,15 @@
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
+
+#include <boost/functional/hash.hpp>
+#include <torch/torch.h>
+
+#include <array>
+#include <cstdint>
+#include <functional>
+#include <sstream>
+#include <string>
 
 namespace c4 {
 
@@ -77,7 +78,7 @@ struct Game {
                             core::action_t last_action, GameResults::Tensor& outcome);
   };
 
-  struct IO {
+  struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,

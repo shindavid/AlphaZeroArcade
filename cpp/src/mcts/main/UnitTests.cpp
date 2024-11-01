@@ -1,7 +1,7 @@
 #include <core/tests/Common.hpp>
-#include <games/nim/Constants.hpp>
 #include <games/nim/Game.hpp>
-#include <games/connect4/Game.hpp>
+#include <games/tictactoe/Game.hpp>
+#include <mcts/SearchLog.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/NNEvaluation.hpp>
@@ -14,16 +14,15 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
 
-using Game = nim::Game;
-using State = Game::State;
-
-class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
+class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<nim::Game> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Game>;
+  using NNEvaluation = mcts::NNEvaluation<nim::Game>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -41,7 +40,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
       ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
       core::seat_index_t cp = item.node()->stable_data().current_player;
 
-      const State& state = item.cur_state();
+      const nim::Game::State& state = item.cur_state();
 
       bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
@@ -76,6 +75,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   bool smart_;
 };
 
+template<core::concepts::Game Game>
 class ManagerTest : public testing::Test {
  protected:
   using Manager = mcts::Manager<Game>;
@@ -90,15 +90,14 @@ class ManagerTest : public testing::Test {
   using edge_pool_index_t = mcts::Node<Game>::edge_pool_index_t;
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
+  using State = Game::State;
 
  public:
-  ManagerTest():
-    manager_params_(create_manager_params()) {}
+  ManagerTest() : manager_params_(create_manager_params()) {}
 
-  // Manager destructor crashes sometimes, don't want to bother with it
-  // ~ManagerTest() override {
-  //   delete manager_;
-  // }
+  ~ManagerTest() override {
+    // delete manager_;
+  }
 
   static ManagerParams create_manager_params() {
     ManagerParams params(mcts::kCompetitive);
@@ -106,32 +105,39 @@ class ManagerTest : public testing::Test {
     return params;
   }
 
-  void init_manager(Service* service=nullptr) {
+  void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
+    if constexpr (IS_MACRO_ENABLED(STORE_STATES)) {
+      const mcts::SharedData<Game>* shared_data = manager_->shared_data();
+      search_log_ = new mcts::SearchLog<Game>(shared_data);
+      manager_->set_post_visit_func([&] { search_log_->update(); });
+    }
   }
 
-  void start_manager(const std::vector<core::action_t>& initial_actions) {
+  void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
     manager_->start();
     for (core::action_t action : initial_actions) {
-      manager_->shared_data_.update_state(action);
+      manager_->shared_data()->update_state(action);
     }
     this->initial_actions_ = initial_actions;
   }
 
-  void start_threads() {
-    manager_->start_threads();
-  }
+  ManagerParams& manager_params() { return manager_params_; }
 
-  void search(int num_searches = 0){
+  void start_threads() { manager_->start_threads(); }
+
+  void search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
     manager_->search(search_params);
   }
 
   Node* get_node_by_index(node_pool_index_t index) {
-    return manager_->shared_data_.lookup_table.get_node(index);
+    return manager_->shared_data()->lookup_table.get_node(index);
   }
 
-  std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent=0) {
+  mcts::SearchLog<Game>* get_search_log() { return search_log_; }
+
+  std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent = 0) {
     std::ostringstream oss;
     Node* node = get_node_by_index(node_ix);
 
@@ -141,7 +147,7 @@ class ManagerTest : public testing::Test {
       const char* marker = node->is_terminal() ? "|*" : "|-";
       oss << std::string((num_indent - 1) * 2, ' ') << marker;
     }
-    oss << "Node " << node_ix << ": " << Game::IO::state_repr(prev_state)
+    oss << "Node " << node_ix << ": " << Game::IO::compact_state_repr(prev_state)
         << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
 
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
@@ -159,8 +165,8 @@ class ManagerTest : public testing::Test {
       new_state = history.current();
 
       oss << std::string(num_indent * 2, ' ') << "|-"
-      << "Edge " << edge_index
-      << ": " << " E = " << edge->E << ", Action = " << edge->action << std::endl;
+          << "Edge " << edge_index << ": " << " E = " << edge->E << ", Action = " << edge->action
+          << std::endl;
       if (edge->child_index != -1) {
         oss << print_tree(edge->child_index, new_state, num_indent + 2);
       }
@@ -177,22 +183,27 @@ class ManagerTest : public testing::Test {
    * - Indentation is used to represent the tree structure, with each level of depth indented
    * further.
    */
+  using Rules = Game::Rules;
   std::string print_tree() {
     StateHistory history;
-    history.initialize(Game::Rules{});
+    history.initialize(Rules{});
     for (core::action_t action : initial_actions_) {
       Game::Rules::apply(history, action);
     }
     return print_tree(0, history.current());
   }
 
+  ManagerParams& get_manager_params() { return manager_params_; }
+
  private:
   ManagerParams manager_params_;
   Manager* manager_ = nullptr;
   std::vector<core::action_t> initial_actions_;
+  mcts::SearchLog<Game>* search_log_ = nullptr;
 };
 
-TEST_F(ManagerTest, uniform_search) {
+using NimManagerTest = ManagerTest<nim::Game>;
+TEST_F(NimManagerTest, uniform_search) {
   init_manager();
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake2};
@@ -222,7 +233,7 @@ TEST_F(ManagerTest, uniform_search) {
             "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n");
 }
 
-TEST_F(ManagerTest, smart_search) {
+TEST_F(NimManagerTest, smart_search) {
   MockNNEvaluationService mock_service(true);
   init_manager(&mock_service);
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
@@ -248,7 +259,7 @@ TEST_F(ManagerTest, smart_search) {
             "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n");
 }
 
-TEST_F(ManagerTest, dumb_search) {
+TEST_F(NimManagerTest, dumb_search) {
   MockNNEvaluationService mock_service(false);
   init_manager(&mock_service);
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
@@ -285,6 +296,62 @@ TEST_F(ManagerTest, dumb_search) {
             "    |-Edge 11:  E = 1, Action = 0\n"
             "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
 }
+
+TEST_F(NimManagerTest, graph_viz) {
+  init_manager();
+  start_manager();
+  start_threads();
+  search(20);
+
+  boost::filesystem::path file_path =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
+  std::ifstream file(file_path);
+  std::string expected_json((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+
+  if (get_search_log()) {
+    EXPECT_EQ(get_search_log()->json_str(), expected_json);
+  }
+}
+
+TEST_F(NimManagerTest, uniform_search_viz) {
+  init_manager();
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+  start_manager(initial_actions);
+  start_threads();
+  search(100);
+
+  boost::filesystem::path file_path =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones.json";
+  std::ifstream file(file_path);
+  std::string expected_json((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+
+  if (get_search_log()) {
+    EXPECT_EQ(get_search_log()->json_str(), expected_json);
+  }
+}
+
+using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
+TEST_F(TicTacToeManagerTest, uniform_search_viz) {
+  init_manager();
+  std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
+  start_manager(initial_actions);
+  start_threads();
+  search(100);
+
+  boost::filesystem::path file_path =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform.json";
+  std::ifstream file(file_path);
+  std::string expected_json((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+
+  if (get_search_log()) {
+    EXPECT_EQ(get_search_log()->json_str(), expected_json);
+  }
+}
+
 
 int main(int argc, char** argv) {
   util::set_tty_mode(false);
