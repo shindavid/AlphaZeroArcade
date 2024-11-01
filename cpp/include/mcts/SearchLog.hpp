@@ -46,11 +46,12 @@ class SearchLog {
 
     boost::json::object graph_repr();
 
-    void add_node(int index, int N, const ValueArray& Q, const std::string& state) {
+    void add_node(node_index_t index, int N, const ValueArray& Q, const std::string& state) {
       nodes.emplace_back(index, N, Q, state);
     }
 
-    void add_edge(int index, int from, int to, int E, core::action_t action) {
+    void add_edge(edge_index_t index, node_index_t from, node_index_t to, int E,
+                  core::action_t action) {
       edges.emplace_back(index, from, to, E, action);
     }
 
