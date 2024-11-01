@@ -16,6 +16,35 @@
 namespace mcts {
 
 /*
+ * StateData<Game, false> is an empty class that does nothing.
+ *
+ * StateData<Game, true> is a class that stores a game state.
+ *
+ * Node::stable_data_t inherits from StateData, with the bool argument set to true only if the
+ * macro STORE_STATES is enabled.
+ *
+ * This allows for us to store the game state in the Node object, which is useful for debugging and
+ * analysis.
+ */
+template <core::concepts::Game Game, bool EnableStorage>
+struct StateData {
+  using State = typename Game::State;
+
+  StateData(const State&) {}
+  const State* get_state() const { return nullptr; }
+};
+
+template <core::concepts::Game Game>
+struct StateData<Game, true> {
+  using State = typename Game::State;
+
+  StateData(const State& s) : state(s) {}
+  const State* get_state() const { return &state; }
+
+  State state;
+};
+
+/*
  * A Node consists of n=3 main data member:
  *
  * stable_data_t: write-once data that is fixed for the lifetime of the node
@@ -58,9 +87,14 @@ class Node {
     kExpanded
   };
 
-  struct stable_data_t {
+  static constexpr bool kStoreStates = IS_MACRO_ENABLED(STORE_STATES);
+  using StateData = mcts::StateData<Game, kStoreStates>;
+
+  // We make the StateData a base-class of stable_data_t because (1) the state is stable, and
+  // (2) if STORE_STATES is not enabled, we get an empty base-class optimization.
+  struct stable_data_t : public StateData {
     stable_data_t(const StateHistory&);  // for non-terminal nodes
-    stable_data_t(const ValueTensor& game_outcome);  // for terminal nodes
+    stable_data_t(const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
     ValueTensor VT;
     ActionMask valid_action_mask;
@@ -169,7 +203,7 @@ class Node {
   };
 
   Node(LookupTable*, const StateHistory&);  // for non-terminal nodes
-  Node(LookupTable*, const ValueTensor& game_outcome);  // for terminal nodes
+  Node(LookupTable*, const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
                      SearchResults& results) const;
