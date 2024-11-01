@@ -346,7 +346,7 @@ TEST_F(TicTacToeManagerTest, uniform_search_viz) {
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-  get_search_log()->write_json_to_file(file_path);
+
   if (get_search_log()) {
     EXPECT_EQ(get_search_log()->json_str(), expected_json);
   }
