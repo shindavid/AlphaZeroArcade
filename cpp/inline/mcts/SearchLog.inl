@@ -3,6 +3,33 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
+inline boost::json::object SearchLog<Game>::log_node_t::to_json() const {
+  boost::json::object node_json;
+  node_json["index"] = index;
+  node_json["N"] = N;
+
+  boost::json::array Q_array;
+  for (int i = 0; i < Q.size(); ++i) {
+    Q_array.push_back(Q[i]);
+  }
+  node_json["Q"] = Q_array;
+
+  node_json["state"] = state;
+  return node_json;
+}
+
+template <core::concepts::Game Game>
+inline boost::json::object SearchLog<Game>::log_edge_t::to_json() const {
+  boost::json::object edge_json;
+  edge_json["index"] = index;
+  edge_json["from"] = from;
+  edge_json["to"] = to;
+  edge_json["E"] = E;
+  edge_json["action"] = action;
+  return edge_json;
+}
+
+template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph& graph) {
   using State = Game::State;
   using edge_t = mcts::Node<Game>::edge_t;
@@ -67,27 +94,14 @@ inline boost::json::object SearchLog<Game>::Graph::graph_repr() const {
   // Nodes
   boost::json::array nodes_array;
   for (const auto& node : nodes) {
-    boost::json::object node_obj;
-    node_obj["index"] = node.index;
-    node_obj["N"] = node.N;
-    node_obj["Q"] = boost::json::array{node.Q[0], node.Q[1]};
-    node_obj["state"] = node.state;
-
-    nodes_array.push_back(node_obj);
+    nodes_array.push_back(node.to_json());
   }
   graph_json["nodes"] = nodes_array;
 
   // Edges
   boost::json::array edges_array;
   for (const auto& edge : edges) {
-    boost::json::object edge_obj;
-    edge_obj["index"] = edge.index;
-    edge_obj["from"] = edge.from;
-    edge_obj["to"] = edge.to;
-    edge_obj["E"] = edge.E;
-    edge_obj["action"] = edge.action;
-
-    edges_array.push_back(edge_obj);
+    edges_array.push_back(edge.to_json());
   }
   graph_json["edges"] = edges_array;
 

@@ -25,6 +25,7 @@ class SearchLog {
     int N;
     ValueArray Q;
     std::string state;
+    boost::json::object to_json() const;
   };
 
   struct log_edge_t {
@@ -33,6 +34,7 @@ class SearchLog {
     node_index_t to;
     int E;
     core::action_t action;
+    boost::json::object to_json() const;
   };
 
   class Graph {
