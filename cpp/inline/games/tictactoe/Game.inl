@@ -208,27 +208,28 @@ inline core::seat_index_t Game::_get_player_at(const State& state, int row, int 
 }
 
 inline std::string Game::IO::compact_state_repr(const State& state) {
-  std::ostringstream ss;
+  char buf[12];
   core::seat_index_t cp = Rules::get_current_player(state);
-  std::string curr_player_symbol = cp ? "O" : "X";
-  std::string oppo_player_symbol = cp ? "X" : "O";
+  char curr_player_symbol = cp ? 'O' : 'X';
+  char oppo_player_symbol = cp ? 'X' : 'O';
 
   for (int row = 0; row < kBoardDimension; ++row) {
     for (int col = 0; col < kBoardDimension; ++col) {
-      if (state.cur_player_mask & (1 << (3 * row + col))) {
-        ss << curr_player_symbol;
-      } else if (state.full_mask & (1 << (3 * row + col))) {
-        ss << oppo_player_symbol;
+      auto state_player = _get_player_at(state, row, col);
+      if (state_player == cp) {
+        buf[row * 4 + col] = curr_player_symbol;
+      } else if (state_player == 1 - cp) {
+        buf[row * 4 + col] = oppo_player_symbol;
       } else {
-        ss << "_";
+        buf[row * 4 + col] = '_';
       }
     }
-    if (row < kBoardDimension - 1) {
-      ss << "\n";
-    }
   }
+  buf[3] = '\n';
+  buf[7] = '\n';
+  buf[11] = '\0';
 
-  return ss.str();
+  return std::string(buf);
 }
 
 }  // namespace tictactoe
