@@ -107,7 +107,7 @@ class ManagerTest : public testing::Test {
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
-    if constexpr (IS_MACRO_ENABLED(STORE_STATES)) {
+    if (IS_MACRO_ENABLED(STORE_STATES)) {
       const mcts::SharedData<Game>* shared_data = manager_->shared_data();
       search_log_ = new mcts::SearchLog<Game>(shared_data);
       manager_->set_post_visit_func([&] { search_log_->update(); });
