@@ -52,7 +52,7 @@ struct Game {
                             core::action_t last_action, GameResults::Tensor& outcome);
   };
 
-  struct IO : core::IOBase<Types, State> {
+  struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return ""; }
     static std::string action_to_str(core::action_t action);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
