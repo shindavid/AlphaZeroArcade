@@ -77,7 +77,8 @@ struct GameTypes {
     ValueTensor value_prior;
     ActionSymmetryTable action_symmetry_table;
     bool trivial;  // all actions are symmetrically equivalent
-    bool provably_lost = false;
+    bool provably_lost;
+    bool permit_pruning;
 
     boost::json::object to_json() const;
   };

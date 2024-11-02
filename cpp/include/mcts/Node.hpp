@@ -208,8 +208,7 @@ class Node {
   Node(LookupTable*, const StateHistory&);  // for non-terminal nodes
   Node(LookupTable*, const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
-  void write_results(const ManagerParams& params, group::element_t inv_sym,
-                     SearchResults& results) const;
+  void write_results(const ManagerParams& params, SearchResults& results) const;
 
   /*
    * update_stats() executes f() under the node's mutex, then updates the node's stats by
@@ -219,7 +218,7 @@ class Node {
    * earlier elimination of that edge would have caused a different sequence of visits to be taken.
    */
   template <typename MutexProtectedFunc>
-  bool update_stats(MutexProtectedFunc f);
+  bool update_stats(MutexProtectedFunc f, bool eliminate_edges=false);
 
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 
@@ -233,8 +232,19 @@ class Node {
 
   void initialize_edges();
 
+  /*
+   * Zeros out the visit count for this node and all its edges.
+   */
+  void reset();
+
   template<typename PolicyTransformFunc>
   void load_eval(NNEvaluation* eval, PolicyTransformFunc);
+
+  /*
+   * Returns true iff all uneliminated actions are known to be symmetrically equivalent, or if
+   * a provably winning action exists.
+   */
+  bool has_forced_action() const;
 
   bool all_children_edges_initialized() const;
   bool edges_initialized() const { return first_edge_index_ != -1; }
@@ -243,6 +253,9 @@ class Node {
   void set_first_edge_index(edge_pool_index_t e) { first_edge_index_ = e; }
   Node* get_child(const edge_t* edge) const;
   void update_child_expand_count(int n=1);
+  core::action_t get_winning_action() const;  // returns -1 if no winning action
+  bool has_certain_outcome() const;
+  bool is_losing_position() const;
   bool trivial() const { return trivial_; }
 
   // NO-OP in release builds, checks various invariants in debug builds

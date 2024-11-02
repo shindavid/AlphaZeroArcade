@@ -222,10 +222,28 @@ inline void SearchThread<Game>::perform_visits() {
     visit(root);
     root->validate_state();
     canonical_sym_ = root_info.canonical_sym;
+
+    // TODO: this copying of raw_history_ on every iteration is unnecessary. Short-circuited
+    // traversals don't need to deal with state-histories at all, so we should refactor this to
+    // do this copying lazily only when needed.
     raw_history_ = root_info.history_array[group::kIdentity];
     dump_profiling_stats();
-    if (!shared_data_->search_params.ponder && root->trivial()) break;
     post_visit_func();
+
+    if (shared_data_->search_params.ponder) continue;
+
+    if (root->has_forced_action()) {
+      if (mcts::kEnableSearchDebug) {
+        LOG_INFO << thread_id_whitespace() << "BREAK: forced move";
+      }
+      break;
+    }
+    if (root->has_certain_outcome()) {
+      if (mcts::kEnableSearchDebug) {
+        LOG_INFO << thread_id_whitespace() << "BREAK: certain outcome";
+      }
+      break;
+    }
   }
 }
 
@@ -312,7 +330,7 @@ inline void SearchThread<Game>::visit(Node* node) {
       search_path_.emplace_back(child, nullptr);
       int edge_count = edge->E;
       int child_count = child->stats().RN;
-      if (edge_count < child_count) {
+      if (edge_count < child_count || child->has_certain_outcome()) {
         short_circuit_backprop();
       } else {
         standard_backprop(false);
@@ -332,12 +350,17 @@ inline void SearchThread<Game>::visit(Node* node) {
     search_path_.emplace_back(child, nullptr);
     int edge_count = edge->E;
     int child_count = child->stats().RN;
-    if (edge_count < child_count) {
+    if (edge_count < child_count || child->has_certain_outcome()) {
       short_circuit_backprop();
       return;
     }
   }
   if (!applied_action) {
+    // TODO: these calculations are needed at intermediate visits just to support the final leaf
+    // visit. However, if the final visit is short-circuited, these intermediate calculations are
+    // unnecessary and wasteful. We should refactor to only perform these calculations lazily when
+    // needed.
+
     // reorient edge->action into raw-orientation
     core::action_t edge_action = edge->action;
     Game::Symmetries::apply(edge_action, inv_canonical_sym);
@@ -365,17 +388,15 @@ inline void SearchThread<Game>::virtual_backprop() {
   }
 
   util::release_assert(!search_path_.empty());
-  Node* last_node = search_path_.back().node;
+  int i = search_path_.size() - 1;
+  Node* last_node = search_path_[i].node;
 
-  last_node->update_stats([&] {
-    last_node->stats().VN++;
-  });
+  last_node->update_stats([&] { last_node->stats().VN++; });
 
-  for (int i = search_path_.size() - 2; i >= 0; --i) {
+  for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    // NOTE: always update the edge first, then the parent node
     node->update_stats([&] {
       edge->E++;
       node->stats().VN++;
@@ -394,7 +415,10 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   }
 
   util::release_assert(!search_path_.empty());
-  Node* last_node = search_path_.back().node;
+  int i = search_path_.size() - 1;
+  Node* last_node = search_path_[i].node;
+
+  int reset_index = -1;
 
   // auto last_stats = last_node->stats();
 
@@ -411,23 +435,30 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
   //          << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
   //          << last_node->stats().RN;
 
-  for (int i = search_path_.size() - 2; i >= 0; --i) {
+  for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    // auto stats = node->stats();
+    auto stats = node->stats();
 
-    // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    bool reset_needed = node->update_stats([&] {
       edge->E++;
       node->stats().RN++;
-    });
+    }, true);
 
-    // LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
-    //          << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
-    //          << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-    //          << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
-    //          << "] RN:" << stats.RN << "->" << node->stats().RN;
+    if (reset_needed) {
+      if (reset_index < 0) reset_index = i;
+    }
+
+    LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
+             << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
+             << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+             << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
+             << "] RN:" << stats.RN << "->" << node->stats().RN;
+  }
+
+  if (reset_index >= 0) {
+    reset_tree(reset_index);
   }
   validate_search_path();
 }
@@ -436,7 +467,8 @@ template <core::concepts::Game Game>
 void SearchThread<Game>::standard_backprop(bool undo_virtual) {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
-  Node* last_node = search_path_.back().node;
+  int i = search_path_.size() - 1;
+  Node* last_node = search_path_[i].node;
   auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
 
   if (mcts::kEnableSearchDebug) {
@@ -444,40 +476,60 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
              << value.transpose();
   }
 
-  // auto last_stats = last_node->stats();
+  int reset_index = -1;
 
-  last_node->update_stats([&] {
+  auto last_stats = last_node->stats();
+
+  bool reset_needed = last_node->update_stats([&] {
     last_node->stats().init_q(value, false);
     last_node->stats().RN++;
-    last_node->stats().VN -= undo_virtual;
-  });
+    if (undo_virtual) {
+      // std::max() to avoid race-condition with Node::reset()
+      last_node->stats().VN = std::max(0, last_node->stats().VN - 1);
+    }
+  }, true);
 
-  // LOG_INFO << thread_id_whitespace() << "path[" << search_path_.size() - 1 << "] Q:["
-  //          << last_stats.Q.transpose() << "]->[" << last_node->stats().Q.transpose()
-  //          << "] Q_lower:[" << last_stats.Q_lower_bound.transpose() << "]->["
-  //          << last_node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-  //          << last_stats.Q_upper_bound.transpose() << "]->["
-  //          << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
-  //          << last_node->stats().RN;
+  if (reset_needed) {
+    if (reset_index < 0) reset_index = i;
+  }
 
-  for (int i = search_path_.size() - 2; i >= 0; --i) {
+  LOG_INFO << thread_id_whitespace() << "path[" << search_path_.size() - 1 << "] Q:["
+           << last_stats.Q.transpose() << "]->[" << last_node->stats().Q.transpose()
+           << "] Q_lower:[" << last_stats.Q_lower_bound.transpose() << "]->["
+           << last_node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+           << last_stats.Q_upper_bound.transpose() << "]->["
+           << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
+           << last_node->stats().RN;
+
+  for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    // auto stats = node->stats();
+    auto stats = node->stats();
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    reset_needed = node->update_stats([&] {
       edge->E += !undo_virtual;
       node->stats().RN++;
-      node->stats().VN -= undo_virtual;
-    });
+      if (undo_virtual) {
+        // std::max() to avoid race-condition with Node::reset()
+        last_node->stats().VN = std::max(0, last_node->stats().VN - 1);
+      }
+    }, true);
 
-    // LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
-    //          << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
-    //          << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-    //          << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
-    //          << "] RN:" << stats.RN << "->" << node->stats().RN;
+    if (reset_needed) {
+      if (reset_index < 0) reset_index = i;
+    }
+
+    LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
+             << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
+             << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+             << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
+             << "] RN:" << stats.RN << "->" << node->stats().RN;
+  }
+
+  if (reset_index >= 0) {
+    reset_tree(reset_index);
   }
   validate_search_path();
 }
@@ -488,23 +540,33 @@ void SearchThread<Game>::short_circuit_backprop() {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
+  int reset_index = -1;
+
   for (int i = search_path_.size() - 2; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    // auto stats = node->stats();
+    auto stats = node->stats();
 
     // NOTE: always update the edge first, then the parent node
-    node->update_stats([&] {
+    bool reset_needed = node->update_stats([&] {
       edge->E++;
       node->stats().RN++;
-    });
+    }, true);
 
-    // LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
-    //          << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
-    //          << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-    //          << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
-    //          << "] RN:" << stats.RN << "->" << node->stats().RN;
+    if (reset_needed) {
+      if (reset_index < 0) reset_index = i;
+    }
+
+    LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
+             << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
+             << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
+             << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
+             << "] RN:" << stats.RN << "->" << node->stats().RN;
+  }
+
+  if (reset_index >= 0) {
+    reset_tree(reset_index);
   }
   validate_search_path();
 }
@@ -617,6 +679,25 @@ void SearchThread<Game>::calc_canonical_state_data() {
 }
 
 template <core::concepts::Game Game>
+void SearchThread<Game>::reset_tree(int search_path_index) {
+  if (mcts::kEnableSearchDebug) {
+    LOG_INFO << thread_id_whitespace() << __func__ << "(" << search_path_index << ") "
+             << search_path_str();
+  }
+
+  util::release_assert(!search_path_.empty());
+  util::release_assert(search_path_index < (int)search_path_.size());
+
+  for (int i = search_path_index; i >= 0; --i) {
+    Node* node = search_path_[i].node;
+    node->reset();
+  }
+
+  Node* root = shared_data_->get_root_node();
+  root->stats().RN++;
+}
+
+template <core::concepts::Game Game>
 void SearchThread<Game>::validate_search_path() const {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
 
@@ -682,7 +763,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     ValueArray CP;
     for (int p = 0; p < kNumPlayers; ++p) {
       players(p) = p;
-      CP(p) = p == cp;
+      CP(p) = p;
     }
 
     std::vector<std::string> player_columns = {"Seat", "Q", "QLB", "QUB", "CurP"};
