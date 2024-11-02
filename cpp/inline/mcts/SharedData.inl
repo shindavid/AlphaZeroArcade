@@ -47,6 +47,12 @@ void SharedData<Game>::init_root_info(bool add_noise) {
     Node* root = lookup_table.get_node(root_info.node_index);
     new (root) Node(&lookup_table, canonical_history);
     root->stats().RN++;
+  } else {
+    Node* root = lookup_table.get_node(root_info.node_index);
+    // root RN could have been cleared from a recent reset
+    if (root->stats().RN == 0) {
+      root->stats().RN++;
+    }
   }
 }
 

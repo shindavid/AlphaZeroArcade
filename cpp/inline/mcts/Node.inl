@@ -188,8 +188,7 @@ Node<Game>::Node(LookupTable* table, const StateHistory& history, const ValueTen
       mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
-void Node<Game>::write_results(const ManagerParams& params, group::element_t inv_sym,
-                               SearchResults& results) const {
+void Node<Game>::write_results(const ManagerParams& params, SearchResults& results) const {
   // This should only be called in contexts where the search-threads are inactive, so we do not need
   // to worry about thread-safety
 
@@ -205,12 +204,32 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
   Q.setZero();
   Q_sq.setZero();
 
+  results.permit_pruning = false;
+
+  core::action_t winning_action = get_winning_action();
+  if (winning_action >= 0) {
+    counts(winning_action) = 1;
+    return;
+  }
+
+  PolicyTensor prior_policy;
+  PolicyTensor unexplored_actions;
+  PolicyTensor explored_and_uneliminated_actions;
+
+  unexplored_actions.setZero();
+  explored_and_uneliminated_actions.setZero();
+
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);
+    const Node* child = get_child(edge);
     core::action_t action = edge->action;
 
-    const Node* child = get_child(edge);
-    if (!child) continue;
+    prior_policy(action) = edge->raw_policy_prior;
+
+    if (!child) {
+      unexplored_actions(action) = 1;
+      continue;
+    }
 
     const auto& stats = child->stats();
 
@@ -218,6 +237,7 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
       counts(action) = edge->E;
       Q(action) = stats.Q(cp);
       Q_sq(action) = stats.Q_sq(cp);
+      explored_and_uneliminated_actions(action) = 1;
     }
 
     const auto& stable_data = child->stable_data();
@@ -225,11 +245,30 @@ void Node<Game>::write_results(const ManagerParams& params, group::element_t inv
     ValueArray VA = Game::GameResults::to_value_array(stable_data.VT);
     action_values(action) = VA(cp);
   }
+
+  if (eigen_util::sum(counts) > 0) {
+    results.permit_pruning = params.forced_playouts;
+    return;
+  }
+
+  // no counts were set. Either all explored edges are eliminated, or at least one un-eliminated
+  // edge exists but it has no visits (due to a recent tree-reset).
+
+  if (eigen_util::any(explored_and_uneliminated_actions)) {
+    counts = prior_policy * explored_and_uneliminated_actions;
+  } else {  // all explored edges are eliminated
+    if (eigen_util::any(unexplored_actions)) {
+      counts = prior_policy * unexplored_actions;
+    } else {  // all edges are explored and eliminated
+      util::release_assert(is_losing_position());
+      counts = prior_policy;
+    }
+  }
 }
 
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
-bool Node<Game>::update_stats(MutexProtectedFunc func) {
+bool Node<Game>::update_stats(MutexProtectedFunc func, bool eliminate_edges) {
   std::unique_lock lock(mutex());
   func();
   lock.unlock();
@@ -253,12 +292,22 @@ bool Node<Game>::update_stats(MutexProtectedFunc func) {
   // Now we lock the mutex, and copy the calculated information into the node
   lock.lock();
 
-  // Mask edges that are eliminated
   bool fresh_elimination = false;
-  for (int i = 0; i < n_actions; i++) {
-    edge_t* edge = get_edge(i);
-    fresh_elimination |= !edge->eliminated && eliminated_actions[i];
-    edge->eliminated = eliminated_actions[i];
+  if (eliminate_edges) {
+    // Mask edges that are eliminated
+    for (int i = 0; i < n_actions; i++) {
+      edge_t* edge = get_edge(i);
+
+      // TODO: this is a very strict definition of fresh-elimination, leading to very aggressive
+      // tree-resetting.
+      //
+      // We can avoid resetting quite so often by being smarter here. This edge was visited E times.
+      // If the E most recent traversals from the root all visited this edge, then a tree-reset is
+      // not needed. We can detect this with some extra record-keeping, taking care to reason about
+      // the multi-threaded case.
+      fresh_elimination |= !edge->eliminated && eliminated_actions[i];
+      edge->eliminated = eliminated_actions[i];
+    }
   }
 
   // Copy Q info
@@ -268,6 +317,8 @@ bool Node<Game>::update_stats(MutexProtectedFunc func) {
     stats_.Q_lower_bound = Q_lower_bound;
     stats_.Q_upper_bound = Q_upper_bound;
   }
+
+  util::debug_assert((stats_.Q_lower_bound <= stats_.Q_upper_bound).all());
 
   return fresh_elimination;
 }
@@ -302,6 +353,23 @@ void Node<Game>::initialize_edges() {
 }
 
 template <core::concepts::Game Game>
+void Node<Game>::reset() {
+  std::unique_lock lock(mutex());
+
+  stats_.RN = 0;
+  stats_.VN = 0;
+
+  int n = stable_data_.num_valid_actions;
+  for (int i = 0; i < n; ++i) {
+    edge_t* edge = get_edge(i);
+    edge->E = 0;
+    if (edge->state == kExpanded) {
+      edge->state = kPreExpanded;
+    }
+  }
+}
+
+template <core::concepts::Game Game>
 template <typename PolicyTransformFunc>
 void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   int n = stable_data_.num_valid_actions;
@@ -329,6 +397,29 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
   stats_.Q_sq = VA * VA;
 
   eigen_util::debug_assert_is_valid_prob_distr(VA);
+}
+
+template <core::concepts::Game Game>
+bool Node<Game>::has_forced_action() const {
+  int n_actions = stable_data_.num_valid_actions;
+  core::seat_index_t cp = stable_data_.current_player;
+  if (n_actions <= 1) return true;
+
+  node_pool_index_t first_viable_child = -1;
+  for (int j = 0; j < n_actions; ++j) {
+    edge_t* edge = get_edge(j);
+    if (edge->eliminated) continue;
+
+    if (edge->child_index < 0) return false;
+    Node* child = get_child(edge);
+    if (child->stats_.Q_lower_bound(cp) == Game::GameResults::kMaxValue) return true;
+    if (first_viable_child < 0) {
+      first_viable_child = edge->child_index;
+    } else if (first_viable_child != edge->child_index) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <core::concepts::Game Game>
@@ -370,6 +461,31 @@ void Node<Game>::update_child_expand_count(int n) {
 }
 
 template <core::concepts::Game Game>
+core::action_t Node<Game>::get_winning_action() const {
+  int n_actions = stable_data_.num_valid_actions;
+  core::seat_index_t cp = stable_data_.current_player;
+
+  for (int j = 0; j < n_actions; ++j) {
+    edge_t* edge = get_edge(j);
+    if (edge->child_index < 0) continue;
+    Node* child = get_child(edge);
+    if (child->stats_.Q_lower_bound(cp) == Game::GameResults::kMaxValue) return edge->action;
+  }
+  return -1;
+}
+
+template <core::concepts::Game Game>
+bool Node<Game>::has_certain_outcome() const {
+  return (stats_.Q_lower_bound == stats_.Q_upper_bound).all();
+}
+
+template <core::concepts::Game Game>
+bool Node<Game>::is_losing_position() const {
+  core::seat_index_t cp = stable_data_.current_player;
+  return stats_.Q_upper_bound[cp] == Game::GameResults::kMinValue;
+}
+
+template <core::concepts::Game Game>
 void Node<Game>::validate_state() const {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
   if (is_terminal()) return;
@@ -379,12 +495,12 @@ void Node<Game>::validate_state() const {
   int N = 1;
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     auto edge = get_edge(i);
-    N += edge->E;
+    N += edge->E * !edge->eliminated;
     util::debug_assert(edge->E >= 0);
   }
 
-  util::debug_assert(N == stats_.RN + stats_.VN, "[%p] %d != %d + %d", this, N, stats_.RN,
-                     stats_.VN);
+  int expectedN = std::max(1, stats_.RN + stats_.VN);
+  util::debug_assert(N == expectedN, "%d != max(1, %d + %d)", N, stats_.RN, stats_.VN);
   util::debug_assert(stats_.RN >= 0);
   util::debug_assert(stats_.VN >= 0);
 }
@@ -407,6 +523,7 @@ void Node<Game>::set_best_bounds(float* best_bounds) const {
     const auto& child_stats = child->stats();
     float ql = child_stats.Q_lower_bound(cp);
     float qu = child_stats.Q_upper_bound(cp);
+    util::debug_assert(ql <= qu);
 
     best_bounds_set = true;
     if (ql > best_bounds[0]) {
@@ -420,12 +537,15 @@ void Node<Game>::set_best_bounds(float* best_bounds) const {
   if (!best_bounds_set) {
     best_bounds[1] = Game::GameResults::kMaxValue;
   }
+  util::debug_assert(best_bounds[0] <= best_bounds[1]);
 }
 
 template <core::concepts::Game Game>
 void Node<Game>::set_eliminated_actions(bool* eliminated_actions, const float* best_bounds) const {
   int n_actions = stable_data_.num_valid_actions;
   core::seat_index_t cp = stable_data_.current_player;
+
+  int uneliminated_count = 0;
 
   for (int i = 0; i < n_actions; i++) {
     const edge_t* edge = get_edge(i);
@@ -434,6 +554,7 @@ void Node<Game>::set_eliminated_actions(bool* eliminated_actions, const float* b
       // if best_bounds[0] is kMaxValue, then the position has been proven to be winning, and we
       // can eliminate not-yet-expanded actions.
       eliminated_actions[i] = best_bounds[0] == Game::GameResults::kMaxValue;
+      uneliminated_count += !eliminated_actions[i];
       continue;
     }
 
@@ -441,9 +562,12 @@ void Node<Game>::set_eliminated_actions(bool* eliminated_actions, const float* b
     float ql = child_stats.Q_lower_bound(cp);
     float qu = child_stats.Q_upper_bound(cp);
 
-    // The first condition is to prevent self-elimination
-    eliminated_actions[i] = (ql < best_bounds[1] && qu <= best_bounds[0]);
+    // ql < best_bounds[1] is to prevent self-elimination
+    eliminated_actions[i] = ql < best_bounds[1] && qu <= best_bounds[0];
+    uneliminated_count += !eliminated_actions[i];
   }
+
+  util::debug_assert(n_actions == 0 || uneliminated_count > 0);
 }
 
 template <core::concepts::Game Game>

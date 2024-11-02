@@ -106,6 +106,9 @@ class SearchThread {
   std::string search_path_str() const;  // slow, for debugging
   void calc_canonical_state_data();
 
+  // Calls node->reset() for the first (search_path_index + 1) node's in search path
+  void reset_tree(int search_path_index);
+
   // In debug builds, calls node->validate_state() for each node in search path.
   // In release builds, NO-OP.
   void validate_search_path() const;
