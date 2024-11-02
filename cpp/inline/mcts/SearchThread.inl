@@ -420,26 +420,14 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
   int reset_index = -1;
 
-  // auto last_stats = last_node->stats();
-
   last_node->update_stats([&] {
     last_node->stats().init_q(value, true);
     last_node->stats().RN++;
   });
 
-  // LOG_INFO << thread_id_whitespace() << "path[" << search_path_.size() - 1 << "] Q:["
-  //          << last_stats.Q.transpose() << "]->[" << last_node->stats().Q.transpose()
-  //          << "] Q_lower:[" << last_stats.Q_lower_bound.transpose() << "]->["
-  //          << last_node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-  //          << last_stats.Q_upper_bound.transpose() << "]->["
-  //          << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
-  //          << last_node->stats().RN;
-
   for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
-
-    auto stats = node->stats();
 
     bool reset_needed = node->update_stats([&] {
       edge->E++;
@@ -449,12 +437,6 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
     if (reset_needed) {
       if (reset_index < 0) reset_index = i;
     }
-
-    LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
-             << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
-             << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-             << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
-             << "] RN:" << stats.RN << "->" << node->stats().RN;
   }
 
   if (reset_index >= 0) {
@@ -478,8 +460,6 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
 
   int reset_index = -1;
 
-  auto last_stats = last_node->stats();
-
   bool reset_needed = last_node->update_stats([&] {
     last_node->stats().init_q(value, false);
     last_node->stats().RN++;
@@ -493,19 +473,9 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
     if (reset_index < 0) reset_index = i;
   }
 
-  LOG_INFO << thread_id_whitespace() << "path[" << search_path_.size() - 1 << "] Q:["
-           << last_stats.Q.transpose() << "]->[" << last_node->stats().Q.transpose()
-           << "] Q_lower:[" << last_stats.Q_lower_bound.transpose() << "]->["
-           << last_node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-           << last_stats.Q_upper_bound.transpose() << "]->["
-           << last_node->stats().Q_upper_bound.transpose() << "] RN:" << last_stats.RN << "->"
-           << last_node->stats().RN;
-
   for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
-
-    auto stats = node->stats();
 
     // NOTE: always update the edge first, then the parent node
     reset_needed = node->update_stats([&] {
@@ -520,12 +490,6 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
     if (reset_needed) {
       if (reset_index < 0) reset_index = i;
     }
-
-    LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
-             << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
-             << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-             << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
-             << "] RN:" << stats.RN << "->" << node->stats().RN;
   }
 
   if (reset_index >= 0) {
@@ -546,8 +510,6 @@ void SearchThread<Game>::short_circuit_backprop() {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    auto stats = node->stats();
-
     // NOTE: always update the edge first, then the parent node
     bool reset_needed = node->update_stats([&] {
       edge->E++;
@@ -557,12 +519,6 @@ void SearchThread<Game>::short_circuit_backprop() {
     if (reset_needed) {
       if (reset_index < 0) reset_index = i;
     }
-
-    LOG_INFO << thread_id_whitespace() << "path[" << i << "] Q:[" << stats.Q.transpose() << "]->["
-             << node->stats().Q.transpose() << "] Q_lower:[" << stats.Q_lower_bound.transpose()
-             << "]->[" << node->stats().Q_lower_bound.transpose() << "] Q_upper:["
-             << stats.Q_upper_bound.transpose() << "]->[" << node->stats().Q_upper_bound.transpose()
-             << "] RN:" << stats.RN << "->" << node->stats().RN;
   }
 
   if (reset_index >= 0) {
