@@ -75,9 +75,9 @@ def transformer(shape_info_dict: ShapeInfoDict):
     assert value_shape == (3,), value_shape
 
     embed_dim = 64
-    n_heads = 8
-    n_layers = 8
-    c_trunk = 128
+    n_heads = 1
+    n_layers = 1
+    c_trunk = 64
 
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
