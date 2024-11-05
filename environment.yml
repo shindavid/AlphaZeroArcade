@@ -147,6 +147,7 @@ dependencies:
   - nest-asyncio=1.5.6=pyhd8ed1ab_0
   - nettle=3.8.1=hc379101_1
   - networkx=3.3=pyhd8ed1ab_1
+  - ninja=1.12.1=h297d8ca_0
   - nodejs=18.10.0=h8839609_0
   - notebook=6.5.3=pyha770c72_0
   - notebook-shim=0.2.2=pyhd8ed1ab_0
@@ -154,7 +155,7 @@ dependencies:
   - numpy-base=1.23.1=py310hcba007f_0
   - openh264=2.3.0=h27087fc_0
   - openmpi=4.1.4=ha1ae619_100
-  - openssl=3.3.1=h4ab18f5_0
+  - openssl=3.3.1=h4bc722e_2
   - p11-kit=0.24.1=hc5aa10d_0
   - packaging=23.0=pyhd8ed1ab_0
   - pandas=1.5.3=py310h9b08913_0
