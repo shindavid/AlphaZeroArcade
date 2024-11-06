@@ -2,6 +2,7 @@
 
 #include <core/concepts/Game.hpp>
 #include <mcts/SharedData.hpp>
+#include <util/BoostUtil.hpp>
 
 #include <boost/json.hpp>
 
@@ -63,7 +64,7 @@ class SearchLog {
   };
 
   void update();
-  std::string json_str() {return boost::json::serialize(combine_json());};
+  std::string json_str();
   void write_json_to_file(const boost::filesystem::path& filename);
 
  private:

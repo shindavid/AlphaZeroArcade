@@ -30,6 +30,13 @@ inline boost::json::object SearchLog<Game>::log_edge_t::to_json() const {
 }
 
 template <core::concepts::Game Game>
+inline std::string SearchLog<Game>::json_str() {
+  std::stringstream ss;
+  boost_util::pretty_print(ss, combine_json());
+  return ss.str();
+};
+
+template <core::concepts::Game Game>
 void SearchLog<Game>::build_graph(Graph& graph) {
   using State = Game::State;
   using edge_t = mcts::Node<Game>::edge_t;
