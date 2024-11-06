@@ -45,6 +45,7 @@ class ActionSymmetryTable {
    */
   PolicyTensor collapse(const PolicyTensor& policy) const;
 
+  action_array_t action_array() const { return action_array_; }
  private:
   action_array_t action_array_;
 };

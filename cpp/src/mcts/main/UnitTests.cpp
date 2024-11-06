@@ -9,6 +9,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -92,6 +93,7 @@ class ManagerTest : public testing::Test {
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using State = Game::State;
+  using SearchResult = Game::Types::SearchResults;
 
   static_assert(Node::kStoreStates, "state-storage required for search-log tests");
 
@@ -127,9 +129,9 @@ class ManagerTest : public testing::Test {
 
   void start_threads() { manager_->start_threads(); }
 
-  void search(int num_searches = 0) {
+  const SearchResult* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
-    manager_->search(search_params);
+    return manager_->search(search_params);
   }
 
   Node* get_node_by_index(node_pool_index_t index) {
@@ -302,7 +304,12 @@ TEST_F(NimManagerTest, search_log) {
   init_manager();
   start_manager();
   start_threads();
-  search(20);
+
+  const SearchResult* result = search(20);
+
+  std::stringstream ss;
+  boost_util::pretty_print(std::cout, result->to_json());
+
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
