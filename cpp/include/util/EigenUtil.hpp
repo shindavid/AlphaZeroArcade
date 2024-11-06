@@ -4,6 +4,7 @@
 
 #include <Eigen/Core>
 #include <EigenRand/EigenRand>
+#include <boost/json.hpp>
 #include <boost/mp11.hpp>
 #include <torch/torch.h>
 #include <unsupported/Eigen/CXX11/Tensor>
