@@ -310,10 +310,15 @@ TEST_F(NimManagerTest, search_log) {
   boost::filesystem::path file_path_result =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_result.json";
 
+  std::ifstream result_file(file_path_result);
+  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                            std::istreambuf_iterator<char>());
+
   std::stringstream ss;
   boost_util::pretty_print(ss, result->to_json());
-  boost_util::write_json_to_file(ss.str(), file_path_result);
+  EXPECT_EQ(ss.str(), expected_result_json);
 
+  // boost_util::write_json_to_file(ss.str(), file_path_result);
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
@@ -335,9 +340,15 @@ TEST_F(NimManagerTest, uniform_search_log) {
   boost::filesystem::path file_path_result =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones_result.json";
 
+  std::ifstream result_file(file_path_result);
+  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                            std::istreambuf_iterator<char>());
+
   std::stringstream ss;
   boost_util::pretty_print(ss, result->to_json());
-  boost_util::write_json_to_file(ss.str(), file_path_result);
+  EXPECT_EQ(ss.str(), expected_result_json);
+
+  // boost_util::write_json_to_file(ss.str(), file_path_result);
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones.json";
@@ -360,9 +371,15 @@ TEST_F(TicTacToeManagerTest, uniform_search_log) {
   boost::filesystem::path file_path_result =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform_result.json";
 
+  std::ifstream result_file(file_path_result);
+  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                            std::istreambuf_iterator<char>());
+
   std::stringstream ss;
   boost_util::pretty_print(ss, result->to_json());
-  boost_util::write_json_to_file(ss.str(), file_path_result);
+  EXPECT_EQ(ss.str(), expected_result_json);
+
+  // boost_util::write_json_to_file(ss.str(), file_path_result);
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform.json";
