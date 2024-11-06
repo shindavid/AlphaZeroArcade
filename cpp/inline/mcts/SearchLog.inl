@@ -84,17 +84,6 @@ inline boost::json::object SearchLog<Game>::combine_json() {
 }
 
 template <core::concepts::Game Game>
-inline void SearchLog<Game>::write_json_to_file(const boost::filesystem::path& filename) {
-  std::ofstream file(filename);  // Convert path to string for ofstream
-  if (file.is_open()) {
-    file << json_str();
-    file.close();
-  } else {
-    throw std::runtime_error("Unable to open file: " + filename.string());
-  }
-}
-
-template <core::concepts::Game Game>
 inline boost::json::object SearchLog<Game>::Graph::graph_repr() const {
   boost::json::object graph_json;
 
