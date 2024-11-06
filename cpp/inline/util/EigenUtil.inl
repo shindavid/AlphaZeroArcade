@@ -545,6 +545,9 @@ template<typename T, size_t N>
 boost::json::array to_json(const std::array<T, N>& array) {
   boost::json::array arr;
   for (size_t i = 0; i < N; ++i) {
+    if (array[i] == -1) {
+      break;
+    }
     arr.push_back(array[i]);
   }
   return arr;
