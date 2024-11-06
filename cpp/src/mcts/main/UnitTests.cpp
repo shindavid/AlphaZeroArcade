@@ -307,8 +307,12 @@ TEST_F(NimManagerTest, search_log) {
 
   const SearchResult* result = search(20);
 
+  boost::filesystem::path file_path_result =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_result.json";
+
   std::stringstream ss;
-  boost_util::pretty_print(std::cout, result->to_json());
+  boost_util::pretty_print(ss, result->to_json());
+  boost_util::write_json_to_file(ss.str(), file_path_result);
 
 
   boost::filesystem::path file_path =
@@ -326,7 +330,14 @@ TEST_F(NimManagerTest, uniform_search_log) {
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
   start_threads();
-  search(100);
+  const SearchResult* result = search(100);
+
+  boost::filesystem::path file_path_result =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones_result.json";
+
+  std::stringstream ss;
+  boost_util::pretty_print(ss, result->to_json());
+  boost_util::write_json_to_file(ss.str(), file_path_result);
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones.json";
@@ -343,7 +354,15 @@ TEST_F(TicTacToeManagerTest, uniform_search_log) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   start_manager(initial_actions);
   start_threads();
-  search(100);
+
+  const SearchResult* result = search(100);
+
+  boost::filesystem::path file_path_result =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform_result.json";
+
+  std::stringstream ss;
+  boost_util::pretty_print(ss, result->to_json());
+  boost_util::write_json_to_file(ss.str(), file_path_result);
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform.json";
