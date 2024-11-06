@@ -22,10 +22,12 @@ class NNEvaluationRequest {
   using InputTensorizor = Game::InputTensorizor;
   using EvalKey = InputTensorizor::EvalKey;
   using NNEvaluation = mcts::NNEvaluation<Game>;
-  using SymmetryMask = Game::Types::SymmetryMask;
 
   using NNEvaluation_sptr = NNEvaluation::sptr;
-  using cache_key_t = EvalKey;
+
+  // If group::element_t is -1, that means to pick a random symmetry at the time of evaluation.
+  // Otherwise, it is the index of the symmetry to use.
+  using cache_key_t = std::tuple<EvalKey, group::element_t>;
 
   enum eval_state_t : int8_t {
     kUnknown = 0,
@@ -39,13 +41,28 @@ class NNEvaluationRequest {
     /*
      * The *logical* history represented by this item is given by (using python notation):
      *
-     * (history + [state]) if first_constructor_used else history
+     * (history + [state]) if state_is_passed_in else history
      *
-     * The first constructor allows multiple items that share the same history-prefix to share
+     * Passing in a state allows multiple items that share the same history-prefix to share
      * the same history vector, as an optimization.
+     *
+     * We use sym to transform the history before tensorizing it. If incorporate_sym_into_cache_key
+     * is true, then we will incorporate sym into the cache key.
+     *
+     * The benefit of incorporating sym into the cache key is that when multiple games are played,
+     * those games are independent. The downside is that we get less cache hits, hurting game
+     * throughput.
+     *
+     * Based on empirical testing, we find that in self-play, it's better not to incorporate sym
+     * into the cache key, to maximize game throughput. The downside is mitigated by the fact that
+     * the cache is cleared on each generation, leading to partial-independence. In contrast, for
+     * rating games, we incorporate sym into the cache key, to ensure the games are truly
+     * independent, in order to get more accurate ratings.
      */
-    Item(Node* node, StateHistory& history, const State& state, const SymmetryMask& sym_mask);
-    Item(Node* node, StateHistory& history, const SymmetryMask& sym_mask);
+    Item(Node* node, StateHistory& history, const State& state, group::element_t sym,
+         bool incorporate_sym_into_cache_key);
+    Item(Node* node, StateHistory& history, group::element_t sym,
+         bool incorporate_sym_into_cache_key);
 
     /*
      * Returns f(history.begin(), history.end()),
@@ -63,18 +80,18 @@ class NNEvaluationRequest {
     NNEvaluation* eval() const { return eval_.get(); }
     eval_state_t eval_state() const { return eval_state_; }
     const cache_key_t& cache_key() const { return cache_key_; }
-    const SymmetryMask& sym_mask() const { return sym_mask_; }
+    group::element_t sym() const { return sym_; }
     const State& cur_state() const { return split_history_ ? state_ : history_->current(); }
 
    private:
-    cache_key_t make_cache_key() const;
+    cache_key_t make_cache_key(group::element_t sym, bool incorporate_sym_into_cache_key) const;
 
     Node* const node_;
     const State state_;
     StateHistory* const history_;
     const bool split_history_;
     const cache_key_t cache_key_;
-    const SymmetryMask sym_mask_;
+    const group::element_t sym_;
 
     NNEvaluation_sptr eval_;
     eval_state_t eval_state_ = kUnknown;

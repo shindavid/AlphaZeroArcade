@@ -56,6 +56,24 @@ struct ManagerParams : public NNEvaluationServiceParams {
    * create action-value targets.
    */
   bool force_evaluate_all_root_children = false;
+
+  /*
+   * When we use a neural network to evaluate a position, we first apply a random symmetry to the
+   * position.
+   *
+   * If incorporate_sym_into_cache_key is true, then this sym is part of the cache key.
+   *
+   * The benefit of incorporating sym into the cache key is that when multiple games are played,
+   * those games are independent. The downside is that we get less cache hits, hurting game
+   * throughput.
+   *
+   * Based on empirical testing, we find that in self-play, it's better not to incorporate sym
+   * into the cache key, to maximize game throughput. The downside is mitigated by the fact that
+   * the cache is cleared on each generation, leading to partial-independence. In contrast, for
+   * rating games, we incorporate sym into the cache key, to ensure the games are truly
+   * independent, in order to get more accurate ratings.
+   */
+  bool incorporate_sym_into_cache_key = true;
 };
 
 }  // namespace mcts
