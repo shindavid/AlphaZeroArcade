@@ -4,6 +4,7 @@
 
 #include <boost/filesystem.hpp>
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <gtest/gtest.h>
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
@@ -17,10 +18,6 @@
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
-
-GTEST_FORWARD_DECLARE(MctsPlayerTest);
-GTEST_FORWARD_DECLARE(MctsPlayerTest, uniform_search);
-GTEST_FORWARD_DECLARE(MctsPlayerTest, uniform_search_01247);
 
 namespace generic {
 
@@ -113,9 +110,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;
 
-  FRIEND_GTEST(MctsPlayerTest);
-  FRIEND_GTEST(MctsPlayerTest, uniform_search);
-  FRIEND_GTEST(MctsPlayerTest, uniform_search_01247);
+  FRIEND_TEST(tictactoe_test, uniform_search);
+  FRIEND_TEST(tictactoe_test, uniform_search_01247);
 };
 
 }  // namespace generic

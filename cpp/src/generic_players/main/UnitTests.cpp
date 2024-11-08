@@ -13,9 +13,11 @@
 
 #include <fstream>
 
+namespace generic {
+
+template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
  protected:
-  using Game = tictactoe::Game;
   using Manager = mcts::Manager<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
@@ -125,11 +127,12 @@ private:
   std::vector<core::action_t> initial_actions_;
 };
 
-TEST_F(MctsPlayerTest, uniform_search) {
+using tictactoe_test = MctsPlayerTest<tictactoe::Game>;
+TEST_F(tictactoe_test, uniform_search) {
   test_get_action_policy("tictactoe");
 }
 
-TEST_F(MctsPlayerTest, uniform_search_01247) {
+TEST_F(tictactoe_test, uniform_search_01247) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   test_get_action_policy("tictactoe01247", initial_actions);
 }
@@ -139,3 +142,5 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+
+}  // namespace generic
