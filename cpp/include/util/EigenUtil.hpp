@@ -372,9 +372,6 @@ boost::json::array to_json(const T& tensor);
 template <eigen_util::concepts::FArray T>
 boost::json::array to_json(const T& array);
 
-template<typename T, size_t N>
-boost::json::array to_json(const std::array<T, N>& array);
-
 }  // namespace eigen_util
 
 #include <inline/util/EigenUtil.inl>

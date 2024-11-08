@@ -16,7 +16,7 @@ GameTypes<GameConstants, State, GameResults, SymmetryGroup>::SearchResults::to_j
   results_json["action_values"] = eigen_util::to_json(action_values);
   results_json["win_rates"] = eigen_util::to_json(win_rates);
   results_json["value_prior"] = eigen_util::to_json(value_prior);
-  results_json["action_symmetry_table"] = eigen_util::to_json(action_symmetry_table.action_array());
+  results_json["action_symmetry_table"] = action_symmetry_table.to_json();
   results_json["trivial"] = trivial;
   results_json["provably_lost"] = provably_lost;
   return results_json;
