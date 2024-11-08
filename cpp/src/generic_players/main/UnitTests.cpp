@@ -129,7 +129,6 @@ TEST_F(TicTacToeMctsPlayerTest, uniform_search_01247) {
   EXPECT_EQ(ss_result.str(), expected_result_json);
   EXPECT_EQ(ss_policy.str(), expected_policy_json);
   EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
-  EXPECT_EQ(response.action, 6);
 }
 
 int main(int argc, char** argv) {

@@ -54,7 +54,7 @@ std::string pop_option_value(std::vector<std::string>& args,
   return "";
 }
 
-// The code below was taken from:
+// The code below was adapted from:
 // https://www.boost.org/doc/libs/1_76_0/libs/json/doc/html/json/examples.html
 void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* indent) {
   std::string indent_;
@@ -78,9 +78,24 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
     }
 
     case boost::json::kind::array: {
+      auto const& arr = jv.get_array();
+
+      if ((arr[0].kind() != boost::json::kind::object) && (arr[0].kind() != boost::json::kind::array)) {
+        os << "[";
+        if (!arr.empty()) {
+          auto it = arr.begin();
+          for (;;) {
+            pretty_print(os, *it, indent);
+            if (++it == arr.end()) break;
+            os << ", ";
+          }
+        }
+        os << "]";
+        break;
+      }
       os << "[\n";
       indent->append(4, ' ');
-      auto const& arr = jv.get_array();
+
       if (!arr.empty()) {
         auto it = arr.begin();
         for (;;) {
@@ -131,7 +146,7 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
       break;
   }
 
-  if (indent->empty()) os << "\n";
+  // if (indent->empty()) os << "\n";
 }
 
 namespace program_options {
