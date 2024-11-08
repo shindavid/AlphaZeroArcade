@@ -82,9 +82,7 @@ void DataExportingMctsPlayer<Game>::extract_policy_target(const SearchResults* m
     *target = nullptr;
   } else {
     **target = mcts_results->action_symmetry_table.symmetrize(**target);
-    sum = eigen_util::sum(**target);
-    auto& policy_target_array = eigen_util::reinterpret_as_array(**target);
-    policy_target_array /= sum;
+    **target = **target / eigen_util::sum(**target);
   }
 }
 
