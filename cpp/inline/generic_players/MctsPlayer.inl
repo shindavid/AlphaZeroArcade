@@ -162,20 +162,9 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
                                                            const ActionMask& valid_actions) {
-  return get_action_response(state, valid_actions, nullptr, nullptr);
-}
-
-template <core::concepts::Game Game>
-core::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
-                                                           const ActionMask& valid_actions,
-                                                           SearchResult* search_result,
-                                                           PolicyTensor* output_policy) {
   core::SearchMode search_mode = choose_search_mode();
   const SearchResults* mcts_results = mcts_search(search_mode);
-  if (search_result) {
-    *search_result = *mcts_results;
-  }
-  return get_action_response_helper(search_mode, mcts_results, valid_actions, output_policy);
+  return get_action_response_helper(search_mode, mcts_results, valid_actions);
 }
 
 template <core::concepts::Game Game>
@@ -193,7 +182,24 @@ inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
 template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const SearchResults* mcts_results,
-    const ActionMask& valid_actions, PolicyTensor* output_policy) const {
+    const ActionMask& valid_actions) const {
+
+  PolicyTensor modified_policy = get_action_policy(search_mode, mcts_results, valid_actions);
+
+  if (verbose_info_) {
+    verbose_info_->action_policy = modified_policy;
+    verbose_info_->mcts_results = *mcts_results;
+    verbose_info_->initialized = true;
+  }
+  core::action_t action = eigen_util::sample(modified_policy);
+  util::release_assert(valid_actions[action]);
+  return action;
+}
+
+template <core::concepts::Game Game>
+auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
+                                                 const SearchResults* mcts_results,
+                                                 const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode == core::kRawPolicy) {
@@ -313,9 +319,9 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
 
           std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
                                               "Q_sigma", "LCB", "UCB", "P*"};
-          auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-              actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr, LCB_arr, UCB_arr,
-              policy_masked_arr));
+          auto data = eigen_util::sort_rows(
+              eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr,
+                                              Q_sigma_arr, LCB_arr, UCB_arr, policy_masked_arr));
 
           eigen_util::PrintArrayFormatMap fmt_map;
           fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
@@ -338,15 +344,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     }
     eigen_util::normalize(policy);
   }
-
-  if (verbose_info_) {
-    verbose_info_->action_policy = policy;
-    verbose_info_->mcts_results = *mcts_results;
-    verbose_info_->initialized = true;
-  }
-  core::action_t action = eigen_util::sample(policy);
-  util::release_assert(valid_actions[action]);
-  return action;
+  return policy;
 }
 
 template <core::concepts::Game Game>

@@ -21,7 +21,7 @@ class MctsPlayerTest : public ::testing::Test {
   using ManagerParams = mcts::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = MctsPlayer::Params;
-  using SearchResult = Game::Types::SearchResults;
+  using SearchResults = Game::Types::SearchResults;
   using SearchLog = mcts::SearchLog<Game>;
   using PolicyTensor = Game::Types::PolicyTensor;
   using StateHistory = Game::StateHistory;
@@ -59,29 +59,26 @@ class MctsPlayerTest : public ::testing::Test {
     initial_actions_ = initial_actions;
   }
 
-  core::ActionResponse get_action_response(SearchResult* search_result,
-                                           PolicyTensor* output_policy) {
-    StateHistory state_history =
-        mcts_manager_->shared_data()->root_info.history_array[group::kIdentity];
-    State state = state_history.current();
-    ActionMask valid_actions = Rules::get_legal_moves(state_history);
-    core::ActionResponse response =
-        mcts_player_->get_action_response(state, valid_actions, search_result, output_policy);
-    return response;
-  }
-
   mcts::SearchLog<Game>* get_search_log() { return search_log_; }
 
-  void test_get_action_response(std::string testname, const std::vector<core::action_t>& initial_actions = {} ) {
+  void test_get_action_policy(std::string testname,
+                              const std::vector<core::action_t>& initial_actions = {}) {
     init();
     start_manager(initial_actions);
-    SearchResult search_result;
-    PolicyTensor output_policy;
-    core::ActionResponse response = get_action_response(&search_result, &output_policy);
+
+    StateHistory state_history =
+        mcts_manager_->shared_data()->root_info.history_array[group::kIdentity];
+    ActionMask valid_actions = Rules::get_legal_moves(state_history);
+
+    core::SearchMode search_mode = mcts_player_->choose_search_mode();
+    const SearchResults* search_result = mcts_player_->mcts_search(search_mode);
+
+    PolicyTensor modified_policy =
+        mcts_player_->get_action_policy(search_mode, search_result, valid_actions);
 
     std::stringstream ss_result, ss_policy;
-    boost_util::pretty_print(ss_result, search_result.to_json());
-    boost_util::pretty_print(ss_policy, eigen_util::to_json(output_policy));
+    boost_util::pretty_print(ss_result, search_result->to_json());
+    boost_util::pretty_print(ss_policy, eigen_util::to_json(modified_policy));
 
     boost::filesystem::path file_path_result =
         util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_result.json");
@@ -131,13 +128,13 @@ private:
 
 using TicTacToeMctsPlayerTest = MctsPlayerTest<tictactoe::Game>;
 TEST_F(TicTacToeMctsPlayerTest, uniform_search) {
-  test_get_action_response("tictactoe");
+  test_get_action_policy("tictactoe");
 }
 
 using TicTacToeMctsPlayerTest = MctsPlayerTest<tictactoe::Game>;
 TEST_F(TicTacToeMctsPlayerTest, uniform_search_01247) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  test_get_action_response("tictactoe01247", initial_actions);
+  test_get_action_policy("tictactoe01247", initial_actions);
 }
 
 int main(int argc, char** argv) {

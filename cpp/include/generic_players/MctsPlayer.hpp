@@ -71,20 +71,17 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   core::ActionResponse get_action_response(const State&, const ActionMask&) override;
-  core::ActionResponse get_action_response(const State&, const ActionMask&, SearchResult*,
-                                           PolicyTensor*);
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
+  auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
+  const SearchResults* mcts_search(core::SearchMode search_mode) const;
+  core::SearchMode choose_search_mode() const;
 
  protected:
   MctsPlayer(const Params&);
-
-  const SearchResults* mcts_search(core::SearchMode search_mode) const;
-  core::SearchMode choose_search_mode() const;
   core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
-                                                  const ActionMask& valid_actions,
-                                                  PolicyTensor* output_policy = nullptr) const;
+                                                  const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;
