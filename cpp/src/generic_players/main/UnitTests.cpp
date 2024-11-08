@@ -49,7 +49,7 @@ class MctsPlayerTest : public ::testing::Test {
     mcts_player_ = new MctsPlayer(player_params_, mcts_manager_);
   }
 
-  void start_manager(const std::vector<core::action_t>& initial_actions = {}) {
+  void start_manager(const std::vector<core::action_t>& initial_actions) {
     mcts_player_->start_game();
     mcts_manager_->start_threads();
     for (core::action_t action : initial_actions) {
@@ -72,6 +72,48 @@ class MctsPlayerTest : public ::testing::Test {
 
   mcts::SearchLog<Game>* get_search_log() { return search_log_; }
 
+  void test_get_action_response(std::string testname, const std::vector<core::action_t>& initial_actions = {} ) {
+    init();
+    start_manager(initial_actions);
+    SearchResult search_result;
+    PolicyTensor output_policy;
+    core::ActionResponse response = get_action_response(&search_result, &output_policy);
+
+    std::stringstream ss_result, ss_policy;
+    boost_util::pretty_print(ss_result, search_result.to_json());
+    boost_util::pretty_print(ss_policy, eigen_util::to_json(output_policy));
+
+    boost::filesystem::path file_path_result =
+        util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_result.json");
+
+    boost::filesystem::path file_path_policy =
+        util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_policy.json");
+
+    boost::filesystem::path file_path_log =
+        util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_log.json");
+
+    if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+      boost_util::write_str_to_file(ss_result.str(), file_path_result);
+      boost_util::write_str_to_file(ss_policy.str(), file_path_policy);
+      boost_util::write_str_to_file(get_search_log()->json_str(), file_path_log);
+    }
+
+    std::ifstream result_file(file_path_result);
+    std::ifstream policy_file(file_path_policy);
+    std::ifstream log_file(file_path_log);
+
+    std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                                     std::istreambuf_iterator<char>());
+    std::string expected_policy_json((std::istreambuf_iterator<char>(policy_file)),
+                                     std::istreambuf_iterator<char>());
+    std::string expected_log_json((std::istreambuf_iterator<char>(log_file)),
+                                  std::istreambuf_iterator<char>());
+
+    EXPECT_EQ(ss_result.str(), expected_result_json);
+    EXPECT_EQ(ss_policy.str(), expected_policy_json);
+    EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
+  }
+
   void TearDown() override {
     delete search_log_;
     delete mcts_manager_;
@@ -88,47 +130,14 @@ private:
 };
 
 using TicTacToeMctsPlayerTest = MctsPlayerTest<tictactoe::Game>;
+TEST_F(TicTacToeMctsPlayerTest, uniform_search) {
+  test_get_action_response("tictactoe");
+}
+
+using TicTacToeMctsPlayerTest = MctsPlayerTest<tictactoe::Game>;
 TEST_F(TicTacToeMctsPlayerTest, uniform_search_01247) {
-  init();
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  start_manager(initial_actions);
-  SearchResult search_result;
-  PolicyTensor output_policy;
-  core::ActionResponse response = get_action_response(&search_result, &output_policy);
-
-  std::stringstream ss_result, ss_policy;
-  boost_util::pretty_print(ss_result, search_result.to_json());
-  boost_util::pretty_print(ss_policy, eigen_util::to_json(output_policy));
-
-  boost::filesystem::path file_path_result =
-      util::Repo::root() / "goldenfiles" / "generic_players" / "tictactoe01247_result.json";
-
-  boost::filesystem::path file_path_policy =
-      util::Repo::root() / "goldenfiles" / "generic_players" / "tictactoe01247_policy.json";
-
-  boost::filesystem::path file_path_log =
-      util::Repo::root() / "goldenfiles" / "generic_players" / "tictactoe01247_log.json";
-
-  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
-    boost_util::write_str_to_file(ss_result.str(), file_path_result);
-    boost_util::write_str_to_file(ss_policy.str(), file_path_policy);
-    boost_util::write_str_to_file(get_search_log()->json_str(), file_path_log);
-  }
-
-  std::ifstream result_file(file_path_result);
-  std::ifstream policy_file(file_path_policy);
-  std::ifstream log_file(file_path_log);
-
-  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
-                                   std::istreambuf_iterator<char>());
-  std::string expected_policy_json((std::istreambuf_iterator<char>(policy_file)),
-                                    std::istreambuf_iterator<char>());
-  std::string expected_log_json((std::istreambuf_iterator<char>(log_file)),
-                                std::istreambuf_iterator<char>());
-
-  EXPECT_EQ(ss_result.str(), expected_result_json);
-  EXPECT_EQ(ss_policy.str(), expected_policy_json);
-  EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
+  test_get_action_response("tictactoe01247", initial_actions);
 }
 
 int main(int argc, char** argv) {
