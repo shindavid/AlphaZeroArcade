@@ -1,13 +1,15 @@
 #pragma once
 
-#include <memory>
-#include <string>
+#include <util/CppUtil.hpp>
+#include <util/StringUtil.hpp>
 
+#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/json.hpp>
 
-#include <util/CppUtil.hpp>
-#include <util/StringUtil.hpp>
+#include <memory>
+#include <fstream>
+#include <string>
 
 namespace boost_util {
 
@@ -26,6 +28,8 @@ std::string get_option_value(const std::vector<std::string>& args, const std::st
 std::string pop_option_value(std::vector<std::string>& args, const std::string& option_name);
 
 void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* indent = nullptr);
+
+void write_str_to_file(const std::string& str, const boost::filesystem::path& filename);
 
 namespace program_options {
 

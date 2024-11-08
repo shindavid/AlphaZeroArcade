@@ -125,6 +125,15 @@ inline std::string float_to_str8(float x) {
   return s;
 }
 
+template <typename T>
+boost::json::array to_json(const T& array) {
+  boost::json::array arr;
+  for (int i = 0; i < array.size(); ++i) {
+    arr.push_back(array.data()[i]);
+  }
+  return arr;
+}
+
 }  // namespace detail
 
 template <typename Scalar>
@@ -520,6 +529,16 @@ auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
   (..., (result.col(col_idx++) = rest));  // Unpack and assign the arrays
 
   return result;
+}
+
+template <eigen_util::concepts::FTensor T>
+boost::json::array to_json(const T& tensor) {
+  return detail::to_json(tensor);
+}
+
+template <eigen_util::concepts::FArray T>
+boost::json::array to_json(const T& array) {
+  return detail::to_json(array);
 }
 
 }  // namespace eigen_util

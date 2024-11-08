@@ -1,16 +1,18 @@
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <type_traits>
+#include <util/CppUtil.hpp>
 
 #include <Eigen/Core>
 #include <EigenRand/EigenRand>
+#include <boost/json.hpp>
 #include <boost/mp11.hpp>
 #include <torch/torch.h>
 #include <unsupported/Eigen/CXX11/Tensor>
 
-#include <util/CppUtil.hpp>
+#include <array>
+#include <bitset>
+#include <cstdint>
+#include <type_traits>
 
 /*
  * Various util functions that make the eigen3 library more pleasant to use.
@@ -363,6 +365,12 @@ void print_array(std::ostream& os, const Eigen::ArrayBase<Derived>& array,
 template <typename Derived0, typename... Deriveds>
 auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
                          const Eigen::ArrayBase<Deriveds>&... rest);
+
+template <eigen_util::concepts::FTensor T>
+boost::json::array to_json(const T& tensor);
+
+template <eigen_util::concepts::FArray T>
+boost::json::array to_json(const T& array);
 
 }  // namespace eigen_util
 

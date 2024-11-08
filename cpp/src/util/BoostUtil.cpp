@@ -1,7 +1,5 @@
 #include <util/BoostUtil.hpp>
 
-#include <boost/json.hpp>
-
 namespace boost_util {
 
 std::string get_option_value(const std::vector<std::string>& args,

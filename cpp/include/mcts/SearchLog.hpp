@@ -65,7 +65,6 @@ class SearchLog {
 
   void update();
   std::string json_str();
-  void write_json_to_file(const boost::filesystem::path& filename);
 
  private:
   const SharedData<Game>* shared_data_;

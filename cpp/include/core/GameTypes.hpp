@@ -55,6 +55,8 @@ struct GameTypes {
     ActionSymmetryTable action_symmetry_table;
     bool trivial;  // all actions are symmetrically equivalent
     bool provably_lost = false;
+
+    boost::json::object to_json() const;
   };
 
   /*
@@ -74,3 +76,5 @@ struct GameTypes {
 };
 
 }  // namespace core
+
+#include <inline/core/GameTypes.inl>

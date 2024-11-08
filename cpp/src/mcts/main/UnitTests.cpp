@@ -9,6 +9,7 @@
 #include <mcts/Node.hpp>
 #include <mcts/SearchThread.hpp>
 #include <mcts/SharedData.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 
@@ -92,6 +93,7 @@ class ManagerTest : public testing::Test {
   using ValueArray = Game::Types::ValueArray;
   using Service = mcts::NNEvaluationServiceBase<Game>;
   using State = Game::State;
+  using SearchResult = Game::Types::SearchResults;
 
   static_assert(Node::kStoreStates, "state-storage required for search-log tests");
 
@@ -127,9 +129,9 @@ class ManagerTest : public testing::Test {
 
   void start_threads() { manager_->start_threads(); }
 
-  void search(int num_searches = 0) {
+  const SearchResult* search(int num_searches = 0) {
     mcts::SearchParams search_params(num_searches, true);
-    manager_->search(search_params);
+    return manager_->search(search_params);
   }
 
   Node* get_node_by_index(node_pool_index_t index) {
@@ -302,14 +304,31 @@ TEST_F(NimManagerTest, search_log) {
   init_manager();
   start_manager();
   start_threads();
-  search(20);
 
+  const SearchResult* result = search(20);
+
+  boost::filesystem::path file_path_result =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_result.json";
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
+
+  std::stringstream ss;
+  boost_util::pretty_print(ss, result->to_json());
+
+  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+    boost_util::write_str_to_file(ss.str(), file_path_result);
+    boost_util::write_str_to_file(get_search_log()->json_str(), file_path);
+  }
+
+  std::ifstream result_file(file_path_result);
+  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                            std::istreambuf_iterator<char>());
+
+  EXPECT_EQ(ss.str(), expected_result_json);
+
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-
   EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
@@ -319,14 +338,30 @@ TEST_F(NimManagerTest, uniform_search_log) {
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
   start_threads();
-  search(100);
+  const SearchResult* result = search(100);
+
+  boost::filesystem::path file_path_result =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones_result.json";
 
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones.json";
+
+  std::stringstream ss;
+  boost_util::pretty_print(ss, result->to_json());
+
+  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+    boost_util::write_str_to_file(ss.str(), file_path_result);
+    boost_util::write_str_to_file(get_search_log()->json_str(), file_path);
+  }
+
+  std::ifstream result_file(file_path_result);
+  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                            std::istreambuf_iterator<char>());
+  EXPECT_EQ(ss.str(), expected_result_json);
+
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-
   EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
@@ -336,14 +371,31 @@ TEST_F(TicTacToeManagerTest, uniform_search_log) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   start_manager(initial_actions);
   start_threads();
-  search(100);
 
+  const SearchResult* result = search(100);
+
+  boost::filesystem::path file_path_result =
+      util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform_result.json";
   boost::filesystem::path file_path =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform.json";
+
+  std::stringstream ss;
+  boost_util::pretty_print(ss, result->to_json());
+
+  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+    boost_util::write_str_to_file(ss.str(), file_path_result);
+    boost_util::write_str_to_file(get_search_log()->json_str(), file_path);
+  }
+
+  std::ifstream result_file(file_path_result);
+  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                            std::istreambuf_iterator<char>());
+
+  EXPECT_EQ(ss.str(), expected_result_json);
+
   std::ifstream file(file_path);
   std::string expected_json((std::istreambuf_iterator<char>(file)),
                             std::istreambuf_iterator<char>());
-
   EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
