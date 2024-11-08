@@ -257,12 +257,6 @@ const auto& reinterpret_as_array(const Tensor& tensor);
 template <concepts::FTensor Tensor>
 auto& reinterpret_as_array(Tensor& tensor);
 
-template <concepts::FTensor Tensor, concepts::FArray Array>
-const Tensor& reinterpret_as_tensor(const Array& array);
-
-template <concepts::FTensor Tensor, concepts::FArray Array>
-Tensor& reinterpret_as_tensor(Array& array);
-
 // debug_assert()'s that distr is a valid probability distribution
 // For release-build's, is a no-op
 template <typename T>

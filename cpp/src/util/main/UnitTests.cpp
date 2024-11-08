@@ -393,21 +393,6 @@ TEST(eigen_util, cwiseMax) {
   }
 }
 
-TEST(eigen_util, reinterpret_as_tensor) {
-  constexpr int N = 4;
-  using Array = eigen_util::FArray<N>;
-  using Tensor = eigen_util::FTensor<Eigen::Sizes<N, 1>>;
-
-  Array array{{0, 1, 2, 3}};
-  Tensor expected_tensor;
-  expected_tensor.setValues({{0}, {1}, {2}, {3}});
-  Tensor tensor = eigen_util::reinterpret_as_tensor<Tensor>(array);
-
-  for (int i = 0; i < N; ++i) {
-    EXPECT_EQ(tensor(i, 0), expected_tensor(i, 0));
-  }
-}
-
 TEST(eigen_util, assert_is_valid_prob_distr_array) {
   constexpr int N = 4;
   using Array = eigen_util::FArray<N>;

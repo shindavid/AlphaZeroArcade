@@ -274,18 +274,6 @@ auto& reinterpret_as_array(Tensor& tensor) {
   return reinterpret_cast<Array&>(tensor);
 }
 
-template <concepts::FTensor Tensor, concepts::FArray Array>
-const Tensor& reinterpret_as_tensor(const Array& array) {
-  static_assert(extract_length_v<Array> == Tensor::Dimensions::total_size);
-  return reinterpret_cast<const Tensor&>(array);
-}
-
-template <concepts::FTensor Tensor, concepts::FArray Array>
-Tensor& reinterpret_as_tensor(Array& array) {
-  static_assert(extract_length_v<Array> == Tensor::Dimensions::total_size);
-  return reinterpret_cast<Tensor&>(array);
-}
-
 template <typename T>
 void debug_assert_is_valid_prob_distr(const T& distr, float eps) {
   if (!IS_MACRO_ENABLED(DEBUG_BUILD)) return;
