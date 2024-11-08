@@ -79,35 +79,34 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
 
     case boost::json::kind::array: {
       auto const& arr = jv.get_array();
-      // print without newlines if the array is empty or contains only simple elements
-      if ((arr[0].kind() != boost::json::kind::object) && (arr[0].kind() != boost::json::kind::array)) {
+      auto it = arr.begin();
+      bool is_simple_array = (it->kind() != boost::json::kind::object) &&
+          (it->kind() != boost::json::kind::array);
+
+      // print without newlines if the array contains only simple elements
+      if (is_simple_array) {
         os << "[";
-        if (!arr.empty()) {
-          auto it = arr.begin();
-          for (;;) {
-            pretty_print(os, *it, indent);
-            if (++it == arr.end()) break;
-            os << ", ";
-          }
+
+        while(true) {
+          pretty_print(os, *it, indent);
+          if (++it == arr.end()) break;
+          os << ", ";
         }
         os << "]";
-        break;
-      }
-      os << "[\n";
-      indent->append(4, ' ');
+      } else {
+        os << "[\n";
+        indent->append(4, ' ');
 
-      if (!arr.empty()) {
-        auto it = arr.begin();
-        for (;;) {
+        while (true) {
           os << *indent;
           pretty_print(os, *it, indent);
           if (++it == arr.end()) break;
           os << ",\n";
         }
+        os << "\n";
+        indent->resize(indent->size() - 4);
+        os << *indent << "]";
       }
-      os << "\n";
-      indent->resize(indent->size() - 4);
-      os << *indent << "]";
       break;
     }
 
