@@ -110,6 +110,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;
 
+  template<core::concepts::Game> friend class MctsPlayerTest;
   FRIEND_TEST(tictactoe_test, uniform_search);
   FRIEND_TEST(tictactoe_test, uniform_search_01247);
 };
