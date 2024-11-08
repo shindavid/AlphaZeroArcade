@@ -13,10 +13,9 @@
 
 #include <fstream>
 
-template<core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
  protected:
-
+  using Game = tictactoe::Game;
   using Manager = mcts::Manager<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
@@ -126,13 +125,11 @@ private:
   std::vector<core::action_t> initial_actions_;
 };
 
-using TicTacToeMctsPlayerTest = MctsPlayerTest<tictactoe::Game>;
-TEST_F(TicTacToeMctsPlayerTest, uniform_search) {
+TEST_F(MctsPlayerTest, uniform_search) {
   test_get_action_policy("tictactoe");
 }
 
-using TicTacToeMctsPlayerTest = MctsPlayerTest<tictactoe::Game>;
-TEST_F(TicTacToeMctsPlayerTest, uniform_search_01247) {
+TEST_F(MctsPlayerTest, uniform_search_01247) {
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
   test_get_action_policy("tictactoe01247", initial_actions);
 }

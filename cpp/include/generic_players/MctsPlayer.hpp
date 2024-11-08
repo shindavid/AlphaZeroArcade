@@ -9,6 +9,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
@@ -16,6 +17,10 @@
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
+
+GTEST_FORWARD_DECLARE(MctsPlayerTest);
+GTEST_FORWARD_DECLARE(MctsPlayerTest, uniform_search);
+GTEST_FORWARD_DECLARE(MctsPlayerTest, uniform_search_01247);
 
 namespace generic {
 
@@ -74,12 +79,12 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
-  auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
-  const SearchResults* mcts_search(core::SearchMode search_mode) const;
-  core::SearchMode choose_search_mode() const;
 
  protected:
   MctsPlayer(const Params&);
+  auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
+  const SearchResults* mcts_search(core::SearchMode search_mode) const;
+  core::SearchMode choose_search_mode() const;
   core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
                                                   const ActionMask& valid_actions) const;
 
@@ -107,6 +112,10 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   bool owns_manager_;
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;
+
+  FRIEND_GTEST(MctsPlayerTest);
+  FRIEND_GTEST(MctsPlayerTest, uniform_search);
+  FRIEND_GTEST(MctsPlayerTest, uniform_search_01247);
 };
 
 }  // namespace generic
