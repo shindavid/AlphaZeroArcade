@@ -66,10 +66,10 @@ boost::json::array ActionSymmetryTable<GameConstants, Group>::to_json() const {
   while (it != action_array_.end()) {
     if (it == action_array_.begin() || *it < *(it - 1)) {
       equivalence_class_json = {};
-
     }
 
     equivalence_class_json.push_back(*it);
+
     if (*it > *(it + 1)) {
       action_array_json.push_back(equivalence_class_json);
     }
