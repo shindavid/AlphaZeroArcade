@@ -61,7 +61,7 @@ ActionSymmetryTable<GameConstants, Group>::collapse(const PolicyTensor& policy) 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
 boost::json::array ActionSymmetryTable<GameConstants, Group>::to_json() const {
   boost::json::array action_array_json;
-  for (const auto& action : action_array_) {
+  for (auto action : action_array_) {
     if (action < 0) break;
     action_array_json.push_back(action);
   }

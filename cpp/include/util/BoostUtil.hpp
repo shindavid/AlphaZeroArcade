@@ -29,7 +29,7 @@ std::string pop_option_value(std::vector<std::string>& args, const std::string& 
 
 void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* indent = nullptr);
 
-void write_json_to_file(const std::string& str, const boost::filesystem::path& filename);
+void write_str_to_file(const std::string& str, const boost::filesystem::path& filename);
 
 namespace program_options {
 

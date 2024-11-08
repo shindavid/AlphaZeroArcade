@@ -45,8 +45,6 @@ class ActionSymmetryTable {
    */
   PolicyTensor collapse(const PolicyTensor& policy) const;
 
-  action_array_t action_array() const { return action_array_; }
-
   boost::json::array to_json() const;
  private:
   action_array_t action_array_;

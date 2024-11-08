@@ -171,7 +171,7 @@ boost::program_options::variables_map parse_args(const T& desc, Ts&&... ts) {
 
 }  // namespace program_options
 
-inline void write_json_to_file(const std::string& str, const boost::filesystem::path& filename) {
+inline void write_str_to_file(const std::string& str, const boost::filesystem::path& filename) {
   std::ofstream file(filename);  // Convert path to string for ofstream
   if (file.is_open()) {
     file << str;
