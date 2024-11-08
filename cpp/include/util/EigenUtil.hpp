@@ -217,10 +217,10 @@ template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim);
 
 /*
- * Returns a random int k, with probability proportional to A[k].
+ * Returns a random int k, with probability proportional to T.data()[k].
  */
-template <concepts::FArray Array>
-int sample(const Array& A);
+template <concepts::FTensor Tensor>
+int sample(const Tensor& T);
 
 /*
  * Divides tensor by its sum.

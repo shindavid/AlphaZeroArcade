@@ -225,10 +225,10 @@ auto reverse(const Tensor& tensor, int dim) {
   return tensor.reverse(rev);
 }
 
-template <concepts::FArray Array>
-int sample(const Array& A) {
-  const auto* data = A.data();
-  int n = A.rows();
+template <concepts::FTensor Tensor>
+int sample(const Tensor& T) {
+  const auto* data = T.data();
+  int n = T.size();
   return util::Random::weighted_sample(data, data + n);
 }
 

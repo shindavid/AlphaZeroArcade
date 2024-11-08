@@ -185,15 +185,14 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
-  auto& policy_array = eigen_util::reinterpret_as_array(policy);
   if (search_mode == core::kRawPolicy) {
     ActionMask valid_actions_subset = valid_actions;
     bitset_util::randomly_zero_out(valid_actions_subset, valid_actions_subset.count() / 2);
 
-    policy_array.setConstant(0);
+    policy.setConstant(0);
 
     for (int a : bitset_util::on_indices(valid_actions_subset)) {
-      policy_array(a) = mcts_results->policy_prior(a);
+      policy(a) = mcts_results->policy_prior(a);
     }
   } else {
     policy = counts;
@@ -239,35 +238,33 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
       PolicyTensor Q_sigma = Q_sigma_sq.sqrt();
 
       PolicyTensor LCB = Q - params_.LCB_z_score * Q_sigma;
-      auto LCB_array = eigen_util::reinterpret_as_array(LCB);
 
       float policy_max = -1;
       float min_LCB = 0;
       bool min_LCB_set = false;
 
       // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
-      // min_{i in S} {LCB_array[i])}
+      // min_{i in S} {LCB(i)}
       for (int a : bitset_util::on_indices(valid_actions)) {
-        float p = policy_array(a);
+        float p = policy(a);
         if (p <= 0) continue;
 
         if (p > policy_max) {
           policy_max = p;
-          min_LCB = LCB_array(a);
+          min_LCB = LCB(a);
           min_LCB_set = true;
         } else if (p == policy_max) {
-          min_LCB = std::min(min_LCB, LCB_array(a));
+          min_LCB = std::min(min_LCB, LCB(a));
           min_LCB_set = true;
         }
       }
 
       if (min_LCB_set) {
         PolicyTensor UCB = Q + params_.LCB_z_score * Q_sigma;
-        auto UCB_array = eigen_util::reinterpret_as_array(UCB);
 
-        // zero out policy_array wherever UCB < min_LCB
-        auto mask = (UCB_array >= min_LCB).template cast<float>();
-        auto policy_masked = policy_array * mask;
+        // zero out policy wherever UCB < min_LCB
+        auto mask = (UCB >= min_LCB).template cast<float>();
+        PolicyTensor policy_masked = policy * mask;
 
         if (mcts::kEnableSearchDebug) {
           int visited_actions = 0;
@@ -316,7 +313,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
           eigen_util::print_array(std::cout, data, columns, &fmt_map);
         }
 
-        policy_array = policy_masked;
+        policy = policy_masked;
       }
     }
   }
@@ -324,9 +321,9 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
   if (!eigen_util::normalize(policy)) {
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
-    policy_array.setConstant(0);
+    policy.setConstant(0);
     for (int a : bitset_util::on_indices(valid_actions)) {
-      policy_array(a) = 1;
+      policy(a) = 1;
     }
     eigen_util::normalize(policy);
   }
@@ -336,7 +333,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     verbose_info_->mcts_results = *mcts_results;
     verbose_info_->initialized = true;
   }
-  core::action_t action = eigen_util::sample(policy_array);
+  core::action_t action = eigen_util::sample(policy);
   util::release_assert(valid_actions[action]);
   return action;
 }

@@ -306,12 +306,14 @@ TEST(eigen_util, sample) {
   constexpr int N = 4;
   constexpr int numSamples = 10000;
 
-  using Array = eigen_util::FArray<N>;
+  using Tensor = eigen_util::FTensor<Eigen::Sizes<N>>;
 
-  Array values = {{1, 2, 3, 4}};
-  Array expectedFreq = values / values.sum() * numSamples;
+  Tensor values;
+  values.setValues({1, 2, 3, 4});
+  Tensor expectedFreq = values * (numSamples / eigen_util::sum(values));
+ // *numSamples;
 
-  Array freq;
+  Tensor freq;
   freq.setZero();
   for (int i = 0; i < numSamples; i++) {
     auto sample = eigen_util::sample(values);
