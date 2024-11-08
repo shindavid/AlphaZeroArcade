@@ -162,9 +162,20 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
                                                            const ActionMask& valid_actions) {
+  return get_action_response(state, valid_actions, nullptr, nullptr);
+}
+
+template <core::concepts::Game Game>
+core::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
+                                                           const ActionMask& valid_actions,
+                                                           SearchResult* search_result,
+                                                           PolicyTensor* output_policy) {
   core::SearchMode search_mode = choose_search_mode();
   const SearchResults* mcts_results = mcts_search(search_mode);
-  return get_action_response_helper(search_mode, mcts_results, valid_actions);
+  if (search_result) {
+    *search_result = *mcts_results;
+  }
+  return get_action_response_helper(search_mode, mcts_results, valid_actions, output_policy);
 }
 
 template <core::concepts::Game Game>
@@ -182,7 +193,7 @@ inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
 template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const SearchResults* mcts_results,
-    const ActionMask& valid_actions) const {
+    const ActionMask& valid_actions, PolicyTensor* output_policy) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode == core::kRawPolicy) {
