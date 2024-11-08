@@ -79,7 +79,7 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
 
     case boost::json::kind::array: {
       auto const& arr = jv.get_array();
-
+      // print without newlines if the array is empty or contains only simple elements
       if ((arr[0].kind() != boost::json::kind::object) && (arr[0].kind() != boost::json::kind::array)) {
         os << "[";
         if (!arr.empty()) {
@@ -145,8 +145,6 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
       os << "null";
       break;
   }
-
-  // if (indent->empty()) os << "\n";
 }
 
 namespace program_options {
