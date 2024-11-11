@@ -1,5 +1,7 @@
 #include <util/BoostUtil.hpp>
 
+#include <util/Asserts.hpp>
+
 namespace boost_util {
 
 std::string get_option_value(const std::vector<std::string>& args,
@@ -107,9 +109,15 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
       os << jv.get_int64();
       break;
 
-    case boost::json::kind::double_:
-      os << jv.get_double();
+    case boost::json::kind::double_: {
+      auto x = jv.get_double();
+      if (x == 0) {  // IEEE 754 standard is weird, 0 can be printed as -0
+        os << "0";
+      } else {
+        os << x;
+      }
       break;
+    }
 
     case boost::json::kind::bool_:
       if (jv.get_bool())
