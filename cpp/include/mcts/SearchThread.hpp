@@ -96,7 +96,7 @@ class SearchThread {
   void deactivate() const;
   void loop();
   void print_visit_info(Node* node);
-  void visit(Node* node);
+  Node* visit(Node* node);  // return next node to visit, or nullptr if should break
   void add_dirichlet_noise(LocalPolicyArray& P) const;
   void virtual_backprop();
   void pure_backprop(const ValueArray& value);
