@@ -391,17 +391,24 @@ inline void SearchThread<Game>::virtual_backprop() {
   int i = search_path_.size() - 1;
   Node* last_node = search_path_[i].node;
 
-  last_node->update_stats([&] { last_node->stats().VN++; });
+  int reset_index = -1;
+
+  bool reset_needed = last_node->update_stats([&] { last_node->stats().VN++; });
+  if (reset_needed && reset_index < 0) reset_index = i;
 
   for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    node->update_stats([&] {
+    reset_needed = node->update_stats([&] {
       node->increment_edge(edge);
       node->stats().VN++;
     });
+
+    if (reset_needed && reset_index < 0) reset_index = i;
   }
+
+  reset_tree(reset_index);
   validate_search_path();
 }
 
@@ -420,28 +427,25 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
   int reset_index = -1;
 
-  last_node->update_stats([&] {
+  bool reset_needed = last_node->update_stats([&] {
     last_node->stats().init_q(value, true);
     last_node->stats().RN++;
   });
+  if (reset_needed && reset_index < 0) reset_index = i;
 
   for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    bool reset_needed = node->update_stats([&] {
+    reset_needed = node->update_stats([&] {
       node->increment_edge(edge);
       node->stats().RN++;
-    }, true);
+    });
 
-    if (reset_needed) {
-      if (reset_index < 0) reset_index = i;
-    }
+    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  if (reset_index >= 0) {
-    reset_tree(reset_index);
-  }
+  reset_tree(reset_index);
   validate_search_path();
 }
 
@@ -467,11 +471,8 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
       // std::max() to avoid race-condition with Node::reset()
       last_node->stats().VN = std::max(0, last_node->stats().VN - 1);
     }
-  }, true);
-
-  if (reset_needed) {
-    if (reset_index < 0) reset_index = i;
-  }
+  });
+  if (reset_needed && reset_index < 0) reset_index = i;
 
   for (--i; i >= 0; --i) {
     edge_t* edge = search_path_[i].edge;
@@ -485,16 +486,12 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
       } else {
         node->increment_edge(edge);
       }
-    }, true);
+    });
 
-    if (reset_needed) {
-      if (reset_index < 0) reset_index = i;
-    }
+    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  if (reset_index >= 0) {
-    reset_tree(reset_index);
-  }
+  reset_tree(reset_index);
   validate_search_path();
 }
 
@@ -513,16 +510,12 @@ void SearchThread<Game>::short_circuit_backprop() {
     bool reset_needed = node->update_stats([&] {
       node->increment_edge(edge);
       node->stats().RN++;
-    }, true);
+    });
 
-    if (reset_needed) {
-      if (reset_index < 0) reset_index = i;
-    }
+    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  if (reset_index >= 0) {
-    reset_tree(reset_index);
-  }
+  reset_tree(reset_index);
   validate_search_path();
 }
 
@@ -635,6 +628,8 @@ void SearchThread<Game>::calc_canonical_state_data() {
 
 template <core::concepts::Game Game>
 void SearchThread<Game>::reset_tree(int search_path_index) {
+  if (search_path_index < 0) return;
+
   if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << "(" << search_path_index << ") "
              << search_path_str();

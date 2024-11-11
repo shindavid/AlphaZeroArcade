@@ -219,7 +219,7 @@ class Node {
    * earlier elimination of that edge would have caused a different sequence of visits to be taken.
    */
   template <typename MutexProtectedFunc>
-  bool update_stats(MutexProtectedFunc f, bool eliminate_edges=false);
+  bool update_stats(MutexProtectedFunc f);
 
   node_pool_index_t lookup_child_by_action(core::action_t action) const;
 

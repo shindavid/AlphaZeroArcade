@@ -268,7 +268,7 @@ void Node<Game>::write_results(const ManagerParams& params, SearchResults& resul
 
 template <core::concepts::Game Game>
 template <typename MutexProtectedFunc>
-bool Node<Game>::update_stats(MutexProtectedFunc func, bool eliminate_edges) {
+bool Node<Game>::update_stats(MutexProtectedFunc func) {
   std::unique_lock lock(mutex());
   func();
   lock.unlock();
@@ -293,15 +293,14 @@ bool Node<Game>::update_stats(MutexProtectedFunc func, bool eliminate_edges) {
   lock.lock();
 
   bool rebuild_needed = false;
-  if (eliminate_edges) {
-    // Mask edges that are eliminated
-    for (int i = 0; i < n_actions; i++) {
-      edge_t* edge = get_edge(i);
 
-      bool newly_eliminated = !edge->eliminated && eliminated_actions[i];
-      rebuild_needed |= newly_eliminated && stats_.cleanly_eliminatable_edge_index != i;
-      edge->eliminated = eliminated_actions[i];
-    }
+  // Mask edges that are eliminated
+  for (int i = 0; i < n_actions; i++) {
+    edge_t* edge = get_edge(i);
+
+    bool newly_eliminated = !edge->eliminated && eliminated_actions[i];
+    rebuild_needed |= newly_eliminated && stats_.cleanly_eliminatable_edge_index != i;
+    edge->eliminated = eliminated_actions[i];
   }
 
   // Copy Q info
