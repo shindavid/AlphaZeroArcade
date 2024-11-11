@@ -81,24 +81,32 @@ auto MctsPlayer<Game>::Params::make_options_description() {
 }
 
 template <core::concepts::Game Game>
-inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
-    : MctsPlayer(params) {
-  mcts_manager_ = mcts_manager;
-  shared_data_ = (SharedData*)mcts_manager->get_player_data();
-  owns_manager_ = false;
+inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager,
+                                    bool owns_manager)
+    : params_(params),
+      search_params_{
+          {params.num_fast_iters, false},  // kFast
+          {params.num_full_iters},         // kFull
+          {1, false}                       // kRawPolicy
+      },
+      move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
+                        params.move_temperature_half_life),
+      mcts_manager_(mcts_manager),
+      owns_manager_(owns_manager) {
+  if (!owns_manager_) {
+    shared_data_ = (SharedData*)mcts_manager_->get_player_data();
+  } else {
+    shared_data_ = new SharedData();
+    mcts_manager_->set_player_data(shared_data_);
+    mcts_manager_->start_threads();
+  }
+
+  if (params.verbose) {
+    verbose_info_ = new VerboseInfo();
+  }
 
   util::release_assert(mcts_manager_ != nullptr);
   util::release_assert(shared_data_ != nullptr);
-}
-
-template <core::concepts::Game Game>
-MctsPlayer<Game>::MctsPlayer(const Params& params, const MctsManagerParams& manager_params)
-    : MctsPlayer(params) {
-  mcts_manager_ = new MctsManager(manager_params);
-  shared_data_ = new SharedData();
-  owns_manager_ = true;
-  mcts_manager_->set_player_data(shared_data_);
-  mcts_manager_->start_threads();
 }
 
 template <core::concepts::Game Game>
@@ -109,21 +117,6 @@ inline MctsPlayer<Game>::~MctsPlayer() {
   if (owns_manager_) {
     delete mcts_manager_;
     delete shared_data_;
-  }
-}
-
-template <core::concepts::Game Game>
-MctsPlayer<Game>::MctsPlayer(const Params& params)
-    : params_(params),
-      search_params_{
-          {params.num_fast_iters, false},  // kFast
-          {params.num_full_iters},         // kFull
-          {1, false}                       // kRawPolicy
-      },
-      move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
-                        params.move_temperature_half_life) {
-  if (params.verbose) {
-    verbose_info_ = new VerboseInfo();
   }
 }
 

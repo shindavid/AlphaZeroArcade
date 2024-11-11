@@ -40,34 +40,36 @@ class MctsPlayerTest : public ::testing::Test {
     return params;
   }
 
-  void init(Service* service = nullptr) {
+  void init(Service* service) {
     mcts_manager_ = new Manager(manager_params_, service);
     const mcts::SharedData<Game>* shared_data = mcts_manager_->shared_data();
     search_log_ = new mcts::SearchLog<Game>(shared_data);
     mcts_manager_->set_post_visit_func([&] { search_log_->update(); });
-    mcts_manager_->start();
-    mcts_manager_->set_player_data(mcts_manager_->shared_data());
-    mcts_player_ = new MctsPlayer(player_params_, mcts_manager_);
+
+    mcts_player_ = new MctsPlayer(player_params_, mcts_manager_, true);
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions) {
     mcts_player_->start_game();
-    mcts_manager_->start_threads();
+    StateHistory history;
+    history.initialize(Rules{});
     for (core::action_t action : initial_actions) {
-      auto shared_data = mcts_manager_->shared_data();
-      shared_data->update_state(action);
+      core::seat_index_t seat = Rules::get_current_player(history.current());
+      Rules::apply(history, action);
+      mcts_player_->receive_state_change(seat, history.current(), action);
     }
     initial_actions_ = initial_actions;
   }
 
   mcts::SearchLog<Game>* get_search_log() { return search_log_; }
 
-  void test_get_action_policy(std::string testname,
-                              const std::vector<core::action_t>& initial_actions = {}) {
-    init();
+  void test_get_action_policy(const std::string& testname,
+                              const std::vector<core::action_t>& initial_actions = {},
+                              Service* service = nullptr) {
+    init(service);
     start_manager(initial_actions);
 
-    StateHistory state_history =
+    const StateHistory& state_history =
         mcts_manager_->shared_data()->root_info.history_array[group::kIdentity];
     ActionMask valid_actions = Rules::get_legal_moves(state_history);
 
@@ -81,14 +83,10 @@ class MctsPlayerTest : public ::testing::Test {
     boost_util::pretty_print(ss_result, search_result->to_json());
     boost_util::pretty_print(ss_policy, eigen_util::to_json(modified_policy));
 
-    boost::filesystem::path file_path_result =
-        util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_result.json");
-
-    boost::filesystem::path file_path_policy =
-        util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_policy.json");
-
-    boost::filesystem::path file_path_log =
-        util::Repo::root() / "goldenfiles" / "generic_players" / (testname + "_log.json");
+    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "generic_players";
+    boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
+    boost::filesystem::path file_path_policy = base_dir / (testname + "_policy.json");
+    boost::filesystem::path file_path_log = base_dir / (testname + "_log.json");
 
     if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
       boost_util::write_str_to_file(ss_result.str(), file_path_result);
@@ -112,9 +110,12 @@ class MctsPlayerTest : public ::testing::Test {
     EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
   }
 
+  void SetUp() override {
+    util::Random::set_seed(1);
+  }
+
   void TearDown() override {
     delete search_log_;
-    delete mcts_manager_;
     delete mcts_player_;
   }
 

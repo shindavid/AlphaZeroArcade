@@ -33,8 +33,7 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   void end_session() override;
 
  protected:
-  virtual BaseMctsPlayer* generate_from_scratch() = 0;
-  virtual BaseMctsPlayer* generate_from_manager(MctsManager* manager) = 0;
+  virtual BaseMctsPlayer* generate_helper(MctsManager* manager, bool owns_manager) = 0;
 
   void validate_params();
 
@@ -68,8 +67,7 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
         mcts_player_params_.make_options_description());
   }
 
-  BaseMctsPlayer* generate_from_scratch() override;
-  BaseMctsPlayer* generate_from_manager(MctsManager* manager) override;
+  BaseMctsPlayer* generate_helper(MctsManager* manager, bool owns_manager) override;
 
   MctsPlayerParams mcts_player_params_;
 };
@@ -98,8 +96,7 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
         .add(writer_params_.make_options_description());
   }
 
-  BaseMctsPlayer* generate_from_scratch() override;
-  BaseMctsPlayer* generate_from_manager(MctsManager* manager) override;
+  BaseMctsPlayer* generate_helper(MctsManager* manager, bool owns_manager) override;
 
   MctsPlayerParams mcts_player_params_;
   TrainingDataWriterParams writer_params_;

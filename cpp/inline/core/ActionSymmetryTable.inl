@@ -62,20 +62,16 @@ template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Gr
 boost::json::array ActionSymmetryTable<GameConstants, Group>::to_json() const {
   boost::json::array action_array_json;
   boost::json::array equivalence_class_json;
-  auto it = action_array_.begin();
-  while (it != action_array_.end()) {
-    if (it == action_array_.begin() || *it < *(it - 1)) {
-      equivalence_class_json = {};
+  int i = 0;
+  while (i < GameConstants::kNumActions) {
+    core::action_t action = action_array_[i];
+    if (action < 0) break;
+
+    equivalence_class_json = {};
+    while (i < GameConstants::kNumActions && action_array_[i] >= action) {
+      equivalence_class_json.push_back(action_array_[i++]);
     }
-
-    equivalence_class_json.push_back(*it);
-
-    if (*it > *(it + 1)) {
-      action_array_json.push_back(equivalence_class_json);
-    }
-
-    if (*it < 0) break;
-    it++;
+    action_array_json.push_back(equivalence_class_json);
   }
   return action_array_json;
 }
