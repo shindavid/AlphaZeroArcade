@@ -292,20 +292,14 @@ bool Node<Game>::update_stats(MutexProtectedFunc func, bool eliminate_edges) {
   // Now we lock the mutex, and copy the calculated information into the node
   lock.lock();
 
-  bool fresh_elimination = false;
+  bool rebuild_needed = false;
   if (eliminate_edges) {
     // Mask edges that are eliminated
     for (int i = 0; i < n_actions; i++) {
       edge_t* edge = get_edge(i);
 
-      // TODO: this is a very strict definition of fresh-elimination, leading to very aggressive
-      // tree-resetting.
-      //
-      // We can avoid resetting quite so often by being smarter here. This edge was visited E times.
-      // If the E most recent traversals from the root all visited this edge, then a tree-reset is
-      // not needed. We can detect this with some extra record-keeping, taking care to reason about
-      // the multi-threaded case.
-      fresh_elimination |= !edge->eliminated && eliminated_actions[i];
+      bool newly_eliminated = !edge->eliminated && eliminated_actions[i];
+      rebuild_needed |= newly_eliminated && stats_.cleanly_eliminatable_edge_index != i;
       edge->eliminated = eliminated_actions[i];
     }
   }
@@ -320,7 +314,7 @@ bool Node<Game>::update_stats(MutexProtectedFunc func, bool eliminate_edges) {
 
   util::debug_assert((stats_.Q_lower_bound <= stats_.Q_upper_bound).all());
 
-  return fresh_elimination;
+  return rebuild_needed;
 }
 
 // NOTE: this can be switched to use binary search if we'd like
@@ -353,11 +347,24 @@ void Node<Game>::initialize_edges() {
 }
 
 template <core::concepts::Game Game>
+void Node<Game>::increment_edge(edge_t* edge) {
+  edge_t* first_edge = get_edge(0);
+  int edge_index = edge - first_edge;
+  bool first_increment = edge->E == 0;
+
+  edge->E++;
+  if (stats_.cleanly_eliminatable_edge_index != edge_index) {
+    stats_.cleanly_eliminatable_edge_index = first_increment ? edge_index : -1;
+  }
+}
+
+template <core::concepts::Game Game>
 void Node<Game>::reset() {
   std::unique_lock lock(mutex());
 
   stats_.RN = 0;
   stats_.VN = 0;
+  stats_.cleanly_eliminatable_edge_index = -1;
 
   int n = stable_data_.num_valid_actions;
   for (int i = 0; i < n; ++i) {

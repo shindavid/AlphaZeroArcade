@@ -398,7 +398,7 @@ inline void SearchThread<Game>::virtual_backprop() {
     Node* node = search_path_[i].node;
 
     node->update_stats([&] {
-      edge->E++;
+      node->increment_edge(edge);
       node->stats().VN++;
     });
   }
@@ -430,7 +430,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
     Node* node = search_path_[i].node;
 
     bool reset_needed = node->update_stats([&] {
-      edge->E++;
+      node->increment_edge(edge);
       node->stats().RN++;
     }, true);
 
@@ -477,13 +477,13 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    // NOTE: always update the edge first, then the parent node
     reset_needed = node->update_stats([&] {
-      edge->E += !undo_virtual;
       node->stats().RN++;
       if (undo_virtual) {
         // std::max() to avoid race-condition with Node::reset()
         last_node->stats().VN = std::max(0, last_node->stats().VN - 1);
+      } else {
+        node->increment_edge(edge);
       }
     }, true);
 
@@ -510,9 +510,8 @@ void SearchThread<Game>::short_circuit_backprop() {
     edge_t* edge = search_path_[i].edge;
     Node* node = search_path_[i].node;
 
-    // NOTE: always update the edge first, then the parent node
     bool reset_needed = node->update_stats([&] {
-      edge->E++;
+      node->increment_edge(edge);
       node->stats().RN++;
     }, true);
 
