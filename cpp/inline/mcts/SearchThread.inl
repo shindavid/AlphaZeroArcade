@@ -219,7 +219,10 @@ inline void SearchThread<Game>::perform_visits() {
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
     search_path_.clear();
     search_path_.emplace_back(root, nullptr);
-    visit(root);
+    Node* node = root;
+    while (node) {
+      node = visit(node);
+    }
     root->validate_state();
     canonical_sym_ = root_info.canonical_sym;
 
@@ -275,14 +278,14 @@ void SearchThread<Game>::print_visit_info(Node* node) {
 }
 
 template <core::concepts::Game Game>
-inline void SearchThread<Game>::visit(Node* node) {
+typename SearchThread<Game>::Node* SearchThread<Game>::visit(Node* node) {
   using Group = Game::SymmetryGroup;
   print_visit_info(node);
 
   const auto& stable_data = node->stable_data();
   if (stable_data.terminal) {
     pure_backprop(Game::GameResults::to_value_array(stable_data.VT));
-    return;
+    return nullptr;
   }
 
   int child_index = get_best_child_index(node);
@@ -318,7 +321,7 @@ inline void SearchThread<Game>::visit(Node* node) {
         state_history = &pseudo_local_vars_.canonical_history;
       }
 
-      if (expand(state_history, node, edge)) return;
+      if (expand(state_history, node, edge)) return nullptr;
     } else if (edge->state == Node::kMidExpansion) {
       node->cv().wait(lock, [edge] { return edge->state == Node::kExpanded; });
     } else if (edge->state == Node::kPreExpanded) {
@@ -340,7 +343,7 @@ inline void SearchThread<Game>::visit(Node* node) {
       edge->state = Node::kExpanded;
       lock.unlock();
       node->cv().notify_all();
-      return;
+      return nullptr;
     }
   }
 
@@ -352,7 +355,7 @@ inline void SearchThread<Game>::visit(Node* node) {
     int child_count = child->stats().RN;
     if (edge_count < child_count || child->has_certain_outcome()) {
       short_circuit_backprop();
-      return;
+      return nullptr;
     }
   }
   if (!applied_action) {
@@ -368,7 +371,7 @@ inline void SearchThread<Game>::visit(Node* node) {
     Game::Rules::apply(raw_history_, edge_action);
     canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
   }
-  visit(child);
+  return child;
 }
 
 template <core::concepts::Game Game>
