@@ -124,6 +124,7 @@ class Node {
     ValueArray Q_sq;  // excludes virtual loss
     int RN = 0;       // real count
     int VN = 0;       // virtual count
+    int cleanly_eliminatable_edge_index = -1;
 
     ValueArray Q_lower_bound;
     ValueArray Q_upper_bound;
@@ -231,6 +232,8 @@ class Node {
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
   void initialize_edges();
+
+  void increment_edge(edge_t* edge);
 
   /*
    * Zeros out the visit count for this node and all its edges.
