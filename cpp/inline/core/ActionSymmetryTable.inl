@@ -10,7 +10,6 @@
 namespace core {
 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-template <IdActionPair item_t>
 void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items) {
   int num_items = items.size();
   std::sort(items.begin(), items.begin() + num_items);
@@ -27,12 +26,12 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
 
   pair_array_t pair_array;
   int num_pairs = 0;
-  int last_key = -1;
+  int last_equivalence_class = -1;
   for (int i = 0; i < num_items; ++i) {
     auto& item = items[i];
-    if (item.group_id != last_key) {
+    if (item.equivalence_class != last_equivalence_class) {
       pair_array[num_pairs++] = {item.action, i};
-      last_key = item.group_id;
+      last_equivalence_class = item.equivalence_class;
     }
   }
 
@@ -44,8 +43,8 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
   int i = 0;
   for (int p = 0; p < num_pairs; ++p) {
     int start_index = pair_array[p].cluster_start_index;
-    auto group_id = items[start_index].group_id;
-    for (int index = start_index; index < num_items && items[index].group_id == group_id; ++index) {
+    auto equivalence_class = items[start_index].equivalence_class;
+    for (int index = start_index; index < num_items && items[index].equivalence_class == equivalence_class; ++index) {
       action_array[i++] = items[index].action;
     }
   }
@@ -57,21 +56,6 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
 
   // now action_array is the same as items, but with the sets themselves sorted in decreasing order
   // by their minimum element
-  //
-  // This ordering, where each individual set is sorted in increasing order, while the sets
-  // themselves are sorted in decreasing order by their minimum element, creates a flat array
-  // from which the equivalence classes can be easily extracted
-  //
-  // Example:
-  //
-  // Equivalence classes: {1, 2, 5, 8}, {4, 7}, {3}, {6}
-  //
-  // Equivalence classes sorted in decreasing order by min element: {6}, {4, 7}, {3}, {1, 2, 5, 8}
-  //
-  // action_array: {6, 4, 7, 3, 1, 2, 5, 8}
-  //
-  // When scanning action_array, any time an entry is less than the previous entry, this marks the
-  // start of a new equivalence class
   action_array_ = action_array;
 }
 

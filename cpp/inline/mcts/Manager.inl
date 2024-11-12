@@ -216,12 +216,7 @@ template <core::concepts::Game Game>
 inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* actions) {
   const auto& stable_data = root->stable_data();
 
-  struct item_t {
-    auto operator<=>(const item_t&) const = default;
-    util::pool_index_t group_id;
-    core::action_t action;
-  };
-
+  using item_t = ActionSymmetryTable::item_t;
   std::vector<item_t> items;
   items.reserve(stable_data.num_valid_actions);
 
