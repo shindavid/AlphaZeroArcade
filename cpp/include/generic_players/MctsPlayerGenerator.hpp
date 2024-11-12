@@ -43,6 +43,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   using shared_data_vec_t = std::vector<SharedData_sptr>;
   using shared_data_map_t = std::map<core::game_thread_id_t, shared_data_vec_t>;
 
+  // TODO: instead of making this static, make this an object passed in via a specialized
+  // PlayerSubfactory's create() method.
   static shared_data_map_t shared_data_cache_;
 
   MctsManagerParams manager_params_;
