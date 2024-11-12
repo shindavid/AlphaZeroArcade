@@ -10,6 +10,56 @@
 namespace core {
 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
+void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items) {
+  int num_items = items.size();
+  std::sort(items.begin(), items.begin() + num_items);
+
+  // items is now a pseudo-list of sets [S_1, S_2, ...], where S_i is a set of symmetrically
+  // equivalent actions, and where each S_i is sorted in increasing order
+
+  struct pair_t {
+    auto operator<=>(const pair_t&) const = default;
+    core::action_t action;
+    int cluster_start_index;
+  };
+  using pair_array_t = std::array<pair_t, GameConstants::kNumActions>;
+
+  pair_array_t pair_array;
+  int num_pairs = 0;
+  int last_equivalence_class = -1;
+  for (int i = 0; i < num_items; ++i) {
+    auto& item = items[i];
+    if (item.equivalence_class != last_equivalence_class) {
+      pair_array[num_pairs++] = {item.action, i};
+      last_equivalence_class = item.equivalence_class;
+    }
+  }
+
+  std::sort(pair_array.begin(), pair_array.begin() + num_pairs, std::greater{});
+
+  // now pair_array is a pseudo-map of min(S) -> &S for each set S in items
+
+  action_array_t action_array;
+  int i = 0;
+  for (int p = 0; p < num_pairs; ++p) {
+    int start_index = pair_array[p].cluster_start_index;
+    auto equivalence_class = items[start_index].equivalence_class;
+    for (int index = start_index; index < num_items && items[index].equivalence_class == equivalence_class; ++index) {
+      action_array[i++] = items[index].action;
+    }
+  }
+  util::debug_assert(i == num_items);
+
+  if (num_items < GameConstants::kNumActions) {
+    action_array[num_items] = -1;
+  }
+
+  // now action_array is the same as items, but with the sets themselves sorted in decreasing order
+  // by their minimum element
+  action_array_ = action_array;
+}
+
+template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
 typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
 ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy) const {
   PolicyTensor out;
