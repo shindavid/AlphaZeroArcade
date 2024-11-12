@@ -21,6 +21,7 @@ class MctsPlayerTest : public ::testing::Test {
   using Manager = mcts::Manager<Game>;
   using ManagerParams = mcts::ManagerParams<Game>;
   using MctsPlayer = generic::MctsPlayer<Game>;
+  using MctsPlayerSharedData = MctsPlayer::SharedData;
   using MctsPlayerParams = MctsPlayer::Params;
   using SearchResults = Game::Types::SearchResults;
   using SearchLog = mcts::SearchLog<Game>;
@@ -41,12 +42,11 @@ class MctsPlayerTest : public ::testing::Test {
   }
 
   void init(Service* service) {
-    mcts_manager_ = new Manager(manager_params_, service);
-    const mcts::SharedData<Game>* shared_data = mcts_manager_->shared_data();
-    search_log_ = new mcts::SearchLog<Game>(shared_data);
-    mcts_manager_->set_post_visit_func([&] { search_log_->update(); });
-
-    mcts_player_ = new MctsPlayer(player_params_, mcts_manager_, true);
+    auto shared_player_data = std::make_shared<MctsPlayerSharedData>(manager_params_, service);
+    auto manager = &shared_player_data->manager;
+    search_log_ = new mcts::SearchLog<Game>(manager->shared_data());
+    manager->set_post_visit_func([&] { search_log_->update(); });
+    mcts_player_ = new MctsPlayer(player_params_, shared_player_data, true);
   }
 
   void start_manager(const std::vector<core::action_t>& initial_actions) {
@@ -70,7 +70,7 @@ class MctsPlayerTest : public ::testing::Test {
     start_manager(initial_actions);
 
     const StateHistory& state_history =
-        mcts_manager_->shared_data()->root_info.history_array[group::kIdentity];
+        mcts_player_->get_manager()->shared_data()->root_info.history_array[group::kIdentity];
     ActionMask valid_actions = Rules::get_legal_moves(state_history);
 
     core::SearchMode search_mode = mcts_player_->choose_search_mode();
@@ -119,10 +119,9 @@ class MctsPlayerTest : public ::testing::Test {
     delete mcts_player_;
   }
 
-private:
+ private:
   ManagerParams manager_params_;
   MctsPlayerParams player_params_;
-  Manager* mcts_manager_;
   MctsPlayer* mcts_player_;
   mcts::SearchLog<Game>* search_log_;
   std::vector<core::action_t> initial_actions_;

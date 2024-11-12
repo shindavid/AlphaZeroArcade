@@ -69,8 +69,6 @@ class Manager {
     nn_eval_service_->end_session();
   }
 
-  void set_player_data(void* player_data) { player_data_ = player_data; }
-  void* get_player_data() const { return player_data_; }
   SharedData* shared_data() { return &shared_data_; }
   void set_post_visit_func(std::function<void()> func);
 
@@ -92,7 +90,6 @@ class Manager {
 
   SearchResults results_;
 
-  void* player_data_ = nullptr;
   bool connected_ = false;
 };
 

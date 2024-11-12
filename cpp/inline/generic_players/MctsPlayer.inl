@@ -81,8 +81,8 @@ auto MctsPlayer<Game>::Params::make_options_description() {
 }
 
 template <core::concepts::Game Game>
-inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager,
-                                    bool owns_manager)
+inline MctsPlayer<Game>::MctsPlayer(const Params& params, SharedData_sptr shared_data,
+                                    bool owns_shared_data)
     : params_(params),
       search_params_{
           {params.num_fast_iters, false},  // kFast
@@ -91,22 +91,17 @@ inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_mana
       },
       move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
                         params.move_temperature_half_life),
-      mcts_manager_(mcts_manager),
-      owns_manager_(owns_manager) {
-  if (!owns_manager_) {
-    shared_data_ = (SharedData*)mcts_manager_->get_player_data();
-  } else {
-    shared_data_ = new SharedData();
-    mcts_manager_->set_player_data(shared_data_);
-    mcts_manager_->start_threads();
+      shared_data_(shared_data),
+      owns_shared_data_(owns_shared_data) {
+  if (owns_shared_data_) {
+    shared_data->manager.start_threads();
   }
 
   if (params.verbose) {
     verbose_info_ = new VerboseInfo();
   }
 
-  util::release_assert(mcts_manager_ != nullptr);
-  util::release_assert(shared_data_ != nullptr);
+  util::release_assert(shared_data_.get() != nullptr);
 }
 
 template <core::concepts::Game Game>
@@ -114,18 +109,14 @@ inline MctsPlayer<Game>::~MctsPlayer() {
   if (verbose_info_) {
     delete verbose_info_;
   }
-  if (owns_manager_) {
-    delete mcts_manager_;
-    delete shared_data_;
-  }
 }
 
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::start_game() {
   move_count_ = 0;
   move_temperature_.reset();
-  if (owns_manager_) {
-    mcts_manager_->start();
+  if (owns_shared_data_) {
+    get_manager()->start();
     if (params_.mean_raw_moves) {
       shared_data_->num_raw_policy_starting_moves =
           util::Random::exponential(1.0 / params_.mean_raw_moves);
@@ -138,8 +129,8 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
                                                     core::action_t action) {
   move_count_++;
   move_temperature_.step();
-  if (owns_manager_) {
-    mcts_manager_->receive_state_change(seat, state, action);
+  if (owns_shared_data_) {
+    get_manager()->receive_state_change(seat, state, action);
   }
   if (base_t::get_my_seat() == seat && params_.verbose) {
     if (facing_human_tui_player_) {
@@ -163,7 +154,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
 template <core::concepts::Game Game>
 inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_search(
     core::SearchMode search_mode) const {
-  return mcts_manager_->search(search_params_[search_mode]);
+  return get_manager()->search(search_params_[search_mode]);
 }
 
 template <core::concepts::Game Game>

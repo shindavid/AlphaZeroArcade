@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,8 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   using MctsManagerParams = mcts::ManagerParams<Game>;
   using MctsManager = mcts::Manager<Game>;
   using BaseMctsPlayer = generic::MctsPlayer<Game>;
+  using SharedData = BaseMctsPlayer::SharedData;
+  using SharedData_sptr = std::shared_ptr<SharedData>;
 
   MctsPlayerGeneratorBase(mcts::Mode mode) : manager_params_(mode) {}
 
@@ -33,14 +36,14 @@ class MctsPlayerGeneratorBase : public core::AbstractPlayerGenerator<Game> {
   void end_session() override;
 
  protected:
-  virtual BaseMctsPlayer* generate_helper(MctsManager* manager, bool owns_manager) = 0;
+  virtual BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) = 0;
 
   void validate_params();
 
-  using manager_vec_t = std::vector<MctsManager*>;
-  using manager_map_t = std::map<core::game_thread_id_t, manager_vec_t>;
+  using shared_data_vec_t = std::vector<SharedData_sptr>;
+  using shared_data_map_t = std::map<core::game_thread_id_t, shared_data_vec_t>;
 
-  static manager_map_t manager_cache_;
+  static shared_data_map_t shared_data_cache_;
 
   MctsManagerParams manager_params_;
 };
@@ -53,6 +56,8 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
   using MctsManager = base_t::MctsManager;
   using MctsPlayer = generic::MctsPlayer<Game>;
   using MctsPlayerParams = MctsPlayer::Params;
+  using SharedData = BaseMctsPlayer::SharedData;
+  using SharedData_sptr = std::shared_ptr<SharedData>;
 
   CompetitiveMctsPlayerGenerator();
   std::string get_default_name() const override;
@@ -67,7 +72,7 @@ class CompetitiveMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
         mcts_player_params_.make_options_description());
   }
 
-  BaseMctsPlayer* generate_helper(MctsManager* manager, bool owns_manager) override;
+  BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) override;
 
   MctsPlayerParams mcts_player_params_;
 };
@@ -81,6 +86,8 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
   using MctsPlayer = generic::DataExportingMctsPlayer<Game>;
   using MctsPlayerParams = MctsPlayer::Params;
   using TrainingDataWriterParams = MctsPlayer::TrainingDataWriterParams;
+  using SharedData = BaseMctsPlayer::SharedData;
+  using SharedData_sptr = std::shared_ptr<SharedData>;
 
   TrainingMctsPlayerGenerator();
   std::string get_default_name() const override;
@@ -96,7 +103,7 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
         .add(writer_params_.make_options_description());
   }
 
-  BaseMctsPlayer* generate_helper(MctsManager* manager, bool owns_manager) override;
+  BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) override;
 
   MctsPlayerParams mcts_player_params_;
   TrainingDataWriterParams writer_params_;

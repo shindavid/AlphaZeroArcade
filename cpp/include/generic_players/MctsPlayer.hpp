@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <ostream>
 
 #include <boost/filesystem.hpp>
@@ -63,11 +64,20 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
+  struct SharedData {
+    template<typename... Ts>
+    SharedData(Ts&&... args) : manager(std::forward<Ts>(args)...) {}
+
+    MctsManager manager;
+    int num_raw_policy_starting_moves = 0;
+  };
+  using SharedData_sptr = std::shared_ptr<SharedData>;
+
   // uses this constructor when sharing an MCTS manager
-  MctsPlayer(const Params&, MctsManager* mcts_manager, bool owns_manager);
+  MctsPlayer(const Params&, SharedData_sptr, bool owns_shared_data);
   ~MctsPlayer();
 
-  MctsManager* get_mcts_manager() { return mcts_manager_; }
+  MctsManager* get_manager() const { return &shared_data_->manager; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
   core::ActionResponse get_action_response(const State&, const ActionMask&) override;
@@ -89,10 +99,6 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     bool initialized = false;
   };
 
-  struct SharedData {
-    int num_raw_policy_starting_moves = 0;
-  };
-
   core::SearchMode get_random_search_mode() const;
   void verbose_dump() const;
 
@@ -100,10 +106,9 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   const MctsSearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
-  MctsManager* const mcts_manager_;
-  SharedData* shared_data_ = nullptr;
+  SharedData_sptr shared_data_;
   VerboseInfo* verbose_info_ = nullptr;
-  const bool owns_manager_;
+  const bool owns_shared_data_;
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;
 
