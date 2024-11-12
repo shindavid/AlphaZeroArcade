@@ -6,6 +6,7 @@
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/IOBase.hpp>
+#include <core/MctsConfigurationBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/WinLossDrawResults.hpp>
@@ -42,8 +43,10 @@ class Game {
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
     static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
+  };
+
+  struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 4;
-    static constexpr bool kStoreStates = true;  // for mcts unit-tests
   };
 
   struct State {

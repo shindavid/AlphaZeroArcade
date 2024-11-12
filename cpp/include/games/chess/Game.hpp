@@ -5,6 +5,7 @@
 #include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/MctsConfigurationBase.hpp>
 #include <core/IOBase.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/TrivialSymmetries.hpp>
@@ -34,6 +35,9 @@ struct Game {
     static constexpr int kNumActions = chess::kNumActions;
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
     static constexpr int kNumPreviousStatesToEncode = chess::kNumPreviousStatesToEncode;
+  };
+
+  struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 18;  // 9 moves per player = reasonablish quarter-life
   };
 

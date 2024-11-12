@@ -88,7 +88,7 @@ class Node {
   };
 
   static constexpr bool kStoreStates =
-      IS_MACRO_ENABLED(STORE_STATES) || Game::Constants::kStoreStates;
+      IS_MACRO_ENABLED(STORE_STATES) || Game::MctsConfiguration::kStoreStates;
   using StateData = mcts::StateData<Game, kStoreStates>;
 
   // We make the StateData a base-class of stable_data_t because (1) the state is stable, and

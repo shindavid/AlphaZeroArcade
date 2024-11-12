@@ -6,7 +6,6 @@ namespace core {
 // values for some of the constants.
 struct ConstantsBase {
   static constexpr int kNumPreviousStatesToEncode = 0;
-  static constexpr bool kStoreStates = false;
 };
 
 }  // namespace core

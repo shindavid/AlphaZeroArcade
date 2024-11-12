@@ -5,6 +5,7 @@
 #include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/MctsConfigurationBase.hpp>
 #include <core/IOBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
@@ -34,6 +35,9 @@ class Game {
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kNumActions = blokus::kNumActions;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
+  };
+
+  struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 70.314;  // likely too big, just keeping previous value
   };
 

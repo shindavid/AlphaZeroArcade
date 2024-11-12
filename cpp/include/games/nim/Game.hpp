@@ -5,6 +5,7 @@
 #include <core/ConstantsBase.hpp>
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
+#include <core/MctsConfigurationBase.hpp>
 #include <core/IOBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
@@ -31,8 +32,10 @@ struct Game {
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kNumActions = nim::kMaxStonesToTake;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
+  };
+
+  struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 3;
-    static constexpr bool kStoreStates = true;  // for mcts unit-tests
   };
 
   struct State {
