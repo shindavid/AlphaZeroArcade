@@ -10,6 +10,72 @@
 namespace core {
 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
+template <IdActionPair item_t>
+void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items) {
+  int num_items = items.size();
+  std::sort(items.begin(), items.begin() + num_items);
+
+  // items is now a pseudo-list of sets [S_1, S_2, ...], where S_i is a set of symmetrically
+  // equivalent actions, and where each S_i is sorted in increasing order
+
+  struct pair_t {
+    auto operator<=>(const pair_t&) const = default;
+    core::action_t action;
+    int cluster_start_index;
+  };
+  using pair_array_t = std::array<pair_t, GameConstants::kNumActions>;
+
+  pair_array_t pair_array;
+  int num_pairs = 0;
+  int last_key = -1;
+  for (int i = 0; i < num_items; ++i) {
+    auto& item = items[i];
+    if (item.group_id != last_key) {
+      pair_array[num_pairs++] = {item.action, i};
+      last_key = item.group_id;
+    }
+  }
+
+  std::sort(pair_array.begin(), pair_array.begin() + num_pairs, std::greater{});
+
+  // now pair_array is a pseudo-map of min(S) -> &S for each set S in items
+
+  action_array_t action_array;
+  int i = 0;
+  for (int p = 0; p < num_pairs; ++p) {
+    int start_index = pair_array[p].cluster_start_index;
+    auto group_id = items[start_index].group_id;
+    for (int index = start_index; index < num_items && items[index].group_id == group_id; ++index) {
+      action_array[i++] = items[index].action;
+    }
+  }
+  util::debug_assert(i == num_items);
+
+  if (num_items < GameConstants::kNumActions) {
+    action_array[num_items] = -1;
+  }
+
+  // now action_array is the same as items, but with the sets themselves sorted in decreasing order
+  // by their minimum element
+  //
+  // This ordering, where each individual set is sorted in increasing order, while the sets
+  // themselves are sorted in decreasing order by their minimum element, creates a flat array
+  // from which the equivalence classes can be easily extracted
+  //
+  // Example:
+  //
+  // Equivalence classes: {1, 2, 5, 8}, {4, 7}, {3}, {6}
+  //
+  // Equivalence classes sorted in decreasing order by min element: {6}, {4, 7}, {3}, {1, 2, 5, 8}
+  //
+  // action_array: {6, 4, 7, 3, 1, 2, 5, 8}
+  //
+  // When scanning action_array, any time an entry is less than the previous entry, this marks the
+  // start of a new equivalence class
+  action_array_ = action_array;
+}
+
+template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
 typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
 ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy) const {
   PolicyTensor out;

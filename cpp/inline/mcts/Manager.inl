@@ -221,80 +221,17 @@ inline void Manager<Game>::load_action_symmetries(Node* root, core::action_t* ac
     util::pool_index_t group_id;
     core::action_t action;
   };
-  using item_array_t = std::array<item_t, Game::Constants::kNumActions>;
 
-  item_array_t items;
-  int num_items = 0;
+  std::vector<item_t> items;
+  items.reserve(stable_data.num_valid_actions);
 
   for (int e = 0; e < stable_data.num_valid_actions; ++e) {
     edge_t* edge = root->get_edge(e);
     if (edge->child_index < 0) continue;
-    items[num_items++] = {edge->child_index, actions[e]};
+    items.emplace_back(edge->child_index, actions[e]);
   }
 
-  std::sort(items.begin(), items.begin() + num_items);
-
-  // items is now a pseudo-list of sets [S_1, S_2, ...], where S_i is a set of symmetrically
-  // equivalent actions, and where each S_i is sorted in increasing order
-
-  struct pair_t {
-    auto operator<=>(const pair_t&) const = default;
-    core::action_t action;
-    int cluster_start_index;
-  };
-  using pair_array_t = std::array<pair_t, Game::Constants::kNumActions>;
-
-  pair_array_t pair_array;
-  int num_pairs = 0;
-  node_pool_index_t last_key = -1;
-  for (int i = 0; i < num_items; ++i) {
-    auto& item = items[i];
-    if (item.group_id != last_key) {
-      pair_array[num_pairs++] = {item.action, i};
-      last_key = item.group_id;
-    }
-  }
-
-  std::sort(pair_array.begin(), pair_array.begin() + num_pairs, std::greater{});
-
-  // now pair_array is a pseudo-map of min(S) -> &S for each set S in items
-
-  using action_array_t = ActionSymmetryTable::action_array_t;
-
-  action_array_t action_array;
-  int i = 0;
-  for (int p = 0; p < num_pairs; ++p) {
-    int start_index = pair_array[p].cluster_start_index;
-    auto group_id = items[start_index].group_id;
-    for (int index = start_index; index < num_items && items[index].group_id == group_id; ++index) {
-      action_array[i++] = items[index].action;
-    }
-  }
-  util::debug_assert(i == num_items);
-
-  if (num_items < Game::Constants::kNumActions) {
-    action_array[num_items] = -1;
-  }
-
-  // now action_array is the same as items, but with the sets themselves sorted in decreasing order
-  // by their minimum element
-  //
-  // This ordering, where each individual set is sorted in increasing order, while the sets
-  // themselves are sorted in decreasing order by their minimum element, creates a flat array
-  // from which the equivalence classes can be easily extracted
-  //
-  // Example:
-  //
-  // Equivalence classes: {1, 2, 5, 8}, {4, 7}, {3}, {6}
-  //
-  // Equivalence classes sorted in decreasing order by min element: {6}, {4, 7}, {3}, {1, 2, 5, 8}
-  //
-  // action_array: {6, 4, 7, 3, 1, 2, 5, 8}
-  //
-  // When scanning action_array, any time an entry is less than the previous entry, this marks the
-  // start of a new equivalence class
-
-  results_.action_symmetry_table.load(action_array);
+  results_.action_symmetry_table.load(items);
 }
 
 template <core::concepts::Game Game>

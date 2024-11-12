@@ -12,6 +12,18 @@
 namespace core {
 
 /*
+ * An IdActionPair is a pair of an integer group_id and an action. The group_id is used to group
+ * actions that are symmetrically equivalent. The ActionSymmetryTable data structure is to
+ * generically encode the symmetrically equivalent actions into a compact form.
+ */
+template <typename T>
+concept IdActionPair = requires(T t) {
+  { t <=> t } -> std::same_as<std::strong_ordering>;
+  { t.group_id } -> std::convertible_to<int>;
+  { t.action } -> std::convertible_to<core::action_t>;
+};
+
+/*
  * In some positions in some games, certain moves are symmetrically equivalent. For example, in
  * the game of Othello, all 4 legal moves in the starting position are symmetrically equivalent.
  *
@@ -26,12 +38,13 @@ class ActionSymmetryTable {
 
   /*
    * Initialize the data structure.
-   *
-   * The argument is an array that contains concatenated equivalence classes. Any entry that is
-   * less than the previous entry is considered the start of a new equivalence class. If a -1 value
-   * is encountered, it is considered the end of the array.
+   * The argument is a vector that contains items that meet the requirement of the IdActionPair.
+   * load() will encode the symmetrically equivalent actions into a compact form:
+   * Any entry that is less than the previous entry is considered the start of a new equivalence
+   * class. If a -1 value is encountered, it is considered the end of the array.
    */
-  void load(const action_array_t& action_array) { action_array_ = action_array; }
+  template <IdActionPair item_t>
+  void load(std::vector<item_t>& items);
 
   /*
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of
