@@ -81,24 +81,32 @@ auto MctsPlayer<Game>::Params::make_options_description() {
 }
 
 template <core::concepts::Game Game>
-inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager)
-    : MctsPlayer(params) {
-  mcts_manager_ = mcts_manager;
-  shared_data_ = (SharedData*)mcts_manager->get_player_data();
-  owns_manager_ = false;
+inline MctsPlayer<Game>::MctsPlayer(const Params& params, MctsManager* mcts_manager,
+                                    bool owns_manager)
+    : params_(params),
+      search_params_{
+          {params.num_fast_iters, false},  // kFast
+          {params.num_full_iters},         // kFull
+          {1, false}                       // kRawPolicy
+      },
+      move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
+                        params.move_temperature_half_life),
+      mcts_manager_(mcts_manager),
+      owns_manager_(owns_manager) {
+  if (!owns_manager_) {
+    shared_data_ = (SharedData*)mcts_manager_->get_player_data();
+  } else {
+    shared_data_ = new SharedData();
+    mcts_manager_->set_player_data(shared_data_);
+    mcts_manager_->start_threads();
+  }
+
+  if (params.verbose) {
+    verbose_info_ = new VerboseInfo();
+  }
 
   util::release_assert(mcts_manager_ != nullptr);
   util::release_assert(shared_data_ != nullptr);
-}
-
-template <core::concepts::Game Game>
-MctsPlayer<Game>::MctsPlayer(const Params& params, const MctsManagerParams& manager_params)
-    : MctsPlayer(params) {
-  mcts_manager_ = new MctsManager(manager_params);
-  shared_data_ = new SharedData();
-  owns_manager_ = true;
-  mcts_manager_->set_player_data(shared_data_);
-  mcts_manager_->start_threads();
 }
 
 template <core::concepts::Game Game>
@@ -109,21 +117,6 @@ inline MctsPlayer<Game>::~MctsPlayer() {
   if (owns_manager_) {
     delete mcts_manager_;
     delete shared_data_;
-  }
-}
-
-template <core::concepts::Game Game>
-MctsPlayer<Game>::MctsPlayer(const Params& params)
-    : params_(params),
-      search_params_{
-          {params.num_fast_iters, false},  // kFast
-          {params.num_full_iters},         // kFull
-          {1, false}                       // kRawPolicy
-      },
-      move_temperature_(params.starting_move_temperature, params.ending_move_temperature,
-                        params.move_temperature_half_life) {
-  if (params.verbose) {
-    verbose_info_ = new VerboseInfo();
   }
 }
 
@@ -183,6 +176,23 @@ template <core::concepts::Game Game>
 core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
+
+  PolicyTensor modified_policy = get_action_policy(search_mode, mcts_results, valid_actions);
+
+  if (verbose_info_) {
+    verbose_info_->action_policy = modified_policy;
+    verbose_info_->mcts_results = *mcts_results;
+    verbose_info_->initialized = true;
+  }
+  core::action_t action = eigen_util::sample(modified_policy);
+  util::release_assert(valid_actions[action]);
+  return action;
+}
+
+template <core::concepts::Game Game>
+auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
+                                                 const SearchResults* mcts_results,
+                                                 const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode == core::kRawPolicy) {
@@ -302,9 +312,9 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
 
           std::vector<std::string> columns = {"action",  "N",   "P",   "Q",
                                               "Q_sigma", "LCB", "UCB", "P*"};
-          auto data = eigen_util::sort_rows(eigen_util::concatenate_columns(
-              actions_arr, counts_arr, policy_arr, Q_arr, Q_sigma_arr, LCB_arr, UCB_arr,
-              policy_masked_arr));
+          auto data = eigen_util::sort_rows(
+              eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr,
+                                              Q_sigma_arr, LCB_arr, UCB_arr, policy_masked_arr));
 
           eigen_util::PrintArrayFormatMap fmt_map;
           fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
@@ -327,15 +337,7 @@ core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     }
     eigen_util::normalize(policy);
   }
-
-  if (verbose_info_) {
-    verbose_info_->action_policy = policy;
-    verbose_info_->mcts_results = *mcts_results;
-    verbose_info_->initialized = true;
-  }
-  core::action_t action = eigen_util::sample(policy);
-  util::release_assert(valid_actions[action]);
-  return action;
+  return policy;
 }
 
 template <core::concepts::Game Game>

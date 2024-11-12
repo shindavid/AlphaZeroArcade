@@ -54,7 +54,7 @@ std::string pop_option_value(std::vector<std::string>& args,
   return "";
 }
 
-// The code below was taken from:
+// The code below was adapted from:
 // https://www.boost.org/doc/libs/1_76_0/libs/json/doc/html/json/examples.html
 void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* indent) {
   std::string indent_;
@@ -78,21 +78,35 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
     }
 
     case boost::json::kind::array: {
-      os << "[\n";
-      indent->append(4, ' ');
       auto const& arr = jv.get_array();
-      if (!arr.empty()) {
-        auto it = arr.begin();
-        for (;;) {
+      auto it = arr.begin();
+      bool is_simple_array = (it->kind() != boost::json::kind::object) &&
+          (it->kind() != boost::json::kind::array);
+
+      // print without newlines if the array contains only simple elements
+      if (is_simple_array) {
+        os << "[";
+
+        while(true) {
+          pretty_print(os, *it, indent);
+          if (++it == arr.end()) break;
+          os << ", ";
+        }
+        os << "]";
+      } else {
+        os << "[\n";
+        indent->append(4, ' ');
+
+        while (true) {
           os << *indent;
           pretty_print(os, *it, indent);
           if (++it == arr.end()) break;
           os << ",\n";
         }
+        os << "\n";
+        indent->resize(indent->size() - 4);
+        os << *indent << "]";
       }
-      os << "\n";
-      indent->resize(indent->size() - 4);
-      os << *indent << "]";
       break;
     }
 
@@ -130,8 +144,6 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
       os << "null";
       break;
   }
-
-  if (indent->empty()) os << "\n";
 }
 
 namespace program_options {

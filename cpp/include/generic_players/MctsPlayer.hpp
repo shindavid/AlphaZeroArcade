@@ -4,11 +4,13 @@
 
 #include <boost/filesystem.hpp>
 #include <unsupported/Eigen/CXX11/Tensor>
+#include <gtest/gtest.h>
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
+#include <games/tictactoe/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
@@ -62,8 +64,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
 
   // uses this constructor when sharing an MCTS manager
-  MctsPlayer(const Params&, MctsManager* mcts_manager);
-  MctsPlayer(const Params&, const MctsManagerParams& manager_params);
+  MctsPlayer(const Params&, MctsManager* mcts_manager, bool owns_manager);
   ~MctsPlayer();
 
   MctsManager* get_mcts_manager() { return mcts_manager_; }
@@ -75,8 +76,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   }
 
  protected:
-  MctsPlayer(const Params&);
-
+  auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
   const SearchResults* mcts_search(core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
   core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
@@ -100,12 +100,14 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
 
   const MctsSearchParams search_params_[core::kNumSearchModes];
   math::ExponentialDecay move_temperature_;
-  MctsManager* mcts_manager_;
+  MctsManager* const mcts_manager_;
   SharedData* shared_data_ = nullptr;
   VerboseInfo* verbose_info_ = nullptr;
-  bool owns_manager_;
+  const bool owns_manager_;
   bool facing_human_tui_player_ = false;
   int move_count_ = 0;
+
+  template<core::concepts::Game> friend class MctsPlayerTest;
 };
 
 }  // namespace generic

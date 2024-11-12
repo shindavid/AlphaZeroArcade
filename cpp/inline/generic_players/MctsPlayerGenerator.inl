@@ -16,14 +16,16 @@ core::AbstractPlayer<Game>* MctsPlayerGeneratorBase<Game>::generate(
   manager_vec_t& vec = manager_cache_[game_thread_id];
   for (MctsManager* manager : vec) {
     if (manager->params() == manager_params_) {
-      return generate_from_manager(manager);
+      return generate_helper(manager, false);
     }
   }
 
-  auto player = generate_from_scratch();
-  MctsManager* manager = player->get_mcts_manager();
+  // TODO: consider using std::shared_ptr here to make object-ownership logic more robust.
+  // If we do so, we should rethink the "player-data" mechanism in MctsManager, so that the
+  // MctsPlayer::SharedData object is also able to use std::shared_ptr.
+  MctsManager* manager = new MctsManager(this->manager_params_);
   vec.push_back(manager);
-  return player;
+  return generate_helper(manager, true);
 }
 
 template <core::concepts::Game Game>
@@ -48,14 +50,8 @@ std::string CompetitiveMctsPlayerGenerator<Game>::get_default_name() const {
 
 template <core::concepts::Game Game>
 typename CompetitiveMctsPlayerGenerator<Game>::BaseMctsPlayer*
-CompetitiveMctsPlayerGenerator<Game>::generate_from_scratch() {
-  return new MctsPlayer(mcts_player_params_, this->manager_params_);
-}
-
-template <core::concepts::Game Game>
-typename CompetitiveMctsPlayerGenerator<Game>::BaseMctsPlayer*
-CompetitiveMctsPlayerGenerator<Game>::generate_from_manager(MctsManager* manager) {
-  return new MctsPlayer(mcts_player_params_, manager);
+CompetitiveMctsPlayerGenerator<Game>::generate_helper(MctsManager* manager, bool owns_manager) {
+  return new MctsPlayer(mcts_player_params_, manager, owns_manager);
 }
 
 template <core::concepts::Game Game>
@@ -77,14 +73,8 @@ std::string TrainingMctsPlayerGenerator<Game>::get_default_name() const {
 
 template <core::concepts::Game Game>
 typename TrainingMctsPlayerGenerator<Game>::BaseMctsPlayer*
-TrainingMctsPlayerGenerator<Game>::generate_from_scratch() {
-  return new MctsPlayer(writer_params_, mcts_player_params_, this->manager_params_);
-}
-
-template <core::concepts::Game Game>
-typename TrainingMctsPlayerGenerator<Game>::BaseMctsPlayer*
-TrainingMctsPlayerGenerator<Game>::generate_from_manager(MctsManager* manager) {
-  return new MctsPlayer(writer_params_, mcts_player_params_, manager);
+TrainingMctsPlayerGenerator<Game>::generate_helper(MctsManager* manager, bool owns_manager) {
+  return new MctsPlayer(writer_params_, mcts_player_params_, manager, owns_manager);
 }
 
 template <core::concepts::Game Game>
