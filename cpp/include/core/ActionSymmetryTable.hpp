@@ -13,8 +13,11 @@ namespace core {
 
 /*
  * An IdActionPair is a pair of an integer group_id and an action. The group_id is used to group
- * actions that are symmetrically equivalent. The ActionSymmetryTable data structure is to
- * generically encode the symmetrically equivalent actions into a compact form.
+ * actions that are symmetrically equivalent. The ActionSymmetryTable data structure is a generic
+ * way to encode these equivalence classes. A group id represents a set of actions that are
+ * symmetrically equivalent. In the current case, we use the pool_index_t type, which is the type
+ * used to index into the pool of nodes in the MCTS search. However, group id could be any integer
+ * type, as long as it is convertible to an int.
  */
 template <typename T>
 concept IdActionPair = requires(T t) {
