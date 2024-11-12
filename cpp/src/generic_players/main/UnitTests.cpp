@@ -1,6 +1,7 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameTypes.hpp>
 #include <core/BasicTypes.hpp>
+#include <games/GameStoreState.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <generic_players/MctsPlayer.hpp>
 #include <mcts/Manager.hpp>
@@ -14,6 +15,8 @@
 #include <fstream>
 
 namespace generic {
+
+using tictactoe = StateStoring<tictactoe::Game>;
 
 template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {
@@ -128,7 +131,7 @@ private:
   std::vector<core::action_t> initial_actions_;
 };
 
-using tictactoe_test = MctsPlayerTest<tictactoe::Game>;
+using tictactoe_test = MctsPlayerTest<tictactoe>;
 TEST_F(tictactoe_test, uniform_search) {
   test_get_action_policy("tictactoe");
 }
