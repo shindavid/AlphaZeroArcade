@@ -20,6 +20,7 @@ concept GameMctsConfiguration = requires {
    * kOpeningLength to N. The reason to tolerate suboptimality in the opening is so that the agent
    * does not act too deterministically. This helps achieve data diversity in training, and also
    * more meaningful testing.
+   *
    * KataGo effectively uses a value of 38 for this in 19x19 go.
    */
   { util::decay_copy(MC::kOpeningLength) } -> std::same_as<float>;
@@ -27,6 +28,7 @@ concept GameMctsConfiguration = requires {
   /*
    * If kStoreStates is enabled, then the Node will store the State in the Node itself. This can
    * also be enabled by enabling the STORE_STATES macro.
+   *
    * If using the core::MctsConfigurationBase base-class, this will be false by default.
    */
   { util::decay_copy(MC::kStoreStates) } -> std::same_as<bool>;
