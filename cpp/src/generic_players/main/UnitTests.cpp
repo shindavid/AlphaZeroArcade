@@ -1,7 +1,7 @@
 #include <core/concepts/Game.hpp>
 #include <core/GameTypes.hpp>
 #include <core/BasicTypes.hpp>
-#include <games/GameStoreState.hpp>
+#include <games/GameTransforms.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <generic_players/MctsPlayer.hpp>
 #include <mcts/Manager.hpp>
@@ -16,7 +16,7 @@
 
 namespace generic {
 
-using tictactoe = StateStoring<tictactoe::Game>;
+using tictactoe = game_transform::AddStateStorage<tictactoe::Game>;
 
 template <core::concepts::Game Game>
 class MctsPlayerTest : public ::testing::Test {

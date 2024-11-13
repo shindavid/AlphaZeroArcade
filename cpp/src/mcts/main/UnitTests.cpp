@@ -1,5 +1,5 @@
 #include <core/tests/Common.hpp>
-#include <games/GameStoreState.hpp>
+#include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <mcts/SearchLog.hpp>
@@ -22,8 +22,8 @@
 #include <string>
 #include <vector>
 
-using Nim = StateStoring<nim::Game>;
-using TicTacToe = StateStoring<tictactoe::Game>;
+using Nim = game_transform::AddStateStorage<nim::Game>;
+using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
 
 class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
