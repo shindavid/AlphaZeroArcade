@@ -6,6 +6,7 @@
 #include <core/GameLog.hpp>
 #include <core/GameTypes.hpp>
 #include <core/IOBase.hpp>
+#include <core/MctsConfigurationBase.hpp>
 #include <core/SimpleStateHistory.hpp>
 #include <core/TrainingTargets.hpp>
 #include <core/WinLossDrawResults.hpp>
@@ -39,6 +40,9 @@ class Game {
     static constexpr int kNumPlayers = 2;
     static constexpr int kNumActions = othello::kNumGlobalActions;
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
+  };
+
+  struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 25.298;  // likely too big, just keeping previous value
   };
 

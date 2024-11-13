@@ -1,4 +1,5 @@
 #include <core/tests/Common.hpp>
+#include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <mcts/SearchLog.hpp>
@@ -21,10 +22,13 @@
 #include <string>
 #include <vector>
 
+using Nim = game_transform::AddStateStorage<nim::Game>;
+using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<nim::Game> {
+
+class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<nim::Game>;
+  using NNEvaluation = mcts::NNEvaluation<Nim>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -42,7 +46,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<nim::Game> 
       ActionMask valid_actions = item.node()->stable_data().valid_action_mask;
       core::seat_index_t cp = item.node()->stable_data().current_player;
 
-      const nim::Game::State& state = item.cur_state();
+      const Nim::State& state = item.cur_state();
 
       bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
@@ -205,7 +209,7 @@ class ManagerTest : public testing::Test {
   mcts::SearchLog<Game>* search_log_ = nullptr;
 };
 
-using NimManagerTest = ManagerTest<nim::Game>;
+using NimManagerTest = ManagerTest<Nim>;
 TEST_F(NimManagerTest, uniform_search) {
   init_manager();
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
@@ -365,7 +369,7 @@ TEST_F(NimManagerTest, uniform_search_log) {
   EXPECT_EQ(get_search_log()->json_str(), expected_json);
 }
 
-using TicTacToeManagerTest = ManagerTest<tictactoe::Game>;
+using TicTacToeManagerTest = ManagerTest<TicTacToe>;
 TEST_F(TicTacToeManagerTest, uniform_search_log) {
   init_manager();
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};

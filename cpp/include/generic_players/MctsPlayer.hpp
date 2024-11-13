@@ -45,7 +45,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
     float mean_raw_moves = 0.0;
     float starting_move_temperature;
     float ending_move_temperature = 0.2;
-    float move_temperature_half_life = 0.5 * Game::Constants::kOpeningLength;
+    float move_temperature_half_life = 0.5 * Game::MctsConfiguration::kOpeningLength;
     float LCB_z_score = 2.0;
     bool verbose = false;
   };
