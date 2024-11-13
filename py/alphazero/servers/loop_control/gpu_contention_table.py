@@ -237,7 +237,8 @@ class GpuContentionTable:
             return True
         self._states[domain].lock_status = LockStatus.ACQUIRING
         self._cond.notify_all()
-        self._cond.wait_for(lambda: self._lock_available(domain) or not self._active(domain))
+        self._cond.wait_for(lambda: self._states[domain].lock_status == LockStatus.ACQUIRED or
+                            self._lock_available(domain) or not self._active(domain))
         active = self._active(domain)
         lock_status = LockStatus.ACQUIRED if active else LockStatus.RELEASED
         self._states[domain].lock_status = lock_status
