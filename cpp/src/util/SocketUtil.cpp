@@ -30,6 +30,7 @@ void Socket::json_write(const boost::json::value& json) {
   uint32_t length = htonl(static_cast<uint32_t>(json_str.size()));
 
   std::unique_lock lock(write_mutex_);
+  if (!active_) return;
   write_helper(&length, sizeof(length), "Could not json_write length to socket");
   write_helper(json_str.c_str(), json_str.size(), "Could not json_write to socket");
 }
@@ -40,6 +41,7 @@ void Socket::send_file_bytes(const std::stringstream& ss) {
   bool exec_bit = false;
 
   std::unique_lock lock(write_mutex_);
+  if (!active_) return;
   write_helper(&length, sizeof(length), "Could not send_file_bytes length to socket");
   write_helper(&exec_bit, sizeof(exec_bit), "Could not send_file_bytes exec-bit to socket");
   write_helper(data.c_str(), data.size(), "Could not send_file_bytes to socket");
@@ -55,6 +57,7 @@ void Socket::json_write_and_send_file_bytes(const boost::json::value& json,
   bool exec_bit = false;
 
   std::unique_lock lock(write_mutex_);
+  if (!active_) return;
   write_helper(&length, sizeof(length), "Could not json_write length to socket");
   write_helper(json_str.c_str(), json_str.size(), "Could not json_write to socket");
 
@@ -106,6 +109,7 @@ bool Socket::recv_file_bytes(std::stringstream& ss) {
 }
 
 void Socket::shutdown() {
+  std::unique_lock lock(write_mutex_);
   if (active_) {
     ::shutdown(fd_, SHUT_RDWR);
     active_ = false;

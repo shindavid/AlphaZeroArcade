@@ -182,11 +182,7 @@ class LoopController(LoopControllerInterface):
                          args=(msg_handler, disconnect_handler, conn, thread_name, preamble),
                          daemon=True).start()
 
-    def handle_new_self_play_positions(self, n_augmented_positions: int):
-        self._training_manager.handle_new_self_play_positions(n_augmented_positions)
-
     def handle_new_model(self):
-        self._self_play_manager.notify_of_new_model()
         for manager in self._ratings_managers.values():
             manager.notify_of_new_model()
 
@@ -219,6 +215,12 @@ class LoopController(LoopControllerInterface):
 
     def unhijack_all_self_play_tables(self):
         self._gpu_contention_manager.unhijack_all_self_play_tables()
+
+    def get_num_self_play_positions_generated(self):
+        return self._self_play_manager.get_num_positions()
+
+    def get_next_checkpoint(self) -> int:
+        return self._training_manager.get_next_checkpoint()
 
     def _get_ratings_manager(self, tag: RatingTag) -> RatingsManager:
         if tag not in self._ratings_managers:
@@ -286,15 +288,15 @@ class LoopController(LoopControllerInterface):
 
             if self._organizer.requires_retraining():
                 self._training_manager.retrain_models()
-                self._self_play_manager.signal_retraining_complete()
-            else:
-                self._self_play_manager.wait_for_gen0_completion()
-                self._training_manager.train_gen1_model_if_necessary()
+
+            self._self_play_manager.run_gen0_if_necessary()
+            self._training_manager.train_gen1_model_if_necessary()
 
             if self._shutdown_manager.shutdown_requested():
                 return
+
             while True:
-                self._training_manager.wait_until_enough_training_data()
+                self._self_play_manager.run_until_checkpoint()
                 self._training_manager.train_step()
         except:
             logger.error('Unexpected error in main_loop():', exc_info=True)

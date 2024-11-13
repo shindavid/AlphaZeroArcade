@@ -181,10 +181,7 @@ class GpuContentionTable:
 
     def release_lock(self, domain: Domain):
         with self._lock:
-            if self._states[domain].lock_status == LockStatus.RELEASED:
-                return
-            self._states[domain].lock_status = LockStatus.RELEASED
-            self._cond.notify_all()
+            self._release_lock(domain)
 
     def wait_for_lock_expiry(self, domain: Domain) -> bool:
         """
@@ -199,8 +196,17 @@ class GpuContentionTable:
         release_lock() to actually release the lock.
         """
         with self._lock:
-            self._cond.wait_for(lambda: not self._active(domain) or self._lock_expired(domain))
-            return self._active(domain)
+            return self._wait_for_lock_expiry(domain)
+
+    def _release_lock(self, domain: Domain):
+        if self._states[domain].lock_status == LockStatus.RELEASED:
+            return
+        self._states[domain].lock_status = LockStatus.RELEASED
+        self._cond.notify_all()
+
+    def _wait_for_lock_expiry(self, domain: Domain) -> bool:
+        self._cond.wait_for(lambda: not self._active(domain) or self._lock_expired(domain))
+        return self._active(domain)
 
     def _get_top_priority_active_domain(self) -> Optional[Domain]:
         pairs = [(state.priority, domain) for domain, state in self._states.items()
@@ -225,12 +231,14 @@ class GpuContentionTable:
         return self._states[domain].management_status == ManagementStatus.INACTIVE
 
     def _acquire_lock(self, domain: Domain) -> bool:
+        logger.debug(f'Acquiring lock for {domain}: {self}')
         assert self._lock.locked(), 'LockTable must be locked'
         if self._states[domain].lock_status == LockStatus.ACQUIRED:
             return True
         self._states[domain].lock_status = LockStatus.ACQUIRING
         self._cond.notify_all()
-        self._cond.wait_for(lambda: self._lock_available(domain) or not self._active(domain))
+        self._cond.wait_for(lambda: self._states[domain].lock_status == LockStatus.ACQUIRED or
+                            self._lock_available(domain) or not self._active(domain))
         active = self._active(domain)
         lock_status = LockStatus.ACQUIRED if active else LockStatus.RELEASED
         self._states[domain].lock_status = lock_status
@@ -269,17 +277,19 @@ class GpuContentionTable:
         return False
 
     def _sleep(self):
-        while True:
-            self.acquire_lock(Domain.SLEEPING)
-            if self.wait_for_lock_expiry(Domain.SLEEPING):
-                self.release_lock(Domain.SLEEPING)
+        with self._lock:
+            while True:
+                self._acquire_lock(Domain.SLEEPING)
+                if self._wait_for_lock_expiry(Domain.SLEEPING):
+                    self._release_lock(Domain.SLEEPING)
 
     def __str__(self):
         g = self._gpu_id
         t = self._states[Domain.TRAINING]
         s = self._states[Domain.SELF_PLAY]
         r = self._states[Domain.RATINGS]
-        return f'LockTable(gpu_id={g}, training={t}, self-play={s}, ratings={r})'
+        u = self._states[Domain.SLEEPING]
+        return f'LockTable(gpu_id={g}, training={t}, self-play={s}, ratings={r}, sleeping={u})'
 
     def __repr__(self) -> str:
         return str(self)
