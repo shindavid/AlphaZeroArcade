@@ -666,7 +666,8 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
   bool is_root = (node == shared_data_->get_root_node());
   const SearchParams& search_params = shared_data_->search_params;
-  ActionSelector action_selector(*manager_params_, search_params, node, is_root);
+  ActionSelector& action_selector = search_path_.back().action_selector;
+  action_selector.load(*manager_params_, search_params, node, is_root);
 
   using PVec = LocalPolicyArray;
 

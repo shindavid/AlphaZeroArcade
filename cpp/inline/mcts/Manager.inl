@@ -237,7 +237,8 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
   if (params_.no_model) return;
 
   Node* root = shared_data_.get_root_node();
-  ActionSelector action_selector(params_, search_params, root, true);
+  ActionSelector action_selector;
+  action_selector.load(params_, search_params, root, true);
 
   const auto& P = action_selector.P;
   const auto& E = action_selector.E;

@@ -5,22 +5,26 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
-                                            const SearchParams& search_params, const Node* node,
-                                            bool is_root)
-    : cp(node->stable_data().current_player),
-      P(node->stable_data().num_valid_actions),
-      Q(P.rows()),
-      QLB(P.rows()),
-      QUB(P.rows()),
-      PW(P.rows()),
-      PL(P.rows()),
-      E(P.rows()),
-      mE(P.rows()),
-      RN(P.rows()),
-      VN(P.rows()),
-      FPU(P.rows()),
-      PUCT(P.rows()) {
+void ActionSelector<Game>::load(const ManagerParams& params, const SearchParams& search_params,
+                                const Node* node, bool is_root) {
+  cp = node->stable_data().current_player;
+  loaded = true;
+
+  int n = node->stable_data().num_valid_actions;
+
+  P.resize(n);
+  Q.resize(n);
+  QLB.resize(n);
+  QUB.resize(n);
+  PW.resize(n);
+  PL.resize(n);
+  E.resize(n);
+  mE.resize(n);
+  RN.resize(n);
+  VN.resize(n);
+  FPU.resize(n);
+  PUCT.resize(n);
+
   P.setZero();
   Q.setZero();
   QLB.setConstant(Game::GameResults::kMinValue);

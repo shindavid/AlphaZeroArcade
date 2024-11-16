@@ -18,10 +18,9 @@ struct ActionSelector {
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
   static constexpr float eps = 1e-6;  // needed when N == 0
 
-  ActionSelector(const ManagerParams& manager_params, const SearchParams& search_params,
+  void load(const ManagerParams& manager_params, const SearchParams& search_params,
             const Node* node, bool is_root);
 
-  core::seat_index_t cp;
   LocalPolicyArray P;
   LocalPolicyArray Q;    // (virtualized) value
   LocalPolicyArray QLB;  // Q lower bound
@@ -34,6 +33,9 @@ struct ActionSelector {
   LocalPolicyArray VN;   // virtual node count
   LocalPolicyArray FPU;  // FPU
   LocalPolicyArray PUCT;
+
+  core::seat_index_t cp;
+  bool loaded = false;
 };
 
 }  // namespace mcts
