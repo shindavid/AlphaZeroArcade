@@ -95,7 +95,7 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
         os << "]";
       } else {
         os << "[\n";
-        indent->append(4, ' ');
+        indent->append(2, ' ');
 
         while (true) {
           os << *indent;
@@ -104,7 +104,7 @@ void pretty_print(std::ostream& os, boost::json::value const& jv, std::string* i
           os << ",\n";
         }
         os << "\n";
-        indent->resize(indent->size() - 4);
+        indent->resize(indent->size() - 2);
         os << *indent << "]";
       }
       break;
