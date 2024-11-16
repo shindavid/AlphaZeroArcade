@@ -1373,14 +1373,14 @@
   "nodes" : [
     {
     "index" : 0,
-    "N" : 18,
-    "Q" : [0.45, 0.55],
+    "N" : 1,
+    "Q" : [0.5, 0.5],
     "state" : "X__\nOOX\nX__"
     },
     {
     "index" : 1,
-    "N" : 5,
-    "Q" : [0.4, 0.6],
+    "N" : 0,
+    "Q" : [0.5, 0.5],
     "state" : "XO_\nOOX\nX__"
     },
     {
@@ -1391,8 +1391,8 @@
     },
     {
     "index" : 3,
-    "N" : 2,
-    "Q" : [0.25, 0.75],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\nOOX\nX__"
     },
     {
@@ -1437,35 +1437,1322 @@
     "index" : 0,
     "from" : 0,
     "to" : 1,
-    "E" : 5,
+    "E" : 0,
     "action" : 1
     },
     {
     "index" : 1,
     "from" : 0,
     "to" : 2,
-    "E" : 4,
+    "E" : 0,
     "action" : 2
     },
     {
     "index" : 2,
     "from" : 0,
     "to" : 1,
-    "E" : 4,
+    "E" : 0,
     "action" : 7
     },
     {
     "index" : 3,
     "from" : 0,
     "to" : 2,
-    "E" : 4,
+    "E" : 0,
     "action" : 8
     },
     {
     "index" : 4,
     "from" : 1,
     "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 5,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 6,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
     "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 7,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 8,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 9,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 10,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
     "action" : 2
     },
     {
@@ -1507,8 +2794,7351 @@
     "index" : 10,
     "from" : 3,
     "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 11,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
     "E" : 1,
     "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 12,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 13,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 14,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 15,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 16,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 17,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 5,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 6,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 7,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 8,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 9,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 10,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 11,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 12,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 13,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 14,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 15,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 16,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 17,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 1,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 5,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 0,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 6,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 7,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 8,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 9,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 10,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 11,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 12,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 13,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 2,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 14,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nXOO\nOXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 15,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nXOO\nOXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 16,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nXOO\nOXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 3,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 17,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nXOO\nOXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
+    }
+  ]
+  },
+  {
+  "nodes" : [
+    {
+    "index" : 0,
+    "N" : 18,
+    "Q" : [0.5, 0.5],
+    "state" : "X__\nOOX\nX__"
+    },
+    {
+    "index" : 1,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "XO_\nOOX\nX__"
+    },
+    {
+    "index" : 2,
+    "N" : 4,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX__"
+    },
+    {
+    "index" : 3,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nX__"
+    },
+    {
+    "index" : 4,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nX__"
+    },
+    {
+    "index" : 5,
+    "N" : 3,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nOOX\n_X_"
+    },
+    {
+    "index" : 6,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\n_OX\nOX_"
+    },
+    {
+    "index" : 7,
+    "N" : 0,
+    "Q" : [0, 1],
+    "state" : "XOX\n_OO\nXX_"
+    },
+    {
+    "index" : 8,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "X_O\nOOX\nX_X"
+    },
+    {
+    "index" : 9,
+    "N" : 1,
+    "Q" : [0, 1],
+    "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nXOO\nOXX"
+    }
+  ],
+  "edges" : [
+    {
+    "index" : 0,
+    "from" : 0,
+    "to" : 1,
+    "E" : 5,
+    "action" : 1
+    },
+    {
+    "index" : 1,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 2
+    },
+    {
+    "index" : 2,
+    "from" : 0,
+    "to" : 1,
+    "E" : 4,
+    "action" : 7
+    },
+    {
+    "index" : 3,
+    "from" : 0,
+    "to" : 2,
+    "E" : 4,
+    "action" : 8
+    },
+    {
+    "index" : 4,
+    "from" : 1,
+    "to" : 3,
+    "E" : 0,
+    "action" : 2
+    },
+    {
+    "index" : 5,
+    "from" : 1,
+    "to" : 5,
+    "E" : 3,
+    "action" : 7
+    },
+    {
+    "index" : 6,
+    "from" : 1,
+    "to" : 7,
+    "E" : 0,
+    "action" : 8
+    },
+    {
+    "index" : 7,
+    "from" : 2,
+    "to" : 4,
+    "E" : 1,
+    "action" : 1
+    },
+    {
+    "index" : 8,
+    "from" : 2,
+    "to" : 6,
+    "E" : 1,
+    "action" : 7
+    },
+    {
+    "index" : 9,
+    "from" : 2,
+    "to" : 8,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 10,
+    "from" : 3,
+    "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
     }
   ]
   },
@@ -1517,36 +10147,36 @@
     {
     "index" : 0,
     "N" : 19,
-    "Q" : [0.447368, 0.552632],
+    "Q" : [0.5, 0.5],
     "state" : "X__\nOOX\nX__"
     },
     {
     "index" : 1,
-    "N" : 5,
-    "Q" : [0.4, 0.6],
+    "N" : 4,
+    "Q" : [0.5, 0.5],
     "state" : "XO_\nOOX\nX__"
     },
     {
     "index" : 2,
-    "N" : 4,
+    "N" : 5,
     "Q" : [0.5, 0.5],
     "state" : "X_O\nOOX\nX__"
     },
     {
     "index" : 3,
-    "N" : 2,
-    "Q" : [0.25, 0.75],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\nOOX\nX__"
     },
     {
     "index" : 4,
-    "N" : 1,
+    "N" : 2,
     "Q" : [0.5, 0.5],
     "state" : "XXO\nOOX\nX__"
     },
     {
     "index" : 5,
-    "N" : 1,
+    "N" : 3,
     "Q" : [0.5, 0.5],
     "state" : "XOX\nOOX\n_X_"
     },
@@ -1558,8 +10188,8 @@
     },
     {
     "index" : 7,
-    "N" : 1,
-    "Q" : [0.5, 0.5],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\n_OO\nXX_"
     },
     {
@@ -1573,6 +10203,30 @@
     "N" : 1,
     "Q" : [0, 1],
     "state" : "XOX\nOOX\nXO_"
+    },
+    {
+    "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
+    "N" : 1,
+    "Q" : [0.5, 0.5],
+    "state" : "XOX\nXOO\nOXX"
     }
   ],
   "edges" : [
@@ -1587,14 +10241,14 @@
     "index" : 1,
     "from" : 0,
     "to" : 2,
-    "E" : 4,
+    "E" : 5,
     "action" : 2
     },
     {
     "index" : 2,
     "from" : 0,
     "to" : 1,
-    "E" : 5,
+    "E" : 4,
     "action" : 7
     },
     {
@@ -1608,28 +10262,28 @@
     "index" : 4,
     "from" : 1,
     "to" : 3,
-    "E" : 2,
+    "E" : 0,
     "action" : 2
     },
     {
     "index" : 5,
     "from" : 1,
     "to" : 5,
-    "E" : 1,
+    "E" : 3,
     "action" : 7
     },
     {
     "index" : 6,
     "from" : 1,
     "to" : 7,
-    "E" : 1,
+    "E" : 0,
     "action" : 8
     },
     {
     "index" : 7,
     "from" : 2,
     "to" : 4,
-    "E" : 1,
+    "E" : 2,
     "action" : 1
     },
     {
@@ -1650,8 +10304,50 @@
     "index" : 10,
     "from" : 3,
     "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 12,
+    "from" : 4,
+    "to" : 11,
     "E" : 1,
     "action" : 7
+    },
+    {
+    "index" : 14,
+    "from" : 5,
+    "to" : 10,
+    "E" : 0,
+    "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
     }
   ]
   },
@@ -1660,36 +10356,36 @@
     {
     "index" : 0,
     "N" : 20,
-    "Q" : [0.454167, 0.545833],
+    "Q" : [0.5, 0.5],
     "state" : "X__\nOOX\nX__"
     },
     {
     "index" : 1,
-    "N" : 6,
-    "Q" : [0.416667, 0.583333],
+    "N" : 4,
+    "Q" : [0.5, 0.5],
     "state" : "XO_\nOOX\nX__"
     },
     {
     "index" : 2,
-    "N" : 4,
+    "N" : 5,
     "Q" : [0.5, 0.5],
     "state" : "X_O\nOOX\nX__"
     },
     {
     "index" : 3,
-    "N" : 2,
-    "Q" : [0.25, 0.75],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\nOOX\nX__"
     },
     {
     "index" : 4,
-    "N" : 1,
+    "N" : 2,
     "Q" : [0.5, 0.5],
     "state" : "XXO\nOOX\nX__"
     },
     {
     "index" : 5,
-    "N" : 2,
+    "N" : 3,
     "Q" : [0.5, 0.5],
     "state" : "XOX\nOOX\n_X_"
     },
@@ -1701,8 +10397,8 @@
     },
     {
     "index" : 7,
-    "N" : 1,
-    "Q" : [0.5, 0.5],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\n_OO\nXX_"
     },
     {
@@ -1719,9 +10415,27 @@
     },
     {
     "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "XOX\nOOX\nOX_"
+    "state" : "XOX\nXOO\nOXX"
     }
   ],
   "edges" : [
@@ -1729,14 +10443,14 @@
     "index" : 0,
     "from" : 0,
     "to" : 1,
-    "E" : 6,
+    "E" : 5,
     "action" : 1
     },
     {
     "index" : 1,
     "from" : 0,
     "to" : 2,
-    "E" : 4,
+    "E" : 5,
     "action" : 2
     },
     {
@@ -1757,28 +10471,28 @@
     "index" : 4,
     "from" : 1,
     "to" : 3,
-    "E" : 2,
+    "E" : 0,
     "action" : 2
     },
     {
     "index" : 5,
     "from" : 1,
     "to" : 5,
-    "E" : 2,
+    "E" : 3,
     "action" : 7
     },
     {
     "index" : 6,
     "from" : 1,
     "to" : 7,
-    "E" : 1,
+    "E" : 0,
     "action" : 8
     },
     {
     "index" : 7,
     "from" : 2,
     "to" : 4,
-    "E" : 1,
+    "E" : 2,
     "action" : 1
     },
     {
@@ -1799,6 +10513,13 @@
     "index" : 10,
     "from" : 3,
     "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 12,
+    "from" : 4,
+    "to" : 11,
     "E" : 1,
     "action" : 7
     },
@@ -1806,8 +10527,36 @@
     "index" : 14,
     "from" : 5,
     "to" : 10,
-    "E" : 1,
+    "E" : 0,
     "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
     }
   ]
   },
@@ -1816,36 +10565,36 @@
     {
     "index" : 0,
     "N" : 21,
-    "Q" : [0.452381, 0.547619],
+    "Q" : [0.5, 0.5],
     "state" : "X__\nOOX\nX__"
     },
     {
     "index" : 1,
-    "N" : 6,
-    "Q" : [0.416667, 0.583333],
+    "N" : 4,
+    "Q" : [0.5, 0.5],
     "state" : "XO_\nOOX\nX__"
     },
     {
     "index" : 2,
-    "N" : 4,
+    "N" : 5,
     "Q" : [0.5, 0.5],
     "state" : "X_O\nOOX\nX__"
     },
     {
     "index" : 3,
-    "N" : 2,
-    "Q" : [0.25, 0.75],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\nOOX\nX__"
     },
     {
     "index" : 4,
-    "N" : 1,
+    "N" : 2,
     "Q" : [0.5, 0.5],
     "state" : "XXO\nOOX\nX__"
     },
     {
     "index" : 5,
-    "N" : 2,
+    "N" : 3,
     "Q" : [0.5, 0.5],
     "state" : "XOX\nOOX\n_X_"
     },
@@ -1857,8 +10606,8 @@
     },
     {
     "index" : 7,
-    "N" : 1,
-    "Q" : [0.5, 0.5],
+    "N" : 0,
+    "Q" : [0, 1],
     "state" : "XOX\n_OO\nXX_"
     },
     {
@@ -1875,9 +10624,27 @@
     },
     {
     "index" : 10,
+    "N" : 2,
+    "Q" : [1, 0],
+    "state" : "XOX\nOOX\nOX_"
+    },
+    {
+    "index" : 11,
+    "N" : 2,
+    "Q" : [0.5, 0.5],
+    "state" : "XXO\nOOX\nXO_"
+    },
+    {
+    "index" : 12,
+    "N" : 1,
+    "Q" : [1, 0],
+    "state" : "XOO\nOOX\nXXX"
+    },
+    {
+    "index" : 13,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "XOX\nOOX\nOX_"
+    "state" : "XOX\nXOO\nOXX"
     }
   ],
   "edges" : [
@@ -1885,56 +10652,56 @@
     "index" : 0,
     "from" : 0,
     "to" : 1,
-    "E" : 6,
+    "E" : 5,
     "action" : 1
     },
     {
     "index" : 1,
     "from" : 0,
     "to" : 2,
-    "E" : 4,
+    "E" : 5,
     "action" : 2
     },
     {
     "index" : 2,
     "from" : 0,
     "to" : 1,
-    "E" : 6,
+    "E" : 5,
     "action" : 7
     },
     {
     "index" : 3,
     "from" : 0,
     "to" : 2,
-    "E" : 4,
+    "E" : 5,
     "action" : 8
     },
     {
     "index" : 4,
     "from" : 1,
     "to" : 3,
-    "E" : 2,
+    "E" : 0,
     "action" : 2
     },
     {
     "index" : 5,
     "from" : 1,
     "to" : 5,
-    "E" : 2,
+    "E" : 3,
     "action" : 7
     },
     {
     "index" : 6,
     "from" : 1,
     "to" : 7,
-    "E" : 1,
+    "E" : 0,
     "action" : 8
     },
     {
     "index" : 7,
     "from" : 2,
     "to" : 4,
-    "E" : 1,
+    "E" : 2,
     "action" : 1
     },
     {
@@ -1955,6 +10722,13 @@
     "index" : 10,
     "from" : 3,
     "to" : 9,
+    "E" : 0,
+    "action" : 7
+    },
+    {
+    "index" : 12,
+    "from" : 4,
+    "to" : 11,
     "E" : 1,
     "action" : 7
     },
@@ -1962,8 +10736,36 @@
     "index" : 14,
     "from" : 5,
     "to" : 10,
-    "E" : 1,
+    "E" : 0,
     "action" : 6
+    },
+    {
+    "index" : 15,
+    "from" : 5,
+    "to" : 11,
+    "E" : 2,
+    "action" : 8
+    },
+    {
+    "index" : 18,
+    "from" : 7,
+    "to" : 9,
+    "E" : 0,
+    "action" : 3
+    },
+    {
+    "index" : 22,
+    "from" : 10,
+    "to" : 12,
+    "E" : 1,
+    "action" : 8
+    },
+    {
+    "index" : 23,
+    "from" : 11,
+    "to" : 13,
+    "E" : 1,
+    "action" : 8
     }
   ]
   }
