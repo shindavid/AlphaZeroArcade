@@ -9,9 +9,9 @@
 "win_rates" : [0.0853659, 0.914634],
 "value_prior" : [0.5, 0.5],
 "action_symmetry_table" : [
-    [2],
-    [1],
-    [0]
+  [2],
+  [1],
+  [0]
 ],
 "trivial" : false,
 "provably_lost" : true
