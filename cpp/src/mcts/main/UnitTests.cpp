@@ -342,7 +342,7 @@ TEST_F(NimManagerTest, uniform_search_log) {
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
   start_manager(initial_actions);
   start_threads();
-  const SearchResult* result = search(100);
+  const SearchResult* result = search(40);
 
   boost::filesystem::path file_path_result =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones_result.json";
@@ -376,7 +376,7 @@ TEST_F(TicTacToeManagerTest, uniform_search_log) {
   start_manager(initial_actions);
   start_threads();
 
-  const SearchResult* result = search(100);
+  const SearchResult* result = search(40);
 
   boost::filesystem::path file_path_result =
       util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform_result.json";

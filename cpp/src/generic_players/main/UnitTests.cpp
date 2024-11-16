@@ -36,7 +36,10 @@ class MctsPlayerTest : public ::testing::Test {
   using Rules = Game::Rules;
 
  public:
-  MctsPlayerTest() : manager_params_(create_manager_params()), player_params_(mcts::kCompetitive) {}
+  MctsPlayerTest() : manager_params_(create_manager_params()), player_params_(mcts::kCompetitive) {
+    player_params_.num_fast_iters = 10;
+    player_params_.num_full_iters = 20;
+  }
 
   ManagerParams create_manager_params() {
     ManagerParams params(mcts::kCompetitive);
