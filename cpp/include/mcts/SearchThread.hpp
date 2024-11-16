@@ -81,8 +81,11 @@ class SearchThread {
 
  private:
   struct visitation_t {
+    visitation_t(Node* n, edge_t* e) : node(n), edge(e) {}
+
     Node* node;
     edge_t* edge;  // emanates from node, possibly nullptr
+    ActionSelector action_selector;
   };
 
   using search_path_t = std::vector<visitation_t>;
