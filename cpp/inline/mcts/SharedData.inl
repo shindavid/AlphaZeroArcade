@@ -17,6 +17,7 @@ void SharedData<Game>::clear() {
   root_softmax_temperature.reset();
   lookup_table.clear();
   root_info.node_index = -1;
+  reachable_set.clear();
 
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
     root_info.history_array[sym].initialize(Rules{});
@@ -54,6 +55,8 @@ void SharedData<Game>::init_root_info(bool add_noise) {
       root->stats().RN++;
     }
   }
+
+  reachable_set.reset(&lookup_table, root_info.node_index);
 }
 
 }  // namespace mcts

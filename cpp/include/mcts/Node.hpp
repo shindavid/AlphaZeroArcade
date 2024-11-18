@@ -134,6 +134,8 @@ class Node {
    * An edge_t corresponds to an action that can be taken from this node.
    */
   struct edge_t {
+    bool viable() const { return !eliminated && E > 0; }
+
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int E = 0;  // real or virtual count
