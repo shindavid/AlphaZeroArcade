@@ -3,6 +3,7 @@
 #include <core/concepts/Game.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/Node.hpp>
+#include <mcts/ReachableSet.hpp>
 #include <mcts/SearchParams.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/Math.hpp>
@@ -30,6 +31,7 @@ struct SharedData {
   using StateHistory = Game::StateHistory;
   using LookupTable = Node::LookupTable;
   using SymmetryGroup = Game::SymmetryGroup;
+  using ReachableSet = mcts::ReachableSet<Game>;
 
   using node_pool_index_t = Node::node_pool_index_t;
 
@@ -61,6 +63,7 @@ struct SharedData {
   boost::dynamic_bitset<> active_search_threads;
   LookupTable lookup_table;
   root_info_t root_info;
+  ReachableSet reachable_set;
 
   SearchParams search_params;
   const int manager_id = -1;
