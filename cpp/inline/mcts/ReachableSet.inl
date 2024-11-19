@@ -8,7 +8,7 @@ template <core::concepts::Game Game>
 void ReachableSet<Game>::clear() {
   std::lock_guard lock(mutex_);
   reachable_nodes_.reset();
-  reachable_leaves_.reset();
+  count_ = 0;
 }
 
 template <core::concepts::Game Game>
@@ -17,7 +17,6 @@ void ReachableSet<Game>::reset(const LookupTable* table, node_pool_index_t root_
   std::lock_guard lock(mutex_);
 
   reachable_nodes_.reset();
-  reachable_leaves_.reset();
 
   auto& queue = tmp_deque_;
   queue.clear();
@@ -30,48 +29,28 @@ void ReachableSet<Game>::reset(const LookupTable* table, node_pool_index_t root_
 
     const Node* node = table->get_node(index);
 
-    bool has_viable_edge = false;
-    if (node->edges_initialized()) {
-      int n_edges = node->stable_data().num_valid_actions;
-      for (int i = 0; i < n_edges; ++i) {
-        const edge_t* edge = node->get_edge(i);
-        if (edge->viable()) {
-          has_viable_edge = true;
+    if (!node->edges_initialized()) continue;
+    int n_edges = node->stable_data().num_valid_actions;
+    for (int i = 0; i < n_edges; ++i) {
+      const edge_t* edge = node->get_edge(i);
+      if (!edge->viable()) continue;
+      if (reachable_nodes_[edge->child_index]) continue;
 
-          if (!reachable_nodes_[edge->child_index]) {
-            util::debug_assert(edge->child_index >= 0);
-            queue.push_back(edge->child_index);
-            reachable_nodes_[edge->child_index] = true;
-          }
-        }
-      }
-    }
-
-    if (!has_viable_edge) {
-      reachable_leaves_.set(index);
+      queue.push_back(edge->child_index);
+      reachable_nodes_[edge->child_index] = true;
     }
   }
+  count_ = reachable_nodes_.count();
 }
 
 template <core::concepts::Game Game>
-void ReachableSet<Game>::grow(const LookupTable* table, node_pool_index_t parent_index,
-                              edge_t* edge) {
-  throw std::runtime_error("Not implemented");
-}
-
-template <core::concepts::Game Game>
-void ReachableSet<Game>::eliminate(edge_t* edge) {
-  throw std::runtime_error("Not implemented");
-}
-
-template <core::concepts::Game Game>
-size_t ReachableSet<Game>::num_reachable_nodes() const {
-  return reachable_nodes_.count();
-}
-
-template <core::concepts::Game Game>
-size_t ReachableSet<Game>::num_reachable_leaves() const {
-  return reachable_leaves_.count();
+void ReachableSet<Game>::add(const LookupTable* table,
+                             const std::vector<node_pool_index_t>& indices) {
+  std::unique_lock lock(mutex_);
+  for (node_pool_index_t node_index : indices) {
+    reachable_nodes_.set(node_index);
+  }
+  count_ = reachable_nodes_.count();
 }
 
 }  // namespace mcts

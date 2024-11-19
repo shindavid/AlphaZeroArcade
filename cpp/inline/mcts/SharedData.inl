@@ -1,5 +1,7 @@
 #include <mcts/SharedData.hpp>
 
+#include <barrier>
+
 namespace mcts {
 
 template <core::concepts::Game Game>
@@ -10,6 +12,28 @@ SharedData<Game>::SharedData(const ManagerParams& manager_params, int mgr_id)
       lookup_table(manager_params.num_search_threads > 1),
       manager_id(mgr_id) {
   active_search_threads.resize(manager_params.num_search_threads);
+}
+
+template <core::concepts::Game Game>
+void SharedData<Game>::break_search_threads() {
+  search_threads_broken = true;
+  std::barrier barrier(active_search_threads.size(), [&] { search_threads_broken = false; });
+}
+
+template <core::concepts::Game Game>
+void SharedData<Game>::reset_reachable_set() {
+  reachable_set.reset(&lookup_table, root_info.node_index);
+}
+
+template <core::concepts::Game Game>
+void SharedData<Game>::add_to_reachable_set(const std::vector<node_pool_index_t>& indices) {
+  reachable_set.add(&lookup_table, indices);
+}
+
+template <core::concepts::Game Game>
+bool SharedData<Game>::more_visits_needed() {
+  return !get_root_node()->has_certain_outcome() &&
+         (int)reachable_set.count() < search_params.tree_size_limit;
 }
 
 template <core::concepts::Game Game>
@@ -48,12 +72,6 @@ void SharedData<Game>::init_root_info(bool add_noise) {
     Node* root = lookup_table.get_node(root_info.node_index);
     new (root) Node(&lookup_table, canonical_history);
     root->stats().RN++;
-  } else {
-    Node* root = lookup_table.get_node(root_info.node_index);
-    // root RN could have been cleared from a recent reset
-    if (root->stats().RN == 0) {
-      root->stats().RN++;
-    }
   }
 
   reachable_set.reset(&lookup_table, root_info.node_index);

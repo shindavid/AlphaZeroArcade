@@ -216,7 +216,7 @@ inline void SearchThread<Game>::perform_visits() {
   raw_history_ = root_info.history_array[group::kIdentity];
 
   Node* root = init_root_node();
-  while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
+  while (!shared_data_->search_threads_broken && shared_data_->more_visits_needed()) {
     search_path_.clear();
     search_path_.emplace_back(root, nullptr);
     Node* node = root;
@@ -262,7 +262,14 @@ inline void SearchThread<Game>::loop() {
   while (!shared_data_->shutting_down) {
     wait_for_activation();
     if (shared_data_->shutting_down) break;
-    perform_visits();
+
+    // extra while-loop on top of the while-loop within perform_visits() to catch race-conditions
+    // due to edge-eliminations
+    do {
+      perform_visits();
+      shared_data_->break_search_threads();
+    } while (shared_data_->more_visits_needed());
+
     deactivate();
   }
 }
@@ -272,7 +279,8 @@ void SearchThread<Game>::print_visit_info(Node* node) {
   if (mcts::kEnableSearchDebug) {
     std::ostringstream ss;
     ss << thread_id_whitespace() << "visit " << search_path_str()
-       << " cp=" << (int)node->stable_data().current_player;
+       << " cp=" << (int)node->stable_data().current_player
+       << " reachable=" << shared_data_->reachable_set.count();
     LOG_INFO << ss.str();
   }
 }
@@ -392,26 +400,19 @@ inline void SearchThread<Game>::virtual_backprop() {
 
   util::release_assert(!search_path_.empty());
   int i = search_path_.size() - 1;
-  Node* last_node = search_path_[i].node;
-
-  int reset_index = -1;
-
-  bool reset_needed = last_node->update_stats([&] { last_node->stats().VN++; });
-  if (reset_needed && reset_index < 0) reset_index = i;
+  visitation_t& v0 = search_path_[i];
+  v0.handled_elimination = v0.node->update_stats([&] { v0.node->stats().VN++; });
 
   for (--i; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
-    Node* node = search_path_[i].node;
+    visitation_t& v = search_path_[i];
 
-    reset_needed = node->update_stats([&] {
-      node->increment_edge(edge);
-      node->stats().VN++;
+    v.handled_elimination = v.node->update_stats([&] {
+      v.edge_newly_viable = v.edge->increment_count();
+      v.node->stats().VN++;
     });
-
-    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  reset_tree(reset_index);
+  update_reachable_set();
   validate_search_path();
 }
 
@@ -426,29 +427,23 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
 
   util::release_assert(!search_path_.empty());
   int i = search_path_.size() - 1;
-  Node* last_node = search_path_[i].node;
+  visitation_t& v0 = search_path_[i];
 
-  int reset_index = -1;
-
-  bool reset_needed = last_node->update_stats([&] {
-    last_node->stats().init_q(value, true);
-    last_node->stats().RN++;
+  v0.handled_elimination = v0.node->update_stats([&] {
+    v0.node->stats().init_q(value, true);
+    v0.node->stats().RN++;
   });
-  if (reset_needed && reset_index < 0) reset_index = i;
 
   for (--i; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
-    Node* node = search_path_[i].node;
+    visitation_t& v = search_path_[i];
 
-    reset_needed = node->update_stats([&] {
-      node->increment_edge(edge);
-      node->stats().RN++;
+    v.handled_elimination = v.node->update_stats([&] {
+      v.edge_newly_viable = v.edge->increment_count();
+      v.node->stats().RN++;
     });
-
-    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  reset_tree(reset_index);
+  update_reachable_set();
   validate_search_path();
 }
 
@@ -457,44 +452,34 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
   profiler_.record(SearchThreadRegion::kBackpropWithVirtualUndo);
 
   int i = search_path_.size() - 1;
-  Node* last_node = search_path_[i].node;
-  auto value = Game::GameResults::to_value_array(last_node->stable_data().VT);
+  visitation_t& v0 = search_path_[i];
+  auto value = Game::GameResults::to_value_array(v0.node->stable_data().VT);
 
   if (mcts::kEnableSearchDebug) {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str() << ": "
              << value.transpose();
   }
 
-  int reset_index = -1;
-
-  bool reset_needed = last_node->update_stats([&] {
-    last_node->stats().init_q(value, false);
-    last_node->stats().RN++;
-    if (undo_virtual) {
-      // std::max() to avoid race-condition with Node::reset()
-      last_node->stats().VN = std::max(0, last_node->stats().VN - 1);
-    }
+  v0.handled_elimination = v0.node->update_stats([&] {
+    v0.node->stats().init_q(value, false);
+    v0.node->stats().RN++;
+    v0.node->stats().VN -= undo_virtual;
   });
-  if (reset_needed && reset_index < 0) reset_index = i;
 
   for (--i; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
-    Node* node = search_path_[i].node;
+    visitation_t& v = search_path_[i];
 
-    reset_needed = node->update_stats([&] {
-      node->stats().RN++;
+    v.handled_elimination = v.node->update_stats([&] {
+      v.node->stats().RN++;
       if (undo_virtual) {
-        // std::max() to avoid race-condition with Node::reset()
-        last_node->stats().VN = std::max(0, last_node->stats().VN - 1);
+        v.node->stats().VN++;
       } else {
-        node->increment_edge(edge);
+        v.edge_newly_viable = v.edge->increment_count();
       }
     });
-
-    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  reset_tree(reset_index);
+  update_reachable_set();
   validate_search_path();
 }
 
@@ -504,22 +489,37 @@ void SearchThread<Game>::short_circuit_backprop() {
     LOG_INFO << thread_id_whitespace() << __func__ << " " << search_path_str();
   }
 
-  int reset_index = -1;
-
   for (int i = search_path_.size() - 2; i >= 0; --i) {
-    edge_t* edge = search_path_[i].edge;
-    Node* node = search_path_[i].node;
+    visitation_t& v = search_path_[i];
 
-    bool reset_needed = node->update_stats([&] {
-      node->increment_edge(edge);
-      node->stats().RN++;
+    v.handled_elimination = v.node->update_stats([&] {
+      v.edge_newly_viable = v.edge->increment_count();
+      v.node->stats().RN++;
     });
-
-    if (reset_needed && reset_index < 0) reset_index = i;
   }
 
-  reset_tree(reset_index);
+  update_reachable_set();
   validate_search_path();
+}
+
+template <core::concepts::Game Game>
+void SearchThread<Game>::update_reachable_set() {
+  bool reset_needed = false;
+  for (const visitation_t& v : search_path_) {
+    if (v.handled_elimination) {
+      reset_needed = true;
+    }
+    if (v.edge_newly_viable) {
+      pseudo_local_vars_.newly_added_node_indices.push_back(v.edge->child_index);
+    }
+  }
+
+  if (reset_needed) {
+    shared_data_->reset_reachable_set();
+  } else if (!pseudo_local_vars_.newly_added_node_indices.empty()) {
+    shared_data_->add_to_reachable_set(pseudo_local_vars_.newly_added_node_indices);
+  }
+  pseudo_local_vars_.newly_added_node_indices.clear();
 }
 
 template <core::concepts::Game Game>
@@ -627,27 +627,6 @@ void SearchThread<Game>::calc_canonical_state_data() {
       util::release_assert(false);
     }
   }
-}
-
-template <core::concepts::Game Game>
-void SearchThread<Game>::reset_tree(int search_path_index) {
-  if (search_path_index < 0) return;
-
-  if (mcts::kEnableSearchDebug) {
-    LOG_INFO << thread_id_whitespace() << __func__ << "(" << search_path_index << ") "
-             << search_path_str();
-  }
-
-  util::release_assert(!search_path_.empty());
-  util::release_assert(search_path_index < (int)search_path_.size());
-
-  for (int i = search_path_index; i >= 0; --i) {
-    Node* node = search_path_[i].node;
-    node->reset();
-  }
-
-  Node* root = shared_data_->get_root_node();
-  root->stats().RN++;
 }
 
 template <core::concepts::Game Game>
