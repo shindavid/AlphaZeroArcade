@@ -117,6 +117,7 @@ class Node {
    * arbitrarily-partially written data.
    */
   struct stats_t {
+    stats_t();
     int total_count() const { return RN + VN; }
     void init_q(const ValueArray&, bool pure);
 
@@ -124,7 +125,6 @@ class Node {
     ValueArray Q_sq;  // excludes virtual loss
     int RN = 0;       // real count
     int VN = 0;       // virtual count
-    int cleanly_eliminatable_edge_index = -1;
 
     ValueArray Q_lower_bound;
     ValueArray Q_upper_bound;
@@ -135,6 +135,7 @@ class Node {
    */
   struct edge_t {
     bool viable() const { return !eliminated && E > 0; }
+    bool increment_count();  // returns true if edge newly becomes viable
 
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
@@ -217,8 +218,7 @@ class Node {
    * update_stats() executes f() under the node's mutex, then updates the node's stats by
    * scanning all children.
    *
-   * Returns true if a tree-rebuild is needed. This happens if an edge is newly eliminated, and if
-   * earlier elimination of that edge would have caused a different sequence of visits to be taken.
+   * Returns true if some edge was newly eliminated.
    */
   template <typename MutexProtectedFunc>
   bool update_stats(MutexProtectedFunc f);
@@ -234,8 +234,6 @@ class Node {
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }
 
   void initialize_edges();
-
-  void increment_edge(edge_t* edge);
 
   /*
    * Zeros out the visit count for this node and all its edges.

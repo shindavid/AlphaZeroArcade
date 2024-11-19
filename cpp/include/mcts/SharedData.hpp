@@ -48,6 +48,16 @@ struct SharedData {
   SharedData(const SharedData&) = delete;
   SharedData& operator=(const SharedData&) = delete;
 
+  /*
+   * Called by each SearchThread. Signals to each SearchThread to break out of its search-loop.
+   *
+   * Returns when all SearchThread's have reached the break-point.
+   */
+  void break_search_threads();
+
+  void reset_reachable_set();
+  void add_to_reachable_set(const std::vector<node_pool_index_t>& indices);
+  bool more_visits_needed();
   void clear();
   void update_state(core::action_t action);
   void init_root_info(bool add_noise);
@@ -59,7 +69,10 @@ struct SharedData {
 
   std::mutex init_root_mutex;
   std::mutex search_mutex;
-  std::condition_variable cv_search_on, cv_search_off;
+  std::condition_variable cv_search_on;
+  std::condition_variable cv_search_off;
+  std::condition_variable cv_search_thread_break;
+
   boost::dynamic_bitset<> active_search_threads;
   LookupTable lookup_table;
   root_info_t root_info;
@@ -67,6 +80,7 @@ struct SharedData {
 
   SearchParams search_params;
   const int manager_id = -1;
+  bool search_threads_broken = false;
   bool shutting_down = false;
 };
 

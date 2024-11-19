@@ -28,6 +28,14 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
 }
 
 template <core::concepts::Game Game>
+Node<Game>::stats_t::stats_t() {
+  Q.setZero();
+  Q_sq.setZero();
+  Q_lower_bound.setConstant(Game::GameResults::kMinValue);
+  Q_upper_bound.setConstant(Game::GameResults::kMaxValue);
+}
+
+template <core::concepts::Game Game>
 void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
   Q = value;
   Q_sq = value * value;
@@ -40,6 +48,13 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
   }
 
   eigen_util::debug_assert_is_valid_prob_distr(Q);
+}
+
+template <core::concepts::Game Game>
+bool Node<Game>::edge_t::increment_count() {
+  bool was_viable = viable();
+  E++;
+  return !was_viable && viable();
 }
 
 template <core::concepts::Game Game>
@@ -292,14 +307,12 @@ bool Node<Game>::update_stats(MutexProtectedFunc func) {
   // Now we lock the mutex, and copy the calculated information into the node
   lock.lock();
 
-  bool rebuild_needed = false;
+  bool new_elimination = false;
 
   // Mask edges that are eliminated
   for (int i = 0; i < n_actions; i++) {
     edge_t* edge = get_edge(i);
-
-    bool newly_eliminated = !edge->eliminated && eliminated_actions[i];
-    rebuild_needed |= newly_eliminated && stats_.cleanly_eliminatable_edge_index != i;
+    new_elimination |= !edge->eliminated && eliminated_actions[i];
     edge->eliminated = eliminated_actions[i];
   }
 
@@ -312,8 +325,7 @@ bool Node<Game>::update_stats(MutexProtectedFunc func) {
   }
 
   util::debug_assert((stats_.Q_lower_bound <= stats_.Q_upper_bound).all());
-
-  return rebuild_needed;
+  return new_elimination;
 }
 
 // NOTE: this can be switched to use binary search if we'd like
@@ -346,24 +358,11 @@ void Node<Game>::initialize_edges() {
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::increment_edge(edge_t* edge) {
-  edge_t* first_edge = get_edge(0);
-  int edge_index = edge - first_edge;
-  bool first_increment = edge->E == 0;
-
-  edge->E++;
-  if (stats_.cleanly_eliminatable_edge_index != edge_index) {
-    stats_.cleanly_eliminatable_edge_index = first_increment ? edge_index : -1;
-  }
-}
-
-template <core::concepts::Game Game>
 void Node<Game>::reset() {
   std::unique_lock lock(mutex());
 
   stats_.RN = 0;
   stats_.VN = 0;
-  stats_.cleanly_eliminatable_edge_index = -1;
 
   int n = stable_data_.num_valid_actions;
   for (int i = 0; i < n; ++i) {

@@ -86,6 +86,8 @@ class SearchThread {
     Node* node;
     edge_t* edge;  // emanates from node, possibly nullptr
     ActionSelector action_selector;
+    bool edge_newly_viable = false;
+    bool handled_elimination = false;
   };
 
   using search_path_t = std::vector<visitation_t>;
@@ -105,12 +107,10 @@ class SearchThread {
   void pure_backprop(const ValueArray& value);
   void standard_backprop(bool undo_virtual);
   void short_circuit_backprop();
+  void update_reachable_set();
   bool expand(StateHistory*, Node*, edge_t*);  // returns true if a new node was expanded
   std::string search_path_str() const;  // slow, for debugging
   void calc_canonical_state_data();
-
-  // Calls node->reset() for the first (search_path_index + 1) node's in search path
-  void reset_tree(int search_path_index);
 
   // In debug builds, calls node->validate_state() for each node in search path.
   // In release builds, NO-OP.
@@ -148,6 +148,7 @@ class SearchThread {
     StateHistory canonical_history;
     item_vec_t request_items;
     StateHistoryArray root_history_array;
+    std::vector<node_pool_index_t> newly_added_node_indices;
   };
 
   pseudo_local_vars_t pseudo_local_vars_;

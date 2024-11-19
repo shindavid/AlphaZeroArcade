@@ -4,8 +4,9 @@
 #include <mcts/Node.hpp>
 #include <util/InfiniteBitset.hpp>
 
-#include <mutex>
 #include <deque>
+#include <mutex>
+#include <vector>
 
 namespace mcts {
 
@@ -23,20 +24,14 @@ class ReachableSet {
   using InfiniteBitset = util::InfiniteBitset;
 
   void clear();
-
   void reset(const LookupTable* table, node_pool_index_t root_index);
-
-  void grow(const LookupTable* table, node_pool_index_t parent_index, edge_t* edge);
-
-  void eliminate(edge_t* edge);
-
-  size_t num_reachable_nodes() const;
-  size_t num_reachable_leaves() const;
+  void add(const LookupTable* table, const std::vector<node_pool_index_t>& indices);
+  size_t count() const { return count_; }
 
  private:
   mutable std::mutex mutex_;
   InfiniteBitset reachable_nodes_;
-  InfiniteBitset reachable_leaves_;  // subset of reachable_nodes_
+  size_t count_ = 0;
 
   // The tmp_* members are used for temporary storage. They are used as if they are local variables,
   // but are members to avoid repeated allocation/deallocation.
