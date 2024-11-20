@@ -134,12 +134,15 @@ class Node {
    * An edge_t corresponds to an action that can be taken from this node.
    */
   struct edge_t {
-    bool viable() const { return !eliminated && E > 0; }
-    bool increment_count();  // returns true if edge newly becomes viable
+    bool viable() const { return !eliminated && RE > 0; }
+
+    // returns true if edge newly becomes viable
+    bool increment_real_count(bool undo_virtual=false);
 
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
-    int E = 0;  // real or virtual count
+    int RE = 0;  // real count
+    int VE = 0;  // real count
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player

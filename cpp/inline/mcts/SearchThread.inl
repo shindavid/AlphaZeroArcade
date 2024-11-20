@@ -339,7 +339,7 @@ typename SearchThread<Game>::Node* SearchThread<Game>::visit(Node* node) {
       util::debug_assert(edge->child_index >= 0);
       Node* child = shared_data_->lookup_table.get_node(edge->child_index);
       search_path_.emplace_back(child, nullptr);
-      int edge_count = edge->E;
+      int edge_count = edge->RE;
       int child_count = child->stats().RN;
       if (edge_count < child_count || child->has_certain_outcome()) {
         short_circuit_backprop();
@@ -359,7 +359,7 @@ typename SearchThread<Game>::Node* SearchThread<Game>::visit(Node* node) {
   Node* child = node->get_child(edge);
   if (child) {
     search_path_.emplace_back(child, nullptr);
-    int edge_count = edge->E;
+    int edge_count = edge->RE;
     int child_count = child->stats().RN;
     if (edge_count < child_count || child->has_certain_outcome()) {
       short_circuit_backprop();
@@ -407,7 +407,7 @@ inline void SearchThread<Game>::virtual_backprop() {
     visitation_t& v = search_path_[i];
 
     v.handled_elimination = v.node->update_stats([&] {
-      v.edge_newly_viable = v.edge->increment_count();
+      v.edge->VE++;
       v.node->stats().VN++;
     });
   }
@@ -438,7 +438,7 @@ inline void SearchThread<Game>::pure_backprop(const ValueArray& value) {
     visitation_t& v = search_path_[i];
 
     v.handled_elimination = v.node->update_stats([&] {
-      v.edge_newly_viable = v.edge->increment_count();
+      v.edge_newly_viable = v.edge->increment_real_count();
       v.node->stats().RN++;
     });
   }
@@ -471,11 +471,8 @@ void SearchThread<Game>::standard_backprop(bool undo_virtual) {
 
     v.handled_elimination = v.node->update_stats([&] {
       v.node->stats().RN++;
-      if (undo_virtual) {
-        v.node->stats().VN++;
-      } else {
-        v.edge_newly_viable = v.edge->increment_count();
-      }
+      v.node->stats().VN += undo_virtual;
+      v.edge_newly_viable = v.edge->increment_real_count(undo_virtual);
     });
   }
 
@@ -493,7 +490,7 @@ void SearchThread<Game>::short_circuit_backprop() {
     visitation_t& v = search_path_[i];
 
     v.handled_elimination = v.node->update_stats([&] {
-      v.edge_newly_viable = v.edge->increment_count();
+      v.edge_newly_viable = v.edge->increment_real_count();
       v.node->stats().RN++;
     });
   }
