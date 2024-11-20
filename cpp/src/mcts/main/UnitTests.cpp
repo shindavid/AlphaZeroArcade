@@ -143,64 +143,41 @@ class ManagerTest : public testing::Test {
   }
 
   mcts::SearchLog<Game>* get_search_log() { return search_log_; }
-
-  std::string print_tree(node_pool_index_t node_ix, const State& prev_state, int num_indent = 0) {
-    std::ostringstream oss;
-    Node* node = get_node_by_index(node_ix);
-
-    if (num_indent == 0) {
-      oss << std::string(num_indent * 2, ' ');
-    } else {
-      const char* marker = node->is_terminal() ? "|*" : "|-";
-      oss << std::string((num_indent - 1) * 2, ' ') << marker;
-    }
-    oss << "Node " << node_ix << ": " << Game::IO::compact_state_repr(prev_state)
-        << " RN = " << node->stats().RN << ": Q = " << node->stats().Q.transpose() << std::endl;
-
-    for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
-      edge_t* edge = node->get_edge(i);
-
-      if (edge->child_index == -1) {
-        continue;
-      }
-      edge_pool_index_t edge_index = i + node->get_first_edge_index();
-
-      State new_state = prev_state;
-      StateHistory history;
-      history.update(new_state);
-      Game::Rules::apply(history, edge->action);
-      new_state = history.current();
-
-      oss << std::string(num_indent * 2, ' ') << "|-"
-          << "Edge " << edge_index << ": " << " E = " << edge->E << ", Action = " << edge->action
-          << std::endl;
-      if (edge->child_index != -1) {
-        oss << print_tree(edge->child_index, new_state, num_indent + 2);
-      }
-    }
-    return oss.str();
-  }
-
-  /*
-   * This function prints the tree structure starting from root.
-   * It recursively traverses the tree and prints each node and its edges.
-   * The format is as follows:
-   * - Each node is printed with its index, state representation, RN (visit count), and Q values.
-   * - Each edge is printed with its index, visit count (E), and action.
-   * - Indentation is used to represent the tree structure, with each level of depth indented
-   * further.
-   */
-  using Rules = Game::Rules;
-  std::string print_tree() {
-    StateHistory history;
-    history.initialize(Rules{});
-    for (core::action_t action : initial_actions_) {
-      Game::Rules::apply(history, action);
-    }
-    return print_tree(0, history.current());
-  }
-
   ManagerParams& get_manager_params() { return manager_params_; }
+
+  void test_search(const std::string& testname, int num_search,
+                   const std::vector<core::action_t>& initial_actions, Service* service) {
+    init_manager(service);
+    start_manager(initial_actions);
+    start_threads();
+    const SearchResult* result = search(num_search);
+
+    boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "mcts_tests";
+
+    boost::filesystem::path file_path_result =
+        base_dir / (testname + "_result.json");
+    boost::filesystem::path file_path_log =
+        base_dir / (testname + "_log.json");
+
+    std::stringstream ss_result;
+    boost_util::pretty_print(ss_result, result->to_json());
+
+    if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
+      boost_util::write_str_to_file(ss_result.str(), file_path_result);
+      boost_util::write_str_to_file(get_search_log()->json_str(), file_path_log);
+    }
+
+    std::ifstream result_file(file_path_result);
+    std::ifstream log_file(file_path_log);
+
+    std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
+                                     std::istreambuf_iterator<char>());
+    std::string expected_log_json((std::istreambuf_iterator<char>(log_file)),
+                                  std::istreambuf_iterator<char>());
+
+    EXPECT_EQ(ss_result.str(), expected_result_json);
+    EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
+  }
 
  private:
   ManagerParams manager_params_;
@@ -211,196 +188,47 @@ class ManagerTest : public testing::Test {
 
 using NimManagerTest = ManagerTest<Nim>;
 TEST_F(NimManagerTest, uniform_search) {
-  init_manager();
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake2};
-  start_manager(initial_actions);
-  start_threads();
-  search(10);
-  std::string tree_str = print_tree();
-  EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q = 0.318182 0.681818\n"
-            "|-Edge 0:  E = 5, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 5: Q = 0.3 0.7\n"
-            "    |-Edge 3:  E = 1, Action = 0\n"
-            "      |-Node 4: [2, 0] RN = 1: Q = 0.5 0.5\n"
-            "    |-Edge 4:  E = 1, Action = 1\n"
-            "      |-Node 5: [1, 0] RN = 1: Q = 0.5 0.5\n"
-            "    |-Edge 5:  E = 2, Action = 2\n"
-            "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n"
-            "|-Edge 1:  E = 3, Action = 1\n"
-            "  |-Node 2: [2, 1] RN = 3: Q = 0.333333 0.666667\n"
-            "    |-Edge 6:  E = 1, Action = 0\n"
-            "      |-Node 5: [1, 0] RN = 1: Q = 0.5 0.5\n"
-            "    |-Edge 7:  E = 1, Action = 1\n"
-            "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n"
-            "|-Edge 2:  E = 2, Action = 2\n"
-            "  |-Node 3: [1, 1] RN = 2: Q = 0.25 0.75\n"
-            "    |-Edge 8:  E = 1, Action = 0\n"
-            "      |*Node 6: [0, 0] RN = 2: Q = 0 1\n");
+  test_search("nim_uniform_10", 10, initial_actions, nullptr);
 }
 
 TEST_F(NimManagerTest, smart_search) {
   MockNNEvaluationService mock_service(true);
-  init_manager(&mock_service);
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake2};
-
-  start_manager(initial_actions);
-  start_threads();
-  search(10);
-  std::string tree_str = print_tree();
-  EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q = 0.0779644  0.922036\n"
-            "|-Edge 0:  E = 4, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 4: Q = 0.0298007  0.970199\n"
-            "    |-Edge 5:  E = 3, Action = 2\n"
-            "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n"
-            "|-Edge 1:  E = 3, Action = 1\n"
-            "  |-Node 2: [2, 1] RN = 3: Q = 0.0397343  0.960266\n"
-            "    |-Edge 7:  E = 2, Action = 1\n"
-            "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n"
-            "|-Edge 2:  E = 3, Action = 2\n"
-            "  |-Node 3: [1, 1] RN = 3: Q = 0.0397343  0.960266\n"
-            "    |-Edge 8:  E = 2, Action = 0\n"
-            "      |*Node 4: [0, 0] RN = 3: Q = 0 1\n");
+  test_search("nim_smart_service", 10, initial_actions, &mock_service);
 }
 
 TEST_F(NimManagerTest, dumb_search) {
   MockNNEvaluationService mock_service(false);
-  init_manager(&mock_service);
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake2};
 
-  start_manager(initial_actions);
-  start_threads();
-  search(10);
-  std::string tree_str = print_tree();
-  EXPECT_EQ(tree_str,
-            "Node 0: [4, 0] RN = 11: Q = 0.489163 0.510837\n"
-            "|-Edge 0:  E = 4, Action = 0\n"
-            "  |-Node 1: [3, 1] RN = 4: Q = 0.5 0.5\n"
-            "    |-Edge 3:  E = 2, Action = 0\n"
-            "      |-Node 2: [2, 0] RN = 2: Q = 0.279801 0.720199\n"
-            "        |-Edge 6:  E = 1, Action = 0\n"
-            "          |-Node 5: [1, 1] RN = 2: Q = 0.440399 0.559601\n"
-            "            |-Edge 11:  E = 1, Action = 0\n"
-            "              |*Node 6: [0, 0] RN = 1: Q = 0 1\n"
-            "    |-Edge 4:  E = 1, Action = 1\n"
-            "      |-Node 4: [1, 0] RN = 2: Q = 0.559601 0.440399\n"
-            "        |-Edge 10:  E = 1, Action = 0\n"
-            "          |*Node 7: [0, 1] RN = 1: Q = 1 0\n"
-            "|-Edge 1:  E = 4, Action = 1\n"
-            "  |-Node 3: [2, 1] RN = 4: Q = 0.5 0.5\n"
-            "    |-Edge 8:  E = 2, Action = 0\n"
-            "      |-Node 4: [1, 0] RN = 2: Q = 0.559601 0.440399\n"
-            "        |-Edge 10:  E = 1, Action = 0\n"
-            "          |*Node 7: [0, 1] RN = 1: Q = 1 0\n"
-            "    |-Edge 9:  E = 1, Action = 1\n"
-            "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n"
-            "|-Edge 2:  E = 2, Action = 2\n"
-            "  |-Node 5: [1, 1] RN = 2: Q = 0.440399 0.559601\n"
-            "    |-Edge 11:  E = 1, Action = 0\n"
-            "      |*Node 6: [0, 0] RN = 1: Q = 0 1\n");
+  test_search("nim_dumb_service", 10, initial_actions, &mock_service);
 }
 
-TEST_F(NimManagerTest, search_log) {
-  init_manager();
-  start_manager();
-  start_threads();
-
-  const SearchResult* result = search(20);
-
-  boost::filesystem::path file_path_result =
-      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_result.json";
-  boost::filesystem::path file_path =
-      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform.json";
-
-  std::stringstream ss;
-  boost_util::pretty_print(ss, result->to_json());
-
-  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
-    boost_util::write_str_to_file(ss.str(), file_path_result);
-    boost_util::write_str_to_file(get_search_log()->json_str(), file_path);
-  }
-
-  std::ifstream result_file(file_path_result);
-  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
-                            std::istreambuf_iterator<char>());
-
-  EXPECT_EQ(ss.str(), expected_result_json);
-
-  std::ifstream file(file_path);
-  std::string expected_json((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_search_log()->json_str(), expected_json);
+TEST_F(NimManagerTest, 20_searches_from_scratch) {
+  test_search("nim_uniform", 20, {}, nullptr);
 }
 
-TEST_F(NimManagerTest, uniform_search_log) {
-  init_manager();
+TEST_F(NimManagerTest, 40_searches_from_4_stones) {
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake2};
-  start_manager(initial_actions);
-  start_threads();
-  const SearchResult* result = search(40);
+  test_search("nim_4_stones", 40, initial_actions, nullptr);
+}
 
-  boost::filesystem::path file_path_result =
-      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones_result.json";
-
-  boost::filesystem::path file_path =
-      util::Repo::root() / "goldenfiles" / "mcts_tests" / "nim_uniform_4_stones.json";
-
-  std::stringstream ss;
-  boost_util::pretty_print(ss, result->to_json());
-
-  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
-    boost_util::write_str_to_file(ss.str(), file_path_result);
-    boost_util::write_str_to_file(get_search_log()->json_str(), file_path);
-  }
-
-  std::ifstream result_file(file_path_result);
-  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
-                            std::istreambuf_iterator<char>());
-  EXPECT_EQ(ss.str(), expected_result_json);
-
-  std::ifstream file(file_path);
-  std::string expected_json((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_search_log()->json_str(), expected_json);
+TEST_F(NimManagerTest, 40_searches_from_5_stones) {
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake1};
+  test_search("nim_5_stones", 40, initial_actions, nullptr);
 }
 
 using TicTacToeManagerTest = ManagerTest<TicTacToe>;
 TEST_F(TicTacToeManagerTest, uniform_search_log) {
-  init_manager();
+
   std::vector<core::action_t> initial_actions = {0, 1, 2, 4, 7};
-  start_manager(initial_actions);
-  start_threads();
-
-  const SearchResult* result = search(40);
-
-  boost::filesystem::path file_path_result =
-      util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform_result.json";
-  boost::filesystem::path file_path =
-      util::Repo::root() / "goldenfiles" / "mcts_tests" / "tictactoe_uniform.json";
-
-  std::stringstream ss;
-  boost_util::pretty_print(ss, result->to_json());
-
-  if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
-    boost_util::write_str_to_file(ss.str(), file_path_result);
-    boost_util::write_str_to_file(get_search_log()->json_str(), file_path);
-  }
-
-  std::ifstream result_file(file_path_result);
-  std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
-                            std::istreambuf_iterator<char>());
-
-  EXPECT_EQ(ss.str(), expected_result_json);
-
-  std::ifstream file(file_path);
-  std::string expected_json((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
-  EXPECT_EQ(get_search_log()->json_str(), expected_json);
+  test_search("tictactoe_uniform", 40, initial_actions, nullptr);
 }
 
 int main(int argc, char** argv) {
