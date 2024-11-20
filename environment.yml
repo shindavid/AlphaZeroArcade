@@ -39,6 +39,7 @@ dependencies:
   - contourpy=1.0.7=py310hdf3cbec_0
   - cryptography=41.0.4=py310h75e40e8_0
   - cudatoolkit=11.6.0=hecad31d_10
+  - cudatoolkit-dev=11.7.0=h1de0b5d_6
   - cudnn=8.4.1.50=hed8a83a_0
   - debugpy=1.6.6=py310heca2aa9_0
   - decorator=5.1.1=pyhd8ed1ab_0
