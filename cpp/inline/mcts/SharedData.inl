@@ -1,7 +1,5 @@
 #include <mcts/SharedData.hpp>
 
-#include <barrier>
-
 namespace mcts {
 
 template <core::concepts::Game Game>
@@ -9,6 +7,7 @@ SharedData<Game>::SharedData(const ManagerParams& manager_params, int mgr_id)
     : root_softmax_temperature(manager_params.starting_root_softmax_temperature,
                                manager_params.ending_root_softmax_temperature,
                                manager_params.root_softmax_temperature_half_life),
+      search_barrier(manager_params.num_search_threads, [&] { search_threads_broken = false; }),
       lookup_table(manager_params.num_search_threads > 1),
       manager_id(mgr_id) {
   active_search_threads.resize(manager_params.num_search_threads);
@@ -17,7 +16,7 @@ SharedData<Game>::SharedData(const ManagerParams& manager_params, int mgr_id)
 template <core::concepts::Game Game>
 void SharedData<Game>::break_search_threads() {
   search_threads_broken = true;
-  std::barrier barrier(active_search_threads.size(), [&] { search_threads_broken = false; });
+  search_barrier.arrive_and_wait();
 }
 
 template <core::concepts::Game Game>

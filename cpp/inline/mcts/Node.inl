@@ -51,9 +51,10 @@ void Node<Game>::stats_t::init_q(const ValueArray& value, bool pure) {
 }
 
 template <core::concepts::Game Game>
-bool Node<Game>::edge_t::increment_count() {
+bool Node<Game>::edge_t::increment_real_count(bool undo_virtual) {
   bool was_viable = viable();
-  E++;
+  RE++;
+  VE -= undo_virtual;
   return !was_viable && viable();
 }
 
@@ -249,7 +250,7 @@ void Node<Game>::write_results(const ManagerParams& params, SearchResults& resul
     const auto& stats = child->stats();
 
     if (!edge->eliminated) {
-      counts(action) = edge->E;
+      counts(action) = edge->RE;
       Q(action) = stats.Q(cp);
       Q_sq(action) = stats.Q_sq(cp);
       explored_and_uneliminated_actions(action) = 1;
@@ -308,15 +309,18 @@ bool Node<Game>::update_stats(MutexProtectedFunc func) {
   lock.lock();
 
   bool new_elimination = false;
+  int RN = stable_data_.VT_valid;
 
   // Mask edges that are eliminated
   for (int i = 0; i < n_actions; i++) {
     edge_t* edge = get_edge(i);
     new_elimination |= !edge->eliminated && eliminated_actions[i];
     edge->eliminated = eliminated_actions[i];
+    RN += edge->RE * !edge->eliminated;
   }
 
   // Copy Q info
+  stats_.RN = RN;
   stats_.Q = Q;
   stats_.Q_sq = Q_sq;
   if (!is_terminal()) {
@@ -367,7 +371,8 @@ void Node<Game>::reset() {
   int n = stable_data_.num_valid_actions;
   for (int i = 0; i < n; ++i) {
     edge_t* edge = get_edge(i);
-    edge->E = 0;
+    edge->RE = 0;
+    edge->VE = 0;
     if (edge->state == kExpanded) {
       edge->state = kPreExpanded;
     }
@@ -500,11 +505,10 @@ void Node<Game>::validate_state() const {
   int N = 1;
   for (int i = 0; i < stable_data_.num_valid_actions; ++i) {
     auto edge = get_edge(i);
-    N += edge->E * !edge->eliminated;
-    util::debug_assert(edge->E >= 0);
+    N += edge->RE * !edge->eliminated;
   }
 
-  int expectedN = std::max(1, stats_.RN + stats_.VN);
+  int expectedN = std::max(1, stats_.RN);
   util::debug_assert(N == expectedN, "%d != max(1, %d + %d)", N, stats_.RN, stats_.VN);
   util::debug_assert(stats_.RN >= 0);
   util::debug_assert(stats_.VN >= 0);
@@ -621,8 +625,9 @@ void Node<Game>::compute_Q_bounds(ValueArray& Q_lower_bound, ValueArray& Q_upper
 }
 
 template <core::concepts::Game Game>
-void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueArray& Q_lower_bound,
-                        const ValueArray& Q_upper_bound, const bool* eliminated_actions) const {
+void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq,
+                                  const ValueArray& Q_lower_bound, const ValueArray& Q_upper_bound,
+                                  const bool* eliminated_actions) const {
   if ((Q_lower_bound == Q_upper_bound).all()) {
     Q = Q_lower_bound;
     Q_sq = Q * Q;
@@ -650,7 +655,7 @@ void Node<Game>::compute_Q_values(ValueArray& Q, ValueArray& Q_sq, const ValueAr
 
     const auto& child_stats = child->stats();
     if (child_stats.RN > 0) {
-      int e = edge->E;
+      int e = edge->RE;
       N += e;
       Q_sum += child_stats.Q * e;
       Q_sq_sum += child_stats.Q_sq * e;

@@ -11,7 +11,9 @@
 #include <boost/dynamic_bitset.hpp>
 #include <EigenRand/EigenRand>
 
+#include <barrier>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <vector>
 
@@ -72,6 +74,7 @@ struct SharedData {
   std::condition_variable cv_search_on;
   std::condition_variable cv_search_off;
   std::condition_variable cv_search_thread_break;
+  std::barrier<std::function<void()>> search_barrier;
 
   boost::dynamic_bitset<> active_search_threads;
   LookupTable lookup_table;

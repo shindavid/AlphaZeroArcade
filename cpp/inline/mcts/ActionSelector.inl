@@ -47,9 +47,9 @@ void ActionSelector<Game>::load(const ManagerParams& params, const SearchParams&
     using edge_t = Node::edge_t;
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
-    E(i) = edge->E;
+    E(i) = edge->RE + edge->VE;
     eliminated(i) = edge->eliminated;
-    mE(i) = edge->E * !edge->eliminated;
+    mE(i) = E(i) * !edge->eliminated;
 
     Node* child = node->get_child(edge);
     if (child) {
