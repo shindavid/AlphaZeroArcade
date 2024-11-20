@@ -189,7 +189,7 @@ def setup_output_dir(env_sh_lines):
 
 
 def setup_local_python_imports(conda_env):
-    if os.system(f'cd py && python setup.py develop'):
+    if os.system(f'cd py && pip install -e .'):
         raise SetupException('Failed setup.py')
 
 
