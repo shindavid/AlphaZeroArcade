@@ -115,25 +115,6 @@ def setup_conda(env_sh_lines):
     return env_name
 
 
-def cuda_check():
-    proc = subprocess.run(['nvcc', '--version'], capture_output=True)
-    if proc.returncode:
-        print_red('CUDA is not detected on your system, but is required for this project.')
-        print('')
-        print('Please visit the NVIDIA CUDA Toolkit download page to download and install it:')
-        print('')
-        print('   https://developer.nvidia.com/cuda-downloads')
-        print('')
-        print("Follow NVIDIA's installation instructions to ensure proper setup.")
-        print('After installation, please rerun this setup script.')
-        print('')
-        print_red(
-            'Note: installing CUDA can be a complex process, especially on laptops.')
-        print_red(
-            'Unfortunately, this part cannot be automated due to licensing restrictions.')
-        raise SetupException()
-
-
 def setup_libtorch(env_sh_lines):
     """
     Request user to set libtorch directory. Validate their input by checking that the directory
@@ -242,7 +223,6 @@ def main():
 
     try:
         env_sh_lines = []
-        cuda_check()
         conda_env = setup_conda(env_sh_lines)
         setup_libtorch(env_sh_lines)
         setup_output_dir(env_sh_lines)
