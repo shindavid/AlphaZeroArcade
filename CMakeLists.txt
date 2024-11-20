@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
 
-project(alphazero)
-
-
 if(CONDA_PREFIX)
     # Append to CMAKE_PREFIX_PATH and link_directories
     list(APPEND CMAKE_PREFIX_PATH "${CONDA_PREFIX}")
@@ -12,6 +9,16 @@ endif()
 # We enabled NDEBUG even for debug builds because a gcc bug leads to a spurious assert() deep
 # in the eigen3 library
 add_definitions(-DNDEBUG)
+
+# Currently needed for gcc 12+
+set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
+
+# First-class CUDA support
+project(alphazero LANGUAGES CXX CUDA)
+
+# Use Conda's CUDA toolkit
+set(CUDAToolkit_ROOT "${CONDA_PREFIX}/lib")
+set(CMAKE_CUDA_COMPILER "${CONDA_PREFIX}/bin/nvcc")
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
