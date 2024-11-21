@@ -11,7 +11,7 @@ import numpy as np
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 # Load your JSON data
-base_dir = '/home/lichensong/projects/AlphaZeroArcade/goldenfiles/mcts_tests'
+base_dir = '/home/lichensong/projects/AlphaZeroArcade/sample_search_logs/mcts_tests'
 
 # List all files ending with '_log.json'
 log_files = [f for f in os.listdir(base_dir) if f.endswith('_log.json')]
@@ -54,7 +54,6 @@ def update_layout(selected_file):
         ),
         dcc.Graph(id='network-graph')
     ]), graph_snapshots
-
 
 # Define callback to update graph
 @app.callback(
@@ -106,8 +105,8 @@ def update_graph(index, graph_snapshots):
 
     node_x = []
     node_y = []
-    node_colors = []  # To store node colors
-    node_text = []  # To store hover text
+    node_colors = []
+    node_text = []
     for node, data in G.nodes(data=True):
         x, y = pos[node]
         node_x.append(x)
@@ -150,6 +149,5 @@ def update_graph(index, graph_snapshots):
 
     return figure
 
-# Run the app
 if __name__ == '__main__':
     app.run_server(debug=True)
