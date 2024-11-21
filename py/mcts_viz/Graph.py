@@ -1,7 +1,6 @@
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
 import json
-import argparse
 
 class Graph:
     def __init__(self, graph_snapshots):
