@@ -45,15 +45,3 @@ class Graph:
 
         return (new_nodes, changed_nodes, new_edges, changed_edges)
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Plot a graph snapshot from a JSON file.")
-    parser.add_argument("json_path", type=str, help="Path to the JSON file containing graph snapshots.")
-    parser.add_argument("snapshot_index", type=int, help="Index of the snapshot to plot.")
-    args = parser.parse_args()
-    with open(args.json_path, 'r') as f:
-        graph_data = json.load(f)
-
-    graph_snapshots = graph_data['graphs']
-    graph = Graph(graph_snapshots)
-    graph.plot_snapshot(args.snapshot_index)
