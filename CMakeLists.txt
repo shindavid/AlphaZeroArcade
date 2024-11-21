@@ -16,9 +16,9 @@ set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 # First-class CUDA support
 project(alphazero LANGUAGES CXX CUDA)
 
-# Use Conda's CUDA toolkit
-set(CUDAToolkit_ROOT "${CONDA_PREFIX}/lib")
-set(CMAKE_CUDA_COMPILER "${CONDA_PREFIX}/bin/nvcc")
+# # Use Conda's CUDA toolkit
+# set(CUDAToolkit_ROOT "${CONDA_PREFIX}/lib")
+# set(CMAKE_CUDA_COMPILER "${CONDA_PREFIX}/bin/nvcc")
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
