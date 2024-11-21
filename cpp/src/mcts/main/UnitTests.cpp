@@ -157,14 +157,14 @@ class ManagerTest : public testing::Test {
     boost::filesystem::path file_path_result =
         base_dir / (testname + "_result.json");
     boost::filesystem::path file_path_log =
-        base_dir / (testname + "_log.json");
+        base_dir / (testname + "_graph.json");
 
     std::stringstream ss_result;
     boost_util::pretty_print(ss_result, result->to_json());
 
     if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
       boost_util::write_str_to_file(ss_result.str(), file_path_result);
-      boost_util::write_str_to_file(get_search_log()->json_str(), file_path_log);
+      boost_util::write_str_to_file(get_search_log()->last_graph_json_str(), file_path_log);
     }
 
     std::ifstream result_file(file_path_result);
