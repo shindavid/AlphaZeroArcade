@@ -42,7 +42,6 @@ def update_layout(selected_file):
         graph_data = json.load(f)
     graph_snapshots = graph_data['graphs']
 
-
     # Once a file is selected, add the slider and graph
     return html.Div([
         dcc.Slider(
@@ -103,6 +102,7 @@ def update_graph(index, graph_snapshots):
         )
         traces.append(label_trace)
 
+    # Create trace for nodes
     node_x = []
     node_y = []
     node_colors = []
