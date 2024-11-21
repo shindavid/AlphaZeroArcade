@@ -167,6 +167,12 @@ class ManagerTest : public testing::Test {
       boost_util::write_str_to_file(get_search_log()->last_graph_json_str(), file_path_log);
     }
 
+    if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
+      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "mcts_tests";
+      boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
+      boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
+    }
+
     std::ifstream result_file(file_path_result);
     std::ifstream log_file(file_path_log);
 
@@ -176,7 +182,7 @@ class ManagerTest : public testing::Test {
                                   std::istreambuf_iterator<char>());
 
     EXPECT_EQ(ss_result.str(), expected_result_json);
-    EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
+    EXPECT_EQ(get_search_log()->last_graph_json_str(), expected_log_json);
   }
 
  private:
