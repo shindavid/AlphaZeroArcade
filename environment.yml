@@ -1,3 +1,4 @@
+name: alpha
 channels:
   - pytorch
   - main
@@ -6,6 +7,7 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
+  - ansi2html=1.9.1=py310h06a4308_0
   - anyio=3.6.2=pyhd8ed1ab_0
   - aom=3.4.0=h27087fc_1
   - appdirs=1.4.4=pyh9f0ad1d_0
@@ -13,6 +15,7 @@ dependencies:
   - argon2-cffi-bindings=21.2.0=py310h5764c6d_3
   - asgiref=3.6.0=pyhd8ed1ab_0
   - asttokens=2.0.8=pyhd8ed1ab_0
+  - atk-1.0=2.36.0=ha1a6a79_0
   - attrs=22.2.0=pyh71513ae_0
   - backcall=0.2.0=pyh9f0ad1d_0
   - backports=1.1=pyhd3eb1b0_0
@@ -24,13 +27,15 @@ dependencies:
   - bokeh=3.0.3=pyhd8ed1ab_0
   - boost=1.80.0=py310hc4a4660_1
   - boost-cpp=1.80.0=h75c5d50_0
+  - brotli-python=1.0.9=py310h6a678d5_8
   - brotlipy=0.7.0=py310h5764c6d_1004
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
   - ca-certificates=2024.9.24=h06a4308_0
   - cached-property=1.5.2=hd8ed1ab_1
   - cached_property=1.5.2=pyha770c72_1
-  - certifi=2024.8.30=pyhd8ed1ab_0
+  - cairo=1.16.0=h19f5f5c_2
+  - certifi=2024.8.30=py310h06a4308_0
   - cffi=1.15.1=py310h255011f_0
   - charset-normalizer=2.1.1=pyhd8ed1ab_0
   - click=8.1.7=unix_pyh707e725_0
@@ -40,6 +45,7 @@ dependencies:
   - cryptography=41.0.4=py310h75e40e8_0
   - cudatoolkit=11.6.0=hecad31d_10
   - cudnn=8.4.1.50=hed8a83a_0
+  - dash=2.14.2=py310h06a4308_0
   - debugpy=1.6.6=py310heca2aa9_0
   - decorator=5.1.1=pyhd8ed1ab_0
   - defusedxml=0.7.1=pyhd8ed1ab_0
@@ -51,6 +57,7 @@ dependencies:
   - expat=2.4.8=h27087fc_0
   - ffmpeg=5.1.1=gpl_hfe78399_101
   - flask=3.0.1=pyhd8ed1ab_0
+  - flask-compress=1.13=py310h06a4308_0
   - flit-core=3.8.0=pyhd8ed1ab_0
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
   - font-ttf-inconsolata=3.000=h77eed37_0
@@ -60,12 +67,22 @@ dependencies:
   - fonts-conda-ecosystem=1=0
   - fonts-conda-forge=1=0
   - freetype=2.12.1=hca18f0e_0
+  - fribidi=1.0.10=h7b6447c_0
+  - gdk-pixbuf=2.42.8=h433bba3_1
   - gettext=0.21.0=hf68c758_0
   - giflib=5.2.1=h36c2ea0_2
+  - glib=2.72.1=h6239696_0
+  - glib-tools=2.72.1=h6239696_0
   - gmp=6.2.1=h58526e2_0
   - gnutls=3.7.7=hf3e180e_0
+  - gobject-introspection=1.72.0=py310hbb6d50b_2
+  - graphite2=1.3.14=h295c915_1
+  - graphviz=2.50.0=h3cd0ef9_0
   - gtest=1.15.2=h434a139_0
+  - gtk2=2.24.33=h73c1081_2
+  - gts=0.7.6=hb67d8dd_3
   - h5py=3.7.0=nompi_py310h416281c_101
+  - harfbuzz=4.4.1=hf9f4e7c_0
   - hdf5=1.12.2=nompi_h4df4325_100
   - highfive=2.4.1=he05ef13_1
   - icu=70.1=h27087fc_0
@@ -101,8 +118,10 @@ dependencies:
   - libev=4.33=h516909a_1
   - libffi=3.4.2=h7f98852_5
   - libgcc-ng=12.1.0=h8d9b700_16
+  - libgd=2.3.3=h695aa2c_1
   - libgfortran-ng=12.1.0=h69a702a_16
   - libgfortran5=12.1.0=hdcd56e2_16
+  - libglib=2.72.1=h2d90d5f_0
   - libgomp=12.1.0=h8d9b700_16
   - libiconv=1.16=h516909a_0
   - libidn2=2.3.3=h166bdaf_0
@@ -111,12 +130,14 @@ dependencies:
   - libnsl=2.0.0=h7f98852_0
   - libpciaccess=0.16=h516909a_0
   - libpng=1.6.37=h753d276_4
+  - librsvg=2.54.4=h19fe530_0
   - libsodium=1.0.18=h36c2ea0_1
   - libsqlite=3.39.3=h753d276_0
   - libssh2=1.10.0=hf14f497_3
   - libstdcxx-ng=12.1.0=ha89aaad_16
   - libtasn1=4.19.0=h166bdaf_0
   - libtiff=4.4.0=h0e0dad5_3
+  - libtool=2.4.6=h6a678d5_1009
   - libunistring=0.9.10=h7f98852_0
   - libuuid=2.32.1=h7f98852_1000
   - libuv=1.44.2=h166bdaf_0
@@ -161,12 +182,16 @@ dependencies:
   - pandas=1.5.3=py310h9b08913_0
   - pandoc=2.19.2=ha770c72_0
   - pandocfilters=1.5.0=pyhd8ed1ab_0
+  - pango=1.50.7=h05da053_0
   - parso=0.8.3=pyhd8ed1ab_0
+  - pcre=8.45=h295c915_0
   - pexpect=4.8.0=pyh9f0ad1d_2
   - pickleshare=0.7.5=py_1003
   - pillow=9.2.0=py310hace64e9_1
   - pip=22.2.2=pyhd8ed1ab_0
+  - pixman=0.40.0=h7f8727e_1
   - pkgutil-resolve-name=1.3.10=pyhd8ed1ab_0
+  - plotly=5.24.1=py310h2f386ee_0
   - pooch=1.6.0=pyhd8ed1ab_0
   - prometheus_client=0.16.0=pyhd8ed1ab_0
   - prompt-toolkit=3.0.31=pyha770c72_0
@@ -175,6 +200,7 @@ dependencies:
   - pure_eval=0.2.2=pyhd8ed1ab_0
   - pycparser=2.21=pyhd8ed1ab_0
   - pygments=2.13.0=pyhd8ed1ab_0
+  - pygraphviz=1.9=py310h5eee18b_1
   - pyopenssl=23.2.0=pyhd8ed1ab_1
   - pyrsistent=0.19.3=py310h1fa729e_0
   - pysocks=1.7.1=pyha2e5f31_6
@@ -189,6 +215,7 @@ dependencies:
   - pyzmq=25.0.0=py310h059b190_0
   - readline=8.1.2=h0f457ee_0
   - requests=2.28.1=pyhd8ed1ab_1
+  - retrying=1.3.3=pyhd3eb1b0_2
   - rhash=1.4.3=h166bdaf_0
   - scipy=1.10.1=py310h8deb116_0
   - send2trash=1.8.0=pyhd8ed1ab_0
@@ -200,6 +227,7 @@ dependencies:
   - sqlparse=0.4.3=pyhd8ed1ab_0
   - stack_data=0.5.0=pyhd8ed1ab_0
   - svt-av1=1.2.1=h27087fc_0
+  - tenacity=9.0.0=py310h06a4308_0
   - termcolor=1.1.0=pyhd8ed1ab_3
   - terminado=0.17.1=pyh41d4057_0
   - tinycss2=1.2.1=pyhd8ed1ab_0

@@ -65,6 +65,7 @@ class SearchLog {
 
   void update();
   std::string json_str();
+  std::string last_graph_json_str();
 
  private:
   const SharedData<Game>* shared_data_;
