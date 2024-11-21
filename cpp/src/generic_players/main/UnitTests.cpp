@@ -92,28 +92,34 @@ class MctsPlayerTest : public ::testing::Test {
     boost::filesystem::path base_dir = util::Repo::root() / "goldenfiles" / "generic_players";
     boost::filesystem::path file_path_result = base_dir / (testname + "_result.json");
     boost::filesystem::path file_path_policy = base_dir / (testname + "_policy.json");
-    boost::filesystem::path file_path_log = base_dir / (testname + "_log.json");
+    boost::filesystem::path file_path_graph = base_dir / (testname + "_graph.json");
 
     if (IS_MACRO_ENABLED(WRITE_GOLDENFILES)) {
       boost_util::write_str_to_file(ss_result.str(), file_path_result);
       boost_util::write_str_to_file(ss_policy.str(), file_path_policy);
-      boost_util::write_str_to_file(get_search_log()->json_str(), file_path_log);
+      boost_util::write_str_to_file(get_search_log()->last_graph_json_str(), file_path_graph);
+    }
+
+    if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
+      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "generic_players";
+      boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
+      boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }
 
     std::ifstream result_file(file_path_result);
     std::ifstream policy_file(file_path_policy);
-    std::ifstream log_file(file_path_log);
+    std::ifstream graph_file(file_path_graph);
 
     std::string expected_result_json((std::istreambuf_iterator<char>(result_file)),
                                      std::istreambuf_iterator<char>());
     std::string expected_policy_json((std::istreambuf_iterator<char>(policy_file)),
                                      std::istreambuf_iterator<char>());
-    std::string expected_log_json((std::istreambuf_iterator<char>(log_file)),
+    std::string expected_graph_json((std::istreambuf_iterator<char>(graph_file)),
                                   std::istreambuf_iterator<char>());
 
     EXPECT_EQ(ss_result.str(), expected_result_json);
     EXPECT_EQ(ss_policy.str(), expected_policy_json);
-    EXPECT_EQ(get_search_log()->json_str(), expected_log_json);
+    EXPECT_EQ(get_search_log()->last_graph_json_str(), expected_graph_json);
   }
 
   void SetUp() override {
