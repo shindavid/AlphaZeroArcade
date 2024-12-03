@@ -1,9 +1,40 @@
 #!/usr/bin/env python3
+from setup_wizard import MD5_FILE_PATHS
+
+import argparse
+import hashlib
 import subprocess
 from pathlib import Path
 
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", '--skip-hash-check', action='store_true', help='skip hash check')
+    return parser.parse_args()
+
+
+def check_hashes(env_vars, repo_root):
+    for path in MD5_FILE_PATHS:
+        full_path = Path(repo_root) / path
+        if not full_path.exists():
+            raise Exception(f"Error: {full_path} not found.")
+
+        env_key = f'A0A_MD5_{path}'
+        expected_hash = env_vars.get(env_key)
+        if not expected_hash:
+            return False
+
+        with full_path.open("rb") as f:
+            actual_hash = hashlib.md5(f.read()).hexdigest()
+
+        if actual_hash != expected_hash:
+            return False
+
+    return True
+
+
 def main():
+    args = get_args()
     repo_root = Path(__file__).parent.resolve()
 
     # Load environment variables from .env.sh
@@ -19,6 +50,12 @@ def main():
             if line.startswith("export"):
                 key, value = line.replace("export ", "").strip().split("=", 1)
                 env_vars[key] = value.strip()
+
+    if not args.skip_hash_check:
+        if not check_hashes(env_vars, repo_root):
+            print('Your docker image appears out of date.')
+            print('Please run setup_wizard.py again.')
+            return
 
     # Get variables from the environment
     A0A_OUTPUT_DIR = env_vars.get("A0A_OUTPUT_DIR")

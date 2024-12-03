@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
+import hashlib
 import os
 import subprocess
+
+
+MD5_FILE_PATHS = [
+    'docker/Dockerfile',
+    'docker/install_deps.sh',
+    ]
 
 
 def print_green(text):
@@ -158,6 +165,13 @@ def write_env_sh(env_sh_lines):
     print_green('Setup wizard completed successfully!')
 
 
+def write_md5_hash(env_sh_lines):
+    for path in MD5_FILE_PATHS:
+        with open(path, 'rb') as f:
+            file_hash = hashlib.md5(f.read()).hexdigest()
+            env_sh_lines.append(f'export A0A_MD5_{path}={file_hash}')
+
+
 def main():
     print('*' * 80)
     print('Running AlphaZeroArcade setup wizard...')
@@ -172,6 +186,7 @@ def main():
         image = build_docker_image(env_sh_lines)
         print('*' * 80)
         validate_nvidia_installation(image)
+        write_md5_hash(env_sh_lines)
         write_env_sh(env_sh_lines)
     except KeyboardInterrupt:
         print('')
