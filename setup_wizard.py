@@ -76,7 +76,13 @@ def validate_nvidia_installation(image):
         # if we got here, the driver is installed but the container toolkit is not working
         print("❌ NVIDIA Container Toolkit validation failed.")
         print(result.stderr)
-        print("Please check NVIDIA website for Container Toolkit installation instructions.")
+        print("Please read here for Container Toolkit installation instructions:")
+        print('')
+        print('https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html')
+        print('')
+        print('Likely applicable sections:')
+        print('  - Installing with Apt')
+        print('  - Configuring Docker')
         raise SetupException()
 
 
