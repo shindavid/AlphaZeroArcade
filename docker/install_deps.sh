@@ -1,28 +1,51 @@
 #!/bin/bash
 set -e
 
-# basics
-apt-get update
-apt-get install -y wget curl rsync unzip emacs git cmake gcc-12 g++-12 python3-pip libeigen3-dev libboost-all-dev libncurses5-dev
-update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-12   60 || true
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 || true
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60 || true
+# Configure timezone and install dependencies - needed for tzdata
+ln -fs /usr/share/zoneinfo/$TZ /etc/localtime
 
-# cuda & python
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip3 install ipython natsort tqdm termcolor
+# Update package lists and upgrade existing packages
+apt-get update && apt-get upgrade -y
 
-# install just
-curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/bin
+# Install required dependencies
+apt-get install -y \
+    ack wget curl rsync unzip emacs vim git cmake gcc-12 g++-12 python3-pip \
+    ninja-build software-properties-common libeigen3-dev libncurses5-dev \
+    python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# hack to disable compiler version checking for nvcc:
-#   this is needed because we are using gcc-12 and cuda checks for gcc <=11
-#   it has an --allow-unsupported-compiler mode but I cannot figure out how to
-#   push that through cmake. So, instead, we just modify the system header to disable
-#   that check. Ideally we should probably just stay on a compatible g++ version
-echo "#define __NV_NO_HOST_COMPILER_CHECK 1" > /tmp/host_config.h
-cat /usr/local/cuda-11.8/targets/x86_64-linux/include/crt/host_config.h >> /tmp/host_config.h
-cp /tmp/host_config.h /usr/local/cuda-11.8/targets/x86_64-linux/include/crt/host_config.h
+# Add PPA for the latest Boost
+add-apt-repository -y ppa:mhier/libboost-latest
+apt-get update && apt-get install -y libboost-json1.81-dev libboost-program-options1.81-dev \
+    libboost-filesystem1.81-dev libboost-log1.81-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# env vars
-echo "export PYTHONPATH=/AlphaZeroArcade/py" > /root/.bashrc
+# Update alternatives for GCC
+for tool in cc gcc g++; do
+    update-alternatives --install /usr/bin/$tool $tool /usr/bin/gcc-12 60 || true
+done
+
+# CUDA & Python dependencies
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+pip3 install ipython==8.14.0 natsort==8.3.1 tqdm==4.66.1 termcolor==2.3.0 cffi numpy matplotlib \
+    bokeh scipy flask
+
+# Download and install libtorch C++ library
+LIBTORCH_URL="https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
+LIBTORCH_DIR="/opt/"
+
+echo "Downloading libtorch from $LIBTORCH_URL..."
+mkdir -p $LIBTORCH_DIR
+wget -O libtorch.zip "$LIBTORCH_URL"
+unzip -q libtorch.zip -d $LIBTORCH_DIR
+rm libtorch.zip
+
+echo "Libtorch installed in $LIBTORCH_DIR"
+
+# Environment variables
+echo "export PYTHONPATH=/workspace/py" >> /root/.bashrc
+echo "export A0A_OUTPUT_DIR=/output" >> /root/.bashrc
+
+# Misc
+echo -e ".mode column\n.headers on" > /root/.sqliterc

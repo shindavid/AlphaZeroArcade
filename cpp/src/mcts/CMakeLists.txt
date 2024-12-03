@@ -9,10 +9,10 @@ set(COMMON_SOURCES
 add_executable(mcts_tests main/UnitTests.cpp ${COMMON_SOURCES})
 
 # Link Google Test libraries to the unit test executable
-target_link_libraries(mcts_tests PRIVATE GTest::GTest GTest::Main)
+target_link_libraries(mcts_tests PRIVATE ${GTEST_LIBS})
 
 # Specify additional libraries (util_lib, TORCH_LIBRARIES, Boost) for all targets
-set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
+set(LINK_LIBS util_lib ${COMMON_EXTERNAL_LIBS})
 
 # Apply the LINK_LIBS to all targets and include necessary directories
 set(TARGETS mcts_tests)

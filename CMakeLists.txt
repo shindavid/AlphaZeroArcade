@@ -1,24 +1,16 @@
 cmake_minimum_required(VERSION 3.17)
 
-if(CONDA_PREFIX)
-    # Append to CMAKE_PREFIX_PATH and link_directories
-    list(APPEND CMAKE_PREFIX_PATH "${CONDA_PREFIX}")
-    link_directories(${CONDA_PREFIX}/lib)
-endif()
-
 # We enabled NDEBUG even for debug builds because a gcc bug leads to a spurious assert() deep
 # in the eigen3 library
 add_definitions(-DNDEBUG)
+
+set(CAFFE2_USE_CUDNN ON CACHE BOOL "Enable cuDNN support")
 
 # Currently needed for gcc 12+
 set(ENV{NVCC_APPEND_FLAGS} "-allow-unsupported-compiler")
 
 # First-class CUDA support
 project(alphazero LANGUAGES CXX CUDA)
-
-# # Use Conda's CUDA toolkit
-# set(CUDAToolkit_ROOT "${CONDA_PREFIX}/lib")
-# set(CMAKE_CUDA_COMPILER "${CONDA_PREFIX}/bin/nvcc")
 
 find_package (Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(Torch REQUIRED PATHS ${MY_TORCH_DIR})
@@ -30,7 +22,7 @@ set(CMAKE_CXX_STANDARD  20)
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libstdc++ -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} -fconcepts-diagnostics-depth=5 -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wshadow -Wno-array-bounds ${TORCH_CXX_FLAGS} -fconcepts-diagnostics-depth=5 -ftemplate-backtrace-limit=50 ${EXTRA_DEFINITIONS}")
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
@@ -73,9 +65,12 @@ function(append_target_metadata game_name)
     endforeach()
 endfunction()
 
+set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES} stdc++ m)
+set(GTEST_LIBS GTest::GTest GTest::Main gtest)
+
 add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/blokus")
-#add_subdirectory("cpp/src/games/chess")
+add_subdirectory("cpp/src/games/chess")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
 add_subdirectory("cpp/src/games/tictactoe")

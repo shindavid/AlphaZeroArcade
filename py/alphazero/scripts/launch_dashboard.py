@@ -258,7 +258,7 @@ def main():
         print('*********************************************************')
         print('')
 
-    app.run(port=flask_port)
+    app.run(host="0.0.0.0", port=flask_port)
 
 
 if __name__ == '__main__':
