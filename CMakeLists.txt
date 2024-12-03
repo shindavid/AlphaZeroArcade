@@ -65,7 +65,7 @@ function(append_target_metadata game_name)
     endforeach()
 endfunction()
 
-set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES} stdc++ m)
+set(COMMON_EXTERNAL_LIBS ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
 set(GTEST_LIBS GTest::GTest GTest::Main gtest)
 
 add_subdirectory("cpp/src")

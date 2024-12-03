@@ -22,8 +22,8 @@ apt-get update && apt-get install -y libboost-json1.81-dev libboost-program-opti
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Update alternatives for GCC
-for tool in cc gcc g++; do
-    update-alternatives --install /usr/bin/$tool $tool /usr/bin/gcc-12 60 || true
+for tool in gcc g++; do
+    update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-12 60 || true
 done
 
 # CUDA & Python dependencies
