@@ -22,11 +22,6 @@ build
 # output
 output
 
-# connect4 defaults
-**/c4_games
-**/c4_model.pt*
-**/debug.xml
-
 # egg files
 **/AlphaZeroArcade.egg-info
 

@@ -5,7 +5,6 @@ from alphazero.dashboard.rating_plotting import create_ratings_figure
 from alphazero.dashboard.self_play_plotting import create_self_play_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
-from util.env_util import get_output_dir
 from util.py_util import CustomHelpFormatter
 
 from bokeh.embed import server_document
@@ -76,7 +75,7 @@ app.secret_key = secrets.token_hex(16)
 if params.debug:
     app.debug = True
 
-game_dir = os.path.join(get_output_dir(), run_params.game)
+game_dir = os.path.join('/output', run_params.game)
 if not os.path.isdir(game_dir):
     raise ValueError(f'Directory does not exist: {game_dir}')
 
@@ -112,7 +111,7 @@ if run_params.tag:
     for tag in tags:
         if not tag:
             raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
-        path = os.path.join(get_output_dir(), run_params.game, tag)
+        path = os.path.join('/output', run_params.game, tag)
         if not os.path.isdir(path):
             raise ValueError(f'Directory does not exist: {path}')
 else:

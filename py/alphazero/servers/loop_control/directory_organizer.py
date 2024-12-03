@@ -2,7 +2,7 @@
 The DirectoryOrganizer class provides structured access to the contents of an alphzero directory.
 Below is a diagram of the directory structure.
 
-BASE_DIR/  # $A0A_OUTPUT_DIR/game/tag/
+BASE_DIR/  # /output/game/tag/
     stdout.txt
     databases/
         clients.db
@@ -35,7 +35,6 @@ BASE_DIR/  # $A0A_OUTPUT_DIR/game/tag/
 """
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.run_params import RunParams
-from util.env_util import get_output_dir
 from util import sqlite3_util
 
 from natsort import natsorted
@@ -94,7 +93,7 @@ class DirectoryOrganizer:
         self.game = game
         self.tag = tag
 
-        self.base_dir = os.path.join(get_output_dir(), game, tag)
+        self.base_dir = os.path.join('/output', game, tag)
         self.databases_dir = os.path.join(self.base_dir, 'databases')
         self.self_play_data_dir = os.path.join(self.base_dir, 'self-play-data')
         self.models_dir = os.path.join(self.base_dir, 'models')
