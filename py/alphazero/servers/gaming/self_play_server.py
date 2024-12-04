@@ -153,7 +153,6 @@ class SelfPlayServer:
         player_args = {
             '--type': 'MCTS-T',
             '--name': 'MCTS',
-            '--max-rows': max_rows,
             '--no-model': None,
         }
         player_args.update(self._session_data.game_spec.training_player_options)
@@ -170,6 +169,8 @@ class SelfPlayServer:
             '--loop-controller-port': self._params.loop_controller_port,
             '--client-role': ClientRole.SELF_PLAY_WORKER.value,
             '--do-not-report-metrics': None,
+            '--max-rows': max_rows,
+            '--enable-training': None,
         }
         args.update(self._session_data.game_spec.training_options)
 
