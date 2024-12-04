@@ -1,5 +1,7 @@
 #pragma once
 
+#include <util/CppUtil.hpp>
+
 #include <cstdint>
 #include <tuple>
 #include <utility>
@@ -40,6 +42,12 @@ concept IsTypeList = requires(T t) { []<typename... Ts>(TypeList<Ts...>&) {}(t);
 
 template <typename T, typename Base>
 concept IsTypeListOf = IsTypeList<T> && AllDerivedFrom<Base, T>::value;
+
+namespace concepts {
+
+template <typename TL> concept TypeList = IsTypeList<TL>;
+
+}  // namespace concepts
 
 template <template <typename> typename Pred, typename T>
 struct AllSatisfyConcept;
@@ -176,4 +184,31 @@ constexpr void constexpr_for(F&& f) {
     constexpr_for<Start + Inc, End, Inc>(f);
   }
 }
+
+namespace detail {
+
+// General create_type template
+template <template <typename...> class Container, util::concepts::IntSequence Seq, template <auto> class TypeTemplate>
+struct TransformIntSequenceHelper;
+
+// Specialization for std::integer_sequence
+template <template <typename...> class Container, typename T, T... Is, template <auto> class TypeTemplate>
+struct TransformIntSequenceHelper<Container, std::integer_sequence<T, Is...>, TypeTemplate> {
+    using type = Container<TypeTemplate<Is>...>;
+};
+
+}  // namespace detail
+
+// Transform an integer sequence into a container type
+//
+// Example:
+//
+// using T = util::int_sequence<1, 4, 6>;
+// using U = util::TransformIntSequence_t<std::tuple, T, std::bitset>;
+// using V = std::tuple<std::bitset<1>, std::bitset<4>, std::bitset<6>>;
+// static_assert(std::is_same_v<U, V>);
+
+template <template <typename...> class Container, util::concepts::IntSequence Seq, template <auto> class TypeTemplate>
+using TransformIntSequence_t = typename detail::TransformIntSequenceHelper<Container, Seq, TypeTemplate>::type;
+
 }  // namespace mp
