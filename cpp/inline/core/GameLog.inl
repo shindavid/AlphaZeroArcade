@@ -556,7 +556,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
 }
 
 template <concepts::Game Game>
-bool GameLogWriter<Game>::is_previous_entry_used_for_training() const {
+bool GameLogWriter<Game>::was_previous_entry_used_for_policy_training() const {
   if (entries_.empty()) {
     return false;
   }

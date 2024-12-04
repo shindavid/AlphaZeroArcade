@@ -87,7 +87,6 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
   using MctsManager = base_t::MctsManager;
   using MctsPlayer = generic::DataExportingMctsPlayer<Game>;
   using MctsPlayerParams = MctsPlayer::Params;
-  using TrainingDataWriterParams = MctsPlayer::TrainingDataWriterParams;
   using SharedData = BaseMctsPlayer::SharedData;
   using SharedData_sptr = std::shared_ptr<SharedData>;
 
@@ -101,14 +100,12 @@ class TrainingMctsPlayerGenerator : public MctsPlayerGeneratorBase<Game> {
  protected:
   auto make_options_description() {
     return this->manager_params_.make_options_description()
-        .add(mcts_player_params_.make_options_description())
-        .add(writer_params_.make_options_description());
+        .add(mcts_player_params_.make_options_description());
   }
 
   BaseMctsPlayer* generate_helper(SharedData_sptr& shared_data, bool owns_shared_data) override;
 
   MctsPlayerParams mcts_player_params_;
-  TrainingDataWriterParams writer_params_;
 };
 
 }  // namespace generic

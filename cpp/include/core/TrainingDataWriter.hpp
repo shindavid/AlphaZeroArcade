@@ -42,19 +42,10 @@ class TrainingDataWriter
   using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;
   using game_log_map_t = std::map<game_id_t, GameLogWriter_sptr>;
 
-  static TrainingDataWriter* instantiate(const Params& params);
-
-  /*
-   * Assumes that instantiate() was called at least once.
-   */
-  static TrainingDataWriter* instance() { return instance_; }
-
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
-  GameLogWriter_sptr get_log(game_id_t id);
-
-  void close(GameLogWriter_sptr log);
+  void add(GameLogWriter_sptr log);
   void shut_down();
 
   void pause() override;
@@ -78,8 +69,6 @@ class TrainingDataWriter
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;
-
-  static TrainingDataWriter* instance_;
 };
 
 }  // namespace core

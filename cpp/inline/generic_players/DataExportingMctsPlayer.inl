@@ -7,34 +7,14 @@
 namespace generic {
 
 template <core::concepts::Game Game>
-template <typename... BaseArgs>
-DataExportingMctsPlayer<Game>::DataExportingMctsPlayer(
-    const TrainingDataWriterParams& writer_params, BaseArgs&&... base_args)
-    : base_t(std::forward<BaseArgs>(base_args)...),
-      writer_(TrainingDataWriter::instantiate(writer_params)) {}
-
-template <core::concepts::Game Game>
-void DataExportingMctsPlayer<Game>::start_game() {
-  base_t::start_game();
-  if (writer_) {
-    game_log_ = writer_->get_log(base_t::get_game_id());
-  }
-}
-
-template <core::concepts::Game Game>
-void DataExportingMctsPlayer<Game>::receive_state_change(core::seat_index_t seat,
-                                                         const State& state,
-                                                         core::action_t action) {
-  base_t::receive_state_change(seat, state, action);
-}
-
-template <core::concepts::Game Game>
 core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
     const State& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
   bool use_for_training = search_mode == core::kFull;
+
+  GameLogWriter_sptr game_log = this->get_game_log();
   bool previous_used_for_training =
-      game_log_ && game_log_->is_previous_entry_used_for_training();
+      game_log && game_log->was_previous_entry_used_for_policy_training();
 
   if (kForceFullSearchIfRecordingAsOppReply && previous_used_for_training) {
     search_mode = core::kFull;
@@ -56,20 +36,11 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
   }
   core::ActionResponse response =
       base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
-  if (game_log_) {
-    game_log_->add(state, response.action, policy_target_ptr, action_values_ptr, use_for_training);
-  }
-  return response;
-}
 
-template <core::concepts::Game Game>
-void DataExportingMctsPlayer<Game>::end_game(const State& state,
-                                             const ValueTensor& outcome) {
-  if (game_log_) {
-    game_log_->add_terminal(state, outcome);
-    writer_->close(game_log_);
-    game_log_ = nullptr;
-  }
+  // TODO: augment response with policy_target/action_values_target/use_for_training
+  throw std::runtime_error("Not implemented");
+
+  // return response;
 }
 
 template <core::concepts::Game Game>

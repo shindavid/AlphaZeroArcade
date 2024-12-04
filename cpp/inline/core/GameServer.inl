@@ -282,12 +282,16 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     player_array_t& players) {
   game_id_t game_id = util::get_unique_id();
 
+  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
+  GameLogWriter_sptr game_log(
+      training_data_writer ? new GameLogWriter(game_id, util::ns_since_epoch()) : nullptr);
+
   player_name_array_t player_names;
   for (size_t p = 0; p < players.size(); ++p) {
     player_names[p] = players[p]->get_name();
   }
   for (size_t p = 0; p < players.size(); ++p) {
-    players[p]->init_game(game_id, player_names, p);
+    players[p]->init_game(game_id, player_names, p, game_log);
     players[p]->start_game();
   }
 
@@ -334,6 +338,12 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       for (auto player2 : players) {
         player2->end_game(state_history.current(), outcome);
       }
+
+      if (training_data_writer) {
+        game_log->add_terminal(state_history.current(), outcome);
+        training_data_writer->add(game_log);
+      }
+
       if (shared_data_.params().announce_game_results) {
         printf("Game %ld complete.\n", game_id);
         for (player_id_t p = 0; p < kNumPlayers; ++p) {

@@ -228,6 +228,7 @@ class SelfPlayServer:
             '--loop-controller-port': self._params.loop_controller_port,
             '--client-role': ClientRole.SELF_PLAY_WORKER.value,
             '--cuda-device': self._params.cuda_device,
+            '--enable-training': None,
         }
         args.update(self._session_data.game_spec.training_options)
 

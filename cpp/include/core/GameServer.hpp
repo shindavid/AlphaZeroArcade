@@ -22,6 +22,8 @@ class GameServer {
 
   using TrainingDataWriter = core::TrainingDataWriter<Game>;
   using TrainingDataWriterParams = TrainingDataWriter::Params;
+  using GameLogWriter = TrainingDataWriter::GameLogWriter;
+  using GameLogWriter_sptr = TrainingDataWriter::GameLogWriter_sptr;
   using GameResults = Game::GameResults;
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -114,6 +116,7 @@ class GameServer {
     const std::string& get_player_name(player_id_t p) const {
       return registrations_[p].gen->get_name();
     }
+    TrainingDataWriter* training_data_writer() const { return training_data_writer_; }
 
    private:
     const Params params_;
