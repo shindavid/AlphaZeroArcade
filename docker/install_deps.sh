@@ -26,7 +26,7 @@ for tool in gcc g++; do
     update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-12 60 || true
 done
 
-# CUDA & Python dependencies
+# Python dependencies
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 pip3 install ipython==8.14.0 natsort==8.3.1 tqdm==4.66.1 termcolor==2.3.0 cffi numpy matplotlib \
     bokeh scipy flask
