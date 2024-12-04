@@ -52,12 +52,23 @@ auto GameServer<Game>::Params::make_options_description() {
 }
 
 template <concepts::Game Game>
+GameServer<Game>::SharedData::SharedData(
+    const Params& params, const TrainingDataWriterParams& training_data_writer_params)
+    : params_(params) {
+  if (training_data_writer_params.enabled) {
+    training_data_writer_ = new TrainingDataWriter(training_data_writer_params);
+  }
+}
+
+template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
   if (bar_) delete bar_;
 
   for (auto& reg : registrations_) {
     delete reg.gen;
   }
+
+  delete training_data_writer_;
 }
 
 template <concepts::Game Game>
@@ -338,7 +349,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 }
 
 template <concepts::Game Game>
-GameServer<Game>::GameServer(const Params& params) : shared_data_(params) {}
+GameServer<Game>::GameServer(const Params& params,
+                             const TrainingDataWriterParams& training_data_writer_params)
+    : shared_data_(params, training_data_writer_params) {}
 
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {

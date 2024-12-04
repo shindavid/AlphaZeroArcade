@@ -31,6 +31,7 @@ class TrainingDataWriter
     bool operator==(const Params& other) const = default;
 
     int64_t max_rows = 0;
+    bool enabled = false;
   };
 
   using ValueArray = Game::Types::ValueArray;
@@ -48,6 +49,9 @@ class TrainingDataWriter
    */
   static TrainingDataWriter* instance() { return instance_; }
 
+  TrainingDataWriter(const Params& params);
+  ~TrainingDataWriter();
+
   GameLogWriter_sptr get_log(game_id_t id);
 
   void close(GameLogWriter_sptr log);
@@ -58,9 +62,6 @@ class TrainingDataWriter
 
  protected:
   using game_queue_t = std::vector<GameLogWriter_sptr>;
-
-  TrainingDataWriter(const Params& params);
-  ~TrainingDataWriter();
 
   void loop();
   bool send(const GameLogWriter* log);  // return true if this is last game

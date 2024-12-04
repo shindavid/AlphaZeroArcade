@@ -10,6 +10,7 @@
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/players/RemotePlayerProxyGenerator.hpp>
+#include <core/TrainingDataWriter.hpp>
 #include <third_party/ProgressBar.hpp>
 
 namespace core {
@@ -19,6 +20,8 @@ class GameServer {
  public:
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
+  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+  using TrainingDataWriterParams = TrainingDataWriter::Params;
   using GameResults = Game::GameResults;
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
@@ -90,7 +93,7 @@ class GameServer {
    */
   class SharedData {
    public:
-    SharedData(const Params& params) : params_(params) {}
+    SharedData(const Params&, const TrainingDataWriterParams&);
     ~SharedData();
 
     const Params& params() const { return params_; }
@@ -114,6 +117,8 @@ class GameServer {
 
    private:
     const Params params_;
+
+    TrainingDataWriter* training_data_writer_ = nullptr;
 
     registration_vec_t registrations_;
     seat_index_array_t random_seat_indices_;  // seats that will be assigned randomly
@@ -154,7 +159,7 @@ class GameServer {
   };
 
  public:
-  GameServer(const Params& params);
+  GameServer(const Params&, const TrainingDataWriterParams&);
 
   /*
    * A negative seat implies a random seat. Otherwise, the player generated is assigned the

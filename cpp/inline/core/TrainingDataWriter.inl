@@ -25,7 +25,9 @@ auto TrainingDataWriter<Game>::Params::make_options_description() {
   return desc
       .template add_option<"max-rows", 'M'>(
           po::value<int64_t>(&max_rows)->default_value(max_rows),
-          "if specified, kill process after writing this many rows");
+          "if specified, kill process after writing this many rows")
+      .template add_flag<"enable-training", "disable-training">(
+          &enabled, "enable training", "disable training");
 }
 
 template <concepts::Game Game>
@@ -42,6 +44,20 @@ TrainingDataWriter<Game>* TrainingDataWriter<Game>::instantiate(const Params& pa
     }
   }
   return instance_;
+}
+
+template <concepts::Game Game>
+TrainingDataWriter<Game>::TrainingDataWriter(const Params& params)
+    : params_(params) {
+  if (LoopControllerClient::initialized()) {
+    LoopControllerClient::get()->add_listener(this);
+  }
+  thread_ = new std::thread([&] { loop(); });
+}
+
+template <concepts::Game Game>
+TrainingDataWriter<Game>::~TrainingDataWriter() {
+  shut_down();
 }
 
 template <concepts::Game Game>
@@ -105,20 +121,6 @@ void TrainingDataWriter<Game>::unpause() {
   lock.unlock();
   cv_.notify_one();
   LOG_INFO << "TrainingDataWriter: unpause complete!";
-}
-
-template <concepts::Game Game>
-TrainingDataWriter<Game>::TrainingDataWriter(const Params& params)
-    : params_(params) {
-  if (LoopControllerClient::initialized()) {
-    LoopControllerClient::get()->add_listener(this);
-  }
-  thread_ = new std::thread([&] { loop(); });
-}
-
-template <concepts::Game Game>
-TrainingDataWriter<Game>::~TrainingDataWriter() {
-  shut_down();
 }
 
 template <concepts::Game Game>
