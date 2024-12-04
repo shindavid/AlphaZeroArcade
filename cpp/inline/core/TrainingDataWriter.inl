@@ -1,7 +1,6 @@
 #include <core/TrainingDataWriter.hpp>
 
 #include <filesystem>
-#include <map>
 #include <string>
 
 #include <util/BoostUtil.hpp>

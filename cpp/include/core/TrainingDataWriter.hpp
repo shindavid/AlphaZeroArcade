@@ -40,7 +40,6 @@ class TrainingDataWriter
 
   using GameLogWriter = core::GameLogWriter<Game>;
   using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;
-  using game_log_map_t = std::map<game_id_t, GameLogWriter_sptr>;
 
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
@@ -59,7 +58,6 @@ class TrainingDataWriter
 
   Params params_;
   std::thread* thread_;
-  game_log_map_t game_log_map_;
   game_queue_t completed_games_[2];
   int64_t rows_written_ = 0;
 
