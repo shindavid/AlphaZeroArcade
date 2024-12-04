@@ -26,7 +26,7 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
   util::clean_assert(params_.strength >= 0 && params_.strength <= 1, "strength must be in [0, 1]");
 }
 
-inline core::ActionResponse PerfectPlayer::get_action_response(
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     const State& state, const ActionMask& valid_actions) {
   if (params_.strength == 0) {
     return bitset_util::choose_random_on_index(valid_actions);

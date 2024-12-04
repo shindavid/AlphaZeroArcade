@@ -141,7 +141,7 @@ void GameServerProxy<Game>::PlayerThread::handle_start_game(const StartGame& pay
   payload.parse_player_names(player_names);
 
   history_.initialize(Rules{});
-  player_->init_game(game_id, player_names, seat_assignment);
+  player_->init_game(game_id, player_names, seat_assignment, nullptr);
   player_->start_game();
 }
 

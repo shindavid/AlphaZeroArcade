@@ -112,7 +112,7 @@ void RemotePlayerProxy<Game>::PacketDispatcher::handle_action(const GeneralPacke
 
 template <concepts::Game Game>
 RemotePlayerProxy<Game>::RemotePlayerProxy(io::Socket* socket, player_id_t player_id,
-                                                game_thread_id_t game_thread_id)
+                                           game_thread_id_t game_thread_id)
     : socket_(socket), player_id_(player_id), game_thread_id_(game_thread_id) {
   action_response_.action = -1;
   auto dispatcher = PacketDispatcher::create(socket);
@@ -145,8 +145,8 @@ void RemotePlayerProxy<Game>::receive_state_change(seat_index_t seat, const Stat
 }
 
 template <concepts::Game Game>
-ActionResponse RemotePlayerProxy<Game>::get_action_response(const State& state,
-                                                            const ActionMask& valid_actions) {
+typename RemotePlayerProxy<Game>::ActionResponse RemotePlayerProxy<Game>::get_action_response(
+    const State& state, const ActionMask& valid_actions) {
   action_response_.action = -1;
 
   Packet<ActionPrompt> packet;

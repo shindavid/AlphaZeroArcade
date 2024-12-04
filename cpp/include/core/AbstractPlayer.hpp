@@ -5,6 +5,7 @@
 
 #include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
+#include <core/TrainingDataWriter.hpp>
 #include <util/Exception.hpp>
 
 namespace core {
@@ -37,8 +38,10 @@ template <concepts::Game Game>
 class AbstractPlayer {
  public:
   using State = Game::State;
+  using GameLogWriter_sptr = core::TrainingDataWriter<Game>::GameLogWriter_sptr;
   using ValueTensor = Game::Types::ValueTensor;
   using ActionMask = Game::Types::ActionMask;
+  using ActionResponse = Game::Types::ActionResponse;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
 
@@ -48,8 +51,9 @@ class AbstractPlayer {
   const player_name_array_t& get_player_names() const { return player_names_; }
   game_id_t get_game_id() const { return game_id_; }
   seat_index_t get_my_seat() const { return my_seat_; }
+  GameLogWriter_sptr get_game_log() const { return game_log_; }
   void init_game(game_id_t game_id, const player_name_array_t& player_names,
-                 seat_index_t seat_assignment);
+                 seat_index_t seat_assignment, GameLogWriter_sptr game_log);
 
   virtual void start_game() {}
   virtual void receive_state_change(seat_index_t, const State&, action_t) {}
@@ -86,6 +90,7 @@ class AbstractPlayer {
   player_name_array_t player_names_;
   game_id_t game_id_ = -1;
   seat_index_t my_seat_ = -1;
+  GameLogWriter_sptr game_log_;
 };
 
 }  // namespace core

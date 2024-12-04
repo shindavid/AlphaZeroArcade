@@ -180,12 +180,10 @@ class GameLogWriter {
            const ActionValueTensor* action_values, bool use_for_training);
   void add_terminal(const State& state, const ValueTensor& outcome);
   void serialize(std::ostream&) const;
-  bool is_previous_entry_used_for_training() const;
+  bool was_previous_entry_used_for_policy_training() const;
   int sample_count() const { return sample_count_; }
   game_id_t id() const { return id_; }
   int64_t start_timestamp() const { return start_timestamp_; }
-  void close() { closed_ = true; }
-  bool closed() const { return closed_; }
 
  private:
   template<typename T>
@@ -202,7 +200,6 @@ class GameLogWriter {
   const int64_t start_timestamp_;
   int sample_count_ = 0;
   bool terminal_added_ = false;
-  bool closed_ = false;
 };
 
 }  // namespace core

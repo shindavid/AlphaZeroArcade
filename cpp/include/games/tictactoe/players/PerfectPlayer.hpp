@@ -26,7 +26,7 @@ class PerfectPlayer : public core::AbstractPlayer<tictactoe::Game> {
 
   PerfectPlayer(const Params&);
 
-  core::ActionResponse get_action_response(const State&, const ActionMask&) override;
+  ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  private:
   struct policy_t {

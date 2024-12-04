@@ -17,8 +17,9 @@ public:
   using base_t = core::AbstractPlayer<Game>;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
+  using ActionResponse = Game::Types::ActionResponse;
 
-  core::ActionResponse get_action_response(const State&, const ActionMask& mask) override {
+  ActionResponse get_action_response(const State&, const ActionMask& mask) override {
     return bitset_util::choose_random_on_index(mask);
   }
 };

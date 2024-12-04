@@ -25,6 +25,7 @@ class RemotePlayerProxy : public AbstractPlayer<Game> {
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
+  using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
   using Player = AbstractPlayer<Game>;
   using player_vec_t = std::vector<RemotePlayerProxy*>;  // keyed by game_thread_id_t

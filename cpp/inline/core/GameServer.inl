@@ -52,12 +52,23 @@ auto GameServer<Game>::Params::make_options_description() {
 }
 
 template <concepts::Game Game>
+GameServer<Game>::SharedData::SharedData(
+    const Params& params, const TrainingDataWriterParams& training_data_writer_params)
+    : params_(params) {
+  if (training_data_writer_params.enabled) {
+    training_data_writer_ = new TrainingDataWriter(training_data_writer_params);
+  }
+}
+
+template <concepts::Game Game>
 GameServer<Game>::SharedData::~SharedData() {
   if (bar_) delete bar_;
 
   for (auto& reg : registrations_) {
     delete reg.gen;
   }
+
+  delete training_data_writer_;
 }
 
 template <concepts::Game Game>
@@ -271,12 +282,16 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     player_array_t& players) {
   game_id_t game_id = util::get_unique_id();
 
+  TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
+  GameLogWriter_sptr game_log(
+      training_data_writer ? new GameLogWriter(game_id, util::ns_since_epoch()) : nullptr);
+
   player_name_array_t player_names;
   for (size_t p = 0; p < players.size(); ++p) {
     player_names[p] = players[p]->get_name();
   }
   for (size_t p = 0; p < players.size(); ++p) {
-    players[p]->init_game(game_id, player_names, p);
+    players[p]->init_game(game_id, player_names, p, game_log);
     players[p]->start_game();
   }
 
@@ -291,7 +306,14 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     Player* player = players[seat];
     auto valid_actions = Rules::get_legal_moves(state_history);
     ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
+
     action_t action = response.action;
+
+    const TrainingInfo& training_info = response.training_info;
+    if (game_log && training_info.use_for_training) {
+      game_log->add(state_history.current(), action, training_info.policy_target,
+                    training_info.action_values_target, training_info.use_for_training);
+    }
 
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
     // the server.
@@ -323,6 +345,12 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       for (auto player2 : players) {
         player2->end_game(state_history.current(), outcome);
       }
+
+      if (training_data_writer) {
+        game_log->add_terminal(state_history.current(), outcome);
+        training_data_writer->add(game_log);
+      }
+
       if (shared_data_.params().announce_game_results) {
         printf("Game %ld complete.\n", game_id);
         for (player_id_t p = 0; p < kNumPlayers; ++p) {
@@ -338,7 +366,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 }
 
 template <concepts::Game Game>
-GameServer<Game>::GameServer(const Params& params) : shared_data_(params) {}
+GameServer<Game>::GameServer(const Params& params,
+                             const TrainingDataWriterParams& training_data_writer_params)
+    : shared_data_(params, training_data_writer_params) {}
 
 template <concepts::Game Game>
 void GameServer<Game>::wait_for_remote_player_registrations() {

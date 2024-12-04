@@ -31,6 +31,7 @@ class TrainingDataWriter
     bool operator==(const Params& other) const = default;
 
     int64_t max_rows = 0;
+    bool enabled = false;
   };
 
   using ValueArray = Game::Types::ValueArray;
@@ -39,18 +40,11 @@ class TrainingDataWriter
 
   using GameLogWriter = core::GameLogWriter<Game>;
   using GameLogWriter_sptr = std::shared_ptr<GameLogWriter>;
-  using game_log_map_t = std::map<game_id_t, GameLogWriter_sptr>;
 
-  static TrainingDataWriter* instantiate(const Params& params);
+  TrainingDataWriter(const Params& params);
+  ~TrainingDataWriter();
 
-  /*
-   * Assumes that instantiate() was called at least once.
-   */
-  static TrainingDataWriter* instance() { return instance_; }
-
-  GameLogWriter_sptr get_log(game_id_t id);
-
-  void close(GameLogWriter_sptr log);
+  void add(GameLogWriter_sptr log);
   void shut_down();
 
   void pause() override;
@@ -59,15 +53,11 @@ class TrainingDataWriter
  protected:
   using game_queue_t = std::vector<GameLogWriter_sptr>;
 
-  TrainingDataWriter(const Params& params);
-  ~TrainingDataWriter();
-
   void loop();
   bool send(const GameLogWriter* log);  // return true if this is last game
 
   Params params_;
   std::thread* thread_;
-  game_log_map_t game_log_map_;
   game_queue_t completed_games_[2];
   int64_t rows_written_ = 0;
 
@@ -77,8 +67,6 @@ class TrainingDataWriter
 
   std::condition_variable cv_;
   mutable std::mutex mutex_;
-
-  static TrainingDataWriter* instance_;
 };
 
 }  // namespace core

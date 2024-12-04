@@ -73,7 +73,7 @@ template <core::concepts::Game Game>
 typename TrainingMctsPlayerGenerator<Game>::BaseMctsPlayer*
 TrainingMctsPlayerGenerator<Game>::generate_helper(SharedData_sptr& shared_data,
                                                    bool owns_shared_data) {
-  return new MctsPlayer(writer_params_, mcts_player_params_, shared_data, owns_shared_data);
+  return new MctsPlayer(mcts_player_params_, shared_data, owns_shared_data);
 }
 
 template <core::concepts::Game Game>

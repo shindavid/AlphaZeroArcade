@@ -1,10 +1,11 @@
 #pragma once
 
 #include <core/AbstractPlayer.hpp>
-#include <core/LoopControllerClient.hpp>
+#include <core/concepts/Game.hpp>
 #include <core/GameServer.hpp>
 #include <core/GameServerProxy.hpp>
-#include <core/concepts/Game.hpp>
+#include <core/LoopControllerClient.hpp>
+#include <core/TrainingDataWriter.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/Exception.hpp>
 #include <util/SocketUtil.hpp>
@@ -22,6 +23,8 @@ struct Main {
   using GameServerParams = GameServer::Params;
   using GameServerProxy = core::GameServerProxy<Game>;
   using Player = core::AbstractPlayer<Game>;
+  using TrainingDataWriter = core::TrainingDataWriter<Game>;
+  using TrainingDataWriterParams = TrainingDataWriter::Params;
 
   struct Args {
     std::vector<std::string> player_strs;
