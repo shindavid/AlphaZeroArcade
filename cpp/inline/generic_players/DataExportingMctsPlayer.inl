@@ -7,12 +7,13 @@
 namespace generic {
 
 template <core::concepts::Game Game>
-core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
+typename DataExportingMctsPlayer<Game>::ActionResponse
+DataExportingMctsPlayer<Game>::get_action_response(
     const State& state, const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
-  bool use_for_training = search_mode == core::kFull;
 
   GameLogWriter_sptr game_log = this->get_game_log();
+  bool use_for_training = game_log && search_mode == core::kFull;
   bool previous_used_for_training =
       game_log && game_log->was_previous_entry_used_for_policy_training();
 
@@ -21,26 +22,24 @@ core::ActionResponse DataExportingMctsPlayer<Game>::get_action_response(
   }
 
   const SearchResults* mcts_search_results = this->mcts_search(search_mode);
-
-  PolicyTensor policy_target;
-  PolicyTensor* policy_target_ptr = nullptr;
-  if (use_for_training || previous_used_for_training) {
-    policy_target_ptr = &policy_target;
-    extract_policy_target(mcts_search_results, &policy_target_ptr);
-  }
-  ActionValueTensor action_values;
-  ActionValueTensor* action_values_ptr = nullptr;
-  if (use_for_training) {
-    action_values = mcts_search_results->action_values;
-    action_values_ptr = &action_values;
-  }
-  core::ActionResponse response =
+  ActionResponse response =
       base_t::get_action_response_helper(search_mode, mcts_search_results, valid_actions);
 
-  // TODO: augment response with policy_target/action_values_target/use_for_training
-  throw std::runtime_error("Not implemented");
+  TrainingInfo& training_info = response.training_info;
+  training_info.policy_target = nullptr;
+  training_info.action_values_target = nullptr;
+  training_info.use_for_training = use_for_training;
 
-  // return response;
+  if (use_for_training || previous_used_for_training) {
+    training_info.policy_target = &policy_target_;
+    extract_policy_target(mcts_search_results, &training_info.policy_target);
+  }
+  if (use_for_training) {
+    action_values_target_ = mcts_search_results->action_values;
+    training_info.action_values_target = &action_values_target_;
+  }
+
+  return response;
 }
 
 template <core::concepts::Game Game>

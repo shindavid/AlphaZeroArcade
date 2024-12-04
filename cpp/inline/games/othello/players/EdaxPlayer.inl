@@ -51,8 +51,8 @@ inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const Stat
   submit_action(action);
 }
 
-inline core::ActionResponse EdaxPlayer::get_action_response(const State&,
-                                                            const ActionMask& valid_actions) {
+inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const State&,
+                                                                  const ActionMask& valid_actions) {
   int num_valid_actions = valid_actions.count();
   if (params_.verbose) {
     std::cout << "EdaxPlayer::get_action_response() - num_valid_actions=" << num_valid_actions

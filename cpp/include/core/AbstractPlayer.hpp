@@ -41,6 +41,7 @@ class AbstractPlayer {
   using GameLogWriter_sptr = core::TrainingDataWriter<Game>::GameLogWriter_sptr;
   using ValueTensor = Game::Types::ValueTensor;
   using ActionMask = Game::Types::ActionMask;
+  using ActionResponse = Game::Types::ActionResponse;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
 

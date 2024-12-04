@@ -144,7 +144,7 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 }
 
 template <core::concepts::Game Game>
-core::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
+typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response(const State& state,
                                                            const ActionMask& valid_actions) {
   core::SearchMode search_mode = choose_search_mode();
   const SearchResults* mcts_results = mcts_search(search_mode);
@@ -164,7 +164,7 @@ inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
 }
 
 template <core::concepts::Game Game>
-core::ActionResponse MctsPlayer<Game>::get_action_response_helper(
+typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_helper(
     core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
 

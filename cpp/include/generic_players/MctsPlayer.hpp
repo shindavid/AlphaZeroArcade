@@ -59,6 +59,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using State = Game::State;
   using IO = Game::IO;
   using ActionMask = Game::Types::ActionMask;
+  using ActionResponse = Game::Types::ActionResponse;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
@@ -80,7 +81,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   MctsManager* get_manager() const { return &shared_data_->manager; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
-  core::ActionResponse get_action_response(const State&, const ActionMask&) override;
+  ActionResponse get_action_response(const State&, const ActionMask&) override;
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }
@@ -89,8 +90,8 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   auto get_action_policy(core::SearchMode, const SearchResults*, const ActionMask&) const;
   const SearchResults* mcts_search(core::SearchMode search_mode) const;
   core::SearchMode choose_search_mode() const;
-  core::ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
-                                                  const ActionMask& valid_actions) const;
+  ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
+                                            const ActionMask& valid_actions) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;

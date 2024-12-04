@@ -36,6 +36,29 @@ struct GameTypes {
 
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
+  struct TrainingInfo {
+    PolicyTensor* policy_target = nullptr;
+    ActionValueTensor* action_values_target = nullptr;
+    bool use_for_training = false;
+  };
+
+  /*
+   * An ActionResponse is an action together with some optional auxiliary information:
+   *
+   * - victory_guarantee: whether the player believes their victory is guaranteed. GameServer can be
+   *     configured to trust this guarantee, and immediately end the game. This can speed up
+   *     simulations.
+   *
+   * - training_info: a pointer to a TrainingInfo object, to be used for NN training.
+   */
+  struct ActionResponse {
+    ActionResponse(action_t a=-1) : action(a) {}
+
+    action_t action = -1;
+    bool victory_guarantee = false;
+    TrainingInfo training_info;
+  };
+
   /*
    * Return type for an MCTS search.
    *

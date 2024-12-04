@@ -306,7 +306,14 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     Player* player = players[seat];
     auto valid_actions = Rules::get_legal_moves(state_history);
     ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
+
     action_t action = response.action;
+
+    const TrainingInfo& training_info = response.training_info;
+    if (game_log && training_info.use_for_training) {
+      game_log->add(state_history.current(), action, training_info.policy_target,
+                    training_info.action_values_target, training_info.use_for_training);
+    }
 
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
     // the server.

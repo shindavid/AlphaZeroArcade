@@ -106,7 +106,7 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
 
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
-  core::ActionResponse get_action_response(const State&, const ActionMask&) override;
+  ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  private:
   const Params params_;
