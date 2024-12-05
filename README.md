@@ -19,40 +19,68 @@ The framework also aims to support games that have one or more of the following 
 
 ## Getting Started
 
-### Env setup
+### Requirements
 
-The project assumes you are working on a Linux platform. No other OS's will be supported.
+To run this project successfully, please ensure your system meets the following requirements:
+
+1. **A Computer with an NVIDIA GPU**: We use CUDA 12.x, which requires an NVIDIA GPU with Compute Capability 7.0 (Volta architecture) or higher. Check compatibility for your GPU [here](https://developer.nvidia.com/cuda-gpus).
+
+2. **NVIDIA GPU Driver**: We use CUDA 12.x, which requires **version 535.54.03** or newer. See the [NVIDIA CUDA Installation Guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/) for details.
+
+3. **Docker**: See installation instructions [here](https://docs.docker.com/engine/install/).
+
+4. **NVIDIA Container Toolkit**: Follow the [installation instructions](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), including the "Configuring Docker" section.
+
+5. **Python**
+
+### Initial Setup
 
 To get started, clone the repo, and then run:
 
 ```
-$ source env_setup.sh
+$ ./setup_wizard.py
 ```
 
-This will launch `setup_wizard.py`, which will walk you through the necessary installation steps. These steps may
-require some manual external steps like installing CUDA and torchlib. Such steps unfortunately cannot be automated
-because of licensing reasons.
+This will walk you through initial setup, including validation that you have met the above requirements. It may
+take 10 minutes+, as it will build a Docker image on your machine. (TODO: upload an official AlphaZeroArcade Docker image
+to Docker Hub, and have the setup wizard pull that, to speed things up for the user)
 
-In the future, whenever you open a new shell, you should rerun the above command. Subsequent runs will be much faster,
-as they simply define some environment variables and activate a conda environment.
+After completing this setup, you will be able to run a Docker container via:
+
+```
+$ ./run_docker.py
+```
+
+Your first execution of this will issue a `docker run` call to spawn a container instance running `bash`, with your repo-checkout-directory
+mounted to `/workspace/`. Subsequent executions of this will issue a `docker exec` call that executes into that
+container instance.
+
+You can think of each bash session spawned by `./run_docker.py` as a sort of ssh-session into a virtual machine.
+All the work you do will be within this virtual machine.
+
+If you have access to multiple machines, you can launch `run_docker.py` on each of them, and then launch commands to
+effectively perform a big distributed AlphaZero run.
+
+TODO: tips on setting up VSCode to connect to the Docker container.
 
 ### Building
 
-From the repo root, run:
+Within your docker container, from the `/workspace/` directory, run:
 
 ```
 ./py/build.py
 ```
 
 This should build a binary for each supported game, along with some unit-test binaries. The end of the output should list
-the available binary paths:
+the built targets:
 
 ```
 ...
-Binary location: target/Release/bin/c4
-Binary location: target/Release/bin/othello
-Binary location: target/Release/bin/othello-tests
-Binary location: target/Release/bin/tictactoe
+target/Release/bin/othello
+target/Release/bin/tictactoe
+target/Release/bin/tests/blokus_tests
+target/Release/bin/tests/c4_tests
+...
 ```
 You can then run for example `target/Release/bin/tictactoe -h` to get a list of help options.
 
@@ -77,21 +105,19 @@ self-play and training metrics, can be viewed using the web dashboard.
 You can launch this loop on your local machine for the game of your choice, with a command like this:
 
 ```
-./py/alphazero/scripts/run_local.py --game tictactoe --tag my-first-run
+./py/alphazero/scripts/run_local.py --game c4 --tag my-first-run
 ```
 or using aliases,
 ```
-./py/alphazero/scripts/run_local.py -g tictactoe -t my-first-run
+./py/alphazero/scripts/run_local.py -g c4 -t my-first-run
 ```
 This launches one instance of each the 3 server types (loop-controller, self-play, ratings).
 
 Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory 
 
 ```
-$A0A_OUTPUT_DIR/tictactoe/my-first-run/
+/output/c4/my-first-run/
 ```
-
-where `$A0A_OUTPUT_DIR` is an environment variable configured during env setup.
 
 By default, `run_local.py` will detect the number of available cuda devices on the local machine, and allocate
 the GPU's across the servers in an optimal manner. If 1 or more GPU's are shared by multiple servers, the
@@ -103,7 +129,7 @@ that the GPU's stay fully utilized, without the components thrashing with each o
 During-or-after a run of the loop-controller, you can launch a web dashboard to track the progress of your run:
 
 ```
-./py/alphazero/scripts/launch_dashboard.py -g tictactoe -t my-first-run --open-in-browser
+./py/alphazero/scripts/launch_dashboard.py -g c4 -t my-first-run --open-in-browser
 ```
 
 This launches an interactive dashboard in your web browser, which currently looks like this:
@@ -123,12 +149,12 @@ exhaustive tree-search represents perfect-play, meaning that the dashed line at 
 plot thus indicates that the system attains optimal results against perfect play within 5 hours (i.e., it always wins as
 first player against perfect play).
 
-You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above tictactoe
+You can also manually play against an MCTS agent powered by a net produced by the AlphaZero loop. For the above Connect4
 example, you can do this with a command like:
 
 ```
-./target/Release/bin/tictactoe --player "--type=TUI" \
-  --player "--type=MCTS-C -m $A0A_OUTPUT_DIR/tictactoe/my-first-run/models/gen-10.pt"
+./target/Release/bin/c4 --player "--type=TUI" \
+  --player "--type=MCTS-C -m $output/c4/my-first-run/models/gen-10.pt"
 ```
 
 ## C++ Overview
@@ -180,24 +206,3 @@ can be represented as a scalar. This implementation, however, supports n-player 
 is instead represented as a 1D tensor. This is another reason why compile-time knowledge of the game type helps,
 as otherwise, all value-calculations (which are simply scalar calculations in typical MCTS implementations) would incur
 dynamic memory allocation/deallocation.
-
-## Just
-
-A command-runner called `just` is used for various scripting.
-
-Install instructions are here: https://github.com/casey/just#packages
-
-To view available commands, just run: `just`
-
-## Docker and Cloud GPUs
-
-Below are some instructions for building and running on GPUs in the cloud.
-
-(Note: this was only tested on the lambdalabs cloud, but is easily extensible to others)
-
-Steps:
-  1. Create instance and setup ssh config for HOSTNAME
-  2. Run `just setup-lambda HOSTNAME` to configure node, build docker container, install all deps (takes about 5-10 minutes)
-  3. Run `just goto HOSTNAME` to log into the cloud docker container
-  4. Run `just build` to build
-  5. Run `just train_c4 YOUR_TAG_HERE -S` to train connect-4
