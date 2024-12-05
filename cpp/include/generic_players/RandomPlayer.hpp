@@ -20,7 +20,9 @@ public:
   using ActionResponse = Game::Types::ActionResponse;
 
   ActionResponse get_action_response(const State&, const ActionMask& mask) override {
-    return bitset_util::choose_random_on_index(mask);
+    return mask.call([&](const auto& bitset) {
+      return bitset_util::choose_random_on_index(bitset);
+    });
   }
 };
 

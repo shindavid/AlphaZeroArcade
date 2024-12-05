@@ -52,6 +52,8 @@ class NNEvaluation {
   static sptr create_uniform(const ActionMask& valid_actions);
 
  protected:
+  static int get_num_valid_actions(const ActionMask& valid_actions);
+
   ValueTensor value_;
   DynamicArray dynamic_array_;
 };

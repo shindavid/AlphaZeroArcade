@@ -34,6 +34,7 @@ class Manager {
   using SharedData = mcts::SharedData<Game>;
   using node_pool_index_t = Node::node_pool_index_t;
   using edge_t = Node::edge_t;
+  using ActionMask = Game::Types::ActionMask;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;

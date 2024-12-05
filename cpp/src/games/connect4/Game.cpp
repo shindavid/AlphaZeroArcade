@@ -96,6 +96,8 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
+  const auto& valid_bitset = valid_actions.get<0>();
+
   constexpr int buf_size = 4096;
   char buffer[buf_size];
   int cx = 0;
@@ -116,7 +118,7 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   cx += snprintf(buffer + cx, buf_size - cx, "%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
 
   for (int i = 0; i < c4::kNumColumns; ++i) {
-    if (valid_actions[i]) {
+    if (valid_bitset[i]) {
       cx += snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i),
                      mcts_counts(i), action_policy(i));
     } else {

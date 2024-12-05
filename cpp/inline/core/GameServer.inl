@@ -304,7 +304,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   while (true) {
     seat_index_t seat = Rules::get_current_player(state_history.current());
     Player* player = players[seat];
-    auto valid_actions = Rules::get_legal_moves(state_history);
+    ActionMask valid_actions = Rules::get_legal_moves(state_history);
     ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
 
     action_t action = response.action;
@@ -317,7 +317,9 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
     // the server.
-    util::release_assert(valid_actions[action], "Invalid action: %d", action);
+    valid_actions.call([&](auto& mask) {
+      util::release_assert(mask[action], "Invalid action: %d", action);
+    });
 
     ValueTensor outcome;
     bool terminal = false;

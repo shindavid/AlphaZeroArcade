@@ -12,6 +12,7 @@
 #include <core/TrivialSymmetries.hpp>
 #include <core/WinShareResults.hpp>
 #include <games/nim/Constants.hpp>
+#include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -30,6 +31,10 @@ namespace nim {
 struct Game {
   struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = nim::kNumPlayers;
+
+    using kNumActionsPerType = util::int_sequence<nim::kMaxStonesToTake>;
+    using kMaxBranchingFactorPerType = util::int_sequence<nim::kMaxStonesToTake>;
+
     static constexpr int kNumActions = nim::kMaxStonesToTake;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
