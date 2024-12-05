@@ -11,7 +11,7 @@ apt-get update && apt-get upgrade -y
 apt-get install -y \
     ack wget curl rsync unzip emacs vim git cmake gcc-12 g++-12 python3-pip \
     ninja-build software-properties-common libeigen3-dev libncurses5-dev \
-    python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 && \
+    python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 plotly dash && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
