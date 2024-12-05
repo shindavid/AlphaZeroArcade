@@ -11,7 +11,7 @@ apt-get update && apt-get upgrade -y
 apt-get install -y \
     ack wget curl rsync unzip emacs vim git cmake gcc-12 g++-12 python3-pip \
     ninja-build software-properties-common libeigen3-dev libncurses5-dev \
-    python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 plotly dash && \
+    python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -29,7 +29,7 @@ done
 # Python dependencies
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 pip3 install ipython==8.14.0 natsort==8.3.1 tqdm==4.66.1 termcolor==2.3.0 cffi numpy matplotlib \
-    bokeh scipy flask
+    bokeh scipy flask plotly dash
 
 # Download and install libtorch C++ library
 LIBTORCH_URL="https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
