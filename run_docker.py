@@ -3,6 +3,7 @@ from setup_wizard import MD5_FILE_PATHS
 
 import argparse
 import hashlib
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -102,7 +103,8 @@ def main():
             entrypoint_cmd += "; exec bash"
             docker_cmd += ["bash", "-c", entrypoint_cmd]
 
-        print(f"Running Docker command: {' '.join(docker_cmd)}")
+        docker_cmd_str = " ".join(shlex.quote(arg) for arg in docker_cmd)
+        print(f"Running Docker command: {docker_cmd_str}")
         subprocess.run(docker_cmd, check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error running Docker container: {e}")
