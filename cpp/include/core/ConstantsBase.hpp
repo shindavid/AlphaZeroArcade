@@ -7,6 +7,7 @@ namespace core {
  */
 struct ConstantsBase {
   static constexpr int kNumPreviousStatesToEncode = 0;
+  static constexpr int kNumActionTypes = 1;
 };
 
 }  // namespace core

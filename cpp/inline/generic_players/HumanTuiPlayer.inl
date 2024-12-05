@@ -37,7 +37,11 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
     complain = true;
     my_action = prompt_for_action(state, valid_actions);
 
-    if (my_action < 0 || my_action >= Game::Constants::kNumActions || !valid_actions[my_action]) continue;
+    if (my_action < 0) continue;
+    bool valid = valid_actions.call([&](const auto& bitset) {
+      return my_action < (int)bitset.size() && bitset[my_action];
+    });
+    if (!valid) continue;
     break;
   }
 

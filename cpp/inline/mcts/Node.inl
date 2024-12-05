@@ -11,7 +11,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   VT.setZero();  // to be set lazily
   VT_valid = false;
   valid_action_mask = Game::Rules::get_legal_moves(history);
-  num_valid_actions = valid_action_mask.count();
+  num_valid_actions = valid_action_mask.call([&](auto& bitset) { return bitset.count(); });
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
 }
@@ -324,13 +324,19 @@ template <core::concepts::Game Game>
 typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
     core::action_t action) const {
   int i = 0;
-  for (core::action_t a : bitset_util::on_indices(stable_data_.valid_action_mask)) {
-    if (a == action) {
-      return get_edge(i)->child_index;
+  node_pool_index_t child_index = -1;
+
+  stable_data_.valid_action_mask.call([&](auto& bitset) {
+    for (core::action_t a : bitset_util::on_indices(bitset)) {
+      if (a == action) {
+        child_index = get_edge(i)->child_index;
+        return;
+      }
+      ++i;
     }
-    ++i;
-  }
-  return -1;
+  });
+
+  return child_index;
 }
 
 template <core::concepts::Game Game>
@@ -340,12 +346,14 @@ void Node<Game>::initialize_edges() {
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);
 
   int i = 0;
-  for (core::action_t action : bitset_util::on_indices(stable_data_.valid_action_mask)) {
-    edge_t* edge = get_edge(i);
-    new (edge) edge_t();
-    edge->action = action;
-    i++;
-  }
+  stable_data_.valid_action_mask.call([&](auto& bitset) {
+    for (core::action_t action : bitset_util::on_indices(bitset)) {
+      edge_t* edge = get_edge(i);
+      new (edge) edge_t();
+      edge->action = action;
+      i++;
+    }
+  });
 }
 
 template <core::concepts::Game Game>

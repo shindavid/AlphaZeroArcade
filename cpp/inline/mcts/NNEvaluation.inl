@@ -11,7 +11,7 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
                                  const ActionValueTensor& raw_action_values,
                                  const ActionMask& valid_actions, group::element_t sym,
                                  core::seat_index_t cp)
-    : dynamic_array_(2, valid_actions.count()) {
+    : dynamic_array_(2, get_num_valid_actions(valid_actions)) {
   ValueTensor value = raw_value;
   PolicyTensor policy = raw_policy;
   ActionValueTensor action_values = raw_action_values;
@@ -25,11 +25,13 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
   Game::Symmetries::apply(action_values, inv_sym);
 
   int i = 0;
-  for (core::action_t a : bitset_util::on_indices(valid_actions)) {
-    dynamic_array_(0, i) = policy(a);
-    dynamic_array_(1, i) = action_values(a);
-    i++;
-  }
+  valid_actions.call([&](const auto& bitset) {
+    for (core::action_t a : bitset_util::on_indices(bitset)) {
+      dynamic_array_(0, i) = policy(a);
+      dynamic_array_(1, i) = action_values(a);
+      i++;
+    }
+  });
 
   dynamic_array_.row(0) = eigen_util::softmax(dynamic_array_.row(0));
 
@@ -43,8 +45,9 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
 
 template <core::concepts::Game Game>
 NNEvaluation<Game>::NNEvaluation(const ActionMask& valid_actions)
-    : dynamic_array_(2, valid_actions.count()) {
-  float policy_entry = 1.0 / valid_actions.count();
+    : dynamic_array_(2, get_num_valid_actions(valid_actions)) {
+  int n_cols = dynamic_array_.cols();
+  float policy_entry = 1.0 / n_cols;
   float value_entry = 1.0 / value_.size();
   float action_value_entry = 1.0 / Game::Constants::kNumPlayers;
 
@@ -66,6 +69,11 @@ template <core::concepts::Game Game>
 typename NNEvaluation<Game>::sptr NNEvaluation<Game>::create_uniform(
     const ActionMask& valid_actions) {
   return std::make_shared<NNEvaluation>(valid_actions);
+}
+
+template <core::concepts::Game Game>
+int NNEvaluation<Game>::get_num_valid_actions(const ActionMask& valid_actions) {
+  return valid_actions.call([&](const auto& bitset) { return bitset.count(); });
 }
 
 }  // namespace mcts

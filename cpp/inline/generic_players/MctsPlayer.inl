@@ -176,23 +176,35 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
     verbose_info_->initialized = true;
   }
   core::action_t action = eigen_util::sample(modified_policy);
-  util::release_assert(valid_actions[action]);
+  valid_actions.call([&](const auto& bitset) {
+    util::release_assert(bitset[action], "Invalid action: %d", action);
+  });
   return action;
 }
 
 template <core::concepts::Game Game>
 auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
-                                                 const SearchResults* mcts_results,
-                                                 const ActionMask& valid_actions) const {
+                                         const SearchResults* mcts_results,
+                                         const ActionMask& valid_actions) const {
+  return valid_actions.call([&](const auto& bitset) {
+    return get_action_policy_helper(search_mode, mcts_results, bitset);
+  });
+}
+
+template <core::concepts::Game Game>
+template <typename Bitset>
+auto MctsPlayer<Game>::get_action_policy_helper(core::SearchMode search_mode,
+                                                const SearchResults* mcts_results,
+                                                const Bitset& valid_bitset) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode == core::kRawPolicy) {
-    ActionMask valid_actions_subset = valid_actions;
-    bitset_util::randomly_zero_out(valid_actions_subset, valid_actions_subset.count() / 2);
-
     policy.setConstant(0);
 
-    for (int a : bitset_util::on_indices(valid_actions_subset)) {
+    Bitset valid_bitset_subset = valid_bitset;
+    bitset_util::randomly_zero_out(valid_bitset_subset, valid_bitset_subset.count() / 2);
+
+    for (int a : bitset_util::on_indices(valid_bitset_subset)) {
       policy(a) = mcts_results->policy_prior(a);
     }
   } else {
@@ -246,7 +258,7 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
 
       // Let S be the set of indices at which policy is maximal. The below loop sets min_LCB to
       // min_{i in S} {LCB(i)}
-      for (int a : bitset_util::on_indices(valid_actions)) {
+      for (int a : bitset_util::on_indices(valid_bitset)) {
         float p = policy(a);
         if (p <= 0) continue;
 
@@ -269,7 +281,7 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
 
         if (mcts::kEnableSearchDebug) {
           int visited_actions = 0;
-          for (int a : bitset_util::on_indices(valid_actions)) {
+          for (int a : bitset_util::on_indices(valid_bitset)) {
             if (counts(a)) visited_actions++;
           }
 
@@ -283,7 +295,7 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
           LocalPolicyArray policy_masked_arr(visited_actions);
 
           int r = 0;
-          for (int a : bitset_util::on_indices(valid_actions)) {
+          for (int a : bitset_util::on_indices(valid_bitset)) {
             if (counts(a) == 0) continue;
 
             actions_arr(r) = a;
@@ -323,7 +335,7 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
     // This can happen if MCTS proves that the position is losing. In this case we just choose a
     // random valid action.
     policy.setConstant(0);
-    for (int a : bitset_util::on_indices(valid_actions)) {
+    for (int a : bitset_util::on_indices(valid_bitset)) {
       policy(a) = 1;
     }
     eigen_util::normalize(policy);

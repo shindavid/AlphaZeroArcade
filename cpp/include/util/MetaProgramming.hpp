@@ -188,13 +188,15 @@ constexpr void constexpr_for(F&& f) {
 namespace detail {
 
 // General create_type template
-template <template <typename...> class Container, util::concepts::IntSequence Seq, template <auto> class TypeTemplate>
+template <template <typename...> class Container, util::concepts::IntSequence Seq,
+          template <auto> class TypeTemplate>
 struct TransformIntSequenceHelper;
 
 // Specialization for std::integer_sequence
-template <template <typename...> class Container, typename T, T... Is, template <auto> class TypeTemplate>
+template <template <typename...> class Container, typename T, T... Is,
+          template <auto> class TypeTemplate>
 struct TransformIntSequenceHelper<Container, std::integer_sequence<T, Is...>, TypeTemplate> {
-    using type = Container<TypeTemplate<Is>...>;
+  using type = Container<TypeTemplate<Is>...>;
 };
 
 }  // namespace detail
@@ -208,7 +210,9 @@ struct TransformIntSequenceHelper<Container, std::integer_sequence<T, Is...>, Ty
 // using V = std::tuple<std::bitset<1>, std::bitset<4>, std::bitset<6>>;
 // static_assert(std::is_same_v<U, V>);
 
-template <template <typename...> class Container, util::concepts::IntSequence Seq, template <auto> class TypeTemplate>
-using TransformIntSequence_t = typename detail::TransformIntSequenceHelper<Container, Seq, TypeTemplate>::type;
+template <template <typename...> class Container, util::concepts::IntSequence Seq,
+          template <auto> class TypeTemplate>
+using TransformIntSequence_t =
+    typename detail::TransformIntSequenceHelper<Container, Seq, TypeTemplate>::type;
 
 }  // namespace mp

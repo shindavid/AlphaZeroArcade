@@ -11,7 +11,6 @@
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
-#include <games/tictactoe/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
@@ -92,6 +91,9 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   core::SearchMode choose_search_mode() const;
   ActionResponse get_action_response_helper(core::SearchMode, const SearchResults*,
                                             const ActionMask& valid_actions) const;
+
+  template<typename Bitset>
+  auto get_action_policy_helper(core::SearchMode, const SearchResults*, const Bitset&) const;
 
   struct VerboseInfo {
     PolicyTensor action_policy;
