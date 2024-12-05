@@ -5,8 +5,8 @@ import subprocess
 
 
 MD5_FILE_PATHS = [
-    'docker/Dockerfile',
-    'docker/install_deps.sh',
+    'docker-setup/Dockerfile',
+    'docker-setup/install_deps.sh',
     ]
 
 
@@ -116,7 +116,7 @@ def build_docker_image(env_sh_lines):
 
     print(f'Building docker image {image_name}...')
 
-    cmd = f'docker build -t {image_name} docker/'
+    cmd = f'docker build -t {image_name} docker-setup/'
     if run(cmd, print_cmd=True, print_output=True):
         print(f"❌ Failed to build docker image {image_name}.")
         raise VerboseSetupException()
