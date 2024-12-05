@@ -2,7 +2,7 @@
 set -e
 
 # Configure timezone and install dependencies - needed for tzdata
-ln -fs /usr/share/zoneinfo/$TZ /etc/localtime
+ln -fs /usr/share/zoneinfo/UTC /etc/localtime
 
 # Update package lists and upgrade existing packages
 apt-get update && apt-get upgrade -y
