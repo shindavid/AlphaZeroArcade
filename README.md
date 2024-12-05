@@ -27,7 +27,7 @@ To run this project successfully, please ensure your system meets the following 
 
 2. **NVIDIA GPU Driver**: We use CUDA 12.x, which requires **version 535.54.03** or newer. See the [NVIDIA CUDA Installation Guide](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/) for details.
 
-3. **Docker**: See installation instructions [here](https://docs.docker.com/engine/install/).
+3. **Docker**: See [installation instructions](https://docs.docker.com/engine/install/).
 
 4. **NVIDIA Container Toolkit**: Follow the [installation instructions](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), including the "Configuring Docker" section.
 
