@@ -1,4 +1,5 @@
 {
+"action_type" : 0,
 "valid_actions" : "111",
 "counts" : [4, 0, 0],
 "policy_target" : [4, 0, 0],
