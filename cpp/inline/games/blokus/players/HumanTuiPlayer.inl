@@ -28,7 +28,8 @@ inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
     pending_poc_ = -1;
     return poc.to_action();
   } else {
-    if (valid_actions[kPass]) {
+    const auto& valid_bitset = std::get<0>(valid_actions);
+    if (valid_bitset[kPass]) {
       return prompt_for_pass();
     }
 
@@ -168,7 +169,8 @@ inline core::action_t HumanTuiPlayer::prompt_for_pass() {
 
 inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
                                          const ActionMask& valid_actions) const {
-  for (core::action_t action : bitset_util::on_indices(valid_actions)) {
+  const auto& valid_bitset = std::get<0>(valid_actions);
+  for (core::action_t action : bitset_util::on_indices(valid_bitset)) {
     // std::cout << "DBG action=" << int(action) << std::endl;
     util::release_assert(action < kPass);
     Location loc = Location::unflatten(action);
@@ -177,7 +179,7 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
     StateHistory history;
     history.update(state);
     Game::Rules::apply(history, action);
-    ActionMask valid_actions2 = Game::Rules::get_legal_moves(history);
+    auto valid_actions2 = std::get<0>(Game::Rules::get_legal_moves(history));
     util::release_assert(valid_actions2.any());
     for (core::action_t action2 : bitset_util::on_indices(valid_actions2)) {
       // std::cout << "DBG   action2=" << int(action2) << std::endl;

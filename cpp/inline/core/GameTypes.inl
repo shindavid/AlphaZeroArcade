@@ -7,7 +7,11 @@ template <concepts::GameConstants GameConstants, typename State, concepts::GameR
 inline boost::json::object
 GameTypes<GameConstants, State, GameResults, SymmetryGroup>::SearchResults::to_json() const {
   boost::json::object results_json;
-  results_json["valid_actions"] = valid_actions.to_string();
+  // TODO: add valid_actions.index() to the json
+  ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
+    results_json["valid_actions"] = std::get<A>(valid_actions).to_string();
+  });
   results_json["counts"] = eigen_util::to_json(counts);
   results_json["policy_target"] = eigen_util::to_json(policy_target);
   results_json["policy_prior"] = eigen_util::to_json(policy_prior);

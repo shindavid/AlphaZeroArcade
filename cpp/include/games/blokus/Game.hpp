@@ -33,7 +33,8 @@ class Game {
  public:
   struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = blokus::kNumPlayers;
-    static constexpr int kNumActions = blokus::kNumActions;
+    using kNumActionsPerType = util::int_sequence<blokus::kNumActions>;
+    static constexpr int kNumActions = blokus::kNumActions;  // TODO: remove
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
   };
 

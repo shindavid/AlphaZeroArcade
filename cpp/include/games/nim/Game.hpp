@@ -33,9 +33,7 @@ struct Game {
     static constexpr int kNumPlayers = nim::kNumPlayers;
 
     using kNumActionsPerType = util::int_sequence<nim::kMaxStonesToTake>;
-    using kMaxBranchingFactorPerType = util::int_sequence<nim::kMaxStonesToTake>;
-
-    static constexpr int kNumActions = nim::kMaxStonesToTake;
+    static constexpr int kNumActions = nim::kMaxStonesToTake;  // TODO: remove
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
 
@@ -70,8 +68,9 @@ struct Game {
 
     static Types::ActionMask get_legal_moves(const StateHistory& history) {
       const State& state = history.current();
-      Types::ActionMask mask;
 
+      using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+      Bitset mask;
       for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
         mask[i] = i + 1 <= state.stones_left;
       }

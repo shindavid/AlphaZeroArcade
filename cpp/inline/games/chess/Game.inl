@@ -22,8 +22,9 @@ inline void Game::Rules::init_state(State& state) {
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   std::vector<lczero::Move> move_list = state.GetBoard().GenerateLegalMoves();
-  Types::ActionMask mask;
 
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+  Bitset mask;
   for (lczero::Move move : move_list) {
     mask[move.as_nn_index(0)] = true;
   }

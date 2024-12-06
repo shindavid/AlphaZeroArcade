@@ -41,7 +41,9 @@ class Game {
  public:
   struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
-    static constexpr int kNumActions = tictactoe::kNumCells;
+
+    using kNumActionsPerType = util::int_sequence<kNumCells>;
+    static constexpr int kNumActions = tictactoe::kNumCells;  // TODO: remove
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
   };
 

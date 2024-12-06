@@ -9,7 +9,8 @@ namespace othello {
 
 inline core::action_t HumanTuiPlayer::prompt_for_action(const State& state,
                                                         const ActionMask& valid_actions) {
-  if (valid_actions[kPass]) {
+  const auto& valid_bitset = std::get<0>(valid_actions);
+  if (valid_bitset[kPass]) {
     std::cout << "Press Enter to pass: ";
     std::cout.flush();
     std::string input;

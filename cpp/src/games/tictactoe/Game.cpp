@@ -37,7 +37,9 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
-  Types::ActionMask mask;
+
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+  Bitset mask;
   mask.set();
   uint64_t u = state.full_mask;
   while (u) {
@@ -87,7 +89,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 
 void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
-  const auto& valid_actions = results.valid_actions;
+  const auto& valid_actions = std::get<0>(results.valid_actions);
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
   const auto& win_rates = results.win_rates;
