@@ -26,12 +26,12 @@ struct GameTypes {
   using ActionMask = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, std::bitset>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
 
-  using PolicyShape = Eigen::Sizes<GameConstants::kNumActions>;
-  using PolicyTensor = eigen_util::FTensor<PolicyShape>;
+  using PolicyShape = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, Eigen::Sizes>;
+  using PolicyTensor = mp::Transform<std::variant, PolicyShape, eigen_util::FTensor>;
   using ValueTensor = GameResults::Tensor;
   using ValueShape = ValueTensor::Dimensions;
-  using ActionValueShape = Eigen::Sizes<GameConstants::kNumActions>;
-  using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
+  using ActionValueShape = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, Eigen::Sizes>;
+  using ActionValueTensor = mp::Transform<std::variant, PolicyShape, eigen_util::FTensor>;
 
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;

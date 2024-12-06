@@ -91,6 +91,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = std::get<0>(results.valid_actions);
+  const auto& action_policy0 = std::get<0>(action_policy);
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
   const auto& win_rates = results.win_rates;
@@ -118,7 +119,7 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   for (int i = 0; i < c4::kNumColumns; ++i) {
     if (valid_actions[i]) {
       cx += snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i),
-                     mcts_counts(i), action_policy(i));
+                     mcts_counts(i), action_policy0(i));
     } else {
       cx += snprintf(buffer + cx, buf_size - cx, "%3d\n", i + 1);
     }

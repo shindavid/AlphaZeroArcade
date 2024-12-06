@@ -77,6 +77,7 @@ class NNEvaluationRequest {
     void set_eval_state(eval_state_t eval_state) { eval_state_ = eval_state; }
 
     Node* node() const { return node_; }
+    core::action_type_t action_type() const { return node_->action_type(); }
     NNEvaluation* eval() const { return eval_.get(); }
     eval_state_t eval_state() const { return eval_state_; }
     const cache_key_t& cache_key() const { return cache_key_; }

@@ -1,10 +1,12 @@
 #pragma once
 
-#include <sstream>
-#include <vector>
+#include <core/BasicTypes.hpp>
 
 #include <boost/filesystem.hpp>
 #include <torch/script.h>
+
+#include <sstream>
+#include <vector>
 
 namespace core {
 
@@ -25,8 +27,9 @@ class NeuralNet {
   template<typename Value>
   void load_weights(Value&& value, const std::string& cuda_device);
 
-  void predict(const input_vec_t& input, torch::Tensor& policy, torch::Tensor& value,
-               torch::Tensor& action_values) const;
+  // TODO: we need to pass all 2*K+1 torch::Tensor's here! - vector<torch::Tensor>
+  void predict(const input_vec_t& input, torch::Tensor& value,
+               torch::Tensor& policy, torch::Tensor& action_values) const;
 
   /*
    * Moves the model to the CPU. This frees up the GPU for other processes.

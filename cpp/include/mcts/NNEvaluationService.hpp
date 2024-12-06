@@ -194,7 +194,7 @@ class NNEvaluationService
   };
 
   struct tensor_group_t {
-    void load_output_from(int row, torch::Tensor& torch_policy, torch::Tensor& torch_value,
+    void load_output_from(int row, torch::Tensor& torch_value, torch::Tensor& torch_policy,
                           torch::Tensor& torch_action_value);
 
     InputTensor input;

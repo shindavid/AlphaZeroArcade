@@ -709,7 +709,7 @@ class Model(nn.Module):
         clone = copy.deepcopy(self)
 
         # strip all aux heads to avoid unnecessary c++ computation
-        clone.heads = clone.heads[:3]
+        clone.heads = [head for clone.heads if not head.is_aux()]
 
         clone.to('cpu')
         clone.eval()
