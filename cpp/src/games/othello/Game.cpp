@@ -60,7 +60,9 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
 
 Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   uint64_t mask = get_moves(state.cur_player_mask, state.opponent_mask);
-  Types::ActionMask valid_actions;
+
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+  Bitset valid_actions;
   uint64_t u = mask;
   while (u) {
     int index = std::countr_zero(u);
@@ -73,7 +75,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
-  Types::ActionMask valid_actions = Rules::get_legal_moves(state);
+  Types::ActionMask valid_actions = std::get<0>(Rules::get_legal_moves(state));
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
   int blink_col = -1;
@@ -136,7 +138,7 @@ int Game::IO::print_row(char* buf, int n, const State& state,
   cx += snprintf(buf + cx, n - cx, "%c%d", prefix, (int)(row + 1));
   for (int col = 0; col < kBoardDimension; ++col) {
     int index = row * kBoardDimension + col;
-    bool valid = valid_actions[index];
+    bool valid = std::get<0>(valid_actions)[index];
     bool occupied_by_cur_player = (1UL << index) & state.cur_player_mask;
     bool occupied_by_opp_player = (1UL << index) & state.opponent_mask;
     bool occupied = occupied_by_cur_player || occupied_by_opp_player;
@@ -167,7 +169,7 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
 
 void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
-  const auto& valid_actions = results.valid_actions;
+  const auto& valid_actions = std::get<0>(results.valid_actions);
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
   const auto& win_rates = results.win_rates;

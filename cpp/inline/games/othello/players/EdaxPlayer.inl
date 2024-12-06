@@ -53,13 +53,14 @@ inline void EdaxPlayer::receive_state_change(core::seat_index_t seat, const Stat
 
 inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const State&,
                                                                   const ActionMask& valid_actions) {
-  int num_valid_actions = valid_actions.count();
+  const auto& valid_bitset = std::get<0>(valid_actions);
+  int num_valid_actions = valid_bitset.count();
   if (params_.verbose) {
     std::cout << "EdaxPlayer::get_action_response() - num_valid_actions=" << num_valid_actions
               << std::endl;
   }
   if (num_valid_actions == 1) {  // only 1 possible move, no need to incur edax/IO overhead
-    core::action_t action = bitset_util::get_nth_on_index(valid_actions, 0);
+    core::action_t action = bitset_util::get_nth_on_index(valid_bitset, 0);
     submit_action(action);
     return action;
   }
@@ -88,7 +89,7 @@ inline EdaxPlayer::ActionResponse EdaxPlayer::get_action_response(const State&,
     }
   }
 
-  if (a < 0 || a >= kNumGlobalActions || !valid_actions[a]) {
+  if (a < 0 || a >= kNumGlobalActions || !valid_bitset[a]) {
     for (size_t i = 0; i < n; ++i) {
       std::cerr << line_buffer_[i] << std::endl;
     }

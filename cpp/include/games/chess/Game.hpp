@@ -32,7 +32,8 @@ namespace chess {
 struct Game {
   struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = chess::kNumPlayers;
-    static constexpr int kNumActions = chess::kNumActions;
+    using kNumActionsPerType = util::int_sequence<chess::kNumActions>;
+    static constexpr int kNumActions = chess::kNumActions;  // TODO: remove
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
     static constexpr int kNumPreviousStatesToEncode = chess::kNumPreviousStatesToEncode;
   };

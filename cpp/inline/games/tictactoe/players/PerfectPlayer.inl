@@ -28,13 +28,14 @@ inline PerfectPlayer::PerfectPlayer(const Params& params)
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     const State& state, const ActionMask& valid_actions) {
+  const auto& valid_actions_bitset = std::get<0>(valid_actions);
   if (params_.strength == 0) {
-    return bitset_util::choose_random_on_index(valid_actions);
+    return bitset_util::choose_random_on_index(valid_actions_bitset);
   }
 
   // if only one legal move, make it
-  if (valid_actions.count() == 1) {
-    return bitset_util::choose_random_on_index(valid_actions);
+  if (valid_actions_bitset.count() == 1) {
+    return bitset_util::choose_random_on_index(valid_actions_bitset);
   }
 
   core::seat_index_t cp = Game::Rules::get_current_player(state);
@@ -47,7 +48,7 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
   if (params_.verbose) {
     std::cout << "PerfectPlayer::" << __func__ << std::endl;
     std::cout << "  cp:        " << int(cp) << std::endl;
-    std::cout << "  valid:     " << valid_actions << std::endl;
+    std::cout << "  valid:     " << valid_actions_bitset << std::endl;
     std::cout << "  my_mask:   " << std::bitset<16>(my_mask) << std::endl;
     std::cout << "  opp_mask:  " << std::bitset<16>(opp_mask) << std::endl;
     std::cout << "  full_mask: " << std::bitset<16>(full_mask) << std::endl;

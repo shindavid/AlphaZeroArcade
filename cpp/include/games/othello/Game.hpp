@@ -38,7 +38,8 @@ class Game {
  public:
   struct Constants : public core::ConstantsBase {
     static constexpr int kNumPlayers = 2;
-    static constexpr int kNumActions = othello::kNumGlobalActions;
+    using kNumActionsPerType = util::int_sequence<othello::kNumGlobalActions>;
+    static constexpr int kNumActions = othello::kNumGlobalActions;  // TODO: remove
     static constexpr int kMaxBranchingFactor = othello::kMaxNumLocalActions;
   };
 

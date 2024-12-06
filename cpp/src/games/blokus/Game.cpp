@@ -25,7 +25,8 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history
 
   color_t color = core.cur_color;
 
-  Types::ActionMask valid_actions;
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+  Bitset valid_actions;
   if (!core.partial_move.valid()) {
     // First, we find board locations where we can fit a piece's corner
 
@@ -191,7 +192,7 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
 
 void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& action_policy,
                                   const Types::SearchResults& results) {
-  const auto& valid_actions = results.valid_actions;
+  const auto& valid_actions = std::get<0>(results.valid_actions);
   const auto& mcts_counts = results.counts;
   const auto& net_policy = results.policy_prior;
   const auto& win_rates = results.win_rates;

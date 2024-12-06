@@ -85,15 +85,15 @@ inline constexpr std::size_t Length_v = Length<TList>::value;
 template <typename TList, std::size_t index>
 struct TypeAt;
 
-template <typename Head, typename... Tails>
-struct TypeAt<TypeList<Head, Tails...>, 0> {
+template <template <typename...> class Container, typename Head, typename... Tails>
+struct TypeAt<Container<Head, Tails...>, 0> {
   using type = Head;
 };
 
-template <typename Head, typename... Tails, std::size_t index>
-struct TypeAt<TypeList<Head, Tails...>, index> {
+template <template <typename...> class Container, typename Head, typename... Tails, std::size_t index>
+struct TypeAt<Container<Head, Tails...>, index> {
   static_assert(index < sizeof...(Tails) + 1, "index out of range");
-  using type = TypeAt<TypeList<Tails...>, index - 1>::type;
+  using type = TypeAt<Container<Tails...>, index - 1>::type;
 };
 
 template <typename TList, std::size_t index>

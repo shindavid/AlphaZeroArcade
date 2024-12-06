@@ -45,9 +45,7 @@ struct Game {
     static constexpr int kNumPlayers = 2;
 
     using kNumActionsPerType = util::int_sequence<kNumColumns>;
-    // using kMaxBranchingFactorPerType = util::int_sequence<kNumColumns>;
-
-    static constexpr int kNumActions = kNumColumns;
+    static constexpr int kNumActions = kNumColumns;  // TODO: remove
     static constexpr int kMaxBranchingFactor = kNumColumns;
   };
 
