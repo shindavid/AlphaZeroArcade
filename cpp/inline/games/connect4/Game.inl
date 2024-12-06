@@ -49,7 +49,8 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym
     case groups::D1::kIdentity:
       return;
     case groups::D1::kFlip: {
-      Types::PolicyTensor u = eigen_util::reverse(t, t.rank() - 1);
+      auto& t0 = std::get<0>(t);
+      Types::PolicyTensor u = eigen_util::reverse(t0, t0.rank() - 1);
       t = u;
       return;
     }

@@ -239,6 +239,7 @@ class Node {
   Node* get_child(const edge_t* edge) const;
   void update_child_expand_count(int n=1);
   bool trivial() const { return trivial_; }
+  core::action_type_t action_type() const { return stable_data_.valid_action_mask.index(); }
 
   // NO-OP in release builds, checks various invariants in debug builds
   void validate_state() const;

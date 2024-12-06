@@ -63,7 +63,7 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
   mp::constexpr_for<0, n_targets, 1>([&](auto a) {
     using Target = mp::TypeAt_t<TrainingTargetsList, a>;
     using Tensor = Target::Tensor;
-    info_array[1 + a].template init<Tensor>(Target::kName, a);
+    info_array[1 + a].template init<Tensor>(Target::name(), a);
   });
 
   return info_array;

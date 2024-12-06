@@ -1,5 +1,6 @@
 #pragma once
 
+#include <core/BasicTypes.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
 
@@ -31,39 +32,39 @@ concept TrainingTargetList = mp::IsTypeListSatisfying<T, IsTrainingTarget<GameLo
 
 }  // namespace concepts
 
-template<typename Game>
+template<typename Game, action_type_t ActionType=0>
 struct PolicyTarget {
-  static constexpr const char* kName = "policy";
-  using Tensor = Game::Types::PolicyTensor;
+  using Tensor = mp::TypeAt_t<Game::Types::PolicyTensor, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
+  static std::string name() { return util::create_string("policy%d", ActionType); }
   static Tensor tensorize(const GameLogView& view);
 };
 
 template <typename Game>
 struct ValueTarget {
-  static constexpr const char* kName = "value";
   using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
+  static std::string name() { return "value"; }
   static Tensor tensorize(const GameLogView& view);
 };
 
-template<typename Game>
+template<typename Game, action_type_t ActionType=0>
 struct ActionValueTarget {
-  static constexpr const char* kName = "action_value";
-  using Tensor = Game::Types::ActionValueTensor;
+  using Tensor = mp::TypeAt_t<Game::Types::ActionValueTensor, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
+  static std::string name() { return util::create_string("policy%d", ActionType); }
   static Tensor tensorize(const GameLogView& view);
 };
 
-template <typename Game>
+template <typename Game, action_type_t ActionType=0>
 struct OppPolicyTarget {
-  static constexpr const char* kName = "opp_policy";
-  using Tensor = Game::Types::PolicyTensor;
+  using Tensor = mp::TypeAt_t<Game::Types::PolicyTensor, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
+  static std::string name() { return util::create_string("opp_policy%d", ActionType); }
   static Tensor tensorize(const GameLogView& view);
 };
 

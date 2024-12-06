@@ -4,10 +4,14 @@
 
 namespace core {
 
-template<typename Game>
-typename PolicyTarget<Game>::Tensor
-PolicyTarget<Game>::tensorize(const GameLogView& view) {
-  return *view.policy;
+template<typename Game, action_type_t ActionType>
+typename PolicyTarget<Game, ActionType>::Tensor
+PolicyTarget<Game, ActionType>::tensorize(const GameLogView& view) {
+  if (view.policy->index() == ActionType) {
+    return std::get<ActionType>(*view.policy);
+  } else {
+    return Tensor::Zero();
+  }
 }
 
 template <typename Game>
@@ -19,16 +23,25 @@ typename ValueTarget<Game>::Tensor ValueTarget<Game>::tensorize(const GameLogVie
   return tensor;
 }
 
-template <typename Game>
-typename ActionValueTarget<Game>::Tensor ActionValueTarget<Game>::tensorize(
+template <typename Game, action_type_t ActionType>
+typename ActionValueTarget<Game, ActionType>::Tensor
+ActionValueTarget<Game, ActionType>::tensorize(
     const GameLogView& view) {
-  return *view.action_values;
+  if (view.action_values->index() == ActionType) {
+    return std::get<ActionType>(*view.action_values);
+  } else {
+    return Tensor::Zero();
+  }
 }
 
-template<typename Game>
-typename OppPolicyTarget<Game>::Tensor
-OppPolicyTarget<Game>::tensorize(const GameLogView& view) {
-  return *view.next_policy;
+template<typename Game, action_type_t ActionType>
+typename OppPolicyTarget<Game, ActionType>::Tensor
+OppPolicyTarget<Game, ActionType>::tensorize(const GameLogView& view) {
+  if (view.next_policy->index() == ActionType) {
+    return std::get<ActionType>(*view.next_policy);
+  } else {
+    return Tensor::Zero();
+  }
 }
 
 }  // namespace core

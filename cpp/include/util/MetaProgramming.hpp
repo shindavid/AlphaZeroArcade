@@ -199,9 +199,22 @@ struct TransformIntSequenceHelper<Container, std::integer_sequence<T, Is...>, Ty
   using type = Container<TypeTemplate<Is>...>;
 };
 
+template <template <typename...> class Container, typename TT,
+          template <typename> class TypeTemplate>
+struct TransformHelper;
+
+template <template <typename...> class Container,
+          template <typename...> class TT,
+          typename... Ts,
+          template <typename> class TypeTemplate>
+struct TransformHelper<Container, TT<Ts...>, TypeTemplate> {
+  using type = Container<TypeTemplate<Ts>...>;
+};
+
 }  // namespace detail
 
-// Transform an integer sequence into a container type
+// TransformIntSequence_t transforms a std::integer_sequence of values Is... into a
+// new type, Container<TypeTemplate<Is>...>.
 //
 // Example:
 //
@@ -209,10 +222,23 @@ struct TransformIntSequenceHelper<Container, std::integer_sequence<T, Is...>, Ty
 // using U = util::TransformIntSequence_t<std::tuple, T, std::bitset>;
 // using V = std::tuple<std::bitset<1>, std::bitset<4>, std::bitset<6>>;
 // static_assert(std::is_same_v<U, V>);
-
 template <template <typename...> class Container, util::concepts::IntSequence Seq,
           template <auto> class TypeTemplate>
 using TransformIntSequence_t =
     typename detail::TransformIntSequenceHelper<Container, Seq, TypeTemplate>::type;
+
+
+// Transform_t transforms a type T<Ts...> into a new type, Container<TypeTemplate<Ts>...>.
+//
+// Example:
+//
+// using T = std::tuple<int, bool>;
+// using U = util::Transform_t<std::variant, T, std::vector>;
+// using V = std::variant<std::vector<int>, std::vector<bool>>;
+// static_assert(std::is_same_v<U, V>);
+template <template <typename...> class Container, typename TT,
+          template <typename> class TypeTemplate>
+using Transform_t =
+    typename detail::TransformHelper<Container, TT, TypeTemplate>::type;
 
 }  // namespace mp

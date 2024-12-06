@@ -20,14 +20,15 @@ inline void NeuralNet::load_weights(Value&& value, const std::string& cuda_devic
   loaded_ = true;
 }
 
-inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& policy,
-                               torch::Tensor& value, torch::Tensor& action_values) const {
+inline void NeuralNet::predict(const input_vec_t& input, torch::Tensor& value,
+                               torch::Tensor& policy, torch::Tensor& action_values) const {
   util::release_assert(activated_, "NeuralNet::predict() called while deactivated");
   torch::NoGradGuard no_grad;
 
+  // TODO: we need to pass all 2*K+1 torch::Tensor's, and populate them all here!
   auto outputs = module_.forward(input).toTuple();
-  policy.copy_(outputs->elements()[0].toTensor());
-  value.copy_(outputs->elements()[1].toTensor());
+  value.copy_(outputs->elements()[0].toTensor());
+  policy.copy_(outputs->elements()[1].toTensor());
   action_values.copy_(outputs->elements()[2].toTensor());
 }
 
