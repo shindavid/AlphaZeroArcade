@@ -96,7 +96,7 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
-  const auto& valid_bitset = valid_actions.get<0>();
+  const auto& valid_bitset = std::get<0>(valid_actions);
 
   constexpr int buf_size = 4096;
   char buffer[buf_size];

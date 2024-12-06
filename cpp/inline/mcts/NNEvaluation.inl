@@ -24,9 +24,11 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
   Game::Symmetries::apply(policy, inv_sym);
   Game::Symmetries::apply(action_values, inv_sym);
 
-  int i = 0;
-  valid_actions.call([&](const auto& bitset) {
-    for (core::action_t a : bitset_util::on_indices(bitset)) {
+  ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
+
+    int i = 0;
+    for (core::action_t a : bitset_util::on_indices(std::get<A>(valid_actions))) {
       dynamic_array_(0, i) = policy(a);
       dynamic_array_(1, i) = action_values(a);
       i++;
@@ -73,7 +75,10 @@ typename NNEvaluation<Game>::sptr NNEvaluation<Game>::create_uniform(
 
 template <core::concepts::Game Game>
 int NNEvaluation<Game>::get_num_valid_actions(const ActionMask& valid_actions) {
-  return valid_actions.call([&](const auto& bitset) { return bitset.count(); });
+  return ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
+    return std::get<A>(valid_actions).count();
+  });
 }
 
 }  // namespace mcts

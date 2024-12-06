@@ -85,8 +85,7 @@ PerfectPlayer::get_action_response(
 
   ActionResponse response;
 
-  using BitSet = ActionMask::TypeAt<0>;
-  BitSet candidates;
+  std::bitset<kNumColumns> candidates;
 
   // first add clearly winning moves
   for (int j = 0; j < kNumColumns; ++j) {

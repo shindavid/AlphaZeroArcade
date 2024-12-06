@@ -18,10 +18,12 @@ public:
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ActionResponse = Game::Types::ActionResponse;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
 
   ActionResponse get_action_response(const State&, const ActionMask& mask) override {
-    return mask.call([&](const auto& bitset) {
-      return bitset_util::choose_random_on_index(bitset);
+    return ActionTypeDispatcher::call(mask.index(), [&](auto action_type) {
+      constexpr int A = decltype(action_type)::value;
+      return bitset_util::choose_random_on_index(std::get<A>(mask));
     });
   }
 };

@@ -36,6 +36,7 @@ class Manager {
   using edge_t = Node::edge_t;
   using ActionMask = Game::Types::ActionMask;
   using ActionSymmetryTable = Game::Types::ActionSymmetryTable;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;

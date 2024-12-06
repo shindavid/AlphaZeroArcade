@@ -19,6 +19,7 @@ class NNEvaluation {
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
 
   // 2 rows, one for policy, one for action-value
   using DynamicArray = Eigen::Array<float, 2, Eigen::Dynamic>;

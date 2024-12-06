@@ -63,6 +63,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
 
   struct SharedData {
     template<typename... Ts>
