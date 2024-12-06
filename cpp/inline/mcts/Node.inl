@@ -11,7 +11,10 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   VT.setZero();  // to be set lazily
   VT_valid = false;
   valid_action_mask = Game::Rules::get_legal_moves(history);
-  num_valid_actions = valid_action_mask.call([&](auto& bitset) { return bitset.count(); });
+  num_valid_actions = ActionTypeDispatcher::call(valid_action_mask.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
+    return std::get<A>(valid_action_mask).count();
+  });
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
 }
@@ -326,8 +329,10 @@ typename Node<Game>::node_pool_index_t Node<Game>::lookup_child_by_action(
   int i = 0;
   node_pool_index_t child_index = -1;
 
-  stable_data_.valid_action_mask.call([&](auto& bitset) {
-    for (core::action_t a : bitset_util::on_indices(bitset)) {
+  const ActionMask& valid_actions = stable_data_.valid_action_mask;
+  ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
+    for (core::action_t a : bitset_util::on_indices(std::get<A>(valid_actions))) {
       if (a == action) {
         child_index = get_edge(i)->child_index;
         return;
@@ -345,9 +350,12 @@ void Node<Game>::initialize_edges() {
   if (n_edges == 0) return;
   first_edge_index_ = lookup_table_->alloc_edges(n_edges);
 
-  int i = 0;
-  stable_data_.valid_action_mask.call([&](auto& bitset) {
-    for (core::action_t action : bitset_util::on_indices(bitset)) {
+  ActionMask& valid_actions = stable_data_.valid_action_mask;
+  ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
+
+    int i = 0;
+    for (core::action_t action : bitset_util::on_indices(std::get<A>(valid_actions))) {
       edge_t* edge = get_edge(i);
       new (edge) edge_t();
       edge->action = action;

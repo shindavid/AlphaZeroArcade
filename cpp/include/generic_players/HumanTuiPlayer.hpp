@@ -19,6 +19,7 @@ class HumanTuiPlayer : public core::AbstractPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
   using player_array_t = base_t::player_array_t;
 
   HumanTuiPlayer() {}

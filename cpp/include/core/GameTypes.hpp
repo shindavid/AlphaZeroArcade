@@ -6,12 +6,13 @@
 #include <core/concepts/GameResults.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
+#include <util/IndexedDispatcher.hpp>
 #include <util/MetaProgramming.hpp>
-#include <util/TypedUnion.hpp>
 
 #include <array>
 #include <bitset>
 #include <string>
+#include <variant>
 
 #include <Eigen/Core>
 
@@ -21,8 +22,8 @@ template <concepts::GameConstants GameConstants, typename State, concepts::GameR
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
   using kNumActionsPerType = GameConstants::kNumActionsPerType;
-  using ActionMask =
-      mp::TransformIntSequence_t<util::TypedUnion, kNumActionsPerType, std::bitset>;
+  using ActionTypeDispatcher = util::IndexedDispatcher<kNumActionsPerType::size()>;
+  using ActionMask = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, std::bitset>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
 
   using PolicyShape = Eigen::Sizes<GameConstants::kNumActions>;

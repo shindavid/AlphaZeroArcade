@@ -76,6 +76,7 @@ class Node {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using SearchResults = Game::Types::SearchResults;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
   using player_bitset_t = std::bitset<kNumPlayers>;
   using node_pool_index_t = util::pool_index_t;
   using edge_pool_index_t = util::pool_index_t;

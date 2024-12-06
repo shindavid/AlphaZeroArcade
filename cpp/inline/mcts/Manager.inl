@@ -147,19 +147,17 @@ Manager<Game>::search(const SearchParams& params) {
 
   core::action_t actions[stable_data.num_valid_actions];
 
-  // TODO: Figure out a way to pass a second argument to this lambda, from which we can extract the
-  // TypedUnion's type-index as a compile-time value. I feel like it should be possible...
-  stable_data.valid_action_mask.call([&](const auto& bitset) {
-    using Bitset = std::remove_cvref_t<decltype(bitset)>;
-    Bitset sym_inverted_bitset;
+  ActionTypeDispatcher::call(stable_data.valid_action_mask.index(), [&](auto action_type) {
+    constexpr int A = decltype(action_type)::value;
 
+    std::get<A>(results_.valid_actions).reset();
     results_.policy_prior.setZero();
 
     int i = 0;
-    for (core::action_t action : bitset_util::on_indices(bitset)) {
+    auto on_indices = bitset_util::on_indices(std::get<A>(stable_data.valid_action_mask));
+    for (core::action_t action : on_indices) {
       Game::Symmetries::apply(action, inv_sym);
-      sym_inverted_bitset.set(action, true);
-
+      std::get<A>(results_.valid_actions).set(action, true);
       actions[i] = action;
 
       auto* edge = root->get_edge(i);
@@ -167,9 +165,6 @@ Manager<Game>::search(const SearchParams& params) {
 
       i++;
     }
-
-    results_.valid_actions =
-        ActionMask(sym_inverted_bitset, stable_data.valid_action_mask.type_index());
   });
 
   load_action_symmetries(root, &actions[0]);

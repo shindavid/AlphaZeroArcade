@@ -30,6 +30,7 @@ class GameServer {
   using ActionMask = Game::Types::ActionMask;
   using ActionResponse = Game::Types::ActionResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
   using State = Game::State;
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
