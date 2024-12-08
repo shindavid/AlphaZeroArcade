@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+
+# This file should not depend on any repo python files outside of the top-level directory.
+
+from pull_docker_image import docker_pull
+from setup_common import get_env_json, update_env_json, DOCKER_HUB_IMAGE
+
 import os
 import subprocess
 
@@ -86,39 +92,7 @@ def validate_nvidia_installation(image):
         raise SetupException()
 
 
-def build_docker_image(env_sh_lines):
-    """
-    Request user to select a docker image name, using "a0a" as the default.
-    If the image does not exist, create it.
-    """
-    print('AlphaZeroArcade runs in a docker container.')
-    print('')
-
-    # Check that docker is installed:
-    proc = subprocess.run(['docker', '--version'], capture_output=True)
-    if proc.returncode:
-        raise SetupException('docker is not installed. Please install it first.')
-
-    default_image_name = os.environ.get('A0A_DOCKER_IMAGE', 'a0a')
-    image_name = input(f'Please enter a docker image name [{default_image_name}]: ')
-    if not image_name:
-        image_name = default_image_name
-
-    # TODO: validate image_name
-    env_sh_lines.append(f'export A0A_DOCKER_IMAGE={image_name}')
-
-    print(f'Building docker image {image_name}...')
-
-    cmd = f'docker build -t {image_name} docker-setup/'
-    if run(cmd, print_cmd=True, print_output=True):
-        print(f"❌ Failed to build docker image {image_name}.")
-        raise VerboseSetupException()
-
-    print(f"✅ Successfully built docker image {image_name}!")
-    return image_name
-
-
-def setup_output_dir(env_sh_lines):
+def setup_output_dir():
     """
     Request user to set the output directory.
     """
@@ -128,8 +102,9 @@ def setup_output_dir(env_sh_lines):
     print('directory.')
     print('')
 
+    env = get_env_json()
     cwd = os.getcwd()
-    default_output_dir = os.environ.get('A0A_OUTPUT_DIR', os.path.join(cwd, 'output'))
+    default_output_dir = env.get('OUTPUT_DIR', os.path.join(cwd, 'output'))
     prompt = f'Please enter the location of your output directory [{default_output_dir}]: '
     output_dir = input(prompt).strip()
     if not output_dir:
@@ -142,20 +117,9 @@ def setup_output_dir(env_sh_lines):
         print(f"❌ Failed to create output directory: {expanded_output_dir}")
         print(f"Error: {e}")
         raise SetupException()
-    env_sh_lines.append(f'export A0A_OUTPUT_DIR={expanded_output_dir}')
+
+    update_env_json({'OUTPUT_DIR': expanded_output_dir})
     print(f"✅ Successfully registered output directory: {output_dir}")
-
-
-def write_env_sh(env_sh_lines):
-    """
-    Write the env.sh file
-    """
-    with open('.env.sh', 'w') as f:
-        f.write('\n'.join(env_sh_lines))
-        f.write('\n')
-
-    print('*' * 80)
-    print_green('Setup wizard completed successfully!')
 
 
 def main():
@@ -166,13 +130,11 @@ def main():
     os.chdir(os.path.dirname(__file__))
 
     try:
-        env_sh_lines = []
-        setup_output_dir(env_sh_lines)
+        setup_output_dir()
         print('*' * 80)
-        image = build_docker_image(env_sh_lines)
+        docker_pull(DOCKER_HUB_IMAGE)
         print('*' * 80)
-        validate_nvidia_installation(image)
-        write_env_sh(env_sh_lines)
+        validate_nvidia_installation(DOCKER_HUB_IMAGE)
     except KeyboardInterrupt:
         print('')
         print('Setup wizard was interrupted. Please try again.')

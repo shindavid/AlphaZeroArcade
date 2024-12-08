@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
+
+# This file should not depend on any repo python files outside of the top-level directory.
+
+from setup_common import get_env_json
+
 import argparse
-import hashlib
 import shlex
 import subprocess
 from packaging import version
@@ -53,7 +57,7 @@ def check_image_version(image_name):
         else:
             print(f'Your docker image version is {image_version}, but the minimum required version is {min_version}.')
         print('')
-        print('Please refresh your docker image by running setup_wizard.py.')
+        print('Please refresh your docker image by running update_docker_image.py.')
         print('')
         print('Or, to run anyways, rerun with --skip-image-version-check')
         return False
@@ -107,24 +111,20 @@ def get_env_vars(args):
 
 
 def run_container(args):
-    env_vars = get_env_vars(args)
-    if env_vars is None:
-        return
+    env = get_env_json()
 
-    # Get variables from the environment
-    A0A_OUTPUT_DIR = env_vars.get("A0A_OUTPUT_DIR")
-    A0A_DOCKER_IMAGE = env_vars.get("A0A_DOCKER_IMAGE")
+    output_dir = env.get("OUTPUT_DIR", None)
+    docker_image = env.get("DOCKER_IMAGE", None)
 
-    if not A0A_OUTPUT_DIR or not A0A_DOCKER_IMAGE:
-        print("Error: A0A_OUTPUT_DIR or A0A_DOCKER_IMAGE not set in .env.sh")
+    if not output_dir or not docker_image:
+        print("Error: Bad environment. Please run setup_wizard.py first.")
         return
 
     if not args.skip_image_version_check:
-        if not check_image_version(A0A_DOCKER_IMAGE):
+        if not check_image_version(docker_image):
             return
 
-    output_dir = Path(A0A_OUTPUT_DIR).resolve()
-
+    output_dir = Path(output_dir)
     mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
     post_mount_cmds = ["export PYTHONPATH=/workspace/repo/py"]
 
@@ -150,7 +150,7 @@ def run_container(args):
         "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
         '-e', f'USER_ID={user_id}', '-e', f'GROUP_ID={group_id}',
     ] + ports_strs + mounts + [
-        A0A_DOCKER_IMAGE
+        docker_image
     ]
 
     # Add post-mount commands as the container's entrypoint

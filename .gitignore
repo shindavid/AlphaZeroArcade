@@ -13,6 +13,7 @@ cmake-build-debug
 
 # env
 .env.sh
+.env.json
 
 # cmake build dir
 target
