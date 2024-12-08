@@ -121,6 +121,30 @@ def setup_output_dir():
     update_env_json({'OUTPUT_DIR': expanded_output_dir})
     print(f"✅ Successfully registered output directory: {output_dir}")
 
+def check_docker_permissions():
+    """Check if the user can run Docker commands without sudo."""
+    print('Checking if you have permission to run Docker commands without sudo...')
+
+    result = subprocess.run(['docker', 'ps'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    if result.returncode == 0:
+        print("✅ You have permission to run Docker commands without sudo.")
+    else:
+        # Check for permission-related errors
+        stderr = result.stderr.decode()
+        if "permission denied" in stderr.lower():
+            print("❌ You do not have permission to run Docker commands without sudo.")
+            print("To fix this, add your user to the Docker group by running:")
+            print("    sudo groupadd docker (if it doesn't already exist)")
+            print("    sudo usermod -aG docker $USER")
+            print("Then log out and log back in.")
+            print("Or run:")
+            print("    newgrp docker")
+        else:
+            print("❌ Docker command failed for an unknown reason.")
+            print("Error details:")
+            print(stderr)
+
 
 def main():
     print('*' * 80)
@@ -135,6 +159,8 @@ def main():
         docker_pull(DOCKER_HUB_IMAGE)
         print('*' * 80)
         validate_nvidia_installation(DOCKER_HUB_IMAGE)
+        print('*' * 80)
+        check_docker_permissions()
     except KeyboardInterrupt:
         print('')
         print('Setup wizard was interrupted. Please try again.')
