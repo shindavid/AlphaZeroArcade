@@ -3,7 +3,7 @@
 The self-play process produces game-log files, located in:
 
 ```
-$A0A_OUTPUT_DIR/<game>/<tag>/self-play-data/
+/workspace/output/<game>/<tag>/self-play-data/
 ```
 
 Currently each file contains one game log. The log is recorded in a binary format, with the following sections:
@@ -33,12 +33,12 @@ Below are details about each section.
 
 Struct definition: `core::GameLogBase::Header` in `cpp/include/core/GameLog.hpp`.
 
-The header includes counts which dictate the size of the other sections. 
+The header includes counts which dictate the size of the other sections.
 
 ## Game outcome
 
 The game outcome, recorded as an `Eigen::Array` of fixed size, which is equivalent in byte-representation
-to a `float[kNumPlayers]`. 
+to a `float[kNumPlayers]`.
 
 ## Sampled indices
 
@@ -92,7 +92,7 @@ is transformed via a randomly selected symmetry.
 ## Dense policy targets
 
 This section contains policy targets that are recorded in dense format. This is simply as an `Eigen::TensorFixedSize`, which is equivalent in byte-representation
-to a `float[kNumGlobalActions]`. 
+to a `float[kNumGlobalActions]`.
 
 ## Sparse policy target entries
 

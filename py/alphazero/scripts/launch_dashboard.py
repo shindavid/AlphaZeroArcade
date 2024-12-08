@@ -75,7 +75,7 @@ app.secret_key = secrets.token_hex(16)
 if params.debug:
     app.debug = True
 
-game_dir = os.path.join('/output', run_params.game)
+game_dir = os.path.join('/workspace/output', run_params.game)
 if not os.path.isdir(game_dir):
     raise ValueError(f'Directory does not exist: {game_dir}')
 
@@ -111,7 +111,7 @@ if run_params.tag:
     for tag in tags:
         if not tag:
             raise ValueError(f'Bad --tag/-t argument: {run_params.tag}')
-        path = os.path.join('/output', run_params.game, tag)
+        path = os.path.join('/workspace/output', run_params.game, tag)
         if not os.path.isdir(path):
             raise ValueError(f'Directory does not exist: {path}')
 else:

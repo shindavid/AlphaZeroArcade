@@ -3,7 +3,7 @@
 
 A generic AlphaZero framework.
 
-There are many AlphaZero implementations out there, but most of them are for a specific game. Some implementations are 
+There are many AlphaZero implementations out there, but most of them are for a specific game. Some implementations are
 more generic but at a serious performance cost. This implementation is designed to be maximally generic at minimal
 overhead.
 
@@ -113,10 +113,10 @@ or using aliases,
 ```
 This launches one instance of each the 3 server types (loop-controller, self-play, ratings).
 
-Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory 
+Here `my-first-run` is a run _tag_. All files produced by the run will then be placed in the directory
 
 ```
-/output/c4/my-first-run/
+/workspace/output/c4/my-first-run/
 ```
 
 By default, `run_local.py` will detect the number of available cuda devices on the local machine, and allocate
@@ -188,7 +188,7 @@ later in the list.
 
 ### Game Types as C++ Template Parameters
 
-The MCTS code is entirely templated based on the game type. This can make the code a bit daunting at first. What drove 
+The MCTS code is entirely templated based on the game type. This can make the code a bit daunting at first. What drove
 this decision?
 
 A high-performance MCTS implementation should aim to saturate both GPU and CPU resources via parallelism. When CPU

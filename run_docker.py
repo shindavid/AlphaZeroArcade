@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-from setup_wizard import MD5_FILE_PATHS
-
 import argparse
 import hashlib
 import shlex
 import subprocess
+from packaging import version
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parent.resolve()
+
+MINIMUM_REQUIRED_IMAGE_VERSION = "1.0.0"
 
 EXPOSED_PORTS = [
     5012,  # bokeh
@@ -18,28 +19,44 @@ EXPOSED_PORTS = [
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", '--skip-hash-check', action='store_true', help='skip hash check')
+    parser.add_argument("-s", '--skip-image-version-check', action='store_true',
+                        help='skip image version check')
     parser.add_argument("-i", '--instance-name', default='a0a_instance',
                         help='name of the instance to run (default: %(default)s)')
     return parser.parse_args()
 
 
-def check_hashes(env_vars):
-    for path in MD5_FILE_PATHS:
-        full_path = Path(REPO_ROOT) / path
-        if not full_path.exists():
-            raise Exception(f"Error: {full_path} not found.")
+def get_image_label(image_name, label_key):
+    """
+    Get the value of a specific label from a Docker image.
+    """
+    result = subprocess.check_output(
+        ["docker", "inspect",
+            f"--format={{{{index .Config.Labels \"{label_key}\"}}}}", image_name],
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).strip()
+    if not result:
+        return None
+    return result
 
-        env_key = f'A0A_MD5_{path}'
-        expected_hash = env_vars.get(env_key)
-        if not expected_hash:
-            return False
 
-        with full_path.open("rb") as f:
-            actual_hash = hashlib.md5(f.read()).hexdigest()
+def check_image_version(image_name):
+    min_version = MINIMUM_REQUIRED_IMAGE_VERSION
+    image_version = get_image_label(image_name, 'version')
 
-        if actual_hash != expected_hash:
-            return False
+    # Check if the image version is at least MINIMUM_REQUIRED_IMAGE_VERSION
+
+    if image_version is None or version.parse(image_version) < version.parse(min_version):
+        if image_version is None:
+            print('Your docker image appears out of date.')
+        else:
+            print(f'Your docker image version is {image_version}, but the minimum required version is {min_version}.')
+        print('')
+        print('Please refresh your docker image by running setup_wizard.py.')
+        print('')
+        print('Or, to run anyways, rerun with --skip-image-version-check')
+        return False
 
     return True
 
@@ -86,12 +103,6 @@ def get_env_vars(args):
                 key, value = line.replace("export ", "").strip().split("=", 1)
                 env_vars[key] = value.strip()
 
-    if not args.skip_hash_check:
-        if not check_hashes(env_vars):
-            print('Your docker image appears out of date.')
-            print('Please run setup_wizard.py again.')
-            return None
-
     return env_vars
 
 
@@ -108,27 +119,36 @@ def run_container(args):
         print("Error: A0A_OUTPUT_DIR or A0A_DOCKER_IMAGE not set in .env.sh")
         return
 
+    if not args.skip_image_version_check:
+        if not check_image_version(A0A_DOCKER_IMAGE):
+            return
+
     output_dir = Path(A0A_OUTPUT_DIR).resolve()
+
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
+    post_mount_cmds = ["export PYTHONPATH=/workspace/repo/py"]
 
     # Check if output_dir is inside REPO_ROOT
     if output_dir.resolve().is_relative_to(REPO_ROOT.resolve()):
         # Handle overlapping mount points
         relative_output = output_dir.relative_to(REPO_ROOT)
-        mounts = ['-v', f"{REPO_ROOT}:/workspace"]
-        symlink_cmd = f"ln -sf /workspace/{relative_output} /output"
-        post_mount_cmds = [symlink_cmd]
+        symlink_cmd = f"ln -sf /workspace/repo/{relative_output} /workspace/output"
+        post_mount_cmds.extend([symlink_cmd])
     else:
         # Separate mounts for REPO_ROOT and output_dir
-        mounts = ['-v', f"{REPO_ROOT}:/workspace", '-v', f"{output_dir}:/output"]
-        post_mount_cmds = []
+        mounts.extend(['-v', f"{output_dir}:/workspace/output"])
 
     ports_strs = []
     for port in EXPOSED_PORTS:
         ports_strs += ['-p', f"{port}:{port}"]
 
+    user_id = subprocess.check_output(["id", "-u"], text=True).strip()
+    group_id = subprocess.check_output(["id", "-g"], text=True).strip()
+
     # Build the docker run command
     docker_cmd = [
         "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
+        '-e', f'USER_ID={user_id}', '-e', f'GROUP_ID={group_id}',
     ] + ports_strs + mounts + [
         A0A_DOCKER_IMAGE
     ]
