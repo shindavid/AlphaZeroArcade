@@ -25,6 +25,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", '--skip-image-version-check', action='store_true',
                         help='skip image version check')
+    parser.add_argument("-d", '--docker-image',
+                        help='name of the docker image to use (default: comes from .env.json)')
     parser.add_argument("-i", '--instance-name', default='a0a_instance',
                         help='name of the instance to run (default: %(default)s)')
     return parser.parse_args()
@@ -114,7 +116,9 @@ def run_container(args):
     env = get_env_json()
 
     output_dir = env.get("OUTPUT_DIR", None)
-    docker_image = env.get("DOCKER_IMAGE", None)
+    docker_image = args.docker_image
+    if not docker_image:
+        docker_image = env.get("DOCKER_IMAGE", None)
 
     if not output_dir or not docker_image:
         print("Error: Bad environment. Please run setup_wizard.py first.")
