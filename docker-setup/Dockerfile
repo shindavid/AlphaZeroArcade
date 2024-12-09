@@ -1,6 +1,6 @@
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
-LABEL version="1.0.0"
+LABEL version="1.0.1"
 
 RUN apt-get clean && apt-get update
 RUN apt-get install locales
