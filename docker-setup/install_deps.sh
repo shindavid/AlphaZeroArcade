@@ -28,7 +28,8 @@ done
 
 # Python dependencies
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-pip3 install ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash
+pip3 install ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash \
+    packaging
 
 # Download and install libtorch C++ library
 LIBTORCH_URL="https://download.pytorch.org/libtorch/cu124/libtorch-cxx11-abi-shared-with-deps-2.5.1%2Bcu124.zip"
