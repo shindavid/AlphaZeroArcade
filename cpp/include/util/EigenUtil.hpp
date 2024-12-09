@@ -44,6 +44,14 @@ concept Shape = is_eigen_shape_v<T>;
 
 }  // namespace concepts
 
+template<int64_t I>
+struct make_1d_shape {
+  using type = Eigen::Sizes<I>;
+};
+
+template <int64_t I>
+using make_1d_shape_t = typename make_1d_shape<I>::type;
+
 /*
  * 10 == extract_dim_v<0, Eigen::Sizes<10, 20, 30>>
  * 20 == extract_dim_v<1, Eigen::Sizes<10, 20, 30>>
