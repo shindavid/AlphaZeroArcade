@@ -121,6 +121,7 @@ def setup_output_dir():
     update_env_json({'OUTPUT_DIR': expanded_output_dir})
     print(f"✅ Successfully registered output directory: {output_dir}")
 
+
 def check_docker_permissions():
     """Check if the user can run Docker commands without sudo."""
     print('Checking if you have permission to run Docker commands without sudo...')
@@ -147,6 +148,18 @@ def check_docker_permissions():
         raise SetupException()
 
 
+def verify_python_modules():
+    print('Checking that required python modules are installed...')
+
+    try:
+        import packaging
+        print("✅ packaging module is installed.")
+    except ImportError:
+        print("❌ packaging module is not installed.")
+        print("Please run `pip install packaging` and retry.")
+        raise SetupException()
+
+
 def main():
     print('*' * 80)
     print('Running AlphaZeroArcade setup wizard...')
@@ -162,6 +175,8 @@ def main():
         validate_nvidia_installation(DOCKER_HUB_IMAGE)
         print('*' * 80)
         check_docker_permissions()
+        print('*' * 80)
+        verify_python_modules()
     except KeyboardInterrupt:
         print('')
         print('Setup wizard was interrupted. Please try again.')
