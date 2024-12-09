@@ -23,17 +23,6 @@ struct ShapeInfo {
 struct GameLogBase {
   static constexpr int kAlignment = 16;
 
-  struct Header {
-    uint32_t num_samples = 0;
-    uint32_t num_positions = 0;  // includes terminal positions
-    uint32_t num_dense_policies = 0;
-    uint32_t num_sparse_policy_entries = 0;
-    uint32_t num_dense_action_values = 0;
-    uint32_t num_sparse_action_values_entries = 0;
-    uint64_t extra = 0;  // leave extra space for future use (version numbering, etc.)
-  };
-  static_assert(sizeof(Header) == 32);
-
   using pos_index_t = int32_t;
 
   struct tensor_index_t {
@@ -60,31 +49,37 @@ struct GameLogBase {
  * [Header]
  * [ValueTensor]                        // game result
  * [pos_index_t...]                     // indices of sampled positions
+ * [action_type_t...]                   // MAYBE: skip if only 1 action type?
  * [action_t...]
  * [tensor_index_t...]                  // indices into policy target tensor data
  * [tensor_index_t...]                  // indices into action-value tensor data
  * [Game::State...]                     // all positions, whether sampled or not
- * [Game::Types::PolicyTensor...]       // data for densely represented policy targets
- * [sparse_tensor_entry_t...]           // data for sparsely represented policy targets
- * [Game::Types::ActionValueTensor...]  // data for densely represented action value targets
- * [sparse_tensor_entry_t...]           // data for sparsely represented action value targets
+ * [sparse_tensor_entry_t...]           // data for sparsely represented tensors (P or AV)
+ * [type-0 Tensor...]                   // data for densely represented type-0 tensors (P or AV)
+ * [type-1 Tensor...]                   // data for densely represented type-1 tensors (P or AV)
+ * ... (as many type-K Tensor sections are there are action types)
  *
  * Each section is aligned to 8 bytes.
  */
 template <concepts::Game Game>
 class GameLog : public GameLogBase {
  public:
-  using Header = GameLogBase::Header;
-
   using Rules = Game::Rules;
   using InputTensorizor = Game::InputTensorizor;
   using InputTensor = Game::InputTensorizor::Tensor;
   using TrainingTargetsList = Game::TrainingTargets::List;
   using State = Game::State;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  // using PolicyTensor = Game::Types::PolicyTensor;
+  // using ActionValueTensor = Game::Types::ActionValueTensor;
   using ValueTensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
+
+  struct Header {
+    uint32_t num_samples = 0;
+    uint32_t num_positions = 0;  // includes terminal positions
+    uint32_t num_sparse_entries = 0;
+    uint32_t num_dense_policies_per_action_type[Game::Constants::kNumActionTypes] = {};
+  };
 
   GameLog(const char* filename);
   ~GameLog();
@@ -104,32 +99,29 @@ class GameLog : public GameLogBase {
 
   int num_positions() const;
   int num_non_terminal_positions() const;
-  int num_dense_policies() const;
-  int num_sparse_policy_entries() const;
-  int num_dense_action_values() const;
-  int num_sparse_action_values_entries() const;
+  int num_dense_tensors(action_type_t) const;
+  int num_sparse_tensor_entries() const;
 
   static constexpr int header_start_mem_offset();
   static constexpr int outcome_start_mem_offset();
   static constexpr int sampled_indices_start_mem_offset();
+  int action_type_start_mem_offset() const;
   int action_start_mem_offset() const;
   int policy_target_index_start_mem_offset() const;
   int action_values_target_index_start_mem_offset() const;
   int state_start_mem_offset() const;
-  int dense_policy_start_mem_offset() const;
-  int sparse_policy_entry_start_mem_offset() const;
-  int dense_action_values_start_mem_offset() const;
-  int sparse_action_values_entry_start_mem_offset() const;
+  int sparse_tensor_entry_start_mem_offset() const;
+  int dense_tensor_start_mem_offset(action_type_t) const;
 
+  const pos_index_t* sampled_indices_start_ptr() const;
+  const action_type_t* action_type_start_ptr() const;
   const action_t* action_start_ptr() const;
   const tensor_index_t* policy_target_index_start_ptr() const;
   const tensor_index_t* action_values_target_index_start_ptr() const;
   const State* state_start_ptr() const;
-  const PolicyTensor* dense_policy_start_ptr() const;
-  const sparse_tensor_entry_t* sparse_policy_entry_start_ptr() const;
-  const ActionValueTensor* dense_action_values_start_ptr() const;
-  const sparse_tensor_entry_t* sparse_action_values_entry_start_ptr() const;
-  const pos_index_t* sampled_indices_start_ptr() const;
+  const sparse_tensor_entry_t* sparse_tensor_entry_start_ptr() const;
+
+  template<action_type_t ActionType> const auto* dense_tensor_start_ptr() const;
 
   PolicyTensor get_policy(int state_index) const;
   ActionValueTensor get_action_values(int state_index) const;
@@ -156,19 +148,19 @@ class GameLogWriter {
   using Rules = Game::Rules;
   using State = Game::State;
   using ValueTensor = Game::Types::ValueTensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  using ActionValueTensor = Game::Types::ActionValueTensor;
+  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
+  using ActionValueTensorVariant = Game::Types::ActionValueTensorVariant;
   using tensor_index_t = GameLogBase::tensor_index_t;
   using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
 
   struct Entry {
     State position;
-    PolicyTensor policy_target;  // only valid if policy_target_is_valid
-    ActionValueTensor action_values;  // only valid if action_values_are_valid
+    PolicyTensorVariant policy_target_variant;  // only valid if policy_target_is_valid
+    ActionValueTensorVariant action_values_target_variant;  // only valid if action_values_target_is_valid
     action_t action;
     bool use_for_training;
     bool policy_target_is_valid;
-    bool action_values_are_valid;
+    bool action_values_target_is_valid;
     bool terminal;
   };
   using entry_vector_t = std::vector<Entry*>;
