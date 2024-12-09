@@ -58,10 +58,10 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
   return false;
 }
 
-Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
+Game::Types::ActionMaskVariant Game::Rules::get_legal_moves(const State& state) {
   uint64_t mask = get_moves(state.cur_player_mask, state.opponent_mask);
 
-  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+  using Bitset = mp::TypeAt_t<Types::ActionMaskVariant, 0>;
   Bitset valid_actions;
   uint64_t u = mask;
   while (u) {
@@ -75,7 +75,7 @@ Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
 
 void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t last_action,
                            const Types::player_name_array_t* player_names) {
-  Types::ActionMask valid_actions = std::get<0>(Rules::get_legal_moves(state));
+  Types::ActionMaskVariant valid_actions = std::get<0>(Rules::get_legal_moves(state));
   bool display_last_action = last_action >= 0;
   int blink_row = -1;
   int blink_col = -1;
@@ -124,7 +124,7 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
 }
 
 int Game::IO::print_row(char* buf, int n, const State& state,
-                        const Types::ActionMask& valid_actions, row_t row, column_t blink_column) {
+                        const Types::ActionMaskVariant& valid_actions, row_t row, column_t blink_column) {
   core::seat_index_t current_player = Rules::get_current_player(state);
   const char* cur_color = current_player == kBlack ? ansi::kBlue("*") : ansi::kWhite("0");
   const char* opp_color = current_player == kBlack ? ansi::kWhite("0") : ansi::kBlue("*");
@@ -167,11 +167,12 @@ Game::GameResults::Tensor Game::Rules::compute_outcome(const State& state) {
   }
 }
 
-void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
+void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensorVariant& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = std::get<0>(results.valid_actions);
-  const auto& mcts_counts = results.counts;
-  const auto& net_policy = results.policy_prior;
+  const auto& mcts_counts = std::get<0>(results.counts);
+  const auto& net_policy = std::get<0>(results.policy_prior);
+  const auto& action_policy0 = std::get<0>(action_policy);
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
@@ -192,14 +193,14 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& a
                  100 * win_rates(0), 100 * win_rates(1));
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
-  auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
+  auto tuple0 = std::make_tuple(mcts_counts(0), action_policy0(0), net_policy(0), 0);
   using tuple_t = decltype(tuple0);
   using tuple_array_t = std::array<tuple_t, othello::kNumGlobalActions>;
   tuple_array_t tuples;
   int i = 0;
   for (int a = 0; a < othello::kNumGlobalActions; ++a) {
     if (valid_actions[a]) {
-      tuples[i] = std::make_tuple(mcts_counts(a), action_policy(a), net_policy(a), a);
+      tuples[i] = std::make_tuple(mcts_counts(a), action_policy0(a), net_policy(a), a);
       i++;
     }
   }

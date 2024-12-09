@@ -111,10 +111,12 @@ inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym)
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym) {
+inline void Game::Symmetries::apply(Types::PolicyTensorVariant& policy_variant, group::element_t sym) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
+
+  auto& tensor = std::get<0>(policy_variant);
   switch (sym) {
     case D4::kIdentity: return;
     case D4::kRot90: return rot90_clockwise<N>(tensor);

@@ -11,6 +11,8 @@ namespace tests {
 
 template <concepts::Game Game>
 struct Common {
+  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
+
   /*
    * For every possible (action, sym) pair:
    *
@@ -23,6 +25,11 @@ struct Common {
    */
   static bool test_action_transforms(const char* func);
   static void gtest_action_transforms();
+
+  template<action_type_t ActionType=0>
+  static bool policies_match(const PolicyTensorVariant& p1, const PolicyTensorVariant& p2) {
+    return eigen_util::equal(std::get<ActionType>(p1), std::get<ActionType>(p2));
+  }
 };
 
 }  // namespace tests

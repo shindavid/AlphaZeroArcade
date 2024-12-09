@@ -9,7 +9,7 @@ using namespace blokus;
 
 using State = Game::State;
 using StateHistory = Game::StateHistory;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
 using IO = Game::IO;
 using Rules = Game::Rules;
 

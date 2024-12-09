@@ -66,10 +66,10 @@ struct Game {
       state.current_player = 0;
     }
 
-    static Types::ActionMask get_legal_moves(const StateHistory& history) {
+    static Types::ActionMaskVariant get_legal_moves(const StateHistory& history) {
       const State& state = history.current();
 
-      using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
+      using Bitset = mp::TypeAt_t<Types::ActionMaskVariant, 0>;
       Bitset mask;
       for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
         mask[i] = i + 1 <= state.stones_left;
@@ -110,7 +110,7 @@ struct Game {
                             const Types::player_name_array_t* player_names = nullptr) {
       throw std::runtime_error("Not implemented");
     }
-    static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
+    static void print_mcts_results(std::ostream&, const Types::PolicyTensorVariant& action_policy,
                                    const Types::SearchResults&) {
       throw std::runtime_error("Not implemented");
     }

@@ -15,9 +15,10 @@
  */
 
 using Game = tictactoe::Game;
+using Common = core::tests::Common<Game>;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
-using PolicyTensor = Game::Types::PolicyTensor;
+using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -36,8 +37,9 @@ State make_init_state() {
   return make_state(7, 2);
 }
 
-PolicyTensor make_policy(int move1, int move2) {
-  PolicyTensor tensor;
+PolicyTensorVariant make_policy(int move1, int move2) {
+  PolicyTensorVariant policy_variant;
+  auto& tensor = std::get<0>(policy_variant);
   tensor.setZero();
   tensor(move1) = 1;
   tensor(move2) = 1;
@@ -84,13 +86,13 @@ TEST(Symmetry, identity) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(0, 1);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(0, 1);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, rot90_clockwise) {
@@ -110,13 +112,13 @@ TEST(Symmetry, rot90_clockwise) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(2, 5);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(2, 5);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, rot180) {
@@ -136,13 +138,13 @@ TEST(Symmetry, rot180) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(7, 8);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(7, 8);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, rot270_clockwise) {
@@ -162,13 +164,13 @@ TEST(Symmetry, rot270_clockwise) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(3, 6);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(3, 6);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, flip_vertical) {
@@ -188,13 +190,13 @@ TEST(Symmetry, flip_vertical) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(6, 7);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(6, 7);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, mirror_horizontal) {
@@ -214,13 +216,13 @@ TEST(Symmetry, mirror_horizontal) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(1, 2);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(1, 2);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, flip_main_diag) {
@@ -240,13 +242,13 @@ TEST(Symmetry, flip_main_diag) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(0, 3);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(0, 3);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, flip_anti_diag) {
@@ -266,17 +268,17 @@ TEST(Symmetry, flip_anti_diag) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensor init_policy = make_policy(0, 1);
-  PolicyTensor policy = init_policy;
+  PolicyTensorVariant init_policy = make_policy(0, 1);
+  PolicyTensorVariant policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensor expected_policy = make_policy(5, 8);
-  EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
+  PolicyTensorVariant expected_policy = make_policy(5, 8);
+  EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
-  EXPECT_TRUE(eigen_util::equal(policy, init_policy));
+  EXPECT_TRUE(Common::policies_match(policy, init_policy));
 }
 
 TEST(Symmetry, action_transforms) {
-  core::tests::Common<Game>::gtest_action_transforms();
+  Common::gtest_action_transforms();
 }
 
 TEST(Symmetry, canonicalization) {

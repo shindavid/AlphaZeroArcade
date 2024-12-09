@@ -49,7 +49,7 @@ struct ValueTarget {
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return "value"; }
-static Tensor tensorize(const GameLogView& view);
+  static Tensor tensorize(const GameLogView& view);
 };
 
 template<typename Game, action_type_t ActionType=0>
