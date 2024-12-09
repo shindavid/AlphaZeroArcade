@@ -9,8 +9,7 @@ GameTypes<GameConstants, State, GameResults, SymmetryGroup>::SearchResults::to_j
   boost::json::object results_json;
   results_json["action_type"] = valid_actions.index();
   ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
-    constexpr int A = decltype(action_type)::value;
-    results_json["valid_actions"] = std::get<A>(valid_actions).to_string();
+    results_json["valid_actions"] = std::get<action_type>(valid_actions).to_string();
   });
   results_json["counts"] = eigen_util::to_json(counts);
   results_json["policy_target"] = eigen_util::to_json(policy_target);

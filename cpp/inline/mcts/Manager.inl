@@ -148,16 +148,14 @@ Manager<Game>::search(const SearchParams& params) {
   core::action_t actions[stable_data.num_valid_actions];
 
   ActionTypeDispatcher::call(stable_data.valid_action_mask.index(), [&](auto action_type) {
-    constexpr int A = decltype(action_type)::value;
-
-    std::get<A>(results_.valid_actions).reset();
+    std::get<action_type>(results_.valid_actions).reset();
     results_.policy_prior.setZero();
 
     int i = 0;
-    auto on_indices = bitset_util::on_indices(std::get<A>(stable_data.valid_action_mask));
+    auto on_indices = bitset_util::on_indices(std::get<action_type>(stable_data.valid_action_mask));
     for (core::action_t action : on_indices) {
       Game::Symmetries::apply(action, inv_sym);
-      std::get<A>(results_.valid_actions).set(action, true);
+      std::get<action_type>(results_.valid_actions).set(action, true);
       actions[i] = action;
 
       auto* edge = root->get_edge(i);

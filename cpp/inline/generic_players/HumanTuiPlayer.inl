@@ -40,8 +40,7 @@ typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_r
     if (my_action < 0) continue;
 
     bool valid = ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
-      constexpr int A = decltype(action_type)::value;
-      const auto& bitset = std::get<A>(valid_actions);
+      const auto& bitset = std::get<action_type>(valid_actions);
       return my_action < (int)bitset.size() && bitset[my_action];
     });
     if (!valid) continue;

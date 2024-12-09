@@ -178,8 +178,8 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
   core::action_t action = eigen_util::sample(modified_policy);
 
   ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
-    constexpr int A = decltype(action_type)::value;
-    util::release_assert(std::get<A>(valid_actions)[action], "Invalid action: %d", action);
+    util::release_assert(std::get<action_type>(valid_actions)[action],
+                         "Invalid action: %d", action);
   });
 
   return action;
@@ -190,8 +190,7 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
                                          const SearchResults* mcts_results,
                                          const ActionMask& valid_actions) const {
   return ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
-    constexpr int A = decltype(action_type)::value;
-    const auto& bitset = std::get<A>(valid_actions);
+    const auto& bitset = std::get<action_type>(valid_actions);
     return get_action_policy_helper(search_mode, mcts_results, bitset);
   });
 }

@@ -318,8 +318,8 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
     // the server.
     ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
-      constexpr int A = decltype(action_type)::value;
-      util::release_assert(std::get<A>(valid_actions)[action], "Invalid action: %d", action);
+      util::release_assert(std::get<action_type>(valid_actions)[action],
+                           "Invalid action: %d", action);
     });
 
     ValueTensor outcome;

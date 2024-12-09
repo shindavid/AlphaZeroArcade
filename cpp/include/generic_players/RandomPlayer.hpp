@@ -22,8 +22,7 @@ public:
 
   ActionResponse get_action_response(const State&, const ActionMask& mask) override {
     return ActionTypeDispatcher::call(mask.index(), [&](auto action_type) {
-      constexpr int A = decltype(action_type)::value;
-      return bitset_util::choose_random_on_index(std::get<A>(mask));
+      return bitset_util::choose_random_on_index(std::get<action_type>(mask));
     });
   }
 };
