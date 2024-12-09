@@ -144,6 +144,7 @@ def check_docker_permissions():
             print("❌ Docker command failed for an unknown reason.")
             print("Error details:")
             print(stderr)
+        raise SetupException()
 
 
 def main():
