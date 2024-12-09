@@ -31,7 +31,7 @@ To run this project successfully, please ensure your system meets the following 
 
 4. **NVIDIA Container Toolkit**: Follow the [installation instructions](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), including the "Configuring Docker" section.
 
-5. **Python**
+5. **Python3**: During setup, only one third-party dependency is needed: the `versioning` module, which can be installed via `pip`.
 
 ### Initial Setup
 
@@ -41,9 +41,8 @@ To get started, clone the repo, and then run:
 $ ./setup_wizard.py
 ```
 
-This will walk you through initial setup, including validation that you have met the above requirements. It may
-take 10 minutes+, as it will build a Docker image on your machine. (TODO: upload an official AlphaZeroArcade Docker image
-to Docker Hub, and have the setup wizard pull that, to speed things up for the user)
+This will walk you through initial setup, including validation that you have met the above requirements. Part of the
+setup involves downloading the latest `AlphaZeroArcade` Docker image from [docker.io](https://hub.docker.com/r/dshin83/alphazeroarcade/tags).
 
 After completing this setup, you will be able to run a Docker container via:
 
@@ -61,11 +60,19 @@ All the work you do will be within this virtual machine.
 If you have access to multiple machines, you can launch `run_docker.py` on each of them, and then launch commands to
 effectively perform a big distributed AlphaZero run.
 
-TODO: tips on setting up VSCode to connect to the Docker container.
+### VSCode
+
+Once you have a Docker container running via `./run_docker.py`, the best workflow is to have your IDE connect to it.
+
+For VSCode, this can be accomplished as follows:
+
+1. Install the "Remote Development" extension.
+2. Launch the Command Palette with `Ctrl + Shift + P`, and search for "Attach to Running Container".
+3. Select the container
 
 ### Building
 
-Within your docker container, from the `/workspace/` directory, run:
+Within your docker container, from the `/workspace/repo/` directory, run:
 
 ```
 ./py/build.py
@@ -129,10 +136,10 @@ that the GPU's stay fully utilized, without the components thrashing with each o
 During-or-after a run of the loop-controller, you can launch a web dashboard to track the progress of your run:
 
 ```
-./py/alphazero/scripts/launch_dashboard.py -g c4 -t my-first-run --open-in-browser
+./py/alphazero/scripts/launch_dashboard.py -g c4 -t my-first-run
 ```
 
-This launches an interactive dashboard in your web browser, which currently looks like this:
+This will print a URL that you can paste into a web browser on your local machine, which currently looks like this:
 
 ![image](https://github.com/shindavid/AlphaZeroArcade/assets/5217927/663d1585-5fdd-4a5f-bcae-91d211559466)
 
@@ -154,7 +161,7 @@ example, you can do this with a command like:
 
 ```
 ./target/Release/bin/c4 --player "--type=TUI" \
-  --player "--type=MCTS-C -m $output/c4/my-first-run/models/gen-10.pt"
+  --player "--type=MCTS-C -m /workspace/output/c4/my-first-run/models/gen-10.pt"
 ```
 
 ## C++ Overview
