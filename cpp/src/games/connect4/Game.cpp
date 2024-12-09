@@ -88,12 +88,12 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensor& action_policy,
+void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensorVariant& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = std::get<0>(results.valid_actions);
   const auto& action_policy0 = std::get<0>(action_policy);
-  const auto& mcts_counts = results.counts;
-  const auto& net_policy = results.policy_prior;
+  const auto& mcts_counts = std::get<0>(results.counts);
+  const auto& net_policy = std::get<0>(results.policy_prior);
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 

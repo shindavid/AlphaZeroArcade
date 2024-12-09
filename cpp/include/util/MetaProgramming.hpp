@@ -99,6 +99,20 @@ struct TypeAt<Container<Head, Tails...>, index> {
 template <typename TList, std::size_t index>
 using TypeAt_t = TypeAt<TList, index>::type;
 
+template<typename Sequence, std::size_t Index>
+struct ValueAt;
+
+template<std::size_t Index, typename T, T... Values>
+struct ValueAt<std::integer_sequence<T, Values...>, Index> {
+    static constexpr T value = []() constexpr {
+        constexpr T arr[] = {Values...};
+        return arr[Index];
+    }();
+};
+
+// ValueAt_v<K, std::integer_sequence<...>> is the K-th value in the integer sequence
+template<util::concepts::IntSequence Seq, size_t Index> constexpr auto ValueAt_v = ValueAt<Seq, Index>::value;
+
 // indexof
 
 template <typename TList, typename T>

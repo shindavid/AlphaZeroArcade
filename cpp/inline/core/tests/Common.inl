@@ -13,46 +13,59 @@ namespace tests {
 
 template <concepts::Game Game>
 bool Common<Game>::test_action_transforms(const char* func) {
-  using PolicyTensor = Game::Types::PolicyTensor;
-  for (core::action_t action = 0; action < Game::Constants::kNumActions; ++action) {
-    for (group::element_t sym = 0; sym < Game::SymmetryGroup::kOrder; ++sym) {
-      core::action_t transformed_action = action;
-      Game::Symmetries::apply(transformed_action, sym);
+  using Constants = Game::Constants;
+  using kNumActionsPerType = Constants::kNumActionsPerType;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
+  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
 
-      PolicyTensor policy;
-      policy.setZero();
-      policy(action) = 1;
+  for (action_type_t action_type = 0; action_type < Constants::kNumActionTypes; ++action_type) {
+    return ActionTypeDispatcher::call(action_type, [&](auto AT) {
+      int num_actions = mp::ValueAt_v<kNumActionsPerType, AT>;
+      for (core::action_t action = 0; action < num_actions; ++action) {
+        for (group::element_t sym = 0; sym < Game::SymmetryGroup::kOrder; ++sym) {
+          core::action_t transformed_action = action;
+          Game::Symmetries::apply(transformed_action, sym);
 
-      PolicyTensor transformed_policy = policy;
-      Game::Symmetries::apply(transformed_policy, sym);
+          PolicyTensorVariant policy_variant(std::in_place_index<AT>);
+          auto& policy_tensor = std::get<AT>(policy_variant);
+          policy_tensor.setZero();
+          policy_tensor(action) = 1;
 
-      float sum = eigen_util::sum(transformed_policy);
-      if (sum != 1) {
-        printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
-        printf("sym=%d action:%d->%d\n", sym, action, transformed_action);
-        printf("Unexpected sum(transformed_policy): %.f\n", sum);
-        return false;
-      }
+          PolicyTensorVariant transformed_policy_variant = policy_variant;
+          Game::Symmetries::apply(transformed_policy_variant, sym);
+          auto& transformed_policy_tensor = std::get<AT>(transformed_policy_variant);
 
-      if (transformed_policy(transformed_action) != 1) {
-        printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
-        printf("sym=%d action:%d->%d\n", sym, action, transformed_action);
-        printf("Not consistent with transformed policy:\n");
-        for (int i = 0; i < Game::Constants::kNumActions; ++i) {
-          printf("%s: %.f\n", Game::IO::action_to_str(i).c_str(), transformed_policy(i));
+          float sum = eigen_util::sum(transformed_policy_tensor);
+          if (sum != 1) {
+            printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
+            printf("sym=%d action:%d->%d\n", sym, action, transformed_action);
+            printf("Unexpected sum(transformed_policy): %.f\n", sum);
+            return false;
+          }
+
+          if (transformed_policy_tensor(transformed_action) != 1) {
+            printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
+            printf("sym=%d action:%d->%d\n", sym, action, transformed_action);
+            printf("Not consistent with transformed policy:\n");
+            for (int i = 0; i < Game::Constants::kNumActions; ++i) {
+              printf("%s: %.f\n", Game::IO::action_to_str(i).c_str(), transformed_policy_tensor(i));
+            }
+            return false;
+          }
+
+          core::action_t inv_sym = Game::SymmetryGroup::inverse(sym);
+          Game::Symmetries::apply(transformed_action, inv_sym);
+          if (transformed_action != action) {
+            printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
+            printf("With sym=%d, expected transformed_action=%d, but got %d\n", sym, action,
+                  transformed_action);
+            return false;
+          }
         }
-        return false;
       }
 
-      core::action_t inv_sym = Game::SymmetryGroup::inverse(sym);
-      Game::Symmetries::apply(transformed_action, inv_sym);
-      if (transformed_action != action) {
-        printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
-        printf("With sym=%d, expected transformed_action=%d, but got %d\n", sym, action,
-               transformed_action);
-        return false;
-      }
-    }
+      return true;
+    });
   }
 
   return true;
@@ -60,27 +73,39 @@ bool Common<Game>::test_action_transforms(const char* func) {
 
 template <concepts::Game Game>
 void Common<Game>::gtest_action_transforms() {
-  using PolicyTensor = Game::Types::PolicyTensor;
-  for (core::action_t action = 0; action < Game::Constants::kNumActions; ++action) {
-    for (group::element_t sym = 0; sym < Game::SymmetryGroup::kOrder; ++sym) {
-      core::action_t transformed_action = action;
-      Game::Symmetries::apply(transformed_action, sym);
+  using Constants = Game::Constants;
+  using kNumActionsPerType = Constants::kNumActionsPerType;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
+  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
 
-      PolicyTensor policy;
-      policy.setZero();
-      policy(action) = 1;
+  for (action_type_t action_type = 0; action_type < Constants::kNumActionTypes; ++action_type) {
+    ActionTypeDispatcher::call(action_type, [&](auto AT) {
+      int num_actions = mp::ValueAt_v<kNumActionsPerType, AT>;
+      for (core::action_t action = 0; action < num_actions; ++action) {
+        for (group::element_t sym = 0; sym < Game::SymmetryGroup::kOrder; ++sym) {
+          core::action_t transformed_action = action;
+          Game::Symmetries::apply(transformed_action, sym);
 
-      PolicyTensor transformed_policy = policy;
-      Game::Symmetries::apply(transformed_policy, sym);
+          PolicyTensorVariant policy_variant(std::in_place_index<AT>);
+          auto& policy_tensor = std::get<AT>(policy_variant);
+          policy_tensor.setZero();
+          policy_tensor(action) = 1;
 
-      float sum = eigen_util::sum(transformed_policy);
-      EXPECT_FLOAT_EQ(sum, 1);
-      EXPECT_FLOAT_EQ(transformed_policy(transformed_action), 1);
+          PolicyTensorVariant transformed_policy_variant = policy_variant;
+          Game::Symmetries::apply(transformed_policy_variant, sym);
+          auto& transformed_policy_tensor = std::get<AT>(transformed_policy_variant);
 
-      core::action_t inv_sym = Game::SymmetryGroup::inverse(sym);
-      Game::Symmetries::apply(transformed_action, inv_sym);
-      EXPECT_EQ(transformed_action, action);
-    }
+          float sum = eigen_util::sum(transformed_policy_tensor);
+          EXPECT_FLOAT_EQ(sum, 1);
+          EXPECT_FLOAT_EQ(transformed_policy_tensor(transformed_action), 1);
+
+          core::action_t inv_sym = Game::SymmetryGroup::inverse(sym);
+          Game::Symmetries::apply(transformed_action, inv_sym);
+          EXPECT_EQ(transformed_action, action);
+
+        }
+      }
+    });
   }
 }
 

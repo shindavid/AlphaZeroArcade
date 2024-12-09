@@ -15,7 +15,7 @@ concept GameRules = requires(const State& const_state, const StateHistory& const
                              core::seat_index_t last_player, core::action_t last_action,
                              GameResultsTensor& results) {
   { GR::init_state(state) };
-  { GR::get_legal_moves(const_history) } -> std::same_as<typename GameTypes::ActionMask>;
+  { GR::get_legal_moves(const_history) } -> std::same_as<typename GameTypes::ActionMaskVariant>;
   { GR::get_current_player(const_state) } -> std::same_as<core::seat_index_t>;
   { GR::apply(history, core::action_t{}) };
 

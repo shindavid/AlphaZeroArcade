@@ -4,14 +4,16 @@
 #include <util/EigenUtil.hpp>
 #include <util/MetaProgramming.hpp>
 
+#include <string>
+
 namespace core {
 
 namespace concepts {
 
 template <typename T, typename GameLogView>
 concept TrainingTarget = requires (const GameLogView& view) {
-  { util::decay_copy(T::kName) } -> std::same_as<const char*>;
   requires eigen_util::concepts::FTensor<typename T::Tensor>;
+  { T::name() } -> std::same_as<std::string>;
   { T::tensorize(view) } -> std::same_as<typename T::Tensor>;
 };
 
@@ -34,7 +36,7 @@ concept TrainingTargetList = mp::IsTypeListSatisfying<T, IsTrainingTarget<GameLo
 
 template<typename Game, action_type_t ActionType=0>
 struct PolicyTarget {
-  using Tensor = mp::TypeAt_t<Game::Types::PolicyTensor, ActionType>;
+  using Tensor = mp::TypeAt_t<typename Game::Types::PolicyTensorVariant, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return util::create_string("policy%d", ActionType); }
@@ -47,12 +49,12 @@ struct ValueTarget {
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return "value"; }
-  static Tensor tensorize(const GameLogView& view);
+static Tensor tensorize(const GameLogView& view);
 };
 
 template<typename Game, action_type_t ActionType=0>
 struct ActionValueTarget {
-  using Tensor = mp::TypeAt_t<Game::Types::ActionValueTensor, ActionType>;
+  using Tensor = mp::TypeAt_t<typename Game::Types::ActionValueTensorVariant, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return util::create_string("policy%d", ActionType); }
@@ -61,7 +63,7 @@ struct ActionValueTarget {
 
 template <typename Game, action_type_t ActionType=0>
 struct OppPolicyTarget {
-  using Tensor = mp::TypeAt_t<Game::Types::PolicyTensor, ActionType>;
+  using Tensor = mp::TypeAt_t<typename Game::Types::PolicyTensorVariant, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return util::create_string("opp_policy%d", ActionType); }

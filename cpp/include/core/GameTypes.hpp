@@ -23,17 +23,17 @@ template <concepts::GameConstants GameConstants, typename State, concepts::GameR
 struct GameTypes {
   using kNumActionsPerType = GameConstants::kNumActionsPerType;
   using ActionTypeDispatcher = util::IndexedDispatcher<kNumActionsPerType::size()>;
-  using ActionMask = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, std::bitset>;
+  using ActionMaskVariant = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, std::bitset>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
 
-  using PolicyShape =
+  using PolicyShapeVariant =
       mp::TransformIntSequence_t<std::variant, kNumActionsPerType, eigen_util::make_1d_shape_t>;
-  using PolicyTensor = mp::Transform_t<std::variant, PolicyShape, eigen_util::FTensor>;
+  using PolicyTensorVariant = mp::Transform_t<std::variant, PolicyShapeVariant, eigen_util::FTensor>;
   using ValueTensor = GameResults::Tensor;
   using ValueShape = ValueTensor::Dimensions;
-  using ActionValueShape =
+  using ActionValueShapeVariant =
       mp::TransformIntSequence_t<std::variant, kNumActionsPerType, eigen_util::make_1d_shape_t>;
-  using ActionValueTensor = mp::Transform_t<std::variant, PolicyShape, eigen_util::FTensor>;
+  using ActionValueTensorVariant = mp::Transform_t<std::variant, PolicyShapeVariant, eigen_util::FTensor>;
 
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;
@@ -44,8 +44,8 @@ struct GameTypes {
   static_assert(std::is_same_v<ValueArray, typename GameResults::ValueArray>);
 
   struct TrainingInfo {
-    PolicyTensor* policy_target = nullptr;
-    ActionValueTensor* action_values_target = nullptr;
+    PolicyTensorVariant* policy_target = nullptr;
+    ActionValueTensorVariant* action_values_target = nullptr;
     bool use_for_training = false;
   };
 
@@ -73,13 +73,13 @@ struct GameTypes {
    * Game::IO::print_mcts_results() function for each specific Game.
    */
   struct SearchResults {
-    ActionMask valid_actions;
-    PolicyTensor counts;
-    PolicyTensor policy_target;
-    PolicyTensor policy_prior;
-    PolicyTensor Q;
-    PolicyTensor Q_sq;
-    ActionValueTensor action_values;
+    ActionMaskVariant valid_actions;
+    PolicyTensorVariant counts;
+    PolicyTensorVariant policy_target;
+    PolicyTensorVariant policy_prior;
+    PolicyTensorVariant Q;
+    PolicyTensorVariant Q_sq;
+    ActionValueTensorVariant action_values;
     ValueArray win_rates;
     ValueTensor value_prior;
     ActionSymmetryTable action_symmetry_table;
@@ -99,9 +99,9 @@ struct GameTypes {
     const State* cur_pos;
     const State* final_pos;
     const ValueTensor* game_result;
-    const PolicyTensor* policy;
-    const PolicyTensor* next_policy;
-    const ActionValueTensor* action_values;
+    const PolicyTensorVariant* policy;
+    const PolicyTensorVariant* next_policy;
+    const ActionValueTensorVariant* action_values;
   };
 };
 

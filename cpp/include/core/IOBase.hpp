@@ -10,7 +10,7 @@ struct IOBase {
                             const Types::player_name_array_t* player_names = nullptr) {
       throw std::runtime_error("print_state not implemented");
     }
-    static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
+    static void print_mcts_results(std::ostream&, const Types::PolicyTensorVariant& action_policy,
                                    const Types::SearchResults&) {
       throw std::runtime_error("print_mcts_results not implemented");
     }
