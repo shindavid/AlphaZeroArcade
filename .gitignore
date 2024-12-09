@@ -13,7 +13,7 @@ cmake-build-debug
 
 # env
 .env.sh
-.environment.yml.md5
+.env.json
 
 # cmake build dir
 target
@@ -21,11 +21,6 @@ build
 
 # output
 output
-
-# connect4 defaults
-**/c4_games
-**/c4_model.pt*
-**/debug.xml
 
 # egg files
 **/AlphaZeroArcade.egg-info

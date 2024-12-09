@@ -150,7 +150,7 @@ class TrainingManager:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_checkpoint_filename = os.path.join(tmp, 'checkpoint.pt')
             shutil.copy(checkpoint_filename, tmp_checkpoint_filename)
-            checkpoint = torch.load(tmp_checkpoint_filename)
+            checkpoint = torch.load(tmp_checkpoint_filename, weights_only=True)
             self._net = Model.load_from_checkpoint(checkpoint)
 
         self._init_net_and_opt()

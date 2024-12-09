@@ -121,16 +121,9 @@ def get_targets(repo_root, target_dir, specified_targets) -> List[Target]:
 
 
 def get_torch_dir():
-    env_var = 'A0A_LIBTORCH_DIR'
-    torch_dir = os.environ.get(env_var, None)
-    assert torch_dir, f'env var ${env_var} not set, please run "source env_setup.sh" first'
+    torch_dir = '/opt/libtorch'
     assert os.path.isdir(torch_dir)
     return torch_dir
-
-
-def get_conda_prefix():
-    # detect if there is an active anaconda env, and if so, return a path to it
-    return os.environ.get('CONDA_PREFIX', None)
 
 
 def main():
@@ -148,6 +141,9 @@ def main():
     targets = args.target.split(',') if args.target else []
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     os.chdir(repo_root)
+
+    # build extra deps unconditionally
+    run('cd extra_deps && ./build.py')
 
     torch_dir = get_torch_dir()
     eigenrand_dir = os.path.join(repo_root, 'extra_deps/EigenRand')
@@ -174,9 +170,6 @@ def main():
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
     ]
-    conda_prefix = get_conda_prefix()
-    if conda_prefix:
-        cmake_cmd_tokens.append(f'-DCONDA_PREFIX={conda_prefix}')
     if debug:
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Debug')
     else:

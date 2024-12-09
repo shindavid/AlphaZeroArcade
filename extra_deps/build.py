@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 import os
 import subprocess
+import sys
+
+
+def run(cmd: str, print_cmd=True, handler=None):
+    if print_cmd:
+        print(cmd)
+
+    proc = subprocess.Popen(cmd, shell=True, text=True, stderr=subprocess.PIPE)
+    _, stderr = proc.communicate()
+    if proc.returncode:
+        print(stderr)
+        if handler:
+            handler(stderr)
+        sys.exit(1)
 
 
 extra_deps_dir = os.path.dirname(__file__)
@@ -8,7 +22,7 @@ extra_deps_dir = os.path.dirname(__file__)
 
 def build_connect4():
     os.chdir(os.path.join(extra_deps_dir, 'connect4'))
-    subprocess.run('make', shell=True)
+    run('make')
 
 
 def build_edax():
@@ -25,9 +39,9 @@ def build_edax():
         print(f'{binary} already exists, skipping edax-reversi build')
     else:
         os.chdir(os.path.join(extra_deps_dir, 'edax-reversi'))
-        subprocess.run('mkdir -p bin', shell=True)
+        run('mkdir -p bin')
         os.chdir(os.path.join(extra_deps_dir, 'edax-reversi', 'src'))
-        subprocess.run(f'make build ARCH={arch} COMP={comp} OS={platform}', shell=True)
+        run(f'make build ARCH={arch} COMP={comp} OS={platform}')
 
 
 build_connect4()

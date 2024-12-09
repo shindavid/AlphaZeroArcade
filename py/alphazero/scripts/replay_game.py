@@ -24,7 +24,7 @@ def load_args():
 
     group.add_argument('-G', '--gen', type=int, help='generation (default: latest)')
     group.add_argument('-s', '--self-play-filename', help='self-play filename. If not specified, '
-                       'picks one from $A0A_OUTPUT_DIR/{game}/{tag}/self-play-data/*/gen-{gen}/')
+                       'picks one from /workspace/output/{game}/{tag}/self-play-data/*/gen-{gen}/')
 
     return parser.parse_args()
 

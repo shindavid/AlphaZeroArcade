@@ -1,7 +1,7 @@
 add_executable(nim_tests main/UnitTests.cpp)
-target_link_libraries(nim_tests PRIVATE GTest::GTest GTest::Main)
+target_link_libraries(nim_tests PRIVATE ${GTEST_LIBS})
 
-set(LINK_LIBS util_lib ${TORCH_LIBRARIES} ${Boost_LIBRARIES})
+set(LINK_LIBS util_lib ${COMMON_EXTERNAL_LIBS})
 set(TARGETS nim_tests)
 foreach(target ${TARGETS})
     target_link_libraries(${target} PRIVATE ${LINK_LIBS})
