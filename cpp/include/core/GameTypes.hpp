@@ -21,8 +21,10 @@ namespace core {
 template <concepts::GameConstants GameConstants, typename State, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
+  static constexpr int kNumActionTypes = GameConstants::kNumActionsPerType::size();
+
   using kNumActionsPerType = GameConstants::kNumActionsPerType;
-  using ActionTypeDispatcher = util::IndexedDispatcher<kNumActionsPerType::size()>;
+  using ActionTypeDispatcher = util::IndexedDispatcher<kNumActionTypes>;
   using ActionMaskVariant = mp::TransformIntSequence_t<std::variant, kNumActionsPerType, std::bitset>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
 

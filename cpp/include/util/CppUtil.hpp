@@ -33,6 +33,9 @@
 
 namespace util {
 
+template <typename T>
+using make_vector_t = std::vector<T>;
+
 // Generic hash function for POD types
 template <typename T>
 struct PODHash {

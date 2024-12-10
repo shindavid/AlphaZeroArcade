@@ -22,6 +22,7 @@ struct ShapeInfo {
 
 struct GameLogBase {
   static constexpr int kAlignment = 16;
+  static constexpr bool kSingleActionTypeOptimization = true;
 
   using pos_index_t = int32_t;
 
@@ -64,21 +65,40 @@ struct GameLogBase {
 template <concepts::Game Game>
 class GameLog : public GameLogBase {
  public:
+  using Constants = Game::Constants;
+  using kNumActionsPerType = Constants::kNumActionsPerType;
   using Rules = Game::Rules;
   using InputTensorizor = Game::InputTensorizor;
   using InputTensor = Game::InputTensorizor::Tensor;
   using TrainingTargetsList = Game::TrainingTargets::List;
   using State = Game::State;
-  // using PolicyTensor = Game::Types::PolicyTensor;
-  // using ActionValueTensor = Game::Types::ActionValueTensor;
+  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
+  using ActionValueTensorVariant = Game::Types::ActionValueTensorVariant;
   using ValueTensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
+
+  static constexpr int kNumActionTypes = Game::Types::kNumActionTypes;
 
   struct Header {
     uint32_t num_samples = 0;
     uint32_t num_positions = 0;  // includes terminal positions
     uint32_t num_sparse_entries = 0;
-    uint32_t num_dense_policies_per_action_type[Game::Constants::kNumActionTypes] = {};
+    uint32_t num_dense_policies_per_action_type[kNumActionTypes] = {};
+  };
+
+  struct MemOffsetTable {
+    MemOffsetTable(const Header&);
+
+    int outcome;
+    int sampled_indices;
+    int action_types;
+    int actions;
+    int policy_target_indices;
+    int action_values_target_indices;
+    int states;
+    int sparse_tensor_entries;
+    int dense_tensors[kNumActionTypes];
   };
 
   GameLog(const char* filename);
@@ -94,24 +114,12 @@ class GameLog : public GameLogBase {
 
  private:
   char* get_buffer() const;
+
   Header& header();
   const Header& header() const;
 
   int num_positions() const;
   int num_non_terminal_positions() const;
-  int num_dense_tensors(action_type_t) const;
-  int num_sparse_tensor_entries() const;
-
-  static constexpr int header_start_mem_offset();
-  static constexpr int outcome_start_mem_offset();
-  static constexpr int sampled_indices_start_mem_offset();
-  int action_type_start_mem_offset() const;
-  int action_start_mem_offset() const;
-  int policy_target_index_start_mem_offset() const;
-  int action_values_target_index_start_mem_offset() const;
-  int state_start_mem_offset() const;
-  int sparse_tensor_entry_start_mem_offset() const;
-  int dense_tensor_start_mem_offset(action_type_t) const;
 
   const pos_index_t* sampled_indices_start_ptr() const;
   const action_type_t* action_type_start_ptr() const;
@@ -120,11 +128,12 @@ class GameLog : public GameLogBase {
   const tensor_index_t* action_values_target_index_start_ptr() const;
   const State* state_start_ptr() const;
   const sparse_tensor_entry_t* sparse_tensor_entry_start_ptr() const;
-
   template<action_type_t ActionType> const auto* dense_tensor_start_ptr() const;
 
-  PolicyTensor get_policy(int state_index) const;
-  ActionValueTensor get_action_values(int state_index) const;
+  PolicyTensorVariant get_policy(int state_index) const;
+  ActionValueTensorVariant get_action_values(int state_index) const;
+
+  action_type_t get_action_type(int state_index) const;
   const State* get_state(int state_index) const;
   action_t get_prev_action(int state_index) const;
   ValueTensor get_outcome() const;
@@ -132,31 +141,33 @@ class GameLog : public GameLogBase {
 
   const std::string filename_;
   char* const buffer_ = nullptr;
-  const int action_start_mem_offset_;
-  const int policy_target_index_start_mem_offset_;
-  const int action_values_target_index_start_mem_offset_;
-  const int state_start_mem_offset_;
-  const int dense_policy_start_mem_offset_;
-  const int sparse_policy_entry_start_mem_offset_;
-  const int dense_action_values_start_mem_offset_;
-  const int sparse_action_values_entry_start_mem_offset_;
+
+  const MemOffsetTable mem_offsets_;
 };
 
 template <concepts::Game Game>
 class GameLogWriter {
  public:
+  using Constants = Game::Constants;
+  using kNumActionsPerType = Constants::kNumActionsPerType;
   using Rules = Game::Rules;
   using State = Game::State;
   using ValueTensor = Game::Types::ValueTensor;
   using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
   using ActionValueTensorVariant = Game::Types::ActionValueTensorVariant;
+  using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
   using tensor_index_t = GameLogBase::tensor_index_t;
   using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
+  using tensor_vector_tuple_t =
+      mp::Transform_t<std::tuple, PolicyTensorVariant, util::make_vector_t>;
+
+  static constexpr int kNumActionTypes = Game::Types::kNumActionTypes;
 
   struct Entry {
     State position;
-    PolicyTensorVariant policy_target_variant;  // only valid if policy_target_is_valid
-    ActionValueTensorVariant action_values_target_variant;  // only valid if action_values_target_is_valid
+    PolicyTensorVariant policy_target_variant;
+    ActionValueTensorVariant action_values_target_variant;
+    action_type_t action_type;
     action_t action;
     bool use_for_training;
     bool policy_target_is_valid;
@@ -168,8 +179,9 @@ class GameLogWriter {
   GameLogWriter(game_id_t id, int64_t start_timestamp);
   ~GameLogWriter();
 
-  void add(const State& state, action_t action, const PolicyTensor* policy_target,
-           const ActionValueTensor* action_values, bool use_for_training);
+  void add(const State& state, action_type_t action_type, action_t action,
+           const PolicyTensorVariant* policy_target, const ActionValueTensorVariant* action_values,
+           bool use_for_training);
   void add_terminal(const State& state, const ValueTensor& outcome);
   void serialize(std::ostream&) const;
   bool was_previous_entry_used_for_policy_training() const;
@@ -181,10 +193,9 @@ class GameLogWriter {
   template<typename T>
   static void write_section(std::ostream& os, const T* t, int count=1);
 
-  template <eigen_util::concepts::FTensor Tensor>
-  static tensor_index_t write_target(
-      const Tensor& target, std::vector<Tensor>& dense_tensors,
-      std::vector<sparse_tensor_entry_t>& sparse_tensor_entries);
+  static tensor_index_t write_target(action_type_t, const PolicyTensorVariant& target,
+                                     tensor_vector_tuple_t& dense_tensors,
+                                     std::vector<sparse_tensor_entry_t>& sparse_tensor_entries);
 
   entry_vector_t entries_;
   ValueTensor outcome_;

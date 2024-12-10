@@ -304,23 +304,23 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   while (true) {
     seat_index_t seat = Rules::get_current_player(state_history.current());
     Player* player = players[seat];
-    ActionMask valid_actions = Rules::get_legal_moves(state_history);
+    ActionMaskVariant valid_actions = Rules::get_legal_moves(state_history);
     ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
 
+    action_type_t action_type = valid_actions.index();
     action_t action = response.action;
-
-    const TrainingInfo& training_info = response.training_info;
-    if (game_log && training_info.use_for_training) {
-      game_log->add(state_history.current(), action, training_info.policy_target,
-                    training_info.action_values_target, training_info.use_for_training);
-    }
 
     // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
     // the server.
-    ActionTypeDispatcher::call(valid_actions.index(), [&](auto action_type) {
-      util::release_assert(std::get<action_type>(valid_actions)[action],
-                           "Invalid action: %d", action);
+    ActionTypeDispatcher::call(valid_actions.index(), [&](auto A) {
+      util::release_assert(std::get<A>(valid_actions)[action], "Invalid action: %d", action);
     });
+
+    const TrainingInfo& training_info = response.training_info;
+    if (game_log && training_info.use_for_training) {
+      game_log->add(state_history.current(), action_type, action, training_info.policy_target,
+                    training_info.action_values_target, training_info.use_for_training);
+    }
 
     ValueTensor outcome;
     bool terminal = false;
