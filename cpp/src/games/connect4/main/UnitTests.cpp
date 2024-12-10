@@ -22,7 +22,7 @@
 using Game = c4::Game;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
-using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
+using Policy = Game::Types::Policy;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -36,13 +36,13 @@ State make_init_state() {
   return history.current();
 }
 
-PolicyTensorVariant make_policy(int move1, int move2) {
-  PolicyTensorVariant policy;
-  mp::TypeAt_t<PolicyTensorVariant, 0> tensor = std::get<0>(policy);
-  tensor.setZero();
-  tensor(move1) = 1;
-  tensor(move2) = 1;
-  return tensor;
+Policy make_policy(int move1, int move2) {
+  Policy policy;
+  auto& subpolicy = std::get<0>(policy);
+  subpolicy.setZero();
+  subpolicy(move1) = 1;
+  subpolicy(move2) = 1;
+  return subpolicy;
 }
 
 const std::string init_state_repr =
@@ -74,7 +74,7 @@ std::string get_repr(const State& state) {
   return repr;
 }
 
-bool policies_match(const PolicyTensorVariant& p1, const PolicyTensorVariant& p2) {
+bool policies_match(const Policy& p1, const Policy& p2) {
   return eigen_util::equal(std::get<0>(p1), std::get<0>(p2));
 }
 
@@ -92,10 +92,10 @@ TEST(Symmetry, identity) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(0, 1);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(0, 1);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(0, 1);
+  Policy expected_policy = make_policy(0, 1);
   EXPECT_TRUE(policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(policies_match(policy, init_policy));
@@ -121,10 +121,10 @@ TEST(Symmetry, flip) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(0, 1);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(0, 1);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(5, 6);
+  Policy expected_policy = make_policy(5, 6);
   EXPECT_TRUE(policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(policies_match(policy, init_policy));

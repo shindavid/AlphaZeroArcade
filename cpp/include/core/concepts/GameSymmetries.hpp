@@ -28,7 +28,7 @@ template <typename GS, typename GameTypes, typename State>
 concept GameSymmetries = requires(const State& state) {
   { GS::get_mask(state) } -> std::same_as<typename GameTypes::SymmetryMask>;
   requires core::concepts::OperatesOn<GS, State>;
-  requires core::concepts::OperatesOn<GS, typename GameTypes::PolicyTensorVariant>;
+  requires core::concepts::OperatesOn<GS, typename GameTypes::Policy>;
   requires core::concepts::OperatesOn<GS, core::action_t>;
   { GS::get_canonical_symmetry(state) } -> std::same_as<group::element_t>;
 };

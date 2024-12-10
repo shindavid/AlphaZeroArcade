@@ -6,7 +6,7 @@ void Game::IO::print_state(std::ostream&, const State&, core::action_t last_acti
                            const Types::player_name_array_t* player_names) {
   throw std::runtime_error("Not implemented");
 }
-void Game::IO::print_mcts_results(std::ostream&, const Types::PolicyTensorVariant& action_policy,
+void Game::IO::print_mcts_results(std::ostream&, const Types::Policy& action_policy,
                                   const Types::SearchResults&) {
   throw std::runtime_error("Not implemented");
 }

@@ -28,7 +28,7 @@ class MctsPlayerTest : public ::testing::Test {
   using MctsPlayerParams = MctsPlayer::Params;
   using SearchResults = Game::Types::SearchResults;
   using SearchLog = mcts::SearchLog<Game>;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using Policy = Game::Types::Policy;
   using StateHistory = Game::StateHistory;
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
@@ -82,7 +82,7 @@ class MctsPlayerTest : public ::testing::Test {
     core::SearchMode search_mode = mcts_player_->choose_search_mode();
     const SearchResults* search_result = mcts_player_->mcts_search(search_mode);
 
-    PolicyTensor modified_policy =
+    Policy modified_policy =
         mcts_player_->get_action_policy(search_mode, search_result, valid_actions);
 
     std::stringstream ss_result, ss_policy;

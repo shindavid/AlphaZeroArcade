@@ -18,14 +18,14 @@ void Game::Rules::init_state(State& state) {
   }
 }
 
-Game::Types::ActionMaskVariant Game::Rules::get_legal_moves(const StateHistory& history) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   const State::core_t& core = state.core;
   const State::aux_t& aux = state.aux;
 
   color_t color = core.cur_color;
 
-  using Bitset = mp::TypeAt_t<Types::ActionMaskVariant, 0>;
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
   Bitset valid_actions;
   if (!core.partial_move.valid()) {
     // First, we find board locations where we can fit a piece's corner
@@ -190,12 +190,12 @@ void Game::IO::print_state(std::ostream& os, const State& state, core::action_t 
   os << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensorVariant& action_policy,
+void Game::IO::print_mcts_results(std::ostream& os, const Types::Policy& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = std::get<0>(results.valid_actions);
   const auto& mcts_counts = std::get<0>(results.counts);
   const auto& net_policy = std::get<0>(results.policy_prior);
-  const auto& action_policy0 = std::get<0>(action_policy);
+  const auto& action_subpolicy = std::get<0>(action_policy);
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
@@ -215,14 +215,14 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensorVar
   }
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
-  auto tuple0 = std::make_tuple(mcts_counts(0), action_policy0(0), net_policy(0), 0);
+  auto tuple0 = std::make_tuple(mcts_counts(0), action_subpolicy(0), net_policy(0), 0);
   using tuple_t = decltype(tuple0);
   using tuple_array_t = std::array<tuple_t, kNumActions>;
   tuple_array_t tuples;
   int i = 0;
   for (int a = 0; a < kNumActions; ++a) {
     if (valid_actions[a]) {
-      tuples[i] = std::make_tuple(mcts_counts(a), action_policy0(a), net_policy(a), a);
+      tuples[i] = std::make_tuple(mcts_counts(a), action_subpolicy(a), net_policy(a), a);
       i++;
     }
   }

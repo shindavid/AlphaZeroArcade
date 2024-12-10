@@ -60,7 +60,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using ActionMask = Game::Types::ActionMask;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueArray = Game::Types::ValueArray;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using Policy = Game::Types::Policy;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
   using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
@@ -97,7 +97,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   auto get_action_policy_helper(core::SearchMode, const SearchResults*, const Bitset&) const;
 
   struct VerboseInfo {
-    PolicyTensor action_policy;
+    Policy action_policy;
     SearchResults mcts_results;
 
     bool initialized = false;

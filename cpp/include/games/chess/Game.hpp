@@ -51,7 +51,7 @@ struct Game {
 
   struct Rules {
     static void init_state(State&);
-    static Types::ActionMaskVariant get_legal_moves(const StateHistory&);
+    static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::seat_index_t get_current_player(const State&);
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
@@ -63,7 +63,7 @@ struct Game {
     static std::string action_to_str(core::action_t action);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
-    static void print_mcts_results(std::ostream&, const Types::PolicyTensorVariant& action_policy,
+    static void print_mcts_results(std::ostream&, const Types::Policy& action_policy,
                                    const Types::SearchResults&);
   };
 

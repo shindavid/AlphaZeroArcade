@@ -7,13 +7,13 @@
 namespace mcts {
 
 template <core::concepts::Game Game>
-NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
+NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const Policy& raw_policy,
                                  const ActionValueTensor& raw_action_values,
                                  const ActionMask& valid_actions, group::element_t sym,
                                  core::seat_index_t cp)
     : dynamic_array_(2, get_num_valid_actions(valid_actions)) {
   ValueTensor value = raw_value;
-  PolicyTensor policy = raw_policy;
+  Policy policy = raw_policy;
   ActionValueTensor action_values = raw_action_values;
 
   // value prediction is from current-player's POV, so rotate it

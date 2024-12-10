@@ -60,9 +60,9 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
 }
 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
-ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy) const {
-  PolicyTensor out;
+typename ActionSymmetryTable<GameConstants, Group>::Policy
+ActionSymmetryTable<GameConstants, Group>::symmetrize(const Policy& policy) const {
+  Policy out;
   out.setZero();
   int i = 0;
   while (i < GameConstants::kNumActions) {
@@ -88,9 +88,9 @@ ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy
 }
 
 template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
-ActionSymmetryTable<GameConstants, Group>::collapse(const PolicyTensor& policy) const {
-  PolicyTensor out;
+typename ActionSymmetryTable<GameConstants, Group>::Policy
+ActionSymmetryTable<GameConstants, Group>::collapse(const Policy& policy) const {
+  Policy out;
   out.setZero();
   int i = 0;
   while (i < GameConstants::kNumActions) {

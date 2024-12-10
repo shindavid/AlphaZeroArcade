@@ -20,7 +20,7 @@ class UniformNNEvaluationService : public mcts::NNEvaluationServiceBase<Game> {
   using NNEvaluation = mcts::NNEvaluation<Game>;
   using NNEvaluationRequest = mcts::NNEvaluationRequest<Game>;
   using ValueTensor = NNEvaluation::ValueTensor;
-  using PolicyTensor = NNEvaluation::PolicyTensor;
+  using Policy = NNEvaluation::Policy;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
 

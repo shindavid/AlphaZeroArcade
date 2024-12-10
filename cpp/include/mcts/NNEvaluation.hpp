@@ -14,7 +14,7 @@ class NNEvaluation {
  public:
   using ActionValueTarget = Game::TrainingTargets::ActionValueTarget;
   using ActionMask = Game::Types::ActionMask;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using Policy = Game::Types::Policy;
   using ValueTensor = Game::Types::ValueTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using LocalPolicyArray = Game::Types::LocalPolicyArray;
@@ -34,7 +34,7 @@ class NNEvaluation {
    *
    * These tensors are then stored as data members.
    */
-  NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
+  NNEvaluation(const ValueTensor& raw_value, const Policy& raw_policy,
                const ActionValueTensor& raw_action_values,
                const ActionMask& valid_actions, group::element_t sym, core::seat_index_t cp);
 

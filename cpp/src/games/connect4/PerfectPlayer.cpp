@@ -80,7 +80,7 @@ inline PerfectOracle::QueryResult PerfectOracle::query(MoveHistory& history) {
 
 PerfectPlayer::ActionResponse
 PerfectPlayer::get_action_response(
-    const State& state, const ActionMaskVariant& valid_actions) {
+    const State& state, const ActionMask& valid_actions) {
   auto result = oracle_->query(move_history_);
 
   ActionResponse response;

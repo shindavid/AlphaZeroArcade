@@ -49,21 +49,21 @@ inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym)
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensorVariant& policy_variant, group::element_t sym) {
+inline void Game::Symmetries::apply(Types::Policy& policy, group::element_t sym) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
 
-  auto& tensor = std::get<0>(policy_variant);
+  auto& subpolicy = std::get<0>(policy);
   switch (sym) {
     case D4::kIdentity: return;
-    case D4::kRot90: return rot90_clockwise<N>(tensor);
-    case D4::kRot180: return rot180<N>(tensor);
-    case D4::kRot270: return rot270_clockwise<N>(tensor);
-    case D4::kFlipVertical: return flip_vertical<N>(tensor);
-    case D4::kFlipMainDiag: return flip_main_diag<N>(tensor);
-    case D4::kMirrorHorizontal: return mirror_horizontal<N>(tensor);
-    case D4::kFlipAntiDiag: return flip_anti_diag<N>(tensor);
+    case D4::kRot90: return rot90_clockwise<N>(subpolicy);
+    case D4::kRot180: return rot180<N>(subpolicy);
+    case D4::kRot270: return rot270_clockwise<N>(subpolicy);
+    case D4::kFlipVertical: return flip_vertical<N>(subpolicy);
+    case D4::kFlipMainDiag: return flip_main_diag<N>(subpolicy);
+    case D4::kMirrorHorizontal: return mirror_horizontal<N>(subpolicy);
+    case D4::kFlipAntiDiag: return flip_anti_diag<N>(subpolicy);
     default: throw util::Exception("Unknown group element: %d", sym);
   }
 }
@@ -102,7 +102,7 @@ inline void Game::Rules::init_state(State& state) {
   state.pass_count = 0;
 }
 
-inline Game::Types::ActionMaskVariant Game::Rules::get_legal_moves(const StateHistory& history) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   return get_legal_moves(history.current());
 }
 

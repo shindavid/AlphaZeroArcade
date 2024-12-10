@@ -27,7 +27,7 @@ class GameServer {
   using GameResults = Game::GameResults;
   using ValueTensor = Game::Types::ValueTensor;
   using ValueArray = Game::Types::ValueArray;
-  using ActionMaskVariant = Game::Types::ActionMaskVariant;
+  using ActionMask = Game::Types::ActionMask;
   using ActionResponse = Game::Types::ActionResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
   using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;

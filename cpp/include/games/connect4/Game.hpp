@@ -70,14 +70,14 @@ struct Game {
     static Types::SymmetryMask get_mask(const State& state);
     static void apply(State& state, group::element_t sym);
     static void apply(StateHistory& history, group::element_t sym);  // optional
-    static void apply(Types::PolicyTensorVariant& policy, group::element_t sym);
+    static void apply(Types::Policy& policy, group::element_t sym);
     static void apply(core::action_t& action, group::element_t sym);
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
   struct Rules {
     static void init_state(State&);
-    static Types::ActionMaskVariant get_legal_moves(const StateHistory&);
+    static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::seat_index_t get_current_player(const State&);
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
@@ -89,7 +89,7 @@ struct Game {
     static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
-    static void print_mcts_results(std::ostream&, const Types::PolicyTensorVariant& action_policy,
+    static void print_mcts_results(std::ostream&, const Types::Policy& action_policy,
                                    const Types::SearchResults&);
 
    private:

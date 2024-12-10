@@ -27,7 +27,7 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   using State = Game::State;
   using ActionMask = Game::Types::ActionMask;
   using ValueTensor = Game::Types::ValueTensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using Policy = Game::Types::Policy;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using ActionResponse = Game::Types::ActionResponse;
   using TrainingInfo = Game::Types::TrainingInfo;
@@ -42,9 +42,9 @@ class DataExportingMctsPlayer : public MctsPlayer<Game> {
   ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  protected:
-  static void extract_policy_target(const SearchResults* results, PolicyTensor** target);
+  static void extract_policy_target(const SearchResults* results, Policy** target);
 
-  PolicyTensor policy_target_;
+  Policy policy_target_;
   ActionValueTensor action_values_target_;
 };
 

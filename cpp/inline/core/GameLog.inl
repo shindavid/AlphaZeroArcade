@@ -57,7 +57,7 @@ GameLog<Game>::MemOffsetTable::MemOffsetTable(const Header& header) {
 
   for (action_type_t a = 1; a < kNumActionTypes; ++a) {
     ActionTypeDispatcher::call(a, [&](auto A) {
-      using Tensor = mp::TypeAt_t<PolicyTensorVariant, A>;
+      using Tensor = mp::TypeAt_t<Policy, A>;
       int n = header.num_dense_policies_per_action_type[a - 1];
       dense_tensors[a] = dense_tensors[a - 1] + align(n * sizeof(Tensor));
     });
@@ -102,9 +102,9 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
                        filename_.c_str());
 
   pos_index_t state_index = get_pos_index(index);
-  PolicyTensorVariant policy = get_policy(state_index);
-  PolicyTensorVariant next_policy = get_policy(state_index + 1);
-  ActionValueTensorVariant action_values = get_action_values(state_index);
+  Policy policy = get_policy(state_index);
+  Policy next_policy = get_policy(state_index + 1);
+  ActionValues action_values = get_action_values(state_index);
 
   int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
   int num_bytes_to_cp = num_states_to_cp * sizeof(State);
@@ -248,7 +248,7 @@ const GameLogBase::sparse_tensor_entry_t* GameLog<Game>::sparse_tensor_entry_sta
 template <concepts::Game Game>
 template <action_type_t ActionType>
 const auto* GameLog<Game>::dense_tensor_start_ptr() const {
-  using Tensor = mp::TypeAt_t<PolicyTensorVariant, ActionType>;
+  using Tensor = mp::TypeAt_t<Policy, ActionType>;
   return reinterpret_cast<Tensor*>(buffer_ + mem_offsets_.dense_tensors[ActionType]);
 }
 
@@ -258,7 +258,7 @@ const GameLogBase::pos_index_t* GameLog<Game>::sampled_indices_start_ptr() const
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::PolicyTensorVariant GameLog<Game>::get_policy(int state_index) const {
+typename GameLog<Game>::Policy GameLog<Game>::get_policy(int state_index) const {
   action_type_t type = get_action_type(state_index);
 
   util::release_assert(type >= 0 && type < kNumActionTypes,
@@ -266,7 +266,7 @@ typename GameLog<Game>::PolicyTensorVariant GameLog<Game>::get_policy(int state_
                        filename_.c_str());
 
   return ActionTypeDispatcher::call(type, [&](auto A) {
-    PolicyTensorVariant policy(std::in_place_index<A>);
+    Policy policy(std::in_place_index<A>);
     auto& policy_tensor = std::get<A>(policy);
     if (state_index >= num_non_terminal_positions()) {
       policy_tensor.setZero();
@@ -301,7 +301,7 @@ typename GameLog<Game>::PolicyTensorVariant GameLog<Game>::get_policy(int state_
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::ActionValueTensorVariant
+typename GameLog<Game>::ActionValues
 GameLog<Game>::get_action_values(int state_index) const {
   action_type_t type = get_action_type(state_index);
 
@@ -310,7 +310,7 @@ GameLog<Game>::get_action_values(int state_index) const {
                        filename_.c_str());
 
   return ActionTypeDispatcher::call(type, [&](auto A) {
-    ActionValueTensorVariant action_values(std::in_place_index<A>);
+    ActionValues action_values(std::in_place_index<A>);
     auto& action_values_tensor = std::get<A>(action_values);
     if (state_index >= num_non_terminal_positions()) {
       action_values_tensor.setZero();
@@ -388,8 +388,8 @@ GameLogWriter<Game>::~GameLogWriter() {
 
 template <concepts::Game Game>
 void GameLogWriter<Game>::add(const State& state, action_type_t action_type, action_t action,
-                              const PolicyTensorVariant* policy_target,
-                              const ActionValueTensorVariant* action_values,
+                              const Policy* policy_target,
+                              const ActionValues* action_values,
                               bool use_for_training) {
   // TODO: get entries from a thread-specific object pool
   Entry* entry = new Entry();
@@ -398,13 +398,13 @@ void GameLogWriter<Game>::add(const State& state, action_type_t action_type, act
     if (policy_target) {
       entry->policy_target = *policy_target;
     } else {
-      entry->policy_target = PolicyTensorVariant(std::in_place_index<A>);
+      entry->policy_target = Policy(std::in_place_index<A>);
       std::get<A>(entry->policy_target).setZero();
     }
     if (action_values) {
       entry->action_values = *action_values;
     } else {
-      entry->action_values = ActionValueTensorVariant(std::in_place_index<A>);
+      entry->action_values = ActionValues(std::in_place_index<A>);
       std::get<A>(entry->action_values).setZero();
     }
   });
@@ -486,7 +486,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
 
     tensor_index_t action_values_target_index = {-1, -1};
     if (entry->action_values_are_valid) {
-      action_values_target_index = write_target(entry->action_type, entry->action_values,
+      action_values_target_index = write_target(entry->action_type, entry->action_values_target,
                                                 dense_tensors, sparse_tensor_entries);
     }
     action_values_target_indices.push_back(action_values_target_index);
@@ -550,11 +550,11 @@ void GameLogWriter<Game>::write_section(std::ostream& os, const T* t, int count)
 
 template <concepts::Game Game>
 GameLogBase::tensor_index_t GameLogWriter<Game>::write_target(
-    action_type_t action_type, const PolicyTensorVariant& target,
+    action_type_t action_type, const Policy& target,
     tensor_vector_tuple_t& dense_tensors,
     std::vector<sparse_tensor_entry_t>& sparse_tensor_entries) {
   return ActionTypeDispatcher::call(action_type, [&](auto A) {
-    using Tensor = mp::TypeAt_t<PolicyTensorVariant, A>;
+    using Tensor = mp::TypeAt_t<Policy, A>;
     const Tensor& target_tensor = std::get<A>(target);
     std::vector<Tensor>& dense_tensors_vec = std::get<A>(dense_tensors);
 

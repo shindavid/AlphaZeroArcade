@@ -44,13 +44,13 @@ inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym)
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensorVariant& t, group::element_t sym) {
+inline void Game::Symmetries::apply(Types::Policy& t, group::element_t sym) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;
     case groups::D1::kFlip: {
       auto& t0 = std::get<0>(t);
-      Types::PolicyTensorVariant u = eigen_util::reverse(t0, t0.rank() - 1);
+      Types::Policy u = eigen_util::reverse(t0, t0.rank() - 1);
       t = u;
       return;
     }
@@ -83,11 +83,11 @@ inline void Game::Rules::init_state(State& state) {
   state.cur_player_mask = 0;
 }
 
-inline Game::Types::ActionMaskVariant Game::Rules::get_legal_moves(const StateHistory& history) {
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   mask_t bottomed_full_mask = state.full_mask + _full_bottom_mask();
 
-  using Bitset = mp::TypeAt_t<Types::ActionMaskVariant, 0>;
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
   Bitset mask;
   for (int col = 0; col < kNumColumns; ++col) {
     bool legal = bottomed_full_mask & _column_mask(col);

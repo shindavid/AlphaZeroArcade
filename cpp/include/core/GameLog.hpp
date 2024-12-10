@@ -72,8 +72,8 @@ class GameLog : public GameLogBase {
   using InputTensor = Game::InputTensorizor::Tensor;
   using TrainingTargetsList = Game::TrainingTargets::List;
   using State = Game::State;
-  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
-  using ActionValueTensorVariant = Game::Types::ActionValueTensorVariant;
+  using Policy = Game::Types::Policy;
+  using ActionValues = Game::Types::ActionValues;
   using ValueTensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
   using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
@@ -130,8 +130,8 @@ class GameLog : public GameLogBase {
   const sparse_tensor_entry_t* sparse_tensor_entry_start_ptr() const;
   template<action_type_t ActionType> const auto* dense_tensor_start_ptr() const;
 
-  PolicyTensorVariant get_policy(int state_index) const;
-  ActionValueTensorVariant get_action_values(int state_index) const;
+  Policy get_policy(int state_index) const;
+  ActionValues get_action_values(int state_index) const;
 
   action_type_t get_action_type(int state_index) const;
   const State* get_state(int state_index) const;
@@ -153,20 +153,20 @@ class GameLogWriter {
   using Rules = Game::Rules;
   using State = Game::State;
   using ValueTensor = Game::Types::ValueTensor;
-  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
-  using ActionValueTensorVariant = Game::Types::ActionValueTensorVariant;
+  using Policy = Game::Types::Policy;
+  using ActionValues = Game::Types::ActionValues;
   using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;
   using tensor_index_t = GameLogBase::tensor_index_t;
   using sparse_tensor_entry_t = GameLogBase::sparse_tensor_entry_t;
   using tensor_vector_tuple_t =
-      mp::Transform_t<std::tuple, PolicyTensorVariant, util::make_vector_t>;
+      mp::Transform_t<std::tuple, Policy, util::make_vector_t>;
 
   static constexpr int kNumActionTypes = Game::Types::kNumActionTypes;
 
   struct Entry {
     State position;
-    PolicyTensorVariant policy_target_variant;
-    ActionValueTensorVariant action_values_target_variant;
+    Policy policy_target;
+    ActionValues action_values_target;
     action_type_t action_type;
     action_t action;
     bool use_for_training;
@@ -180,7 +180,7 @@ class GameLogWriter {
   ~GameLogWriter();
 
   void add(const State& state, action_type_t action_type, action_t action,
-           const PolicyTensorVariant* policy_target, const ActionValueTensorVariant* action_values,
+           const Policy* policy_target, const ActionValues* action_values,
            bool use_for_training);
   void add_terminal(const State& state, const ValueTensor& outcome);
   void serialize(std::ostream&) const;
@@ -193,7 +193,7 @@ class GameLogWriter {
   template<typename T>
   static void write_section(std::ostream& os, const T* t, int count=1);
 
-  static tensor_index_t write_target(action_type_t, const PolicyTensorVariant& target,
+  static tensor_index_t write_target(action_type_t, const Policy& target,
                                      tensor_vector_tuple_t& dense_tensors,
                                      std::vector<sparse_tensor_entry_t>& sparse_tensor_entries);
 

@@ -11,7 +11,7 @@ namespace tests {
 
 template <concepts::Game Game>
 struct Common {
-  using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
+  using Policy = Game::Types::Policy;
 
   /*
    * For every possible (action, sym) pair:
@@ -27,7 +27,7 @@ struct Common {
   static void gtest_action_transforms();
 
   template<action_type_t ActionType=0>
-  static bool policies_match(const PolicyTensorVariant& p1, const PolicyTensorVariant& p2) {
+  static bool policies_match(const Policy& p1, const Policy& p2) {
     return eigen_util::equal(std::get<ActionType>(p1), std::get<ActionType>(p2));
   }
 };

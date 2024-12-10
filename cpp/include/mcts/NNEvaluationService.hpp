@@ -88,7 +88,7 @@ class NNEvaluationService
   using NNEvaluation_sptr = NNEvaluation::sptr;
 
   using InputTensor = Game::InputTensorizor::Tensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using Policy = Game::Types::Policy;
   using ValueTensor = Game::TrainingTargets::ValueTarget::Tensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
 
@@ -198,7 +198,7 @@ class NNEvaluationService
                           torch::Tensor& torch_action_value);
 
     InputTensor input;
-    PolicyTensor policy;
+    Policy policy;
     ValueTensor value;
     ActionValueTensor action_values;
     core::seat_index_t current_player;

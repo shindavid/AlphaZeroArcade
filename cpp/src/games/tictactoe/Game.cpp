@@ -35,10 +35,10 @@ bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player
   return false;
 }
 
-Game::Types::ActionMaskVariant Game::Rules::get_legal_moves(const StateHistory& history) {
+Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
 
-  using Bitset = mp::TypeAt_t<Types::ActionMaskVariant, 0>;
+  using Bitset = mp::TypeAt_t<Types::ActionMask, 0>;
   Bitset mask;
   mask.set();
   uint64_t u = state.full_mask;
@@ -87,12 +87,12 @@ void Game::IO::print_state(std::ostream& ss, const State& state, core::action_t 
   ss << buffer << std::endl;
 }
 
-void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensorVariant& action_policy,
+void Game::IO::print_mcts_results(std::ostream& ss, const Types::Policy& action_policy,
                                   const Types::SearchResults& results) {
   const auto& valid_actions = std::get<0>(results.valid_actions);
   const auto& mcts_counts = std::get<0>(results.counts);
   const auto& net_policy = std::get<0>(results.policy_prior);
-  const auto& action_policy0 = std::get<0>(action_policy);
+  const auto& action_subpolicy = std::get<0>(action_policy);
   const auto& win_rates = results.win_rates;
   const auto& net_value = results.value_prior;
 
@@ -116,7 +116,7 @@ void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTensorVar
   for (int i = 0; i < tictactoe::kNumCells; ++i) {
     if (valid_actions[i]) {
       float count = mcts_counts(i);
-      auto action_p = action_policy0(i);
+      auto action_p = action_subpolicy(i);
       auto net_p = net_policy(i);
       cx += snprintf(buffer + cx, buf_size - cx, "   %d %8.3f %8.3f %8.3f\n", i, net_p, count,
                      action_p);

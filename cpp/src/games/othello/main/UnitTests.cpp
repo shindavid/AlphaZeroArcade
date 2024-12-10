@@ -18,7 +18,7 @@ using Game = othello::Game;
 using Common = core::tests::Common<Game>;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
-using PolicyTensorVariant = Game::Types::PolicyTensorVariant;
+using Policy = Game::Types::Policy;
 using IO = Game::IO;
 using Rules = Game::Rules;
 
@@ -30,12 +30,12 @@ State make_init_state() {
   return history.current();
 }
 
-PolicyTensorVariant make_policy(int move) {
-  PolicyTensorVariant policy;
-  auto& tensor = std::get<0>(policy);
-  tensor.setZero();
-  tensor(move) = 1;
-  return tensor;
+Policy make_policy(int move) {
+  Policy policy;
+  auto& subpolicy = std::get<0>(policy);
+  subpolicy.setZero();
+  subpolicy(move) = 1;
+  return subpolicy;
 }
 
 const std::string init_state_repr =
@@ -87,10 +87,10 @@ TEST(Symmetry, identity) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kA3);
+  Policy expected_policy = make_policy(othello::kA3);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -119,10 +119,10 @@ TEST(Symmetry, rot90_clockwise) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kF1);
+  Policy expected_policy = make_policy(othello::kF1);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -151,10 +151,10 @@ TEST(Symmetry, rot180) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kH6);
+  Policy expected_policy = make_policy(othello::kH6);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -183,10 +183,10 @@ TEST(Symmetry, rot270_clockwise) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kC8);
+  Policy expected_policy = make_policy(othello::kC8);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -215,10 +215,10 @@ TEST(Symmetry, flip_vertical) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kA6);
+  Policy expected_policy = make_policy(othello::kA6);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -247,10 +247,10 @@ TEST(Symmetry, mirror_horizontal) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kH3);
+  Policy expected_policy = make_policy(othello::kH3);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -279,10 +279,10 @@ TEST(Symmetry, flip_main_diag) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kC1);
+  Policy expected_policy = make_policy(othello::kC1);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));
@@ -311,10 +311,10 @@ TEST(Symmetry, flip_anti_diag) {
   Game::Symmetries::apply(state, inv_sym);
   EXPECT_EQ(get_repr(state), init_state_repr);
 
-  PolicyTensorVariant init_policy = make_policy(othello::kA3);
-  PolicyTensorVariant policy = init_policy;
+  Policy init_policy = make_policy(othello::kA3);
+  Policy policy = init_policy;
   Game::Symmetries::apply(policy, sym);
-  PolicyTensorVariant expected_policy = make_policy(othello::kF8);
+  Policy expected_policy = make_policy(othello::kF8);
   EXPECT_TRUE(Common::policies_match(policy, expected_policy));
   Game::Symmetries::apply(policy, inv_sym);
   EXPECT_TRUE(Common::policies_match(policy, init_policy));

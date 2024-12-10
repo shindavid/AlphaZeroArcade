@@ -18,7 +18,7 @@ namespace c4 {
 
 class PerfectOracle {
  public:
-  using ActionMaskVariant = Game::Types::ActionMaskVariant;
+  using ActionMask = Game::Types::ActionMask;
   using State = Game::State;
   using ScoreArray = Eigen::Array<int, kNumColumns, 1>;
 
@@ -106,7 +106,7 @@ class PerfectPlayer : public core::AbstractPlayer<c4::Game> {
 
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
-  ActionResponse get_action_response(const State&, const ActionMaskVariant&) override;
+  ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  private:
   const Params params_;

@@ -36,7 +36,7 @@ concept TrainingTargetList = mp::IsTypeListSatisfying<T, IsTrainingTarget<GameLo
 
 template<typename Game, action_type_t ActionType=0>
 struct PolicyTarget {
-  using Tensor = mp::TypeAt_t<typename Game::Types::PolicyTensorVariant, ActionType>;
+  using Tensor = mp::TypeAt_t<typename Game::Types::Policy, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return util::create_string("policy%d", ActionType); }
@@ -54,7 +54,7 @@ struct ValueTarget {
 
 template<typename Game, action_type_t ActionType=0>
 struct ActionValueTarget {
-  using Tensor = mp::TypeAt_t<typename Game::Types::ActionValueTensorVariant, ActionType>;
+  using Tensor = mp::TypeAt_t<typename Game::Types::ActionValues, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return util::create_string("policy%d", ActionType); }
@@ -63,7 +63,7 @@ struct ActionValueTarget {
 
 template <typename Game, action_type_t ActionType=0>
 struct OppPolicyTarget {
-  using Tensor = mp::TypeAt_t<typename Game::Types::PolicyTensorVariant, ActionType>;
+  using Tensor = mp::TypeAt_t<typename Game::Types::Policy, ActionType>;
   using GameLogView = Game::Types::GameLogView;
 
   static std::string name() { return util::create_string("opp_policy%d", ActionType); }

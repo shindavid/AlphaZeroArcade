@@ -73,7 +73,7 @@ class Node {
   using LocalActionValueArray = Game::Types::LocalActionValueArray;
   using ValueArray = Game::Types::ValueArray;
   using ValueTensor = Game::Types::ValueTensor;
-  using PolicyTensor = Game::Types::PolicyTensor;
+  using Policy = Game::Types::Policy;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using SearchResults = Game::Types::SearchResults;
   using ActionTypeDispatcher = Game::Types::ActionTypeDispatcher;

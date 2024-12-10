@@ -304,7 +304,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   while (true) {
     seat_index_t seat = Rules::get_current_player(state_history.current());
     Player* player = players[seat];
-    ActionMaskVariant valid_actions = Rules::get_legal_moves(state_history);
+    ActionMask valid_actions = Rules::get_legal_moves(state_history);
     ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
 
     action_type_t action_type = valid_actions.index();

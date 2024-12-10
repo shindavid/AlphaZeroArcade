@@ -30,7 +30,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
  public:
   using NNEvaluation = mcts::NNEvaluation<Nim>;
   using ValueTensor = NNEvaluation::ValueTensor;
-  using PolicyTensor = NNEvaluation::PolicyTensor;
+  using Policy = NNEvaluation::Policy;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
   using ActionMask = NNEvaluation::ActionMask;
 
@@ -38,7 +38,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
 
   void evaluate(const NNEvaluationRequest& request) override {
     ValueTensor value;
-    PolicyTensor policy;
+    Policy policy;
     ActionValueTensor action_values;
     group::element_t sym = group::kIdentity;
 

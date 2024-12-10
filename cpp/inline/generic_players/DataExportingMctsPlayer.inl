@@ -44,7 +44,7 @@ DataExportingMctsPlayer<Game>::get_action_response(
 
 template <core::concepts::Game Game>
 void DataExportingMctsPlayer<Game>::extract_policy_target(const SearchResults* mcts_results,
-                                                          PolicyTensor** target) {
+                                                          Policy** target) {
   **target = mcts_results->policy_target;
   float sum = eigen_util::sum(**target);
   if (mcts_results->provably_lost || sum == 0 || mcts_results->trivial) {

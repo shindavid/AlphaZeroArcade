@@ -168,7 +168,7 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
     core::SearchMode search_mode, const SearchResults* mcts_results,
     const ActionMask& valid_actions) const {
 
-  PolicyTensor modified_policy = get_action_policy(search_mode, mcts_results, valid_actions);
+  Policy modified_policy = get_action_policy(search_mode, mcts_results, valid_actions);
 
   if (verbose_info_) {
     verbose_info_->action_policy = modified_policy;
@@ -200,7 +200,7 @@ template <typename Bitset>
 auto MctsPlayer<Game>::get_action_policy_helper(core::SearchMode search_mode,
                                                 const SearchResults* mcts_results,
                                                 const Bitset& valid_bitset) const {
-  PolicyTensor policy, Q_sum, Q_sq_sum;
+  Policy policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode == core::kRawPolicy) {
     policy.setConstant(0);
@@ -235,10 +235,10 @@ auto MctsPlayer<Game>::get_action_policy_helper(core::SearchMode search_mode,
        *
        * But the above doesn't work.
        */
-      PolicyTensor policy_max_tensor = policy.maximum();
+      Policy policy_max_tensor = policy.maximum();
       float policy_max = policy_max_tensor(0);
       if (policy_max > 0) {
-        PolicyTensor policy_max_broadcasted;
+        Policy policy_max_broadcasted;
         policy_max_broadcasted.setConstant(policy_max);
         policy = (policy == policy_max_broadcasted).template cast<float>();
       }
@@ -248,13 +248,13 @@ auto MctsPlayer<Game>::get_action_policy_helper(core::SearchMode search_mode,
       Q_sum = mcts_results->action_symmetry_table.symmetrize(Q_sum);
       Q_sq_sum = mcts_results->action_symmetry_table.symmetrize(Q_sq_sum);
 
-      PolicyTensor Q = Q_sum / counts;
-      PolicyTensor Q_sq = Q_sq_sum / counts;
-      PolicyTensor Q_sigma_sq = (Q_sq - Q * Q) / counts;
+      Policy Q = Q_sum / counts;
+      Policy Q_sq = Q_sq_sum / counts;
+      Policy Q_sigma_sq = (Q_sq - Q * Q) / counts;
       Q_sigma_sq = eigen_util::cwiseMax(Q_sigma_sq, 0);  // clip negative values to 0
-      PolicyTensor Q_sigma = Q_sigma_sq.sqrt();
+      Policy Q_sigma = Q_sigma_sq.sqrt();
 
-      PolicyTensor LCB = Q - params_.LCB_z_score * Q_sigma;
+      Policy LCB = Q - params_.LCB_z_score * Q_sigma;
 
       float policy_max = -1;
       float min_LCB = 0;
@@ -277,11 +277,11 @@ auto MctsPlayer<Game>::get_action_policy_helper(core::SearchMode search_mode,
       }
 
       if (min_LCB_set) {
-        PolicyTensor UCB = Q + params_.LCB_z_score * Q_sigma;
+        Policy UCB = Q + params_.LCB_z_score * Q_sigma;
 
         // zero out policy wherever UCB < min_LCB
         auto mask = (UCB >= min_LCB).template cast<float>();
-        PolicyTensor policy_masked = policy * mask;
+        Policy policy_masked = policy * mask;
 
         if (mcts::kEnableSearchDebug) {
           int visited_actions = 0;

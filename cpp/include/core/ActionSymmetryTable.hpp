@@ -23,7 +23,7 @@ template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Gr
 class ActionSymmetryTable {
  public:
   using action_array_t = std::array<core::action_t, GameConstants::kNumActions>;
-  using PolicyTensor = eigen_util::FTensor<Eigen::Sizes<GameConstants::kNumActions>>;
+  using Policy = eigen_util::FTensor<Eigen::Sizes<GameConstants::kNumActions>>;
 
   struct item_t {
     auto operator<=>(const item_t&) const = default;
@@ -49,13 +49,13 @@ class ActionSymmetryTable {
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of
    * symmetrically equivalent actions are averaged.
    */
-  PolicyTensor symmetrize(const PolicyTensor& policy) const;
+  Policy symmetrize(const Policy& policy) const;
 
   /*
    * Accepts a policy tensor and returns a new policy tensor where the probabilities of
    * symmetrically equivalent actions are shifted so that all but one are zero.
    */
-  PolicyTensor collapse(const PolicyTensor& policy) const;
+  Policy collapse(const Policy& policy) const;
 
   boost::json::array to_json() const;
 
