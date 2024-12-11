@@ -88,10 +88,10 @@ TEST(Symmetry, identity) {
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Game::Symmetries::apply(policy, sym, 0);
   PolicyTensor expected_policy = make_policy(0, 1);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Game::Symmetries::apply(policy, inv_sym, 0);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 
@@ -117,10 +117,10 @@ TEST(Symmetry, flip) {
 
   PolicyTensor init_policy = make_policy(0, 1);
   PolicyTensor policy = init_policy;
-  Game::Symmetries::apply(policy, sym);
+  Game::Symmetries::apply(policy, sym, 0);
   PolicyTensor expected_policy = make_policy(5, 6);
   EXPECT_TRUE(eigen_util::equal(policy, expected_policy));
-  Game::Symmetries::apply(policy, inv_sym);
+  Game::Symmetries::apply(policy, inv_sym, 0);
   EXPECT_TRUE(eigen_util::equal(policy, init_policy));
 }
 

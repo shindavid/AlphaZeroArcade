@@ -98,6 +98,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
                                                 core::action_t action) {
   group::element_t sym = shared_data_.root_info.canonical_sym;
 
+  core::action_mode_t mode = shared_data_.get_current_action_mode();
   shared_data_.update_state(action);
   shared_data_.root_softmax_temperature.step();
   stop_search_threads();
@@ -105,7 +106,7 @@ inline void Manager<Game>::receive_state_change(core::seat_index_t seat,
   if (root_index < 0) return;
 
   core::action_t transformed_action = action;
-  Game::Symmetries::apply(transformed_action, sym);
+  Game::Symmetries::apply(transformed_action, sym, mode);
 
   Node* root = shared_data_.lookup_table.get_node(root_index);
   root_index = root->lookup_child_by_action(transformed_action);
@@ -142,6 +143,7 @@ Manager<Game>::search(const SearchParams& params) {
   const auto& stable_data = root->stable_data();
   const auto& stats = root->stats();
 
+  core::action_mode_t mode = root->action_mode();
   group::element_t sym = root_info.canonical_sym;
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
 
@@ -152,7 +154,7 @@ Manager<Game>::search(const SearchParams& params) {
 
   int i = 0;
   for (core::action_t action : bitset_util::on_indices(stable_data.valid_action_mask)) {
-    Game::Symmetries::apply(action, inv_sym);
+    Game::Symmetries::apply(action, inv_sym, mode);
     results_.valid_actions.set(action, true);
     actions[i] = action;
 
@@ -171,14 +173,15 @@ Manager<Game>::search(const SearchParams& params) {
     prune_policy_target(params, inv_sym);
   }
 
-  Game::Symmetries::apply(results_.counts, inv_sym);
-  Game::Symmetries::apply(results_.policy_target, inv_sym);
-  Game::Symmetries::apply(results_.Q, inv_sym);
-  Game::Symmetries::apply(results_.Q_sq, inv_sym);
-  Game::Symmetries::apply(results_.action_values, inv_sym);
+  Game::Symmetries::apply(results_.counts, inv_sym, mode);
+  Game::Symmetries::apply(results_.policy_target, inv_sym, mode);
+  Game::Symmetries::apply(results_.Q, inv_sym, mode);
+  Game::Symmetries::apply(results_.Q_sq, inv_sym, mode);
+  Game::Symmetries::apply(results_.action_values, inv_sym, mode);
 
   results_.win_rates = stats.Q;
   results_.value_prior = stable_data.VT;
+  results_.action_mode = mode;
 
   return &results_;
 }
@@ -284,10 +287,11 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
     LocalPolicyArray actions(n_actions);
     LocalPolicyArray pruned(n_actions);
 
+    core::action_mode_t mode = root->action_mode();
     for (int i = 0; i < n_actions; ++i) {
       core::action_t raw_action = root->get_edge(i)->action;
       core::action_t action = raw_action;
-      Game::Symmetries::apply(action, inv_sym);
+      Game::Symmetries::apply(action, inv_sym, mode);
       actions(i) = action;
       pruned(i) = results_.policy_target(raw_action);
     }
@@ -300,7 +304,7 @@ void Manager<Game>::prune_policy_target(const SearchParams& search_params,
         eigen_util::concatenate_columns(actions, P, Q, PUCT, E, PW, PL, mE, pruned, target));
 
     eigen_util::PrintArrayFormatMap fmt_map;
-    fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
+    fmt_map["action"] = [&](float x) { return Game::IO::action_to_str(x, mode); };
 
     std::cout << std::endl << "Policy target pruning:" << std::endl;
     eigen_util::print_array(std::cout, data, columns, &fmt_map);

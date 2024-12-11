@@ -442,6 +442,53 @@ concept UsableAsHashMapKey = requires(const T& a, const T& b) {
 
 }  // namespace concepts
 
+/*
+ * util::get() can be used to get the k-th element of a std::integer_sequence.
+ *
+ * Example usage showcasing 6 different ways to use get():
+ *
+ * using T = std::integer_sequence<int, 1, 2, 3>;
+ * constexpr K = 1;
+ *
+ * constexpr int x1 = util::get(1, T{});
+ * constexpr int x2 = util::get(T{}, 1);
+ * constexpr int x3 = util::get<T>(1);
+ * constexpr int x4 = util::get<1>(T{});
+ * constexpr int x5 = util::get<1, T>();
+ * constexpr int x6 = util::get<T, 1>();
+ */
+template <typename T, T... Values>
+constexpr int get(std::size_t k, std::integer_sequence<T, Values...>) {
+  constexpr T arr[] = {Values...};
+  return arr[k];
+}
+
+template <typename T, T... Values>
+constexpr int get(std::integer_sequence<T, Values...>, std::size_t k) {
+  constexpr T arr[] = {Values...};
+  return arr[k];
+}
+
+template <typename T>
+constexpr int get(std::size_t k) {
+  return get(k, T{});
+}
+
+template <int K, typename T>
+constexpr int get(T) {
+  return get(K, T{});
+}
+
+template <int K, typename T>
+constexpr int get() {
+  return get(K, T{});
+}
+
+template <typename T, int K>
+constexpr int get() {
+  return get(K, T{});
+}
+
 }  // namespace util
 
 namespace std {

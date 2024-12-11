@@ -135,7 +135,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
 
     // reorient edge->action into raw-orientation
     core::action_t raw_edge_action = edge->action;
-    Game::Symmetries::apply(raw_edge_action, inv_canonical_sym);
+    Game::Symmetries::apply(raw_edge_action, inv_canonical_sym, node->action_mode());
 
     // apply raw-orientation action to raw-orientation child-state
     Game::Rules::apply(raw_history_, raw_edge_action);
@@ -148,7 +148,7 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     StateHistory& canonical_history = pseudo_local_vars_.root_history_array[canonical_child_sym];
 
     core::action_t reoriented_action = raw_edge_action;
-    Game::Symmetries::apply(reoriented_action, canonical_child_sym);
+    Game::Symmetries::apply(reoriented_action, canonical_child_sym, node->action_mode());
     Game::Rules::apply(canonical_history, reoriented_action);
 
     expand_count++;
@@ -282,7 +282,7 @@ inline void SearchThread<Game>::visit(Node* node) {
 
       // reorient edge->action into raw-orientation
       core::action_t edge_action = edge->action;
-      Game::Symmetries::apply(edge_action, inv_canonical_sym);
+      Game::Symmetries::apply(edge_action, inv_canonical_sym, node->action_mode());
 
       // apply raw-orientation action to raw-orientation leaf-state
       Game::Rules::apply(raw_history_, edge_action);
@@ -340,7 +340,7 @@ inline void SearchThread<Game>::visit(Node* node) {
   if (!applied_action) {
     // reorient edge->action into raw-orientation
     core::action_t edge_action = edge->action;
-    Game::Symmetries::apply(edge_action, inv_canonical_sym);
+    Game::Symmetries::apply(edge_action, inv_canonical_sym, node->action_mode());
 
     Game::Rules::apply(raw_history_, edge_action);
     canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
@@ -480,7 +480,7 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
 
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
-    Game::Symmetries::apply(last_action, edge->sym);
+    Game::Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
     bool terminal = Game::Rules::is_terminal(
         history->current(), parent->stable_data().current_player, last_action, game_outcome);
@@ -524,10 +524,11 @@ std::string SearchThread<Game>::search_path_str() const {
   std::vector<std::string> vec;
   for (const visitation_t& visitation : search_path_) {
     if (!visitation.edge) continue;
+    core::action_mode_t mode = visitation.node->action_mode();
     core::action_t action = visitation.edge->action;
-    Game::Symmetries::apply(action, cur_sym);
+    Game::Symmetries::apply(action, cur_sym, mode);
     cur_sym = Group::compose(cur_sym, Group::inverse(visitation.edge->sym));
-    vec.push_back(Game::IO::action_to_str(action));
+    vec.push_back(Game::IO::action_to_str(action, mode));
   }
   return util::create_string("[%s]", boost::algorithm::join(vec, delim).c_str());
 }
@@ -543,9 +544,10 @@ void SearchThread<Game>::calc_canonical_state_data() {
     group::element_t leaf_canonical_sym = canonical_sym_;
     for (const visitation_t& visitation : search_path_) {
       edge_t* edge = visitation.edge;
+      core::action_mode_t mode = visitation.node->action_mode();
       core::action_t action = edge->action;
       group::element_t sym = Group::compose(leaf_canonical_sym, Group::inverse(cur_canonical_sym));
-      Game::Symmetries::apply(action, sym);
+      Game::Symmetries::apply(action, sym, mode);
       Game::Rules::apply(pseudo_local_vars_.canonical_history, action);
       cur_canonical_sym = Group::compose(edge->sym, cur_canonical_sym);
     }
@@ -675,7 +677,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
     for (int e = 0; e < n_actions; ++e) {
       auto edge = node->get_edge(e);
       core::action_t action = edge->action;
-      Game::Symmetries::apply(action, inv_sym);
+      Game::Symmetries::apply(action, inv_sym, node->action_mode());
       actions(e) = action;
       child_addr(e) = edge->child_index;
     }
@@ -686,7 +688,7 @@ void SearchThread<Game>::print_action_selection_details(Node* node, const Action
         actions, P, Q, FPU, PW, PL, E, mE, RN, VN, child_addr, PUCT, argmax));
 
     eigen_util::PrintArrayFormatMap fmt_map2;
-    fmt_map2["action"] = [](float x) { return Game::IO::action_to_str(x); };
+    fmt_map2["action"] = [&](float x) { return Game::IO::action_to_str(x, node->action_mode()); };
     fmt_map2["&ch"] = [](float x) { return x < 0 ? std::string() : std::to_string((int)x); };
     fmt_map2["argmax"] = [](float x) { return std::string(x == 0 ? "" : "*"); };
 

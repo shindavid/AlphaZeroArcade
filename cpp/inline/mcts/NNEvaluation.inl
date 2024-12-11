@@ -10,7 +10,7 @@ template <core::concepts::Game Game>
 NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTensor& raw_policy,
                                  const ActionValueTensor& raw_action_values,
                                  const ActionMask& valid_actions, group::element_t sym,
-                                 core::seat_index_t cp)
+                                 core::seat_index_t cp, core::action_mode_t mode)
     : dynamic_array_(2, valid_actions.count()) {
   ValueTensor value = raw_value;
   PolicyTensor policy = raw_policy;
@@ -21,8 +21,8 @@ NNEvaluation<Game>::NNEvaluation(const ValueTensor& raw_value, const PolicyTenso
   Game::GameResults::right_rotate(value, cp);
 
   group::element_t inv_sym = Game::SymmetryGroup::inverse(sym);
-  Game::Symmetries::apply(policy, inv_sym);
-  Game::Symmetries::apply(action_values, inv_sym);
+  Game::Symmetries::apply(policy, inv_sym, mode);
+  Game::Symmetries::apply(action_values, inv_sym, mode);
 
   int i = 0;
   for (core::action_t a : bitset_util::on_indices(valid_actions)) {

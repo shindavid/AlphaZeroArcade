@@ -77,8 +77,11 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
                        filename_.c_str());
 
   pos_index_t state_index = get_pos_index(index);
+  bool has_next = state_index < num_non_terminal_positions();
+
   PolicyTensor policy = get_policy(state_index);
-  PolicyTensor next_policy = get_policy(state_index + 1);
+  PolicyTensor next_policy =
+      has_next ? get_policy(state_index + 1) : eigen_util::zeros<PolicyTensor>();
   ActionValueTensor action_values = get_action_values(state_index);
 
   int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
@@ -96,13 +99,18 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
     sym = bitset_util::choose_random_on_index(Game::Symmetries::get_mask(*cur_pos));
   }
 
+  action_mode_t mode = Game::Rules::get_action_mode(*cur_pos);
+
   for (int i = 0; i < num_states_to_cp; ++i) {
     Game::Symmetries::apply(states[i], sym);
   }
   Game::Symmetries::apply(final_state, sym);
-  Game::Symmetries::apply(policy, sym);
-  Game::Symmetries::apply(next_policy, sym);
-  Game::Symmetries::apply(action_values, sym);
+  Game::Symmetries::apply(policy, sym, mode);
+  if (has_next) {
+    action_mode_t next_mode = Game::Rules::get_action_mode(*get_state(state_index + 1));
+    Game::Symmetries::apply(next_policy, sym, next_mode);
+  }
+  Game::Symmetries::apply(action_values, sym, mode);
 
   ValueTensor outcome = get_outcome();
 
@@ -132,16 +140,17 @@ void GameLog<Game>::replay() const {
   int n = num_positions();
   for (int i = 0; i < n; ++i) {
     const State* pos = get_state(i);
+    action_mode_t mode = Game::Rules::get_action_mode(*pos);
     action_t last_action = get_prev_action(i);
     Game::IO::print_state(std::cout, *pos, last_action);
     if (i < n - 1) {
       action_t action = get_prev_action(i + 1);
       PolicyTensor policy = get_policy(i);
       bool add_newline = false;
-      for (action_t a = 0; a < Game::Constants::kNumActions; ++a) {
+      for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
         if (policy(a) > 0) {
           char p = a == action ? '*' : ' ';
-          std::string s = Game::IO::action_to_str(a);
+          std::string s = Game::IO::action_to_str(a, mode);
           printf("%c %s: %.6f\n", p, s.c_str(), policy(a));
           add_newline = true;
         }
@@ -331,11 +340,6 @@ const GameLogBase::pos_index_t* GameLog<Game>::sampled_indices_start_ptr() const
 template <concepts::Game Game>
 typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) const {
   PolicyTensor policy;
-  if (state_index >= num_non_terminal_positions()) {
-    policy.setZero();
-    return policy;
-  }
-
   tensor_index_t index = policy_target_index_start_ptr()[state_index];
 
   if (index.start < index.end) {

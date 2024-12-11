@@ -201,8 +201,9 @@ class NNEvaluationService
     PolicyTensor policy;
     ValueTensor value;
     ActionValueTensor action_values;
-    core::seat_index_t current_player;
     eval_ptr_data_t eval_ptr_data;
+    core::action_mode_t action_mode;
+    core::seat_index_t current_player;
   };
 
   struct batch_data_t {

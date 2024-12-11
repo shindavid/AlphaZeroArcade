@@ -100,6 +100,7 @@ class Node {
     ValueTensor VT;
     ActionMask valid_action_mask;
     int num_valid_actions;
+    core::action_mode_t action_mode;
     core::seat_index_t current_player;
     bool terminal;
     bool VT_valid;
@@ -221,6 +222,7 @@ class Node {
   const stats_t& stats() const { return stats_; }
   stats_t& stats() { return stats_; }
   bool is_terminal() const { return stable_data_.terminal; }
+  core::action_mode_t action_mode() const { return stable_data_.action_mode; }
 
   std::mutex& mutex() const { return lookup_table_->get_mutex(mutex_id_); }
   std::condition_variable& cv() { return lookup_table_->get_cv(mutex_id_); }

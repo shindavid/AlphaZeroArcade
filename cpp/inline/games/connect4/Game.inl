@@ -44,7 +44,8 @@ inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym)
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym) {
+inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym,
+                                    core::action_mode_t) {
   switch (sym) {
     case groups::D1::kIdentity:
       return;
@@ -59,7 +60,8 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& t, group::element_t sym
   }
 }
 
-inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym) {
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
+                                    core::action_mode_t) {
   switch (sym) {
     case groups::D1::kIdentity: return;
     case groups::D1::kFlip: {

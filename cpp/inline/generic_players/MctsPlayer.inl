@@ -182,8 +182,8 @@ typename MctsPlayer<Game>::ActionResponse MctsPlayer<Game>::get_action_response_
 
 template <core::concepts::Game Game>
 auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
-                                                 const SearchResults* mcts_results,
-                                                 const ActionMask& valid_actions) const {
+                                         const SearchResults* mcts_results,
+                                         const ActionMask& valid_actions) const {
   PolicyTensor policy, Q_sum, Q_sq_sum;
   const auto& counts = mcts_results->counts;
   if (search_mode == core::kRawPolicy) {
@@ -307,8 +307,9 @@ auto MctsPlayer<Game>::get_action_policy(core::SearchMode search_mode,
               eigen_util::concatenate_columns(actions_arr, counts_arr, policy_arr, Q_arr,
                                               Q_sigma_arr, LCB_arr, UCB_arr, policy_masked_arr));
 
+          core::action_mode_t mode = mcts_results->action_mode;
           eigen_util::PrintArrayFormatMap fmt_map;
-          fmt_map["action"] = [](float x) { return Game::IO::action_to_str(x); };
+          fmt_map["action"] = [&](float x) { return Game::IO::action_to_str(x, mode); };
 
           std::cout << std::endl << "Applying LCB:" << std::endl;
           eigen_util::print_array(std::cout, data, columns, &fmt_map);

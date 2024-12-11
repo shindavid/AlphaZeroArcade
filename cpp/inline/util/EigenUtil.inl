@@ -529,4 +529,11 @@ boost::json::array to_json(const T& array) {
   return detail::to_json(array);
 }
 
+template <concepts::FTensor Tensor>
+Tensor zeros() {
+  Tensor t;
+  t.setZero();
+  return t;
+}
+
 }  // namespace eigen_util

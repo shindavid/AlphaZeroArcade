@@ -12,6 +12,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   VT_valid = false;
   valid_action_mask = Game::Rules::get_legal_moves(history);
   num_valid_actions = valid_action_mask.count();
+  action_mode = Game::Rules::get_action_mode(history.current());
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
 }
@@ -23,6 +24,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
   VT = game_outcome;
   VT_valid = true;
   num_valid_actions = 0;
+  action_mode = -1;
   current_player = -1;
   terminal = true;
 }

@@ -49,6 +49,7 @@ struct SharedData {
   void clear();
   void update_state(core::action_t action);
   void init_root_info(bool add_noise);
+  core::action_mode_t get_current_action_mode() const;
   Node* get_root_node() { return lookup_table.get_node(root_info.node_index); }
 
   eigen_util::UniformDirichletGen<float> dirichlet_gen;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <core/BasicTypes.hpp>
-#include <core/concepts/GameConstants.hpp>
 #include <util/AllocPool.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -19,11 +18,11 @@ namespace core {
  * Such equivalences are naturally discovered via MCGS mechanics during search. At the end of
  * search, the discovered equivalences are loaded into this data structure.
  */
-template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
+template <int kMaxNumActions, group::concepts::FiniteGroup Group>
 class ActionSymmetryTable {
  public:
-  using action_array_t = std::array<core::action_t, GameConstants::kNumActions>;
-  using PolicyTensor = eigen_util::FTensor<Eigen::Sizes<GameConstants::kNumActions>>;
+  using action_array_t = std::array<core::action_t, kMaxNumActions>;
+  using PolicyTensor = eigen_util::FTensor<Eigen::Sizes<kMaxNumActions>>;
 
   struct item_t {
     auto operator<=>(const item_t&) const = default;
