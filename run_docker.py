@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.resolve()
 
-MINIMUM_REQUIRED_IMAGE_VERSION = "1.0.0"
+MINIMUM_REQUIRED_IMAGE_VERSION = "1.0.2"
 
 EXPOSED_PORTS = [
     5012,  # bokeh
