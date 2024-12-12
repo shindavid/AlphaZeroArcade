@@ -39,15 +39,22 @@ LIBTORCH_DIR="$LIBTORCH_BASE_DIR/$LIBTORCH_VERSION"
 
 if [ ! -d "$LIBTORCH_DIR" ]; then
     echo "$LIBTORCH_VERSION installation not found."
+    echo "*****************************************************"
+    echo "* PERFORMING ONE-TIME SLOW INSTALLATION OF libtorch *"
+    echo "*****************************************************"
     echo "Downloading from $LIBTORCH_URL"
     mkdir -p "$LIBTORCH_BASE_DIR"
     wget -O /tmp/libtorch.zip "$LIBTORCH_URL"
-    unzip -q /tmp/libtorch.zip -d $LIBTORCH_DIR
+    unzip -q /tmp/libtorch.zip -d $LIBTORCH_BASE_DIR
+    mv "$LIBTORCH_BASE_DIR/libtorch" "$LIBTORCH_DIR"
     rm /tmp/libtorch.zip
-    ln -s "$LIBTORCH_DIR" "$LIBTORCH_BASE_DIR/current"
+    cd "$LIBTORCH_BASE_DIR"
+    ln -s "$LIBTORCH_VERSION" current
+    cd -
+    chown -R "$USER_NAME":"$GROUP_NAME" $LIBTORCH_BASE_DIR
     echo "Libtorch installed in $LIBTORCH_DIR"
 else
-    echo "$LIBTORCH_VERSION installation found in $LIBTORCH_DIR"
+    echo "Found libtorch installation in $LIBTORCH_BASE_DIR"
 fi
 
 # Execute the command as the created user
