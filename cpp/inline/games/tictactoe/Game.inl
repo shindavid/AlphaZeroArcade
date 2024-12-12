@@ -111,7 +111,8 @@ inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym)
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym) {
+inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym,
+                                    core::action_mode_t) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
@@ -130,7 +131,8 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
   }
 }
 
-inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym) {
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
+                                    core::action_mode_t) {
   constexpr int8_t lookup[] = {
       0, 1, 2, 3, 4, 5, 6, 7, 8,  // kIdentity
       2, 5, 8, 1, 4, 7, 0, 3, 6,  // kRot90

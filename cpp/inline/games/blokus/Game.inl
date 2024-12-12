@@ -9,7 +9,7 @@ inline core::seat_index_t Game::Rules::get_current_player(const State& state) {
   return state.core.cur_color;
 }
 
-inline std::string Game::IO::action_to_str(core::action_t action) {
+inline std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
   if (action == kPass) {
     return "pass";
   }

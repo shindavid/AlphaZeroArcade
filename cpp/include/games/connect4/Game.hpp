@@ -42,8 +42,8 @@ namespace c4 {
  */
 struct Game {
   struct Constants : public core::ConstantsBase {
-    static constexpr int kNumPlayers = 2;
     using kNumActionsPerMode = util::int_sequence<kNumColumns>;
+    static constexpr int kNumPlayers = 2;
     static constexpr int kMaxBranchingFactor = kNumColumns;
   };
 

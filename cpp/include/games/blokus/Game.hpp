@@ -14,6 +14,7 @@
 #include <games/blokus/Constants.hpp>
 #include <games/blokus/GameState.hpp>
 #include <games/blokus/Types.hpp>
+#include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -32,8 +33,9 @@ namespace blokus {
 class Game {
  public:
   struct Constants : public core::ConstantsBase {
+    // TODO: change this to use different action modes (location, poc)
+    using kNumActionsPerMode = util::int_sequence<blokus::kNumActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
-    static constexpr int kNumActions = blokus::kNumActions;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
   };
 
@@ -58,6 +60,7 @@ class Game {
   struct Rules {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
+    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
@@ -69,7 +72,7 @@ class Game {
 
   struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action);
+    static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,
