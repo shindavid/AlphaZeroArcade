@@ -3,7 +3,7 @@
 # This file should not depend on any repo python files outside of the top-level directory.
 
 from pull_docker_image import docker_pull
-from setup_common import get_env_json, update_env_json, DOCKER_HUB_IMAGE
+from setup_common import get_env_json, update_env_json, LATEST_DOCKER_HUB_IMAGE
 
 import os
 import subprocess
@@ -170,9 +170,9 @@ def main():
     try:
         setup_output_dir()
         print('*' * 80)
-        docker_pull(DOCKER_HUB_IMAGE)
+        docker_pull(LATEST_DOCKER_HUB_IMAGE)
         print('*' * 80)
-        validate_nvidia_installation(DOCKER_HUB_IMAGE)
+        validate_nvidia_installation(LATEST_DOCKER_HUB_IMAGE)
         print('*' * 80)
         check_docker_permissions()
         print('*' * 80)

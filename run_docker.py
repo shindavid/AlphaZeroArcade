@@ -2,7 +2,7 @@
 
 # This file should not depend on any repo python files outside of the top-level directory.
 
-from setup_common import get_env_json
+from setup_common import get_env_json, get_image_label
 
 import argparse
 import shlex
@@ -30,21 +30,6 @@ def get_args():
     parser.add_argument("-i", '--instance-name', default='a0a_instance',
                         help='name of the instance to run (default: %(default)s)')
     return parser.parse_args()
-
-
-def get_image_label(image_name, label_key):
-    """
-    Get the value of a specific label from a Docker image.
-    """
-    result = subprocess.check_output(
-        ["docker", "inspect",
-            f"--format={{{{index .Config.Labels \"{label_key}\"}}}}", image_name],
-        stderr=subprocess.STDOUT,
-        text=True,
-    ).strip()
-    if not result:
-        return None
-    return result
 
 
 def check_image_version(image_name):
