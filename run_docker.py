@@ -128,8 +128,11 @@ def run_container(args):
         if not check_image_version(docker_image):
             return
 
+    libtorch_dir = REPO_ROOT / "libtorch"
+    libtorch_dir.mkdir(exist_ok=True)
+
     output_dir = Path(output_dir)
-    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo", '-v', f"{libtorch_dir}:/workspace/libtorch"]
     post_mount_cmds = ["export PYTHONPATH=/workspace/repo/py"]
 
     # Check if output_dir is inside REPO_ROOT

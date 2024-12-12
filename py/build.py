@@ -121,7 +121,7 @@ def get_targets(repo_root, target_dir, specified_targets) -> List[Target]:
 
 
 def get_torch_dir():
-    torch_dir = '/opt/libtorch'
+    torch_dir = '/workspace/libtorch/current'
     assert os.path.isdir(torch_dir)
     return torch_dir
 
