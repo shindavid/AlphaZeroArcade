@@ -171,8 +171,8 @@ class TrainingManager:
         learning_rate = training_params.learning_rate
         momentum = training_params.momentum
         weight_decay = training_params.weight_decay
-        self._opt = optim.SGD(self._net.parameters(), lr=learning_rate, momentum=momentum,
-                              weight_decay=weight_decay)
+        self._opt = optim.RAdam(self._net.parameters(), lr=learning_rate,
+                              weight_decay=weight_decay) #momentum=momentum,
 
         # TODO: SWA, cyclic learning rate
 

@@ -74,16 +74,16 @@ def transformer(shape_info_dict: ShapeInfoDict):
 
     assert value_shape == (3,), value_shape
 
-    embed_dim = 64
+    embed_dim = 42
     n_heads = 1
-    n_layers = 1
-    c_trunk = 64
+    n_layers = 8
+    c_trunk = 42
 
     c_policy_hidden = 2
     c_opp_policy_hidden = 2
     c_action_value_hidden = 2
     c_value_hidden = 1
-    n_value_hidden = 256
+    n_value_hidden = 42
 
     return ModelConfig(
         shape_info_dict=shape_info_dict,
