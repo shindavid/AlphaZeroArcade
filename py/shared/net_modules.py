@@ -257,13 +257,14 @@ class TransformerBlock(nn.Module):
         x = self.positional_embedding(x)  # (B, H * W, E)
 
         # Pass through transformer
-        x = self.transformer_encoder(x)  # (B, H * W, E)
+        x = x.permute(1, 0, 2)
+        x = self.transformer_encoder(x)  # (H * W, B, E)
 
         # Project output back to the number of channels needed by the heads
-        x = self.output_projection(x)  # (B, H * W, n_output_channels)
+        x = self.output_projection(x)  # (H * W, B, n_output_channels)
 
         # Make the tensor contiguous and reshape back to (B, n_output_channels, H, W)
-        x = x.permute(0, 2, 1).contiguous().view(B, -1, H, W)  # (B, n_output_channels, H, W)
+        x = x.permute(1, 2, 0).contiguous().view(B, -1, H, W)  # (B, n_output_channels, H, W)
 
         return x
 
