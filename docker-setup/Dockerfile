@@ -1,4 +1,5 @@
-FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+# FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
 LABEL version="1.0.2"
 
@@ -15,7 +16,7 @@ ENV LC_ALL=en_US.UTF-8
 RUN ln -fs /usr/share/zoneinfo/UTC /etc/localtime && \
     apt-get update && apt-get upgrade -y && \
     apt-get install -y \
-      sudo gosu ack wget curl rsync unzip emacs vim git cmake gcc-12 g++-12 python3-pip \
+      sudo gosu ack wget curl rsync unzip vim git cmake gcc-12 g++-12 python3-pip \
       ninja-build software-properties-common libeigen3-dev libncurses5-dev \
       python-is-python3 libgtest-dev python3-cffi tzdata sqlite3 && \
     dpkg-reconfigure --frontend noninteractive tzdata && \
@@ -29,16 +30,16 @@ RUN add-apt-repository -y ppa:mhier/libboost-latest && \
       libboost-filesystem1.81-dev libboost-log1.81-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Update alternatives for gcc and g++
+# Update alternatives for gcc/g++
 RUN for tool in gcc g++; do \
       update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-12 60 || true; \
     done
 
-# Install Python dependencies (excluding libtorch installation here)
+# Python dependencies
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 && \
     pip3 install ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging
 
-# Set up SQLite configuration
+# Configure SQLite
 RUN echo -e ".mode column\n.headers on" > /root/.sqliterc
 
 # Copy entrypoint script
