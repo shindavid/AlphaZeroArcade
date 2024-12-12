@@ -18,10 +18,7 @@ struct Common {
    *  2. Apply the symmetry to the action and to the tensor.
    *  3. Check that the action and the tensor are consistent.
    *  4. Check that the inverse symmetry acts as expected on the action and the tensor.
-   *
-   * If these checks pass, returns true. Else, prints failure info to stdout, and returns false.
    */
-  static bool test_action_transforms(const char* func);
   static void gtest_action_transforms();
 };
 

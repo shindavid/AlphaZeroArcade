@@ -60,7 +60,6 @@ template <core::concepts::Game Game>
 class Node {
  public:
   static constexpr int kMaxBranchingFactor = Game::Constants::kMaxBranchingFactor;
-  static constexpr int kNumActions = Game::Constants::kNumActions;
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
 
   using ManagerParams = mcts::ManagerParams<Game>;

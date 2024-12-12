@@ -53,7 +53,6 @@ class SearchThread {
   using item_vec_t = NNEvaluationRequest::item_vec_t;
 
   static constexpr int kNumPlayers = Game::Constants::kNumPlayers;
-  static constexpr int kNumActions = Game::Constants::kNumActions;
 
   using profiler_t = search_thread_profiler_t;
 

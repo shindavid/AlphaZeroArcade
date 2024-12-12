@@ -12,61 +12,6 @@ namespace core {
 namespace tests {
 
 template <concepts::Game Game>
-bool Common<Game>::test_action_transforms(const char* func) {
-  using Constants = Game::Constants;
-  using kNumActionsPerMode = Constants::kNumActionsPerMode;
-  using PolicyTensor = Game::Types::PolicyTensor;
-  for (action_mode_t action_mode=0; action_mode < Game::Types::kNumActionTypes; action_mode++) {
-    int num_actions = util::get<kNumActionsPerMode>(action_mode);
-    for (core::action_t action = 0; action < num_actions; ++action) {
-      for (group::element_t sym = 0; sym < Game::SymmetryGroup::kOrder; ++sym) {
-        core::action_t transformed_action = action;
-        Game::Symmetries::apply(transformed_action, sym, action_mode);
-
-        PolicyTensor policy;
-        policy.setZero();
-        policy(action) = 1;
-
-        PolicyTensor transformed_policy = policy;
-        Game::Symmetries::apply(transformed_policy, sym, action_mode);
-
-        float sum = eigen_util::sum(transformed_policy);
-        if (sum != 1) {
-          printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
-          printf("sym=%d action_mode:%d action:%d->%d\n", sym, action_mode, action,
-                 transformed_action);
-          printf("Unexpected sum(transformed_policy): %.f\n", sum);
-          return false;
-        }
-
-        if (transformed_policy(transformed_action) != 1) {
-          printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
-          printf("sym=%d action_mode:%d action:%d->%d\n", sym, action_mode, action,
-                 transformed_action);
-          printf("Not consistent with transformed policy:\n");
-          for (int i = 0; i < Game::Constants::kNumActions; ++i) {
-            printf("%s: %.f\n", Game::IO::action_to_str(i, action_mode).c_str(),
-                   transformed_policy(i));
-          }
-          return false;
-        }
-
-        core::action_t inv_sym = Game::SymmetryGroup::inverse(sym);
-        Game::Symmetries::apply(transformed_action, inv_sym, action_mode);
-        if (transformed_action != action) {
-          printf("Failure in %s() at %s:%d\n", func, __FILE__, __LINE__);
-          printf("With sym=%d, expected transformed_action=%d, but got %d\n", sym, action,
-                transformed_action);
-          return false;
-        }
-      }
-    }
-  }
-
-  return true;
-}
-
-template <concepts::Game Game>
 void Common<Game>::gtest_action_transforms() {
   using Constants = Game::Constants;
   using kNumActionsPerMode = Constants::kNumActionsPerMode;
