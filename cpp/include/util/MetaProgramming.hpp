@@ -155,6 +155,23 @@ struct MaxSizeOf<TypeList<Head, Tails...>> {
 template <typename TList>
 inline constexpr std::size_t MaxSizeOf_v = MaxSizeOf<TList>::value;
 
+
+template <typename T>
+struct MaxOf {};
+
+template <typename T, T I>
+struct MaxOf<std::integer_sequence<T, I>> {
+  static constexpr T value = I;
+};
+
+template <typename T, T I, T... Is>
+struct MaxOf<std::integer_sequence<T, I, Is...>> {
+  static constexpr T value = std::max(I, MaxOf<std::integer_sequence<T, Is...>>::value);
+};
+
+template <typename T>
+constexpr auto MaxOf_v = MaxOf<T>::value;
+
 // static for loop
 //
 // Usage:

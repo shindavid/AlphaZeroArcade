@@ -1,22 +1,15 @@
 #pragma once
 
 #include <memory>
-#include <ostream>
-
-#include <boost/filesystem.hpp>
-#include <unsupported/Eigen/CXX11/Tensor>
-#include <gtest/gtest.h>
 
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <core/Constants.hpp>
 #include <core/concepts/Game.hpp>
-#include <games/tictactoe/Game.hpp>
 #include <mcts/Constants.hpp>
 #include <mcts/Manager.hpp>
 #include <mcts/ManagerParams.hpp>
 #include <mcts/SearchParams.hpp>
-#include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
 #include <util/Math.hpp>
 

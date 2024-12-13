@@ -181,7 +181,6 @@ inline void HumanTuiPlayer::load_actions(p_map_t& p_map, const State& state,
     util::release_assert(valid_actions2.any());
     for (core::action_t action2 : bitset_util::on_indices(valid_actions2)) {
       // std::cout << "DBG   action2=" << int(action2) << std::endl;
-      util::release_assert(action2 > kPass);
       PieceOrientationCorner poc = PieceOrientationCorner::from_action(action2);
       Piece p = poc.to_piece();
       PieceOrientation po = poc.to_piece_orientation();

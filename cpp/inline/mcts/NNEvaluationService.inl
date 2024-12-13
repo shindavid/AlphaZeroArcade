@@ -278,7 +278,8 @@ void NNEvaluationService<Game>::batch_evaluate() {
 
     edata.eval_ptr.store(
         std::make_shared<NNEvaluation>(group.value, group.policy, group.action_values,
-                                       edata.valid_actions, edata.sym, group.current_player));
+                                       edata.valid_actions, edata.sym, group.current_player,
+                                       group.action_mode));
   }
 
   profiler_.record(NNEvaluationServiceRegion::kAcquiringCacheMutex);
@@ -423,6 +424,7 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
   const auto& stable_data = item.node()->stable_data();
   const ActionMask& valid_action_mask = stable_data.valid_action_mask;
   core::seat_index_t current_player = stable_data.current_player;
+  core::action_mode_t action_mode = stable_data.action_mode;
   group::element_t sym = item.sym();
   group::element_t inverse_sym = Game::SymmetryGroup::inverse(sym);
 
@@ -441,11 +443,12 @@ void NNEvaluationService<Game>::tensorize_and_transform_input(const NNEvaluation
 
   tensor_group_t& group = batch_data_.tensor_groups_[reserve_index];
   group.input = input;
-  group.current_player = current_player;
   group.eval_ptr_data.eval_ptr.store(nullptr);
   group.eval_ptr_data.cache_key = cache_key;
   group.eval_ptr_data.valid_actions = valid_action_mask;
   group.eval_ptr_data.sym = sym;
+  group.action_mode = action_mode;
+  group.current_player = current_player;
 }
 
 template <core::concepts::Game Game>

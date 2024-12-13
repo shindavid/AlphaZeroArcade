@@ -49,7 +49,8 @@ inline void Game::Symmetries::apply(StateHistory& history, group::element_t sym)
   }
 }
 
-inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym) {
+inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_t sym,
+                                    core::action_mode_t) {
   using namespace eigen_util;
   using D4 = groups::D4;
   constexpr int N = kBoardDimension;
@@ -66,7 +67,8 @@ inline void Game::Symmetries::apply(Types::PolicyTensor& tensor, group::element_
   }
 }
 
-inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym) {
+inline void Game::Symmetries::apply(core::action_t& action, group::element_t sym,
+                                    core::action_mode_t) {
   using namespace bitmap_util;
   using D4 = groups::D4;
 

@@ -29,8 +29,8 @@ namespace nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
+    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
-    static constexpr int kNumActions = nim::kMaxStonesToTake;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
 
@@ -74,6 +74,8 @@ struct Game {
       return mask;
     }
 
+    static core::action_mode_t get_action_mode(const State&) { return 0; }
+
     static core::seat_index_t get_current_player(const State& state) {
       return state.current_player;
     }
@@ -101,7 +103,9 @@ struct Game {
 
   struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return "-"; }
-    static std::string action_to_str(core::action_t action) { return std::to_string(action + 1); }
+    static std::string action_to_str(core::action_t action, core::action_mode_t) {
+      return std::to_string(action + 1);
+    }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr) {
       throw std::runtime_error("Not implemented");

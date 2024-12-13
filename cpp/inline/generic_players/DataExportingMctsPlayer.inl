@@ -8,8 +8,8 @@ namespace generic {
 
 template <core::concepts::Game Game>
 typename DataExportingMctsPlayer<Game>::ActionResponse
-DataExportingMctsPlayer<Game>::get_action_response(
-    const State& state, const ActionMask& valid_actions) {
+DataExportingMctsPlayer<Game>::get_action_response(const State& state,
+                                                   const ActionMask& valid_actions) {
   auto search_mode = this->choose_search_mode();
 
   GameLogWriter_sptr game_log = this->get_game_log();

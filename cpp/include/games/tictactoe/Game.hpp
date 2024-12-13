@@ -40,8 +40,8 @@ constexpr mask_t make_mask(int a, int b, int c) {
 class Game {
  public:
   struct Constants : public core::ConstantsBase {
+    using kNumActionsPerMode = util::int_sequence<tictactoe::kNumCells>;
     static constexpr int kNumPlayers = tictactoe::kNumPlayers;
-    static constexpr int kNumActions = tictactoe::kNumCells;
     static constexpr int kMaxBranchingFactor = tictactoe::kNumCells;
   };
 
@@ -67,14 +67,15 @@ class Game {
     static Types::SymmetryMask get_mask(const State& state);
     static void apply(State& state, group::element_t sym);
     static void apply(StateHistory& history, group::element_t sym);  // optional
-    static void apply(Types::PolicyTensor& policy, group::element_t sym);
-    static void apply(core::action_t& action, group::element_t sym);
+    static void apply(Types::PolicyTensor& policy, group::element_t sym, core::action_mode_t=0);
+    static void apply(core::action_t& action, group::element_t sym, core::action_mode_t=0);
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
   struct Rules {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
+    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
@@ -83,7 +84,9 @@ class Game {
 
   struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return ""; }
-    static std::string action_to_str(core::action_t action) { return std::to_string(action); }
+    static std::string action_to_str(core::action_t action, core::action_mode_t) {
+      return std::to_string(action);
+    }
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,

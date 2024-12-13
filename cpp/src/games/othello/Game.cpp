@@ -12,7 +12,7 @@
 
 namespace othello {
 
-std::string Game::IO::action_to_str(core::action_t action) {
+std::string Game::IO::action_to_str(core::action_t action, core::action_mode_t) {
   int a = action;
   if (a == kPass) {
     return "PA";

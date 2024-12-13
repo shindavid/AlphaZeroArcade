@@ -9,8 +9,8 @@
 
 namespace core {
 
-template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items) {
+template <int kMaxNumActions, group::concepts::FiniteGroup Group>
+void ActionSymmetryTable<kMaxNumActions, Group>::load(std::vector<item_t>& items) {
   int num_items = items.size();
   std::sort(items.begin(), items.begin() + num_items);
 
@@ -22,7 +22,7 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
     core::action_t action;
     int cluster_start_index;
   };
-  using pair_array_t = std::array<pair_t, GameConstants::kNumActions>;
+  using pair_array_t = std::array<pair_t, kMaxNumActions>;
 
   pair_array_t pair_array;
   int num_pairs = 0;
@@ -50,7 +50,7 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
   }
   util::debug_assert(i == num_items);
 
-  if (num_items < GameConstants::kNumActions) {
+  if (num_items < kMaxNumActions) {
     action_array[num_items] = -1;
   }
 
@@ -59,19 +59,19 @@ void ActionSymmetryTable<GameConstants, Group>::load(std::vector<item_t>& items)
   action_array_ = action_array;
 }
 
-template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
-ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy) const {
+template <int kMaxNumActions, group::concepts::FiniteGroup Group>
+typename ActionSymmetryTable<kMaxNumActions, Group>::PolicyTensor
+ActionSymmetryTable<kMaxNumActions, Group>::symmetrize(const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
   int i = 0;
-  while (i < GameConstants::kNumActions) {
+  while (i < kMaxNumActions) {
     core::action_t action = action_array_[i];
     if (action < 0) break;
 
     int start_i = i;
     float sum = 0;
-    while (i < GameConstants::kNumActions && action_array_[i] >= action) {
+    while (i < kMaxNumActions && action_array_[i] >= action) {
       sum += policy(action_array_[i++]);
     }
 
@@ -87,19 +87,19 @@ ActionSymmetryTable<GameConstants, Group>::symmetrize(const PolicyTensor& policy
   return out;
 }
 
-template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-typename ActionSymmetryTable<GameConstants, Group>::PolicyTensor
-ActionSymmetryTable<GameConstants, Group>::collapse(const PolicyTensor& policy) const {
+template <int kMaxNumActions, group::concepts::FiniteGroup Group>
+typename ActionSymmetryTable<kMaxNumActions, Group>::PolicyTensor
+ActionSymmetryTable<kMaxNumActions, Group>::collapse(const PolicyTensor& policy) const {
   PolicyTensor out;
   out.setZero();
   int i = 0;
-  while (i < GameConstants::kNumActions) {
+  while (i < kMaxNumActions) {
     core::action_t action = action_array_[i];
     if (action < 0) break;
 
     int start_i = i;
     float sum = 0;
-    while (i < GameConstants::kNumActions && action_array_[i] >= action) {
+    while (i < kMaxNumActions && action_array_[i] >= action) {
       sum += policy(action_array_[i++]);
     }
 
@@ -108,17 +108,17 @@ ActionSymmetryTable<GameConstants, Group>::collapse(const PolicyTensor& policy) 
   return out;
 }
 
-template <concepts::GameConstants GameConstants, group::concepts::FiniteGroup Group>
-boost::json::array ActionSymmetryTable<GameConstants, Group>::to_json() const {
+template <int kMaxNumActions, group::concepts::FiniteGroup Group>
+boost::json::array ActionSymmetryTable<kMaxNumActions, Group>::to_json() const {
   boost::json::array action_array_json;
   boost::json::array equivalence_class_json;
   int i = 0;
-  while (i < GameConstants::kNumActions) {
+  while (i < kMaxNumActions) {
     core::action_t action = action_array_[i];
     if (action < 0) break;
 
     equivalence_class_json = {};
-    while (i < GameConstants::kNumActions && action_array_[i] >= action) {
+    while (i < kMaxNumActions && action_array_[i] >= action) {
       equivalence_class_json.push_back(action_array_[i++]);
     }
     action_array_json.push_back(equivalence_class_json);

@@ -252,8 +252,8 @@ class PieceOrientationCorner {
 
   void pretty_print(std::ostream&, color_t) const;
 
-  static PieceOrientationCorner from_action(core::action_t a);
-  core::action_t to_action() const { return index_ + kNumCells + 1; }
+  static PieceOrientationCorner from_action(core::action_t a) { return a; }
+  core::action_t to_action() const { return index_; }
 
   BitBoardSlice to_bitboard_mask(Location loc) const;  // returns empty slice if out-of-bounds
   BitBoardSlice to_adjacent_bitboard_mask(Location loc) const;  // assumes in-bounds

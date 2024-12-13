@@ -215,10 +215,10 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
 
   auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
   using tuple_t = decltype(tuple0);
-  using tuple_array_t = std::array<tuple_t, kNumActions>;
+  using tuple_array_t = std::array<tuple_t, Types::kMaxNumActions>;
   tuple_array_t tuples;
   int i = 0;
-  for (int a = 0; a < kNumActions; ++a) {
+  for (int a = 0; a < Types::kMaxNumActions; ++a) {
     if (valid_actions[a]) {
       tuples[i] = std::make_tuple(mcts_counts(a), action_policy(a), net_policy(a), a);
       i++;
@@ -239,7 +239,7 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
     auto net_p = std::get<2>(tuple);
     int action = std::get<3>(tuple);
 
-    std::string action_str = action_to_str(action);
+    std::string action_str = action_to_str(action, results.action_mode);
     cx += snprintf(buffer + cx, buf_size - cx, "%4s %8.3f %8.3f %8.3f\n", action_str.c_str(), net_p,
                    count, action_p);
   }

@@ -12,6 +12,7 @@
 #include <core/WinLossDrawResults.hpp>
 #include <games/chess/Constants.hpp>
 #include <games/chess/LcZeroPositionHistoryAdapter.hpp>
+#include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -31,8 +32,8 @@ namespace chess {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
+    using kNumActionsPerMode = util::int_sequence<chess::kNumActions>;
     static constexpr int kNumPlayers = chess::kNumPlayers;
-    static constexpr int kNumActions = chess::kNumActions;
     static constexpr int kMaxBranchingFactor = chess::kMaxBranchingFactor;
     static constexpr int kNumPreviousStatesToEncode = chess::kNumPreviousStatesToEncode;
   };
@@ -51,6 +52,7 @@ struct Game {
   struct Rules {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
+    static core::action_mode_t get_action_mode(const State&) { return 0; }
     static core::seat_index_t get_current_player(const State&);
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
@@ -59,7 +61,7 @@ struct Game {
 
   struct IO : public core::IOBase<Types, State> {
     static std::string action_delimiter() { return ""; }
-    static std::string action_to_str(core::action_t action);
+    static std::string action_to_str(core::action_t action, core::action_mode_t);
     static void print_state(std::ostream&, const State&, core::action_t last_action = -1,
                             const Types::player_name_array_t* player_names = nullptr);
     static void print_mcts_results(std::ostream&, const Types::PolicyTensor& action_policy,

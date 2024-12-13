@@ -18,19 +18,23 @@ namespace core {
 template <concepts::GameConstants GameConstants, typename State, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
-  using ActionMask = std::bitset<GameConstants::kNumActions>;
+  using kNumActionsPerMode = GameConstants::kNumActionsPerMode;
+  static constexpr int kNumActionTypes = kNumActionsPerMode::size();
+  static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
+
+  using ActionMask = std::bitset<kMaxNumActions>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
 
-  using PolicyShape = Eigen::Sizes<GameConstants::kNumActions>;
+  using PolicyShape = Eigen::Sizes<kMaxNumActions>;
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
   using ValueTensor = GameResults::Tensor;
   using ValueShape = ValueTensor::Dimensions;
-  using ActionValueShape = Eigen::Sizes<GameConstants::kNumActions>;
+  using ActionValueShape = Eigen::Sizes<kMaxNumActions>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
 
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;
-  using ActionSymmetryTable = core::ActionSymmetryTable<GameConstants, SymmetryGroup>;
+  using ActionSymmetryTable = core::ActionSymmetryTable<kMaxNumActions, SymmetryGroup>;
   using LocalPolicyArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
   using LocalActionValueArray = eigen_util::DArray<GameConstants::kMaxBranchingFactor>;
 
@@ -76,6 +80,7 @@ struct GameTypes {
     ValueArray win_rates;
     ValueTensor value_prior;
     ActionSymmetryTable action_symmetry_table;
+    core::action_mode_t action_mode;
     bool trivial;  // all actions are symmetrically equivalent
     bool provably_lost = false;
 

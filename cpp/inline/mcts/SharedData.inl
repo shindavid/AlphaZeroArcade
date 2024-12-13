@@ -20,7 +20,8 @@ void SharedData<Game>::clear() {
 
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
     root_info.history_array[sym].initialize(Rules{});
-    Game::Symmetries::apply(root_info.history_array[sym].current(), sym);
+    State& state = root_info.history_array[sym].current();
+    Game::Symmetries::apply(state, sym);
   }
 
   const State& raw_state = root_info.history_array[group::kIdentity].current();
@@ -29,9 +30,10 @@ void SharedData<Game>::clear() {
 
 template <core::concepts::Game Game>
 void SharedData<Game>::update_state(core::action_t action) {
+  core::action_mode_t mode = get_current_action_mode();
   for (group::element_t sym = 0; sym < SymmetryGroup::kOrder; ++sym) {
     core::action_t transformed_action = action;
-    Game::Symmetries::apply(transformed_action, sym);
+    Game::Symmetries::apply(transformed_action, sym, mode);
     Game::Rules::apply(root_info.history_array[sym], transformed_action);
   }
 
@@ -48,6 +50,11 @@ void SharedData<Game>::init_root_info(bool add_noise) {
     new (root) Node(&lookup_table, canonical_history);
     root->stats().RN++;
   }
+}
+
+template <core::concepts::Game Game>
+core::action_mode_t SharedData<Game>::get_current_action_mode() const {
+  return Rules::get_action_mode(root_info.history_array[0].current());
 }
 
 }  // namespace mcts

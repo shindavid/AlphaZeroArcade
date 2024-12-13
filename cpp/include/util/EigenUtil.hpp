@@ -360,11 +360,10 @@ template <typename Derived0, typename... Deriveds>
 auto concatenate_columns(const Eigen::ArrayBase<Derived0>& first,
                          const Eigen::ArrayBase<Deriveds>&... rest);
 
-template <eigen_util::concepts::FTensor T>
-boost::json::array to_json(const T& tensor);
+template <eigen_util::concepts::FTensor T> boost::json::array to_json(const T& tensor);
+template <eigen_util::concepts::FArray T> boost::json::array to_json(const T& array);
 
-template <eigen_util::concepts::FArray T>
-boost::json::array to_json(const T& array);
+template <concepts::FTensor Tensor> Tensor zeros();
 
 }  // namespace eigen_util
 

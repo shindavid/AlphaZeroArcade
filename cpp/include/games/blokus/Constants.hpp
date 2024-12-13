@@ -94,14 +94,14 @@ const int kMiniBoardLookupSize = 91;
  * 1. Location (or pass)
  * 2. Piece/orientation/corner to place on that location
  *
- * To allow an action to be interpretable in a context-free manner, we use disjoint regions of
- * the action space for each part of the move.
- *
  * The first part contributes (kNumCells + 1) values (+1 for pass).
  *
  * The second part contributes kNumPieceOrientationCorners values.
  */
-const int kNumActions = kNumCells + kNumPieceOrientationCorners + 1;
+const core::action_mode_t kLocationMode = 0;
+const core::action_mode_t kPiecePlacementMode = 1;
+const int kNumLocationActions = kNumCells + 1;
+const int kNumPiecePlacementActions = kNumPieceOrientationCorners;
 
 const core::action_t kPass = kNumCells;
 
