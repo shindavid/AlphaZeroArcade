@@ -19,7 +19,7 @@ template <concepts::GameConstants GameConstants, typename State, concepts::GameR
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
   using kNumActionsPerMode = GameConstants::kNumActionsPerMode;
-  static constexpr int kNumActionTypes = kNumActionsPerMode::size();
+  static constexpr int kNumActionModes = kNumActionsPerMode::size();
   static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
 
   using ActionMask = std::bitset<kMaxNumActions>;

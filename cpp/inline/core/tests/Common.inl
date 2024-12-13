@@ -16,7 +16,7 @@ void Common<Game>::gtest_action_transforms() {
   using Constants = Game::Constants;
   using kNumActionsPerMode = Constants::kNumActionsPerMode;
   using PolicyTensor = Game::Types::PolicyTensor;
-  for (action_mode_t action_mode = 0; action_mode < Game::Types::kNumActionTypes; action_mode++) {
+  for (action_mode_t action_mode = 0; action_mode < Game::Types::kNumActionModes; action_mode++) {
     int num_actions = util::get<kNumActionsPerMode>(action_mode);
     for (core::action_t action = 0; action < num_actions; ++action) {
       for (group::element_t sym = 0; sym < Game::SymmetryGroup::kOrder; ++sym) {
