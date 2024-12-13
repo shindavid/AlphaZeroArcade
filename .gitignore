@@ -21,6 +21,7 @@ build
 
 # output
 output
+profiling
 
 # egg files
 **/AlphaZeroArcade.egg-info
