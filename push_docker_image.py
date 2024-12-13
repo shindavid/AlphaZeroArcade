@@ -48,6 +48,7 @@ def main():
     version = get_image_label(args.local_docker_image, 'version')
     image_id = get_image_id(args.local_docker_image)
     docker_tag(image_id, args.docker_hub_image, version)
+    docker_tag(image_id, args.docker_hub_image, 'latest')
     docker_push(args.docker_hub_image, version)
     docker_push(args.docker_hub_image, 'latest')
     print('✅ Successfully pushed docker image!')
