@@ -2,7 +2,7 @@
 
 # This file should not depend on any repo python files outside of the top-level directory.
 
-from setup_common import get_env_json
+from setup_common import get_env_json, get_image_label
 
 import argparse
 import shlex
@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.resolve()
 
-MINIMUM_REQUIRED_IMAGE_VERSION = "1.0.0"
+MINIMUM_REQUIRED_IMAGE_VERSION = "1.0.2"
 
 EXPOSED_PORTS = [
     5012,  # bokeh
@@ -30,21 +30,6 @@ def get_args():
     parser.add_argument("-i", '--instance-name', default='a0a_instance',
                         help='name of the instance to run (default: %(default)s)')
     return parser.parse_args()
-
-
-def get_image_label(image_name, label_key):
-    """
-    Get the value of a specific label from a Docker image.
-    """
-    result = subprocess.check_output(
-        ["docker", "inspect",
-            f"--format={{{{index .Config.Labels \"{label_key}\"}}}}", image_name],
-        stderr=subprocess.STDOUT,
-        text=True,
-    ).strip()
-    if not result:
-        return None
-    return result
 
 
 def check_image_version(image_name):
@@ -128,8 +113,11 @@ def run_container(args):
         if not check_image_version(docker_image):
             return
 
+    libtorch_dir = REPO_ROOT / "libtorch"
+    libtorch_dir.mkdir(exist_ok=True)
+
     output_dir = Path(output_dir)
-    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo"]
+    mounts = ['-v', f"{REPO_ROOT}:/workspace/repo", '-v', f"{libtorch_dir}:/workspace/libtorch"]
     post_mount_cmds = ["export PYTHONPATH=/workspace/repo/py"]
 
     # Check if output_dir is inside REPO_ROOT

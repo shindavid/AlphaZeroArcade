@@ -2,7 +2,7 @@
 
 # This file should not depend on any repo python files outside of the top-level directory.
 
-from setup_common import DOCKER_HUB_IMAGE, update_env_json
+from setup_common import LATEST_DOCKER_HUB_IMAGE, update_env_json
 
 import argparse
 import subprocess
@@ -10,7 +10,7 @@ import subprocess
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", '--docker-hub-image', default=DOCKER_HUB_IMAGE,
+    parser.add_argument("-i", '--docker-hub-image', default=LATEST_DOCKER_HUB_IMAGE,
                         help='Docker Hub image name (default: %(default)s)')
     return parser.parse_args()
 

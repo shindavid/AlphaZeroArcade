@@ -29,5 +29,8 @@ output
 .ipynb_checkpoints/
 Untitled*.ipynb
 
+# libtorch
+libtorch/
+
 logs
 
