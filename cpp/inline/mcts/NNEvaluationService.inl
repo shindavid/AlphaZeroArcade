@@ -318,7 +318,7 @@ void NNEvaluationService<Game>::loop() {
     wait_for_last_reservation();
     wait_for_commits();
     batch_evaluate();
-    profiler_.dump();
+    profiler_.dump(64);
   }
 }
 
