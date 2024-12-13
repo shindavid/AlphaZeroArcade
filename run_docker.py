@@ -44,7 +44,7 @@ def check_image_version(image_name):
         else:
             print(f'Your docker image version is {image_version}, but the minimum required version is {min_version}.')
         print('')
-        print('Please refresh your docker image by running update_docker_image.py.')
+        print('Please refresh your docker image by running pull_docker_image.py.')
         print('')
         print('Or, to run anyways, rerun with --skip-image-version-check')
         return False
