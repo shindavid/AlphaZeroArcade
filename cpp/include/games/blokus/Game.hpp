@@ -33,8 +33,7 @@ namespace blokus {
 class Game {
  public:
   struct Constants : public core::ConstantsBase {
-    // TODO: change this to use different action modes (location, poc)
-    using kNumActionsPerMode = util::int_sequence<blokus::kNumActions>;
+    using kNumActionsPerMode = util::int_sequence<kNumLocationActions, kNumPiecePlacementActions>;
     static constexpr int kNumPlayers = blokus::kNumPlayers;
     static constexpr int kMaxBranchingFactor = blokus::kNumPieceOrientationCorners;
   };
@@ -60,7 +59,7 @@ class Game {
   struct Rules {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
+    static core::action_mode_t get_action_mode(const State&);
     static core::seat_index_t get_current_player(const State&);
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,

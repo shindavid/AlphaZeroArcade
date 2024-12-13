@@ -215,10 +215,10 @@ void Game::IO::print_mcts_results(std::ostream& os, const Types::PolicyTensor& a
 
   auto tuple0 = std::make_tuple(mcts_counts(0), action_policy(0), net_policy(0), 0);
   using tuple_t = decltype(tuple0);
-  using tuple_array_t = std::array<tuple_t, kNumActions>;
+  using tuple_array_t = std::array<tuple_t, Types::kMaxNumActions>;
   tuple_array_t tuples;
   int i = 0;
-  for (int a = 0; a < kNumActions; ++a) {
+  for (int a = 0; a < Types::kMaxNumActions; ++a) {
     if (valid_actions[a]) {
       tuples[i] = std::make_tuple(mcts_counts(a), action_policy(a), net_policy(a), a);
       i++;
