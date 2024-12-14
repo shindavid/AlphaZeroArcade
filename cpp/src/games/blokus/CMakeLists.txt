@@ -5,13 +5,16 @@ set(COMMON_SOURCES
     Types.cpp
 )
 
-add_executable(blokus_tests main/UnitTests.cpp ${COMMON_SOURCES})
-add_executable(blokus_exe main/Blokus.cpp ${COMMON_SOURCES})
-add_library(blokus_ffi SHARED shared/Blokus_ffi.cpp ${COMMON_SOURCES})
+add_library(blokus_common_objs OBJECT ${COMMON_SOURCES})
+set_target_properties(blokus_common_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_executable(blokus_tests main/UnitTests.cpp)
+add_executable(blokus_exe main/Blokus.cpp)
+add_library(blokus_ffi SHARED shared/Blokus_ffi.cpp)
 set_target_properties(blokus_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(blokus_tests PRIVATE ${GTEST_LIBS})
 
-set(LINK_LIBS util_lib ${COMMON_EXTERNAL_LIBS})
+set(LINK_LIBS blokus_common_objs util_lib ${COMMON_EXTERNAL_LIBS})
 set(TARGETS blokus_tests blokus_exe blokus_ffi)
 foreach(target ${TARGETS})
     target_link_libraries(${target} PRIVATE ${LINK_LIBS})

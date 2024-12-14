@@ -3,13 +3,16 @@ set(COMMON_SOURCES
     PerfectStrategyLookupTable.cpp
 )
 
-add_executable(tictactoe_tests main/UnitTests.cpp ${COMMON_SOURCES})
-add_executable(tictactoe_exe main/TicTacToe.cpp ${COMMON_SOURCES})
-add_library(tictactoe_ffi SHARED shared/TicTacToe_ffi.cpp ${COMMON_SOURCES})
+add_library(tictactoe_common_objs OBJECT ${COMMON_SOURCES})
+set_target_properties(tictactoe_common_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_executable(tictactoe_tests main/UnitTests.cpp)
+add_executable(tictactoe_exe main/TicTacToe.cpp)
+add_library(tictactoe_ffi SHARED shared/TicTacToe_ffi.cpp)
 set_target_properties(tictactoe_ffi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(tictactoe_tests PRIVATE ${GTEST_LIBS})
 
-set(LINK_LIBS util_lib ${COMMON_EXTERNAL_LIBS})
+set(LINK_LIBS tictactoe_common_objs util_lib ${COMMON_EXTERNAL_LIBS})
 set(TARGETS tictactoe_tests tictactoe_exe tictactoe_ffi)
 foreach(target ${TARGETS})
     target_link_libraries(${target} PRIVATE ${LINK_LIBS})

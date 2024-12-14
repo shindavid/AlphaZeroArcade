@@ -1,11 +1,6 @@
 set(EXTRA_DEPS_DIR ${CMAKE_SOURCE_DIR}/extra_deps)
 set(LC0_DIR ${EXTRA_DEPS_DIR}/lc0)
 
-# file(GLOB LC0_SOURCES ${LC0_DIR}/*/*.cc)
-# list(REMOVE_ITEM LC0_SOURCES ${LC0_DIR}/chess/uciloop.cc)
-# list(REMOVE_ITEM LC0_SOURCES ${LC0_DIR}/utils/filesystem.win32.cc)
-# list(REMOVE_ITEM LC0_SOURCES ${LC0_DIR}/utils/weights_adapter.cc)
-
 set(LC0_SOURCES
     ${LC0_DIR}/chess/bitboard.cc
     ${LC0_DIR}/chess/board.cc
