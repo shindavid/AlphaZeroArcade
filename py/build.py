@@ -27,7 +27,7 @@ def run(cmd: str, print_cmd=True, handler=None):
 def get_args():
     parser = argparse.ArgumentParser(formatter_class=CustomHelpFormatter)
     parser.add_argument("-d", '--debug', action='store_true', help='debug build')
-    parser.add_argument('--clean', action='store_true', help='clean out target/.../bin/ directory')
+    parser.add_argument('--clean', action='store_true', help='clean out target/.../{bin,lib}/ directory')
     parser.add_argument("-c", '--clear-core-dumps', action='store_true', help='rm core.* (in cwd) before doing anything')
     parser.add_argument("-t", '--target', help='build targets, comma-separated. Default: all')
     parser.add_argument('-D', '--macro-defines', action='append',
@@ -160,6 +160,7 @@ def main():
 
     if args.clean:
         run(f'rm -rf {target_dir}/bin/*')
+        run(f'rm -rf {target_dir}/lib/*')
 
     cmake_cmd_tokens = [
         'cmake',
