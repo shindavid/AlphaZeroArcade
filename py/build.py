@@ -139,7 +139,7 @@ def main():
     debug = bool(args.debug)
 
     targets = args.target.split(',') if args.target else []
-    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    repo_root = os.path.dirname(os.path.dirname(__file__))
     os.chdir(repo_root)
 
     # build extra deps unconditionally
