@@ -60,16 +60,6 @@ All the work you do will be within this virtual machine.
 If you have access to multiple machines, you can launch `run_docker.py` on each of them, and then launch commands to
 effectively perform a big distributed AlphaZero run.
 
-### VSCode
-
-Once you have a Docker container running via `./run_docker.py`, the best workflow is to have your IDE connect to it.
-
-For VSCode, this can be accomplished as follows:
-
-1. Install the "Remote Development" extension.
-2. Launch the Command Palette with `Ctrl + Shift + P`, and search for "Attach to Running Container".
-3. Select the container
-
 ### Building
 
 Within your docker container, from the `/workspace/repo/` directory, run:
@@ -90,6 +80,42 @@ target/Release/bin/tests/c4_tests
 ...
 ```
 You can then run for example `target/Release/bin/tictactoe -h` to get a list of help options.
+
+### VSCode
+
+Once you have a Docker container running via `./run_docker.py`, the best workflow is to have your IDE connect to it.
+
+For VSCode, this can be accomplished as follows:
+
+1. Install the "Remote Development" extension.
+2. Launch the Command Palette with Ctrl+Shift+P, and search for "Attach to Running Container".
+3. Select the container
+
+After you've built the project at least once, you will have a `target/` directory that IntelliSense can use to streamline
+your coding experience. To set up IntelliSense:
+
+1. Install the "C/C++" extension.
+2. From the repo-root of the host-machine, in `.vscode/c_cpp_properties.json`, add a configuration for "AlphaZeroArcade":
+```
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      ...
+    },
+    {
+      "name": "AlphaZeroArcade",
+      "compileCommands": "${workspaceFolder}/target/Release/compile_commands.json"
+    }
+  ],
+  "version": 4
+}
+```
+3. Select the New Configuration in VSCode:
+- Open the Command Palette (Ctrl+Shift+P or Cmd+Shift+P on macOS).
+- Type "C/C++: Select a Configuration" and select your newly added "AlphaZeroArcade" configuration.
+
+_(Alternatively, you can click the C/C++ configuration indicator in the lower status bar and choose the "AlphaZeroArcade" configuration if it’s visible.)_
 
 ### The AlphaZero loop
 
