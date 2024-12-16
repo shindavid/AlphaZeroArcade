@@ -184,6 +184,7 @@ class GameLogWriter {
   int sample_count() const { return sample_count_; }
   game_id_t id() const { return id_; }
   int64_t start_timestamp() const { return start_timestamp_; }
+  bool done() {return terminal_added_;}
 
  private:
   template<typename T>

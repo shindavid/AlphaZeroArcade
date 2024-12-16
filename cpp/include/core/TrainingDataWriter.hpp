@@ -1,20 +1,20 @@
 #pragma once
 
-#include <cstdint>
-#include <list>
-#include <mutex>
-#include <thread>
-#include <vector>
-
-#include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-
 #include <core/GameLog.hpp>
 #include <core/concepts/Game.hpp>
 #include <core/LoopControllerClient.hpp>
 #include <core/LoopControllerListener.hpp>
 #include <util/BoostUtil.hpp>
 #include <util/CppUtil.hpp>
+
+#include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
+
+#include <cstdint>
+#include <deque>
+#include <list>
+#include <mutex>
+#include <thread>
 
 namespace core {
 
@@ -44,24 +44,24 @@ class TrainingDataWriter
   TrainingDataWriter(const Params& params);
   ~TrainingDataWriter();
 
-  void add(GameLogWriter_sptr log);
+  GameLogWriter_sptr make_game_log(game_id_t game_id);
+  void notify() {cv_.notify_one();}
   void shut_down();
 
   void pause() override;
   void unpause() override;
 
  protected:
-  using game_queue_t = std::vector<GameLogWriter_sptr>;
+  using game_queue_t = std::deque<GameLogWriter_sptr>;
 
   void loop();
   bool send(const GameLogWriter* log);  // return true if this is last game
 
   Params params_;
   std::thread* thread_;
-  game_queue_t completed_games_[2];
+  game_queue_t game_queue_;
   int64_t rows_written_ = 0;
 
-  int queue_index_ = 0;
   bool closed_ = false;
   bool paused_ = false;
 

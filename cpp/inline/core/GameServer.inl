@@ -284,7 +284,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
   TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
   GameLogWriter_sptr game_log(
-      training_data_writer ? new GameLogWriter(game_id, util::ns_since_epoch()) : nullptr);
+      training_data_writer ? training_data_writer->make_game_log(game_id) : nullptr);
 
   player_name_array_t player_names;
   for (size_t p = 0; p < players.size(); ++p) {
@@ -348,7 +348,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
       if (training_data_writer) {
         game_log->add_terminal(state_history.current(), outcome);
-        training_data_writer->add(game_log);
+        training_data_writer->notify();
       }
 
       if (shared_data_.params().announce_game_results) {

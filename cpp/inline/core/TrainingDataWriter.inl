@@ -40,11 +40,11 @@ TrainingDataWriter<Game>::~TrainingDataWriter() {
 }
 
 template <concepts::Game Game>
-void TrainingDataWriter<Game>::add(GameLogWriter_sptr data) {
+TrainingDataWriter<Game>::GameLogWriter_sptr
+TrainingDataWriter<Game>::make_game_log(game_id_t game_id) {
   std::unique_lock<std::mutex> lock(mutex_);
-  completed_games_[queue_index_].push_back(data);
-  lock.unlock();
-  cv_.notify_one();
+  game_queue_.push_back(std::make_shared<GameLogWriter>(game_id, util::ns_since_epoch()));
+  return game_queue_.back();
 }
 
 template <concepts::Game Game>
@@ -87,10 +87,18 @@ void TrainingDataWriter<Game>::unpause() {
 
 template <concepts::Game Game>
 void TrainingDataWriter<Game>::loop() {
+  std::vector<GameLogWriter_sptr> queue;
   while (!closed_) {
     std::unique_lock lock(mutex_);
-    game_queue_t& queue = completed_games_[queue_index_];
-    cv_.wait(lock, [&] { return !queue.empty() || closed_ || paused_; });
+    cv_.wait(lock, [&] { return (!game_queue_.empty() && game_queue_.front()->done()) || closed_ || paused_; });
+    for (size_t i = 0; i < game_queue_.size(); ++i) {
+      if (game_queue_[i]->done()){
+        queue.push_back(game_queue_[i]);
+        game_queue_.pop_front();
+      } else {
+        break;
+      }
+    }
     if (paused_) {
       LOG_INFO << "TrainingDataWriter: handle_pause_receipt";
       core::LoopControllerClient::get()->handle_pause_receipt();
@@ -99,7 +107,6 @@ void TrainingDataWriter<Game>::loop() {
       LOG_INFO << "TrainingDataWriter: handle_unpause_receipt";
       core::LoopControllerClient::get()->handle_unpause_receipt();
     }
-    queue_index_ = 1 - queue_index_;
     lock.unlock();
     for (GameLogWriter_sptr& data : queue) {
       if (send(data.get())) break;
