@@ -166,6 +166,7 @@ def main():
         '-G Ninja',
         'CMakeLists.txt',
         f'-B{target_dir}',
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
         f'-DMY_TORCH_DIR={torch_dir}',
         f'-DMY_EIGENRAND_DIR={eigenrand_dir}',
         f'-DEXTRA_DEFINITIONS="{extra_definitions}"',
