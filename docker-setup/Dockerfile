@@ -1,7 +1,7 @@
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 # FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
 
-LABEL version="1.0.3"
+LABEL version="1.0.4"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -40,7 +40,7 @@ RUN pip3 install torch torchvision torchaudio --index-url https://download.pytor
     pip3 install ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging
 
 # Configure SQLite
-RUN echo -e ".mode column\n.headers on" > /root/.sqliterc
+RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
