@@ -2,7 +2,6 @@
 import argparse
 from dataclasses import dataclass
 import os
-import pkg_resources
 import subprocess
 import sys
 from typing import List
@@ -11,7 +10,7 @@ from games.index import GAME_SPECS_BY_NAME
 from util.py_util import CustomHelpFormatter
 
 
-def run(cmd: str, print_cmd=True, handler=None):
+def run(cmd: str, print_cmd=True):
     if print_cmd:
         print(cmd)
 
@@ -19,8 +18,6 @@ def run(cmd: str, print_cmd=True, handler=None):
     _, stderr = proc.communicate()
     if proc.returncode:
         print(stderr)
-        if handler:
-            handler(stderr)
         sys.exit(1)
 
 
@@ -35,59 +32,6 @@ def get_args():
                         ' without an assigned value, it is given a value of "1" by default. This plays nicely with the'
                         ' IS_MACRO_ENABLED() macro function defined in cpp/util/CppUtil.hpp')
     return parser.parse_args()
-
-
-def catch_first_time_ninja_error(stderr):
-    lines = stderr.splitlines()
-    if lines[0].startswith('CMake Error: Error: generator : Ninja'):
-        print('\033[91m')
-        print('It appears that this is your first build since the migration to Ninja.')
-        print('Please do a one-time manual removal of your target/ directory and try again.')
-        print('\033[0m')
-
-
-def validate_gcc_version():
-    """
-    Our c++ code uses std::atomic<std::shared_ptr>>, which is only supported in gcc-12+.
-
-    See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
-    """
-    output = subprocess.getoutput('gcc --version')
-    version_str = output.splitlines()[0].split()[-1]
-    version = pkg_resources.parse_version(version_str)
-    required_version_str = '12'
-    required_version = pkg_resources.parse_version(required_version_str)
-    if version >= required_version:
-        return
-
-    print(f'Your gcc version ({version_str}) is old. Please update to version {required_version_str}+')
-    print('Recommended action:')
-    print('')
-    print('sudo apt-get install gcc-12')
-    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
-    sys.exit(0)
-
-
-def validate_gxx_version():
-    """
-    Our c++ code uses std::atomic<std::shared_ptr>>, which is only supported in gcc-12+.
-
-    See: https://en.cppreference.com/w/cpp/compiler_support#C.2B.2B20_library_features
-    """
-    output = subprocess.getoutput('g++ --version')
-    version_str = output.splitlines()[0].split()[-1]
-    version = pkg_resources.parse_version(version_str)
-    required_version_str = '12'
-    required_version = pkg_resources.parse_version(required_version_str)
-    if version >= required_version:
-        return
-
-    print(f'Your g++ version ({version_str}) is old. Please update to version {required_version_str}+')
-    print('Recommended action:')
-    print('')
-    print('sudo apt install g++-12')
-    print('sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60 --slave /usr/bin/g++ g++ /usr/bin/g++-12')
-    sys.exit(0)
 
 
 @dataclass
@@ -133,9 +77,6 @@ def main():
     if args.clear_core_dumps:
         run('rm -f core.*')
 
-    validate_gcc_version()
-    validate_gxx_version()
-
     debug = bool(args.debug)
 
     targets = args.target.split(',') if args.target else []
@@ -178,7 +119,7 @@ def main():
         cmake_cmd_tokens.append('-DCMAKE_BUILD_TYPE=Release')
 
     cmake_cmd = ' '.join(cmake_cmd_tokens)
-    run(cmake_cmd, handler=catch_first_time_ninja_error)
+    run(cmake_cmd)
 
     # Only use half of the available CPU cores for building to avoid overloading the machine
     num_parallel_jobs = max(1, os.cpu_count() // 2)
