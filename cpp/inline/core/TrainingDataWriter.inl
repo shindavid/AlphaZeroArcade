@@ -91,14 +91,14 @@ void TrainingDataWriter<Game>::loop() {
   while (!closed_) {
     std::unique_lock lock(mutex_);
     cv_.wait(lock, [&] { return (!game_queue_.empty() && game_queue_.front()->done()) || closed_ || paused_; });
-    for (size_t i = 0; i < game_queue_.size(); ++i) {
-      if (game_queue_[i]->done()){
-        queue.push_back(game_queue_[i]);
-        game_queue_.pop_front();
-      } else {
-        break;
-      }
+
+    auto it = game_queue_.begin();
+    while (it != game_queue_.end() && (*it)->done()) {
+      queue.push_back(*it);
+      ++it;
     }
+    game_queue_.erase(game_queue_.begin(), it);
+
     if (paused_) {
       LOG_INFO << "TrainingDataWriter: handle_pause_receipt";
       core::LoopControllerClient::get()->handle_pause_receipt();

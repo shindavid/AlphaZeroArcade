@@ -45,7 +45,7 @@ class TrainingDataWriter
   ~TrainingDataWriter();
 
   GameLogWriter_sptr make_game_log(game_id_t game_id);
-  void notify() {cv_.notify_one();}
+  void notify() { cv_.notify_one(); }
   void shut_down();
 
   void pause() override;

@@ -272,7 +272,7 @@ void GameServer<Game>::GameThread::run() {
       reindexed_outcome[player_order[p].player_id] = outcome[p];
     }
     duration_t duration = t2 - t1;
-    int64_t ns = duration.count();
+  int64_t ns = duration.count();
     shared_data_.update(reindexed_outcome, ns);
   }
 }
