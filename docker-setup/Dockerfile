@@ -1,7 +1,7 @@
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
-# FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+# FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-LABEL version="1.0.4"
+LABEL version="1.1.0"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -36,11 +36,13 @@ RUN for tool in gcc g++; do \
     done
 
 # Python dependencies
-RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124 && \
-    pip3 install ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging
+RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging
 
 # Configure SQLite
 RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
+
+RUN groupadd -g 1000 devgroup && \
+    useradd -u 1000 -g devgroup devuser
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
@@ -48,4 +50,4 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 WORKDIR /workspace/repo
 
-CMD ["bash"]
+CMD ["/start.sh"]
