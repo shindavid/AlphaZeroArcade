@@ -77,7 +77,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
                        filename_.c_str());
 
   pos_index_t state_index = get_pos_index(index);
-  bool has_next = state_index < num_non_terminal_positions();
+  bool has_next = state_index + 1 < num_non_terminal_positions();
 
   PolicyTensor policy = get_policy(state_index);
   PolicyTensor next_policy =
