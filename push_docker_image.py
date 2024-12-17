@@ -18,6 +18,10 @@ def get_args():
                         help='Local docker image name (default: %(default)s)')
     parser.add_argument("-i", '--docker-hub-image', default=DOCKER_HUB_IMAGE,
                         help='Docker Hub image name, without tag (default: %(default)s)')
+    parser.add_argument("-t", '--tag',
+                        help='Comma-separated tags to push to Docker Hub '
+                        '(default: "{VERSION},latest", where VERSION is the version label '
+                        'of the local image)')
     return parser.parse_args()
 
 
@@ -45,12 +49,19 @@ def docker_push(remote_image, tag):
 
 def main():
     args = get_args()
-    version = get_image_label(args.local_docker_image, 'version')
+    tags = []
+    if args.tag:
+        tags = args.tag.split(',')
+    else:
+        version = get_image_label(args.local_docker_image, 'version')
+        tags.append(version)
+        tags.append('latest')
     image_id = get_image_id(args.local_docker_image)
-    docker_tag(image_id, args.docker_hub_image, version)
-    docker_tag(image_id, args.docker_hub_image, 'latest')
-    docker_push(args.docker_hub_image, version)
-    docker_push(args.docker_hub_image, 'latest')
+
+    for tag in tags:
+        docker_tag(image_id, args.docker_hub_image, tag)
+        docker_push(args.docker_hub_image, tag)
+
     print('✅ Successfully pushed docker image!')
 
 
