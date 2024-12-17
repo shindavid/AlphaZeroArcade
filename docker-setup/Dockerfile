@@ -1,7 +1,7 @@
 # FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-LABEL version="1.1.0"
+LABEL version="1.1.1"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
