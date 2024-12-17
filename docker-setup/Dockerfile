@@ -1,7 +1,7 @@
 # FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-LABEL version="1.1.1"
+LABEL version="1.1.2"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -41,8 +41,13 @@ RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy ma
 # Configure SQLite
 RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
 
+ENV PYTHONPATH=/workspace/repo/py
+
 RUN groupadd -g 1000 devgroup && \
     useradd -u 1000 -g devgroup devuser
+
+RUN mkdir -p /home/devuser && chown devuser:devgroup /home/devuser
+RUN mkdir -p /workspace && chown devuser:devgroup /workspace
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh

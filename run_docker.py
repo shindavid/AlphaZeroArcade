@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.resolve()
 
-MINIMUM_REQUIRED_IMAGE_VERSION = "1.1.0"
+MINIMUM_REQUIRED_IMAGE_VERSION = "1.1.2"
 
 EXPOSED_PORTS = [
     5012,  # bokeh
@@ -134,9 +134,13 @@ def run_container(args):
     for port in EXPOSED_PORTS:
         ports_strs += ['-p', f"{port}:{port}"]
 
+    user_id = subprocess.check_output(["id", "-u"], text=True).strip()
+    group_id = subprocess.check_output(["id", "-g"], text=True).strip()
+
     # Build the docker run command
     docker_cmd = [
         "docker", "run", "--rm", "-it", "--gpus", "all", "--name", args.instance_name,
+        '--user', f'{user_id}:{group_id}',
     ] + ports_strs + mounts + [
         docker_image
     ]
