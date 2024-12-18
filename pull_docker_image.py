@@ -19,13 +19,6 @@ def get_args():
 
 def docker_pull(image):
     print(f'Pulling {image}...')
-    subprocess.run(['docker', 'pull', image], check=True)
-    update_env_json({'DOCKER_IMAGE': image})
-    print('✅ Successfully pulled docker image!')
-
-
-def docker_pull(image):
-    print(f'Pulling {image}...')
 
     # Run the docker pull command and capture the output
     result = subprocess.run(
@@ -34,6 +27,8 @@ def docker_pull(image):
         stderr=subprocess.STDOUT,
         text=True
     )
+
+    update_env_json({'DOCKER_IMAGE': image})
 
     output = result.stdout
     print(output)  # Optionally print the output for debugging
