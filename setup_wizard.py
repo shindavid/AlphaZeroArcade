@@ -136,11 +136,8 @@ def check_docker_permissions():
         if "permission denied" in stderr.lower():
             print("❌ You do not have permission to run Docker commands without sudo.")
             print("To fix this, add your user to the Docker group by running:")
-            print("    sudo groupadd docker (if it doesn't already exist)")
             print("    sudo usermod -aG docker $USER")
-            print("Then log out and log back in.")
-            print("Or run:")
-            print("    newgrp docker")
+            print("Then, log out and log back in.")
         else:
             print("❌ Docker command failed for an unknown reason.")
             print("Error details:")
@@ -170,11 +167,11 @@ def main():
     try:
         setup_output_dir()
         print('*' * 80)
+        check_docker_permissions()
+        print('*' * 80)
         docker_pull(LATEST_DOCKER_HUB_IMAGE)
         print('*' * 80)
         validate_nvidia_installation(LATEST_DOCKER_HUB_IMAGE)
-        print('*' * 80)
-        check_docker_permissions()
         print('*' * 80)
         verify_python_modules()
     except KeyboardInterrupt:
