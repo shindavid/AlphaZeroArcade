@@ -27,7 +27,6 @@
 
 namespace nim {
 
-
 struct Game {
   struct Constants : public core::ConstantsBase {
     using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
@@ -40,8 +39,7 @@ struct Game {
   };
 
 /*
- *
- * This structure encapsulates the state of the game using a single integer
+ * This structure encapsulates the state of the game using a single integer uint8_t.
  * (bits) to store various pieces of information:
  * - Bits 0-4: Number of stones (0-31)
  * - Bit 5: Current player (0 or 1)
