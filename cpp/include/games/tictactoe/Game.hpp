@@ -80,6 +80,7 @@ class Game {
     static void apply(StateHistory&, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
+    static bool is_chance(const State&) { return false; }
   };
 
   struct IO : public core::IOBase<Types, State> {

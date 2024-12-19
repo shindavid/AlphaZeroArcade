@@ -79,6 +79,7 @@ struct Game {
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
     static bool is_chance_mode(core::action_mode_t mode) { return mode == 1; }
+    static bool is_chance(const State& state) { return is_chance_mode(get_action_mode(state)); }
     static Types::PolicyTensor get_chance_dist(const State& state);
     static void apply_chance(StateHistory& history);
   };
