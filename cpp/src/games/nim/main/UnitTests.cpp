@@ -19,7 +19,7 @@ TEST(NimGameTest, InitialState) {
   State state = history.current();
 
   EXPECT_EQ(Rules::get_current_player(state), 0);
-  EXPECT_EQ(state.stones_left, 21);  // Assuming the game starts with 21 stones
+  EXPECT_EQ(Game::get_stones(state), 21);  // Assuming the game starts with 21 stones
 }
 
 TEST(NimGameTest, MakeMove) {
@@ -28,7 +28,7 @@ TEST(NimGameTest, MakeMove) {
   Rules::apply(history, nim::kTake3);
   State state = history.current();
 
-  EXPECT_EQ(state.stones_left, 18);
+  EXPECT_EQ(Game::get_stones(state), 18);
   EXPECT_EQ(Rules::get_current_player(state), 1);
 }
 
@@ -45,7 +45,7 @@ TEST(NimGameTest, Player0Wins) {
   core::action_t last_action = actions.back();
 
   GameResults::Tensor outcome;
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().current_player,
+  bool terminal = Rules::is_terminal(history.current(), 1 - Game::get_player(history.current()),
                                      last_action, outcome);
 
   EXPECT_TRUE(terminal);
@@ -64,7 +64,7 @@ TEST(NimGameTest, Player1Wins) {
 
   GameResults::Tensor outcome;
   core::action_t last_action = actions.back();
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().current_player,
+  bool terminal = Rules::is_terminal(history.current(), 1 - Game::get_player(history.current()),
                                      last_action, outcome);
 
   EXPECT_TRUE(terminal);

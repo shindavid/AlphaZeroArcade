@@ -2,8 +2,9 @@
 
 namespace nim {
 inline void Game::Rules::init_state(State& state) {
-  state.stones_left = kStartingStones;
-  state.current_player = 0;
+  Game::set_stones(state, kStartingStones);
+  Game::set_player(state, 0);
+  Game::set_player_ready(state, 1);
 }
 
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
@@ -11,7 +12,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   Types::ActionMask mask;
 
   for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-    mask[i] = i + 1 <= state.stones_left;
+    mask[i] = i + 1 <= Game::get_stones(state);
   }
 
   return mask;
@@ -23,13 +24,13 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   }
 
   State& state = history.extend();
-  state.stones_left -= action + 1;
-  state.current_player = 1 - state.current_player;
+  Game::set_stones(state, Game::get_stones(state) - (action + 1));
+  Game::set_player(state, 1 - Game::get_player(state));
 }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                                      core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.stones_left == 0) {
+  if (Game::get_stones(state) == 0) {
     outcome.setZero();
     outcome(last_player) = 1;
     return true;
