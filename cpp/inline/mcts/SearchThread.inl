@@ -487,7 +487,7 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
 
     if (terminal) {
       new (child) Node(&lookup_table, *history, game_outcome);
-    } else if (Game::Rules::is_chance(history->current())) {
+    } else if (Game::Rules::is_chance_mode(history->current())) {
       new (child) Node(&lookup_table, *history, true);
     } else {
       new (child) Node(&lookup_table, *history);

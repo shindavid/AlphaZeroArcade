@@ -38,10 +38,15 @@ TEST(NimGameTest, VerifyChanceStatus) {
 
   Rules::apply(history, nim::kTake3);
   State state = history.current();
-
-  EXPECT_FALSE(state.is_player_ready());
-  EXPECT_EQ(Rules::get_action_mode(state), 1);
-  EXPECT_TRUE(Rules::is_chance_mode(Rules::get_action_mode(state)));
+  if (nim::kMaxRandomStonesToTake == 0) {
+    EXPECT_TRUE(state.is_player_ready());
+    EXPECT_EQ(Rules::get_action_mode(state), 0);
+    EXPECT_FALSE(Rules::is_chance_mode(state));
+  } else {
+    EXPECT_FALSE(state.is_player_ready());
+    EXPECT_EQ(Rules::get_action_mode(state), 1);
+    EXPECT_TRUE(Rules::is_chance_mode(state));
+  }
 }
 
 TEST(NimGameTest, VerifyDistFailure) {
@@ -52,6 +57,9 @@ TEST(NimGameTest, VerifyDistFailure) {
 }
 
 TEST(NimGameTest, VerifyDist) {
+  if (nim::kMaxRandomStonesToTake == 0) {
+    return;
+  }
   StateHistory history;
   history.initialize(Rules{});
 
@@ -60,12 +68,19 @@ TEST(NimGameTest, VerifyDist) {
 
   PolicyTensor dist = Rules::get_chance_dist(state);
 
-  EXPECT_EQ(dist[0], 0.5);
-  EXPECT_EQ(dist[1], 0.5);
-  EXPECT_EQ(dist[2], 0);
+  for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
+    EXPECT_EQ(dist[i], 1.0 / (nim::kMaxRandomStonesToTake + 1));
+  }
+
+  for (int i = nim::kMaxRandomStonesToTake + 1; i < dist.size(); ++i) {
+    EXPECT_EQ(dist[i], 0);
+  }
 }
 
 TEST(NimGameTest, ChanceMove) {
+  if (nim::kMaxRandomStonesToTake == 0) {
+    return;
+  }
   int num_trials = 1000;
   float sum = 0;
   for (int i = 0; i < num_trials; i++) {
@@ -73,7 +88,9 @@ TEST(NimGameTest, ChanceMove) {
     history.initialize(Rules{});
 
     Rules::apply(history, nim::kTake3);
-    Rules::apply_chance(history);
+
+    core::action_t chance_action = Rules::sample_chance_action(history);
+    Rules::apply(history, chance_action);
 
     sum += history.current().get_stones();
   }

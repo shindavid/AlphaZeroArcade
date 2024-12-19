@@ -19,30 +19,35 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
-inline void Game::Rules::apply_chance(StateHistory& history) {
-  core::action_mode_t mode = get_action_mode(history.current());
-  if (!is_chance_mode(mode)) {
+inline core::action_t Game::Rules::sample_chance_action(StateHistory& history) {
+  if (!is_chance_mode(history.current())) {
     throw std::invalid_argument("Not in chance mode");
   }
 
   Types::PolicyTensor dist = get_chance_dist(history.current());
   core::action_t random_action = eigen_util::sample(dist);
 
-  State& state = history.extend();
-  int outcome_stones = std::max(state.get_stones() - random_action, 0);
-  state.set_stones(outcome_stones);
-  state.set_player_ready(true);
+  return random_action;
 }
 
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  if (action < 0 || action >= nim::kMaxStonesToTake) {
-    throw std::invalid_argument("Invalid action: " + std::to_string(action));
-  }
-
+  bool is_chance = is_chance_mode(history.current());
   State& state = history.extend();
-  state.set_stones(state.get_stones() - (action + 1));
-  state.set_player(1 - state.get_player());
-  state.set_player_ready(false);
+
+  if (is_chance) {
+    int outcome_stones = std::max(state.get_stones() - action, 0);
+    state.set_stones(outcome_stones);
+    state.set_player_ready(true);
+  } else {
+    if (action < 0 || action >= nim::kMaxStonesToTake) {
+      throw std::invalid_argument("Invalid action: " + std::to_string(action));
+    }
+    state.set_stones(state.get_stones() - (action + 1));
+    state.set_player(1 - state.get_player());
+    if (kMaxRandomStonesToTake > 0) {
+      state.set_player_ready(false);
+    }
+  }
 }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
