@@ -80,6 +80,7 @@ struct Game {
                             core::action_t last_action, GameResults::Tensor& outcome);
     static bool is_chance_mode(core::action_mode_t mode) { return mode == 1; }
     static Types::PolicyTensor get_chance_dist(const State& state);
+    static void apply_chance(StateHistory& history);
   };
 
   struct IO : public core::IOBase<Types, State> {

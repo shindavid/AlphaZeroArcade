@@ -19,6 +19,12 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
+inline void Game::Rules::apply_chance(StateHistory& history) {
+  static_assert(is_chance_mode(get_action_mode(history.current())), 1);
+  core::action_t random_action = eigen_util::sample(get_chance_dist(history.current()));
+  apply(history, random_action);
+}
+
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   if (action < 0 || action >= nim::kMaxStonesToTake) {
     throw std::invalid_argument("Invalid action: " + std::to_string(action));
