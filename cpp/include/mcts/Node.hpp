@@ -206,7 +206,7 @@ class Node {
     mutable std::mutex map_mutex_;
   };
 
-  Node(LookupTable*, const StateHistory&);  // for non-terminal nodes
+  Node(LookupTable*, const StateHistory&, bool is_chance=false);  // for non-terminal nodes
   Node(LookupTable*, const StateHistory&, const ValueTensor& game_outcome);  // for terminal nodes
 
   void write_results(const ManagerParams& params, group::element_t inv_sym,
@@ -239,6 +239,7 @@ class Node {
   Node* get_child(const edge_t* edge) const;
   void update_child_expand_count(int n=1);
   bool trivial() const { return trivial_; }
+  bool is_chance() const { return is_chance_; }
 
   // NO-OP in release builds, checks various invariants in debug builds
   void validate_state() const;
@@ -251,6 +252,7 @@ class Node {
   edge_pool_index_t first_edge_index_ = -1;
   int child_expand_count_ = 0;
   bool trivial_ = false;  // set to true if all actions discovered to be symmetrically equivalent
+  bool is_chance_ = false;
 };
 
 }  // namespace mcts

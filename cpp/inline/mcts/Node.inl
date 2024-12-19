@@ -177,10 +177,11 @@ int Node<Game>::LookupTable::get_random_mutex_id() const {
 }
 
 template <core::concepts::Game Game>
-Node<Game>::Node(LookupTable* table, const StateHistory& history)
+Node<Game>::Node(LookupTable* table, const StateHistory& history, bool is_chance)
     : stable_data_(history),
       lookup_table_(table),
-      mutex_id_(table->get_random_mutex_id()) {}
+      mutex_id_(table->get_random_mutex_id()),
+      is_chance_(is_chance) {}
 
 template <core::concepts::Game Game>
 Node<Game>::Node(LookupTable* table, const StateHistory& history, const ValueTensor& game_outcome)
