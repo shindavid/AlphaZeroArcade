@@ -5,6 +5,7 @@ from .params import LoopControllerParams
 from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientConnection, DisconnectHandler, Generation, GpuId, \
     MsgHandler, ShutdownAction
+from alphazero.logic.run_params import RunParams
 from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from util.socket_util import JsonDict
@@ -56,6 +57,11 @@ class LoopControllerInterface(abc.ABC):
     @property
     @abc.abstractmethod
     def training_params(self) -> TrainingParams:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def run_params(self) -> RunParams:
         pass
 
     @property
@@ -115,14 +121,6 @@ class LoopControllerInterface(abc.ABC):
 
     @abc.abstractmethod
     def handle_new_model(self):
-        pass
-
-    @abc.abstractmethod
-    def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
-        pass
-
-    @abc.abstractmethod
-    def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
         pass
 
     @abc.abstractmethod
