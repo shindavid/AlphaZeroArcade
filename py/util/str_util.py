@@ -3,6 +3,13 @@ Collection of str util functions.
 """
 
 
+def rreplace(s: str, old: str, new: str, count: int) -> str:
+    """
+    Like s.replace(old, new, count), but replaces from the back rather than the front.
+    """
+    return new.join(s.rsplit(old, count))
+
+
 def center_text(text: str, n: int) -> str:
     """
     center_text('abc', 5) -> ' abc '

@@ -6,9 +6,9 @@ from alphazero.dashboard.self_play_plotting import create_self_play_figure
 from alphazero.logic.run_params import RunParams
 from alphazero.servers.loop_control.directory_organizer import DirectoryOrganizer
 from util.py_util import CustomHelpFormatter
+from util.str_util import rreplace
 
 from bokeh.embed import server_document
-from bokeh.plotting import figure
 from bokeh.server.server import Server
 from bokeh.themes import Theme
 from flask import Flask, jsonify, render_template, request, session
@@ -43,7 +43,7 @@ class Params:
 
     @staticmethod
     def add_args(parser):
-        group = parser.add_argument_group('Flaskh/Bokeh options')
+        group = parser.add_argument_group('Flask/Bokeh options')
 
         defaults = Params()
         group.add_argument('--bokeh-port', type=int, default=defaults.bokeh_port,
@@ -155,16 +155,26 @@ class DocumentCollection:
     def __init__(self, tags: List[str]):
         tag_str = ','.join(tags)
 
-        training_heads = [
-            (head, server_document(f'http://localhost:{bokeh_port}/training_{head}',
-                                   arguments={'tags': tag_str}))
-                                   for head in all_training_heads]
-        training = server_document(f'http://localhost:{bokeh_port}/training',
-                                            arguments={'tags': tag_str})
-        self_play = server_document(f'http://localhost:{bokeh_port}/self_play',
-                                    arguments={'tags': tag_str})
-        ratings = server_document(f'http://localhost:{bokeh_port}/ratings',
-                                arguments={'tags': tag_str})
+        flask_host = request.headers.get('X-Forwarded-Host', request.host)
+        protocol = request.headers.get('X-Forwarded-Proto', 'http')
+
+        # For local runs, flask_host will be "127.0.0.1:{flask_port}"
+        #
+        # On runpod.io, flask_host will be a proxy address like
+        #    x2hjevr3ktavjr-{flask_port}.proxy.runpod.net
+        #
+        # The below rreplace() replaces the port for either case.
+        bokeh_host = rreplace(flask_host, str(flask_port), str(bokeh_port), 1)
+        assert flask_host != bokeh_host, flask_host
+
+        def make_doc(name):
+            return server_document(f'{protocol}://{bokeh_host}/{name}',
+                                   arguments={'tags': tag_str})
+
+        training_heads = [(head, make_doc(f'training_{head}')) for head in all_training_heads]
+        training = make_doc('training')
+        self_play = make_doc('self_play')
+        ratings = make_doc('ratings')
 
         self.tags = tags
         self.training_heads = training_heads
@@ -227,10 +237,10 @@ def bk_worker():
     for head in all_training_heads:
         apps[f'/training_{head}'] = training_head(head)
 
-    allow_list = [
-        f"localhost:{bokeh_port}",
-        f"127.0.0.1:{flask_port}",
-        f"localhost:{flask_port}"]
+    # In principle, we should set the allow_list in a much more restrictive way.
+    # In practice, this may be running on a cloud server like runpod.io, which presents headaches
+    # because of their use of proxies. So, we allow all origins for now.
+    allow_list = ['*']
 
     server = Server(apps, io_loop=IOLoop(),
                     allow_websocket_origin=allow_list,
@@ -248,6 +258,9 @@ def open_in_browser():
 
 def main():
     Thread(target=bk_worker).start()
+
+    # TODO: detect if we are running locally or on a cloud server, and adjust the open_in_browser
+    # option and the print statement accordingly.
     if params.open_in_browser:
         Thread(target=open_in_browser).start()
     else:
