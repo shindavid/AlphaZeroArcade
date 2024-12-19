@@ -64,7 +64,7 @@ struct Game {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
     // action mode: 0 means player's move, 1 means chance move
-    static core::action_mode_t get_action_mode(const State& state) { return 1 - state.is_player_ready(); }
+    static core::action_mode_t get_action_mode(const State& state) { return !state.is_player_ready(); }
     static core::seat_index_t get_current_player(const State& state) { return state.get_player(); }
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,

@@ -40,12 +40,12 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
 }
 
 inline Game::Types::PolicyTensor Game::Rules::get_chance_dist(const State& state) {
-  Types::PolicyTensor policy;
-  policy.setZero();
+  Types::PolicyTensor dist;
+  dist.setZero();
   for (int i = 0; i < nim::kMaxRandomStonesToTake; ++i) {
-    policy[i] = 1.0 / nim::kMaxRandomStonesToTake;
+    dist[i] = 1.0 / nim::kMaxRandomStonesToTake;
   }
-  return policy;
+  return dist;
 }
 
 }  // namespace nim
