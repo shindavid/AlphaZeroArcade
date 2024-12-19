@@ -58,47 +58,15 @@ struct Game {
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Rules {
-    static void init_state(State& state) {
-      state.stones_left = nim::kStartingStones;
-      state.current_player = 0;
-    }
-
-    static Types::ActionMask get_legal_moves(const StateHistory& history) {
-      const State& state = history.current();
-      Types::ActionMask mask;
-
-      for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-        mask[i] = i + 1 <= state.stones_left;
-      }
-
-      return mask;
-    }
-
+    static void init_state(State& state);
+    static Types::ActionMask get_legal_moves(const StateHistory& history);
     static core::action_mode_t get_action_mode(const State&) { return 0; }
-
     static core::seat_index_t get_current_player(const State& state) {
       return state.current_player;
     }
-
-    static void apply(StateHistory& history, core::action_t action) {
-      if (action < 0 || action >= nim::kMaxStonesToTake) {
-        throw std::invalid_argument("Invalid action: " + std::to_string(action));
-      }
-
-      State& state = history.extend();
-      state.stones_left -= action + 1;
-      state.current_player = 1 - state.current_player;
-    }
-
+    static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
-                            core::action_t last_action, GameResults::Tensor& outcome) {
-      if (state.stones_left == 0) {
-        outcome.setZero();
-        outcome(last_player) = 1;
-        return true;
-      }
-      return false;
-    }
+                            core::action_t last_action, GameResults::Tensor& outcome);
   };
 
   struct IO : public core::IOBase<Types, State> {
@@ -166,3 +134,5 @@ struct hash<nim::Game::State> {
 }  // namespace std
 
 static_assert(core::concepts::Game<nim::Game>);
+
+#include <inline/games/nim/Game.inl>

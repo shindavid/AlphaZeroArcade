@@ -1,3 +1,10 @@
+set(COMMON_SOURCES
+    Game.cpp
+)
+
+add_library(nim_common_objs OBJECT ${COMMON_SOURCES})
+set_target_properties(nim_common_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 add_executable(nim_tests main/UnitTests.cpp)
 target_link_libraries(nim_tests PRIVATE ${GTEST_LIBS})
 
