@@ -32,6 +32,54 @@ TEST(NimGameTest, MakeMove) {
   EXPECT_EQ(Rules::get_current_player(state), 1);
 }
 
+TEST(NimGameTest, VerifyChanceStatus) {
+  StateHistory history;
+  history.initialize(Rules{});
+
+  Rules::apply(history, nim::kTake3);
+  State state = history.current();
+
+  EXPECT_FALSE(state.is_player_ready());
+  EXPECT_EQ(Rules::get_action_mode(state), 1);
+  EXPECT_TRUE(Rules::is_chance_mode(Rules::get_action_mode(state)));
+}
+
+TEST(NimGameTest, VerifyDistFailure) {
+  StateHistory history;
+  history.initialize(Rules{});
+
+  EXPECT_THROW(Rules::get_chance_dist(history.current()), std::invalid_argument);
+}
+
+TEST(NimGameTest, VerifyDist) {
+  StateHistory history;
+  history.initialize(Rules{});
+
+  Rules::apply(history, nim::kTake3);
+  State state = history.current();
+
+  PolicyTensor dist = Rules::get_chance_dist(state);
+
+  EXPECT_EQ(dist[0], 0.5);
+  EXPECT_EQ(dist[1], 0.5);
+  EXPECT_EQ(dist[2], 0);
+}
+
+TEST(NimGameTest, ChanceMove) {
+  int num_trials = 1000;
+  float sum = 0;
+  for (int i = 0; i < num_trials; i++) {
+    StateHistory history;
+    history.initialize(Rules{});
+
+    Rules::apply(history, nim::kTake3);
+    Rules::apply_chance(history);
+
+    sum += history.current().get_stones();
+  }
+  EXPECT_NEAR(sum / num_trials, 17.5, 3 * std::sqrt(0.5 * 0.5 / num_trials));
+}
+
 TEST(NimGameTest, Player0Wins) {
   StateHistory history;
   history.initialize(Rules{});
