@@ -44,6 +44,7 @@ class RatingsManager:
             'type': 'handshake-ack',
             'client_id': conn.client_id,
             'game': self._controller.game_spec.name,
+            'tag': self._controller.run_params.tag,
         }
         conn.socket.send_json(reply)
 
@@ -235,15 +236,11 @@ class RatingsManager:
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if msg_type != 'log' and logger.isEnabledFor(logging.DEBUG):
-            # no need to double-log log-messages
+
+        if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'ratings-server received json message: {msg}')
 
-        if msg_type == 'log':
-            self._controller.handle_log_msg(msg, conn)
-        elif msg_type == 'worker-exit':
-            self._controller.handle_worker_exit(msg, conn)
-        elif msg_type == 'ready':
+        if msg_type == 'ready':
             self._handle_ready(conn)
         elif msg_type == 'match-result':
             self._handle_match_result(msg, conn)
@@ -257,9 +254,7 @@ class RatingsManager:
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'ratings-worker received json message: {msg}')
 
-        if msg_type == 'log':
-            self._controller.handle_log_msg(msg, conn)
-        elif msg_type == 'pause-ack':
+        if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)

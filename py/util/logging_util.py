@@ -79,7 +79,6 @@ def configure_logger(*, params: Optional[LoggingParams]=None, filename=None,
     If queue_stream is provided, then the logger will additionally log to the queue. The expectation
     is that the queue will be consumed by a separate thread.
     """
-    sys.exit
     debug = params.debug if params else False
     level = logging.DEBUG if debug else logging.INFO
     logger = logging.getLogger(logger_name)
