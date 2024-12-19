@@ -42,6 +42,15 @@ struct Game {
     State() : bits(0) {}
     auto operator<=>(const State& other) const = default;
     size_t hash() const { return bits; }
+
+    int get_stones() const { return bits & 0b11111; }  // Bits 0-4
+    void set_stones(int stones) { bits = (bits & ~0b11111) | (stones & 0b11111); }
+    bool get_player() const { return (bits >> 5) & 1; }  // Bit 5
+    void set_player(bool player) { bits = (bits & ~(1 << 5)) | (player << 5); }
+    bool is_player_ready() const { return (bits >> 6) & 1; }  // Bit 6
+    void set_player_ready(bool ready) { bits = (bits & ~(1 << 6)) | (ready << 6); }
+
+   private:
     state_t bits;
   };
 
@@ -54,12 +63,14 @@ struct Game {
   struct Rules {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
-    // action mode: 1 means player's move, 0 means chance move
-    static core::action_mode_t get_action_mode(const State& state) { return is_player_ready(state); }
-    static core::seat_index_t get_current_player(const State& state) { return get_player(state); }
+    // action mode: 0 means player's move, 1 means chance move
+    static core::action_mode_t get_action_mode(const State& state) { return 1 - state.is_player_ready(); }
+    static core::seat_index_t get_current_player(const State& state) { return state.get_player(); }
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
+    static bool is_chance_mode(core::action_mode_t mode) { return mode == 1; }
+    static Types::PolicyTensor get_chance_dist(const State& state);
   };
 
   struct IO : public core::IOBase<Types, State> {
@@ -77,7 +88,7 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      ss << "[" << get_stones(state) << ", " << get_player(state) << "]";
+      ss << "[" << state.get_stones() << ", " << state.get_player() << "]";
       return ss.str();
     }
   };
@@ -98,7 +109,7 @@ struct Game {
       tensor.setZero();
       Iter state = cur;
 
-      for (int i = 0; i < Game::get_stones(*state); ++i) {
+      for (int i = 0; i < state->get_stones(); ++i) {
         tensor(nim::kStartingStones - 1 - i) = 1;
       }
       return tensor;
@@ -116,18 +127,6 @@ struct Game {
 
   static void static_init() {}
 
-  static int get_stones(const State& state) { return state.bits & 0b11111; } // Bits 0-4
-  static void set_stones(State& state, int stones) {
-    state.bits = (state.bits & ~0b11111) | (stones & 0b11111);
-  }
-  static bool get_player(const State& state) { return (state.bits >> 5) & 1; }  // Bit 5
-  static void set_player(State& state, bool player) {
-    state.bits = (state.bits & ~(1 << 5)) | (player << 5);
-  }
-  static bool is_player_ready(const State& state) { return (state.bits >> 6) & 1; } // Bit 6
-  static void set_player_ready(State& state, bool ready) {
-    state.bits = (state.bits & ~(1 << 6)) | (ready << 6);
-  }
 };  // struct Game
 }  // namespace nim
 
