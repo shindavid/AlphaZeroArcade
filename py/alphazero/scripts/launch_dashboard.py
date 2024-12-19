@@ -9,7 +9,6 @@ from util.py_util import CustomHelpFormatter
 from util.str_util import rreplace
 
 from bokeh.embed import server_document
-from bokeh.plotting import figure
 from bokeh.server.server import Server
 from bokeh.themes import Theme
 from flask import Flask, jsonify, render_template, request, session
@@ -44,7 +43,7 @@ class Params:
 
     @staticmethod
     def add_args(parser):
-        group = parser.add_argument_group('Flaskh/Bokeh options')
+        group = parser.add_argument_group('Flask/Bokeh options')
 
         defaults = Params()
         group.add_argument('--bokeh-port', type=int, default=defaults.bokeh_port,
