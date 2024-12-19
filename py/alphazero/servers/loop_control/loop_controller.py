@@ -5,7 +5,6 @@ from .gpu_contention_table import GpuContentionTable
 from .params import LoopControllerParams
 from .loop_controller_interface import LoopControllerInterface
 from .ratings_manager import RatingsManager
-from .remote_logging_manager import RemoteLoggingManager
 from .self_play_manager import SelfPlayManager
 from .training_manager import TrainingManager
 from .gpu_contention_manager import GpuContentionManager
@@ -20,8 +19,7 @@ from shared.training_params import TrainingParams
 from games.game_spec import GameSpec
 from games.index import get_game_spec
 from util.logging_util import get_logger
-from util.socket_util import JsonDict, SocketRecvException, SocketSendException, send_file, \
-    send_json
+from util.socket_util import SocketRecvException, SocketSendException, send_file, send_json
 from util.sqlite3_util import DatabaseConnectionPool
 
 
@@ -29,7 +27,7 @@ import faulthandler
 import signal
 import socket
 import threading
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 
 logger = get_logger()
@@ -51,6 +49,7 @@ class LoopController(LoopControllerInterface):
         self._game_spec = get_game_spec(run_params.game)
         self._params = params
         self._training_params = training_params
+        self._run_params = run_params
         self._build_params = build_params
         self._default_training_gpu_id = GpuId(constants.LOCALHOST_IP, params.cuda_device)
         self._socket: Optional[socket.socket] = None
@@ -63,7 +62,6 @@ class LoopController(LoopControllerInterface):
         self._self_play_manager = SelfPlayManager(self)
         self._ratings_managers: Dict[RatingTag, RatingsManager] = {}
         self._gpu_contention_manager = GpuContentionManager(self)
-        self._remote_logging_manager = RemoteLoggingManager(self)
 
         # This line allows us to generate a per-thread stack trace by externally running:
         #
@@ -109,6 +107,10 @@ class LoopController(LoopControllerInterface):
     @property
     def training_params(self) -> TrainingParams:
         return self._training_params
+
+    @property
+    def run_params(self) -> RunParams:
+        return self._run_params
 
     @property
     def build_params(self) -> BuildParams:
@@ -186,12 +188,6 @@ class LoopController(LoopControllerInterface):
         for manager in self._ratings_managers.values():
             manager.notify_of_new_model()
 
-    def handle_log_msg(self, msg: JsonDict, conn: ClientConnection):
-        self._remote_logging_manager.handle_log_msg(msg, conn)
-
-    def handle_worker_exit(self, msg: JsonDict, conn: ClientConnection):
-        self._remote_logging_manager.close_log_file(msg, conn.client_id)
-
     def broadcast_weights(self, conn: ClientConnection, gen: Generation):
         logger.debug('Broadcasting weights (gen=%s) to %s', gen, conn)
 
@@ -265,7 +261,6 @@ class LoopController(LoopControllerInterface):
         func(f'Handling disconnect: {conn}...')
         self._client_connection_manager.remove(conn)
         self._database_connection_manager.close_db_conns(threading.get_ident())
-        self._remote_logging_manager.handle_disconnect(conn)
         conn.socket.close()
 
     def _init_socket(self):

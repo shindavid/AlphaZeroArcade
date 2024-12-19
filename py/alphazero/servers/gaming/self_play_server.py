@@ -2,7 +2,6 @@ from alphazero.logic.build_params import BuildParams
 from alphazero.logic.custom_types import ClientRole
 from alphazero.logic.shutdown_manager import ShutdownManager
 from alphazero.servers.gaming.base_params import BaseParams
-from alphazero.servers.gaming.log_forwarder import LogForwarder
 from alphazero.servers.gaming.session_data import SessionData
 from util.logging_util import LoggingParams, get_logger
 from util.socket_util import JsonDict, SocketRecvException, SocketSendException
@@ -37,9 +36,8 @@ class SelfPlayServer:
                  build_params: BuildParams):
         self._params = params
         self._build_params = build_params
-        self._session_data = SessionData(params)
+        self._session_data = SessionData(params, logging_params)
         self._shutdown_manager = ShutdownManager()
-        self._log_forwarder = LogForwarder(self._shutdown_manager, logging_params)
         self._running = False
         self._proc: Optional[subprocess.Popen] = None
 
@@ -65,14 +63,13 @@ class SelfPlayServer:
 
     def _init_socket(self):
         self._session_data.init_socket()
-        self._log_forwarder.set_socket(self._session_data.socket)
         self._shutdown_manager.register(lambda: self._session_data.socket.close())
 
     def _send_handshake(self):
         self._session_data.send_handshake(ClientRole.SELF_PLAY_SERVER)
 
     def _recv_handshake(self):
-        self._session_data.recv_handshake(ClientRole.SELF_PLAY_SERVER, self._log_forwarder)
+        self._session_data.recv_handshake(ClientRole.SELF_PLAY_SERVER)
 
     def _recv_loop(self):
         try:
@@ -163,6 +160,8 @@ class SelfPlayServer:
         })
         player_args_str = make_args_str(player_args)
 
+        log_filename = self._session_data.get_log_filename('gen0-self-play-worker')
+
         args = {
             '-G': 0,
             '--loop-controller-hostname': self._params.loop_controller_host,
@@ -171,6 +170,7 @@ class SelfPlayServer:
             '--do-not-report-metrics': None,
             '--max-rows': max_rows,
             '--enable-training': None,
+            '--log-filename': log_filename,
         }
         args.update(self._session_data.game_spec.training_options)
 
@@ -194,7 +194,7 @@ class SelfPlayServer:
 
         proc = subprocess_util.Popen(self_play_cmd)
         logger.info('Running gen-0 self-play [%s]: %s', proc.pid, self_play_cmd)
-        self._log_forwarder.forward_output('gen0-self-play-worker', proc)
+        self._session_data.wait_for(proc)
 
         logger.info('Gen-0 self-play complete!')
         self._running = False
@@ -223,6 +223,8 @@ class SelfPlayServer:
         player_args.update(self._session_data.game_spec.training_player_options)
         player_args_str = make_args_str(player_args)
 
+        log_filename = self._session_data.get_log_filename('self-play-worker')
+
         args = {
             '-G': 0,
             '--loop-controller-hostname': self._params.loop_controller_host,
@@ -230,6 +232,7 @@ class SelfPlayServer:
             '--client-role': ClientRole.SELF_PLAY_WORKER.value,
             '--cuda-device': self._params.cuda_device,
             '--enable-training': None,
+            '--log-filename': log_filename,
         }
         args.update(self._session_data.game_spec.training_options)
 
@@ -254,7 +257,7 @@ class SelfPlayServer:
         proc = subprocess_util.Popen(self_play_cmd)
         self._proc = proc
         logger.info('Running self-play [%s]: %s', proc.pid, self_play_cmd)
-        self._log_forwarder.forward_output('self-play-worker', proc)
+        self._session_data.wait_for(proc)
 
     def _restart_helper(self):
         proc = self._proc
@@ -262,7 +265,7 @@ class SelfPlayServer:
 
         logger.info('Restarting self-play process')
         logger.info('Killing [%s]...', proc.pid)
-        self._log_forwarder.disable_next_returncode_check()
+        self._session_data.disable_next_returncode_check()
         self._proc.kill()
         self._proc.wait(timeout=60)  # overly generous timeout, kill should be quick
         self._running = False

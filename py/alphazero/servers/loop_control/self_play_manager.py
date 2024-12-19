@@ -88,6 +88,7 @@ class SelfPlayManager:
             'type': 'handshake-ack',
             'client_id': conn.client_id,
             'game': self._controller.game_spec.name,
+            'tag': self._controller.run_params.tag,
         }
         conn.socket.send_json(reply)
 
@@ -137,16 +138,10 @@ class SelfPlayManager:
 
     def _server_msg_handler(self, conn: ClientConnection, msg: JsonDict) -> bool:
         msg_type = msg['type']
-        if msg_type != 'log':
-            # no need to double-log log-messages
-            logger.debug('self-play-server received json message: %s', msg)
+        logger.debug('self-play-server received json message: %s', msg)
 
-        if msg_type == 'log':
-            self._controller.handle_log_msg(msg, conn)
-        elif msg_type == 'ready':
+        if msg_type == 'ready':
             self._handle_ready(conn)
-        elif msg_type == 'worker-exit':
-            self._controller.handle_worker_exit(msg, conn)
         elif msg_type == 'gen0-complete':
             self._handle_gen0_complete()
         else:
@@ -160,9 +155,7 @@ class SelfPlayManager:
             # logging every game is too spammy
             logger.debug('self-play-worker received json message: %s', msg)
 
-        if msg_type == 'log':
-            self._controller.handle_log_msg(msg, conn)
-        elif msg_type == 'pause-ack':
+        if msg_type == 'pause-ack':
             self._handle_pause_ack(conn)
         elif msg_type == 'unpause-ack':
             self._handle_unpause_ack(conn)

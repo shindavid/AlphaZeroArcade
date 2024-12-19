@@ -1,15 +1,14 @@
 from .base_params import BaseParams
-from .log_forwarder import LogForwarder
 
 from alphazero.logic.custom_types import ClientId, ClientRole
 from games.game_spec import GameSpec
 from games.index import get_game_spec
-from util.logging_util import get_logger
-from util.repo_util import Repo
+from util.logging_util import LoggingParams, configure_logger, get_logger
 from util.socket_util import Socket
 
 import os
 import socket
+import subprocess
 import time
 from typing import Optional
 
@@ -23,12 +22,30 @@ class SessionData:
 
     This class holds various data that is associated with that session.
     """
-    def __init__(self, params: BaseParams):
+    def __init__(self, params: BaseParams, logging_params: LoggingParams):
         self._params = params
+        self._logging_params = logging_params
         self._game = None
         self._game_spec = None
+        self._tag = None
         self._socket: Optional[Socket] = None
         self._client_id: Optional[ClientId] = None
+        self._skip_next_returncode_check = False
+
+    def disable_next_returncode_check(self):
+        self._skip_next_returncode_check = True
+
+    def wait_for(self, proc: subprocess.Popen):
+        proc.wait()
+
+        if self._skip_next_returncode_check:
+            self._skip_next_returncode_check = False
+            return
+        if proc.returncode:
+            logger.error(f'Process failed with return code {proc.returncode}')
+            for line in proc.stderr:
+                logger.error(line.strip())
+            raise Exception()
 
     def init_socket(self):
         addr = (self._params.loop_controller_host, self._params.loop_controller_port)
@@ -48,7 +65,7 @@ class SessionData:
 
         self.socket.send_json(data)
 
-    def recv_handshake(self, role: ClientRole, log_forwarder: LogForwarder):
+    def recv_handshake(self, role: ClientRole):
         data = self.socket.recv_json(timeout=1)
         assert data['type'] == 'handshake-ack', data
 
@@ -58,11 +75,16 @@ class SessionData:
 
         client_id = data['client_id']
         self._game = data['game']
+        self._tag = data['tag']
         self._client_id = client_id
 
-        log_forwarder.launch()
+        configure_logger(params=self._logging_params, filename=self.get_log_filename(role.value))
         logger.info('**** Starting %s ****', role.value)
         logger.info('Received client id assignment: %s', client_id)
+
+    def get_log_filename(self, src: str):
+        return os.path.join('/home/devuser/logs', self.game, self.tag, src,
+                            f'{src}-{self.client_id}.log')
 
     @property
     def socket(self) -> Socket:
@@ -81,6 +103,12 @@ class SessionData:
         if self._game is None:
             raise ValueError('game not set')
         return self._game
+
+    @property
+    def tag(self) -> str:
+        if self._tag is None:
+            raise ValueError('tag not set')
+        return self._tag
 
     @property
     def game_spec(self) -> GameSpec:
