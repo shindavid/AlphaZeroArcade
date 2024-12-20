@@ -220,14 +220,14 @@ TEST_F(NimManagerTest, 20_searches_from_scratch) {
 }
 
 TEST_F(NimManagerTest, 40_searches_from_4_stones) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
-  test_search("nim_4_stones", 40, initial_actions, nullptr);
+  std::vector<core::action_t> initial_actions = {nim::kTake3, 0, nim::kTake3, 0, nim::kTake3, 0,
+                                                 nim::kTake3, 0, nim::kTake3, 0, nim::kTake2, 0};
+  test_search("nim_4_stones", 100, initial_actions, nullptr);
 }
 
 TEST_F(NimManagerTest, 40_searches_from_5_stones) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake1};
+  std::vector<core::action_t> initial_actions = {nim::kTake3, 0, nim::kTake3, 0, nim::kTake3, 0,
+                                                 nim::kTake3, 0, nim::kTake3, 0, nim::kTake1, 0};
   test_search("nim_5_stones", 40, initial_actions, nullptr);
 }
 

@@ -100,7 +100,8 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      ss << "[" << state.get_stones() << ", " << state.get_player() << "]";
+      ss << "[" << state.get_stones() << ", " << state.get_player() << ", "
+         << state.is_player_ready() << "]";
       return ss.str();
     }
   };

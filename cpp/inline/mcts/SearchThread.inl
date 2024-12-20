@@ -481,9 +481,10 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
     Game::Symmetries::apply(last_action, edge->sym, parent->action_mode());
+    core::seat_index_t last_player = 1 - Game::Rules::get_current_player(history->current());
 
     bool terminal = Game::Rules::is_terminal(
-        history->current(), parent->stable_data().current_player, last_action, game_outcome);
+        history->current(), last_player, last_action, game_outcome);
 
     if (terminal) {
       new (child) Node(&lookup_table, *history, game_outcome);
@@ -586,40 +587,48 @@ void SearchThread<Game>::validate_search_path() const {
 
 template <core::concepts::Game Game>
 int SearchThread<Game>::get_best_child_index(Node* node) {
-  profiler_.record(SearchThreadRegion::kPUCT);
+  if (node->stable_data().prior_prob_known) {
+    PolicyTensor prior_prob = node->stable_data().prior_prob;
+    std::cout << "prior_prob: " << prior_prob[0] << ", " << prior_prob[1] << std::endl;
+    core::action_t random_action = eigen_util::sample(prior_prob);
+    return random_action;
 
-  bool is_root = (node == shared_data_->get_root_node());
-  const SearchParams& search_params = shared_data_->search_params;
-  ActionSelector action_selector(*manager_params_, search_params, node, is_root);
-
-  using PVec = LocalPolicyArray;
-
-  const PVec& P = action_selector.P;
-  const PVec& mE = action_selector.mE;
-  PVec& PUCT = action_selector.PUCT;
-
-  int argmax_index;
-
-  if (search_params.tree_size_limit == 1) {
-    // net-only, use P
-    P.maxCoeff(&argmax_index);
   } else {
-    bool force_playouts = manager_params_->forced_playouts && is_root &&
-                          search_params.full_search && manager_params_->dirichlet_mult > 0;
+    profiler_.record(SearchThreadRegion::kPUCT);
 
-    if (force_playouts) {
-      PVec n_forced = (P * manager_params_->k_forced * mE.sum()).sqrt();
-      auto F1 = (mE < n_forced).template cast<float>();
-      auto F2 = (mE > 0).template cast<float>();
-      auto F = F1 * F2;
-      PUCT = PUCT * (1 - F) + F * 1e+6;
+    bool is_root = (node == shared_data_->get_root_node());
+    const SearchParams& search_params = shared_data_->search_params;
+    ActionSelector action_selector(*manager_params_, search_params, node, is_root);
+
+    using PVec = LocalPolicyArray;
+
+    const PVec& P = action_selector.P;
+    const PVec& mE = action_selector.mE;
+    PVec& PUCT = action_selector.PUCT;
+
+    int argmax_index;
+
+    if (search_params.tree_size_limit == 1) {
+      // net-only, use P
+      P.maxCoeff(&argmax_index);
+    } else {
+      bool force_playouts = manager_params_->forced_playouts && is_root &&
+                            search_params.full_search && manager_params_->dirichlet_mult > 0;
+
+      if (force_playouts) {
+        PVec n_forced = (P * manager_params_->k_forced * mE.sum()).sqrt();
+        auto F1 = (mE < n_forced).template cast<float>();
+        auto F2 = (mE > 0).template cast<float>();
+        auto F = F1 * F2;
+        PUCT = PUCT * (1 - F) + F * 1e+6;
+      }
+
+      PUCT.maxCoeff(&argmax_index);
     }
 
-    PUCT.maxCoeff(&argmax_index);
+    print_action_selection_details(node, action_selector, argmax_index);
+    return argmax_index;
   }
-
-  print_action_selection_details(node, action_selector, argmax_index);
-  return argmax_index;
 }
 
 template <core::concepts::Game Game>
