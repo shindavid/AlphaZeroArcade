@@ -8,7 +8,7 @@ using state_t = uint8_t;
 
 const int kNumPlayers = 2;
 const int kMaxStonesToTake = 3;
-const int kMaxRandomStonesToTake = 0;
+const int kMaxRandomStonesToTake = 1;
 const int kStartingStones = 21;
 
 const core::action_t kTake1 = 0;

@@ -29,7 +29,7 @@ namespace nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
-    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
+    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake, nim::kMaxRandomStonesToTake>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
@@ -79,9 +79,10 @@ struct Game {
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
     static bool is_chance_mode(core::action_mode_t mode) { return mode == 1; }
-    static bool is_chance_mode(const State& state) { return is_chance_mode(get_action_mode(state)); }
-    static Types::PolicyTensor get_chance_dist(const State& state);
     static core::action_t sample_chance_action(StateHistory& history);
+    static int get_num_chance_actions() { return kMaxRandomStonesToTake + 1; }
+    static bool prior_prob_known(const State& state) { return is_chance_mode(get_action_mode(state)); }
+    static Types::PolicyTensor get_prior_prob(const State& state);
   };
 
   struct IO : public core::IOBase<Types, State> {

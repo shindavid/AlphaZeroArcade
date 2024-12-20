@@ -15,6 +15,13 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   action_mode = Game::Rules::get_action_mode(history.current());
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
+  prior_prob_known = Game::Rules::prior_prob_known(history.current());
+
+  if (prior_prob_known) {
+    prior_prob = Game::Rules::get_prior_prob(history.current());
+  } else {
+    prior_prob.setZero();
+  }
 }
 
 template <core::concepts::Game Game>
@@ -177,11 +184,10 @@ int Node<Game>::LookupTable::get_random_mutex_id() const {
 }
 
 template <core::concepts::Game Game>
-Node<Game>::Node(LookupTable* table, const StateHistory& history, bool is_chance)
+Node<Game>::Node(LookupTable* table, const StateHistory& history)
     : stable_data_(history),
       lookup_table_(table),
-      mutex_id_(table->get_random_mutex_id()),
-      is_chance_(is_chance) {}
+      mutex_id_(table->get_random_mutex_id()) {}
 
 template <core::concepts::Game Game>
 Node<Game>::Node(LookupTable* table, const StateHistory& history, const ValueTensor& game_outcome)

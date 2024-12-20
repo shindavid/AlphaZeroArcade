@@ -41,11 +41,11 @@ TEST(NimGameTest, VerifyChanceStatus) {
   if (nim::kMaxRandomStonesToTake == 0) {
     EXPECT_TRUE(state.is_player_ready());
     EXPECT_EQ(Rules::get_action_mode(state), 0);
-    EXPECT_FALSE(Rules::is_chance_mode(state));
+    EXPECT_FALSE(Rules::prior_prob_known(state));
   } else {
     EXPECT_FALSE(state.is_player_ready());
     EXPECT_EQ(Rules::get_action_mode(state), 1);
-    EXPECT_TRUE(Rules::is_chance_mode(state));
+    EXPECT_TRUE(Rules::prior_prob_known(state));
   }
 }
 
@@ -53,7 +53,7 @@ TEST(NimGameTest, VerifyDistFailure) {
   StateHistory history;
   history.initialize(Rules{});
 
-  EXPECT_THROW(Rules::get_chance_dist(history.current()), std::invalid_argument);
+  EXPECT_THROW(Rules::get_prior_prob(history.current()), std::invalid_argument);
 }
 
 TEST(NimGameTest, VerifyDist) {
@@ -66,7 +66,7 @@ TEST(NimGameTest, VerifyDist) {
   Rules::apply(history, nim::kTake3);
   State state = history.current();
 
-  PolicyTensor dist = Rules::get_chance_dist(state);
+  PolicyTensor dist = Rules::get_prior_prob(state);
 
   for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
     EXPECT_EQ(dist[i], 1.0 / (nim::kMaxRandomStonesToTake + 1));
@@ -105,6 +105,8 @@ TEST(NimGameTest, Player0Wins) {
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
+    // chance action
+    Rules::apply(history, 0);
   }
 
   core::action_t last_action = actions.back();
@@ -125,6 +127,8 @@ TEST(NimGameTest, Player1Wins) {
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
+    // chance action
+    Rules::apply(history, 0);
   }
 
   GameResults::Tensor outcome;
@@ -147,7 +151,9 @@ TEST(NimGameTest, tensorize) {
   StateHistory history;
   history.initialize(Rules{});
   Rules::apply(history, 1);  // Player 0
+  Rules::apply(history, 0);  // chance
   Rules::apply(history, 0);  // Player 1
+  Rules::apply(history, 0);  // chance
 
   Game::InputTensorizor::Tensor tensor =
       Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
