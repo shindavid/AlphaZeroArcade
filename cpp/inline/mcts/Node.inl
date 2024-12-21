@@ -15,12 +15,12 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   action_mode = Game::Rules::get_action_mode(history.current());
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
-  prior_prob_known = Game::Rules::prior_prob_known(history.current());
+  has_known_dist = Game::Rules::has_known_dist(history.current());
 
-  if (prior_prob_known) {
-    prior_prob = Game::Rules::get_prior_prob(history.current());
+  if (has_known_dist) {
+    known_dist = Game::Rules::get_known_dist(history.current());
   } else {
-    prior_prob.setZero();
+    known_dist.setZero();
   }
 }
 
@@ -34,8 +34,8 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
   action_mode = -1;
   current_player = -1;
   terminal = true;
-  prior_prob_known = false;
-  prior_prob.setZero();
+  has_known_dist = false;
+  known_dist.setZero();
 }
 
 template <core::concepts::Game Game>
@@ -261,7 +261,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   Q_sq_sum.setZero();
   int N = 0;
 
-  if (stable_data_.prior_prob_known) {
+  if (stable_data_.has_known_dist) {
     for (int i = 0; i < stable_data_.num_valid_actions; i++) {
       const edge_t* edge = get_edge(i);
       const Node* child = get_child(edge);
@@ -271,8 +271,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
         break;
       }
       const auto& child_stats = child->stats();
-      Q_sum += child_stats.Q * stable_data_.prior_prob(edge_action);
-      Q_sq_sum += child_stats.Q_sq * stable_data_.prior_prob(edge_action);
+      Q_sum += child_stats.Q * stable_data_.known_dist(edge_action);
+      Q_sq_sum += child_stats.Q_sq * stable_data_.known_dist(edge_action);
       N++;
     }
     if (N == stable_data_.num_valid_actions) {

@@ -587,10 +587,9 @@ void SearchThread<Game>::validate_search_path() const {
 
 template <core::concepts::Game Game>
 int SearchThread<Game>::get_best_child_index(Node* node) {
-  if (node->stable_data().prior_prob_known) {
-    PolicyTensor prior_prob = node->stable_data().prior_prob;
-    std::cout << "prior_prob: " << prior_prob[0] << ", " << prior_prob[1] << std::endl;
-    core::action_t random_action = eigen_util::sample(prior_prob);
+  if (node->stable_data().has_known_dist) {
+    PolicyTensor known_dist = node->stable_data().known_dist;
+    core::action_t random_action = eigen_util::sample(known_dist);
     return random_action;
 
   } else {

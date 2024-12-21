@@ -41,11 +41,11 @@ TEST(NimGameTest, VerifyChanceStatus) {
   if (nim::kMaxRandomStonesToTake == 0) {
     EXPECT_TRUE(state.is_player_ready());
     EXPECT_EQ(Rules::get_action_mode(state), 0);
-    EXPECT_FALSE(Rules::prior_prob_known(state));
+    EXPECT_FALSE(Rules::has_known_dist(state));
   } else {
     EXPECT_FALSE(state.is_player_ready());
     EXPECT_EQ(Rules::get_action_mode(state), 1);
-    EXPECT_TRUE(Rules::prior_prob_known(state));
+    EXPECT_TRUE(Rules::has_known_dist(state));
   }
 }
 
@@ -53,7 +53,7 @@ TEST(NimGameTest, VerifyDistFailure) {
   StateHistory history;
   history.initialize(Rules{});
 
-  EXPECT_THROW(Rules::get_prior_prob(history.current()), std::invalid_argument);
+  EXPECT_THROW(Rules::get_known_dist(history.current()), std::invalid_argument);
 }
 
 TEST(NimGameTest, VerifyDist) {
@@ -66,7 +66,7 @@ TEST(NimGameTest, VerifyDist) {
   Rules::apply(history, nim::kTake3);
   State state = history.current();
 
-  PolicyTensor dist = Rules::get_prior_prob(state);
+  PolicyTensor dist = Rules::get_known_dist(state);
 
   for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
     EXPECT_EQ(dist[i], 1.0 / (nim::kMaxRandomStonesToTake + 1));
@@ -150,14 +150,14 @@ TEST(NimGameTest, InvalidMove) {
 TEST(NimGameTest, tensorize) {
   StateHistory history;
   history.initialize(Rules{});
-  Rules::apply(history, 1);  // Player 0
+  Rules::apply(history, 1);  // Player 0 removes 2 stones
   Rules::apply(history, 0);  // chance
-  Rules::apply(history, 0);  // Player 1
+  Rules::apply(history, 0);  // Player 1 removes 1 stone
   Rules::apply(history, 0);  // chance
 
   Game::InputTensorizor::Tensor tensor =
       Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
-  float expectedValues[] = {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  float expectedValues[] = {18, 0, 1};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
   }

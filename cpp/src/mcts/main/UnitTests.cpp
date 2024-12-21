@@ -115,6 +115,8 @@ class ManagerTest : public testing::Test {
     return params;
   }
 
+  void SetUp() override { util::Random::set_seed(1); }
+
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
     const mcts::SharedData<Game>* shared_data = manager_->shared_data();

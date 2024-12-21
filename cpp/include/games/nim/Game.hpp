@@ -38,15 +38,6 @@ struct Game {
     static constexpr float kOpeningLength = 3;
   };
 
-/*
- * This structure encapsulates the state of the game using a single integer uint8_t.
- * (bits) to store various pieces of information:
- * - Bits 0-4: Number of stones (0-31)
- * - Bit 5: Current player (0 or 1)
- * - Bit 6: Player readiness (0 or 1)
- *
- * It provides methods to get and set these values.
- */
   struct State {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
@@ -82,8 +73,8 @@ struct Game {
     static bool is_chance_mode(core::action_mode_t mode) { return mode == 1; }
     static core::action_t sample_chance_action(StateHistory& history);
     static int get_num_chance_actions() { return kMaxRandomStonesToTake + 1; }
-    static bool prior_prob_known(const State& state) { return is_chance_mode(get_action_mode(state)); }
-    static Types::PolicyTensor get_prior_prob(const State& state);
+    static bool has_known_dist(const State& state) { return is_chance_mode(get_action_mode(state)); }
+    static Types::PolicyTensor get_known_dist(const State& state);
   };
 
   struct IO : public core::IOBase<Types, State> {
@@ -108,7 +99,7 @@ struct Game {
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<3>>;
     using MCTSKey = State;
     using EvalKey = State;
 

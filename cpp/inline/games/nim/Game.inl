@@ -17,7 +17,7 @@ inline size_t Game::State::hash() const {
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   Types::ActionMask mask;
-  bool is_chance = Rules::prior_prob_known(history.current());
+  bool is_chance = Rules::has_known_dist(history.current());
 
   if (is_chance) {
     for (int i = 0; i < kMaxRandomStonesToTake + 1; ++i) {
@@ -32,18 +32,18 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
 }
 
 inline core::action_t Game::Rules::sample_chance_action(StateHistory& history) {
-  if (!prior_prob_known(history.current())) {
+  if (!has_known_dist(history.current())) {
     throw std::invalid_argument("Not in chance mode");
   }
 
-  Types::PolicyTensor dist = get_prior_prob(history.current());
+  Types::PolicyTensor dist = get_known_dist(history.current());
   core::action_t random_action = eigen_util::sample(dist);
 
   return random_action;
 }
 
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  bool is_chance = prior_prob_known(history.current());
+  bool is_chance = has_known_dist(history.current());
   State& state = history.extend();
 
   if (is_chance) {
@@ -72,8 +72,8 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
   return false;
 }
 
-inline Game::Types::PolicyTensor Game::Rules::get_prior_prob(const State& state) {
-  if (!prior_prob_known(state)) {
+inline Game::Types::PolicyTensor Game::Rules::get_known_dist(const State& state) {
+  if (!has_known_dist(state)) {
     throw std::invalid_argument("Not in chance mode");
   }
 
