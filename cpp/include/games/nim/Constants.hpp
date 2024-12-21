@@ -4,8 +4,6 @@
 
 namespace nim {
 
-using state_t = uint8_t;
-
 const int kNumPlayers = 2;
 const int kMaxStonesToTake = 3;
 const int kMaxRandomStonesToTake = 1;
