@@ -31,17 +31,6 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
-inline core::action_t Game::Rules::sample_chance_action(StateHistory& history) {
-  if (!has_known_dist(history.current())) {
-    throw std::invalid_argument("Not in chance mode");
-  }
-
-  Types::PolicyTensor dist = get_known_dist(history.current());
-  core::action_t random_action = eigen_util::sample(dist);
-
-  return random_action;
-}
-
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   bool is_chance = has_known_dist(history.current());
   State& state = history.extend();

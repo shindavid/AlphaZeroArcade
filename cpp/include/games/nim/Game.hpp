@@ -70,10 +70,8 @@ struct Game {
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
-    static bool is_chance_mode(core::action_mode_t mode) { return mode == 1; }
-    static core::action_t sample_chance_action(StateHistory& history);
     static int get_num_chance_actions() { return kMaxRandomStonesToTake + 1; }
-    static bool has_known_dist(const State& state) { return is_chance_mode(get_action_mode(state)); }
+    static bool has_known_dist(const State& state) { return (get_action_mode(state) == 1); }
     static Types::PolicyTensor get_known_dist(const State& state);
   };
 
@@ -131,7 +129,6 @@ struct Game {
   };
 
   static void static_init() {}
-
 };  // struct Game
 }  // namespace nim
 

@@ -10,6 +10,7 @@ using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
 using IO = Game::IO;
 using Rules = Game::Rules;
+using Types = Game::Types;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 
@@ -89,7 +90,8 @@ TEST(NimGameTest, ChanceMove) {
 
     Rules::apply(history, nim::kTake3);
 
-    core::action_t chance_action = Rules::sample_chance_action(history);
+    Types::PolicyTensor dist = Rules::get_known_dist(history.current());
+    core::action_t chance_action = eigen_util::sample(dist);
     Rules::apply(history, chance_action);
 
     sum += history.current().get_stones();
