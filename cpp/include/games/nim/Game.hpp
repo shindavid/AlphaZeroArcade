@@ -124,9 +124,9 @@ struct Game {
       tensor.setZero();
       Iter state = cur;
 
-      for (int i = 0; i < state->get_stones(); ++i) {
-        tensor(nim::kStartingStones - 1 - i) = 1;
-      }
+      tensor(0) = state->get_stones();
+      tensor(1) = state->get_player();
+      tensor(2) = state->is_player_ready();
       return tensor;
     }
   };
