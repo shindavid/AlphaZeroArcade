@@ -123,7 +123,7 @@ struct Game {
     using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
+ 
     using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
   };
 
