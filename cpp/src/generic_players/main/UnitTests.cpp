@@ -122,9 +122,7 @@ class MctsPlayerTest : public ::testing::Test {
     EXPECT_EQ(get_search_log()->last_graph_json_str(), expected_graph_json);
   }
 
-  void SetUp() override {
-    util::Random::set_seed(1);
-  }
+  void SetUp() override { util::Random::set_seed(1); }
 
   void TearDown() override {
     delete search_log_;

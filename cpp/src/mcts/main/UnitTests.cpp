@@ -49,9 +49,9 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
 
       const Nim::State& state = item.cur_state();
 
-      bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
+      bool winning = state.get_stones() % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
-        core::action_t winning_move = (state.stones_left) % (1 + nim::kMaxStonesToTake) - 1;
+        core::action_t winning_move = state.get_stones() % (1 + nim::kMaxStonesToTake) - 1;
 
         // these are logits
         float winning_v = smart_ ? 2 : 0;
@@ -114,6 +114,8 @@ class ManagerTest : public testing::Test {
     params.no_model = true;
     return params;
   }
+
+  void SetUp() override { util::Random::set_seed(1); }
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
@@ -219,15 +221,15 @@ TEST_F(NimManagerTest, 20_searches_from_scratch) {
   test_search("nim_uniform", 20, {}, nullptr);
 }
 
-TEST_F(NimManagerTest, 40_searches_from_4_stones) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake2};
-  test_search("nim_4_stones", 40, initial_actions, nullptr);
+TEST_F(NimManagerTest, 100_searches_from_4_stones) {
+  std::vector<core::action_t> initial_actions = {nim::kTake3, 0, nim::kTake3, 0, nim::kTake3, 0,
+                                                 nim::kTake3, 0, nim::kTake3, 0, nim::kTake2, 0};
+  test_search("nim_4_stones", 100, initial_actions, nullptr);
 }
 
 TEST_F(NimManagerTest, 40_searches_from_5_stones) {
-  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
-                                                 nim::kTake3, nim::kTake3, nim::kTake1};
+  std::vector<core::action_t> initial_actions = {nim::kTake3, 0, nim::kTake3, 0, nim::kTake3, 0,
+                                                 nim::kTake3, 0, nim::kTake3, 0, nim::kTake1, 0};
   test_search("nim_5_stones", 40, initial_actions, nullptr);
 }
 

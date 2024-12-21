@@ -150,4 +150,4 @@ def update_graph(index, graph_snapshots):
     return figure
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=8051)

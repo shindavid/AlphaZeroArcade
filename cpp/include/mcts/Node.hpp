@@ -103,6 +103,8 @@ class Node {
     core::seat_index_t current_player;
     bool terminal;
     bool VT_valid;
+    bool has_known_dist;
+    PolicyTensor known_dist;
   };
 
   /*
