@@ -29,7 +29,7 @@ namespace nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
-    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake, nim::kMaxRandomStonesToTake>;
+    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake, nim::kMaxRandomStonesToTake + 1>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
