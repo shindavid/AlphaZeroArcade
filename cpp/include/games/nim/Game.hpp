@@ -36,7 +36,6 @@ struct Game {
 
   struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 3;
-    static constexpr bool kStoreStates = true;  // temporary, for debugging
   };
 
 /*
