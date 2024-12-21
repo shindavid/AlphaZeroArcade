@@ -36,6 +36,7 @@ struct Game {
 
   struct MctsConfiguration : public core::MctsConfigurationBase {
     static constexpr float kOpeningLength = 3;
+    static constexpr bool kStoreStates = true;  // temporary, for debugging
   };
 
 /*
@@ -48,19 +49,20 @@ struct Game {
  * It provides methods to get and set these values.
  */
   struct State {
-    State() : bits(0) {}
     auto operator<=>(const State& other) const = default;
-    size_t hash() const { return bits; }
+    size_t hash() const;
 
-    int get_stones() const { return bits & 0b11111; }  // Bits 0-4
-    void set_stones(int stones) { bits = (bits & ~0b11111) | (stones & 0b11111); }
-    bool get_player() const { return (bits >> 5) & 1; }  // Bit 5
-    void set_player(bool player) { bits = (bits & ~(1 << 5)) | (player << 5); }
-    bool is_player_ready() const { return (bits >> 6) & 1; }  // Bit 6
-    void set_player_ready(bool ready) { bits = (bits & ~(1 << 6)) | (ready << 6); }
+    int get_stones() const { return stones_left; }  // Bits 0-4
+    void set_stones(int stones) { stones_left = stones; }
+    bool get_player() const { return current_player; }  // Bit 5
+    void set_player(bool player) { current_player = player; }
+    bool is_player_ready() const { return player_ready; }  // Bit 6
+    void set_player_ready(bool ready) { player_ready = ready; }
 
    private:
-    state_t bits;
+    int stones_left;
+    bool current_player;
+    bool player_ready;
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;

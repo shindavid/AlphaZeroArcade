@@ -34,6 +34,8 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
   action_mode = -1;
   current_player = -1;
   terminal = true;
+  prior_prob_known = false;
+  prior_prob.setZero();
 }
 
 template <core::concepts::Game Game>
@@ -253,78 +255,99 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   func();
   lock.unlock();
 
-  core::seat_index_t cp = stable_data().current_player;
-
   ValueArray Q_sum;
   ValueArray Q_sq_sum;
   Q_sum.setZero();
   Q_sq_sum.setZero();
   int N = 0;
 
-  // provably winning/losing calculation
-  bool cp_has_winning_move = false;
-  int num_children = 0;
+  if (stable_data_.prior_prob_known) {
+    for (int i = 0; i < stable_data_.num_valid_actions; i++) {
+      const edge_t* edge = get_edge(i);
+      const Node* child = get_child(edge);
+      core::action_t edge_action = edge->action;
 
-  player_bitset_t all_provably_winning;
-  player_bitset_t all_provably_losing;
-  all_provably_winning.set();
-  all_provably_losing.set();
-  bool skipped = false;
-  for (int i = 0; i < stable_data().num_valid_actions; i++) {
-    const edge_t* edge = get_edge(i);
-    const Node* child = get_child(edge);
-    if (!child) {
-      skipped = true;
-      continue;
+      if (!child) {
+        break;
+      }
+      const auto& child_stats = child->stats();
+      Q_sum += child_stats.Q * stable_data_.prior_prob(edge_action);
+      Q_sq_sum += child_stats.Q_sq * stable_data_.prior_prob(edge_action);
+      N++;
     }
-    const auto& child_stats = child->stats();
-    if (child_stats.RN > 0) {
-      int e = edge->E;
-      N += e;
-      Q_sum += child_stats.Q * e;
-      Q_sq_sum += child_stats.Q_sq * e;
+    if (N == stable_data_.num_valid_actions) {
+      stats_.Q = Q_sum;
+      stats_.Q_sq = Q_sq_sum;
     }
 
-    cp_has_winning_move |= child_stats.provably_winning[cp];
-    all_provably_winning &= child_stats.provably_winning;
-    all_provably_losing &= child_stats.provably_losing;
-    num_children++;
-  }
+  } else {
+    core::seat_index_t cp = stable_data().current_player;
 
-  if (skipped) {
-    all_provably_winning.reset();
-    all_provably_losing.reset();
-  }
+    // provably winning/losing calculation
+    bool cp_has_winning_move = false;
+    int num_children = 0;
 
-  if (stable_data_.VT_valid) {
-    ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
-    Q_sum += VA;
-    Q_sq_sum += VA * VA;
-    N++;
+    player_bitset_t all_provably_winning;
+    player_bitset_t all_provably_losing;
+    all_provably_winning.set();
+    all_provably_losing.set();
+    bool skipped = false;
+    for (int i = 0; i < stable_data().num_valid_actions; i++) {
+      const edge_t* edge = get_edge(i);
+      const Node* child = get_child(edge);
+      if (!child) {
+        skipped = true;
+        continue;
+      }
+      const auto& child_stats = child->stats();
+      if (child_stats.RN > 0) {
+        int e = edge->E;
+        N += e;
+        Q_sum += child_stats.Q * e;
+        Q_sq_sum += child_stats.Q_sq * e;
+      }
 
-    eigen_util::debug_assert_is_valid_prob_distr(VA);
-  }
+      cp_has_winning_move |= child_stats.provably_winning[cp];
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
+      num_children++;
+    }
 
-  lock.lock();
+    if (skipped) {
+      all_provably_winning.reset();
+      all_provably_losing.reset();
+    }
 
-  // incorporate bounds from children
-  int num_valid_actions = stable_data_.num_valid_actions;
-  if (num_valid_actions == 0) {
-    // terminal state, provably_winning/losing are already set by instruction
-  } else if (cp_has_winning_move) {
-    stats_.provably_winning[cp] = true;
-    stats_.provably_losing.set();
-    stats_.provably_losing[cp] = false;
-  } else if (num_children == num_valid_actions) {
-    stats_.provably_winning = all_provably_winning;
-    stats_.provably_losing = all_provably_losing;
-  }
+    if (stable_data_.VT_valid) {
+      ValueArray VA = Game::GameResults::to_value_array(stable_data_.VT);
+      Q_sum += VA;
+      Q_sq_sum += VA * VA;
+      N++;
 
-  stats_.Q = N ? (Q_sum / N) : Q_sum;
-  stats_.Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
+      eigen_util::debug_assert_is_valid_prob_distr(VA);
+    }
 
-  if (N) {
-    eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
+    lock.lock();
+
+    // incorporate bounds from children
+    int num_valid_actions = stable_data_.num_valid_actions;
+    if (num_valid_actions == 0) {
+      // terminal state, provably_winning/losing are already set by instruction
+    } else if (cp_has_winning_move) {
+      stats_.provably_winning[cp] = true;
+      stats_.provably_losing.set();
+      stats_.provably_losing[cp] = false;
+    } else if (num_children == num_valid_actions) {
+      stats_.provably_winning = all_provably_winning;
+      stats_.provably_losing = all_provably_losing;
+    }
+
+    stats_.Q = N ? (Q_sum / N) : Q_sum;
+    stats_.Q_sq = N ? (Q_sq_sum / N) : Q_sq_sum;
+
+    if (N) {
+      eigen_util::debug_assert_is_valid_prob_distr(stats_.Q);
+    }
   }
 }
 

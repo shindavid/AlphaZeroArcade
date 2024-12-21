@@ -8,6 +8,12 @@ inline void Game::Rules::init_state(State& state) {
   state.set_player_ready(true);
 }
 
+inline size_t Game::State::hash() const {
+  auto tuple = std::make_tuple(stones_left, current_player, player_ready);
+  std::hash<decltype(tuple)> hasher;
+  return hasher(tuple);
+}
+
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   Types::ActionMask mask;
