@@ -221,7 +221,7 @@ TEST_F(NimManagerTest, 20_searches_from_scratch) {
   test_search("nim_uniform", 20, {}, nullptr);
 }
 
-TEST_F(NimManagerTest, 40_searches_from_4_stones) {
+TEST_F(NimManagerTest, 100_searches_from_4_stones) {
   std::vector<core::action_t> initial_actions = {nim::kTake3, 0, nim::kTake3, 0, nim::kTake3, 0,
                                                  nim::kTake3, 0, nim::kTake3, 0, nim::kTake2, 0};
   test_search("nim_4_stones", 100, initial_actions, nullptr);

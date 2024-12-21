@@ -73,5 +73,4 @@ inline Game::Types::PolicyTensor Game::Rules::get_known_dist(const State& state)
   }
   return dist;
 }
-
 }  // namespace nim
