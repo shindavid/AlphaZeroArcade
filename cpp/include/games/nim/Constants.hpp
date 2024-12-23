@@ -2,6 +2,8 @@
 
 #include <core/BasicTypes.hpp>
 
+#include <bit>
+
 namespace nim {
 
 const int kNumPlayers = 2;
@@ -16,4 +18,9 @@ constexpr int kChanceDistributionSize = sizeof(kChanceEventProbs) / sizeof(float
 const core::action_t kTake1 = 0;
 const core::action_t kTake2 = 1;
 const core::action_t kTake3 = 2;
+
+const core::action_mode_t kPlayerMode = 0;
+const core::action_mode_t kChanceMode = 1;
+
+constexpr int kStartingStonesBitWidth = std::bit_width(kStartingStones);
 }

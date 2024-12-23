@@ -40,11 +40,11 @@ TEST(NimGameTest, VerifyChanceStatus) {
   Rules::apply(history, nim::kTake3);
   State state = history.current();
   if (nim::kChanceDistributionSize == 0) {
-    EXPECT_FALSE(state.chance_active);
+    EXPECT_EQ(state.current_mode, nim::kPlayerMode);
     EXPECT_EQ(Rules::get_action_mode(state), 0);
     EXPECT_FALSE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   } else {
-    EXPECT_TRUE(state.chance_active);
+    EXPECT_EQ(state.current_mode, nim::kChanceMode);
     EXPECT_EQ(Rules::get_action_mode(state), 1);
     EXPECT_TRUE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   }
@@ -154,7 +154,7 @@ TEST(NimGameTest, MoveProbMass) {
   State state;
   state.stones_left = 1;
   state.current_player = 0;
-  state.chance_active = true;
+  state.current_mode = nim::kChanceMode;
   history.update(state);
   Game::Types::ChanceDistribution dist = Rules::get_chance_distribution(state);
 

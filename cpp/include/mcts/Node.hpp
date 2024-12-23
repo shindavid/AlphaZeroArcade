@@ -139,10 +139,9 @@ class Node {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int E = 0;  // real or virtual count
-    float raw_policy_prior = 0;
+    float base_prob = 0; // used for both policy prior and chance node probability
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
-    float chance_prob = 0;  // probability of this edge being chosen in a chance node
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };

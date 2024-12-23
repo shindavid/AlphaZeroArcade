@@ -1,7 +1,3 @@
-set(COMMON_SOURCES
-    Game.cpp
-)
-
 add_executable(nim_tests main/UnitTests.cpp)
 target_link_libraries(nim_tests PRIVATE ${GTEST_LIBS})
 

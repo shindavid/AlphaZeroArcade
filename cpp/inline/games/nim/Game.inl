@@ -8,7 +8,7 @@ inline void Game::Rules::init_state(State& state) {
 }
 
 inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(stones_left, current_player, chance_active);
+  auto tuple = std::make_tuple(stones_left, current_player, current_mode);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
 }
@@ -16,7 +16,7 @@ inline size_t Game::State::hash() const {
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   Types::ActionMask mask;
-  bool is_chance = is_chance_mode(get_action_mode(history.current()));
+  bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
     for (int i = 0; i < std::min(nim::kChanceDistributionSize, state.stones_left + 1); ++i) {
       mask[i] = true;
@@ -32,20 +32,20 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
 
 // current_player only switches AFTER a chance action
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  bool is_chance = is_chance_mode(get_action_mode(history.current()));
+  bool is_chance = is_chance_mode(history.current().current_mode);
   State& state = history.extend();
 
   if (is_chance) {
     int outcome_stones = state.stones_left - action;
     state.stones_left = outcome_stones;
     state.current_player = 1 - state.current_player;
-    state.chance_active = false;
+    state.current_mode = nim::kPlayerMode;
   } else {
     if (action < 0 || action >= nim::kMaxStonesToTake) {
       throw std::invalid_argument("Invalid action: " + std::to_string(action));
     }
-    state.stones_left = state.stones_left- (action + 1);
-    state.chance_active = true;
+    state.stones_left = state.stones_left - (action + 1);
+    state.current_mode = nim::kChanceMode;
   }
 }
 
@@ -60,23 +60,24 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
   return false;
 }
 
+/**
+ * Assign the chance distribution mass to each legal move. If the sum of the probabilities is less
+ * than 1, move the remaining probability mass to the last legal move.
+ */
 inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(const State& state) {
   if (!is_chance_mode(get_action_mode(state))) {
     throw std::invalid_argument("Not in chance mode");
   }
-
-  Game::StateHistory single_state_history;
-  single_state_history.update(state);
-  int num_legal_moves = get_legal_moves(single_state_history).count();
-
+  int num_legal_moves = std::min(nim::kChanceDistributionSize, state.stones_left + 1);
   Types::ChanceDistribution dist;
   dist.setZero();
+
+  float cumulative_prob = 0;
   for (int i = 0; i < num_legal_moves; ++i) {
     dist(i) = nim::kChanceEventProbs[i];
+    cumulative_prob += dist(i);
   }
-  for (int i = num_legal_moves; i < nim::kChanceDistributionSize; ++i) {
-    dist(num_legal_moves - 1) += nim::kChanceEventProbs[i];
-  }
+  dist(num_legal_moves - 1) += 1 - cumulative_prob;
   return dist;
 }
 
@@ -86,12 +87,11 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   tensor.setZero();
   Iter state = cur;
 
-  constexpr int bit_width = std::bit_width(kStartingStones);
-  for (int i = 0; i < bit_width; ++i) {
+  for (int i = 0; i < nim::kStartingStonesBitWidth; ++i) {
     tensor(i) = (state->stones_left & (1 << i)) ? 1 : 0;
   }
-  tensor(bit_width) = state->current_player;
-  tensor(bit_width + 1) = state->chance_active;
+  tensor(nim::kStartingStonesBitWidth) = state->current_player;
+  tensor(nim::kStartingStonesBitWidth + 1) = state->current_mode;
   return tensor;
 }
 }  // namespace nim

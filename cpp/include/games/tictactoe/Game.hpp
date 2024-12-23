@@ -73,7 +73,7 @@ class Game {
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
-  struct Rules : public game_base::RulesBase<Types, State> {
+  struct Rules : public game_base::RulesBase<Types> {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }

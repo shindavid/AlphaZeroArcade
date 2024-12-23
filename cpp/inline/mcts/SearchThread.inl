@@ -118,9 +118,9 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
       for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
         edge_t* edge = node->get_edge(i);
         core::action_t action = edge->action;
-        typename Game::Types::ChanceDistribution chance_dist =
-            Game::Rules::get_chance_distribution(history->current());
-        edge->chance_prob = chance_dist(action);
+        using ChanceDistribution = Game::Types::ChanceDistribution;
+        ChanceDistribution chance_dist = Game::Rules::get_chance_distribution(history->current());
+        edge->base_prob = chance_dist(action);
       }
     }
   }
@@ -640,14 +640,12 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
 template <core::concepts::Game Game>
 int SearchThread<Game>::sample_chance_child_index(Node* node) {
-  bool is_root = (node == shared_data_->get_root_node());
-  const SearchParams& search_params = shared_data_->search_params;
-  ActionSelector action_selector(*manager_params_, search_params, node, is_root);
-  const auto* chance_dist = action_selector.chance_dist;
-
-  int n = Game::Constants::kMaxBranchingFactor;
-  core::action_t chance_action = util::Random::weighted_sample(chance_dist, chance_dist + n);
-  return chance_action;
+  int n = node->stable_data().num_valid_actions;
+  float chance_dist[n];
+  for (int i = 0; i < n; i++) {
+    chance_dist[i] = node->get_edge(i)->base_prob;
+  }
+  return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
 
 template <core::concepts::Game Game>

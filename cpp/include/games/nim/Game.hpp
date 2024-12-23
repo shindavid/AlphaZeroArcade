@@ -21,7 +21,6 @@
 #include <torch/torch.h>
 
 #include <array>
-#include <bit>
 #include <cstdint>
 #include <functional>
 #include <sstream>
@@ -47,7 +46,7 @@ struct Game {
 
     int stones_left;
     int current_player;
-    bool chance_active;
+    core::action_mode_t current_mode;
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
@@ -56,11 +55,10 @@ struct Game {
   using Symmetries = core::TrivialSymmetries;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
-  struct Rules : public game_base::RulesBase<Types, State> {
+  struct Rules : public game_base::RulesBase<Types> {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
-    // action mode: 0 means player's move, 1 means chance move
-    static core::action_mode_t get_action_mode(const State& state) { return state.chance_active; }
+    static core::action_mode_t get_action_mode(const State& state) { return state.current_mode; }
     static core::seat_index_t get_current_player(const State& state) { return state.current_player; }
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
@@ -84,14 +82,18 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      ss << "[" << state.stones_left << ", " << state.current_player << ", " << state.chance_active
-         << "]";
+      if (state.current_mode == nim::kPlayerMode) {
+        ss << "p" << state.current_player;
+      } else {
+        ss << "*";
+      }
+      ss << " @" << state.stones_left;
       return ss.str();
     }
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<std::bit_width(kStartingStones) + 2>>;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStonesBitWidth + 2>>;
     using MCTSKey = State;
     using EvalKey = State;
 
@@ -99,7 +101,7 @@ struct Game {
     template <typename Iter>
     static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter>
-    // tensor is of the format {binary encoding of stones_left, current_player, chance_active}
+    // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
     static Tensor tensorize(Iter start, Iter cur);
   };
 

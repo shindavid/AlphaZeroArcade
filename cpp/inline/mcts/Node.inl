@@ -15,7 +15,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   action_mode = Game::Rules::get_action_mode(history.current());
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
-  is_chance_node = Game::Rules::is_chance_mode(Game::Rules::get_action_mode(history.current()));
+  is_chance_node = Game::Rules::is_chance_mode(action_mode);
 }
 
 template <core::concepts::Game Game>
@@ -263,8 +263,8 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
         break;
       }
       const auto& child_stats = child->stats();
-      Q_sum += child_stats.Q * edge->chance_prob;
-      Q_sq_sum += child_stats.Q_sq * edge->chance_prob;
+      Q_sum += child_stats.Q * edge->base_prob;
+      Q_sq_sum += child_stats.Q_sq * edge->base_prob;
       N++;
     }
     if (N == stable_data_.num_valid_actions) {
@@ -390,7 +390,7 @@ void Node<Game>::load_eval(NNEvaluation* eval, PolicyTransformFunc f) {
 
   for (int i = 0; i < n; ++i) {
     edge_t* edge = get_edge(i);
-    edge->raw_policy_prior = P_raw[i];
+    edge->base_prob = P_raw[i];
     edge->adjusted_policy_prior = P_adjusted[i];
     edge->child_V_estimate = child_V[i];
   }

@@ -19,8 +19,9 @@ concept GameRules = requires(const State& const_state, const StateHistory& const
   { GR::get_action_mode(const_state) } -> std::same_as<core::action_mode_t>;
   { GR::get_current_player(const_state) } -> std::same_as<core::seat_index_t>;
   { GR::apply(history, core::action_t{}) };
+  // TODO: make this function constexpr
   { GR::is_chance_mode(action_mode) } -> std::same_as<bool>;
-  { GR::get_chance_distribution(state) } -> std::same_as<typename GameTypes::ChanceDistribution>;
+  { GR::get_chance_distribution(const_state) } -> std::same_as<typename GameTypes::ChanceDistribution>;
 
   // Return true iff the game has ended. If returning true, set results to the results of the game.
   { GR::is_terminal(const_state, last_player, last_action, results) } -> std::same_as<bool>;
