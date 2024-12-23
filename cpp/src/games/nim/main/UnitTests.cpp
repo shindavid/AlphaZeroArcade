@@ -114,7 +114,7 @@ TEST(NimGameTest, Player0Wins) {
   core::action_t last_action = actions.back();
 
   GameResults::Tensor outcome;
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().next_player,
+  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().current_player,
                                      last_action, outcome);
 
   EXPECT_TRUE(terminal);

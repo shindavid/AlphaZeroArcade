@@ -4,11 +4,11 @@ namespace nim {
 
 inline void Game::Rules::init_state(State& state) {
   state.stones_left = kStartingStones;
-  state.next_player = 0;
+  state.current_player = 0;
 }
 
 inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(stones_left, next_player, chance_active);
+  auto tuple = std::make_tuple(stones_left, current_player, chance_active);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
 }
@@ -26,6 +26,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
+// current_player only switches AFTER a chance action
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   bool is_chance = is_chance_mode(get_action_mode(history.current()));
   State& state = history.extend();
@@ -33,7 +34,7 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   if (is_chance) {
     int outcome_stones = state.stones_left - action;
     state.stones_left = outcome_stones;
-    state.next_player = 1 - state.next_player;
+    state.current_player = 1 - state.current_player;
     state.chance_active = false;
   } else {
     if (action < 0 || action >= nim::kMaxStonesToTake) {
@@ -78,7 +79,7 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   for (int i = 0; i < bit_width; ++i) {
     tensor(i) = (state->stones_left & (1 << i)) ? 1 : 0;
   }
-  tensor(bit_width) = state->next_player;
+  tensor(bit_width) = state->current_player;
   tensor(bit_width + 1) = state->chance_active;
   return tensor;
 }

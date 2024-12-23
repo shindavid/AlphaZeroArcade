@@ -46,7 +46,7 @@ struct Game {
     size_t hash() const;
 
     int stones_left;
-    int next_player;
+    int current_player;
     bool chance_active;
   };
 
@@ -61,7 +61,7 @@ struct Game {
     static Types::ActionMask get_legal_moves(const StateHistory& history);
     // action mode: 0 means player's move, 1 means chance move
     static core::action_mode_t get_action_mode(const State& state) { return state.chance_active; }
-    static core::seat_index_t get_current_player(const State& state) { return state.next_player; }
+    static core::seat_index_t get_current_player(const State& state) { return state.current_player; }
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
@@ -84,7 +84,7 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      ss << "[" << state.stones_left << ", " << state.next_player << ", " << state.chance_active
+      ss << "[" << state.stones_left << ", " << state.current_player << ", " << state.chance_active
          << "]";
       return ss.str();
     }
@@ -99,7 +99,7 @@ struct Game {
     template <typename Iter>
     static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter>
-    // tensor is of the format {binary encoding of stones_left, next_player, chance_active}
+    // tensor is of the format {binary encoding of stones_left, current_player, chance_active}
     static Tensor tensorize(Iter start, Iter cur);
   };
 
