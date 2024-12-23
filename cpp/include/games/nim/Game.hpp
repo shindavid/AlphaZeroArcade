@@ -126,3 +126,4 @@ struct hash<nim::Game::State> {
 static_assert(core::concepts::Game<nim::Game>);
 
 #include <inline/games/nim/Game.inl>
+

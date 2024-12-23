@@ -44,6 +44,7 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   }
 }
 
+// if the game ends after a chance action, the player who made the last move wins
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                                      core::action_t last_action, GameResults::Tensor& outcome) {
   if (state.stones_left == 0) {
@@ -82,3 +83,4 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   return tensor;
 }
 }  // namespace nim
+
