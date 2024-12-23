@@ -21,6 +21,7 @@
 #include <torch/torch.h>
 
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <functional>
 #include <sstream>
@@ -90,26 +91,16 @@ struct Game {
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<3>>;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<std::bit_width(kStartingStones) + 2>>;
     using MCTSKey = State;
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
+    static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur) {
-      Tensor tensor;
-      tensor.setZero();
-      Iter state = cur;
-
-      tensor(0) = state->stones_left;
-      tensor(1) = state->next_player;
-      tensor(2) = state->chance_active;
-      return tensor;
-    }
+    // tensor is of the format {binary encoding of stones_left, next_player, chance_active}
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {

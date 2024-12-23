@@ -6,7 +6,7 @@ namespace nim {
 
 const int kNumPlayers = 2;
 const int kMaxStonesToTake = 3;
-const int kStartingStones = 21;
+const unsigned int kStartingStones = 21;
 
 // After each player's turn, a random int r is chose with probability kChanceEventProbs[r],
 // and r stones are removed from the pile.

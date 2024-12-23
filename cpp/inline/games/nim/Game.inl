@@ -68,8 +68,23 @@ inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(cons
   Types::ChanceDistribution dist;
   dist.setZero();
   for (int i = 0; i < nim::kChanceDistributionSize; ++i) {
-    dist[i] = 1.0 / nim::kChanceDistributionSize;
+    dist[i] = nim::kChanceEventProbs[i];
   }
   return dist;
+}
+
+template <typename Iter>
+inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter cur) {
+  Tensor tensor;
+  tensor.setZero();
+  Iter state = cur;
+
+  constexpr int bit_width = std::bit_width(kStartingStones);
+  for (int i = 0; i < bit_width; ++i) {
+    tensor(i) = (state->stones_left & (1 << i)) ? 1 : 0;
+  }
+  tensor(bit_width) = state->next_player;
+  tensor(bit_width + 1) = state->chance_active;
+  return tensor;
 }
 }  // namespace nim

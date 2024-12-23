@@ -159,7 +159,7 @@ TEST(NimGameTest, tensorize) {
 
   Game::InputTensorizor::Tensor tensor =
       Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
-  float expectedValues[] = {18, 0, 0};
+  float expectedValues[] = {0, 1, 0, 0, 1, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
   }
