@@ -17,16 +17,12 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   const State& state = history.current();
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(get_action_mode(history.current()));
+  int max_num_action = is_chance ? nim::kChanceDistributionSize : nim::kMaxStonesToTake;
 
-  if (is_chance) {
-    for (int i = 0; i < kChanceDistributionSize; ++i) {
-      mask[i] = true;
-    }
-  } else {
-    for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-      mask[i] = i + 1 <= state.stones_left;
-    }
+  for (int i = 0; i < std::min(max_num_action, state.stones_left); ++i) {
+    mask[i] = true;
   }
+
   return mask;
 }
 
@@ -35,7 +31,7 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();
 
   if (is_chance) {
-    int outcome_stones = std::max(state.stones_left - action, 0);
+    int outcome_stones = state.stones_left - action;
     state.stones_left = outcome_stones;
     state.next_player = 1 - state.next_player;
     state.chance_active = false;
