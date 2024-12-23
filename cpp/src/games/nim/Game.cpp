@@ -1,1 +1,0 @@
-#include <games/nim/Game.hpp>

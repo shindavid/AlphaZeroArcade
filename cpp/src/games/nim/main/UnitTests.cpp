@@ -30,7 +30,7 @@ TEST(NimGameTest, MakeMove) {
   State state = history.current();
 
   EXPECT_EQ(state.stones_left, 18);
-  EXPECT_EQ(Rules::get_current_player(state), 1);
+  EXPECT_EQ(Rules::get_current_player(state), 0);
 }
 
 TEST(NimGameTest, VerifyChanceStatus) {

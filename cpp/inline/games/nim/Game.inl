@@ -37,16 +37,14 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   if (is_chance) {
     int outcome_stones = std::max(state.stones_left - action, 0);
     state.stones_left = outcome_stones;
+    state.next_player = 1 - state.next_player;
     state.chance_active = false;
   } else {
     if (action < 0 || action >= nim::kMaxStonesToTake) {
       throw std::invalid_argument("Invalid action: " + std::to_string(action));
     }
     state.stones_left = state.stones_left- (action + 1);
-    state.next_player = 1 - state.next_player;
-    if (kChanceDistributionSize > 0) {
-      state.chance_active = true;
-    }
+    state.chance_active = true;
   }
 }
 

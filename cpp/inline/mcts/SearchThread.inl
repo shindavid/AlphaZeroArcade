@@ -497,10 +497,9 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     ValueTensor game_outcome;
     core::action_t last_action = edge->action;
     Game::Symmetries::apply(last_action, edge->sym, parent->action_mode());
-    core::seat_index_t last_player = 1 - Game::Rules::get_current_player(history->current());
 
     bool terminal = Game::Rules::is_terminal(
-        history->current(), last_player, last_action, game_outcome);
+        history->current(), parent->stable_data().current_player, last_action, game_outcome);
 
     if (terminal) {
       new (child) Node(&lookup_table, *history, game_outcome);
