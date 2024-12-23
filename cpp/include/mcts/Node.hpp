@@ -104,7 +104,6 @@ class Node {
     bool terminal;
     bool VT_valid;
     bool is_chance_node;
-    PolicyTensor known_dist;
   };
 
   /*
@@ -143,6 +142,7 @@ class Node {
     float raw_policy_prior = 0;
     float adjusted_policy_prior = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
+    float chance_prob = 0;  // probability of this edge being chosen in a chance node
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
   };

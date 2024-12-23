@@ -32,6 +32,7 @@ struct ActionSelector {
   LocalPolicyArray VN;   // virtual node count
   LocalPolicyArray FPU;  // FPU
   LocalPolicyArray PUCT;
+  float chance_dist[Game::Constants::kMaxBranchingFactor];
 };
 
 }  // namespace mcts

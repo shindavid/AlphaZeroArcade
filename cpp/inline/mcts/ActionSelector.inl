@@ -38,6 +38,7 @@ inline ActionSelector<Game>::ActionSelector(const ManagerParams& params,
     edge_t* edge = node->get_edge(i);
     P(i) = edge->adjusted_policy_prior;
     E(i) = edge->E;
+    chance_dist[i] = edge->chance_prob;
 
     Node* child = node->get_child(edge);
     if (child) {

@@ -113,6 +113,16 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
       }
       pseudo_local_vars_.request_items.clear();
     }
+
+    if (node->stable_data().is_chance_node) {
+      for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
+        edge_t* edge = node->get_edge(i);
+        core::action_t action = edge->action;
+        typename Game::Types::ChanceDistribution chance_dist =
+            Game::Rules::get_chance_distribution(history->current());
+        edge->chance_prob = chance_dist(action);
+      }
+    }
   }
 
   auto mcts_key = Game::InputTensorizor::mcts_key(*history);
@@ -267,7 +277,13 @@ inline void SearchThread<Game>::visit(Node* node) {
     return;
   }
 
-  int child_index = get_best_child_index(node);
+  int child_index;
+  if (stable_data.is_chance_node) {
+    child_index = sample_chance_child_index(node);
+  } else {
+    child_index = get_best_child_index(node);
+  }
+
   edge_t* edge = node->get_edge(child_index);
   search_path_.back().edge = edge;
   bool applied_action = false;
@@ -587,47 +603,52 @@ void SearchThread<Game>::validate_search_path() const {
 
 template <core::concepts::Game Game>
 int SearchThread<Game>::get_best_child_index(Node* node) {
-  if (node->stable_data().is_chance_node) {
-    PolicyTensor known_dist = node->stable_data().known_dist;
-    core::action_t random_action = eigen_util::sample(known_dist);
-    return random_action;
+  profiler_.record(SearchThreadRegion::kPUCT);
 
+  bool is_root = (node == shared_data_->get_root_node());
+  const SearchParams& search_params = shared_data_->search_params;
+  ActionSelector action_selector(*manager_params_, search_params, node, is_root);
+
+  using PVec = LocalPolicyArray;
+
+  const PVec& P = action_selector.P;
+  const PVec& mE = action_selector.mE;
+  PVec& PUCT = action_selector.PUCT;
+
+  int argmax_index;
+
+  if (search_params.tree_size_limit == 1) {
+    // net-only, use P
+    P.maxCoeff(&argmax_index);
   } else {
-    profiler_.record(SearchThreadRegion::kPUCT);
+    bool force_playouts = manager_params_->forced_playouts && is_root &&
+                          search_params.full_search && manager_params_->dirichlet_mult > 0;
 
-    bool is_root = (node == shared_data_->get_root_node());
-    const SearchParams& search_params = shared_data_->search_params;
-    ActionSelector action_selector(*manager_params_, search_params, node, is_root);
-
-    using PVec = LocalPolicyArray;
-
-    const PVec& P = action_selector.P;
-    const PVec& mE = action_selector.mE;
-    PVec& PUCT = action_selector.PUCT;
-
-    int argmax_index;
-
-    if (search_params.tree_size_limit == 1) {
-      // net-only, use P
-      P.maxCoeff(&argmax_index);
-    } else {
-      bool force_playouts = manager_params_->forced_playouts && is_root &&
-                            search_params.full_search && manager_params_->dirichlet_mult > 0;
-
-      if (force_playouts) {
-        PVec n_forced = (P * manager_params_->k_forced * mE.sum()).sqrt();
-        auto F1 = (mE < n_forced).template cast<float>();
-        auto F2 = (mE > 0).template cast<float>();
-        auto F = F1 * F2;
-        PUCT = PUCT * (1 - F) + F * 1e+6;
-      }
-
-      PUCT.maxCoeff(&argmax_index);
+    if (force_playouts) {
+      PVec n_forced = (P * manager_params_->k_forced * mE.sum()).sqrt();
+      auto F1 = (mE < n_forced).template cast<float>();
+      auto F2 = (mE > 0).template cast<float>();
+      auto F = F1 * F2;
+      PUCT = PUCT * (1 - F) + F * 1e+6;
     }
 
-    print_action_selection_details(node, action_selector, argmax_index);
-    return argmax_index;
+    PUCT.maxCoeff(&argmax_index);
   }
+
+  print_action_selection_details(node, action_selector, argmax_index);
+  return argmax_index;
+}
+
+template <core::concepts::Game Game>
+int SearchThread<Game>::sample_chance_child_index(Node* node) {
+  bool is_root = (node == shared_data_->get_root_node());
+  const SearchParams& search_params = shared_data_->search_params;
+  ActionSelector action_selector(*manager_params_, search_params, node, is_root);
+  const auto* chance_dist = action_selector.chance_dist;
+
+  int n = Game::Constants::kMaxBranchingFactor;
+  core::action_t chance_action = util::Random::weighted_sample(chance_dist, chance_dist + n);
+  return chance_action;
 }
 
 template <core::concepts::Game Game>

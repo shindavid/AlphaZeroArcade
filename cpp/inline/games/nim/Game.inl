@@ -68,7 +68,7 @@ inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(cons
   Types::ChanceDistribution dist;
   dist.setZero();
   for (int i = 0; i < nim::kChanceDistributionSize; ++i) {
-    dist[i] = nim::kChanceEventProbs[i];
+    dist(i) = nim::kChanceEventProbs[i];
   }
   return dist;
 }
