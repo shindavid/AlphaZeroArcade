@@ -115,7 +115,7 @@ class ManagerTest : public testing::Test {
     return params;
   }
 
-  void SetUp() override { util::Random::set_seed(1); }
+  void SetUp() override { util::Random::set_seed(0); }
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
@@ -227,10 +227,10 @@ TEST_F(NimManagerTest, 100_searches_from_4_stones) {
   test_search("nim_4_stones", 100, initial_actions, nullptr);
 }
 
-TEST_F(NimManagerTest, 40_searches_from_5_stones) {
+TEST_F(NimManagerTest, 100_searches_from_5_stones) {
   std::vector<core::action_t> initial_actions = {nim::kTake3, 0, nim::kTake3, 0, nim::kTake3, 0,
                                                  nim::kTake3, 0, nim::kTake3, 0, nim::kTake1, 0};
-  test_search("nim_5_stones", 40, initial_actions, nullptr);
+  test_search("nim_5_stones", 100, initial_actions, nullptr);
 }
 
 using TicTacToeManagerTest = ManagerTest<TicTacToe>;

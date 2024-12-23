@@ -69,13 +69,9 @@ TEST(NimGameTest, VerifyDist) {
 
   PolicyTensor dist = Rules::get_chance_distribution(state);
 
-  for (int i = 0; i < nim::kChanceDistributionSize; ++i) {
-    EXPECT_EQ(dist[i], 1.0 / nim::kChanceDistributionSize);
-  }
-
-  for (int i = nim::kChanceDistributionSize; i < dist.size(); ++i) {
-    EXPECT_EQ(dist[i], 0);
-  }
+  EXPECT_NEAR(dist(0), 0.2, 1e-6);
+  EXPECT_NEAR(dist(1), 0.3, 1e-6);
+  EXPECT_NEAR(dist(2), 0.5, 1e-6);
 }
 
 TEST(NimGameTest, ChanceMove) {
@@ -96,7 +92,11 @@ TEST(NimGameTest, ChanceMove) {
 
     sum += history.current().stones_left;
   }
-  EXPECT_NEAR(sum / num_trials, 17.5, 3 * std::sqrt(0.5 * 0.5 / num_trials));
+  float mean = 18 * 0.2 + 17 * 0.3 + 16 * 0.5;
+  float sigma = std::sqrt(
+      (0.2 * std::pow(16 - mean, 2) + 0.3 * std::pow(17 - mean, 2) + 0.5 * std::pow(18 - mean, 2)) /
+      num_trials);
+  EXPECT_NEAR(sum / num_trials, mean, 3 * sigma);
 }
 
 TEST(NimGameTest, Player0Wins) {
@@ -149,6 +149,20 @@ TEST(NimGameTest, InvalidMove) {
   EXPECT_THROW(Rules::apply(history, 3), std::invalid_argument);
 }
 
+TEST(NimGameTest, MoveProbMass) {
+  StateHistory history;
+  State state;
+  state.stones_left = 1;
+  state.current_player = 0;
+  state.chance_active = true;
+  history.update(state);
+  Game::Types::ChanceDistribution dist = Rules::get_chance_distribution(state);
+
+  EXPECT_NEAR(dist(0), 0.2, 1e-6);
+  EXPECT_NEAR(dist(1), 0.8, 1e-6);
+  EXPECT_NEAR(dist(2), 0.0, 1e-6);
+}
+
 TEST(NimGameTest, tensorize) {
   StateHistory history;
   history.initialize(Rules{});
@@ -169,3 +183,4 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+

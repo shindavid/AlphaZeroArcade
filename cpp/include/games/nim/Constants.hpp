@@ -10,7 +10,7 @@ const unsigned int kStartingStones = 21;
 
 // After each player's turn, a random int r is chose with probability kChanceEventProbs[r],
 // and r stones are removed from the pile.
-constexpr float kChanceEventProbs[] = {0.5, 0.5};
+constexpr float kChanceEventProbs[] = {0.2, 0.3, 0.5};
 constexpr int kChanceDistributionSize = sizeof(kChanceEventProbs) / sizeof(float);
 
 const core::action_t kTake1 = 0;

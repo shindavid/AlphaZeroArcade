@@ -17,10 +17,14 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   const State& state = history.current();
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(get_action_mode(history.current()));
-  int max_num_action = is_chance ? nim::kChanceDistributionSize : nim::kMaxStonesToTake;
-
-  for (int i = 0; i < std::min(max_num_action, state.stones_left); ++i) {
-    mask[i] = true;
+  if (is_chance) {
+    for (int i = 0; i < std::min(nim::kChanceDistributionSize, state.stones_left + 1); ++i) {
+      mask[i] = true;
+    }
+  } else {
+    for (int i = 0; i < std::min(nim::kMaxStonesToTake, state.stones_left); ++i) {
+      mask[i] = true;
+    }
   }
 
   return mask;
@@ -61,10 +65,17 @@ inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(cons
     throw std::invalid_argument("Not in chance mode");
   }
 
+  Game::StateHistory single_state_history;
+  single_state_history.update(state);
+  int num_legal_moves = get_legal_moves(single_state_history).count();
+
   Types::ChanceDistribution dist;
   dist.setZero();
-  for (int i = 0; i < nim::kChanceDistributionSize; ++i) {
+  for (int i = 0; i < num_legal_moves; ++i) {
     dist(i) = nim::kChanceEventProbs[i];
+  }
+  for (int i = num_legal_moves; i < nim::kChanceDistributionSize; ++i) {
+    dist(num_legal_moves - 1) += nim::kChanceEventProbs[i];
   }
   return dist;
 }

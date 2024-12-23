@@ -72,8 +72,8 @@ def update_graph(index, graph_snapshots):
     for u, v, data in G.edges(data=True):
         x0, y0 = pos[u]
         x1, y1 = pos[v]
-        xm = (x0 + x1) / 2
-        ym = (y0 + y1) / 2
+        xm = x0 * 0.8 + x1 * 0.2
+        ym = y0 * 0.8 + y1 * 0.2
 
         if (u, v) in new_edges:
             edge_color = 'red'
