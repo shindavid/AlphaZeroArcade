@@ -17,7 +17,7 @@ inline size_t Game::State::hash() const {
 inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
   const State& state = history.current();
   Types::ActionMask mask;
-  bool is_chance = Rules::has_known_dist(history.current());
+  bool is_chance = is_chance_mode(get_action_mode(history.current()));
 
   if (is_chance) {
     for (int i = 0; i < kMaxRandomStonesToTake + 1; ++i) {
@@ -32,7 +32,7 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
 }
 
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  bool is_chance = has_known_dist(history.current());
+  bool is_chance = is_chance_mode(get_action_mode(history.current()));
   State& state = history.extend();
 
   if (is_chance) {
@@ -61,12 +61,12 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
   return false;
 }
 
-inline Game::Types::PolicyTensor Game::Rules::get_known_dist(const State& state) {
-  if (!has_known_dist(state)) {
+inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(const State& state) {
+  if (!is_chance_mode(get_action_mode(state))) {
     throw std::invalid_argument("Not in chance mode");
   }
 
-  Types::PolicyTensor dist;
+  Types::ChanceDistribution dist;
   dist.setZero();
   for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
     dist[i] = 1.0 / (nim::kMaxRandomStonesToTake + 1);

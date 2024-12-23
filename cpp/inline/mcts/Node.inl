@@ -15,10 +15,10 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   action_mode = Game::Rules::get_action_mode(history.current());
   current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
-  has_known_dist = Game::Rules::has_known_dist(history.current());
+  is_chance_node = Game::Rules::is_chance_mode(Game::Rules::get_action_mode(history.current()));
 
-  if (has_known_dist) {
-    known_dist = Game::Rules::get_known_dist(history.current());
+  if (is_chance_node) {
+    known_dist = Game::Rules::get_chance_distribution(history.current());
   } else {
     known_dist.setZero();
   }
@@ -34,7 +34,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history,
   action_mode = -1;
   current_player = -1;
   terminal = true;
-  has_known_dist = false;
+  is_chance_node = false;
   known_dist.setZero();
 }
 
@@ -261,7 +261,7 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   Q_sq_sum.setZero();
   int N = 0;
 
-  if (stable_data_.has_known_dist) {
+  if (stable_data_.is_chance_node) {
     for (int i = 0; i < stable_data_.num_valid_actions; i++) {
       const edge_t* edge = get_edge(i);
       const Node* child = get_child(edge);

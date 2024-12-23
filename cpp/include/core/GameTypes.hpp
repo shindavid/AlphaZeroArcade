@@ -31,6 +31,8 @@ struct GameTypes {
   using ValueShape = ValueTensor::Dimensions;
   using ActionValueShape = Eigen::Sizes<kMaxNumActions>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
+  using ChanceEventShape = Eigen::Sizes<kMaxNumActions>;
+  using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;

@@ -42,11 +42,11 @@ TEST(NimGameTest, VerifyChanceStatus) {
   if (nim::kMaxRandomStonesToTake == 0) {
     EXPECT_TRUE(state.is_player_ready());
     EXPECT_EQ(Rules::get_action_mode(state), 0);
-    EXPECT_FALSE(Rules::has_known_dist(state));
+    EXPECT_FALSE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   } else {
     EXPECT_FALSE(state.is_player_ready());
     EXPECT_EQ(Rules::get_action_mode(state), 1);
-    EXPECT_TRUE(Rules::has_known_dist(state));
+    EXPECT_TRUE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   }
 }
 
@@ -54,7 +54,7 @@ TEST(NimGameTest, VerifyDistFailure) {
   StateHistory history;
   history.initialize(Rules{});
 
-  EXPECT_THROW(Rules::get_known_dist(history.current()), std::invalid_argument);
+  EXPECT_THROW(Rules::get_chance_distribution(history.current()), std::invalid_argument);
 }
 
 TEST(NimGameTest, VerifyDist) {
@@ -67,7 +67,7 @@ TEST(NimGameTest, VerifyDist) {
   Rules::apply(history, nim::kTake3);
   State state = history.current();
 
-  PolicyTensor dist = Rules::get_known_dist(state);
+  PolicyTensor dist = Rules::get_chance_distribution(state);
 
   for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
     EXPECT_EQ(dist[i], 1.0 / (nim::kMaxRandomStonesToTake + 1));
@@ -90,7 +90,7 @@ TEST(NimGameTest, ChanceMove) {
 
     Rules::apply(history, nim::kTake3);
 
-    Types::PolicyTensor dist = Rules::get_known_dist(history.current());
+    Types::PolicyTensor dist = Rules::get_chance_distribution(history.current());
     core::action_t chance_action = eigen_util::sample(dist);
     Rules::apply(history, chance_action);
 

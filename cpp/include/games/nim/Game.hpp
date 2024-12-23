@@ -12,6 +12,7 @@
 #include <core/TrivialSymmetries.hpp>
 #include <core/WinShareResults.hpp>
 #include <games/nim/Constants.hpp>
+#include <games/GameRulesBase.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -42,17 +43,17 @@ struct Game {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
 
-    int get_stones() const { return stones_left; }  // Bits 0-4
+    int get_stones() const { return stones_left; }
     void set_stones(int stones) { stones_left = stones; }
-    bool get_player() const { return current_player; }  // Bit 5
+    bool get_player() const { return current_player; }
     void set_player(bool player) { current_player = player; }
-    bool is_player_ready() const { return player_ready; }  // Bit 6
+    bool is_player_ready() const { return player_ready; }
     void set_player_ready(bool ready) { player_ready = ready; }
 
    private:
     int stones_left;
     bool current_player;
-    bool player_ready;
+    bool player_ready; // true means that no chance events need to occur before player makes a move
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
@@ -61,7 +62,7 @@ struct Game {
   using Symmetries = core::TrivialSymmetries;
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
-  struct Rules {
+  struct Rules : public game_base::RulesBase<Types, State> {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
     // action mode: 0 means player's move, 1 means chance move
@@ -70,8 +71,8 @@ struct Game {
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
-    static bool has_known_dist(const State& state) { return (get_action_mode(state) == 1); }
-    static Types::PolicyTensor get_known_dist(const State& state);
+    static bool is_chance_mode(const core::action_mode_t& mode) { return mode == 1; }
+    static Types::ChanceDistribution get_chance_distribution(const State& state);
   };
 
   struct IO : public core::IOBase<Types, State> {
@@ -123,7 +124,6 @@ struct Game {
     using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
- 
     using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
   };
 

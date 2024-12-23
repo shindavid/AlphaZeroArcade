@@ -587,7 +587,7 @@ void SearchThread<Game>::validate_search_path() const {
 
 template <core::concepts::Game Game>
 int SearchThread<Game>::get_best_child_index(Node* node) {
-  if (node->stable_data().has_known_dist) {
+  if (node->stable_data().is_chance_node) {
     PolicyTensor known_dist = node->stable_data().known_dist;
     core::action_t random_action = eigen_util::sample(known_dist);
     return random_action;
