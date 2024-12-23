@@ -30,7 +30,8 @@ namespace nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
-    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake, nim::kMaxRandomStonesToTake + 1>;
+    using kNumActionsPerMode =
+        util::int_sequence<nim::kMaxStonesToTake, nim::kChanceDistributionSize>;
     static constexpr int kNumPlayers = nim::kNumPlayers;
     static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
   };
@@ -43,17 +44,9 @@ struct Game {
     auto operator<=>(const State& other) const = default;
     size_t hash() const;
 
-    int get_stones() const { return stones_left; }
-    void set_stones(int stones) { stones_left = stones; }
-    bool get_player() const { return current_player; }
-    void set_player(bool player) { current_player = player; }
-    bool is_player_ready() const { return player_ready; }
-    void set_player_ready(bool ready) { player_ready = ready; }
-
-   private:
     int stones_left;
-    bool current_player;
-    bool player_ready; // true means that no chance events need to occur before player makes a move
+    int next_player;
+    bool chance_active;
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
@@ -66,8 +59,8 @@ struct Game {
     static void init_state(State& state);
     static Types::ActionMask get_legal_moves(const StateHistory& history);
     // action mode: 0 means player's move, 1 means chance move
-    static core::action_mode_t get_action_mode(const State& state) { return !state.is_player_ready(); }
-    static core::seat_index_t get_current_player(const State& state) { return state.get_player(); }
+    static core::action_mode_t get_action_mode(const State& state) { return state.chance_active; }
+    static core::seat_index_t get_current_player(const State& state) { return state.next_player; }
     static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
                             core::action_t last_action, GameResults::Tensor& outcome);
@@ -90,8 +83,8 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      ss << "[" << state.get_stones() << ", " << state.get_player() << ", "
-         << state.is_player_ready() << "]";
+      ss << "[" << state.stones_left << ", " << state.next_player << ", " << state.chance_active
+         << "]";
       return ss.str();
     }
   };
@@ -112,9 +105,9 @@ struct Game {
       tensor.setZero();
       Iter state = cur;
 
-      tensor(0) = state->get_stones();
-      tensor(1) = state->get_player();
-      tensor(2) = state->is_player_ready();
+      tensor(0) = state->stones_left;
+      tensor(1) = state->next_player;
+      tensor(2) = state->chance_active;
       return tensor;
     }
   };

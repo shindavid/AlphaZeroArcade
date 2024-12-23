@@ -49,9 +49,9 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
 
       const Nim::State& state = item.cur_state();
 
-      bool winning = state.get_stones() % (1 + nim::kMaxStonesToTake) != 0;
+      bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
-        core::action_t winning_move = state.get_stones() % (1 + nim::kMaxStonesToTake) - 1;
+        core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
         // these are logits
         float winning_v = smart_ ? 2 : 0;

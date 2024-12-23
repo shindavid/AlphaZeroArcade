@@ -3,13 +3,12 @@
 namespace nim {
 
 inline void Game::Rules::init_state(State& state) {
-  state.set_stones(kStartingStones);
-  state.set_player(0);
-  state.set_player_ready(true);
+  state.stones_left = kStartingStones;
+  state.next_player = 0;
 }
 
 inline size_t Game::State::hash() const {
-  auto tuple = std::make_tuple(stones_left, current_player, player_ready);
+  auto tuple = std::make_tuple(stones_left, next_player, chance_active);
   std::hash<decltype(tuple)> hasher;
   return hasher(tuple);
 }
@@ -20,12 +19,12 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   bool is_chance = is_chance_mode(get_action_mode(history.current()));
 
   if (is_chance) {
-    for (int i = 0; i < kMaxRandomStonesToTake + 1; ++i) {
+    for (int i = 0; i < kChanceDistributionSize; ++i) {
       mask[i] = true;
     }
   } else {
     for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-      mask[i] = i + 1 <= state.get_stones();
+      mask[i] = i + 1 <= state.stones_left;
     }
   }
   return mask;
@@ -36,24 +35,24 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
   State& state = history.extend();
 
   if (is_chance) {
-    int outcome_stones = std::max(state.get_stones() - action, 0);
-    state.set_stones(outcome_stones);
-    state.set_player_ready(true);
+    int outcome_stones = std::max(state.stones_left - action, 0);
+    state.stones_left = outcome_stones;
+    state.chance_active = false;
   } else {
     if (action < 0 || action >= nim::kMaxStonesToTake) {
       throw std::invalid_argument("Invalid action: " + std::to_string(action));
     }
-    state.set_stones(state.get_stones() - (action + 1));
-    state.set_player(1 - state.get_player());
-    if (kMaxRandomStonesToTake > 0) {
-      state.set_player_ready(false);
+    state.stones_left = state.stones_left- (action + 1);
+    state.next_player = 1 - state.next_player;
+    if (kChanceDistributionSize > 0) {
+      state.chance_active = true;
     }
   }
 }
 
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                                      core::action_t last_action, GameResults::Tensor& outcome) {
-  if (state.get_stones() == 0) {
+  if (state.stones_left == 0) {
     outcome.setZero();
     outcome(last_player) = 1;
     return true;
@@ -68,8 +67,8 @@ inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(cons
 
   Types::ChanceDistribution dist;
   dist.setZero();
-  for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
-    dist[i] = 1.0 / (nim::kMaxRandomStonesToTake + 1);
+  for (int i = 0; i < nim::kChanceDistributionSize; ++i) {
+    dist[i] = 1.0 / nim::kChanceDistributionSize;
   }
   return dist;
 }

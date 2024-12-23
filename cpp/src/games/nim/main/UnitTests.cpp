@@ -20,7 +20,7 @@ TEST(NimGameTest, InitialState) {
   State state = history.current();
 
   EXPECT_EQ(Rules::get_current_player(state), 0);
-  EXPECT_EQ(state.get_stones(), 21);  // Assuming the game starts with 21 stones
+  EXPECT_EQ(state.stones_left, 21);  // Assuming the game starts with 21 stones
 }
 
 TEST(NimGameTest, MakeMove) {
@@ -29,7 +29,7 @@ TEST(NimGameTest, MakeMove) {
   Rules::apply(history, nim::kTake3);
   State state = history.current();
 
-  EXPECT_EQ(state.get_stones(), 18);
+  EXPECT_EQ(state.stones_left, 18);
   EXPECT_EQ(Rules::get_current_player(state), 1);
 }
 
@@ -39,12 +39,12 @@ TEST(NimGameTest, VerifyChanceStatus) {
 
   Rules::apply(history, nim::kTake3);
   State state = history.current();
-  if (nim::kMaxRandomStonesToTake == 0) {
-    EXPECT_TRUE(state.is_player_ready());
+  if (nim::kChanceDistributionSize == 0) {
+    EXPECT_FALSE(state.chance_active);
     EXPECT_EQ(Rules::get_action_mode(state), 0);
     EXPECT_FALSE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   } else {
-    EXPECT_FALSE(state.is_player_ready());
+    EXPECT_TRUE(state.chance_active);
     EXPECT_EQ(Rules::get_action_mode(state), 1);
     EXPECT_TRUE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   }
@@ -58,7 +58,7 @@ TEST(NimGameTest, VerifyDistFailure) {
 }
 
 TEST(NimGameTest, VerifyDist) {
-  if (nim::kMaxRandomStonesToTake == 0) {
+  if (nim::kChanceDistributionSize == 0) {
     return;
   }
   StateHistory history;
@@ -69,17 +69,17 @@ TEST(NimGameTest, VerifyDist) {
 
   PolicyTensor dist = Rules::get_chance_distribution(state);
 
-  for (int i = 0; i < nim::kMaxRandomStonesToTake + 1; ++i) {
-    EXPECT_EQ(dist[i], 1.0 / (nim::kMaxRandomStonesToTake + 1));
+  for (int i = 0; i < nim::kChanceDistributionSize; ++i) {
+    EXPECT_EQ(dist[i], 1.0 / nim::kChanceDistributionSize);
   }
 
-  for (int i = nim::kMaxRandomStonesToTake + 1; i < dist.size(); ++i) {
+  for (int i = nim::kChanceDistributionSize; i < dist.size(); ++i) {
     EXPECT_EQ(dist[i], 0);
   }
 }
 
 TEST(NimGameTest, ChanceMove) {
-  if (nim::kMaxRandomStonesToTake == 0) {
+  if (nim::kChanceDistributionSize == 0) {
     return;
   }
   int num_trials = 1000;
@@ -94,7 +94,7 @@ TEST(NimGameTest, ChanceMove) {
     core::action_t chance_action = eigen_util::sample(dist);
     Rules::apply(history, chance_action);
 
-    sum += history.current().get_stones();
+    sum += history.current().stones_left;
   }
   EXPECT_NEAR(sum / num_trials, 17.5, 3 * std::sqrt(0.5 * 0.5 / num_trials));
 }
@@ -114,7 +114,7 @@ TEST(NimGameTest, Player0Wins) {
   core::action_t last_action = actions.back();
 
   GameResults::Tensor outcome;
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().get_player(),
+  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().next_player,
                                      last_action, outcome);
 
   EXPECT_TRUE(terminal);
@@ -135,7 +135,7 @@ TEST(NimGameTest, Player1Wins) {
 
   GameResults::Tensor outcome;
   core::action_t last_action = actions.back();
-  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().get_player(),
+  bool terminal = Rules::is_terminal(history.current(), 1 - history.current().stones_left,
                                      last_action, outcome);
 
   EXPECT_TRUE(terminal);
@@ -159,7 +159,7 @@ TEST(NimGameTest, tensorize) {
 
   Game::InputTensorizor::Tensor tensor =
       Game::InputTensorizor::tensorize(history.begin(), history.end() - 1);
-  float expectedValues[] = {18, 0, 1};
+  float expectedValues[] = {18, 0, 0};
   for (int i = 0; i < tensor.size(); i++) {
     EXPECT_EQ(tensor.data()[i], expectedValues[i]);
   }
