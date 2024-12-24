@@ -1,17 +1,18 @@
 {
 "valid_actions" : "111",
-"counts" : [3, 0, 7],
-"policy_target" : [3, 0, 7],
-"policy_prior" : [0.106507, 0.106507, 0.786986],
-"Q" : [0.880797, 0, 0.5],
-"Q_sq" : [0.775803, 0, 0.25],
-"action_values" : [0.880797, 0, 0.5],
-"win_rates" : [0.361528, 0.638472],
-"value_prior" : [0.119203, 0.880797],
+"counts" : [4, 3, 3],
+"policy_target" : [4, 3, 3],
+"policy_prior" : [0.333333, 0.333333, 0.333333],
+"Q" : [0.0298007, 0.0397343, 0.0397343],
+"Q_sq" : [0.00355233, 0.00473645, 0.00473645],
+"action_values" : [0.119203, 0.119203, 0.119203],
+"win_rates" : [0.0779644, 0.922036],
+"value_prior" : [0.5, 0.5],
 "action_symmetry_table" : [
   [2],
+  [1],
   [0]
 ],
 "trivial" : false,
-"provably_lost" : false
+"provably_lost" : true
 }

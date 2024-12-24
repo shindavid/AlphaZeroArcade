@@ -1,5 +1,6 @@
 #include <core/tests/Common.hpp>
 #include <games/GameTransforms.hpp>
+#include <games/nim/Game.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <mcts/SearchLog.hpp>
@@ -22,13 +23,13 @@
 #include <string>
 #include <vector>
 
+using Nim = game_transform::AddStateStorage<nim::Game>;
 using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
 
-
-class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Stochastic_nim> {
+class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
  public:
-  using NNEvaluation = mcts::NNEvaluation<Stochastic_nim>;
+  using NNEvaluation = mcts::NNEvaluation<Nim>;
   using ValueTensor = NNEvaluation::ValueTensor;
   using PolicyTensor = NNEvaluation::PolicyTensor;
   using ActionValueTensor = NNEvaluation::ActionValueTensor;
@@ -47,11 +48,11 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Stochastic_
       core::seat_index_t cp = item.node()->stable_data().current_player;
       core::action_mode_t mode = item.node()->action_mode();
 
-      const Stochastic_nim::State& state = item.cur_state();
+      const Nim::State& state = item.cur_state();
 
-      bool winning = state.stones_left % (1 + stochastic_nim::kMaxStonesToTake) != 0;
+      bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
-        core::action_t winning_move = state.stones_left % (1 + stochastic_nim::kMaxStonesToTake) - 1;
+        core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
         // these are logits
         float winning_v = smart_ ? 2 : 0;
@@ -171,7 +172,7 @@ class ManagerTest : public testing::Test {
     }
 
     if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
-      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs1" / "mcts_tests";
+      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "mcts_tests";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }
@@ -195,26 +196,49 @@ class ManagerTest : public testing::Test {
   mcts::SearchLog<Game>* search_log_ = nullptr;
 };
 
+using NimManagerTest = ManagerTest<Nim>;
+TEST_F(NimManagerTest, uniform_search) {
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+  test_search("nim_uniform_10", 10, initial_actions, nullptr);
+}
+
+TEST_F(NimManagerTest, smart_search) {
+  MockNNEvaluationService mock_service(true);
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+  test_search("nim_smart_service", 10, initial_actions, &mock_service);
+}
+
+TEST_F(NimManagerTest, dumb_search) {
+  MockNNEvaluationService mock_service(false);
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake2};
+
+  test_search("nim_dumb_service", 10, initial_actions, &mock_service);
+}
+
+TEST_F(NimManagerTest, 20_searches_from_scratch) {
+  test_search("nim_uniform", 20, {}, nullptr);
+}
+
+TEST_F(NimManagerTest, 40_searches_from_4_stones) {
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake2};
+  test_search("nim_4_stones", 40, initial_actions, nullptr);
+}
+
+TEST_F(NimManagerTest, 40_searches_from_5_stones) {
+  std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
+                                                 nim::kTake3, nim::kTake3, nim::kTake1};
+  test_search("nim_5_stones", 40, initial_actions, nullptr);
+}
+
 using StochasticNimManagerTest = ManagerTest<Stochastic_nim>;
 TEST_F(StochasticNimManagerTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
                                                  stochastic_nim::kTake3, stochastic_nim::kTake2};
   test_search("stochastic_nim_uniform_10", 10, initial_actions, nullptr);
-}
-
-TEST_F(StochasticNimManagerTest, smart_search) {
-  MockNNEvaluationService mock_service(true);
-  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                                 stochastic_nim::kTake3, stochastic_nim::kTake2};
-  test_search("stochastic_nim_smart_service", 10, initial_actions, &mock_service);
-}
-
-TEST_F(StochasticNimManagerTest, dumb_search) {
-  MockNNEvaluationService mock_service(false);
-  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                                 stochastic_nim::kTake3, stochastic_nim::kTake2};
-
-  test_search("stochastic_nim_dumb_service", 10, initial_actions, &mock_service);
 }
 
 TEST_F(StochasticNimManagerTest, 20_searches_from_scratch) {

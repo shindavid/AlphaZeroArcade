@@ -1,12 +1,12 @@
 {
 "valid_actions" : "111",
-"counts" : [5, 3, 2],
-"policy_target" : [5, 3, 2],
+"counts" : [7, 11, 82],
+"policy_target" : [7, 11, 82],
 "policy_prior" : [0.333333, 0.333333, 0.333333],
-"Q" : [0.3, 0.333333, 0.25],
-"Q_sq" : [0.15, 0.166667, 0.125],
+"Q" : [0.3, 0.192857, 0.522885],
+"Q_sq" : [0.15, 0.0964286, 0.511442],
 "action_values" : [0.5, 0.5, 0.5],
-"win_rates" : [0.318182, 0.681818],
+"win_rates" : [0.471267, 0.528733],
 "value_prior" : [0.5, 0.5],
 "action_symmetry_table" : [
   [2],
@@ -14,5 +14,5 @@
   [0]
 ],
 "trivial" : false,
-"provably_lost" : true
+"provably_lost" : false
 }
