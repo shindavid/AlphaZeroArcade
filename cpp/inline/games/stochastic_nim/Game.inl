@@ -26,7 +26,6 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
       mask[i] = true;
     }
   }
-
   return mask;
 }
 
@@ -60,7 +59,7 @@ inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last
   return false;
 }
 
-/**
+/*
  * Assign the chance distribution mass to each legal move. If the sum of the probabilities is less
  * than 1, move the remaining probability mass to the last legal move.
  */
