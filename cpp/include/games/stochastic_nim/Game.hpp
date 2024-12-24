@@ -11,7 +11,7 @@
 #include <core/TrainingTargets.hpp>
 #include <core/TrivialSymmetries.hpp>
 #include <core/WinShareResults.hpp>
-#include <games/nim/Constants.hpp>
+#include <games/stochastic_nim/Constants.hpp>
 #include <games/GameRulesBase.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -26,14 +26,14 @@
 #include <sstream>
 #include <string>
 
-namespace nim {
+namespace stochastic_nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
     using kNumActionsPerMode =
-        util::int_sequence<nim::kMaxStonesToTake, nim::kChanceDistributionSize>;
-    static constexpr int kNumPlayers = nim::kNumPlayers;
-    static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
+        util::int_sequence<stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize>;
+    static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;
+    static constexpr int kMaxBranchingFactor = stochastic_nim::kMaxStonesToTake;
   };
 
   struct MctsConfiguration : public core::MctsConfigurationBase {
@@ -83,7 +83,7 @@ struct Game {
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
       ss << "p" << state.current_player;
-      if (state.current_mode == nim::kChanceMode) {
+      if (state.current_mode == stochastic_nim::kChanceMode) {
         ss << "*";
       }
       ss << " @" << state.stones_left;
@@ -92,7 +92,7 @@ struct Game {
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStonesBitWidth + 2>>;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<stochastic_nim::kStartingStonesBitWidth + 2>>;
     using MCTSKey = State;
     using EvalKey = State;
 
@@ -114,17 +114,17 @@ struct Game {
 
   static void static_init() {}
 };  // struct Game
-}  // namespace nim
+}  // namespace stochastic_nim
 
 namespace std {
 
 template <>
-struct hash<nim::Game::State> {
-  size_t operator()(const nim::Game::State& pos) const { return pos.hash(); }
+struct hash<stochastic_nim::Game::State> {
+  size_t operator()(const stochastic_nim::Game::State& pos) const { return pos.hash(); }
 };
 }  // namespace std
 
-static_assert(core::concepts::Game<nim::Game>);
+static_assert(core::concepts::Game<stochastic_nim::Game>);
 
-#include <inline/games/nim/Game.inl>
+#include <inline/games/stochastic_nim/Game.inl>
 

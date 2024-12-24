@@ -4,7 +4,7 @@
 
 #include <bit>
 
-namespace nim {
+namespace stochastic_nim {
 
 const int kNumPlayers = 2;
 const int kMaxStonesToTake = 3;

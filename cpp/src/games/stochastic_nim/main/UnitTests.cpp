@@ -1,10 +1,10 @@
-#include <games/nim/Game.hpp>
+#include <games/stochastic_nim/Game.hpp>
 
 #include <gtest/gtest.h>
 
 #include <iostream>
 
-using Game = nim::Game;
+using Game = stochastic_nim::Game;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
@@ -26,7 +26,7 @@ TEST(NimGameTest, InitialState) {
 TEST(NimGameTest, MakeMove) {
   StateHistory history;
   history.initialize(Rules{});
-  Rules::apply(history, nim::kTake3);
+  Rules::apply(history, stochastic_nim::kTake3);
   State state = history.current();
 
   EXPECT_EQ(state.stones_left, 18);
@@ -37,14 +37,14 @@ TEST(NimGameTest, VerifyChanceStatus) {
   StateHistory history;
   history.initialize(Rules{});
 
-  Rules::apply(history, nim::kTake3);
+  Rules::apply(history, stochastic_nim::kTake3);
   State state = history.current();
-  if (nim::kChanceDistributionSize == 0) {
-    EXPECT_EQ(state.current_mode, nim::kPlayerMode);
+  if (stochastic_nim::kChanceDistributionSize == 0) {
+    EXPECT_EQ(state.current_mode, stochastic_nim::kPlayerMode);
     EXPECT_EQ(Rules::get_action_mode(state), 0);
     EXPECT_FALSE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   } else {
-    EXPECT_EQ(state.current_mode, nim::kChanceMode);
+    EXPECT_EQ(state.current_mode, stochastic_nim::kChanceMode);
     EXPECT_EQ(Rules::get_action_mode(state), 1);
     EXPECT_TRUE(Rules::is_chance_mode(Rules::get_action_mode(state)));
   }
@@ -58,13 +58,13 @@ TEST(NimGameTest, VerifyDistFailure) {
 }
 
 TEST(NimGameTest, VerifyDist) {
-  if (nim::kChanceDistributionSize == 0) {
+  if (stochastic_nim::kChanceDistributionSize == 0) {
     return;
   }
   StateHistory history;
   history.initialize(Rules{});
 
-  Rules::apply(history, nim::kTake3);
+  Rules::apply(history, stochastic_nim::kTake3);
   State state = history.current();
 
   PolicyTensor dist = Rules::get_chance_distribution(state);
@@ -75,7 +75,7 @@ TEST(NimGameTest, VerifyDist) {
 }
 
 TEST(NimGameTest, ChanceMove) {
-  if (nim::kChanceDistributionSize == 0) {
+  if (stochastic_nim::kChanceDistributionSize == 0) {
     return;
   }
   int num_trials = 1000;
@@ -84,7 +84,7 @@ TEST(NimGameTest, ChanceMove) {
     StateHistory history;
     history.initialize(Rules{});
 
-    Rules::apply(history, nim::kTake3);
+    Rules::apply(history, stochastic_nim::kTake3);
 
     Types::PolicyTensor dist = Rules::get_chance_distribution(history.current());
     core::action_t chance_action = eigen_util::sample(dist);
@@ -102,8 +102,8 @@ TEST(NimGameTest, ChanceMove) {
 TEST(NimGameTest, Player0Wins) {
   StateHistory history;
   history.initialize(Rules{});
-  std::vector<core::action_t> actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                         nim::kTake3, nim::kTake3, nim::kTake3};
+  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3};
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
@@ -124,8 +124,8 @@ TEST(NimGameTest, Player0Wins) {
 TEST(NimGameTest, Player1Wins) {
   StateHistory history;
   history.initialize(Rules{});
-  std::vector<core::action_t> actions = {nim::kTake3, nim::kTake3, nim::kTake3, nim::kTake3,
-                                         nim::kTake3, nim::kTake3, nim::kTake1, nim::kTake2};
+  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake1, stochastic_nim::kTake2};
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
@@ -154,7 +154,7 @@ TEST(NimGameTest, MoveProbMass) {
   State state;
   state.stones_left = 1;
   state.current_player = 0;
-  state.current_mode = nim::kChanceMode;
+  state.current_mode = stochastic_nim::kChanceMode;
   history.update(state);
   Game::Types::ChanceDistribution dist = Rules::get_chance_distribution(state);
 

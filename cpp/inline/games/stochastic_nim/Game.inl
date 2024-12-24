@@ -1,6 +1,6 @@
-#include <games/nim/Game.hpp>
+#include <games/stochastic_nim/Game.hpp>
 
-namespace nim {
+namespace stochastic_nim {
 
 inline void Game::Rules::init_state(State& state) {
   state.stones_left = kStartingStones;
@@ -18,11 +18,11 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
-    for (int i = 0; i < std::min(nim::kChanceDistributionSize, state.stones_left + 1); ++i) {
+    for (int i = 0; i < std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1); ++i) {
       mask[i] = true;
     }
   } else {
-    for (int i = 0; i < std::min(nim::kMaxStonesToTake, state.stones_left); ++i) {
+    for (int i = 0; i < std::min(stochastic_nim::kMaxStonesToTake, state.stones_left); ++i) {
       mask[i] = true;
     }
   }
@@ -39,13 +39,13 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
     int outcome_stones = state.stones_left - action;
     state.stones_left = outcome_stones;
     state.current_player = 1 - state.current_player;
-    state.current_mode = nim::kPlayerMode;
+    state.current_mode = stochastic_nim::kPlayerMode;
   } else {
-    if (action < 0 || action >= nim::kMaxStonesToTake) {
+    if (action < 0 || action >= stochastic_nim::kMaxStonesToTake) {
       throw std::invalid_argument("Invalid action: " + std::to_string(action));
     }
     state.stones_left = state.stones_left - (action + 1);
-    state.current_mode = nim::kChanceMode;
+    state.current_mode = stochastic_nim::kChanceMode;
   }
 }
 
@@ -68,13 +68,13 @@ inline Game::Types::ChanceDistribution Game::Rules::get_chance_distribution(cons
   if (!is_chance_mode(get_action_mode(state))) {
     throw std::invalid_argument("Not in chance mode");
   }
-  int num_legal_moves = std::min(nim::kChanceDistributionSize, state.stones_left + 1);
+  int num_legal_moves = std::min(stochastic_nim::kChanceDistributionSize, state.stones_left + 1);
   Types::ChanceDistribution dist;
   dist.setZero();
 
   float cumulative_prob = 0;
   for (int i = 0; i < num_legal_moves; ++i) {
-    dist(i) = nim::kChanceEventProbs[i];
+    dist(i) = stochastic_nim::kChanceEventProbs[i];
     cumulative_prob += dist(i);
   }
   dist(num_legal_moves - 1) += 1 - cumulative_prob;
@@ -87,12 +87,12 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   tensor.setZero();
   Iter state = cur;
 
-  for (int i = 0; i < nim::kStartingStonesBitWidth; ++i) {
+  for (int i = 0; i < stochastic_nim::kStartingStonesBitWidth; ++i) {
     tensor(i) = (state->stones_left & (1 << i)) ? 1 : 0;
   }
-  tensor(nim::kStartingStonesBitWidth) = state->current_player;
-  tensor(nim::kStartingStonesBitWidth + 1) = state->current_mode;
+  tensor(stochastic_nim::kStartingStonesBitWidth) = state->current_player;
+  tensor(stochastic_nim::kStartingStonesBitWidth + 1) = state->current_mode;
   return tensor;
 }
-}  // namespace nim
+}  // namespace stochastic_nim
 
