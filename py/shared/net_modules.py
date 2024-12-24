@@ -208,7 +208,7 @@ class ResBlockWithGlobalPooling(nn.Module):
 
 class PositionalEncoding(nn.Module):
     """
-    
+    The standard positional encoding of tokens as in https://arxiv.org/pdf/1706.03762.
     """
     def __init__(self, d_model, board_size, dropout=0.):
         super(PositionalEncoding, self).__init__()
