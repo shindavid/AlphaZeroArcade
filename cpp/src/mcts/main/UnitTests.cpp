@@ -171,7 +171,7 @@ class ManagerTest : public testing::Test {
     }
 
     if (IS_MACRO_ENABLED(WRITE_LOGFILES)) {
-      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs" / "mcts_tests";
+      boost::filesystem::path log_dir = util::Repo::root() / "sample_search_logs1" / "mcts_tests";
       boost::filesystem::path log_file_path = log_dir / (testname + "_log.json");
       boost_util::write_str_to_file(get_search_log()->json_str(), log_file_path);
     }

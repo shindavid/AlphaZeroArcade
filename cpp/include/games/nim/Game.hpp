@@ -82,9 +82,8 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      if (state.current_mode == nim::kPlayerMode) {
-        ss << "p" << state.current_player;
-      } else {
+      ss << "p" << state.current_player;
+      if (state.current_mode == nim::kChanceMode) {
         ss << "*";
       }
       ss << " @" << state.stones_left;

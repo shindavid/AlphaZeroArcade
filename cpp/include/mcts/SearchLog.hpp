@@ -17,6 +17,7 @@ class SearchLog {
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
+  using player_bitset_t = std::bitset<Game::Constants::kNumPlayers>;
 
  public:
   SearchLog(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}
@@ -26,6 +27,8 @@ class SearchLog {
     int N;
     ValueArray Q;
     std::string state;
+    player_bitset_t provably_winning;
+    player_bitset_t provably_losing;
     boost::json::object to_json() const;
   };
 
@@ -49,8 +52,9 @@ class SearchLog {
 
     boost::json::object graph_repr() const;
 
-    void add_node(node_index_t index, int N, const ValueArray& Q, const std::string& state) {
-      nodes.emplace_back(index, N, Q, state);
+    void add_node(node_index_t index, int N, const ValueArray& Q, const std::string& state,
+                  const player_bitset_t& provably_winning, const player_bitset_t& provably_losing) {
+      nodes.emplace_back(index, N, Q, state, provably_winning, provably_losing);
     }
 
     void add_edge(edge_index_t index, node_index_t from, node_index_t to, int E,

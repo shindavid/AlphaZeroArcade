@@ -254,6 +254,11 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   Q_sq_sum.setZero();
   int N = 0;
 
+  player_bitset_t all_provably_winning;
+  player_bitset_t all_provably_losing;
+  all_provably_winning.set();
+  all_provably_losing.set();
+
   if (stable_data_.is_chance_node) {
     for (int i = 0; i < stable_data_.num_valid_actions; i++) {
       const edge_t* edge = get_edge(i);
@@ -266,10 +271,15 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
       Q_sum += child_stats.Q * edge->base_prob;
       Q_sq_sum += child_stats.Q_sq * edge->base_prob;
       N++;
+
+      all_provably_winning &= child_stats.provably_winning;
+      all_provably_losing &= child_stats.provably_losing;
     }
     if (N == stable_data_.num_valid_actions) {
       stats_.Q = Q_sum;
       stats_.Q_sq = Q_sq_sum;
+      stats_.provably_winning = all_provably_winning;
+      stats_.provably_losing = all_provably_losing;
     }
 
   } else {
@@ -279,10 +289,6 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
   bool cp_has_winning_move = false;
   int num_children = 0;
 
-  player_bitset_t all_provably_winning;
-  player_bitset_t all_provably_losing;
-  all_provably_winning.set();
-  all_provably_losing.set();
   bool skipped = false;
   for (int i = 0; i < stable_data().num_valid_actions; i++) {
     const edge_t* edge = get_edge(i);

@@ -15,6 +15,19 @@ inline boost::json::object SearchLog<Game>::log_node_t::to_json() const {
   node_json["Q"] = Q_array;
 
   node_json["state"] = state;
+
+  boost::json::array provably_winning_array;
+  for (size_t i = 0; i < provably_winning.size(); ++i) {
+    provably_winning_array.push_back(provably_winning[i]);
+  }
+  node_json["provably_winning"] = provably_winning_array;
+
+  boost::json::array provably_losing_array;
+  for (size_t i = 0; i < provably_losing.size(); ++i) {
+    provably_losing_array.push_back(provably_losing[i]);
+  }
+  node_json["provably_losing"] = provably_losing_array;
+
   return node_json;
 }
 
@@ -53,8 +66,8 @@ void SearchLog<Game>::build_graph(Graph& graph) {
   for (auto [key, node_ix] : *map) {
     const Node* node = shared_data_->lookup_table.get_node(node_ix);
     const State* state = node->stable_data().get_state();
-    graph.add_node(node_ix, node->stats().RN, node->stats().Q,
-                   Game::IO::compact_state_repr(*state));
+    graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::compact_state_repr(*state),
+                   node->stats().provably_winning, node->stats().provably_losing);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       edge_t* edge = node->get_edge(i);
 

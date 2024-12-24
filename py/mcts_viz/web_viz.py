@@ -11,7 +11,7 @@ import numpy as np
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 # Load your JSON data
-base_dir = '/home/lichensong/projects/AlphaZeroArcade/sample_search_logs/mcts_tests'
+base_dir = '/home/lichensong/projects/AlphaZeroArcade/sample_search_logs1/mcts_tests'
 
 # List all files ending with '_log.json'
 log_files = [f for f in os.listdir(base_dir) if f.endswith('_log.json')]
@@ -119,7 +119,9 @@ def update_graph(index, graph_snapshots):
         else:
             node_colors.append('lightgray')
 
-        label = f"({node})<br>{data['state']}<br>N: {data['N']}<br>Q: [{float(data['Q'][0]):.2f}, {float(data['Q'][1]):.2f}]"
+        label = f"({node})<br>{data['state']}<br>N: {data['N']}<br>"
+        label += f"Q: [{float(data['Q'][0]):.2f}, {float(data['Q'][1]):.2f}]<br>"
+        label += f"W: [{data['provably_winning'][0]}, {data['provably_winning'][1]}]<br>"
         node_text.append(label)
 
     node_trace = go.Scatter(
