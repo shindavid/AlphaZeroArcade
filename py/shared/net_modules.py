@@ -271,6 +271,7 @@ class TransformerBlock(nn.Module):
 
         return x
 
+
 class Head(nn.Module):
     def __init__(self, name: str, target: LearningTarget):
         super(Head, self).__init__()
