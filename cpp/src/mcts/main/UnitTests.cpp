@@ -199,14 +199,14 @@ using StochasticNimManagerTest = ManagerTest<Stochastic_nim>;
 TEST_F(StochasticNimManagerTest, uniform_search) {
   std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
                                                  stochastic_nim::kTake3, stochastic_nim::kTake2};
-  test_search("nim_uniform_10", 10, initial_actions, nullptr);
+  test_search("stochastic_nim_uniform_10", 10, initial_actions, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, smart_search) {
   MockNNEvaluationService mock_service(true);
   std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
                                                  stochastic_nim::kTake3, stochastic_nim::kTake2};
-  test_search("nim_smart_service", 10, initial_actions, &mock_service);
+  test_search("stochastic_nim_smart_service", 10, initial_actions, &mock_service);
 }
 
 TEST_F(StochasticNimManagerTest, dumb_search) {
@@ -214,23 +214,23 @@ TEST_F(StochasticNimManagerTest, dumb_search) {
   std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
                                                  stochastic_nim::kTake3, stochastic_nim::kTake2};
 
-  test_search("nim_dumb_service", 10, initial_actions, &mock_service);
+  test_search("stochastic_nim_dumb_service", 10, initial_actions, &mock_service);
 }
 
 TEST_F(StochasticNimManagerTest, 20_searches_from_scratch) {
-  test_search("nim_uniform", 20, {}, nullptr);
+  test_search("stochastic_nim_uniform", 20, {}, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_4_stones) {
   std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
                                                  stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
-  test_search("nim_4_stones", 100, initial_actions, nullptr);
+  test_search("stochastic_nim_4_stones", 100, initial_actions, nullptr);
 }
 
 TEST_F(StochasticNimManagerTest, 100_searches_from_5_stones) {
   std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
                                                  stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
-  test_search("nim_5_stones", 100, initial_actions, nullptr);
+  test_search("stochastic_nim_5_stones", 100, initial_actions, nullptr);
 }
 
 using TicTacToeManagerTest = ManagerTest<TicTacToe>;

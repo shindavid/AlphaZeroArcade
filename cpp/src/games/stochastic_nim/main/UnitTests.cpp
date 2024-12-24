@@ -14,7 +14,7 @@ using Types = Game::Types;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 
-TEST(NimGameTest, InitialState) {
+TEST(StochasticNimGameTest, InitialState) {
   StateHistory history;
   history.initialize(Rules{});
   State state = history.current();
@@ -23,7 +23,7 @@ TEST(NimGameTest, InitialState) {
   EXPECT_EQ(state.stones_left, 21);  // Assuming the game starts with 21 stones
 }
 
-TEST(NimGameTest, MakeMove) {
+TEST(StochasticNimGameTest, MakeMove) {
   StateHistory history;
   history.initialize(Rules{});
   Rules::apply(history, stochastic_nim::kTake3);
@@ -33,7 +33,7 @@ TEST(NimGameTest, MakeMove) {
   EXPECT_EQ(Rules::get_current_player(state), 0);
 }
 
-TEST(NimGameTest, VerifyChanceStatus) {
+TEST(StochasticNimGameTest, VerifyChanceStatus) {
   StateHistory history;
   history.initialize(Rules{});
 
@@ -50,14 +50,14 @@ TEST(NimGameTest, VerifyChanceStatus) {
   }
 }
 
-TEST(NimGameTest, VerifyDistFailure) {
+TEST(StochasticNimGameTest, VerifyDistFailure) {
   StateHistory history;
   history.initialize(Rules{});
 
   EXPECT_THROW(Rules::get_chance_distribution(history.current()), std::invalid_argument);
 }
 
-TEST(NimGameTest, VerifyDist) {
+TEST(StochasticNimGameTest, VerifyDist) {
   if (stochastic_nim::kChanceDistributionSize == 0) {
     return;
   }
@@ -74,7 +74,7 @@ TEST(NimGameTest, VerifyDist) {
   EXPECT_NEAR(dist(2), 0.5, 1e-6);
 }
 
-TEST(NimGameTest, ChanceMove) {
+TEST(StochasticNimGameTest, ChanceMove) {
   if (stochastic_nim::kChanceDistributionSize == 0) {
     return;
   }
@@ -99,7 +99,7 @@ TEST(NimGameTest, ChanceMove) {
   EXPECT_NEAR(sum / num_trials, mean, 3 * sigma);
 }
 
-TEST(NimGameTest, Player0Wins) {
+TEST(StochasticNimGameTest, Player0Wins) {
   StateHistory history;
   history.initialize(Rules{});
   std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
@@ -121,7 +121,7 @@ TEST(NimGameTest, Player0Wins) {
   EXPECT_EQ(outcome[0], 1);
 }
 
-TEST(NimGameTest, Player1Wins) {
+TEST(StochasticNimGameTest, Player1Wins) {
   StateHistory history;
   history.initialize(Rules{});
   std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
@@ -142,14 +142,14 @@ TEST(NimGameTest, Player1Wins) {
   EXPECT_EQ(outcome[1], 1);
 }
 
-TEST(NimGameTest, InvalidMove) {
+TEST(StochasticNimGameTest, InvalidMove) {
   StateHistory history;
   history.initialize(Rules{});
   EXPECT_THROW(Rules::apply(history, -1), std::invalid_argument);
   EXPECT_THROW(Rules::apply(history, 3), std::invalid_argument);
 }
 
-TEST(NimGameTest, MoveProbMass) {
+TEST(StochasticNimGameTest, MoveProbMass) {
   StateHistory history;
   State state;
   state.stones_left = 1;
@@ -163,7 +163,7 @@ TEST(NimGameTest, MoveProbMass) {
   EXPECT_NEAR(dist(2), 0.0, 1e-6);
 }
 
-TEST(NimGameTest, tensorize) {
+TEST(StochasticNimGameTest, tensorize) {
   StateHistory history;
   history.initialize(Rules{});
   Rules::apply(history, 1);  // Player 0 removes 2 stones
