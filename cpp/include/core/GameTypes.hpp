@@ -15,15 +15,17 @@
 
 namespace core {
 
-template <concepts::GameConstants GameConstants, typename State, concepts::GameResults GameResults,
+template <concepts::GameConstants GameConstants, typename State_, concepts::GameResults GameResults,
           group::concepts::FiniteGroup SymmetryGroup>
 struct GameTypes {
+  using State = State_;
   using kNumActionsPerMode = GameConstants::kNumActionsPerMode;
   static constexpr int kNumActionModes = kNumActionsPerMode::size();
   static constexpr int kMaxNumActions = mp::MaxOf_v<kNumActionsPerMode>;
 
   using ActionMask = std::bitset<kMaxNumActions>;
   using player_name_array_t = std::array<std::string, GameConstants::kNumPlayers>;
+  using player_bitset_t = std::bitset<GameConstants::kNumPlayers>;
 
   using PolicyShape = Eigen::Sizes<kMaxNumActions>;
   using PolicyTensor = eigen_util::FTensor<PolicyShape>;
@@ -31,6 +33,8 @@ struct GameTypes {
   using ValueShape = ValueTensor::Dimensions;
   using ActionValueShape = Eigen::Sizes<kMaxNumActions>;
   using ActionValueTensor = eigen_util::FTensor<ActionValueShape>;
+  using ChanceEventShape = Eigen::Sizes<kMaxNumActions>;
+  using ChanceDistribution = eigen_util::FTensor<ChanceEventShape>;
 
   using ValueArray = eigen_util::FArray<GameConstants::kNumPlayers>;
   using SymmetryMask = std::bitset<SymmetryGroup::kOrder>;

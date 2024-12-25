@@ -159,7 +159,7 @@ Manager<Game>::search(const SearchParams& params) {
     actions[i] = action;
 
     auto* edge = root->get_edge(i);
-    results_.policy_prior(action) = edge->raw_policy_prior;
+    results_.policy_prior(action) = edge->base_prob;
 
     i++;
   }

@@ -11,6 +11,7 @@
 #include <core/TrainingTargets.hpp>
 #include <core/WinLossDrawResults.hpp>
 #include <games/connect4/Constants.hpp>
+#include <games/GameRulesBase.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>
@@ -73,7 +74,7 @@ struct Game {
     static group::element_t get_canonical_symmetry(const State& state);
   };
 
-  struct Rules {
+  struct Rules : public game_base::RulesBase<Types> {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::action_mode_t get_action_mode(const State&) { return 0; }

@@ -1,6 +1,7 @@
 #include <core/tests/Common.hpp>
 #include <games/GameTransforms.hpp>
 #include <games/nim/Game.hpp>
+#include <games/stochastic_nim/Game.hpp>
 #include <games/tictactoe/Game.hpp>
 #include <mcts/SearchLog.hpp>
 #include <mcts/Manager.hpp>
@@ -23,8 +24,8 @@
 #include <vector>
 
 using Nim = game_transform::AddStateStorage<nim::Game>;
+using Stochastic_nim = game_transform::AddStateStorage<stochastic_nim::Game>;
 using TicTacToe = game_transform::AddStateStorage<tictactoe::Game>;
-
 
 class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
  public:
@@ -51,7 +52,7 @@ class MockNNEvaluationService : public mcts::NNEvaluationServiceBase<Nim> {
 
       bool winning = state.stones_left % (1 + nim::kMaxStonesToTake) != 0;
       if (winning) {
-        core::action_t winning_move = (state.stones_left) % (1 + nim::kMaxStonesToTake) - 1;
+        core::action_t winning_move = state.stones_left % (1 + nim::kMaxStonesToTake) - 1;
 
         // these are logits
         float winning_v = smart_ ? 2 : 0;
@@ -114,6 +115,8 @@ class ManagerTest : public testing::Test {
     params.no_model = true;
     return params;
   }
+
+  void SetUp() override { util::Random::set_seed(0); }
 
   void init_manager(Service* service = nullptr) {
     manager_ = new Manager(manager_params_, service);
@@ -229,6 +232,29 @@ TEST_F(NimManagerTest, 40_searches_from_5_stones) {
   std::vector<core::action_t> initial_actions = {nim::kTake3, nim::kTake3, nim::kTake3,
                                                  nim::kTake3, nim::kTake3, nim::kTake1};
   test_search("nim_5_stones", 40, initial_actions, nullptr);
+}
+
+using StochasticNimManagerTest = ManagerTest<Stochastic_nim>;
+TEST_F(StochasticNimManagerTest, uniform_search) {
+  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                                 stochastic_nim::kTake3, stochastic_nim::kTake2};
+  test_search("stochastic_nim_uniform_10", 10, initial_actions, nullptr);
+}
+
+TEST_F(StochasticNimManagerTest, 20_searches_from_scratch) {
+  test_search("stochastic_nim_uniform", 20, {}, nullptr);
+}
+
+TEST_F(StochasticNimManagerTest, 100_searches_from_4_stones) {
+  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+                                                 stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake2, 0};
+  test_search("stochastic_nim_4_stones", 100, initial_actions, nullptr);
+}
+
+TEST_F(StochasticNimManagerTest, 100_searches_from_5_stones) {
+  std::vector<core::action_t> initial_actions = {stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0,
+                                                 stochastic_nim::kTake3, 0, stochastic_nim::kTake3, 0, stochastic_nim::kTake1, 0};
+  test_search("stochastic_nim_5_stones", 100, initial_actions, nullptr);
 }
 
 using TicTacToeManagerTest = ManagerTest<TicTacToe>;

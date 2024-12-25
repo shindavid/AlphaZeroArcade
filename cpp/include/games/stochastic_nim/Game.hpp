@@ -11,7 +11,7 @@
 #include <core/TrainingTargets.hpp>
 #include <core/TrivialSymmetries.hpp>
 #include <core/WinShareResults.hpp>
-#include <games/nim/Constants.hpp>
+#include <games/stochastic_nim/Constants.hpp>
 #include <games/GameRulesBase.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -26,13 +26,15 @@
 #include <sstream>
 #include <string>
 
-namespace nim {
+namespace stochastic_nim {
 
 struct Game {
   struct Constants : public core::ConstantsBase {
-    using kNumActionsPerMode = util::int_sequence<nim::kMaxStonesToTake>;
-    static constexpr int kNumPlayers = nim::kNumPlayers;
-    static constexpr int kMaxBranchingFactor = nim::kMaxStonesToTake;
+    using kNumActionsPerMode =
+        util::int_sequence<stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize>;
+    static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;
+    static constexpr int kMaxBranchingFactor =
+        std::max(stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize);
   };
 
   struct MctsConfiguration : public core::MctsConfigurationBase {
@@ -41,15 +43,11 @@ struct Game {
 
   struct State {
     auto operator<=>(const State& other) const = default;
-
-    size_t hash() const {
-      auto tuple = std::make_tuple(stones_left, current_player);
-      std::hash<decltype(tuple)> hasher;
-      return hasher(tuple);
-    }
+    size_t hash() const;
 
     int stones_left;
     int current_player;
+    core::action_mode_t current_mode;
   };
 
   using GameResults = core::WinShareResults<Constants::kNumPlayers>;
@@ -59,47 +57,17 @@ struct Game {
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
 
   struct Rules : public game_base::RulesBase<Types> {
-    static void init_state(State& state) {
-      state.stones_left = nim::kStartingStones;
-      state.current_player = 0;
-    }
-
-    static Types::ActionMask get_legal_moves(const StateHistory& history) {
-      const State& state = history.current();
-      Types::ActionMask mask;
-
-      for (int i = 0; i < nim::kMaxStonesToTake; ++i) {
-        mask[i] = i + 1 <= state.stones_left;
-      }
-
-      return mask;
-    }
-
-    static core::action_mode_t get_action_mode(const State&) { return 0; }
-
-    static core::seat_index_t get_current_player(const State& state) {
-      return state.current_player;
-    }
-
-    static void apply(StateHistory& history, core::action_t action) {
-      if (action < 0 || action >= nim::kMaxStonesToTake) {
-        throw std::invalid_argument("Invalid action: " + std::to_string(action));
-      }
-
-      State& state = history.extend();
-      state.stones_left -= action + 1;
-      state.current_player = 1 - state.current_player;
-    }
-
+    static void init_state(State& state);
+    static Types::ActionMask get_legal_moves(const StateHistory& history);
+    static core::action_mode_t get_action_mode(const State& state) { return state.current_mode; }
+    static core::seat_index_t get_current_player(const State& state) { return state.current_player; }
+    static void apply(StateHistory& history, core::action_t action);
     static bool is_terminal(const State& state, core::seat_index_t last_player,
-                            core::action_t last_action, GameResults::Tensor& outcome) {
-      if (state.stones_left == 0) {
-        outcome.setZero();
-        outcome(last_player) = 1;
-        return true;
-      }
-      return false;
+                            core::action_t last_action, GameResults::Tensor& outcome);
+    static bool is_chance_mode(const core::action_mode_t& mode) {
+      return mode == stochastic_nim::kChanceMode;
     }
+    static Types::ChanceDistribution get_chance_distribution(const State& state);
   };
 
   struct IO : public core::IOBase<Types, State> {
@@ -117,32 +85,26 @@ struct Game {
     }
     static std::string compact_state_repr(const State& state) {
       std::ostringstream ss;
-      ss << "[" << state.stones_left << ", " << state.current_player << "]";
+      ss << "p" << state.current_player;
+      if (state.current_mode == stochastic_nim::kChanceMode) {
+        ss << "*";
+      }
+      ss << "@" << state.stones_left;
       return ss.str();
     }
   };
 
   struct InputTensorizor {
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<nim::kStartingStones>>;
+    // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<stochastic_nim::kStartingStonesBitWidth + 2>>;
     using MCTSKey = State;
     using EvalKey = State;
 
     static MCTSKey mcts_key(const StateHistory& history) { return history.current(); }
     template <typename Iter>
-    static EvalKey eval_key(Iter start, Iter cur) {
-      return *cur;
-    }
+    static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter>
-    static Tensor tensorize(Iter start, Iter cur) {
-      Tensor tensor;
-      tensor.setZero();
-      Iter state = cur;
-
-      for (int i = 0; i < state->stones_left; ++i) {
-        tensor(nim::kStartingStones - 1 - i) = 1;
-      }
-      return tensor;
-    }
+    static Tensor tensorize(Iter start, Iter cur);
   };
 
   struct TrainingTargets {
@@ -150,20 +112,22 @@ struct Game {
     using ValueTarget = core::ValueTarget<Game>;
     using ActionValueTarget = core::ActionValueTarget<Game>;
     using OppPolicyTarget = core::OppPolicyTarget<Game>;
-
     using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget>;
   };
 
   static void static_init() {}
 };  // struct Game
-}  // namespace nim
+}  // namespace stochastic_nim
 
 namespace std {
 
 template <>
-struct hash<nim::Game::State> {
-  size_t operator()(const nim::Game::State& pos) const { return pos.hash(); }
+struct hash<stochastic_nim::Game::State> {
+  size_t operator()(const stochastic_nim::Game::State& pos) const { return pos.hash(); }
 };
 }  // namespace std
 
-static_assert(core::concepts::Game<nim::Game>);
+static_assert(core::concepts::Game<stochastic_nim::Game>);
+
+#include <inline/games/stochastic_nim/Game.inl>
+

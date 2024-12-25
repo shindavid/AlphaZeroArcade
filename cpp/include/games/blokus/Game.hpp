@@ -14,6 +14,7 @@
 #include <games/blokus/Constants.hpp>
 #include <games/blokus/GameState.hpp>
 #include <games/blokus/Types.hpp>
+#include <games/GameRulesBase.hpp>
 #include <util/CppUtil.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
@@ -56,7 +57,7 @@ class Game {
   using Types = core::GameTypes<Constants, State, GameResults, SymmetryGroup>;
   using Symmetries = core::TrivialSymmetries;
 
-  struct Rules {
+  struct Rules : public game_base::RulesBase<Types> {
     static void init_state(State&);
     static Types::ActionMask get_legal_moves(const StateHistory&);
     static core::action_mode_t get_action_mode(const State&);

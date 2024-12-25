@@ -113,6 +113,16 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
       }
       pseudo_local_vars_.request_items.clear();
     }
+
+    if (node->stable_data().is_chance_node) {
+      using ChanceDistribution = Game::Types::ChanceDistribution;
+      ChanceDistribution chance_dist = Game::Rules::get_chance_distribution(history->current());
+      for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
+        edge_t* edge = node->get_edge(i);
+        core::action_t action = edge->action;
+        edge->base_prob = chance_dist(action);
+      }
+    }
   }
 
   auto mcts_key = Game::InputTensorizor::mcts_key(*history);
@@ -267,7 +277,13 @@ inline void SearchThread<Game>::visit(Node* node) {
     return;
   }
 
-  int child_index = get_best_child_index(node);
+  int child_index;
+  if (stable_data.is_chance_node) {
+    child_index = sample_chance_child_index(node);
+  } else {
+    child_index = get_best_child_index(node);
+  }
+
   edge_t* edge = node->get_edge(child_index);
   search_path_.back().edge = edge;
   bool applied_action = false;
@@ -620,6 +636,16 @@ int SearchThread<Game>::get_best_child_index(Node* node) {
 
   print_action_selection_details(node, action_selector, argmax_index);
   return argmax_index;
+}
+
+template <core::concepts::Game Game>
+int SearchThread<Game>::sample_chance_child_index(Node* node) {
+  int n = node->stable_data().num_valid_actions;
+  float chance_dist[n];
+  for (int i = 0; i < n; i++) {
+    chance_dist[i] = node->get_edge(i)->base_prob;
+  }
+  return util::Random::weighted_sample(chance_dist, chance_dist + n);
 }
 
 template <core::concepts::Game Game>

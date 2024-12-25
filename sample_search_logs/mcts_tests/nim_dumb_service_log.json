@@ -6,13 +6,17 @@
     "index" : 0,
     "N" : 2,
     "Q" : [0.690399, 0.309601],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 1,
     "Q" : [0.880797, 0.119203],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -31,19 +35,25 @@
     "index" : 0,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -69,25 +79,33 @@
     "index" : 0,
     "N" : 4,
     "Q" : [0.595199, 0.404801],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 1,
     "Q" : [0.880797, 0.119203],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -120,31 +138,41 @@
     "index" : 0,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -184,37 +212,49 @@
     "index" : 0,
     "N" : 6,
     "Q" : [0.563466, 0.436534],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.880797, 0.119203],
-    "state" : "[1, 1]"
+    "state" : "[1, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -261,43 +301,57 @@
     "index" : 0,
     "N" : 7,
     "Q" : [0.482971, 0.517029],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 2,
     "Q" : [0.440399, 0.559601],
-    "state" : "[1, 1]"
+    "state" : "[1, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0, 1],
-    "state" : "[0, 0]"
+    "state" : "[0, 0]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     }
   ],
   "edges" : [
@@ -351,43 +405,57 @@
     "index" : 0,
     "N" : 8,
     "Q" : [0.4375, 0.5625],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 3,
     "Q" : [0.373068, 0.626932],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 2,
     "Q" : [0.440399, 0.559601],
-    "state" : "[1, 1]"
+    "state" : "[1, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0, 1],
-    "state" : "[0, 0]"
+    "state" : "[0, 0]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     }
   ],
   "edges" : [
@@ -448,49 +516,65 @@
     "index" : 0,
     "N" : 9,
     "Q" : [0.5, 0.5],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 3,
     "Q" : [0.373068, 0.626932],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 3,
     "Q" : [0.666667, 0.333333],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 2,
     "Q" : [0.559601, 0.440399],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "10",
+    "provably_losing" : "01"
     },
     {
     "index" : 5,
     "N" : 2,
     "Q" : [0.440399, 0.559601],
-    "state" : "[1, 1]"
+    "state" : "[1, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0, 1],
-    "state" : "[0, 0]"
+    "state" : "[0, 0]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [1, 0],
-    "state" : "[0, 1]"
+    "state" : "[0, 1]",
+    "provably_winning" : "10",
+    "provably_losing" : "01"
     }
   ],
   "edges" : [
@@ -558,49 +642,65 @@
     "index" : 0,
     "N" : 10,
     "Q" : [0.45, 0.55],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 3,
     "Q" : [0.373068, 0.626932],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.119203, 0.880797],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 4,
     "N" : 2,
     "Q" : [0.559601, 0.440399],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "10",
+    "provably_losing" : "01"
     },
     {
     "index" : 5,
     "N" : 2,
     "Q" : [0.440399, 0.559601],
-    "state" : "[1, 1]"
+    "state" : "[1, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0, 1],
-    "state" : "[0, 0]"
+    "state" : "[0, 0]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [1, 0],
-    "state" : "[0, 1]"
+    "state" : "[0, 1]",
+    "provably_winning" : "10",
+    "provably_losing" : "01"
     }
   ],
   "edges" : [
@@ -675,49 +775,65 @@
     "index" : 0,
     "N" : 11,
     "Q" : [0.489163, 0.510837],
-    "state" : "[4, 0]"
+    "state" : "[4, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "[3, 1]"
+    "state" : "[3, 1]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 2,
     "Q" : [0.279801, 0.720199],
-    "state" : "[2, 0]"
+    "state" : "[2, 0]",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "[2, 1]"
+    "state" : "[2, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 4,
     "N" : 2,
     "Q" : [0.559601, 0.440399],
-    "state" : "[1, 0]"
+    "state" : "[1, 0]",
+    "provably_winning" : "10",
+    "provably_losing" : "01"
     },
     {
     "index" : 5,
     "N" : 2,
     "Q" : [0.440399, 0.559601],
-    "state" : "[1, 1]"
+    "state" : "[1, 1]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0, 1],
-    "state" : "[0, 0]"
+    "state" : "[0, 0]",
+    "provably_winning" : "01",
+    "provably_losing" : "10"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [1, 0],
-    "state" : "[0, 1]"
+    "state" : "[0, 1]",
+    "provably_winning" : "10",
+    "provably_losing" : "01"
     }
   ],
   "edges" : [

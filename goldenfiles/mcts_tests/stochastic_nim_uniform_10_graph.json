@@ -2,17 +2,17 @@
 "nodes" : [
   {
   "index" : 0,
-  "N" : 21,
+  "N" : 11,
   "Q" : [0.5, 0.5],
-  "state" : "___\n___\n___",
+  "state" : "p1@7",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
   {
   "index" : 1,
-  "N" : 3,
+  "N" : 4,
   "Q" : [0.5, 0.5],
-  "state" : "X__\n___\n___",
+  "state" : "p1*@6",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
@@ -20,23 +20,23 @@
   "index" : 2,
   "N" : 3,
   "Q" : [0.5, 0.5],
-  "state" : "_X_\n___\n___",
+  "state" : "p1*@5",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
   {
   "index" : 3,
-  "N" : 2,
+  "N" : 3,
   "Q" : [0.5, 0.5],
-  "state" : "___\n_X_\n___",
+  "state" : "p1*@4",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
   {
   "index" : 4,
-  "N" : 1,
+  "N" : 2,
   "Q" : [0.5, 0.5],
-  "state" : "XO_\n___\n___",
+  "state" : "p0@4",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
@@ -44,7 +44,7 @@
   "index" : 5,
   "N" : 1,
   "Q" : [0.5, 0.5],
-  "state" : "OX_\n___\n___",
+  "state" : "p0@5",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
@@ -52,7 +52,7 @@
   "index" : 6,
   "N" : 1,
   "Q" : [0.5, 0.5],
-  "state" : "O__\n_X_\n___",
+  "state" : "p0@3",
   "provably_winning" : "00",
   "provably_losing" : "00"
   },
@@ -60,7 +60,7 @@
   "index" : 7,
   "N" : 1,
   "Q" : [0.5, 0.5],
-  "state" : "X_O\n___\n___",
+  "state" : "p0*@3",
   "provably_winning" : "00",
   "provably_losing" : "00"
   }
@@ -70,7 +70,7 @@
   "index" : 0,
   "from" : 0,
   "to" : 1,
-  "E" : 3,
+  "E" : 4,
   "action" : 0
   },
   {
@@ -83,84 +83,56 @@
   {
   "index" : 2,
   "from" : 0,
-  "to" : 1,
+  "to" : 3,
+  "E" : 3,
+  "action" : 2
+  },
+  {
+  "index" : 4,
+  "from" : 1,
+  "to" : 5,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 5,
+  "from" : 1,
+  "to" : 4,
   "E" : 2,
   "action" : 2
   },
   {
-  "index" : 3,
-  "from" : 0,
-  "to" : 2,
-  "E" : 2,
-  "action" : 3
-  },
-  {
-  "index" : 4,
-  "from" : 0,
-  "to" : 3,
-  "E" : 2,
-  "action" : 4
-  },
-  {
-  "index" : 5,
-  "from" : 0,
-  "to" : 2,
-  "E" : 2,
-  "action" : 5
-  },
-  {
-  "index" : 6,
-  "from" : 0,
-  "to" : 1,
-  "E" : 2,
-  "action" : 6
-  },
-  {
   "index" : 7,
-  "from" : 0,
-  "to" : 2,
-  "E" : 2,
-  "action" : 7
-  },
-  {
-  "index" : 8,
-  "from" : 0,
-  "to" : 1,
-  "E" : 2,
-  "action" : 8
-  },
-  {
-  "index" : 9,
-  "from" : 1,
+  "from" : 2,
   "to" : 4,
   "E" : 1,
   "action" : 1
   },
   {
-  "index" : 10,
-  "from" : 1,
-  "to" : 7,
+  "index" : 8,
+  "from" : 2,
+  "to" : 6,
   "E" : 1,
   "action" : 2
   },
   {
-  "index" : 17,
-  "from" : 2,
-  "to" : 5,
+  "index" : 9,
+  "from" : 3,
+  "to" : 4,
   "E" : 1,
   "action" : 0
   },
   {
-  "index" : 18,
-  "from" : 2,
-  "to" : 5,
-  "E" : 1,
-  "action" : 2
-  },
-  {
-  "index" : 25,
+  "index" : 10,
   "from" : 3,
   "to" : 6,
+  "E" : 1,
+  "action" : 1
+  },
+  {
+  "index" : 12,
+  "from" : 4,
+  "to" : 7,
   "E" : 1,
   "action" : 0
   }

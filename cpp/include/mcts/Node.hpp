@@ -75,7 +75,7 @@ class Node {
   using PolicyTensor = Game::Types::PolicyTensor;
   using ActionValueTensor = Game::Types::ActionValueTensor;
   using SearchResults = Game::Types::SearchResults;
-  using player_bitset_t = std::bitset<kNumPlayers>;
+  using player_bitset_t = Game::Types::player_bitset_t;
   using node_pool_index_t = util::pool_index_t;
   using edge_pool_index_t = util::pool_index_t;
 
@@ -103,6 +103,7 @@ class Node {
     core::seat_index_t current_player;
     bool terminal;
     bool VT_valid;
+    bool is_chance_node;
   };
 
   /*
@@ -138,8 +139,9 @@ class Node {
     node_pool_index_t child_index = -1;
     core::action_t action = -1;
     int E = 0;  // real or virtual count
-    float raw_policy_prior = 0;
-    float adjusted_policy_prior = 0;
+    float base_prob = 0;  // used for both raw policy prior and chance node probability
+    // equal to base_prob, with possible adjustments from Dirichlet-noise and softmax-temperature
+    float adjusted_base_prob = 0;
     float child_V_estimate = 0;  // network estimate of child-value for current-player
     group::element_t sym = -1;
     expansion_state_t state = kNotExpanded;
