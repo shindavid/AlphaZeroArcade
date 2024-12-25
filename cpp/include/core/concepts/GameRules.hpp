@@ -17,6 +17,7 @@ concept GameRules = requires(const State& const_state, const StateHistory& const
   { GR::init_state(state) };
   { GR::get_legal_moves(const_history) } -> std::same_as<typename GameTypes::ActionMask>;
   { GR::get_action_mode(const_state) } -> std::same_as<core::action_mode_t>;
+  // Assumes the state is in player mode.
   { GR::get_current_player(const_state) } -> std::same_as<core::seat_index_t>;
   { GR::apply(history, core::action_t{}) };
   // TODO: make this function constexpr
@@ -25,8 +26,8 @@ concept GameRules = requires(const State& const_state, const StateHistory& const
   { GR::get_chance_distribution(const_state) } -> std::same_as<typename GameTypes::ChanceDistribution>;
 
   // Return true iff the game has ended. If returning true, set results to the results of the game.
-  // last_player is allowed to be -1 for chance nodes and will be ignored inside the function.
-  // TODO: pass in last_mode so when last_mode is chance_mode, last_player is ignored.
+  // last_player is allowed to be -1 if the last_player was a chance node.
+  // TODO: pass in last_mode
   { GR::is_terminal(const_state, last_player, last_action, results) } -> std::same_as<bool>;
 };
 
