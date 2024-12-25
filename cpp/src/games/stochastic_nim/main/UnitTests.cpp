@@ -102,8 +102,10 @@ TEST(StochasticNimGameTest, ChanceMove) {
 TEST(StochasticNimGameTest, Player0Wins) {
   StateHistory history;
   history.initialize(Rules{});
-  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3};
+  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3};
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
@@ -124,8 +126,10 @@ TEST(StochasticNimGameTest, Player0Wins) {
 TEST(StochasticNimGameTest, Player1Wins) {
   StateHistory history;
   history.initialize(Rules{});
-  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake3,
-                                         stochastic_nim::kTake3, stochastic_nim::kTake3, stochastic_nim::kTake1, stochastic_nim::kTake2};
+  std::vector<core::action_t> actions = {stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake3, stochastic_nim::kTake3,
+                                         stochastic_nim::kTake1, stochastic_nim::kTake2};
 
   for (core::action_t action : actions) {
     Rules::apply(history, action);
@@ -166,9 +170,9 @@ TEST(StochasticNimGameTest, MoveProbMass) {
 TEST(StochasticNimGameTest, tensorize) {
   StateHistory history;
   history.initialize(Rules{});
-  Rules::apply(history, 1);  // Player 0 removes 2 stones
+  Rules::apply(history, stochastic_nim::kTake2);  // Player 0 removes 2 stones
   Rules::apply(history, 0);  // chance
-  Rules::apply(history, 0);  // Player 1 removes 1 stone
+  Rules::apply(history, stochastic_nim::kTake1);  // Player 1 removes 1 stone
   Rules::apply(history, 0);  // chance
 
   Game::InputTensorizor::Tensor tensor =

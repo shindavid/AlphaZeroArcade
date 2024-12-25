@@ -6,17 +6,17 @@
     "index" : 0,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -35,25 +35,25 @@
     "index" : 0,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -79,33 +79,33 @@
     "index" : 0,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -138,41 +138,41 @@
     "index" : 0,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -212,41 +212,41 @@
     "index" : 0,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -293,41 +293,41 @@
     "index" : 0,
     "N" : 7,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -381,49 +381,49 @@
     "index" : 0,
     "N" : 8,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -484,57 +484,57 @@
     "index" : 0,
     "N" : 9,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -602,57 +602,57 @@
     "index" : 0,
     "N" : 10,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -727,65 +727,65 @@
     "index" : 0,
     "N" : 11,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -867,73 +867,73 @@
     "index" : 0,
     "N" : 12,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -1022,81 +1022,81 @@
     "index" : 0,
     "N" : 13,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -1192,81 +1192,81 @@
     "index" : 0,
     "N" : 14,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -1369,81 +1369,81 @@
     "index" : 0,
     "N" : 15,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -1546,89 +1546,89 @@
     "index" : 0,
     "N" : 16,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 10,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @15",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@15",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -1738,89 +1738,89 @@
     "index" : 0,
     "N" : 17,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 10,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @15",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@15",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -1937,89 +1937,89 @@
     "index" : 0,
     "N" : 18,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 10,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @15",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@15",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -2143,97 +2143,97 @@
     "index" : 0,
     "N" : 19,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 4,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 10,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @15",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@15",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 11,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @14",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@14",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -2364,105 +2364,105 @@
     "index" : 0,
     "N" : 20,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 7,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 10,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @15",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@15",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 11,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @14",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@14",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 12,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [
@@ -2600,105 +2600,105 @@
     "index" : 0,
     "N" : 21,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @21",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@21",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 1,
     "N" : 7,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @20",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@20",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 2,
     "N" : 7,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 3,
     "N" : 6,
     "Q" : [0.5, 0.5],
-    "state" : "p0* @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0*@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 4,
     "N" : 5,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @18",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@18",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 5,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @19",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@19",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 6,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 7,
     "N" : 2,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 8,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 9,
     "N" : 3,
     "Q" : [0.5, 0.5],
-    "state" : "p1 @16",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1@16",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 10,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @15",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@15",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 11,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p1* @14",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p1*@14",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     },
     {
     "index" : 12,
     "N" : 1,
     "Q" : [0.5, 0.5],
-    "state" : "p0 @17",
-    "provably_winning" : [false, false],
-    "provably_losing" : [false, false]
+    "state" : "p0@17",
+    "provably_winning" : "00",
+    "provably_losing" : "00"
     }
   ],
   "edges" : [

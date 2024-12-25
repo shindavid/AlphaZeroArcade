@@ -115,11 +115,11 @@ inline void SearchThread<Game>::init_node(StateHistory* history, node_pool_index
     }
 
     if (node->stable_data().is_chance_node) {
+      using ChanceDistribution = Game::Types::ChanceDistribution;
+      ChanceDistribution chance_dist = Game::Rules::get_chance_distribution(history->current());
       for (int i = 0; i < node->stable_data().num_valid_actions; i++) {
         edge_t* edge = node->get_edge(i);
         core::action_t action = edge->action;
-        using ChanceDistribution = Game::Types::ChanceDistribution;
-        ChanceDistribution chance_dist = Game::Rules::get_chance_distribution(history->current());
         edge->base_prob = chance_dist(action);
       }
     }

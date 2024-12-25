@@ -15,18 +15,8 @@ inline boost::json::object SearchLog<Game>::log_node_t::to_json() const {
   node_json["Q"] = Q_array;
 
   node_json["state"] = state;
-
-  boost::json::array provably_winning_array;
-  for (size_t i = 0; i < provably_winning.size(); ++i) {
-    provably_winning_array.push_back(provably_winning[i]);
-  }
-  node_json["provably_winning"] = provably_winning_array;
-
-  boost::json::array provably_losing_array;
-  for (size_t i = 0; i < provably_losing.size(); ++i) {
-    provably_losing_array.push_back(provably_losing[i]);
-  }
-  node_json["provably_losing"] = provably_losing_array;
+  node_json["provably_winning"] = bitset_util::to_string(provably_winning);
+  node_json["provably_losing"] = bitset_util::to_string(provably_losing);
 
   return node_json;
 }

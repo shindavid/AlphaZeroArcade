@@ -17,7 +17,7 @@ class SearchLog {
   using ValueArray = Game::Types::ValueArray;
   using node_index_t = int;
   using edge_index_t = int;
-  using player_bitset_t = std::bitset<Game::Constants::kNumPlayers>;
+  using player_bitset_t = Game::Types::player_bitset_t;
 
  public:
   SearchLog(const SharedData<Game>* shared_data) : shared_data_(shared_data) {}

@@ -119,9 +119,9 @@ def update_graph(index, graph_snapshots):
         else:
             node_colors.append('lightgray')
 
-        label = f"({node})<br>{data['state']}<br>N: {data['N']}<br>"
+        label = f"({node}) N: {data['N']}<br>{data['state']}<br>"
         label += f"Q: [{float(data['Q'][0]):.2f}, {float(data['Q'][1]):.2f}]<br>"
-        label += f"W: [{data['provably_winning'][0]}, {data['provably_winning'][1]}]<br>"
+        label += f"W: [{data['provably_winning']}] L: [{data['provably_losing']}]"
         node_text.append(label)
 
     node_trace = go.Scatter(

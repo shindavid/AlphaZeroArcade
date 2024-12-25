@@ -33,7 +33,8 @@ struct Game {
     using kNumActionsPerMode =
         util::int_sequence<stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize>;
     static constexpr int kNumPlayers = stochastic_nim::kNumPlayers;
-    static constexpr int kMaxBranchingFactor = stochastic_nim::kMaxStonesToTake;
+    static constexpr int kMaxBranchingFactor =
+        std::max(stochastic_nim::kMaxStonesToTake, stochastic_nim::kChanceDistributionSize);
   };
 
   struct MctsConfiguration : public core::MctsConfigurationBase {
@@ -88,12 +89,13 @@ struct Game {
       if (state.current_mode == stochastic_nim::kChanceMode) {
         ss << "*";
       }
-      ss << " @" << state.stones_left;
+      ss << "@" << state.stones_left;
       return ss.str();
     }
   };
 
   struct InputTensorizor {
+    // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
     using Tensor = eigen_util::FTensor<Eigen::Sizes<stochastic_nim::kStartingStonesBitWidth + 2>>;
     using MCTSKey = State;
     using EvalKey = State;
@@ -102,7 +104,6 @@ struct Game {
     template <typename Iter>
     static EvalKey eval_key(Iter start, Iter cur) { return *cur; }
     template <typename Iter>
-    // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
     static Tensor tensorize(Iter start, Iter cur);
   };
 
