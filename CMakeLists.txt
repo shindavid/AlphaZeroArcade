@@ -70,7 +70,7 @@ set(GTEST_LIBS GTest::GTest GTest::Main gtest)
 
 add_subdirectory("cpp/src")
 add_subdirectory("cpp/src/games/blokus")
-add_subdirectory("cpp/src/games/carcassonne")
+# add_subdirectory("cpp/src/games/carcassonne")
 add_subdirectory("cpp/src/games/chess")
 add_subdirectory("cpp/src/games/connect4")
 add_subdirectory("cpp/src/games/othello")
