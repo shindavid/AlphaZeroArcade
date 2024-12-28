@@ -74,3 +74,4 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
 } // namespace stochastic_nim
 
 #include <inline/games/stochastic_nim/PerfectPlayer.inl>
+
