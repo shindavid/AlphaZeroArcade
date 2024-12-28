@@ -42,11 +42,25 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
   ActionResponse get_action_response(const State&, const ActionMask&) override;
   StateActionTensor get_state_action_tensor() const { return state_action_tensor_; }
 
-  private:
-    StateActionTensor state_action_tensor_;
-    void update_state_action_tensor();
-    void update_player_state_action_tensor(int stones_left, core::seat_index_t);
-    void update_chance_state_action_tensor(int stones_left, core::seat_index_t);
+ private:
+  /*
+   * The state-action tensor is a 4D tensor Q(s, a) where:
+   * s = [stones_left, current_player, mode]
+   * Q(s, a) = Q[stones_left, current_player, mode, action]
+   * Q(s, a) is from the persepctive of player 0
+   */
+  StateActionTensor state_action_tensor_;
+  void update_boundary_conditions();
+  void update_state_action_tensor();
+  void update_player_state_action_tensor(int stones_left, core::seat_index_t);
+  void update_chance_state_action_tensor(int stones_left, core::seat_index_t);
+  float compute_action_value(const ActionMask&, const State&);
+
+  static constexpr int ZeroStones = 0;
+  static constexpr core::seat_index_t Player0 = 0;
+  static constexpr core::seat_index_t  Player1 = 1;
+  static constexpr float Player0Win = 1.0;
+  static constexpr float Player1Win = 0.0;
 };
 
 } // namespace stochastic_nim
