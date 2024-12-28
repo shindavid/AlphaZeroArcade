@@ -14,8 +14,7 @@ inline size_t Game::State::hash() const {
   return hasher(tuple);
 }
 
-inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
-  const State& state = history.current();
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const State& state) {
   Types::ActionMask mask;
   bool is_chance = is_chance_mode(state.current_mode);
   if (is_chance) {
@@ -30,23 +29,34 @@ inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& 
   return mask;
 }
 
+inline Game::Types::ActionMask Game::Rules::get_legal_moves(const StateHistory& history) {
+  const State& state = history.current();
+  return get_legal_moves(state);
+}
+
 // current_player only switches AFTER a chance action
 inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
-  bool is_chance = is_chance_mode(history.current().current_mode);
-  State& state = history.extend();
+  State state = apply(history.current(), action);
+  history.update(state);
+}
 
+inline Game::State Game::Rules::apply(const State& state, core::action_t action) {
+  bool is_chance = is_chance_mode(state.current_mode);
+  State next_state;
   if (is_chance) {
     int outcome_stones = state.stones_left - action;
-    state.stones_left = outcome_stones;
-    state.current_player = 1 - state.current_player;
-    state.current_mode = stochastic_nim::kPlayerMode;
+    next_state.stones_left = outcome_stones;
+    next_state.current_player = 1 - state.current_player;
+    next_state.current_mode = stochastic_nim::kPlayerMode;
   } else {
     if (action < 0 || action >= stochastic_nim::kMaxStonesToTake) {
       throw std::invalid_argument("Invalid action: " + std::to_string(action));
     }
-    state.stones_left = state.stones_left - (action + 1);
-    state.current_mode = stochastic_nim::kChanceMode;
+    next_state.stones_left = state.stones_left - (action + 1);
+    next_state.current_player = state.current_player;
+    next_state.current_mode = stochastic_nim::kChanceMode;
   }
+  return next_state;
 }
 
 // if the game ends after a chance action, the player who made the last move wins
