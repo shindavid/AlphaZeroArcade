@@ -2,7 +2,7 @@
 
 namespace stochastic_nim {
 
-inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
+inline PerfectPlayer::PerfectPlayer() {
   state_action_tensor_.setConstant(-1);
   update_boundary_conditions();
   update_state_action_tensor();
@@ -139,7 +139,6 @@ inline PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(co
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& state,
                                                                  const ActionMask& valid_actions) {
-  // TODO: add random move
   action_value_t action_value = compute_best_action_value(state);
   return {action_value.action};
 }

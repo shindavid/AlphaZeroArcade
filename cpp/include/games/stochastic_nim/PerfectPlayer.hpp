@@ -26,22 +26,12 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
                         Types::kMaxNumActions>;
   using StateActionTensor = eigen_util::FTensor<StateActionShape>;
 
-  struct Params {
-    /*
-     * The strength parameter controls how well the player plays. It is either 0 (random) or
-     * 1 (perfect).
-     */
-    int strength = 1;
-    bool verbose = false;
-    auto make_options_description(){};
-  };
-
   struct action_value_t {
     core::action_t action;
     float value;
   };
 
-  PerfectPlayer(const Params&);
+  PerfectPlayer();
   // Assumes the state is in player mode
   ActionResponse get_action_response(const State&, const ActionMask&) override;
   StateActionTensor get_state_action_tensor() const { return state_action_tensor_; }
@@ -66,7 +56,6 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
    * Q(s, a) is from the persepctive of player 0
    */
   StateActionTensor state_action_tensor_;
-  Params params_;
 };
 
 } // namespace stochastic_nim

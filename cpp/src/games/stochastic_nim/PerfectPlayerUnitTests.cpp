@@ -12,10 +12,9 @@ class PerfectPlayerTest : public testing::Test {
   using PerfectPlayer = stochastic_nim::PerfectPlayer;
   using State = PerfectPlayer::State;
   using Types = PerfectPlayer::Types;
-  using Params = PerfectPlayer::Params;
 
  public:
-  PerfectPlayerTest() : player_(PerfectPlayer(Params())) {}
+  PerfectPlayerTest() : player_(PerfectPlayer()) {}
   void test_tensor_values(const std::string& testname) {
 
     std::ostringstream oss;
