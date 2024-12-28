@@ -129,7 +129,6 @@ PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const Sta
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& state,
                                                                  const ActionMask& valid_actions) {
   action_value_t action_value = compute_best_action_value(state);
-
   return action_value.action;
 }
 

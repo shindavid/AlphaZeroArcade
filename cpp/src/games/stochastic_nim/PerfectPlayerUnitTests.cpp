@@ -61,6 +61,21 @@ TEST_F(PerfectPlayerTest, 6_stones_player0) {
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake1);
 }
 
+TEST_F(PerfectPlayerTest, 4_stones_player1) {
+  State state{4, PerfectPlayer::Player1, stochastic_nim::kPlayerMode};
+  EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
+}
+
+TEST_F(PerfectPlayerTest, 5_stones_player1) {
+  State state{5, PerfectPlayer::Player1, stochastic_nim::kPlayerMode};
+  EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
+}
+
+TEST_F(PerfectPlayerTest, 6_stones_player1) {
+  State state{6, PerfectPlayer::Player1, stochastic_nim::kPlayerMode};
+  EXPECT_EQ(get_action_response(state), stochastic_nim::kTake1);
+}
+
 TEST_F(PerfectPlayerTest, chance_mode_throw_error) {
   State state{4, PerfectPlayer::Player0, stochastic_nim::kChanceMode};
   EXPECT_THROW(get_action_response(state), std::invalid_argument);
