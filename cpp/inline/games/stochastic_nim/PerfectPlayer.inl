@@ -102,6 +102,9 @@ void PerfectPlayer::update_chance_state_action_tensor(int stones_left, core::sea
 }
 
 PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const State& state) {
+  if (state.current_mode == stochastic_nim::kChanceMode) {
+    throw std::invalid_argument("Cannot compute best action value for chance mode");
+  }
   ActionMask valid_actions = Rules::get_legal_moves(state);
   std::function<bool(float, float)> comp;
   if (state.current_player == Player0) {

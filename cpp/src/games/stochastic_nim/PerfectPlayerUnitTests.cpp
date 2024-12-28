@@ -51,6 +51,11 @@ TEST_F(PerfectPlayerTest, 4_stones_player0) {
   EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
 }
 
+TEST_F(PerfectPlayerTest, chance_mode_throw_error) {
+  State state{4, PerfectPlayer::Player0, stochastic_nim::kChanceMode};
+  EXPECT_THROW(get_action_response(state), std::invalid_argument);
+}
+
 int main(int argc, char** argv) {
   util::set_tty_mode(false);
   testing::InitGoogleTest(&argc, argv);
