@@ -34,17 +34,20 @@ void PerfectPlayer::update_boundary_conditions() {
 void PerfectPlayer::update_state_action_tensor() {
   for (int stones_left = 1; (unsigned int)stones_left <= stochastic_nim::kStartingStones;
        ++stones_left) {
-    // Need to update the state-action tensor for all player nodes first because the chance nodes
-    // depend on the player nodes of the same stones_left.
-    for (core::seat_index_t player = 0; player < Constants::kNumPlayers; ++player) {
-      // Q(pi@n, a) = \sum_{a'} P(a') Q(pi*@(n - a), a')
-      update_player_state_action_tensor(stones_left, player);
-    }
-    for (core::seat_index_t player = 0; player < Constants::kNumPlayers; ++player) {
-      // Q(pi*@n, a) = max_{a'} Q(pi@n, a') for player 0
-      // Q(pi*@n, a) = min_{a'} Q(pi@n, a') for player 1
-      update_chance_state_action_tensor(stones_left, player);
-    }
+    /*
+     * Need to update the state-action tensor for all player nodes first because the chance nodes
+     * could have a child that is a player node with the same number of stones left, so depend on
+     * the player node's value.
+     */
+    // Q(pi@n, a) = \sum_{a'} P(a') Q(pi*@(n - a), a')
+    update_player_state_action_tensor(stones_left, Player0);
+    update_player_state_action_tensor(stones_left, Player1);
+
+    // Q(pi*@n, a) = max_{a'} Q(pi@n, a') for player 0
+    update_chance_state_action_tensor(stones_left, Player0);
+
+    // Q(pi*@n, a) = min_{a'} Q(pi@n, a') for player 1
+    update_chance_state_action_tensor(stones_left, Player1);
   }
 }
 
@@ -70,15 +73,11 @@ void PerfectPlayer::update_player_state_action_tensor(int stones_left,
     // s' = pi*@(n - a) or [n - a, i, 1]
     // Q(pi@n, a) = \sum_{a'} P(a'|s') Q(pi*@(n - a), a')
     action_state_value = 0.0;
-    for (core::action_t next_action = 0; (size_t)next_action < next_valid_actions.size();
-         ++next_action) {
-      if (next_valid_actions[next_action]) {
-        float prob = chance_dist(next_action);
-        float next_action_value =
-            state_action_tensor_(next_state.stones_left, next_state.current_player,
-                                 next_state.current_mode, next_action);
-        action_state_value += prob * next_action_value;
-      }
+    for (auto next_action : bitset_util::on_indices(next_valid_actions)) {
+      float prob = chance_dist(next_action);
+      float next_action_value = state_action_tensor_(
+          next_state.stones_left, next_state.current_player, next_state.current_mode, next_action);
+      action_state_value += prob * next_action_value;
     }
   }
 }
@@ -105,15 +104,18 @@ PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const Sta
   if (state.current_mode == stochastic_nim::kChanceMode) {
     throw std::invalid_argument("Cannot compute best action value for chance mode");
   }
-  ActionMask valid_actions = Rules::get_legal_moves(state);
+
   std::function<bool(float, float)> comp;
+  float best_value;
   if (state.current_player == Player0) {
-    comp = [](float value, float best_value) -> bool { return value > best_value; };
+    comp = [](float value, float best_value_) -> bool { return value > best_value_; };
+    best_value = std::numeric_limits<float>::lowest();
   } else {
-    comp = [](float value, float best_value) -> bool { return value < best_value; };
+    comp = [](float value, float best_value_) -> bool { return value < best_value_; };
+    best_value = std::numeric_limits<float>::max();
   }
-  float best_value = (state.current_player == Player0) ? std::numeric_limits<float>::lowest()
-                                                            : std::numeric_limits<float>::max();
+
+  ActionMask valid_actions = Rules::get_legal_moves(state);
   core::action_t best_action = 0;
   for (auto action : bitset_util::on_indices(valid_actions)) {
     float state_action_value = state_action_tensor_(
