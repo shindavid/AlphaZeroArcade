@@ -7,16 +7,39 @@ PerfectPlayer::PerfectPlayer(const Params& params) {
   update_state_action_tensor();
 }
 
+// s = [stones_left, current_player, mode]
+// Q(s, a) = Q[stones_left, current_player, mode, action]
+// Q(s, a) is from the persepctive of player 0
 void PerfectPlayer::update_state_action_tensor() {
-  // s = [stones_left, current_player, mode]
-  // Q(s, a) = Q[stones_left, current_player, mode, action]
-  // Q(s, a) is from the persepctive of player 0
-  state_action_tensor_.chip<0>(0).chip<0>(0).chip<0>(0).setConstant(0.0);  // Q[0, 0, 0, :] = 0.0
-  state_action_tensor_.chip<0>(0).chip<0>(1).chip<0>(0).setConstant(1.0);  // Q[0, 1, 0, :] = 1.0
-  state_action_tensor_.chip<0>(0).chip<0>(0).chip<0>(1).setConstant(1.0);  // Q[0, 0, 1, :] = 1.0
-  state_action_tensor_.chip<0>(0).chip<0>(1).chip<0>(1).setConstant(0.0);  // Q[0, 1, 1, :] = 0.0
+  constexpr int ZeroStones = 0;
+  constexpr int Player0 = 0;
+  constexpr int Player1 = 1;
+  constexpr float Player0Win = 1.0;
+  constexpr float Player1Win = 0.0;
 
-  for (int stones_left = 1; (unsigned int) stones_left <= stochastic_nim::kStartingStones; ++stones_left) {
+  // Q[0, 0, 0, :] = 0.0
+  state_action_tensor_.chip<0>(ZeroStones)
+      .chip<0>(Player0)
+      .chip<0>(stochastic_nim::kPlayerMode)
+      .setConstant(Player1Win);
+  // Q[0, 1, 0, :] = 1.0
+  state_action_tensor_.chip<0>(ZeroStones)
+      .chip<0>(Player1)
+      .chip<0>(stochastic_nim::kPlayerMode)
+      .setConstant(Player0Win);
+  // Q[0, 0, 1, :] = 1.0
+  state_action_tensor_.chip<0>(ZeroStones)
+      .chip<0>(Player0)
+      .chip<0>(stochastic_nim::kChanceMode)
+      .setConstant(Player0Win);
+  // Q[0, 1, 1, :] = 0.0
+  state_action_tensor_.chip<0>(ZeroStones)
+      .chip<0>(Player1)
+      .chip<0>(stochastic_nim::kChanceMode)
+      .setConstant(Player1Win);
+
+  for (int stones_left = 1; (unsigned int)stones_left <= stochastic_nim::kStartingStones;
+       ++stones_left) {
     // Need to update the state-action tensor for all player nodes first because the chance nodes
     // depend on the player nodes of the same stones_left.
     for (core::seat_index_t player = 0; player < Constants::kNumPlayers; ++player) {
