@@ -31,7 +31,7 @@ To run this project successfully, please ensure your system meets the following 
 
 4. **NVIDIA Container Toolkit**: Follow the [installation instructions](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html), including the "Configuring Docker" section.
 
-5. **Python3**: During setup, only one third-party dependency is needed: the `versioning` module, which can be installed via `pip`.
+5. **Python3**: During setup, only one third-party dependency is needed: the `packaging` module, which can be installed via `pip`.
 
 ### Initial Setup
 
