@@ -141,7 +141,7 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& st
                                                                  const ActionMask& valid_actions) {
   // TODO: add random move
   action_value_t action_value = compute_best_action_value(state);
-  return action_value.action;
+  return {action_value.action};
 }
 
 }  // namespace stochastic_nim
