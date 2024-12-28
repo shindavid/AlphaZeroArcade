@@ -42,8 +42,6 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
   };
 
   PerfectPlayer(const Params&);
-  void start_game() override {};
-  void receive_state_change(core::seat_index_t, const State&, core::action_t) override {};
   // Assumes the state is in player mode
   ActionResponse get_action_response(const State&, const ActionMask&) override;
   StateActionTensor get_state_action_tensor() const { return state_action_tensor_; }
