@@ -2,7 +2,7 @@
 
 namespace stochastic_nim {
 
-PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
+inline PerfectPlayer::PerfectPlayer(const Params& params) : params_(params) {
   state_action_tensor_.setConstant(-1);
   update_boundary_conditions();
   update_state_action_tensor();
@@ -31,7 +31,7 @@ void PerfectPlayer::update_boundary_conditions() {
       .setConstant(Player1Win);
 }
 
-void PerfectPlayer::update_state_action_tensor() {
+inline void PerfectPlayer::update_state_action_tensor() {
   for (int stones_left = 1; (unsigned int)stones_left <= stochastic_nim::kStartingStones;
        ++stones_left) {
     /*
@@ -51,7 +51,7 @@ void PerfectPlayer::update_state_action_tensor() {
   }
 }
 
-void PerfectPlayer::update_player_state_action_tensor(int stones_left,
+inline void PerfectPlayer::update_player_state_action_tensor(int stones_left,
                                                       core::seat_index_t player) {
   State state(stones_left, player, stochastic_nim::kPlayerMode);
   ActionMask valid_actions = Rules::get_legal_moves(state);
@@ -82,7 +82,7 @@ void PerfectPlayer::update_player_state_action_tensor(int stones_left,
   }
 }
 
-void PerfectPlayer::update_chance_state_action_tensor(int stones_left, core::seat_index_t player) {
+inline void PerfectPlayer::update_chance_state_action_tensor(int stones_left, core::seat_index_t player) {
   State state(stones_left, player, stochastic_nim::kChanceMode);
   ActionMask valid_actions = Rules::get_legal_moves(state);
   for (auto action : bitset_util::on_indices(valid_actions)) {
@@ -109,7 +109,7 @@ void PerfectPlayer::update_chance_state_action_tensor(int stones_left, core::sea
  * Q(pi*@n, a) = min_{a'} Q(pi@n, a')
  * best_action = argmin_{a'} Q(pi@n, a')
  */
-PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const State& state) {
+inline PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const State& state) {
   if (state.current_mode == stochastic_nim::kChanceMode) {
     throw std::invalid_argument("Cannot compute best action value for chance mode");
   }
@@ -137,7 +137,7 @@ PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const Sta
   return {best_action, best_value};
 }
 
-PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& state,
+inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& state,
                                                                  const ActionMask& valid_actions) {
   // TODO: add random move
   action_value_t action_value = compute_best_action_value(state);
