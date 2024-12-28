@@ -137,8 +137,10 @@ PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& st
         best_action = action;
       }
     }
+    return {best_action};
   }
-  return {best_action};
+
 }
 
 }  // namespace stochastic_nim
+
