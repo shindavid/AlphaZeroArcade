@@ -33,12 +33,22 @@ class PerfectPlayerTest : public testing::Test {
     EXPECT_EQ(oss.str(), expected_string);
   }
 
+  core::action_t get_action_response(const State& state) {
+    Types::ActionMask valid_actions;
+    return player_.get_action_response(state, valid_actions).action;
+  }
+
  private:
   PerfectPlayer player_;
 };
 
 TEST_F(PerfectPlayerTest, tensor_values) {
   test_tensor_values("stochastic_nim_tensor_values");
+}
+
+TEST_F(PerfectPlayerTest, 4_stones_player0) {
+  State state{4, PerfectPlayer::Player0, stochastic_nim::kPlayerMode};
+  EXPECT_EQ(get_action_response(state), stochastic_nim::kTake3);
 }
 
 int main(int argc, char** argv) {

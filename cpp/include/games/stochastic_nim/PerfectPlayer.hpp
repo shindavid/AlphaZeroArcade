@@ -36,11 +36,22 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
     auto make_options_description(){};
   };
 
+  struct action_value_t {
+    core::action_t action;
+    float value;
+  };
+
   PerfectPlayer(const Params&);
   void start_game() override {};
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override {};
   ActionResponse get_action_response(const State&, const ActionMask&) override;
   StateActionTensor get_state_action_tensor() const { return state_action_tensor_; }
+
+  static constexpr int ZeroStones = 0;
+  static constexpr core::seat_index_t Player0 = 0;
+  static constexpr core::seat_index_t Player1 = 1;
+  static constexpr float Player0Win = 1.0;
+  static constexpr float Player1Win = 0.0;
 
  private:
   /*
@@ -54,13 +65,7 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
   void update_state_action_tensor();
   void update_player_state_action_tensor(int stones_left, core::seat_index_t);
   void update_chance_state_action_tensor(int stones_left, core::seat_index_t);
-  float compute_action_value(const ActionMask&, const State&);
-
-  static constexpr int ZeroStones = 0;
-  static constexpr core::seat_index_t Player0 = 0;
-  static constexpr core::seat_index_t  Player1 = 1;
-  static constexpr float Player0Win = 1.0;
-  static constexpr float Player1Win = 0.0;
+  action_value_t compute_best_action_value(const State&);
 };
 
 } // namespace stochastic_nim

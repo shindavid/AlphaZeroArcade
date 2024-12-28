@@ -54,13 +54,14 @@ void PerfectPlayer::update_player_state_action_tensor(int stones_left,
   ActionMask valid_actions = Rules::get_legal_moves(state);
   for (auto action : bitset_util::on_indices(valid_actions)) {
     State next_state = Rules::apply(state, action);
-    if (next_state.stones_left == 0) {
-      float next_state_action_value = state_action_tensor_(
-          next_state.stones_left, next_state.current_player, next_state.current_mode, 0);
+
+    if (next_state.stones_left == ZeroStones) {
       state_action_tensor_(state.stones_left, state.current_player, state.current_mode, action) =
-          next_state_action_value;
+          state_action_tensor_(next_state.stones_left, next_state.current_player,
+                               next_state.current_mode, 0);
       continue;
     }
+
     ChanceDistribution chance_dist = Rules::get_chance_distribution(next_state);
     ActionMask next_valid_actions = Rules::get_legal_moves(next_state);
 
@@ -87,68 +88,47 @@ void PerfectPlayer::update_chance_state_action_tensor(int stones_left, core::sea
   ActionMask valid_actions = Rules::get_legal_moves(state);
   for (auto action : bitset_util::on_indices(valid_actions)) {
     State next_state = Rules::apply(state, action);
-    if (next_state.stones_left == 0) {
-      float next_state_action_value = state_action_tensor_(
-          next_state.stones_left, next_state.current_player, next_state.current_mode, 0);
+    if (next_state.stones_left == ZeroStones) {
       state_action_tensor_(state.stones_left, state.current_player, state.current_mode, action) =
-          next_state_action_value;
+          state_action_tensor_(next_state.stones_left, next_state.current_player,
+                               next_state.current_mode, 0);
       continue;
     }
 
-    ActionMask next_valid_actions = Rules::get_legal_moves(next_state);
-    float state_action_value = 0.0;
-    state_action_value = compute_action_value(next_valid_actions, next_state);
+    action_value_t action_value = compute_best_action_value(next_state);
     state_action_tensor_(state.stones_left, state.current_player, state.current_mode, action) =
-        state_action_value;
+        action_value.value;
   }
 }
 
-float PerfectPlayer::compute_action_value(const ActionMask& next_valid_actions, const State& next_state) {
-  float value = (next_state.current_player == Player0) ? std::numeric_limits<float>::lowest()
-                                                       : std::numeric_limits<float>::max();
-  std::function<float(float, float)> comp;
-  if (next_state.current_player == Player0) {
-    comp = [](float x, float y) -> float { return std::max(x, y); };
+PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const State& state) {
+  ActionMask valid_actions = Rules::get_legal_moves(state);
+  std::function<bool(float, float)> comp;
+  if (state.current_player == Player0) {
+    comp = [](float value, float best_value) -> bool { return value > best_value; };
   } else {
-    comp = [](float x, float y) -> float { return std::min(x, y); };
+    comp = [](float value, float best_value) -> bool { return value < best_value; };
   }
-
-  for (auto next_action : bitset_util::on_indices(next_valid_actions)) {
-    float next_action_value = state_action_tensor_(
-        next_state.stones_left, next_state.current_player, next_state.current_mode, next_action);
-    value = comp(value, next_action_value);
+  float best_value = (state.current_player == Player0) ? std::numeric_limits<float>::lowest()
+                                                            : std::numeric_limits<float>::max();
+  core::action_t best_action = 0;
+  for (auto action : bitset_util::on_indices(valid_actions)) {
+    float state_action_value = state_action_tensor_(
+        state.stones_left, state.current_player, state.current_mode, action);
+    if (comp(state_action_value, best_value)) {
+      best_value = state_action_value;
+      best_action = action;
+    }
   }
-  return value;
+  return {best_action, best_value};
 }
 
 PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(const State& state,
                                                                  const ActionMask& valid_actions) {
-    if (state.current_player == 0) {
-      float max_value = std::numeric_limits<float>::lowest();
-      core::action_t best_action = 0;
-      for (auto action : bitset_util::on_indices(valid_actions)) {
-        float action_value = state_action_tensor_(state.stones_left, state.current_player,
-                                                  state.current_mode, action);
-        if (action_value > max_value) {
-          max_value = action_value;
-          best_action = action;
-        }
-      }
-      return {best_action};
-    } else {
-      float min_value = std::numeric_limits<float>::max();
-      core::action_t best_action = 0;
-      for (auto action : bitset_util::on_indices(valid_actions)) {
-        float action_value = state_action_tensor_(state.stones_left, state.current_player,
-                                                  state.current_mode, action);
-        if (action_value < min_value) {
-          min_value = action_value;
-          best_action = action;
-        }
-      }
-      return {best_action};
-    }
-  }
+  action_value_t action_value = compute_best_action_value(state);
+
+  return action_value.action;
+}
 
 }  // namespace stochastic_nim
 
