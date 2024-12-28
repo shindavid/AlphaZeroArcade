@@ -100,6 +100,15 @@ void PerfectPlayer::update_chance_state_action_tensor(int stones_left, core::sea
   }
 }
 
+/*
+ * For player 0:
+ * Q(pi*@n, a) = max_{a'} Q(pi@n, a')
+ * best_action = argmax_{a'} Q(pi@n, a')
+ *
+ * For player 1:
+ * Q(pi*@n, a) = min_{a'} Q(pi@n, a')
+ * best_action = argmin_{a'} Q(pi@n, a')
+ */
 PerfectPlayer::action_value_t PerfectPlayer::compute_best_action_value(const State& state) {
   if (state.current_mode == stochastic_nim::kChanceMode) {
     throw std::invalid_argument("Cannot compute best action value for chance mode");
