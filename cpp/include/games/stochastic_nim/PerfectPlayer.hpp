@@ -9,58 +9,6 @@
 
 namespace stochastic_nim {
 
-class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
- public:
-
-  using base_t = core::AbstractPlayer<stochastic_nim::Game>;
-  using Constants = stochastic_nim::Game::Constants;
-  using Rules = stochastic_nim::Game::Rules;
-  using Types = stochastic_nim::Game::Types;
-  using ActionMask = Types::ActionMask;
-  using State = stochastic_nim::Game::State;
-  using ChanceDistribution = Types::ChanceDistribution;
-
-  static constexpr size_t kNumModes = Constants::kNumActionsPerMode::size();
-  using StateActionShape =
-      eigen_util::Shape<stochastic_nim::kStartingStones + 1, Constants::kNumPlayers, kNumModes,
-                        Types::kMaxNumActions>;
-  using StateActionTensor = eigen_util::FTensor<StateActionShape>;
-
-  struct action_value_t {
-    core::action_t action;
-    float value;
-  };
-
-  PerfectPlayer();
-  // Assumes the state is in player mode
-  ActionResponse get_action_response(const State&, const ActionMask&) override;
-  StateActionTensor get_state_action_tensor() const { return state_action_tensor_; }
-  float get_state_action_value(const State& state, core::action_t action) const {
-    return state_action_tensor_(state.stones_left, state.current_player, state.current_mode, action);
-  }
-
-  static constexpr int ZeroStones = 0;
-  static constexpr core::seat_index_t Player0 = 0;
-  static constexpr core::seat_index_t Player1 = 1;
-  static constexpr float Player0Win = 1.0;
-  static constexpr float Player1Win = 0.0;
-
- private:
-  void update_boundary_conditions();
-  void update_state_action_tensor();
-  void update_player_state_action_tensor(int stones_left, core::seat_index_t);
-  void update_chance_state_action_tensor(int stones_left, core::seat_index_t);
-  action_value_t compute_best_action_value(const State&);
-
-  /*
-   * The state-action tensor is a 4D tensor Q(s, a) where:
-   * s = [stones_left, current_player, mode]
-   * Q(s, a) = Q[stones_left, current_player, mode, action]
-   * Q(s, a) is from the persepctive of player 0
-   */
-  StateActionTensor state_action_tensor_;
-};
-
 class PerfectStrategy {
  public:
   struct Params {
@@ -71,16 +19,29 @@ class PerfectStrategy {
   };
 
   PerfectStrategy(Params params);
-  float* get_state_value() { return state_value_; }
-  int* get_optimal_action() { return optimal_action_; }
+  float* get_state_value() const { return state_value_; }
+  int* get_optimal_action() const { return optimal_action_; }
+  Params get_params() const { return params_; }
 
  private:
   void iterate();
   Params params_;
   // expected win rate if there are [index up to starting_stones] stones left after a player's move
   float* state_value_;
-  // best action to take if there are [index up to starting stones] stones left
+  // best number of stones to take if there are [index up to starting stones] stones left
   int* optimal_action_;
+};
+
+class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
+ public:
+
+  using base_t = core::AbstractPlayer<stochastic_nim::Game>;
+
+  PerfectPlayer(PerfectStrategy* strategy) : strategy_(strategy) {}
+  ActionResponse get_action_response(const State&, const ActionMask&) override;
+
+ private:
+  const PerfectStrategy* strategy_;
 };
 
 } // namespace stochastic_nim
