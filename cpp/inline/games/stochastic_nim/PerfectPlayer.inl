@@ -16,8 +16,12 @@ PerfectStrategy::PerfectStrategy() {
   }
 
   state_values_[0] = 1.0;
-  state_values_[stochastic_nim::kStartingStones] = 0.0;
-  optimal_actions_[0] = -stochastic_nim::kStartingStones;
+  state_values_[1] = 0.8;
+  state_values_[2] = 0.5;
+  state_values_[3] = 0.0;
+  optimal_actions_[1] = 1;
+  optimal_actions_[2] = 2;
+  optimal_actions_[3] = 3;
   iterate();
 }
 
@@ -32,19 +36,19 @@ inline void PerfectStrategy::iterate() {
   Eigen::Array<float, stochastic_nim::kChanceDistributionSize, 1> prob_array{
       stochastic_nim::kChanceEventProbs};
   auto reverse_probs = prob_array.reverse().eval();
-  for (int stones_left = 1; stones_left <= stochastic_nim::kStartingStones; stones_left++) {
-    int num_stones_can_take = std::min(stones_left, stochastic_nim::kMaxStonesToTake);
+  for (int stones_left = 4; stones_left <= stochastic_nim::kStartingStones; stones_left++) {
     optimal_actions_[stones_left] =
-        num_stones_can_take - eigen_util::argmax(state_values_.segment(
-            std::max(0, stones_left - stochastic_nim::kMaxStonesToTake), num_stones_can_take));
+        stochastic_nim::kMaxStonesToTake -
+        eigen_util::argmax(state_values_.segment(stones_left - stochastic_nim::kMaxStonesToTake,
+                                                 stochastic_nim::kMaxStonesToTake));
 
     auto non_neg_stones_left =
         Eigen::ArrayXi::LinSpaced(stochastic_nim::kChanceDistributionSize,
                                   stones_left - stochastic_nim::kChanceDistributionSize + 1,
-                                  stones_left).cwiseMax(0);
-    state_values_[stones_left] = 1.0 -
-        (reverse_probs * eigen_util::slice(state_values_,
-        non_neg_stones_left - eigen_util::slice(optimal_actions_, non_neg_stones_left))).sum();
+                                  stones_left);
+    state_values_[stones_left] = 1.0 - (reverse_probs *
+               eigen_util::slice(state_values_, non_neg_stones_left -
+               eigen_util::slice(optimal_actions_, non_neg_stones_left))).sum();
   }
 }
 
