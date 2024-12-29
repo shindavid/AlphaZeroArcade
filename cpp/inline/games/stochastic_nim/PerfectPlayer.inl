@@ -29,7 +29,8 @@ inline int PerfectStrategy::get_optimal_action(int stones_left) const {
 }
 
 inline void PerfectStrategy::iterate() {
-  Eigen::Array<float, 3, 1> prob_array{stochastic_nim::kChanceEventProbs};
+  Eigen::Array<float, stochastic_nim::kChanceDistributionSize, 1> prob_array{
+      stochastic_nim::kChanceEventProbs};
   auto reverse_probs = prob_array.reverse().eval();
   for (int stones_left = 1; stones_left <= stochastic_nim::kStartingStones; stones_left++) {
     int num_stones_can_take = std::min(stones_left, stochastic_nim::kMaxStonesToTake);
