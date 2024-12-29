@@ -92,11 +92,14 @@ TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
 
 TEST_F(PerfectStrategyTest, 4_stones) {
   PerfectStrategy strategy = get_strategy();
+  EXPECT_NEAR(strategy.get_state_value(5), 0.16, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(4), 0.04, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(3), 0.0, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(2), 0.5, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(1), 0.8, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(0), 1.0, 1e-6);
+  EXPECT_EQ(strategy.get_optimal_action(6), 0);
+  EXPECT_EQ(strategy.get_optimal_action(5), 2);
   EXPECT_EQ(strategy.get_optimal_action(4), 2);
   EXPECT_EQ(strategy.get_optimal_action(3), 2);
   EXPECT_EQ(strategy.get_optimal_action(2), 1);

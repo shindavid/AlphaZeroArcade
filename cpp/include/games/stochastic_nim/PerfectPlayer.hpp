@@ -16,9 +16,12 @@ class PerfectStrategy {
   int get_optimal_action(int stones_left) const { return optimal_actions_[stones_left] - 1; }
 
  private:
-  void iterate();
   using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
-  // expected win rate if there are [index up to starting_stones] stones left after a player's move
+  void iterate();
+  int argmax(const Eigen::Array<float, Eigen::Dynamic, 1>&);
+
+  // expected win rate if there are [index up to starting_stones] stones left after a player's
+  // move
   FArray state_values_;
   // best number of stones to take if there are [index up to starting stones] stones left
   FArray optimal_actions_;
