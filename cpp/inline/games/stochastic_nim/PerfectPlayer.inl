@@ -6,8 +6,6 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     const State& state, const ActionMask& valid_actions) {
   util::release_assert(state.current_mode == kPlayerMode,
                        "PerfectPlayer does not support chance mode");
-  util::release_assert(state.stones_left <= stochastic_nim::kStartingStones,
-                       "PerfectPlayer does not support more stones than starting stones");
   return strategy_->get_optimal_action(state.stones_left);
 }
 
@@ -19,6 +17,13 @@ PerfectStrategy::PerfectStrategy() {
 
   state_values_[0] = 1.0;
   iterate();
+}
+
+inline int PerfectStrategy::get_optimal_action(int stones_left) const {
+  util::release_assert(
+      (stones_left <= stochastic_nim::kStartingStones) && (stones_left > 0),
+      "PerfectStrategy does not support more stones than starting stones or less or equal to 0");
+  return optimal_actions_[stones_left] - 1;
 }
 
 inline void PerfectStrategy::iterate() {
@@ -42,7 +47,8 @@ inline void PerfectStrategy::iterate() {
   }
 }
 
-inline int PerfectStrategy::argmax(const Eigen::Array<float, Eigen::Dynamic, 1>& segment) {
+template <typename ArrayLike>
+inline int PerfectStrategy::argmax(const ArrayLike& segment) {
   Eigen::Index maxIndex;
   segment.maxCoeff(&maxIndex);
   return static_cast<int>(maxIndex);

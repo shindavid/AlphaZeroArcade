@@ -98,13 +98,13 @@ TEST_F(PerfectStrategyTest, 4_stones) {
   EXPECT_NEAR(strategy.get_state_value(2), 0.5, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(1), 0.8, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(0), 1.0, 1e-6);
-  EXPECT_EQ(strategy.get_optimal_action(6), 0);
-  EXPECT_EQ(strategy.get_optimal_action(5), 2);
-  EXPECT_EQ(strategy.get_optimal_action(4), 2);
-  EXPECT_EQ(strategy.get_optimal_action(3), 2);
-  EXPECT_EQ(strategy.get_optimal_action(2), 1);
-  EXPECT_EQ(strategy.get_optimal_action(1), 0);
-  EXPECT_EQ(strategy.get_optimal_action(0), -2);
+  EXPECT_EQ(strategy.get_optimal_action(6), stochastic_nim::kTake1);
+  EXPECT_EQ(strategy.get_optimal_action(5), stochastic_nim::kTake3);
+  EXPECT_EQ(strategy.get_optimal_action(4), stochastic_nim::kTake3);
+  EXPECT_EQ(strategy.get_optimal_action(3), stochastic_nim::kTake3);
+  EXPECT_EQ(strategy.get_optimal_action(2), stochastic_nim::kTake2);
+  EXPECT_EQ(strategy.get_optimal_action(1), stochastic_nim::kTake1);
+  EXPECT_THROW(strategy.get_optimal_action(0), util::Exception);
 }
 
 

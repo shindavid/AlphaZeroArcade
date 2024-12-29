@@ -13,13 +13,14 @@ class PerfectStrategy {
  public:
   PerfectStrategy();
   float get_state_value(int stones_left) const { return state_values_[stones_left]; }
-  int get_optimal_action(int stones_left) const { return optimal_actions_[stones_left] - 1; }
+  int get_optimal_action(int stones_left) const;
 
  private:
-  using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
   void iterate();
-  int argmax(const Eigen::Array<float, Eigen::Dynamic, 1>&);
+  template <typename ArrayLike>
+  int argmax(const ArrayLike&);
 
+  using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
   // expected win rate if there are [index up to starting_stones] stones left after a player's
   // move
   FArray state_values_;
