@@ -11,33 +11,24 @@ namespace stochastic_nim {
 
 class PerfectStrategy {
  public:
-  struct Params {
-    const int starting_stones;
-    const int max_stones_to_take;
-    const float* chance_event_probs;
-    const int num_chance_events;
-  };
-
-  PerfectStrategy(Params params);
-  float* get_state_value() const { return state_value_; }
-  int* get_optimal_action() const { return optimal_action_; }
-  Params get_params() const { return params_; }
+  PerfectStrategy();
+  float get_state_value(int stones_left) const { return state_values_[stones_left]; }
+  int get_optimal_action(int stones_left) const { return optimal_actions_[stones_left] - 1; }
 
  private:
   void iterate();
-  Params params_;
+  using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
   // expected win rate if there are [index up to starting_stones] stones left after a player's move
-  float* state_value_;
+  FArray state_values_;
   // best number of stones to take if there are [index up to starting stones] stones left
-  int* optimal_action_;
+  FArray optimal_actions_;
 };
 
 class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
  public:
-
   using base_t = core::AbstractPlayer<stochastic_nim::Game>;
 
-  PerfectPlayer(PerfectStrategy* strategy) : strategy_(strategy) {}
+  PerfectPlayer(const PerfectStrategy* strategy) : strategy_(strategy) {}
   ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  private:

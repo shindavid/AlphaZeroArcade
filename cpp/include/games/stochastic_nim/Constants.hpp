@@ -22,5 +22,8 @@ constexpr core::action_t kTake3 = 2;
 constexpr core::action_mode_t kPlayerMode = 0;
 constexpr core::action_mode_t kChanceMode = 1;
 
+constexpr core::seat_index_t kPlayer0 = 0;
+constexpr core::seat_index_t kPlayer1 = 1;
+
 constexpr int kStartingStonesBitWidth = std::bit_width(kStartingStones);
 }
