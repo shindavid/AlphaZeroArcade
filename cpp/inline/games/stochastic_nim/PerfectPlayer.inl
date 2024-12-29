@@ -42,13 +42,16 @@ inline void PerfectStrategy::iterate() {
         eigen_util::argmax(state_values_.segment(stones_left - stochastic_nim::kMaxStonesToTake,
                                                  stochastic_nim::kMaxStonesToTake));
 
-    auto non_neg_stones_left =
-        Eigen::ArrayXi::LinSpaced(stochastic_nim::kChanceDistributionSize,
-                                  stones_left - stochastic_nim::kChanceDistributionSize + 1,
-                                  stones_left);
-    state_values_[stones_left] = 1.0 - (reverse_probs *
-               eigen_util::slice(state_values_, non_neg_stones_left -
-               eigen_util::slice(optimal_actions_, non_neg_stones_left))).sum();
+    state_values_[stones_left] =
+        1.0 -
+        (reverse_probs *
+         eigen_util::slice(
+             state_values_,
+             Eigen::ArrayXi::LinSpaced(stochastic_nim::kChanceDistributionSize,
+                                       stones_left - stochastic_nim::kChanceDistributionSize + 1,
+                                       stones_left) -
+                 optimal_actions_.segment(stones_left - stochastic_nim::kChanceDistributionSize + 1,
+                                          stochastic_nim::kChanceDistributionSize))).sum();
   }
 }
 
