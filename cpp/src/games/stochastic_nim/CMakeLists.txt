@@ -1,5 +1,4 @@
 add_executable(stochastic_nim_tests main/UnitTests.cpp)
-
 target_link_libraries(stochastic_nim_tests PRIVATE ${GTEST_LIBS})
 
 set(LINK_LIBS util_lib ${COMMON_EXTERNAL_LIBS})
