@@ -221,8 +221,8 @@ inline int argmax(const Array& arr) {
 }
 
 template <typename DerivedData, concepts::Shape1DInt DerivedIndices>
-auto slice(const Eigen::ArrayBase<DerivedData>& data, const Eigen::ArrayBase<DerivedIndices>& indices)
-{
+auto slice(const Eigen::ArrayBase<DerivedData>& data,
+           const Eigen::ArrayBase<DerivedIndices>& indices) {
   using Scalar = typename DerivedData::Scalar;
   constexpr int Cols = DerivedData::ColsAtCompileTime;
   Eigen::Index numIndices = indices.size();

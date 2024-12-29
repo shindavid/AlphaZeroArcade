@@ -45,8 +45,7 @@ inline void PerfectStrategy::iterate() {
     state_values_[stones_left] =
         1.0 -
         (reverse_probs *
-         eigen_util::slice(
-             state_values_,
+         eigen_util::slice(state_values_,
              Eigen::ArrayXi::LinSpaced(stochastic_nim::kChanceDistributionSize,
                                        stones_left - stochastic_nim::kChanceDistributionSize + 1,
                                        stones_left) -
