@@ -28,10 +28,11 @@ inline int PerfectStrategy::get_optimal_action(int stones_left) const {
 
 inline void PerfectStrategy::iterate() {
   for (int stones_left = 1; stones_left <= stochastic_nim::kStartingStones; stones_left++) {
-    int m = std::min(stones_left, stochastic_nim::kMaxStonesToTake);
+    int num_stones_can_take = std::min(stones_left, stochastic_nim::kMaxStonesToTake);
     optimal_actions_[stones_left] =
-        m - argmax(state_values_.segment(
-                std::max(0, stones_left - stochastic_nim::kMaxStonesToTake), m));
+        num_stones_can_take -
+        argmax(state_values_.segment(std::max(0, stones_left - stochastic_nim::kMaxStonesToTake),
+                                     num_stones_can_take));
 
     float state_value = 0.0;
     for (int chance_remove = 0; chance_remove < stochastic_nim::kChanceDistributionSize; chance_remove++) {
