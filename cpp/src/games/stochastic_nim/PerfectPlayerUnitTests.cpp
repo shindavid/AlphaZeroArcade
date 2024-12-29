@@ -37,8 +37,23 @@ class PerfectPlayerTest : public testing::Test {
     return player_.get_action_response(state, valid_actions).action;
   }
 
+  float get_state_action_value(const State& state, core::action_t action) {
+    return player_.get_state_action_value(state, action);
+  }
  private:
   PerfectPlayer player_;
+};
+
+class PerfectStrategyTest: public testing::Test {
+ protected:
+  using PerfectStrategy = stochastic_nim::PerfectStrategy;
+  using Params = PerfectStrategy::Params;
+
+ public:
+  PerfectStrategy get_strategy(int starting_stones, int max_stones_to_take, const float* dist, int dist_size) {
+    Params params{starting_stones, max_stones_to_take, dist, dist_size};
+    return PerfectStrategy(params);
+  }
 };
 
 TEST_F(PerfectPlayerTest, tensor_values) {
@@ -78,6 +93,45 @@ TEST_F(PerfectPlayerTest, 6_stones_player1) {
 TEST_F(PerfectPlayerTest, chance_mode_throw_error) {
   State state{4, PerfectPlayer::Player0, stochastic_nim::kChanceMode};
   EXPECT_THROW(get_action_response(state), std::invalid_argument);
+}
+
+TEST_F(PerfectPlayerTest, Q_value_4_stones_left) {
+  State state{4, PerfectPlayer::Player0, stochastic_nim::kPlayerMode};
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake3), 0.8, 1e-6);
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake2), 0.5, 1e-6);
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake1), 0.0, 1e-6);
+}
+
+TEST_F(PerfectPlayerTest, Q_value_3_stones_left) {
+  State state{3, PerfectPlayer::Player0, stochastic_nim::kPlayerMode};
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake3), 1.0, 1e-6);
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake2), 0.8, 1e-6);
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake1), 0.5, 1e-6);
+}
+
+TEST_F(PerfectPlayerTest, Q_value_2_stones_left) {
+  State state{2, PerfectPlayer::Player0, stochastic_nim::kPlayerMode};
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake2), 1.0, 1e-6);
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake1), 0.8, 1e-6);
+}
+
+TEST_F(PerfectPlayerTest, Q_value_1_stones_left) {
+  State state{1, PerfectPlayer::Player0, stochastic_nim::kPlayerMode};
+  EXPECT_NEAR(get_state_action_value(state, stochastic_nim::kTake1), 1.0, 1e-6);
+}
+
+TEST_F(PerfectStrategyTest, 4_stones) {
+  PerfectStrategy strategy = get_strategy(4, 3, stochastic_nim::kChanceEventProbs, 3);
+  EXPECT_NEAR(strategy.get_state_value()[4], 0.04, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value()[3], 0.0, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value()[2], 0.5, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value()[1], 0.8, 1e-6);
+  EXPECT_NEAR(strategy.get_state_value()[0], 1.0, 1e-6);
+  EXPECT_EQ(strategy.get_optimal_action()[4], 3);
+  EXPECT_EQ(strategy.get_optimal_action()[3], 3);
+  EXPECT_EQ(strategy.get_optimal_action()[2], 2);
+  EXPECT_EQ(strategy.get_optimal_action()[1], 1);
+  EXPECT_EQ(strategy.get_optimal_action()[0], -1);
 }
 
 int main(int argc, char** argv) {
