@@ -168,6 +168,10 @@ concept FTensor = is_ftensor_v<T>;
 template <typename T>
 concept FArray = is_farray_v<T>;
 
+template <typename Derived>
+concept Shape1DInt = (Derived::RowsAtCompileTime == 1 || Derived::ColsAtCompileTime == 1) &&
+                     std::is_integral_v<typename Derived::Scalar>;
+
 }  // namespace concepts
 
 template <typename T>
@@ -205,6 +209,12 @@ auto softmax(const Tensor& tensor);
  */
 template <typename Array>
 auto sigmoid(const Array& arr);
+
+template <typename Array>
+int argmax(const Array& arr);
+
+template <typename DerivedData, concepts::Shape1DInt DerivedIndices>
+auto slice(const Eigen::ArrayBase<DerivedData>&, const Eigen::ArrayBase<DerivedIndices>&);
 
 /*
  * Reverses the elements of tensor along the given dimension.

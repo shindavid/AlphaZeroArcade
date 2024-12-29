@@ -16,6 +16,8 @@ PerfectStrategy::PerfectStrategy() {
   }
 
   state_values_[0] = 1.0;
+  state_values_[stochastic_nim::kStartingStones] = 0.0;
+  optimal_actions_[0] = -stochastic_nim::kStartingStones;
   iterate();
 }
 
@@ -27,32 +29,22 @@ inline int PerfectStrategy::get_optimal_action(int stones_left) const {
 }
 
 inline void PerfectStrategy::iterate() {
+  Eigen::Array<float, 3, 1> prob_array{stochastic_nim::kChanceEventProbs};
+  auto reverse_probs = prob_array.reverse().eval();
   for (int stones_left = 1; stones_left <= stochastic_nim::kStartingStones; stones_left++) {
     int num_stones_can_take = std::min(stones_left, stochastic_nim::kMaxStonesToTake);
     optimal_actions_[stones_left] =
-        num_stones_can_take -
-        argmax(state_values_.segment(std::max(0, stones_left - stochastic_nim::kMaxStonesToTake),
-                                     num_stones_can_take));
+        num_stones_can_take - eigen_util::argmax(state_values_.segment(
+            std::max(0, stones_left - stochastic_nim::kMaxStonesToTake), num_stones_can_take));
 
-    float state_value = 0.0;
-    for (int chance_remove = 0; chance_remove < stochastic_nim::kChanceDistributionSize; chance_remove++) {
-      int next_stones = stones_left - chance_remove;
-      if (next_stones <= 0) {
-        state_value += stochastic_nim::kChanceEventProbs[chance_remove] * 1.0;
-      } else {
-        state_value += stochastic_nim::kChanceEventProbs[chance_remove] *
-                       (1.0 - state_values_[next_stones - optimal_actions_[next_stones]]);
-      }
-    }
-    state_values_[stones_left] = state_value;
+    auto non_neg_stones_left =
+        Eigen::ArrayXi::LinSpaced(stochastic_nim::kChanceDistributionSize,
+                                  stones_left - stochastic_nim::kChanceDistributionSize + 1,
+                                  stones_left).cwiseMax(0);
+    state_values_[stones_left] = 1.0 -
+        (reverse_probs * eigen_util::slice(state_values_,
+        non_neg_stones_left - eigen_util::slice(optimal_actions_, non_neg_stones_left))).sum();
   }
-}
-
-template <typename ArrayLike>
-inline int PerfectStrategy::argmax(const ArrayLike& segment) {
-  Eigen::Index maxIndex;
-  segment.maxCoeff(&maxIndex);
-  return static_cast<int>(maxIndex);
 }
 
 }  // namespace stochastic_nim

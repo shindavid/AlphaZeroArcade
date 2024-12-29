@@ -17,15 +17,13 @@ class PerfectStrategy {
 
  private:
   void iterate();
-  template <typename ArrayLike>
-  int argmax(const ArrayLike&);
 
   using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
   // expected win rate if there are [index up to starting_stones] stones left after a player's
   // move
   FArray state_values_;
   // best number of stones to take if there are [index up to starting stones] stones left
-  FArray optimal_actions_;
+  Eigen::Array<int, stochastic_nim::kStartingStones + 1, 1> optimal_actions_;
 };
 
 class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {

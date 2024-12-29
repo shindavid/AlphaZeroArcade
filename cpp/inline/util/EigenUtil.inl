@@ -213,6 +213,28 @@ auto sigmoid(const Array& array) {
   return 1.0 / (1.0 + (-array).exp());
 }
 
+template <typename Array>
+inline int argmax(const Array& arr) {
+  Eigen::Index maxIndex;
+  arr.maxCoeff(&maxIndex);
+  return static_cast<int>(maxIndex);
+}
+
+template <typename DerivedData, concepts::Shape1DInt DerivedIndices>
+auto slice(const Eigen::ArrayBase<DerivedData>& data, const Eigen::ArrayBase<DerivedIndices>& indices)
+{
+  using Scalar = typename DerivedData::Scalar;
+  constexpr int Cols = DerivedData::ColsAtCompileTime;
+  Eigen::Index numIndices = indices.size();
+  Eigen::Array<Scalar, Eigen::Dynamic, Cols> out;
+  out.resize(numIndices, Cols);
+  for (Eigen::Index i = 0; i < numIndices; ++i)
+  {
+    out.row(i) = data.row(indices[i]);
+  }
+  return out;
+}
+
 template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim) {
   using Sizes = Tensor::Dimensions;
