@@ -220,11 +220,13 @@ inline int argmax(const Array& arr) {
   return static_cast<int>(maxIndex);
 }
 
-template <typename DerivedData, concepts::Shape1DInt DerivedIndices>
-auto slice(const Eigen::ArrayBase<DerivedData>& data,
-           const Eigen::ArrayBase<DerivedIndices>& indices) {
-  using Scalar = typename DerivedData::Scalar;
-  constexpr int Cols = DerivedData::ColsAtCompileTime;
+template <typename Derived1, typename Derived2>
+auto slice(const Eigen::ArrayBase<Derived1>& data, const Eigen::ArrayBase<Derived2>& indices) {
+  static_assert((Derived2::RowsAtCompileTime == 1) || (Derived2::ColsAtCompileTime == 1));
+  static_assert(std::is_integral_v<typename Derived2::Scalar>);
+
+  using Scalar = typename Derived1::Scalar;
+  constexpr int Cols = Derived1::ColsAtCompileTime;
   Eigen::Index numIndices = indices.size();
   Eigen::Array<Scalar, Eigen::Dynamic, Cols> out;
   out.resize(numIndices, Cols);
