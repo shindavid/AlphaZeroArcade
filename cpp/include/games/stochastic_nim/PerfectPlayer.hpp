@@ -18,12 +18,12 @@ class PerfectStrategy {
  private:
   void iterate();
 
-  using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
-  using IArray = Eigen::Array<int, stochastic_nim::kStartingStones + 1, 1>;
+  using FVector = Eigen::Vector<float, stochastic_nim::kStartingStones + 1>;
+  using IVector = Eigen::Vector<int, stochastic_nim::kStartingStones + 1>;
   // state_values_[k]: expected win-rate if there are k stones left after a player's move
-  FArray V;
+  FVector V;
   // optimal_actions_[k]: optimal number of stones to take if there are k stones left
-  IArray P;
+  IVector P;
 };
 
 class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {

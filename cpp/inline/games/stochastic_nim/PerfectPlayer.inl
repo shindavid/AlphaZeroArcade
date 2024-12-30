@@ -33,12 +33,12 @@ inline void PerfectStrategy::iterate() {
   constexpr int c = stochastic_nim::kChanceDistributionSize;
   constexpr int n = stochastic_nim::kStartingStones;
   constexpr int m = stochastic_nim::kMaxStonesToTake;
-  Eigen::Array<float, c, 1> probs{stochastic_nim::kChanceEventProbs};
+  Eigen::Vector<float, c> probs{stochastic_nim::kChanceEventProbs};
   auto rp = probs.reverse();
   for (int k = 4; k <= n; k++) {
     P[k] = m - eigen_util::argmax(V.segment(k - m, m));
-    V[k] = 1.0 - (rp * eigen_util::slice(V,
-                      Eigen::ArrayXi::LinSpaced(c, k - c + 1, k) - P.segment(k - c + 1, c))).sum();
+    V[k] = 1.0 - rp.dot(eigen_util::slice(
+                     V, Eigen::VectorXi::LinSpaced(c, k - c + 1, k) - P.segment(k - c + 1, c)));
   }
 }
 

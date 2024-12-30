@@ -221,14 +221,14 @@ inline int argmax(const Array& arr) {
 }
 
 template <typename Derived1, typename Derived2>
-auto slice(const Eigen::ArrayBase<Derived1>& data, const Eigen::ArrayBase<Derived2>& indices) {
+auto slice(const Eigen::MatrixBase<Derived1>& data, const Eigen::MatrixBase<Derived2>& indices) {
   static_assert((Derived2::RowsAtCompileTime == 1) || (Derived2::ColsAtCompileTime == 1));
   static_assert(std::is_integral_v<typename Derived2::Scalar>);
 
   using Scalar = typename Derived1::Scalar;
   constexpr int Cols = Derived1::ColsAtCompileTime;
   Eigen::Index numIndices = indices.size();
-  Eigen::Array<Scalar, Eigen::Dynamic, Cols> out;
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Cols> out;
   out.resize(numIndices, Cols);
   for (Eigen::Index i = 0; i < numIndices; ++i) {
     out.row(i) = data.row(indices[i]);
