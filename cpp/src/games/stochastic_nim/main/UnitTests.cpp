@@ -23,12 +23,7 @@ class PerfectPlayerTest : public testing::Test {
   using ActionMask = PerfectPlayer::ActionMask;
 
  public:
-  PerfectPlayerTest() : strategy_(new PerfectStrategy()), player_(strategy_) {}
-
-
-  ~PerfectPlayerTest() override {
-    delete strategy_;
-  }
+  PerfectPlayerTest() : player_(&strategy_) {}
 
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;
@@ -36,7 +31,7 @@ class PerfectPlayerTest : public testing::Test {
   }
 
  private:
-  PerfectStrategy* strategy_;
+  PerfectStrategy strategy_;
   PerfectPlayer player_;
 };
 
