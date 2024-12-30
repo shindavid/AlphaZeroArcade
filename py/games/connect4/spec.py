@@ -126,9 +126,9 @@ class Connect4Spec(GameSpec):
     extra_runtime_deps = ['extra_deps/connect4/c4solver',
                           'extra_deps/connect4/7x6.book']
     model_configs = {
-        'default': b7_c128,
         'b7_c128': b7_c128,
         'transformer': transformer,
+        'default': transformer,
     }
     reference_player_family = ReferencePlayerFamily('Perfect', '--strength', 0, 21)
 
