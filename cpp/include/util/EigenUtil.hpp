@@ -209,18 +209,6 @@ auto sigmoid(const Array& arr);
 template <typename Array>
 int argmax(const Array& arr);
 
-template <typename Array>
-auto dot_product(const Array& arr1, const Array& arr2);
-
-/*
- * Returns a sliced array according to the given indices. The indices are assumed to be of 1D shape.
- * data could be a 1D or 2D array. When slicing a 2D array, it is performed along the first dim (0).
- * e.g. slice([1, 2, 3, 4], [0, 2]) -> [1, 3]
- * e.g. slice([[1, 2], [3, 4], [5, 6]], [0, 2]) -> [[1, 2], [5, 6]]
- */
-template <typename Derived1, typename Derived2>
-auto slice(const Eigen::ArrayBase<Derived1>& data, const Eigen::ArrayBase<Derived2>& indices);
-
 /*
  * Reverses the elements of tensor along the given dimension.
  *
