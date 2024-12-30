@@ -582,6 +582,12 @@ class ModuleSpec:
 
 
 @dataclass
+class OptimizerSpec:
+    type: str
+    kwargs: dict = field(default_factory=dict)
+
+
+@dataclass
 class ModelConfig:
     shape_info_dict: ShapeInfoDict
     stem: Optional[ModuleSpec]
@@ -589,6 +595,7 @@ class ModelConfig:
     heads: List[ModuleSpec]
     neck: Optional[ModuleSpec]
     loss_weights: Dict[str, float]
+    opt: OptimizerSpec
 
     def validate(self):
         for spec in [self.stem, self.neck] + self.blocks + self.heads:

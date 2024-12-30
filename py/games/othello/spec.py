@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import math
 
 from games.game_spec import GameSpec, ReferencePlayerFamily
-from shared.net_modules import ModelConfig, ModuleSpec, ShapeInfoDict
+from shared.net_modules import ModelConfig, ModuleSpec, OptimizerSpec, ShapeInfoDict
 from shared.training_params import TrainingParams
 
 
@@ -75,6 +75,8 @@ def b9_c128(shape_info_dict: ShapeInfoDict):
             'score_margin': 0.02,
             'ownership': 0.15,
         },
+
+        opt=OptimizerSpec(type='SGD', kwargs={'lr': 6e-5, 'weight_decay': 6e-5, 'momentum': 0.9}),
     )
 
 
