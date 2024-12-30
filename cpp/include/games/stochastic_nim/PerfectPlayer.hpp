@@ -12,7 +12,7 @@ namespace stochastic_nim {
 class PerfectStrategy {
  public:
   PerfectStrategy();
-  float get_state_value(int stones_left) const { return state_values_[stones_left]; }
+  float get_state_value(int stones_left) const { return V[stones_left]; }
   int get_optimal_action(int stones_left) const;
 
  private:
@@ -21,9 +21,9 @@ class PerfectStrategy {
   using FArray = eigen_util::FArray<stochastic_nim::kStartingStones + 1>;
   using IArray = Eigen::Array<int, stochastic_nim::kStartingStones + 1, 1>;
   // state_values_[k]: expected win-rate if there are k stones left after a player's move
-  FArray state_values_;
+  FArray V;
   // optimal_actions_[k]: optimal number of stones to take if there are k stones left
-  IArray optimal_actions_;
+  IArray P;
 };
 
 class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {

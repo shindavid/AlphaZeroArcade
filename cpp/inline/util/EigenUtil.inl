@@ -230,8 +230,7 @@ auto slice(const Eigen::ArrayBase<Derived1>& data, const Eigen::ArrayBase<Derive
   Eigen::Index numIndices = indices.size();
   Eigen::Array<Scalar, Eigen::Dynamic, Cols> out;
   out.resize(numIndices, Cols);
-  for (Eigen::Index i = 0; i < numIndices; ++i)
-  {
+  for (Eigen::Index i = 0; i < numIndices; ++i) {
     out.row(i) = data.row(indices[i]);
   }
   return out;

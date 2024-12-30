@@ -209,6 +209,9 @@ auto sigmoid(const Array& arr);
 template <typename Array>
 int argmax(const Array& arr);
 
+template <typename Array>
+auto dot_product(const Array& arr1, const Array& arr2);
+
 /*
  * Returns a sliced array according to the given indices. The indices are assumed to be of 1D shape.
  * data could be a 1D or 2D array. When slicing a 2D array, it is performed along the first dim (0).
