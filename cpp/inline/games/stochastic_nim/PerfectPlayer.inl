@@ -18,7 +18,6 @@ PerfectStrategy::PerfectStrategy() {
   Qb[0] = 1.0;
   Qb[1] = 0.8;
   Qb[2] = 0.5;
-
   iterate();
 }
 
