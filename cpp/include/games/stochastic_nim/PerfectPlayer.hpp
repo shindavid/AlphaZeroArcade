@@ -20,11 +20,13 @@ class PerfectStrategy {
 
   using FVector = Eigen::Vector<float, stochastic_nim::kStartingStones + 1>;
   using IVector = Eigen::Vector<int, stochastic_nim::kStartingStones + 1>;
-  // V[k]: expected win-rate if there are k stones before a player's move
+  /* 
+   * Qa[k]: expected win-rate if there are k stones before a player's move
+   * Qb[k]: expected win-rate if there are k stones after a player's move
+   * P[k]: optimal number of stones to take if there are k stones left
+   */
   FVector Qa;
-  // V[k]: expected win-rate if there are k stones after a player's move
   FVector Qb;
-  // P[k]: optimal number of stones to take if there are k stones left
   IVector P;
 };
 

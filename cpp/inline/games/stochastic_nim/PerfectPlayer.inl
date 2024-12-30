@@ -32,7 +32,7 @@ inline void PerfectStrategy::iterate() {
   constexpr int m = stochastic_nim::kMaxStonesToTake;
   Eigen::Vector<float, c> probs{stochastic_nim::kChanceEventProbs};
   auto rp = probs.reverse();
-  for (int k = 3; k <= n; k++) {
+  for (int k = c; k <= n; k++) {
     P[k] = m - eigen_util::argmax(Qb.segment(k - m, m));
     Qa[k] = Qb[k - P[k]];
     Qb[k] = 1.0 - rp.dot(Qa.segment(k - c + 1, c));
