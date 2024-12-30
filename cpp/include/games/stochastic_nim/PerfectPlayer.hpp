@@ -12,7 +12,7 @@ namespace stochastic_nim {
 class PerfectStrategy {
  public:
   PerfectStrategy();
-  float get_state_value(int stones_left) const { return V[stones_left]; }
+  float get_state_value(int stones_left) const { return Qb[stones_left]; }
   int get_optimal_action(int stones_left) const;
 
  private:
@@ -20,8 +20,10 @@ class PerfectStrategy {
 
   using FVector = Eigen::Vector<float, stochastic_nim::kStartingStones + 1>;
   using IVector = Eigen::Vector<int, stochastic_nim::kStartingStones + 1>;
-  // V[k]: expected win-rate if there are k stones left after a player's move
-  FVector V;
+  // V[k]: expected win-rate if there are k stones before a player's move
+  FVector Qa;
+  // V[k]: expected win-rate if there are k stones after a player's move
+  FVector Qb;
   // P[k]: optimal number of stones to take if there are k stones left
   IVector P;
 };

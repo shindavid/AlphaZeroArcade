@@ -9,18 +9,16 @@ inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
 }
 
 PerfectStrategy::PerfectStrategy() {
-  for (int i = 0; i < stochastic_nim::kStartingStones + 1; i++) {
-    V[i] = -1.0;
-    P[i] = -1;
-  }
-
-  V[0] = 1.0;
-  V[1] = 0.8;
-  V[2] = 0.5;
-  V[3] = 0.0;
+  Qa[0] = -1.0;  // should never be used
+  P[0] = -1;  // should never be used
   P[1] = 1;
   P[2] = 2;
-  P[3] = 3;
+  Qa[1] = 1.0;
+  Qa[2] = 1.0;
+  Qb[0] = 1.0;
+  Qb[1] = 0.8;
+  Qb[2] = 0.5;
+
   iterate();
 }
 
@@ -35,10 +33,10 @@ inline void PerfectStrategy::iterate() {
   constexpr int m = stochastic_nim::kMaxStonesToTake;
   Eigen::Vector<float, c> probs{stochastic_nim::kChanceEventProbs};
   auto rp = probs.reverse();
-  for (int k = 4; k <= n; k++) {
-    P[k] = m - eigen_util::argmax(V.segment(k - m, m));
-    V[k] = 1.0 - rp.dot(eigen_util::slice(
-                     V, Eigen::VectorXi::LinSpaced(c, k - c + 1, k) - P.segment(k - c + 1, c)));
+  for (int k = 3; k <= n; k++) {
+    P[k] = m - eigen_util::argmax(Qb.segment(k - m, m));
+    Qa[k] = Qb[k - P[k]];
+    Qb[k] = 1.0 - rp.dot(Qa.segment(k - c + 1, c));
   }
 }
 
