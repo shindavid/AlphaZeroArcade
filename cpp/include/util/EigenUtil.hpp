@@ -179,6 +179,9 @@ struct extract_length<FArray<N>> {
 template <typename T>
 inline constexpr int extract_length_v = extract_length<T>::value;
 
+template <typename Derived>
+struct is_eigen_array : std::is_base_of<Eigen::ArrayBase<Derived>, Derived> {};
+
 /*
  * Accepts an Eigen::Array, and sorts the columns based on the values in the first row.
  */
@@ -205,6 +208,21 @@ auto softmax(const Tensor& tensor);
  */
 template <typename Array>
 auto sigmoid(const Array& arr);
+
+/*
+ * Returns the index of the maximum element. Only works for 1D Array or Matrix.
+ */
+template <typename Derived>
+int argmax(const Eigen::DenseBase<Derived>& arr);
+
+/*
+ * Returns a sliced array according to the given indices. The indices are assumed to be of 1D shape.
+ * data could be a 1D or 2D array. When slicing a 2D array, it is performed along the first dim (0).
+ * e.g. slice([1, 2, 3, 4], [0, 2]) -> [1, 3]
+ * e.g. slice([[1, 2], [3, 4], [5, 6]], [0, 2]) -> [[1, 2], [5, 6]]
+ */
+template <typename Derived1, typename Derived2>
+auto slice(const Eigen::ArrayBase<Derived1>& data, const Eigen::ArrayBase<Derived2>& indices);
 
 /*
  * Reverses the elements of tensor along the given dimension.

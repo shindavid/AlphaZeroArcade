@@ -213,6 +213,34 @@ auto sigmoid(const Array& array) {
   return 1.0 / (1.0 + (-array).exp());
 }
 
+template <typename Derived>
+inline int argmax(const Eigen::DenseBase<Derived>& arr) {
+  static_assert(Derived::RowsAtCompileTime == 1 || Derived::ColsAtCompileTime == 1);
+  Eigen::Index maxIndex;
+  arr.maxCoeff(&maxIndex);
+  return static_cast<int>(maxIndex);
+}
+
+template <typename Derived1, typename Derived2>
+auto slice(const Eigen::DenseBase<Derived1>& data, const Eigen::DenseBase<Derived2>& indices) {
+  static_assert((Derived2::RowsAtCompileTime == 1) || (Derived2::ColsAtCompileTime == 1));
+  static_assert(std::is_integral_v<typename Derived2::Scalar>);
+
+  using Scalar = Derived1::Scalar;
+  constexpr int Cols = Derived1::ColsAtCompileTime;
+  constexpr static int Options = Derived1::Options;
+  using OutType = std::conditional_t<is_eigen_array<Derived1>::value,
+                                     Eigen::Array<Scalar, Eigen::Dynamic, Cols, Options>,
+                                     Eigen::Matrix<Scalar, Eigen::Dynamic, Cols, Options>>;
+  Eigen::Index numIndices = indices.size();
+  OutType out;
+  out.resize(numIndices, Cols);
+  for (Eigen::Index i = 0; i < numIndices; ++i) {
+    out.row(i) = data.row(indices[i]);
+  }
+  return out;
+}
+
 template <concepts::FTensor Tensor>
 auto reverse(const Tensor& tensor, int dim) {
   using Sizes = Tensor::Dimensions;
