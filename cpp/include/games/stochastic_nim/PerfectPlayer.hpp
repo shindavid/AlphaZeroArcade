@@ -5,6 +5,7 @@
 #include <games/stochastic_nim/Constants.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <util/BitSet.hpp>
+#include <util/BoostUtil.hpp>
 #include <util/EigenUtil.hpp>
 
 namespace stochastic_nim {
@@ -35,10 +36,22 @@ class PerfectPlayer : public core::AbstractPlayer<stochastic_nim::Game> {
  public:
   using base_t = core::AbstractPlayer<stochastic_nim::Game>;
 
-  PerfectPlayer(const PerfectStrategy* strategy) : strategy_(strategy) {}
+  struct Params {
+    /*
+     * The strength parameter controls how well the player plays. It is either 0 (random) or
+     * 1 (perfect).
+     */
+    int strength = 1;
+    bool verbose = false;
+    auto make_options_description();
+  };
+
+  PerfectPlayer(const Params& params, const PerfectStrategy* strategy)
+      : params_(params), strategy_(strategy) {}
   ActionResponse get_action_response(const State&, const ActionMask&) override;
 
  private:
+  const Params params_;
   const PerfectStrategy* strategy_;
 };
 
