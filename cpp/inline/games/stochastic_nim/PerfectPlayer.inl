@@ -27,13 +27,13 @@ inline void PerfectStrategy::iterate() {
   constexpr int n = stochastic_nim::kStartingStones;
   constexpr int c = stochastic_nim::kChanceDistributionSize;
   Eigen::Vector<float, c> probs{stochastic_nim::kChanceEventProbs};
+  auto arange_c = Eigen::ArrayXi::LinSpaced(c, 0, c - 1);
   for (int k = 1; k <= n; k++) {
     int m = std::min(k, stochastic_nim::kMaxStonesToTake);
 
     P[k] = m - eigen_util::argmax(Qb.segment(k - m, m));
     Qa[k] = Qb[k - P[k]];
-    auto ix = (k - Eigen::ArrayXi::LinSpaced(c, 0, c - 1)).cwiseMax(0).eval();
-    Qb[k] = 1.0 - probs.dot(eigen_util::slice(Qa, ix));
+    Qb[k] = 1.0 - probs.dot(eigen_util::slice(Qa, (k - arange_c).cwiseMax(0)));
   }
 }
 
