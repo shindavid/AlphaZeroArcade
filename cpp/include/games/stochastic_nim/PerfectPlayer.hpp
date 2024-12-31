@@ -16,11 +16,12 @@ class PerfectStrategy {
   int get_optimal_action(int stones_left) const;
 
  private:
+  void init_boundary_conditions();
   void iterate();
 
   using FVector = Eigen::Vector<float, stochastic_nim::kStartingStones + 1>;
   using IVector = Eigen::Vector<int, stochastic_nim::kStartingStones + 1>;
-  /* 
+  /*
    * Qa[k]: expected win-rate if there are k stones before a player's move
    * Qb[k]: expected win-rate if there are k stones after a player's move
    * P[k]: optimal number of stones to take if there are k stones left
