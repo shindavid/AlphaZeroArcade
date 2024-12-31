@@ -23,7 +23,7 @@ class PerfectPlayerTest : public testing::Test {
   using ActionMask = PerfectPlayer::ActionMask;
 
  public:
-  PerfectPlayerTest() : player_(&strategy_) {}
+  PerfectPlayerTest() : player_(PerfectPlayer::Params(1, false), &strategy_) {}
 
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;

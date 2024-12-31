@@ -94,7 +94,7 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   Iter state = cur;
 
   for (int i = 0; i < stochastic_nim::kStartingStonesBitWidth; ++i) {
-    tensor(i) = (state->stones_left & (1 << i)) ? 1 : 0;
+    tensor(0, i, 0) = (state->stones_left & (1 << i)) ? 1 : 0;
   }
   tensor(stochastic_nim::kStartingStonesBitWidth) = state->current_player;
   tensor(stochastic_nim::kStartingStonesBitWidth + 1) = state->current_mode;

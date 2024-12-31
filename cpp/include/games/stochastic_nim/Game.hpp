@@ -96,7 +96,8 @@ struct Game {
 
   struct InputTensorizor {
     // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
-    using Tensor = eigen_util::FTensor<Eigen::Sizes<stochastic_nim::kStartingStonesBitWidth + 2>>;
+    constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 2;
+    using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
     using MCTSKey = State;
     using EvalKey = State;
 

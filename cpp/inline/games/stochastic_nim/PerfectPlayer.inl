@@ -2,9 +2,25 @@
 
 namespace stochastic_nim {
 
+inline auto PerfectPlayer::Params::make_options_description() {
+  namespace po = boost::program_options;
+  namespace po2 = boost_util::program_options;
+
+  po2::options_description desc("stochastic_nim::PerfectPlayer options");
+  return desc
+      .template add_option<"strength", 's'>(po::value<int>(&strength)->default_value(strength),
+                                            "strength (0-1). 0 is random, 1 is perfect.")
+      .template add_option<"verbose", 'v'>(po::bool_switch(&verbose)->default_value(verbose),
+                                           "verbose mode");
+}
+
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
     const State& state, const ActionMask& valid_actions) {
   util::release_assert(state.current_mode == kPlayerMode);
+
+  if (params_.strength == 0) {
+    return bitset_util::choose_random_on_index(valid_actions);
+  }
   return strategy_->get_optimal_action(state.stones_left);
 }
 
