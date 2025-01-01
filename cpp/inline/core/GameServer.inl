@@ -302,34 +302,15 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
   }
   while (true) {
-    seat_index_t seat = Rules::get_current_player(state_history.current());
-    Player* player = players[seat];
-    auto valid_actions = Rules::get_legal_moves(state_history);
-    ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
-
-    action_t action = response.action;
-
-    const TrainingInfo& training_info = response.training_info;
-    if (game_log) {
-      game_log->add(state_history.current(), action, training_info.policy_target,
-                    training_info.action_values_target, training_info.use_for_training);
-    }
-
-    // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
-    // the server.
-    util::release_assert(valid_actions[action], "Invalid action: %d", action);
-
+    core::action_mode_t action_mode = Rules::get_action_mode(state_history.current());
+    core::action_t action;
     ValueTensor outcome;
     bool terminal = false;
-    if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
-      outcome = GameResults::win(seat);
-      terminal = true;
-      if (shared_data_.params().announce_game_results) {
-        printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
-               player->get_name().c_str(), int(seat));
-        std::cout << std::endl;
-      }
-    } else {
+    seat_index_t seat = Rules::get_current_player(state_history.current());
+
+    if (Rules::is_chance_mode(action_mode)) {
+      ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
+      action = eigen_util::sample(chance_dist);
       Rules::apply(state_history, action);
       if (shared_data_.params().print_game_states) {
         Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
@@ -339,7 +320,42 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       }
 
       terminal = Game::Rules::is_terminal(state_history.current(), seat, action, outcome);
+    } else {
+      Player* player = players[seat];
+      auto valid_actions = Rules::get_legal_moves(state_history);
+      ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
+      action = response.action;
+      const TrainingInfo& training_info = response.training_info;
+      if (game_log && training_info.use_for_training) {
+        game_log->add(state_history.current(), action, training_info.policy_target,
+                      training_info.action_values_target, training_info.use_for_training);
+      }
+
+      // TODO: gracefully handle and prompt for retry. Otherwise, a malicious remote process can crash
+      // the server.
+      util::release_assert(valid_actions[action], "Invalid action: %d", action);
+
+      if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
+        outcome = GameResults::win(seat);
+        terminal = true;
+        if (shared_data_.params().announce_game_results) {
+          printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
+                player->get_name().c_str(), int(seat));
+          std::cout << std::endl;
+        }
+      } else {
+        Rules::apply(state_history, action);
+        if (shared_data_.params().print_game_states) {
+          Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
+        }
+        for (auto player2 : players) {
+          player2->receive_state_change(seat, state_history.current(), action);
+        }
+
+        terminal = Game::Rules::is_terminal(state_history.current(), seat, action, outcome);
+      }
     }
+
     if (terminal) {
       ValueArray array = GameResults::to_value_array(outcome);
       for (auto player2 : players) {
