@@ -39,8 +39,9 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
         heads=[
             ModuleSpec(type='PolicyHead',
                        args=['policy', board_size, c_trunk, c_policy_hidden, policy_shape]),
-            ModuleSpec(type='WinLossDrawValueHead',
-                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden]),
+            ModuleSpec(type='WinShareValueHead',
+                       args=['value', board_size, c_trunk, c_value_hidden, n_value_hidden,
+                             value_shape]),
             ModuleSpec(type='WinShareActionValueHead',
                        args=['action_value', board_size, c_trunk, c_action_value_hidden,
                              action_value_shape]),
@@ -69,7 +70,7 @@ class StochasticNimSpec(GameSpec):
     )
 
     training_options = {
-        '-p': 16,
+        '-p': 4,
     }
 
     training_player_options = {
@@ -77,7 +78,7 @@ class StochasticNimSpec(GameSpec):
     }
 
     rating_options = {
-        '-p': 64,
+        '-p': 4,
     }
 
     rating_player_options = {
