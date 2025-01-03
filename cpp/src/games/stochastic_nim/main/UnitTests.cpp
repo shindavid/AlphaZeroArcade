@@ -1,5 +1,5 @@
 #include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/PerfectPlayer.hpp>
+#include <games/stochastic_nim/players/PerfectPlayer.hpp>
 
 #include <gtest/gtest.h>
 
@@ -85,8 +85,11 @@ TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
   EXPECT_THROW(get_action_response(state), util::Exception);
 }
 
-TEST_F(PerfectStrategyTest, 4_stones) {
+TEST_F(PerfectStrategyTest, verify_state_values) {
   PerfectStrategy strategy = get_strategy();
+  for (int i = 1; i <= stochastic_nim::kStartingStones; ++i) {
+    std::cout << "Stones left: " << i << " Value: " << strategy.get_optimal_action(i) << std::endl;
+  }
   EXPECT_NEAR(strategy.get_state_value(5), 0.16, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(4), 0.04, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(3), 0.0, 1e-6);

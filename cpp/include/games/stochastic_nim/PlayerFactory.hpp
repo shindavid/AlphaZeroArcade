@@ -5,7 +5,8 @@
 #include <generic_players/MctsPlayerGenerator.hpp>
 #include <generic_players/RandomPlayerGenerator.hpp>
 #include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/PerfectPlayerGenerator.hpp>
+#include <games/stochastic_nim/players/HumanTuiPlayerGenerator.hpp>
+#include <games/stochastic_nim/players/PerfectPlayerGenerator.hpp>
 
 namespace stochastic_nim {
 
@@ -18,7 +19,8 @@ class PlayerFactory : public core::PlayerFactory<Game> {
 
  private:
   static player_subfactory_vec_t make_subfactories() {
-    return {new core::PlayerSubfactory<stochastic_nim::PerfectPlayerGenerator>(),
+    return {new core::PlayerSubfactory<stochastic_nim::HumanTuiPlayerGenerator>(),
+            new core::PlayerSubfactory<stochastic_nim::PerfectPlayerGenerator>(),
             new core::PlayerSubfactory<generic::CompetitiveMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<generic::TrainingMctsPlayerGenerator<Game>>(),
             new core::PlayerSubfactory<generic::RandomPlayerGenerator<Game>>(),
