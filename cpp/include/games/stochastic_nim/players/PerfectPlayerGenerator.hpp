@@ -3,7 +3,7 @@
 #include <core/AbstractPlayer.hpp>
 #include <core/BasicTypes.hpp>
 #include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/PerfectPlayer.hpp>
+#include <games/stochastic_nim/players/PerfectPlayer.hpp>
 #include <util/BoostUtil.hpp>
 
 #include <string>
