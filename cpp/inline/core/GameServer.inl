@@ -310,7 +310,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     action_t action = response.action;
 
     const TrainingInfo& training_info = response.training_info;
-    if (game_log && training_info.use_for_training) {
+    if (game_log) {
       game_log->add(state_history.current(), action, training_info.policy_target,
                     training_info.action_values_target, training_info.use_for_training);
     }
