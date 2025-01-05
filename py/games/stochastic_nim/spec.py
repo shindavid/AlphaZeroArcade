@@ -32,6 +32,9 @@ def b3_c32(shape_info_dict: ShapeInfoDict):
             ModuleSpec(type='ResBlock', args=['block1', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block2', c_trunk, c_mid]),
             ModuleSpec(type='ResBlock', args=['block3', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block4', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block5', c_trunk, c_mid]),
+            ModuleSpec(type='ResBlock', args=['block6', c_trunk, c_mid]),
             ],
 
         neck=None,

@@ -13,7 +13,6 @@
 #include <core/WinShareResults.hpp>
 #include <games/stochastic_nim/Constants.hpp>
 #include <games/GameRulesBase.hpp>
-#include <util/AnsiCodes.hpp>
 #include <util/EigenUtil.hpp>
 #include <util/FiniteGroups.hpp>
 #include <util/MetaProgramming.hpp>

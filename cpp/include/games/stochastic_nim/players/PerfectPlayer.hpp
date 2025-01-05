@@ -5,7 +5,6 @@
 #include <games/stochastic_nim/Constants.hpp>
 #include <games/stochastic_nim/Game.hpp>
 #include <util/BitSet.hpp>
-#include <util/BoostUtil.hpp>
 #include <util/EigenUtil.hpp>
 
 namespace stochastic_nim {
