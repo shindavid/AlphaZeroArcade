@@ -114,12 +114,19 @@ inline void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTe
                  100 * win_rates(0), 100 * win_rates(1));
   cx += snprintf(buffer + cx, buf_size - cx, "\n");
 
-  cx += snprintf(buffer + cx, buf_size - cx, "%3s %8s %8s %8s\n", "Col", "Net", "Count", "Action");
+  cx += snprintf(buffer + cx, buf_size - cx, "%3s %8s %10s %8s %8s\n", "Col", "Prior", "Posterior",
+                 "Count", "Action");
+
+  int count = 0;
+  for (int i = 0; i < stochastic_nim::kMaxStonesToTake; ++i) {
+    count += mcts_counts(i);
+  }
 
   for (int i = 0; i < stochastic_nim::kMaxStonesToTake; ++i) {
     if (valid_actions[i]) {
-      cx += snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %8.3f %8.3f\n", i + 1, net_policy(i),
-                     mcts_counts(i), action_policy(i));
+      cx +=
+          snprintf(buffer + cx, buf_size - cx, "%3d %8.3f %10.3f %8.3f %8.3f\n", i + 1,
+                   net_policy(i), (float)mcts_counts(i) / count, mcts_counts(i), action_policy(i));
     } else {
       cx += snprintf(buffer + cx, buf_size - cx, "%3d\n", i + 1);
     }
