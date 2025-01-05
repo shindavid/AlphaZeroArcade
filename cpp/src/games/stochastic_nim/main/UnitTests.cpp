@@ -87,9 +87,6 @@ TEST_F(PerfectPlayerTest, greater_than_starting_stones_throw_error) {
 
 TEST_F(PerfectStrategyTest, verify_state_values) {
   PerfectStrategy strategy = get_strategy();
-  for (int i = 1; i <= stochastic_nim::kStartingStones; ++i) {
-    std::cout << "Stones left: " << i << " Value: " << strategy.get_optimal_action(i) << std::endl;
-  }
   EXPECT_NEAR(strategy.get_state_value(5), 0.16, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(4), 0.04, 1e-6);
   EXPECT_NEAR(strategy.get_state_value(3), 0.0, 1e-6);
@@ -275,7 +272,24 @@ TEST(StochasticNimGameTest, tensorize) {
   }
 }
 
+void print_perfert_strategy_info() {
+  stochastic_nim::PerfectStrategy strategy;
+  for (int i = stochastic_nim::kStartingStones; i > 0; --i) {
+    std::cout << "Stones left: " << i << " Action: " << strategy.get_optimal_action(i) + 1 << std::endl;
+
+    for (int j = 0; j < stochastic_nim::kMaxStonesToTake; ++j) {
+      std::cout << "  Take " << j + 1;
+      if (i - j - 1 >= 0) {
+        std::cout << " Value: " << strategy.get_state_value(i - j - 1) << std::endl;
+      } else {
+        std::cout << " Value: N/A" << std::endl;
+      }
+    }
+  }
+}
+
 int main(int argc, char **argv) {
+  print_perfert_strategy_info();
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
