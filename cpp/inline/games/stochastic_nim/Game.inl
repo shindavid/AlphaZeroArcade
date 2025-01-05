@@ -53,14 +53,8 @@ inline void Game::Rules::apply(StateHistory& history, core::action_t action) {
 inline bool Game::Rules::is_terminal(const State& state, core::seat_index_t last_player,
                                      core::action_t last_action, GameResults::Tensor& outcome) {
   if (state.stones_left == 0) {
-    core::seat_index_t last_player_;
-    if (last_player == -1) {
-      last_player_ = 1 - get_current_player(state);
-    } else {
-      last_player_ = last_player;
-    }
     outcome.setZero();
-    outcome(last_player_) = 1;
+    outcome(last_player) = 1;
     return true;
   }
   return false;

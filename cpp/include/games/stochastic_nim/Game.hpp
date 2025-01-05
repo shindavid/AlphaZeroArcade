@@ -92,13 +92,8 @@ struct Game {
       char buffer[buf_size];
       int cx = 0;
 
-      cx += snprintf(buffer + cx, buf_size - cx, "%8s %6s%s%s%s %6s%s%s%s\n", "", "",
-                     ansi::kRed(""), ansi::kCircle("R"), ansi::kReset(""), "", ansi::kYellow(""),
-                     ansi::kCircle("Y"), ansi::kReset(""));
       cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(W)",
                      100 * net_value(0), 100 * net_value(1));
-      cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(D)",
-                     100 * net_value(2), 100 * net_value(2));
       cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "net(L)",
                      100 * net_value(1), 100 * net_value(0));
       cx += snprintf(buffer + cx, buf_size - cx, "%8s %6.3f%% %6.3f%%\n", "win-rate",

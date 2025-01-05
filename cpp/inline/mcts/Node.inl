@@ -14,7 +14,7 @@ inline Node<Game>::stable_data_t::stable_data_t(const StateHistory& history)
   num_valid_actions = valid_action_mask.count();
   action_mode = Game::Rules::get_action_mode(history.current());
   is_chance_node = Game::Rules::is_chance_mode(action_mode);
-  current_player = is_chance_node ? -1 : Game::Rules::get_current_player(history.current());
+  current_player = Game::Rules::get_current_player(history.current());
   terminal = false;
 }
 
