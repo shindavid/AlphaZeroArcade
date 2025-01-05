@@ -311,6 +311,23 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     if (Rules::is_chance_mode(action_mode)) {
       ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
       action = eigen_util::sample(chance_dist);
+
+      TrainingInfo chance_training_info = dummy_training_info();
+      auto chance_policy_target = std::make_shared<typename Types::PolicyTensor>();
+      auto chance_action_values_target = std::make_shared<typename Types::ActionValueTensor>();
+
+      chance_policy_target->setConstant(1.0 / chance_dist.size());
+      chance_action_values_target->setConstant(1.0 / chance_dist.size());
+      chance_training_info.policy_target = chance_policy_target.get();
+      chance_training_info.action_values_target = chance_action_values_target.get();
+      chance_training_info.use_for_training = true;
+
+      if (game_log) {
+        game_log->add(state_history.current(), action, chance_training_info.policy_target,
+                      chance_training_info.action_values_target,
+                      chance_training_info.use_for_training);
+      }
+
       Rules::apply(state_history, action);
       if (shared_data_.params().print_game_states) {
         Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
