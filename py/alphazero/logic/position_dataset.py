@@ -19,7 +19,6 @@ from alphazero.logic.game_log_reader import GameLogReader
 from shared.net_modules import ShapeInfo
 from util.logging_util import get_logger
 
-import torch
 import numpy as np
 import os
 import sqlite3
@@ -168,10 +167,6 @@ class PositionDataset(Dataset):
             log = self._game_log_reader.open_log(filename)
             output = self._game_log_reader.create_tensors(log, self._input_shape_info,
                                                           self._target_shape_infos, pos_index)
-
-            for tensor in output:
-                assert torch.isfinite(tensor).all(), f'Error loading data from file: {filename}'
-
             self._game_log_reader.close_log(log)
             return output
         except:
