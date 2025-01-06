@@ -13,7 +13,7 @@ ALL_GAME_SPECS = [
     Connect4,
     Othello,
     TicTacToe,
-    StochasticNim
+    StochasticNim,
 ]
 
 GAME_SPECS_BY_NAME = {game.name: game for game in ALL_GAME_SPECS}
