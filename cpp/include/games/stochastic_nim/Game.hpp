@@ -94,8 +94,8 @@ struct Game {
   };
 
   struct InputTensorizor {
-    // tensor is of the format {binary encoding of stones_left, current_player, current_mode}
-    constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 2;
+    // tensor is of the format {binary encoding of stones_left, current_mode}
+    constexpr static int kNumFeatures = stochastic_nim::kStartingStonesBitWidth + 1;
     using Tensor = eigen_util::FTensor<Eigen::Sizes<1, kNumFeatures, 1>>;
     using MCTSKey = State;
     using EvalKey = State;
@@ -130,4 +130,3 @@ struct hash<stochastic_nim::Game::State> {
 static_assert(core::concepts::Game<stochastic_nim::Game>);
 
 #include <inline/games/stochastic_nim/Game.inl>
-
