@@ -3,7 +3,6 @@
 #include <core/BasicTypes.hpp>
 #include <generic_players/HumanTuiPlayer.hpp>
 #include <games/stochastic_nim/Game.hpp>
-#include <games/stochastic_nim/players/PerfectPlayer.hpp>
 
 namespace stochastic_nim {
 
