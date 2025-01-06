@@ -90,8 +90,7 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start
   for (int i = 0; i < stochastic_nim::kStartingStonesBitWidth; ++i) {
     tensor(0, i, 0) = (state->stones_left & (1 << i)) ? 1 : 0;
   }
-  tensor(stochastic_nim::kStartingStonesBitWidth) = state->current_player;
-  tensor(stochastic_nim::kStartingStonesBitWidth + 1) = state->current_mode;
+  tensor(0, stochastic_nim::kStartingStonesBitWidth, 0) = state->current_mode;
   return tensor;
 }
 
@@ -131,4 +130,3 @@ inline void Game::IO::print_mcts_results(std::ostream& ss, const Types::PolicyTe
 }
 
 }  // namespace stochastic_nim
-
