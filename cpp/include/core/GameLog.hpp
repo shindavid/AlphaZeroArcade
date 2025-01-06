@@ -92,7 +92,7 @@ class GameLog : public GameLogBase {
   static ShapeInfo* get_shape_info_array();
 
   void load(int index, bool apply_symmetry, float* input_values, int* target_indices,
-            float** target_arrays) const;
+            float** target_arrays, bool** target_masks) const;
 
   void replay() const;
   int num_sampled_positions() const;
@@ -131,8 +131,8 @@ class GameLog : public GameLogBase {
   const sparse_tensor_entry_t* sparse_action_values_entry_start_ptr() const;
   const pos_index_t* sampled_indices_start_ptr() const;
 
-  PolicyTensor get_policy(int state_index) const;
-  ActionValueTensor get_action_values(int state_index) const;
+  bool get_policy(int state_index, PolicyTensor&) const;  // return true iff valid
+  bool get_action_values(int state_index, ActionValueTensor&) const;  // return true iff valid
   const State* get_state(int state_index) const;
   action_t get_prev_action(int state_index) const;
   ValueTensor get_outcome() const;

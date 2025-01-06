@@ -123,14 +123,14 @@ class Game {
       static constexpr const char* kName = "score_margin";
       using Tensor = eigen_util::FTensor<ScoreMarginShape>;
 
-      static Tensor tensorize(const Types::GameLogView& view);
+      static bool tensorize(const Types::GameLogView& view, Tensor&);
     };
 
     struct OwnershipTarget {
       static constexpr const char* kName = "ownership";
       using Tensor = eigen_util::FTensor<OwnershipShape>;
 
-      static Tensor tensorize(const Types::GameLogView& view);
+      static bool tensorize(const Types::GameLogView& view, Tensor&);
     };
 
     using List = mp::TypeList<PolicyTarget, ValueTarget, ActionValueTarget, OppPolicyTarget,

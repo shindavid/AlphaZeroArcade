@@ -71,7 +71,7 @@ ShapeInfo* GameLog<Game>::get_shape_info_array() {
 
 template <concepts::Game Game>
 void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, int* target_indices,
-                         float** target_arrays) const {
+                         float** target_arrays, bool** target_masks) const {
   util::release_assert(index >= 0 && index < num_sampled_positions(),
                        "Index %d out of bounds [0, %d) in %s", index, num_sampled_positions(),
                        filename_.c_str());
@@ -79,10 +79,12 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   pos_index_t state_index = get_pos_index(index);
   bool has_next = state_index + 1 < num_non_terminal_positions();
 
-  PolicyTensor policy = get_policy(state_index);
-  PolicyTensor next_policy =
-      has_next ? get_policy(state_index + 1) : eigen_util::zeros<PolicyTensor>();
-  ActionValueTensor action_values = get_action_values(state_index);
+  PolicyTensor policy, next_policy;
+  bool policy_valid = get_policy(state_index, policy);
+  bool next_policy_valid = has_next && get_policy(state_index + 1, next_policy);
+
+  ActionValueTensor action_values;
+  bool action_values_valid = get_action_values(state_index, action_values);
 
   int num_states_to_cp = 1 + std::min(Game::Constants::kNumPreviousStatesToEncode, state_index);
   int num_bytes_to_cp = num_states_to_cp * sizeof(State);
@@ -117,7 +119,10 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   auto input = InputTensorizor::tensorize(start_pos, cur_pos);
   memcpy(input_values, input.data(), input.size() * sizeof(float));
 
-  GameLogView view{cur_pos, &final_state, &outcome, &policy, &next_policy, &action_values};
+  PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
+  PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
+  ActionValueTensor* action_values_ptr = action_values_valid ? &action_values : nullptr;
+  GameLogView view{cur_pos, &final_state, &outcome, policy_ptr, next_policy_ptr, action_values_ptr};
 
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
 
@@ -128,7 +133,9 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
     mp::constexpr_for<0, N, 1>([&](auto a) {
       if (target_index == a) {
         using Target = mp::TypeAt_t<TrainingTargetsList, a>;
-        auto tensor = Target::tensorize(view);
+        using Tensor = Target::Tensor;
+        Tensor tensor;
+        target_masks[t][0] = Target::tensorize(view, tensor);
         memcpy(target_arrays[t], tensor.data(), tensor.size() * sizeof(float));
       }
     });
@@ -145,7 +152,10 @@ void GameLog<Game>::replay() const {
     Game::IO::print_state(std::cout, *pos, last_action);
     if (i < n - 1) {
       action_t action = get_prev_action(i + 1);
-      PolicyTensor policy = get_policy(i);
+      PolicyTensor policy;
+      bool policy_valid = get_policy(i, policy);
+      if (!policy_valid) continue;
+
       bool add_newline = false;
       for (action_t a = 0; a < Game::Types::kMaxNumActions; ++a) {
         if (policy(a) > 0) {
@@ -338,8 +348,7 @@ const GameLogBase::pos_index_t* GameLog<Game>::sampled_indices_start_ptr() const
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) const {
-  PolicyTensor policy;
+bool GameLog<Game>::get_policy(int state_index, PolicyTensor& policy) const {
   tensor_index_t index = policy_target_index_start_ptr()[state_index];
 
   if (index.start < index.end) {
@@ -350,15 +359,15 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
       sparse_tensor_entry_t entry = sparse_start[i];
       policy(entry.offset) = entry.probability;
     }
-    return policy;
+    return true;
   } else if (index.start == index.end) {
     if (index.start < 0) {
       // no policy target
-      policy.setZero();
-      return policy;
+      return false;
     } else {
       // dense case
-      return dense_policy_start_ptr()[index.start];
+      policy = dense_policy_start_ptr()[index.start];
+      return true;
     }
   } else {
     throw util::Exception("Invalid policy tensor index (%d, %d) at state index %d", index.start,
@@ -367,8 +376,7 @@ typename GameLog<Game>::PolicyTensor GameLog<Game>::get_policy(int state_index) 
 }
 
 template <concepts::Game Game>
-typename GameLog<Game>::ActionValueTensor GameLog<Game>::get_action_values(int state_index) const {
-  ActionValueTensor action_values;
+bool GameLog<Game>::get_action_values(int state_index, ActionValueTensor& action_values) const {
   util::release_assert(state_index >= 0 && state_index < num_non_terminal_positions(),
                        "Invalid state index %d", state_index);
 
@@ -382,15 +390,15 @@ typename GameLog<Game>::ActionValueTensor GameLog<Game>::get_action_values(int s
       sparse_tensor_entry_t entry = sparse_start[i];
       action_values.data()[entry.offset] = entry.probability;
     }
-    return action_values;
+    return true;
   } else if (index.start == index.end) {
     if (index.start < 0) {
       // no action_values target
-      action_values.setZero();
-      return action_values;
+      return false;
     } else {
       // dense case
-      return dense_action_values_start_ptr()[index.start];
+      action_values = dense_action_values_start_ptr()[index.start];
+      return true;
     }
   } else {
     throw util::Exception("Invalid action values tensor index (%d, %d) at state index %d",

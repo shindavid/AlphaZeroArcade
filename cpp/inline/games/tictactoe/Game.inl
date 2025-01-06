@@ -185,9 +185,8 @@ inline Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iterator s
   return tensor;
 }
 
-inline Game::TrainingTargets::OwnershipTarget::Tensor
-Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
+inline bool Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view,
+                                                              Tensor& tensor) {
   tensor.setZero();
   const State& state = *view.final_pos;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
@@ -198,7 +197,7 @@ Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view
       tensor(x, row, col) = 1;
     }
   }
-  return tensor;
+  return true;
 }
 
 inline core::seat_index_t Game::_get_player_at(const State& state, int row, int col) {

@@ -133,9 +133,8 @@ Game::InputTensorizor::Tensor Game::InputTensorizor::tensorize(Iter start, Iter 
   return tensor;
 }
 
-inline Game::TrainingTargets::ScoreMarginTarget::Tensor
-Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
+inline bool Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& view,
+                                                                Tensor& tensor) {
   tensor.setZero();
   const State& state = *view.final_pos;
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
@@ -149,12 +148,11 @@ Game::TrainingTargets::ScoreMarginTarget::tensorize(const Types::GameLogView& vi
   for (int i = 0; i <= score_index; ++i) {
     tensor(1, i) = 1;
   }
-  return tensor;
+  return true;
 }
 
-inline Game::TrainingTargets::OwnershipTarget::Tensor
-Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
+inline bool Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view,
+                                                              Tensor& tensor) {
   tensor.setZero();
   core::seat_index_t cp = Rules::get_current_player(*view.cur_pos);
   for (int row = 0; row < kBoardDimension; ++row) {
@@ -165,7 +163,7 @@ Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view
     }
   }
 
-  return tensor;
+  return true;
 }
 
 inline int Game::get_count(const State& state, core::seat_index_t seat) {
