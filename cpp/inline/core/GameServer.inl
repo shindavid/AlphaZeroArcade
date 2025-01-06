@@ -302,6 +302,12 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
   if (shared_data_.params().print_game_states) {
     Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
   }
+
+  using PolicyTensor = Game::Types::PolicyTensor;
+  using ActionValueTensor =  Game::Types::ActionValueTensor;
+  constexpr PolicyTensor* null_policy_target = nullptr;
+  constexpr ActionValueTensor* null_action_values_target = nullptr;
+
   while (true) {
     core::action_mode_t action_mode = Rules::get_action_mode(state_history.current());
     core::action_t action;
@@ -311,21 +317,10 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     if (Rules::is_chance_mode(action_mode)) {
       ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
       action = eigen_util::sample(chance_dist);
-
-      TrainingInfo chance_training_info = dummy_training_info();
-      auto chance_policy_target = std::make_shared<typename Types::PolicyTensor>();
-      auto chance_action_values_target = std::make_shared<typename Types::ActionValueTensor>();
-
-      chance_policy_target->setConstant(1.0 / chance_dist.size());
-      chance_action_values_target->setConstant(1.0 / chance_dist.size());
-      chance_training_info.policy_target = chance_policy_target.get();
-      chance_training_info.action_values_target = chance_action_values_target.get();
-      chance_training_info.use_for_training = true;
-
+      TrainingInfo training_info{null_policy_target, null_action_values_target, true};
       if (game_log) {
-        game_log->add(state_history.current(), action, chance_training_info.policy_target,
-                      chance_training_info.action_values_target,
-                      chance_training_info.use_for_training);
+        game_log->add(state_history.current(), action, training_info.policy_target,
+                      training_info.action_values_target, training_info.use_for_training);
       }
 
       Rules::apply(state_history, action);
