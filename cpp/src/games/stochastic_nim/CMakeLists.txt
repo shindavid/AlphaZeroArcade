@@ -1,8 +1,3 @@
-# set(COMMON_SOURCES
-# )
-# add_library(c4_common_objs OBJECT ${COMMON_SOURCES})
-# set_target_properties(stochastic_nim_common_objs PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
 add_executable(stochastic_nim_tests main/UnitTests.cpp)
 add_executable(stochastic_nim_exe main/stochastic_nim.cpp)
 add_library(stochastic_nim_ffi SHARED shared/stochastic_nim_ffi.cpp)
