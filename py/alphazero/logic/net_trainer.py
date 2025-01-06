@@ -5,11 +5,15 @@ from torch import optim
 from alphazero.logic.custom_types import Generation
 from alphazero.logic.position_dataset import PositionDataset
 from shared.net_modules import Head, Model
+from util.logging_util import get_logger
 from util.torch_util import apply_mask
 
 
 import time
 from typing import Optional
+
+
+logger = get_logger()
 
 
 class EvaluationResults:
@@ -157,6 +161,8 @@ class NetTrainer:
         window_start = dataset.start_index
         window_end = dataset.end_index
 
+        first = True
+
         start_ts = time.time_ns()
         n_samples = 0
         stats = TrainingStats(self.gen, loader.batch_size, window_start, window_end, net)
@@ -164,20 +170,24 @@ class NetTrainer:
             if self._shutdown_in_progress:
                 return None
             t1 = time.time()
+            d = len(data)
+            assert d % 2 == 1, d
+            dd = (d + 1) // 2
             inputs = data[0]
-            labels_list = data[1:]
+            labels_list = data[1:dd]
+            masks = data[dd:]
+
             inputs = inputs.type(torch.float32).to(self.py_cuda_device_str)
 
             labels_list = [labels.to(self.py_cuda_device_str) for labels in labels_list]
+            masks_list = [mask.to(self.py_cuda_device_str).squeeze(-1) for mask in masks]
 
             optimizer.zero_grad()
             outputs_list = net(inputs)
             assert len(outputs_list) == len(labels_list)
 
-            masks = [target.get_mask(labels) for labels, target in zip(labels_list, net.learning_targets)]
-
-            labels_list = [apply_mask(labels, mask) for mask, labels in zip(masks, labels_list)]
-            outputs_list = [apply_mask(outputs, mask) for mask, outputs in zip(masks, outputs_list)]
+            labels_list = [apply_mask(y_hat, mask) for mask, y_hat in zip(masks_list, labels_list)]
+            outputs_list = [apply_mask(y, mask) for mask, y in zip(masks_list, outputs_list)]
 
             loss_list = [loss_fn(outputs, labels) for loss_fn, outputs, labels in
                             zip(loss_fns, outputs_list, labels_list)]

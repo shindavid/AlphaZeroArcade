@@ -16,38 +16,17 @@ class LearningTarget:
     together:
 
     - The loss function to use for this head
-    - Whether or how to mask rows of data
+
+    (that's it...should we remove this class and just specify the loss function directly?)
     """
     @abc.abstractmethod
     def loss_fn(self) -> nn.Module:
         pass
 
-    def get_mask(self, labels: torch.Tensor) -> Optional[torch.Tensor]:
-        """
-        Assumes labels is a 2D tensor of shape (batch_size, num_labels). Returns a 1D tensor of
-        shape (batch_size,)
-
-        If no mask should be applied, return None. This is the default behavior; derived classes
-        can override this.
-        """
-        return None
-
 
 class PolicyTarget(LearningTarget):
     def loss_fn(self) -> nn.Module:
         return nn.CrossEntropyLoss()
-
-    def get_mask(self, labels: torch.Tensor) -> torch.Tensor:
-        """
-        The C++ uses the zero-tensor to represent a row that should be masked.
-        """
-        assert len(labels.shape) == 2, labels.shape
-        n = labels.shape[0]
-        labels = labels.reshape((n, -1))
-
-        label_sums = labels.sum(dim=1)
-        mask = label_sums != 0
-        return mask
 
 
 class WinShareActionValueTarget(LearningTarget):

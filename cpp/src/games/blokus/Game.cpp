@@ -275,9 +275,7 @@ Game::State Game::IO::load(const std::string& str, int pass_count) {
   return state;
 }
 
-Game::TrainingTargets::ScoreTarget::Tensor
-Game::TrainingTargets::ScoreTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
+bool Game::TrainingTargets::ScoreTarget::tensorize(const Types::GameLogView& view, Tensor& tensor) {
   tensor.setZero();
   const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
@@ -300,12 +298,11 @@ Game::TrainingTargets::ScoreTarget::tensorize(const Types::GameLogView& view) {
     }
   }
 
-  return tensor;
+  return true;
 }
 
-Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipTarget::tensorize(
-    const Types::GameLogView& view) {
-  Tensor tensor;
+bool Game::TrainingTargets::OwnershipTarget::tensorize(const Types::GameLogView& view,
+                                                       Tensor& tensor) {
   tensor.setZero();
   const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
@@ -324,12 +321,11 @@ Game::TrainingTargets::OwnershipTarget::Tensor Game::TrainingTargets::OwnershipT
     }
   }
 
-  return tensor;
+  return true;
 }
 
-Game::TrainingTargets::UnplayedPiecesTarget::Tensor
-Game::TrainingTargets::UnplayedPiecesTarget::tensorize(const Types::GameLogView& view) {
-  Tensor tensor;
+bool Game::TrainingTargets::UnplayedPiecesTarget::tensorize(const Types::GameLogView& view,
+                                                            Tensor& tensor) {
   tensor.setZero();
   const State& state = *view.final_pos;
   color_t cp = Rules::get_current_player(*view.cur_pos);
@@ -342,7 +338,7 @@ Game::TrainingTargets::UnplayedPiecesTarget::tensorize(const Types::GameLogView&
     }
   }
 
-  return tensor;
+  return true;
 }
 
 }  // namespace blokus

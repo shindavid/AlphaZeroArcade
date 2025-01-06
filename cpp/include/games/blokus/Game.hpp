@@ -114,7 +114,7 @@ class Game {
       static constexpr const char* kName = "score";
       using Tensor = eigen_util::FTensor<ScoreShape>;
 
-      static Tensor tensorize(const Types::GameLogView& view);
+      static bool tensorize(const Types::GameLogView& view, Tensor&);
     };
 
     /*
@@ -124,7 +124,7 @@ class Game {
       static constexpr const char* kName = "ownership";
       using Tensor = eigen_util::FTensor<OwnershipShape>;
 
-      static Tensor tensorize(const Types::GameLogView& view);
+      static bool tensorize(const Types::GameLogView& view, Tensor&);
     };
 
     /*
@@ -134,7 +134,7 @@ class Game {
       static constexpr const char* kName = "unplayed_pieces";
       using Tensor = eigen_util::FTensor<UnplayedPiecesShape>;
 
-      static Tensor tensorize(const Types::GameLogView& view);
+      static bool tensorize(const Types::GameLogView& view, Tensor&);
     };
 
     // TODO:

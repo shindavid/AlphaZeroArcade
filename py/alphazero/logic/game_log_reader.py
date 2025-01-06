@@ -58,16 +58,19 @@ class GameLogReader:
         input_tensor = torch.empty(input_shape_info.shape, dtype=torch.float32)
         target_tensors = [torch.empty(shape_info.shape, dtype=torch.float32)
                           for shape_info in target_shape_infos]
+        target_masks = [torch.empty(1, dtype=torch.bool) for _ in target_shape_infos]
         target_indices = [s.target_index for s in target_shape_infos] + [-1]  # -1: null-terminator
         target_values = [ffi.cast('float*', tensor.data_ptr()) for tensor in target_tensors]
+        target_mask_values = [ffi.cast('bool*', tensor.data_ptr()) for tensor in target_masks]
 
         input_values_c = ffi.cast('float*', input_tensor.data_ptr())
         target_indices_c = ffi.new('int[]', target_indices)
         target_values_c = ffi.new('float*[]', target_values)
+        target_masks_c = ffi.new('bool*[]', target_mask_values)
 
         lib.GameLog_load(log, index, apply_symmetry, input_values_c, target_indices_c,
-                         target_values_c)
-        return [input_tensor] + target_tensors
+                         target_values_c, target_masks_c)
+        return [input_tensor] + target_tensors + target_masks
 
     def _get_ffi(self):
         ffi = FFI()
@@ -87,7 +90,8 @@ class GameLogReader:
             struct GameLog* GameLog_new(const char* filename);
             void GameLog_delete(struct GameLog* log);
             void GameLog_load(struct GameLog* log, int index, bool apply_symmetry,
-                       float* input_values, int* target_indices, float** target_value_arrays);
+                       float* input_values, int* target_indices, float** target_value_arrays,
+                       bool** target_masks);
             int GameLog_num_sampled_positions(struct GameLog* log);
 
             void init();
