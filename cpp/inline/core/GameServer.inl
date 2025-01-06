@@ -297,6 +297,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
   StateHistory state_history;
   state_history.initialize(Rules{});
+  seat_index_t active_seat = -1;
 
   if (shared_data_.params().print_game_states) {
     Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
@@ -306,7 +307,6 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     core::action_t action;
     ValueTensor outcome;
     bool terminal = false;
-    seat_index_t seat = Rules::get_current_player(state_history.current());
 
     if (Rules::is_chance_mode(action_mode)) {
       ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
@@ -316,12 +316,13 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
         Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
       }
       for (auto player2 : players) {
-        player2->receive_state_change(seat, state_history.current(), action);
+        player2->receive_state_change(active_seat, state_history.current(), action);
       }
 
-      terminal = Game::Rules::is_terminal(state_history.current(), seat, action, outcome);
+      terminal = Game::Rules::is_terminal(state_history.current(), active_seat, action, outcome);
     } else {
-      Player* player = players[seat];
+      active_seat = Rules::get_current_player(state_history.current());
+      Player* player = players[active_seat];
       auto valid_actions = Rules::get_legal_moves(state_history);
       ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
       action = response.action;
@@ -336,11 +337,11 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       util::release_assert(valid_actions[action], "Invalid action: %d", action);
 
       if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
-        outcome = GameResults::win(seat);
+        outcome = GameResults::win(active_seat);
         terminal = true;
         if (shared_data_.params().announce_game_results) {
           printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
-                player->get_name().c_str(), int(seat));
+                player->get_name().c_str(), int(active_seat));
           std::cout << std::endl;
         }
       } else {
@@ -349,10 +350,10 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
           Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
         }
         for (auto player2 : players) {
-          player2->receive_state_change(seat, state_history.current(), action);
+          player2->receive_state_change(active_seat, state_history.current(), action);
         }
 
-        terminal = Game::Rules::is_terminal(state_history.current(), seat, action, outcome);
+        terminal = Game::Rules::is_terminal(state_history.current(), active_seat, action, outcome);
       }
     }
 
