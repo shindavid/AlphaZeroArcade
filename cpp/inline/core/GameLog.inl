@@ -152,8 +152,10 @@ void GameLog<Game>::replay() const {
   for (int i = 0; i < n; ++i) {
     const State* pos = get_state(i);
     action_mode_t mode = Game::Rules::get_action_mode(*pos);
+    seat_index_t active_seat = get_active_seat(i);
     action_t last_action = get_prev_action(i);
     Game::IO::print_state(std::cout, *pos, last_action);
+    std::cout << "active seat: " << (int)active_seat << std::endl;
     if (i < n - 1) {
       action_t action = get_prev_action(i + 1);
       PolicyTensor policy;
@@ -529,6 +531,7 @@ void GameLogWriter<Game>::serialize(std::ostream& stream) const {
 
   sampled_indices.reserve(sample_count_);
   actions.reserve(num_non_terminal_entries);
+  seat_indices.reserve(num_non_terminal_entries);
   policy_target_indices.reserve(num_non_terminal_entries);
   action_values_target_indices.reserve(num_non_terminal_entries);
   states.reserve(num_entries);
