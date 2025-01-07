@@ -60,6 +60,7 @@ struct GameLogBase {
  * [Header]
  * [ValueTensor]                        // game result
  * [pos_index_t...]                     // indices of sampled positions
+ * [seat_index_t...]                    // seat index with which the position is associated
  * [action_t...]
  * [tensor_index_t...]                  // indices into policy target tensor data
  * [tensor_index_t...]                  // indices into action-value tensor data
@@ -113,6 +114,7 @@ class GameLog : public GameLogBase {
   static constexpr int outcome_start_mem_offset();
   static constexpr int sampled_indices_start_mem_offset();
   int action_start_mem_offset() const;
+  int seat_index_start_mem_offset() const;
   int policy_target_index_start_mem_offset() const;
   int action_values_target_index_start_mem_offset() const;
   int state_start_mem_offset() const;
@@ -122,6 +124,7 @@ class GameLog : public GameLogBase {
   int sparse_action_values_entry_start_mem_offset() const;
 
   const action_t* action_start_ptr() const;
+  const seat_index_t* seat_index_start_ptr() const;
   const tensor_index_t* policy_target_index_start_ptr() const;
   const tensor_index_t* action_values_target_index_start_ptr() const;
   const State* state_start_ptr() const;
@@ -131,6 +134,7 @@ class GameLog : public GameLogBase {
   const sparse_tensor_entry_t* sparse_action_values_entry_start_ptr() const;
   const pos_index_t* sampled_indices_start_ptr() const;
 
+  seat_index_t get_active_seat(int state_index) const;
   bool get_policy(int state_index, PolicyTensor&) const;  // return true iff valid
   bool get_action_values(int state_index, ActionValueTensor&) const;  // return true iff valid
   const State* get_state(int state_index) const;
@@ -141,6 +145,7 @@ class GameLog : public GameLogBase {
   const std::string filename_;
   char* const buffer_ = nullptr;
   const int action_start_mem_offset_;
+  const int seat_index_start_mem_offset_;
   const int policy_target_index_start_mem_offset_;
   const int action_values_target_index_start_mem_offset_;
   const int state_start_mem_offset_;
@@ -166,6 +171,7 @@ class GameLogWriter {
     PolicyTensor policy_target;  // only valid if policy_target_is_valid
     ActionValueTensor action_values;  // only valid if action_values_are_valid
     action_t action;
+    seat_index_t active_seat;
     bool use_for_training;
     bool policy_target_is_valid;
     bool action_values_are_valid;
@@ -176,8 +182,9 @@ class GameLogWriter {
   GameLogWriter(game_id_t id, int64_t start_timestamp);
   ~GameLogWriter();
 
-  void add(const State& state, action_t action, const PolicyTensor* policy_target,
-           const ActionValueTensor* action_values, bool use_for_training);
+  void add(const State& state, action_t action, seat_index_t active_seat,
+           const PolicyTensor* policy_target, const ActionValueTensor* action_values,
+           bool use_for_training);
   void add_terminal(const State& state, const ValueTensor& outcome);
   void serialize(std::ostream&) const;
   bool was_previous_entry_used_for_policy_training() const;
