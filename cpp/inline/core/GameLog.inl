@@ -608,7 +608,7 @@ GameLogBase::tensor_index_t GameLogWriter<Game>::write_target(
     // use dense representation
     int index = dense_tensors.size();
     if (index > std::numeric_limits<int16_t>::max()) {
-      throw util::Exception("Too many sparse tensor entries (%d)", index);
+      throw util::Exception("Too many dense tensor entries (%d)", index);
     }
     int16_t index16 = index;
     dense_tensors.push_back(target);
