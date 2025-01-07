@@ -60,8 +60,8 @@ struct GameLogBase {
  * [Header]
  * [ValueTensor]                        // game result
  * [pos_index_t...]                     // indices of sampled positions
- * [seat_index_t...]                    // seat index with which the position is associated
  * [action_t...]
+ * [seat_index_t...]                    // seat index with which the position is associated
  * [tensor_index_t...]                  // indices into policy target tensor data
  * [tensor_index_t...]                  // indices into action-value tensor data
  * [Game::State...]                     // all positions, whether sampled or not
