@@ -1,10 +1,8 @@
 #pragma once
 
 #include <core/AbstractPlayer.hpp>
-#include <core/BasicTypes.hpp>
 #include <core/concepts/Game.hpp>
-#include <util/EigenUtil.hpp>
-#include <util/Random.hpp>
+#include <util/BitSet.hpp>
 
 namespace generic {
 
@@ -14,13 +12,11 @@ namespace generic {
 template<core::concepts::Game Game>
 class RandomPlayer : public core::AbstractPlayer<Game> {
 public:
-  using base_t = core::AbstractPlayer<Game>;
-  using State = Game::State;
-  using ActionMask = Game::Types::ActionMask;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
 
-  ActionResponse get_action_response(const State&, const ActionMask& mask) override {
-    return bitset_util::choose_random_on_index(mask);
+  ActionResponse get_action_response(const ActionRequest& request) override {
+    return bitset_util::choose_random_on_index(request.valid_actions);
   }
 };
 

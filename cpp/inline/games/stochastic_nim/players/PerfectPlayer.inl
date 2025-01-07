@@ -15,7 +15,9 @@ inline auto PerfectPlayer::Params::make_options_description() {
 }
 
 inline PerfectPlayer::ActionResponse PerfectPlayer::get_action_response(
-    const State& state, const ActionMask& valid_actions) {
+    const ActionRequest& request) {
+  const State& state = request.state;
+  const ActionMask& valid_actions = request.valid_actions;
   util::release_assert(state.current_mode == kPlayerMode);
 
   if (params_.strength == 0) {
@@ -54,4 +56,3 @@ inline void PerfectStrategy::iterate() {
 }
 
 }  // namespace stochastic_nim
-

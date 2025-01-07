@@ -24,6 +24,7 @@ class GameServerProxy {
   using StateHistory = Game::StateHistory;
   using Rules = Game::Rules;
   using ActionMask = Game::Types::ActionMask;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueTensor = Game::Types::ValueTensor;
   using PlayerGenerator = AbstractPlayerGenerator<Game>;

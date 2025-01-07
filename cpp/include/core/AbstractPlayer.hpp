@@ -41,6 +41,7 @@ class AbstractPlayer {
   using GameLogWriter_sptr = core::TrainingDataWriter<Game>::GameLogWriter_sptr;
   using ValueTensor = Game::Types::ValueTensor;
   using ActionMask = Game::Types::ActionMask;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using player_array_t = std::array<AbstractPlayer*, Game::Constants::kNumPlayers>;
   using player_name_array_t = Game::Types::player_name_array_t;
@@ -59,10 +60,10 @@ class AbstractPlayer {
   virtual void receive_state_change(seat_index_t, const State&, action_t) {}
 
   /*
-   * The State passed in here is guaranteed to be identical to the State last received via
+   * request.state is guaranteed to be identical to the State last received via
    * receive_state_change().
    */
-  virtual ActionResponse get_action_response(const State&, const ActionMask&) = 0;
+  virtual ActionResponse get_action_response(const ActionRequest& request) = 0;
 
   /*
    * The State passed in here is guaranteed to be identical to the State last received via

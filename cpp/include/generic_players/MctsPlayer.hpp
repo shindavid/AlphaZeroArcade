@@ -52,6 +52,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   using State = Game::State;
   using IO = Game::IO;
   using ActionMask = Game::Types::ActionMask;
+  using ActionRequest = Game::Types::ActionRequest;
   using ActionResponse = Game::Types::ActionResponse;
   using ValueArray = Game::Types::ValueArray;
   using PolicyTensor = Game::Types::PolicyTensor;
@@ -74,7 +75,7 @@ class MctsPlayer : public core::AbstractPlayer<Game> {
   MctsManager* get_manager() const { return &shared_data_->manager; }
   void start_game() override;
   void receive_state_change(core::seat_index_t, const State&, core::action_t) override;
-  ActionResponse get_action_response(const State&, const ActionMask&) override;
+  ActionResponse get_action_response(const ActionRequest&) override;
   void set_facing_human_tui_player() override {
     facing_human_tui_player_ = true;  // affects printing
   }

@@ -50,6 +50,18 @@ struct GameTypes {
     bool use_for_training = false;
   };
 
+  struct ActionRequest {
+    ActionRequest(const State& s, const ActionMask& va, bool pn = false)
+        : state(s), valid_actions(va), play_noisily(pn) {}
+
+    const State& state;
+    const ActionMask& valid_actions;
+
+    // If set to true, the player is being asked to play noisily, in order to add diversity to the
+    // training data. Each player is free to interpret this in their own way.
+    bool play_noisily;
+  };
+
   /*
    * An ActionResponse is an action together with some optional auxiliary information:
    *

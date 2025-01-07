@@ -9,9 +9,10 @@ using Game = stochastic_nim::Game;
 using State = Game::State;
 using StateHistory = Game::StateHistory;
 using PolicyTensor = Game::Types::PolicyTensor;
+using ActionRequest = Game::Types::ActionRequest;
+using ChanceDistribution = Game::Types::ChanceDistribution;
 using IO = Game::IO;
 using Rules = Game::Rules;
-using Types = Game::Types;
 using SymmetryGroup = groups::TrivialGroup;
 using GameResults = core::WinShareResults<Game::Constants::kNumPlayers>;
 
@@ -27,7 +28,8 @@ class PerfectPlayerTest : public testing::Test {
 
   core::action_t get_action_response(const State& state) {
     ActionMask valid_actions;
-    return player_.get_action_response(state, valid_actions).action;
+    ActionRequest request(state, valid_actions);
+    return player_.get_action_response(request).action;
   }
 
  private:
@@ -175,7 +177,7 @@ TEST(StochasticNimGameTest, ChanceMove) {
 
     Rules::apply(history, stochastic_nim::kTake3);
 
-    Types::PolicyTensor dist = Rules::get_chance_distribution(history.current());
+    PolicyTensor dist = Rules::get_chance_distribution(history.current());
     core::action_t chance_action = eigen_util::sample(dist);
     Rules::apply(history, chance_action);
 
@@ -249,7 +251,7 @@ TEST(StochasticNimGameTest, MoveProbMass) {
   state.current_player = 0;
   state.current_mode = stochastic_nim::kChanceMode;
   history.update(state);
-  Game::Types::ChanceDistribution dist = Rules::get_chance_distribution(state);
+  ChanceDistribution dist = Rules::get_chance_distribution(state);
 
   EXPECT_NEAR(dist(0), 0.2, 1e-6);
   EXPECT_NEAR(dist(1), 0.8, 1e-6);
@@ -293,4 +295,3 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-

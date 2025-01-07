@@ -330,7 +330,8 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       active_seat = Rules::get_current_player(state_history.current());
       Player* player = players[active_seat];
       auto valid_actions = Rules::get_legal_moves(state_history);
-      ActionResponse response = player->get_action_response(state_history.current(), valid_actions);
+      ActionRequest request(state_history.current(), valid_actions);
+      ActionResponse response = player->get_action_response(request);
       action = response.action;
       const TrainingInfo& training_info = response.training_info;
       if (game_log) {

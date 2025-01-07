@@ -25,7 +25,10 @@ inline void HumanTuiPlayer<Game>::receive_state_change(core::seat_index_t, const
 
 template <core::concepts::Game Game>
 typename HumanTuiPlayer<Game>::ActionResponse HumanTuiPlayer<Game>::get_action_response(
-    const State& state, const ActionMask& valid_actions) {
+    const ActionRequest& request) {
+  const State& state = request.state;
+  const ActionMask& valid_actions = request.valid_actions;
+
   util::ScreenClearer::clear_once();
   print_state(state, false);
   bool complain = false;
