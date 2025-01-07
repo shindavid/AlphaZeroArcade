@@ -8,14 +8,15 @@ namespace core {
 namespace concepts {
 
 template <typename T, typename GameLogView>
-concept TrainingTarget = requires (const GameLogView& view, typename T::Tensor& tensor_ref) {
-  { util::decay_copy(T::kName) } -> std::same_as<const char*>;
-  requires eigen_util::concepts::FTensor<typename T::Tensor>;
+concept TrainingTarget =
+    requires(const GameLogView& view, typename T::Tensor& tensor_ref, seat_index_t active_seat) {
+      { util::decay_copy(T::kName) } -> std::same_as<const char*>;
+      requires eigen_util::concepts::FTensor<typename T::Tensor>;
 
-  // If we have a valid training target, populates tensor_ref and returns true.
-  // Otherwise, returns false.
-  { T::tensorize(view, tensor_ref) } -> std::same_as<bool>;
-};
+      // If we have a valid training target, populates tensor_ref and returns true.
+      // Otherwise, returns false.
+      { T::tensorize(view, tensor_ref, active_seat) } -> std::same_as<bool>;
+    };
 
 }  // namespace concepts
 
@@ -40,7 +41,7 @@ struct PolicyTarget {
   using Tensor = Game::Types::PolicyTensor;
   using GameLogView = Game::Types::GameLogView;
 
-  static bool tensorize(const GameLogView& view, Tensor&);
+  static bool tensorize(const GameLogView& view, Tensor&, seat_index_t);
 };
 
 template <typename Game>
@@ -49,7 +50,7 @@ struct ValueTarget {
   using Tensor = Game::Types::ValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
-  static bool tensorize(const GameLogView& view, Tensor&);
+  static bool tensorize(const GameLogView& view, Tensor&, seat_index_t);
 };
 
 template<typename Game>
@@ -58,7 +59,7 @@ struct ActionValueTarget {
   using Tensor = Game::Types::ActionValueTensor;
   using GameLogView = Game::Types::GameLogView;
 
-  static bool tensorize(const GameLogView& view, Tensor&);
+  static bool tensorize(const GameLogView& view, Tensor&, seat_index_t);
 };
 
 template <typename Game>
@@ -67,7 +68,7 @@ struct OppPolicyTarget {
   using Tensor = Game::Types::PolicyTensor;
   using GameLogView = Game::Types::GameLogView;
 
-  static bool tensorize(const GameLogView& view, Tensor&);
+  static bool tensorize(const GameLogView& view, Tensor&, seat_index_t);
 };
 
 }  // namespace core

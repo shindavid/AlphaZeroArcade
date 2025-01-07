@@ -314,7 +314,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
       action = eigen_util::sample(chance_dist);
       if (game_log) {
-        game_log->add(state_history.current(), action, nullptr, nullptr, true);
+        game_log->add(state_history.current(), action, active_seat, nullptr, nullptr, true);
       }
 
       Rules::apply(state_history, action);
@@ -334,7 +334,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       action = response.action;
       const TrainingInfo& training_info = response.training_info;
       if (game_log) {
-        game_log->add(state_history.current(), action, training_info.policy_target,
+        game_log->add(state_history.current(), action, active_seat, training_info.policy_target,
                       training_info.action_values_target, training_info.use_for_training);
       }
 
