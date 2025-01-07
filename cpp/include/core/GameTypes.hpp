@@ -104,6 +104,7 @@ struct GameTypes {
     const PolicyTensor* policy;
     const PolicyTensor* next_policy;
     const ActionValueTensor* action_values;
+    const seat_index_t active_seat;
   };
 };
 
