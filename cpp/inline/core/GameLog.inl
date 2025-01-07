@@ -125,7 +125,8 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
   PolicyTensor* policy_ptr = policy_valid ? &policy : nullptr;
   PolicyTensor* next_policy_ptr = next_policy_valid ? &next_policy : nullptr;
   ActionValueTensor* action_values_ptr = action_values_valid ? &action_values : nullptr;
-  GameLogView view{cur_pos, &final_state, &outcome, policy_ptr, next_policy_ptr, action_values_ptr};
+  GameLogView view{cur_pos, &final_state, &outcome, policy_ptr,
+                   next_policy_ptr, action_values_ptr, active_seat};
 
   constexpr size_t N = mp::Length_v<TrainingTargetsList>;
 
@@ -138,7 +139,7 @@ void GameLog<Game>::load(int index, bool apply_symmetry, float* input_values, in
         using Target = mp::TypeAt_t<TrainingTargetsList, a>;
         using Tensor = Target::Tensor;
         Tensor tensor;
-        target_masks[t][0] = Target::tensorize(view, tensor, active_seat);
+        target_masks[t][0] = Target::tensorize(view, tensor);
         memcpy(target_arrays[t], tensor.data(), tensor.size() * sizeof(float));
       }
     });
