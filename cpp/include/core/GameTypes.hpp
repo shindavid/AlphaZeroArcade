@@ -57,8 +57,8 @@ struct GameTypes {
     const State& state;
     const ActionMask& valid_actions;
 
-    // If set to true, the player is being asked to play noisily, in order to add diversity to the
-    // training data. Each player is free to interpret this in their own way.
+    // If set to true, the player is being asked to play noisily, in order to add opening diversity.
+    // Each player is free to interpret this in their own way.
     bool play_noisily;
   };
 

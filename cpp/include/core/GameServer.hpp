@@ -84,6 +84,7 @@ class GameServer {
     int num_games = 1000;   // if <=0, run indefinitely
     int parallelism = 256;  // number of games to run simultaneously
     int port = 0;
+    float mean_noisy_moves = 0.0;  // mean of exp distr from which to draw number of noisy moves
     bool display_progress_bar = false;
     bool print_game_states = false;  // print game state between moves
     bool announce_game_results = false;  // print outcome of each individual match

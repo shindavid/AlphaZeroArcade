@@ -61,9 +61,6 @@ auto MctsPlayer<Game>::Params::make_options_description() {
           "num mcts iterations to do per full move")
       .template add_option<"full-pct", 'f'>(po2::float_value("%.2f", &full_pct, full_pct),
                                             "pct of moves that should be full")
-      .template add_option<"mean-raw-moves", 'r'>(
-          po2::float_value("%.2f", &mean_raw_moves, mean_raw_moves),
-          "mean number of raw policy moves to make at the start of each game")
       .template add_hidden_option<"starting-move-temp">(
           po::value<float>(&starting_move_temperature)->default_value(starting_move_temperature),
           "starting temperature for move selection")
@@ -113,21 +110,15 @@ inline MctsPlayer<Game>::~MctsPlayer() {
 
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::start_game() {
-  move_count_ = 0;
   move_temperature_.reset();
   if (owns_shared_data_) {
     get_manager()->start();
-    if (params_.mean_raw_moves) {
-      shared_data_->num_raw_policy_starting_moves =
-          util::Random::exponential(1.0 / params_.mean_raw_moves);
-    }
   }
 }
 
 template <core::concepts::Game Game>
 inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, const State& state,
                                                     core::action_t action) {
-  move_count_++;
   move_temperature_.step();
   if (owns_shared_data_) {
     get_manager()->receive_state_change(seat, state, action);
@@ -146,7 +137,7 @@ inline void MctsPlayer<Game>::receive_state_change(core::seat_index_t seat, cons
 template <core::concepts::Game Game>
 typename MctsPlayer<Game>::ActionResponse
 MctsPlayer<Game>::get_action_response(const ActionRequest& request) {
-  core::SearchMode search_mode = choose_search_mode();
+  core::SearchMode search_mode = choose_search_mode(request);
   const SearchResults* mcts_results = mcts_search(search_mode);
   return get_action_response_helper(search_mode, mcts_results, request.valid_actions);
 }
@@ -158,9 +149,8 @@ inline const typename MctsPlayer<Game>::SearchResults* MctsPlayer<Game>::mcts_se
 }
 
 template <core::concepts::Game Game>
-inline core::SearchMode MctsPlayer<Game>::choose_search_mode() const {
-  bool use_raw_policy = move_count_ < shared_data_->num_raw_policy_starting_moves;
-  return use_raw_policy ? core::kRawPolicy : get_random_search_mode();
+inline core::SearchMode MctsPlayer<Game>::choose_search_mode(const ActionRequest& request) const {
+  return request.play_noisily ? core::kRawPolicy : get_random_search_mode();
 }
 
 template <core::concepts::Game Game>

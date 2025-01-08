@@ -76,10 +76,6 @@ class StochasticNimSpec(GameSpec):
         '-p': 4,
     }
 
-    training_player_options = {
-        '-r': 0,
-    }
-
     rating_options = {
         '-p': 4,
     }
@@ -92,4 +88,3 @@ class StochasticNimSpec(GameSpec):
 
 
 StochasticNim = StochasticNimSpec()
-

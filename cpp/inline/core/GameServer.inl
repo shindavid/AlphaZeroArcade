@@ -37,6 +37,9 @@ auto GameServer<Game>::Params::make_options_description() {
           po::value<int>(&parallelism)->default_value(parallelism),
           "max num games to play simultaneously. Participating players can request lower values "
           "and the server will respect their requests")
+      .template add_option<"mean-noisy-moves", 'n'>(
+          po2::float_value("%.2f", &mean_noisy_moves, mean_noisy_moves),
+          "mean number of noisy moves to make at the start of each game")
       .template add_flag<"display-progress-bar", "hide-progress-bar">(
           &display_progress_bar, "display progress bar (only in tty-mode without TUI player)",
           "hide progress bar")
@@ -280,6 +283,7 @@ void GameServer<Game>::GameThread::run() {
 template <concepts::Game Game>
 typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     player_array_t& players) {
+  const Params& params = shared_data_.params();
   game_id_t game_id = util::get_unique_id();
 
   TrainingDataWriter* training_data_writer = shared_data_.training_data_writer();
@@ -295,14 +299,20 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
     players[p]->start_game();
   }
 
+  int num_noisy_starting_moves = 0;
+  if (params.mean_noisy_moves) {
+    num_noisy_starting_moves = util::Random::exponential(1.0 / params.mean_noisy_moves);
+  }
+  int move_number = 0;
+  bool noisy_mode = move_number < num_noisy_starting_moves;
+
   StateHistory state_history;
   state_history.initialize(Rules{});
   seat_index_t active_seat = -1;
 
-  if (shared_data_.params().print_game_states) {
+  if (params.print_game_states) {
     Game::IO::print_state(std::cout, state_history.current(), -1, &player_names);
   }
-
 
   while (true) {
     core::action_mode_t action_mode = Rules::get_action_mode(state_history.current());
@@ -314,11 +324,12 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       ChanceDistribution chance_dist = Rules::get_chance_distribution(state_history.current());
       action = eigen_util::sample(chance_dist);
       if (game_log) {
+        // TODO: AV-target should be nullptr iff noisy_mode is true
         game_log->add(state_history.current(), action, active_seat, nullptr, nullptr, true);
       }
 
       Rules::apply(state_history, action);
-      if (shared_data_.params().print_game_states) {
+      if (params.print_game_states) {
         Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
       }
       for (auto player2 : players) {
@@ -327,10 +338,12 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
 
       terminal = Game::Rules::is_terminal(state_history.current(), active_seat, action, outcome);
     } else {
+      noisy_mode = move_number < num_noisy_starting_moves;
+
       active_seat = Rules::get_current_player(state_history.current());
       Player* player = players[active_seat];
       auto valid_actions = Rules::get_legal_moves(state_history);
-      ActionRequest request(state_history.current(), valid_actions);
+      ActionRequest request(state_history.current(), valid_actions, noisy_mode);
       ActionResponse response = player->get_action_response(request);
       action = response.action;
       const TrainingInfo& training_info = response.training_info;
@@ -343,17 +356,17 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
       // the server.
       util::release_assert(valid_actions[action], "Invalid action: %d", action);
 
-      if (response.victory_guarantee && shared_data_.params().respect_victory_hints) {
+      if (response.victory_guarantee && params.respect_victory_hints) {
         outcome = GameResults::win(active_seat);
         terminal = true;
-        if (shared_data_.params().announce_game_results) {
+        if (params.announce_game_results) {
           printf("Short-circuiting game %ld because player %s (seat=%d) claims victory\n", game_id,
                 player->get_name().c_str(), int(active_seat));
           std::cout << std::endl;
         }
       } else {
         Rules::apply(state_history, action);
-        if (shared_data_.params().print_game_states) {
+        if (params.print_game_states) {
           Game::IO::print_state(std::cout, state_history.current(), action, &player_names);
         }
         for (auto player2 : players) {
@@ -375,7 +388,7 @@ typename GameServer<Game>::ValueArray GameServer<Game>::GameThread::play_game(
         training_data_writer->add(game_log);
       }
 
-      if (shared_data_.params().announce_game_results) {
+      if (params.announce_game_results) {
         printf("Game %ld complete.\n", game_id);
         for (player_id_t p = 0; p < kNumPlayers; ++p) {
           printf("  pid=%d name=%s %g\n", p, players[p]->get_name().c_str(), array[p]);

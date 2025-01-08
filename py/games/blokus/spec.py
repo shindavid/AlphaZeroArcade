@@ -110,8 +110,8 @@ class BlokusSpec(GameSpec):
         minibatch_size=64,
     )
 
-    training_player_options = {
-        '-r': 8,
+    training_options = {
+        '--mean-noisy-moves': 8,
     }
 
 

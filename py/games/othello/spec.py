@@ -99,8 +99,8 @@ class OthelloSpec(GameSpec):
         minibatch_size=100,
     )
 
-    training_player_options = {
-        '-r': 4,
+    training_options = {
+        '--mean-noisy-moves': 4,
     }
 
     rating_options = {
