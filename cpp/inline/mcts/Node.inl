@@ -286,7 +286,6 @@ void Node<Game>::update_stats(MutexProtectedFunc func) {
 
   } else {
     core::seat_index_t seat = stable_data().active_seat;
-    util::debug_assert(seat >= 0 && seat < kNumPlayers);
 
     // provably winning/losing calculation
     bool cp_has_winning_move = false;

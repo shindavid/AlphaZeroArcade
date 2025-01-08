@@ -40,6 +40,7 @@ struct SharedData {
 
     group::element_t canonical_sym = -1;
     node_pool_index_t node_index = -1;
+    core::seat_index_t active_seat = -1;
   };
 
   SharedData(const ManagerParams& manager_params, int mgr_id);

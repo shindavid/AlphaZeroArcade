@@ -47,8 +47,9 @@ void SharedData<Game>::init_root_info(bool add_noise) {
     const StateHistory& canonical_history = root_info.history_array[root_info.canonical_sym];
     root_info.node_index = lookup_table.alloc_node();
     Node* root = lookup_table.get_node(root_info.node_index);
-    core::seat_index active_seat = Game::Rules::get_current_player(canonical_history.current());
+    core::seat_index_t active_seat = Game::Rules::get_current_player(canonical_history.current());
     util::release_assert(active_seat >= 0 && active_seat < Game::Constants::kNumPlayers);
+    root_info.active_seat = active_seat;
     new (root) Node(&lookup_table, canonical_history, active_seat);
     root->stats().RN++;
   }

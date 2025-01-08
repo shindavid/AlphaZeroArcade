@@ -154,9 +154,18 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     // apply raw-orientation action to raw-orientation child-state
     Game::Rules::apply(raw_history_, raw_edge_action);
 
+    const State& raw_child_state = raw_history_.current();
+
+    // compute active-seat as local-variable, so we don't need an undo later
+    core::action_mode_t child_mode = Game::Rules::get_action_mode(raw_child_state);
+    core::seat_index_t child_active_seat = active_seat_;
+    if (!Game::Rules::is_chance_mode(child_mode)) {
+      child_active_seat = Game::Rules::get_current_player(raw_child_state);
+    }
+
     // determine canonical orientation of new leaf-state
     group::element_t canonical_child_sym =
-        Game::Symmetries::get_canonical_symmetry(raw_history_.current());
+        Game::Symmetries::get_canonical_symmetry(raw_child_state);
     edge->sym = Group::compose(canonical_child_sym, inv_canonical_sym);
 
     StateHistory& canonical_history = pseudo_local_vars_.root_history_array[canonical_child_sym];
@@ -180,12 +189,15 @@ void SearchThread<Game>::expand_all_children(Node* node, NNEvaluationRequest* re
     edge->child_index = lookup_table.alloc_node();
     Node* child = lookup_table.get_node(edge->child_index);
 
+    core::seat_index_t parent_active_seat = node->stable_data().active_seat;
+    util::debug_assert(parent_active_seat == active_seat_);
+
     ValueTensor game_outcome;
-    if (Game::Rules::is_terminal(raw_history_.current(), node->stable_data().active_seat,
+    if (Game::Rules::is_terminal(raw_child_state, parent_active_seat,
                                  raw_edge_action, game_outcome)) {
       new (child) Node(&lookup_table, canonical_history, game_outcome);
     } else {
-      new (child) Node(&lookup_table, canonical_history);  // TODO
+      new (child) Node(&lookup_table, canonical_history, child_active_seat);
     }
     child->initialize_edges();
     shared_data_->lookup_table.insert_node(mcts_key, edge->child_index);
@@ -228,6 +240,7 @@ inline void SearchThread<Game>::perform_visits() {
   pseudo_local_vars_.root_history_array = root_info.history_array;
   canonical_sym_ = root_info.canonical_sym;
   raw_history_ = root_info.history_array[group::kIdentity];
+  active_seat_ = root_info.active_seat;
 
   Node* root = init_root_node();
   while (root->stats().total_count() <= shared_data_->search_params.tree_size_limit) {
@@ -237,6 +250,7 @@ inline void SearchThread<Game>::perform_visits() {
     root->validate_state();
     canonical_sym_ = root_info.canonical_sym;
     raw_history_ = root_info.history_array[group::kIdentity];
+    active_seat_ = root_info.active_seat;
     dump_profiling_stats();
     if (!shared_data_->search_params.ponder && root->trivial()) break;
     post_visit_func();
@@ -312,6 +326,9 @@ inline void SearchThread<Game>::visit(Node* node) {
       edge->sym = Group::compose(new_sym, inv_canonical_sym);
 
       canonical_sym_ = new_sym;
+      if (!stable_data.is_chance_node) {
+        active_seat_ = Game::Rules::get_current_player(raw_history_.current());
+      }
       applied_action = true;
 
       StateHistory* state_history = &raw_history_;
@@ -363,6 +380,9 @@ inline void SearchThread<Game>::visit(Node* node) {
     Game::Symmetries::apply(edge_action, inv_canonical_sym, node->action_mode());
 
     Game::Rules::apply(raw_history_, edge_action);
+    if (!stable_data.is_chance_node) {
+      active_seat_ = Game::Rules::get_current_player(raw_history_.current());
+    }
     canonical_sym_ = Group::compose(edge->sym, canonical_sym_);
   }
   visit(child);
@@ -508,7 +528,7 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     if (terminal) {
       new (child) Node(&lookup_table, *history, game_outcome);
     } else {
-      new (child) Node(&lookup_table, *history);  // TODO
+      new (child) Node(&lookup_table, *history, active_seat_);
     }
 
     search_path_.emplace_back(child, nullptr);
