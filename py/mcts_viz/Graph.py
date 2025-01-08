@@ -17,7 +17,8 @@ class Graph:
         for node in snapshot['nodes']:
             node_id = node['index']
             G.add_node(node_id, N=node['N'], Q=node['Q'], state=node['state'],\
-                provably_winning=node['provably_winning'], provably_losing=node['provably_losing'])
+                provably_winning=node['provably_winning'], provably_losing=node['provably_losing'],\
+                    active_seat=node['active_seat'])
 
     def insert_edges(self, G, snapshot):
         # Add edges, tracking changes

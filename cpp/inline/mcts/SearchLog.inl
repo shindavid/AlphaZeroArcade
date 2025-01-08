@@ -17,7 +17,7 @@ inline boost::json::object SearchLog<Game>::log_node_t::to_json() const {
   node_json["state"] = state;
   node_json["provably_winning"] = bitset_util::to_string(provably_winning);
   node_json["provably_losing"] = bitset_util::to_string(provably_losing);
-
+  node_json["active_seat"] = active_seat;
   return node_json;
 }
 
@@ -57,7 +57,8 @@ void SearchLog<Game>::build_graph(Graph& graph) {
     const Node* node = shared_data_->lookup_table.get_node(node_ix);
     const State* state = node->stable_data().get_state();
     graph.add_node(node_ix, node->stats().RN, node->stats().Q, Game::IO::compact_state_repr(*state),
-                   node->stats().provably_winning, node->stats().provably_losing);
+                   node->stats().provably_winning, node->stats().provably_losing,
+                   node->stable_data().active_seat);
     for (int i = 0; i < node->stable_data().num_valid_actions; ++i) {
       edge_t* edge = node->get_edge(i);
 

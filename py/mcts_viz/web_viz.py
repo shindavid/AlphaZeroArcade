@@ -119,7 +119,7 @@ def update_graph(index, graph_snapshots):
         else:
             node_colors.append('lightgray')
 
-        label = f"({node}) N: {data['N']}<br>{data['state']}<br>"
+        label = f"({node}) N: {data['N']} seat: {data['active_seat']}<br>{data['state']}<br>"
         label += f"Q: [{float(data['Q'][0]):.2f}, {float(data['Q'][1]):.2f}]<br>"
         label += f"W: [{data['provably_winning']}] L: [{data['provably_losing']}]"
         node_text.append(label)

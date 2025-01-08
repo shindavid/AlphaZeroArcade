@@ -522,6 +522,11 @@ bool SearchThread<Game>::expand(StateHistory* history, Node* parent, edge_t* edg
     core::action_t last_action = edge->action;
     Game::Symmetries::apply(last_action, edge->sym, parent->action_mode());
 
+    core::action_mode_t child_mode = Game::Rules::get_action_mode(history->current());
+    if(!Game::Rules::is_chance_mode(child_mode)) {
+      active_seat_ = Game::Rules::get_current_player(history->current());
+    }
+
     bool terminal = Game::Rules::is_terminal(
         history->current(), parent->stable_data().active_seat, last_action, game_outcome);
 
