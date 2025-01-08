@@ -24,8 +24,8 @@ inline SearchThread<Game>::SearchThread(SharedData* shared_data,
       manager_params_(manager_params),
       thread_id_(thread_id) {
   thread_id_whitespace_ = util::make_whitespace(kThreadWhitespaceLength * thread_id_);
-  break_plus_thread_id_whitespace_ = "\n" + util::make_whitespace(
-    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * thread_id_);
+  break_plus_thread_id_whitespace_ = util::create_string("\n%s", util::make_whitespace(
+    util::Logging::kTimestampPrefixLength + kThreadWhitespaceLength * thread_id_).c_str());
 }
 
 template <core::concepts::Game Game>
