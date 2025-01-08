@@ -11,7 +11,7 @@ import numpy as np
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 # Load your JSON data
-base_dir = '/home/lichensong/projects/AlphaZeroArcade/sample_search_logs/mcts_tests'
+base_dir = '/workspace/repo/sample_search_logs/mcts_tests'
 
 # List all files ending with '_log.json'
 log_files = [f for f in os.listdir(base_dir) if f.endswith('_log.json')]
@@ -152,4 +152,4 @@ def update_graph(index, graph_snapshots):
     return figure
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8051)
+    app.run_server(debug=True, host="0.0.0.0", port=8051)

@@ -30,13 +30,20 @@ RUN add-apt-repository -y ppa:mhier/libboost-latest && \
       libboost-filesystem1.81-dev libboost-log1.81-dev && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install graphviz
+RUN apt-get update && \
+    apt-get install -y \
+      graphviz \
+      graphviz-dev && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Update alternatives for gcc/g++
 RUN for tool in gcc g++; do \
       update-alternatives --install /usr/bin/$tool $tool /usr/bin/${tool}-12 60 || true; \
     done
 
 # Python dependencies
-RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging
+RUN pip3 install --ignore-installed ipython natsort tqdm termcolor cffi numpy matplotlib bokeh scipy flask plotly dash packaging pygraphviz
 
 # Configure SQLite
 RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
