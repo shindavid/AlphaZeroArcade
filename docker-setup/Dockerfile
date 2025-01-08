@@ -1,7 +1,7 @@
 # FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-LABEL version="1.1.3"
+LABEL version="1.1.4"
 
 # Set up locales
 RUN apt-get clean && apt-get update && \
@@ -45,7 +45,8 @@ RUN printf ".mode column\n.headers on\n" > /root/.sqliterc
 ENV PYTHONPATH=/workspace/repo/py
 
 RUN groupadd -g 1000 devgroup && \
-    useradd -u 1000 -g devgroup devuser
+    useradd -u 1000 -g devgroup devuser && \
+    echo "devuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 RUN mkdir -p /home/devuser && chown devuser:devgroup /home/devuser
 RUN mkdir -p /workspace && chown devuser:devgroup /workspace
